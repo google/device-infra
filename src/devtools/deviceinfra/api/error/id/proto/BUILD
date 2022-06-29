@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@rules_proto//proto:defs.bzl2", "proto_library")
+load("@rules_proto//proto:defs.bzl", "proto_library")
 package(
     default_visibility = [
         "//:deviceinfra_api_users",
