@@ -14,12 +14,7 @@
 #
 
 DEFAULT_VISIBILITY = [
-    "//devtools/common/metrics/stability/user:all_users",
-    "//devtools/common/metrics/stability/model/proto:__subpackages__",
-    "//java/com/google/devtools/common/metrics/stability:__subpackages__",
-    "//javatests/com/google/devtools/common/metrics/stability:__subpackages__",
-    "//src/java/com/google/devtools/common/metrics/stability:__subpackages__",
-    "//src/javatests/com/google/devtools/common/metrics/stability:__subpackages__",
+    "//:deviceinfra_metrics_pkg",
 ]
 
 package(default_visibility = DEFAULT_VISIBILITY)
@@ -34,8 +29,6 @@ proto_library(
     ],
 )
 
-# For open source projects only. Internal google3 users should use
-# //devtools/common/metrics/stability/model/proto:error_java_proto instead.
 java_proto_library(
     name = "error_java_proto",
     deps = [":error_proto"],

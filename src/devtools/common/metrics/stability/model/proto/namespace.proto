@@ -23,8 +23,8 @@ option java_outer_classname = "NamespaceProto";
 
 enum Namespace {
   UNKNOWN = 0;
-  MH = 1;  // Mobile Harness
-  UD = 2;  // UDCluster
-  TF = 3;  // Trade Federation test harness (go/tf)
-  VN = 4;  // Vinson Test Framework (go/vinson)
+  MH = 1;  // Mobile Harness, Device Infra.
+
+  // For external usage, use the enum value starting from 100,000.
+  reserved 100000 to max;
 }

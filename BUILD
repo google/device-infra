@@ -39,3 +39,11 @@ package_group(
         "//src/javatests/com/google/devtools/deviceinfra/...",
     ],
 )
+
+package_group(
+    name = "deviceinfra_metrics_pkg",
+    packages = [
+        "//src/java/com/google/devtools/common/metrics/stability/...",
+        "//src/javatests/com/google/devtools/common/metrics/stability/...",
+    ],
+)
