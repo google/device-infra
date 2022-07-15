@@ -13,21 +13,17 @@
 # limitations under the License.
 #
 
-# deviceinfra:oss-insert load("@rules_proto//proto:defs.bzl", "proto_library")
 package(
     default_visibility = [
         "//:deviceinfra_api_users",
     ],
 )
 
-licenses(["notice"])
-
-proto_library(
-    name = "error_code_range_proto",
-    srcs = ["error_code_range.proto"],
-)
-
-java_proto_library(
-    name = "error_code_range_java_proto",
-    deps = [":error_code_range_proto"],
+java_library(
+    name = "error_id_interface",
+    srcs = ["DeviceInfraErrorId.java"],
+    deps = [
+        "//devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//java/com/google/devtools/common/metrics/stability/model:error_id",
+    ],
 )
