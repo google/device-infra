@@ -14,18 +14,12 @@
 #
 
 DEFAULT_VISIBILITY = [
-    "//devtools/common/metrics/stability/user:all_users",
-    "//java/com/google/devtools/common/metrics/stability:__subpackages__",
-    "//javatests/com/google/devtools/common/metrics/stability:__subpackages__",
-    "//src/java/com/google/devtools/common/metrics/stability:__subpackages__",
-    "//src/javatests/com/google/devtools/common/metrics/stability:__subpackages__",
+    "//:deviceinfra_all_pkg",
+    "//:deviceinfra_metrics_pkg",
 ]
 
 package(default_visibility = DEFAULT_VISIBILITY)
 
-# For open source projects only. Internal google3 users should use
-# //java/com/google/devtools/common/metrics/stability/util:error_id_comparator
-# instead.
 java_library(
     name = "error_id_comparator",
     srcs = ["ErrorIdComparator.java"],
@@ -37,9 +31,6 @@ java_library(
     ],
 )
 
-# For open source projects only. Internal google3 users should use
-# //java/com/google/devtools/common/metrics/stability/util:error_id_formatter
-# instead.
 java_library(
     name = "error_id_formatter",
     srcs = ["ErrorIdFormatter.java"],

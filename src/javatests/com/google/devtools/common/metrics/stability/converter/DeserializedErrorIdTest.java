@@ -21,7 +21,6 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto.ErrorId;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
-import com.google.devtools.deviceinfra.shared.error.id.defined.PredefinedErrorIdTest;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -37,8 +36,12 @@ public class DeserializedErrorIdTest {
                 .setCode(1234)
                 .setName("FOO")
                 .setType(ErrorType.CUSTOMER_ISSUE)
-                .setNamespace(Namespace.UD)
+                .setNamespace(Namespace.MH)
                 .build());
-    assertThat(PredefinedErrorIdTest.hasLegalToString(errorId)).isTrue();
+    assertThat(
+            String.format(
+                "[%s|%s|%s|%s]",
+                errorId.namespace(), errorId.type(), errorId.name(), errorId.code()))
+        .isEqualTo(errorId.toString());
   }
 }

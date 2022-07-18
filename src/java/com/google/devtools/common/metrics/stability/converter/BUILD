@@ -15,51 +15,43 @@
 
 DEFAULT_VISIBILITY = [
     #  DO NOT public all libs to user projects.
-    "//java/com/google/devtools/common/metrics/stability:__subpackages__",
-    "//javatests/com/google/devtools/common/metrics/stability:__subpackages__",
-    "//src/java/com/google/devtools/common/metrics/stability:__subpackages__",
-    "//src/javatests/com/google/devtools/common/metrics/stability:__subpackages__",
+    "//:deviceinfra_metrics_pkg",
 ]
 
 package(default_visibility = DEFAULT_VISIBILITY)
 
-# For open source projects only. Internal google3 users should use
-# //java/com/google/devtools/common/metrics/stability/converter:deserialized_exception
-# instead.
 java_library(
     name = "deserialized_exception",
     srcs = [
         "DeserializedException.java",
     ],
-    visibility = DEFAULT_VISIBILITY + ["//devtools/common/metrics/stability/user:all_users"],
+    visibility = [
+        "//:deviceinfra_metrics_pkg",
+    ],
     deps = [
         ":internal",
-        "//java/com/google/devtools/common/metrics/stability/model:error_id",
+        "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
 
-# For open source projects only. Internal google3 users should use
-# //java/com/google/devtools/common/metrics/stability/converter
-# instead.
 java_library(
     name = "converter",
     srcs = [
         "ErrorModelConverter.java",
     ],
-    visibility = DEFAULT_VISIBILITY + ["//devtools/common/metrics/stability/user:all_users"],
+    visibility = [
+        "//:deviceinfra_metrics_pkg",
+    ],
     deps = [
         "deserialized_exception",
         ":internal",
-        "//devtools/common/metrics/stability/model/proto:error_java_proto",
-        "//java/com/google/devtools/common/metrics/stability/model:error_id",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
         "@maven//:com_google_guava_guava",
     ],
 )
 
-# For open source projects only. Internal google3 users should use
-# //java/com/google/devtools/common/metrics/stability/converter:internal
-# instead.
 java_library(
     name = "internal",
     srcs = [
@@ -67,9 +59,9 @@ java_library(
         "UnknownErrorId.java",
     ],
     deps = [
-        "//devtools/common/metrics/stability/model/proto:error_java_proto",
-        "//java/com/google/devtools/common/metrics/stability/model:error_id",
-        "//java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
+        "//src/java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
     ],
 )

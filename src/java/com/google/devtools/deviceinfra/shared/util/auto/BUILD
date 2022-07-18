@@ -14,19 +14,24 @@
 #
 
 DEFAULT_VISIBILITY = [
-    "//:deviceinfra_metrics_pkg",
-    "//:deviceinfra_all_pkg",
+    "//:deviceinfra_pkg",
 ]
 
-package(default_visibility = DEFAULT_VISIBILITY)
+package(
+    default_visibility = DEFAULT_VISIBILITY,
+)
+
+java_plugin(
+    name = "auto_value_plugin",
+    processor_class = "com.google.auto.value.processor.AutoValueProcessor",
+    deps = ["@maven//:com_google_auto_value_auto_value"],
+)
 
 java_library(
-    name = "error_id",
-    srcs = [
-        "ErrorId.java",
-        "ErrorIdProvider.java",
-    ],
-    deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+    name = "auto_value",
+    exported_plugins = [":auto_value_plugin"],
+    exports = [
+        "@maven//:com_google_auto_value_auto_value",
+        "@maven//:com_google_auto_value_auto_value_annotations",
     ],
 )

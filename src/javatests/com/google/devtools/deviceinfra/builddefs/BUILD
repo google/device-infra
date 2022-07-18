@@ -13,20 +13,12 @@
 # limitations under the License.
 #
 
-DEFAULT_VISIBILITY = [
-    "//:deviceinfra_metrics_pkg",
-    "//:deviceinfra_all_pkg",
-]
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 
-package(default_visibility = DEFAULT_VISIBILITY)
-
-java_library(
-    name = "error_id",
+bzl_library(
+    name = "junit_test_suites_bzl",
     srcs = [
-        "ErrorId.java",
-        "ErrorIdProvider.java",
+        "junit_test_suites.bzl",
     ],
-    deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
-    ],
+    visibility = ["//visibility:public"],
 )

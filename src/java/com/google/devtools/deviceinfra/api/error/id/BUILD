@@ -23,7 +23,7 @@ java_library(
     name = "error_id_interface",
     srcs = ["DeviceInfraErrorId.java"],
     deps = [
-        "//devtools/common/metrics/stability/model/proto:error_java_proto",
-        "//java/com/google/devtools/common/metrics/stability/model:error_id",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
     ],
 )

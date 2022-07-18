@@ -25,7 +25,7 @@ java_library(
     name = "error",
     srcs = glob(["*.java"]),
     deps = [
-        "//devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/java/com/google/devtools/deviceinfra/api/error:exception",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
         "@maven//:com_google_truth_truth",

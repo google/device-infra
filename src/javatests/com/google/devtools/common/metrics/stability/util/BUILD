@@ -22,11 +22,11 @@ java_library(
     testonly = True,
     srcs = glob(["*.java"]),
     deps = [
-        "//java/com/google/devtools/mobileharness/api/model/error",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_comparator",
+        "//src/java/com/google/devtools/deviceinfra/api/error/id/defined",
         "@maven//:com_google_truth_truth",
         "@maven//:junit_junit",
     ],

@@ -23,8 +23,8 @@ java_library(
     name = "exception",
     srcs = ["DeviceInfraException.java"],
     deps = [
-        "//java/com/google/devtools/common/metrics/stability/model:error_id",
-        "//java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
+        "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
+        "//src/java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",

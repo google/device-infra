@@ -23,7 +23,7 @@ import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
-import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.deviceinfra.api.error.id.defined.BasicErrorId;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -33,32 +33,36 @@ public class ErrorIdComparatorTest {
   @Test
   public void equals_compareClasses() {
     assertThat(
-            ErrorIdComparator.equal(BasicErrorId.TEST_TIMEOUT, BasicErrorId.TEST_RESULT_NOT_FOUND))
+            ErrorIdComparator.equal(
+                BasicErrorId.REFLECTION_LOAD_CLASS_ERROR,
+                BasicErrorId.REFLECTION_LOAD_CLASS_TYPE_MISMATCH))
         .isFalse();
-    assertThat(ErrorIdComparator.equal(BasicErrorId.TEST_TIMEOUT, BasicErrorId.TEST_TIMEOUT))
+    assertThat(
+            ErrorIdComparator.equal(
+                BasicErrorId.REFLECTION_LOAD_CLASS_ERROR, BasicErrorId.REFLECTION_LOAD_CLASS_ERROR))
         .isTrue();
     assertThat(
             ErrorIdComparator.equal(
-                BasicErrorId.TEST_TIMEOUT,
+                BasicErrorId.REFLECTION_LOAD_CLASS_ERROR,
                 new ErrorId() {
                   @Override
                   public int code() {
-                    return BasicErrorId.TEST_TIMEOUT.code();
+                    return BasicErrorId.REFLECTION_LOAD_CLASS_ERROR.code();
                   }
 
                   @Override
                   public String name() {
-                    return BasicErrorId.TEST_TIMEOUT.name();
+                    return BasicErrorId.REFLECTION_LOAD_CLASS_ERROR.name();
                   }
 
                   @Override
                   public ErrorType type() {
-                    return BasicErrorId.TEST_TIMEOUT.type();
+                    return BasicErrorId.REFLECTION_LOAD_CLASS_ERROR.type();
                   }
 
                   @Override
                   public Namespace namespace() {
-                    return BasicErrorId.TEST_TIMEOUT.namespace();
+                    return BasicErrorId.REFLECTION_LOAD_CLASS_ERROR.namespace();
                   }
                 }))
         .isTrue();
@@ -66,7 +70,7 @@ public class ErrorIdComparatorTest {
 
   @Test
   public void equals_compareProto() {
-    BasicErrorId mhErrorId = BasicErrorId.TEST_TIMEOUT;
+    BasicErrorId mhErrorId = BasicErrorId.REFLECTION_LOAD_CLASS_ERROR;
     ErrorIdProto.ErrorId commonErrorIdProto = ErrorModelConverter.toErrorIdProto(mhErrorId);
     assertThat(ErrorIdComparator.equal(commonErrorIdProto, mhErrorId)).isTrue();
     assertThat(ErrorIdComparator.equal(mhErrorId, commonErrorIdProto)).isTrue();

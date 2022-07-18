@@ -28,7 +28,6 @@ public abstract class DeserializedErrorId implements ErrorId {
 
   /** Do not make it public. */
   static DeserializedErrorId of(ErrorIdProto.ErrorId errorIdProto) {
-    // TODO(b/158161092): Add the namespace.
     return new AutoValue_DeserializedErrorId(
         errorIdProto.getCode(),
         errorIdProto.getName(),

@@ -20,9 +20,21 @@ http_archive(
         "https://github.com/bazelbuild/rules_proto/archive/refs/tags/4.0.0-3.20.0.tar.gz",
     ],
 )
+
 load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
+
 rules_proto_dependencies()
+
 rules_proto_toolchains()
+
+http_archive(
+    name = "bazel_skylib",
+    sha256 = "f7be3474d42aae265405a592bb7da8e171919d74c16f082a5457840f06054728",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.2.1/bazel-skylib-1.2.1.tar.gz",
+        "https://github.com/bazelbuild/bazel-skylib/releases/download/1.2.1/bazel-skylib-1.2.1.tar.gz",
+    ],
+)
 
 # Java Maven-based repositories.
 http_archive(
@@ -44,25 +56,25 @@ load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 maven_install(
     artifacts = [
-        "com.google.auto.value:auto-value:1.8.1",
-        "com.google.auto.value:auto-value-annotations:1.8.1",
+        "com.google.auto.value:auto-value:1.9",
+        "com.google.auto.value:auto-value-annotations:1.9",
         "com.google.code.findbugs:jsr305:3.0.2",
         "com.google.errorprone:error_prone_annotations:2.11.0",
         "com.google.flogger:flogger-system-backend:0.6",
         "com.google.flogger:flogger:0.6",
         "com.google.guava:guava:31.0.1-jre",
         "com.google.inject:guice:4.1.0",
+        "com.google.truth.extensions:truth-proto-extension:1.1.3",
         "com.google.truth:truth:1.1.3",
         "javax.inject:jsr330-api:0.9",
         "junit:junit:4.13",
         "org.apache.commons:commons-lang3:3.6",
         "org.mockito:mockito-core:4.3.1",
     ],
+    fetch_sources = True,
     repositories = [
         "https://maven.google.com",
         "https://repo1.maven.org/maven2",
         "https://repository.mulesoft.org/nexus/content/repositories/public",
     ],
-    fetch_sources = True,
 )
-
