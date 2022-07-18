@@ -15,22 +15,42 @@
 
 load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
+package(
+    default_testonly = 1,
+)
+
 licenses(["notice"])
 
 java_library(
-    name = "converter",
-    testonly = True,
-    srcs = glob(["*.java"]),
+    name = "command",
+    srcs = glob(
+        ["*.java"],
+        exclude = ["StdoutStderrPrinter.java"],
+    ),
+    data = [
+        ":stdout_stderr_printer",
+        "//src/javatests/com/google/devtools/deviceinfra/shared/util/command/testdata",
+    ],
     deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
-        "//src/java/com/google/devtools/common/metrics/stability/converter",
-        "//src/java/com/google/devtools/common/metrics/stability/converter:deserialized_exception",
-        "//src/java/com/google/devtools/common/metrics/stability/converter:internal",
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception",
+        "//java/com/google/common/time",
+        "//java/com/google/common/util",
+        "//java/com/google/testing/util:test_util",
         "//src/java/com/google/devtools/deviceinfra/api/error/id/defined",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/command",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
+    ],
+)
+
+java_binary(
+    name = "stdout_stderr_printer",
+    srcs = ["StdoutStderrPrinter.java"],
+    main_class = "com.google.devtools.deviceinfra.shared.util.command.StdoutStderrPrinter",
+    visibility = [
+        "//javatests/com/google/devtools/mobileharness/shared/util/command:__subpackages__",
     ],
 )
 
@@ -38,6 +58,9 @@ junit_test_suites(
     name = "gen_tests",
     sizes = [
         "small",
+        "medium",
     ],
-    deps = [":converter"],
+    deps = [
+        ":command",
+    ],
 )

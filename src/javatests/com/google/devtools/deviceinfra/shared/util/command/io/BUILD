@@ -22,20 +22,13 @@ package(
 licenses(["notice"])
 
 java_library(
-    name = "id",
+    name = "io",
     srcs = glob(["*.java"]),
-    runtime_deps = [
-        "//src/java/com/google/devtools/deviceinfra/api/error/id/defined:testing",
-    ],
     deps = [
-        "//src/devtools/deviceinfra/api/error/id/proto:error_code_range_java_proto",
-        "//src/java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception_generator",
-        "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/command/io",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
-        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 
@@ -44,5 +37,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":id"],
+    deps = [":io"],
 )
