@@ -21,7 +21,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.function.Function.identity;
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 
@@ -152,7 +151,7 @@ public class ErrorIdTest {
             DeviceInfraExceptionGenerator.class.getSimpleName())
         .that(
             errorIds.keySet().stream()
-                .filter(not(DeviceInfraExceptionGenerator.class::isAssignableFrom))
+                .filter(errorId -> !DeviceInfraExceptionGenerator.class.isAssignableFrom(errorId))
                 .collect(toImmutableList()))
         .isEmpty();
   }

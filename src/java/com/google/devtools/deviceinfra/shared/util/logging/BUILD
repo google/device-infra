@@ -13,21 +13,11 @@
 # limitations under the License.
 #
 
-load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-
-bzl_library(
-    name = "junit_test_suites_bzl",
-    srcs = [
-        "junit_test_suites.bzl",
-    ],
-    visibility = ["//visibility:public"],
-)
-
 java_library(
-    name = "truth",
+    name = "google_logger",
     visibility = ["//visibility:public"],
     exports = [
-        "@maven//:com_google_truth_extensions_truth_java8_extension",
-        "@maven//:com_google_truth_truth",
+        "@maven//:com_google_flogger_flogger",
+        "@maven//:com_google_flogger_flogger_system_backend",
     ],
 )
