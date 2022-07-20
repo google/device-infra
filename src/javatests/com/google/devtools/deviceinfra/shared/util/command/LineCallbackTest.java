@@ -17,6 +17,7 @@
 package com.google.devtools.deviceinfra.shared.util.command;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doThrow;
@@ -106,21 +107,17 @@ public class LineCallbackTest {
     assertThat(Response.stop().getStop()).isTrue();
     assertThat(Response.notStop().getStop()).isFalse();
     assertThat(Response.stop(true).getStop()).isTrue();
-    assertThat(Response.answer("Answer").getAnswer().orElseThrow(AssertionError::new))
-        .isEqualTo("Answer");
-    assertThat(Response.answerLn("Answer").getAnswer().orElseThrow(AssertionError::new))
-        .isEqualTo("Answer\n");
+    assertThat(Response.answer("Answer").getAnswer()).hasValue("Answer");
+    assertThat(Response.answerLn("Answer").getAnswer()).hasValue("Answer\n");
     assertThat(Response.of(true, "Answer").getStop()).isTrue();
-    assertThat(Response.of(true, "Answer").getAnswer().orElseThrow(AssertionError::new))
-        .isEqualTo("Answer");
-    assertThat(Response.ofLn(true, "Answer").getAnswer().orElseThrow(AssertionError::new))
-        .isEqualTo("Answer\n");
+    assertThat(Response.of(true, "Answer").getAnswer()).hasValue("Answer");
+    assertThat(Response.ofLn(true, "Answer").getAnswer()).hasValue("Answer\n");
+    assertThat(Response.of(true, null).getAnswer()).isEmpty();
+    assertThat(Response.ofLn(true, null).getAnswer()).isEmpty();
     assertThat(Response.answer("Answer").withStop().getStop()).isTrue();
     assertThat(Response.answer("Answer").withNotStop().getStop()).isFalse();
     assertThat(Response.answer("Answer").withStop(true).getStop()).isTrue();
-    assertThat(Response.stop().withAnswer("Answer").getAnswer().orElseThrow(AssertionError::new))
-        .isEqualTo("Answer");
-    assertThat(Response.stop().withAnswerLn("Answer").getAnswer().orElseThrow(AssertionError::new))
-        .isEqualTo("Answer\n");
+    assertThat(Response.stop().withAnswer("Answer").getAnswer()).hasValue("Answer");
+    assertThat(Response.stop().withAnswerLn("Answer").getAnswer()).hasValue("Answer\n");
   }
 }

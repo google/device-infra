@@ -23,6 +23,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import javax.annotation.Nullable;
 
 /**
  * Callback of a new stdout/stderr line of a running {@link Command}.
@@ -174,8 +175,10 @@ public interface LineCallback {
      * <p>If a command is stopped, getting its result by {@link CommandExecutor#run(Command)},
      * {@link CommandExecutor#exec(Command)} and {@link CommandProcess#await()} will not throw
      * {@link CommandFailureException} no matter if the command successes.
+     *
+     * <p>If {@code answer} is {@code null}, it is equivalent to call {@link #stop(boolean)}.
      */
-    public static Response of(boolean stop, String answer) {
+    public static Response of(boolean stop, @Nullable String answer) {
       return builder().stop(stop).answer(answer).build();
     }
 
@@ -186,9 +189,11 @@ public interface LineCallback {
      * <p>If a command is stopped, getting its result by {@link CommandExecutor#run(Command)},
      * {@link CommandExecutor#exec(Command)} and {@link CommandProcess#await()} will not throw
      * {@link CommandFailureException} no matter if the command successes.
+     *
+     * <p>If {@code answer} is {@code null}, it is equivalent to call {@link #stop(boolean)}.
      */
-    public static Response ofLn(boolean stop, String answer) {
-      return of(stop, answer + "\n");
+    public static Response ofLn(boolean stop, @Nullable String answer) {
+      return of(stop, answer == null ? null : answer + "\n");
     }
 
     /**
@@ -260,7 +265,7 @@ public interface LineCallback {
 
       abstract Builder stop(boolean stop);
 
-      abstract Builder answer(String answer);
+      abstract Builder answer(@Nullable String answer);
 
       abstract Response build();
     }
