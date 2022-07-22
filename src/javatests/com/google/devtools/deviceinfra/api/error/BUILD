@@ -28,7 +28,7 @@ java_library(
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/java/com/google/devtools/deviceinfra/api/error:exception",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
-        "@maven//:com_google_truth_truth",
+        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],

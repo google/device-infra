@@ -13,21 +13,17 @@
 # limitations under the License.
 #
 
-load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-
-bzl_library(
-    name = "junit_test_suites_bzl",
-    srcs = [
-        "junit_test_suites.bzl",
-    ],
-    visibility = ["//visibility:public"],
-)
-
 java_library(
-    name = "truth",
-    visibility = ["//visibility:public"],
-    exports = [
-        "@maven//:com_google_truth_extensions_truth_java8_extension",
-        "@maven//:com_google_truth_truth",
+    name = "linecallback",
+    srcs = glob(["*.java"]),
+    visibility = [
+        "//:deviceinfra_api_users",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/command",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
     ],
 )

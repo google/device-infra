@@ -13,21 +13,17 @@
 # limitations under the License.
 #
 
-load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
-
-bzl_library(
-    name = "junit_test_suites_bzl",
-    srcs = [
-        "junit_test_suites.bzl",
-    ],
-    visibility = ["//visibility:public"],
+package(
+    default_testonly = 1,
 )
 
-java_library(
-    name = "truth",
-    visibility = ["//visibility:public"],
-    exports = [
-        "@maven//:com_google_truth_extensions_truth_java8_extension",
-        "@maven//:com_google_truth_truth",
+licenses(["notice"])
+
+filegroup(
+    name = "testdata",
+    srcs = glob(["**/*"]),
+    visibility = [
+        "//javatests/com/google/devtools/mobileharness/shared/util/command:__subpackages__",
+        "//src/javatests/com/google/devtools/deviceinfra/shared/util/command:__subpackages__",
     ],
 )

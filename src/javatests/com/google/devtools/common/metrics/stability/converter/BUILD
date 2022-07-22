@@ -28,8 +28,8 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/converter:internal",
         "//src/java/com/google/devtools/deviceinfra/api/error:exception",
         "//src/java/com/google/devtools/deviceinfra/api/error/id/defined",
+        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_truth_truth",
         "@maven//:junit_junit",
     ],
 )
