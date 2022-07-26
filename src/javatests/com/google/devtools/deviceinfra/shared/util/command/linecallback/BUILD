@@ -25,9 +25,9 @@ java_library(
     name = "linecallback",
     srcs = glob(["*.java"]),
     deps = [
-        "//java/com/google/common/time",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/linecallback",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",

@@ -14,20 +14,6 @@
  * limitations under the License.
  */
 
-// Copyright 2017 Google Inc.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package com.google.devtools.deviceinfra.shared.util.command.backend;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -57,12 +43,10 @@ public abstract class InputSource {
     /** Input from a file. */
     FILE,
     /** Input from the parent JVM process; usually equivalent to {@link System#in}. */
-    // TODO(diamondm, gdennis) settle on a name, perhaps via Java API Review.
     JVM,
     /**
      * Input from the command process, so it may be written to {@link CommandProcess#stdinStream}.
      */
-    // TODO(diamondm, gdennis) actually provide CommandProcess#stdinStream.
     PROCESS,
     /** Input from an input stream. */
     STREAM

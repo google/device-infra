@@ -36,6 +36,14 @@ http_archive(
     ],
 )
 
+http_archive(
+    name = "bazel_tools",
+    sha256 = "820a94dbb14071ed6d8c266cf0c080ecb265a5eea65307579489c4662c2d582a",
+    urls = [
+        "https://github.com/bazelbuild/bazel/releases/download/5.2.0/bazel-5.2.0-dist.zip",
+    ],
+)
+
 # Java Maven-based repositories.
 http_archive(
     name = "rules_jvm_external",
@@ -62,9 +70,10 @@ maven_install(
         "com.google.errorprone:error_prone_annotations:2.11.0",
         "com.google.flogger:flogger-system-backend:0.6",
         "com.google.flogger:flogger:0.6",
-        "com.google.guava:guava:31.0.1-jre",
+        "com.google.guava:guava:31.1-jre",
         "com.google.inject:guice:4.1.0",
         "com.google.truth.extensions:truth-proto-extension:1.1.3",
+        "com.google.truth.extensions:truth-java8-extension:1.1.3",
         "com.google.truth:truth:1.1.3",
         "javax.inject:jsr330-api:0.9",
         "junit:junit:4.13",

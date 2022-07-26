@@ -20,7 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.deviceinfra.shared.util.command.Timeout.deadline;
 import static com.google.devtools.deviceinfra.shared.util.command.Timeout.fixed;
 
-import com.google.common.time.TimeSource;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.Test;
@@ -30,7 +30,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class TimeoutTest {
 
-  private static final Instant INSTANT = TimeSource.system().now();
+  private static final Instant INSTANT = Clock.systemUTC().instant();
 
   @Test
   public void timeout() {
@@ -85,13 +85,13 @@ public class TimeoutTest {
   public void getRemainingTest() {
     assertThat(fixed(Duration.ofMillis(2L)).getRemainingTime()).isEqualTo(Duration.ofMillis(2L));
     assertThat(
-            deadline(TimeSource.system().now().plus(Duration.ofMinutes(1L)))
+            deadline(Clock.systemUTC().instant().plus(Duration.ofMinutes(1L)))
                 .getRemainingTime()
                 .compareTo(Duration.ofMinutes(1L)))
         .isAtMost(0);
     assertThat(
             fixed(Duration.ofSeconds(3L))
-                .withDeadline(TimeSource.system().now().plusSeconds(4L))
+                .withDeadline(Clock.systemUTC().instant().plusSeconds(4L))
                 .getRemainingTime())
         .isEqualTo(Duration.ofSeconds(3L));
   }

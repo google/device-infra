@@ -19,10 +19,10 @@ package com.google.devtools.deviceinfra.shared.util.command.linecallback;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.google.common.time.Sleeper;
-import com.google.common.time.TimeSource;
 import com.google.devtools.deviceinfra.shared.util.command.CommandProcess;
 import com.google.devtools.deviceinfra.shared.util.command.LineCallback.Response;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.Before;
@@ -40,7 +40,7 @@ public final class ScanSignalOutputCallbackTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private Sleeper sleeper;
-  @Mock private TimeSource timeSource;
+  @Mock private Clock clock;
 
   @SuppressWarnings("DoNotMockAutoValue")
   @Mock
@@ -53,7 +53,7 @@ public final class ScanSignalOutputCallbackTest {
 
   @Before
   public void setUp() {
-    callback = new ScanSignalOutputCallback(SIGNAL, DEFAULT_STOP_ON_SIGNAL, sleeper, timeSource);
+    callback = new ScanSignalOutputCallback(SIGNAL, DEFAULT_STOP_ON_SIGNAL, sleeper, clock);
   }
 
   @Test
@@ -71,7 +71,7 @@ public final class ScanSignalOutputCallbackTest {
 
   @Test
   public void onLine_notStopOnSignal() {
-    callback = new ScanSignalOutputCallback(SIGNAL, /* stopOnSignal= */ false, sleeper, timeSource);
+    callback = new ScanSignalOutputCallback(SIGNAL, /* stopOnSignal= */ false, sleeper, clock);
     String[] otherOutput = {"line 1", "line2", "line3"};
 
     for (String line : otherOutput) {
@@ -87,7 +87,7 @@ public final class ScanSignalOutputCallbackTest {
   public void waitForSignal_catchSignal() throws Exception {
     Duration timeout = Duration.ofMinutes(1);
     long nowMs = 1;
-    when(timeSource.now())
+    when(clock.instant())
         .thenReturn(
             Instant.ofEpochMilli(nowMs),
             Instant.ofEpochMilli(nowMs + 1),
@@ -102,7 +102,7 @@ public final class ScanSignalOutputCallbackTest {
   public void waitForSignal_timeoutBeforeCatchingSignal() throws Exception {
     Duration timeout = Duration.ofMinutes(1);
     long nowMs = 1;
-    when(timeSource.now())
+    when(clock.instant())
         .thenReturn(
             Instant.ofEpochMilli(nowMs),
             Instant.ofEpochMilli(nowMs + 1),

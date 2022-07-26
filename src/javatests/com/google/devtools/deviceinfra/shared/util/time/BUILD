@@ -13,17 +13,30 @@
 # limitations under the License.
 #
 
+load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
+
+package(
+    default_testonly = 1,
+)
+
+licenses(["notice"])
+
 java_library(
-    name = "backend",
+    name = "time",
     srcs = glob(["*.java"]),
-    visibility = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/command:__pkg__",
-    ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_errorprone_error_prone_annotations",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
     ],
+)
+
+junit_test_suites(
+    name = "tests",
+    sizes = [
+        "small",
+        "medium",
+    ],
+    deps = [":time"],
 )

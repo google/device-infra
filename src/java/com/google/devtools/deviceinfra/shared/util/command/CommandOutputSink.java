@@ -17,7 +17,6 @@
 package com.google.devtools.deviceinfra.shared.util.command;
 
 import com.google.common.io.ByteSink;
-import com.google.common.time.TimeSource;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -26,6 +25,7 @@ import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
@@ -133,12 +133,12 @@ class CommandOutputSink extends ByteSink {
    * string containing all data written to the stream.
    */
   String awaitResult(Duration timeout) throws InterruptedException, TimeoutException {
-    Instant deadline = TimeSource.system().now().plus(timeout);
+    Instant deadline = Clock.systemUTC().instant().plus(timeout);
     if (!compositeOutputStream.closePipeLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
       throw new TimeoutException("Command process is still handling stdout/stderr");
     }
     return compositeOutputStream.stringOutputStream.await(
-        Duration.between(TimeSource.system().now(), deadline));
+        Duration.between(Clock.systemUTC().instant(), deadline));
   }
 
   private static class CompositeOutputStream extends OutputStream {

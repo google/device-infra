@@ -33,7 +33,6 @@ java_library(
     deps = [
         ":command_process_impl",
         ":command_results",
-        "//java/com/google/common/time",
         "//src/java/com/google/devtools/deviceinfra/api/error:exception",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
         "//src/java/com/google/devtools/deviceinfra/api/error/id/defined",
@@ -43,8 +42,8 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/history:recorder",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/io",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/tracing:local_trace_span_executors",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -84,25 +83,10 @@ java_library(
     visibility = [
         # Do NOT add other packages here.
         # Used by command library only.
-        "//java/com/google/devtools/mobileharness/shared/util/command:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/backend",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/io",
         "@maven//:com_google_code_findbugs_jsr305",
-    ],
-)
-
-java_library(
-    name = "command_process_impls",
-    srcs = ["CommandProcessImpls.java"],
-    visibility = [
-        # Do NOT add other packages here.
-        # Used by command library only.
-        "//java/com/google/devtools/mobileharness/shared/util/command:__subpackages__",
-    ],
-    deps = [
-        ":command",
-        ":command_process_impl",
     ],
 )

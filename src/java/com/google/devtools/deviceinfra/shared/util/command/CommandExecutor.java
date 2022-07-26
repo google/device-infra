@@ -30,7 +30,6 @@ import com.google.devtools.deviceinfra.shared.util.command.history.CommandRecord
 import com.google.devtools.deviceinfra.shared.util.command.history.CommandRecorder;
 import com.google.devtools.deviceinfra.shared.util.command.io.LineCollector;
 import com.google.devtools.deviceinfra.shared.util.command.io.LineReader;
-import com.google.devtools.deviceinfra.shared.util.tracing.LocalTraceSpanExecutors;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import java.io.IOException;
@@ -39,6 +38,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
@@ -80,6 +80,7 @@ public class CommandExecutor {
     }
 
     /** Sets the thread pool used by the command executor with a shared default one. */
+    @CanIgnoreReturnValue
     public Builder useDefaultThreadPool(boolean propagateTraceContext) {
       return setThreadPool(
           propagateTraceContext
@@ -605,11 +606,11 @@ public class CommandExecutor {
                 getThreadFactory(/*threadName=*/ "default-mh-command-executor")));
 
     private static final ListeningExecutorService DEFAULT_THREAD_POOL =
-        LocalTraceSpanExecutors.decorate(
+        decorateWithLocalTraceSpan(
             DEFAULT_NON_PROPAGATING_THREAD_POOL, ListeningExecutorService.class);
 
     private static final ListeningScheduledExecutorService DEFAULT_TIMER =
-        LocalTraceSpanExecutors.decorate(
+        decorateWithLocalTraceSpan(
             MoreExecutors.listeningDecorator(
                 Executors.newScheduledThreadPool(
                     /*corePoolSize=*/ 3,
@@ -625,6 +626,12 @@ public class CommandExecutor {
                 logger.atWarning().withCause(e).log("Uncaught error of thread %s", threadName));
         return thread;
       };
+    }
+
+    @SuppressWarnings("unused")
+    private static <T extends Executor> T decorateWithLocalTraceSpan(
+        T executor, Class<T> interfaceName) {
+       return executor;
     }
   }
 }

@@ -13,7 +13,6 @@
 # limitations under the License.
 #
 
-# Some commonly used LineCallback for go/udcluster-command
 java_library(
     name = "linecallback",
     srcs = glob(["*.java"]),
@@ -21,9 +20,9 @@ java_library(
         "//:deviceinfra_api_users",
     ],
     deps = [
-        "//java/com/google/common/time",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],

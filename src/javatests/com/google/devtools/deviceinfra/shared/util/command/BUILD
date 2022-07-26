@@ -32,13 +32,12 @@ java_library(
         "//src/javatests/com/google/devtools/deviceinfra/shared/util/command/testdata",
     ],
     deps = [
-        "//java/com/google/common/time",
-        "//java/com/google/common/util",
-        "//java/com/google/testing/util:test_util",
         "//src/java/com/google/devtools/deviceinfra/api/error/id/defined",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "@bazel_tools//tools/java/runfiles",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
@@ -50,7 +49,6 @@ java_binary(
     srcs = ["StdoutStderrPrinter.java"],
     main_class = "com.google.devtools.deviceinfra.shared.util.command.StdoutStderrPrinter",
     visibility = [
-        "//javatests/com/google/devtools/mobileharness/shared/util/command:__subpackages__",
     ],
 )
 

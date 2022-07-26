@@ -22,3 +22,12 @@ bzl_library(
     ],
     visibility = ["//visibility:public"],
 )
+
+java_library(
+    name = "truth",
+    visibility = ["//visibility:public"],
+    exports = [
+        "@maven//:com_google_truth_extensions_truth_java8_extension",
+        "@maven//:com_google_truth_truth",
+    ],
+)

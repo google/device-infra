@@ -22,9 +22,9 @@ import static com.google.common.truth.Truth8.assertThat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.time.TimeSource;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.function.Consumer;
@@ -42,7 +42,7 @@ public class CommandTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
 
-  private static final Instant INSTANT = TimeSource.system().now();
+  private static final Instant INSTANT = Clock.systemUTC().instant();
 
   @SuppressWarnings("DoNotMockAutoValue")
   @Mock

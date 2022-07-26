@@ -17,11 +17,11 @@
 package com.google.devtools.deviceinfra.shared.util.command;
 
 import com.google.common.annotations.Beta;
-import com.google.common.time.TimeSource;
 import com.google.devtools.deviceinfra.api.error.id.defined.BasicErrorId;
 import com.google.devtools.deviceinfra.shared.util.command.io.LineCollector;
 import java.io.OutputStream;
 import java.io.Writer;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.TimeoutException;
@@ -108,28 +108,28 @@ public class CommandProcess {
    *     completed
    */
   public CommandResult await(Duration timeout) throws CommandException, InterruptedException {
-    Instant deadline = TimeSource.system().now().plus(timeout);
+    Instant deadline = Clock.systemUTC().instant().plus(timeout);
     try {
       int exitCode =
           impl.backendProcess()
-              .await(Duration.between(TimeSource.system().now(), deadline))
+              .await(Duration.between(Clock.systemUTC().instant(), deadline))
               .exitCode();
       String stdout =
           impl.stdoutCollector()
-              .waitForAllLines(Duration.between(TimeSource.system().now(), deadline));
+              .waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
       String stderr =
           impl.stderrCollector()
-              .waitForAllLines(Duration.between(TimeSource.system().now(), deadline));
+              .waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
       return getResult(stdout, stderr, exitCode, /*backendFailureException=*/ null);
     } catch (
         com.google.devtools.deviceinfra.shared.util.command.backend.CommandFailureException e) {
       int exitCode = e.result().exitCode();
       String stdout =
           impl.stdoutCollector()
-              .waitForAllLines(Duration.between(TimeSource.system().now(), deadline));
+              .waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
       String stderr =
           impl.stderrCollector()
-              .waitForAllLines(Duration.between(TimeSource.system().now(), deadline));
+              .waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
       return getResult(stdout, stderr, exitCode, e);
     } catch (TimeoutException e) {
       throw new CommandException(

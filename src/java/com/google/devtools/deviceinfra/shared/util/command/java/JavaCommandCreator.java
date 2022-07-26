@@ -24,23 +24,16 @@ import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
-/**
- * Utility class for creating Java command, supporting various Java invocation forms.
- *
- * @see <a href="http://go/using-google3-launcher">Google3 Java Launcher</a>
- */
+/** Utility class for creating Java command, supporting various Java invocation forms. */
 @AutoValue
 public abstract class JavaCommandCreator {
 
   /**
    * Creates a {@link JavaCommandCreator}.
    *
-   * @param useStandardInvocationForm if {@code true}, use the <a
-   *     href="http://go/using-google3-launcher#standard-invocation-form">standard Java invocation
-   *     form</a> to create a Java command. If {@code false}, use the <a
-   *     href="http://go/using-google3-launcher#run-without-java">direct Java invocation</a>
-   *     instead.
-   * @param javaLauncherPath must be present if {@code useStandardInvocationForm} is {@code true}.
+   * @param useStandardInvocationForm it should be always {@code false} for external usage.
+   * @param javaLauncherPath must be present if {@code useStandardInvocationForm} is {@code
+  true}.
    *     For example, "{@code java}" or "{@code /usr/local/buildtools/java/jdk/bin/java}".
    */
   public static JavaCommandCreator of(

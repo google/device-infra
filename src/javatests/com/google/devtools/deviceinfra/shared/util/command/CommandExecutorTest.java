@@ -35,17 +35,16 @@ import static org.mockito.Mockito.verify;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.time.TimeSource;
-import com.google.common.util.PathUtil;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.deviceinfra.api.error.id.defined.BasicErrorId;
+import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 
-import com.google.testing.util.TestUtil;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -67,19 +66,13 @@ import org.mockito.junit.MockitoRule;
 public class CommandExecutorTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static final String TEST_SH =
-      TestUtil.getRunfilesDir()
-          + "/google3/third_party/deviceinfra/src/javatests/com/google/devtools/deviceinfra/"
-          + "shared/util/command/testdata/test.sh";
+  private static final String TEST_DATA_ROOT_PATH =
+      "com_google_deviceinfra/src/javatests/com/google/devtools/deviceinfra/";
+  private static final String TEST_SH = getRunfilesLocation("shared/util/command/testdata/test.sh");
   private static final String UNKILLABLE_SH =
-      TestUtil.getRunfilesDir()
-          + "/google3/third_party/deviceinfra/src/javatests/com/google/devtools/deviceinfra/"
-          + "shared/util/command/testdata/unkillable.sh";
+      getRunfilesLocation("shared/util/command/testdata/unkillable.sh");
   private static final String STDOUT_STDERR_PRINTER =
-      TestUtil.getRunfilesDir()
-          + "/google3/third_party/deviceinfra/src/javatests/com/google/devtools/deviceinfra/"
-          + "shared/util/command/stdout_stderr_printer";
+      getRunfilesLocation("shared/util/command/stdout_stderr_printer");
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
@@ -103,7 +96,7 @@ public class CommandExecutorTest {
 
   @Test
   public void run_input() throws CommandException, InterruptedException {
-    assertThat(executor.run(Command.of("/bin/sh", "-c", "read A; echo $A").inputLn("Y")))
+    assertThat(executor.run(Command.of("/bin/bash", "-c", "read A; echo $A").inputLn("Y")))
         .isEqualTo("Y\n");
   }
 
@@ -164,7 +157,7 @@ public class CommandExecutorTest {
       throws CommandException, InterruptedException {
     assertThat(
             executor.run(
-                Command.of("/bin/sh", "-c", "echo Hello; echo Bye")
+                Command.of("/bin/bash", "-c", "echo Hello; echo Bye")
                     .successStartCondition(
                         line -> {
                           throw new IllegalArgumentException();
@@ -205,7 +198,7 @@ public class CommandExecutorTest {
 
     assertThat(
             executor.run(
-                Command.of("/bin/sh", "-c", "echo Hello; echo Bye").onStdout(lineCallback)))
+                Command.of("/bin/bash", "-c", "echo Hello; echo Bye").onStdout(lineCallback)))
         .isEqualTo("Hello\nBye\n");
 
     verify(lineCallback).onLine(anyString());
@@ -217,7 +210,7 @@ public class CommandExecutorTest {
             executor
                 .exec(
                     Command.of(
-                            "/bin/sh",
+                            "/bin/bash",
                             "-c",
                             "echo 0; for i in {1..5}; do read A; echo ${A}; done; "
                                 + "read A; echo ${A} >&2")
@@ -239,7 +232,7 @@ public class CommandExecutorTest {
 
     assertThat(
             executor.run(
-                Command.of("/bin/sh", "-c", "echo Hello; echo Bye").onStdout(does(lineConsumer))))
+                Command.of("/bin/bash", "-c", "echo Hello; echo Bye").onStdout(does(lineConsumer))))
         .isEqualTo("Hello\nBye\n");
 
     verify(lineConsumer).accept("Hello");
@@ -269,9 +262,7 @@ public class CommandExecutorTest {
                                 executor
                                     .asyncRun(
                                         Command.of(
-                                            "ls",
-                                            "file_not_exist_"
-                                                + TimeSource.system().now().toEpochMilli()))
+                                            "ls", "file_not_exist_" + Clock.systemUTC().millis()))
                                     .get())
                         .getCause())
                 .result()
@@ -285,7 +276,7 @@ public class CommandExecutorTest {
 
     ListenableFuture<String> resultFuture =
         executor.asyncRun(
-            Command.of("/bin/sh", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
+            Command.of("/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
 
     Thread.sleep(2_000L);
 
@@ -293,7 +284,7 @@ public class CommandExecutorTest {
 
     Thread.sleep(3_000L);
 
-    assertThat(executor.run(Command.of("/bin/sh", "-c", "cat " + fileName))).isEqualTo("Hello\n");
+    assertThat(executor.run(Command.of("/bin/bash", "-c", "cat " + fileName))).isEqualTo("Hello\n");
   }
 
   @Test
@@ -302,7 +293,7 @@ public class CommandExecutorTest {
 
     ListenableFuture<String> resultFuture =
         executor.asyncRun(
-            Command.of("/bin/sh", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
+            Command.of("/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
 
     Thread.sleep(2_000L);
 
@@ -312,7 +303,7 @@ public class CommandExecutorTest {
 
     assertThat(
             executor
-                .exec(Command.of("/bin/sh", "-c", "cat " + fileName).successExitCodes(1))
+                .exec(Command.of("/bin/bash", "-c", "cat " + fileName).successExitCodes(1))
                 .stderr())
         .contains("No such file or directory");
   }
@@ -324,9 +315,7 @@ public class CommandExecutorTest {
                     CommandFailureException.class,
                     () ->
                         executor.exec(
-                            Command.of(
-                                "ls",
-                                "file_not_exist_" + TimeSource.system().now().toEpochMilli())))
+                            Command.of("ls", "file_not_exist_" + Clock.systemUTC().millis())))
                 .result()
                 .stderr())
         .contains("No such file or directory");
@@ -381,7 +370,7 @@ public class CommandExecutorTest {
   @Test
   public void exec_stdoutCallback_does() throws CommandException, InterruptedException {
     executor.exec(
-        Command.of("/bin/sh", "-c", "echo line0; echo line1").onStdout(does(lineConsumer)));
+        Command.of("/bin/bash", "-c", "echo line0; echo line1").onStdout(does(lineConsumer)));
 
     verify(lineConsumer).accept("line0");
     verify(lineConsumer).accept("line1");
@@ -398,7 +387,7 @@ public class CommandExecutorTest {
         .accept(anyString());
 
     executor.exec(
-        Command.of("/bin/sh", "-c", "echo line0; echo line1").onStdout(does(lineConsumer)));
+        Command.of("/bin/bash", "-c", "echo line0; echo line1").onStdout(does(lineConsumer)));
 
     verify(lineConsumer).accept("line0");
     verify(lineConsumer).accept("line1");
@@ -409,7 +398,7 @@ public class CommandExecutorTest {
     assertThat(
             executor
                 .exec(
-                    Command.of("/bin/sh", "-c", "echo line0 >&2; echo line1 >&2")
+                    Command.of("/bin/bash", "-c", "echo line0 >&2; echo line1 >&2")
                         .onStderr(does(lineConsumer)))
                 .stderr())
         .isEqualTo("line0\nline1\n");
@@ -438,7 +427,7 @@ public class CommandExecutorTest {
         .accept(anyString());
 
     executor.exec(
-        Command.of("/bin/sh", "-c", "echo line0 >&2; echo line1 >&2").onStderr(does(lineConsumer)));
+        Command.of("/bin/bash", "-c", "echo line0 >&2; echo line1 >&2").onStderr(does(lineConsumer)));
 
     verify(lineConsumer).accept("line0");
     verify(lineConsumer).accept("line1");
@@ -497,11 +486,11 @@ public class CommandExecutorTest {
         () ->
             executor.exec(
                 Command.of(
-                    "/bin/sh", "-c", "echo Hello > " + fileName + "; sleep 8s; rm " + fileName)));
+                    "/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 8s; rm " + fileName)));
 
     Thread.sleep(10_000L);
 
-    assertThat(executor.run(Command.of("/bin/sh", "-c", "cat " + fileName))).isEqualTo("Hello\n");
+    assertThat(executor.run(Command.of("/bin/bash", "-c", "cat " + fileName))).isEqualTo("Hello\n");
   }
 
   @Test
@@ -588,7 +577,7 @@ public class CommandExecutorTest {
   @Test
   public void start_stdinStream() throws CommandException, IOException, InterruptedException {
     CommandProcess process =
-        executor.start(Command.of("/bin/sh", "-c", "read A; read B; echo $A $B"));
+        executor.start(Command.of("/bin/bash", "-c", "read A; read B; echo $A $B"));
     Writer writer =
         new BufferedWriter(new OutputStreamWriter(process.stdinStream(), StandardCharsets.UTF_8));
     writer.write("hello\n");
@@ -600,7 +589,7 @@ public class CommandExecutorTest {
   @Test
   public void start_stdinWriter() throws CommandException, IOException, InterruptedException {
     CommandProcess process =
-        executor.start(Command.of("/bin/sh", "-c", "read A; read B; echo $A $B"));
+        executor.start(Command.of("/bin/bash", "-c", "read A; read B; echo $A $B"));
     Writer writer = process.stdinWriter();
     writer.write("hello\n");
     writer.write("goodbye\n");
@@ -620,7 +609,7 @@ public class CommandExecutorTest {
   public void start_stdoutCallback_does() throws CommandException, InterruptedException {
     CommandProcess process =
         executor.start(
-            Command.of("/bin/sh", "-c", "echo line0 >&2; echo line1 >&2")
+            Command.of("/bin/bash", "-c", "echo line0 >&2; echo line1 >&2")
                 .redirectStderr(true)
                 .onStdout(does(lineConsumer)));
 
@@ -634,7 +623,7 @@ public class CommandExecutorTest {
   public void start_await_timeout()
       throws CommandStartException, InterruptedException, CommandFailureException,
           CommandTimeoutException {
-    CommandProcess process = executor.start(Command.of("/bin/sh", "-c", "sleep 3s; echo Hello"));
+    CommandProcess process = executor.start(Command.of("/bin/bash", "-c", "sleep 3s; echo Hello"));
     assertThat(
             assertThrows(CommandException.class, () -> process.await(Duration.ofMillis(100L)))
                 .getErrorId())
@@ -666,9 +655,7 @@ public class CommandExecutorTest {
                                 executor
                                     .asyncExec(
                                         Command.of(
-                                            "ls",
-                                            "file_not_exist_"
-                                                + TimeSource.system().now().toEpochMilli()))
+                                            "ls", "file_not_exist_" + Clock.systemUTC().millis()))
                                     .get())
                         .getCause())
                 .result()
@@ -682,7 +669,7 @@ public class CommandExecutorTest {
 
     ListenableFuture<CommandResult> resultFuture =
         executor.asyncExec(
-            Command.of("/bin/sh", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
+            Command.of("/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
 
     Thread.sleep(2_000L);
 
@@ -690,7 +677,7 @@ public class CommandExecutorTest {
 
     Thread.sleep(3_000L);
 
-    assertThat(executor.run(Command.of("/bin/sh", "-c", "cat " + fileName))).isEqualTo("Hello\n");
+    assertThat(executor.run(Command.of("/bin/bash", "-c", "cat " + fileName))).isEqualTo("Hello\n");
   }
 
   @Test
@@ -699,7 +686,7 @@ public class CommandExecutorTest {
 
     ListenableFuture<CommandResult> resultFuture =
         executor.asyncExec(
-            Command.of("/bin/sh", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
+            Command.of("/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
 
     Thread.sleep(2_000L);
 
@@ -709,7 +696,7 @@ public class CommandExecutorTest {
 
     assertThat(
             executor
-                .exec(Command.of("/bin/sh", "-c", "cat " + fileName).successExitCodes(1))
+                .exec(Command.of("/bin/bash", "-c", "cat " + fileName).successExitCodes(1))
                 .stderr())
         .contains("No such file or directory");
   }
@@ -745,8 +732,18 @@ public class CommandExecutorTest {
   private List<String> getUnkillableProcesses() throws CommandException, InterruptedException {
     return Splitter.onPattern("\r\n|\n|\r")
         .omitEmptyStrings()
-        .splitToStream(executor.run(Command.of("/bin/sh", "-c", "ps -ef | grep " + UNKILLABLE_SH)))
+        .splitToStream(executor.run(Command.of("/bin/bash", "-c", "ps -ef | grep " + UNKILLABLE_SH)))
         .filter(line -> !line.contains("grep " + UNKILLABLE_SH))
         .collect(Collectors.toList());
+  }
+
+  @SuppressWarnings("UnnecessarilyFullyQualified")
+  private static String getRunfilesLocation(String suffix) {
+     try {
+      return com.google.devtools.build.runfiles.Runfiles.create().rlocation(
+          TEST_DATA_ROOT_PATH + suffix);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
   }
 }

@@ -18,8 +18,8 @@ package com.google.devtools.deviceinfra.shared.util.command.history;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
-import com.google.common.time.TimeSource;
 import com.google.devtools.deviceinfra.shared.util.command.CommandResult;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -38,7 +38,7 @@ public abstract class CommandRecord {
         ImmutableList.copyOf(
             Arrays.asList(stackTrace).subList(Math.min(3, stackTrace.length), stackTrace.length)),
         Thread.currentThread().getName(),
-        TimeSource.system().now(),
+        Clock.systemUTC().instant(),
         Optional.empty(),
         Optional.empty());
   }
@@ -51,7 +51,7 @@ public abstract class CommandRecord {
         threadName(),
         startTime(),
         Optional.of(result),
-        Optional.of(TimeSource.system().now()));
+        Optional.of(Clock.systemUTC().instant()));
   }
 
   /** Returns the record id */

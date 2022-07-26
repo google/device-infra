@@ -19,7 +19,7 @@ package com.google.devtools.deviceinfra.shared.util.command;
 import static com.google.common.base.Preconditions.checkState;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.time.TimeSource;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Optional;
@@ -73,7 +73,7 @@ public abstract class Timeout {
     Duration remainingTime = null;
     Optional<Instant> deadline = getDeadline();
     if (deadline.isPresent()) {
-      remainingTime = Duration.between(TimeSource.system().now(), deadline.get());
+      remainingTime = Duration.between(Clock.systemUTC().instant(), deadline.get());
     }
     Optional<Duration> period = getPeriod();
     if (period.isPresent()
