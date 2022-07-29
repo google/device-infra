@@ -327,6 +327,14 @@ public abstract class Command {
    *
    * <p>The command will be killed if it <a href="#timeout">timeouts</a> while running.
    *
+   * <p><b>WARNING</b>: When a command timeouts, the command executor kills it by calling {@link
+   * Process#destroy()} of the process of the command, which sends {@code SIGTERM} to the process.
+   * {@link CommandExecutor#run(Command)}, {@link CommandExecutor#exec(Command)} and {@link
+   * CommandProcess#await()} of the command will return <b>AFTER</b> the process handles the {@code
+   * SIGTERM} signal and <b>EXITS</b>. It means if the process does not handle the signal or does
+   * not handle the signal in time, these methods will <b>NOT</b> return, even when the command
+   * timeouts.
+   *
    * <p><b>NOTE</b>: If a command timeouts, getting its result by {@link
    * CommandExecutor#run(Command)}, {@link CommandExecutor#exec(Command)} and {@link
    * CommandProcess#await()} will always throw {@link CommandTimeoutException} no matter if the
@@ -354,7 +362,8 @@ public abstract class Command {
    * Returns a command that behaves equivalently to this command, but with the specified timeout in
    * place of the current timeout.
    *
-   * <p>The command will be killed after the deadline.
+   * <p>The command will be killed after the deadline. (See {@link #timeout(Timeout)} for the
+   * <b>WARNING</b> of the kill behavior.)
    *
    * <p>Short for {@linkplain #timeout(Timeout) timeout}{@code (Timeout.deadline(deadline))}.
    *
@@ -378,7 +387,8 @@ public abstract class Command {
    * Returns a command that behaves equivalently to this command, but with the specified timeout in
    * place of the current timeout.
    *
-   * <p>The command will be killed after it has been running for the specified duration.
+   * <p>The command will be killed after it has been running for the specified duration. (See {@link
+   * #timeout(Timeout)} for the <b>WARNING</b> of the kill behavior.)
    *
    * <p>Short for {@linkplain #timeout(Timeout) timeout}{@code (Timeout.fixed(timeout))}.
    *
@@ -404,7 +414,8 @@ public abstract class Command {
    *
    * <p>The command will be killed if it does not "start successfully" for the specified duration
    * since the command starts. By default, the condition of a successfully starting is there is any
-   * line from stdout/stderr.
+   * line from stdout/stderr. (See {@link #timeout(Timeout)} for the <b>WARNING</b> of the kill
+   * behavior.)
    *
    * <p><b>NOTE</b>: If a command timeouts, getting its result by {@link
    * CommandExecutor#run(Command)}, {@link CommandExecutor#exec(Command)} and {@link
@@ -437,7 +448,7 @@ public abstract class Command {
    *
    * <p>The command will be killed if it does not "start successfully" before the specified
    * deadline. By default, the condition of a successfully starting is there is any line from
-   * stdout/stderr.
+   * stdout/stderr. (See {@link #timeout(Timeout)} for the <b>WARNING</b> of the kill behavior.)
    *
    * <p>Short for {@linkplain #startTimeout(Timeout) startTimeout}{@code
    * (Timeout.deadline(startDeadline))}.
@@ -466,7 +477,8 @@ public abstract class Command {
    *
    * <p>The command will be killed if it does not "start successfully" for the specified duration
    * since the command starts. By default, the condition of a successfully starting is there is any
-   * line from stdout/stderr.
+   * line from stdout/stderr. (See {@link #timeout(Timeout)} for the <b>WARNING</b> of the kill
+   * behavior.)
    *
    * <p>Short for {@linkplain #startTimeout(Timeout) startTimeout}{@code
    * (Timeout.fixed(startTimeout))}.
