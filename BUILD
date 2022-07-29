@@ -35,8 +35,6 @@ package_group(
     name = "deviceinfra_pkg",
     packages = [
         "//...",
-        "//src/java/com/google/devtools/deviceinfra/...",
-        "//src/javatests/com/google/devtools/deviceinfra/...",
     ],
 )
 
