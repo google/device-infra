@@ -20,13 +20,4 @@ package(
 java_library(
     name = "error_code",
     srcs = ["ErrorCode.java"],
-    constraints = [
-        "gwt",
-        "public",
-    ],
-    tags = [
-        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
-        "avoid_dep",
-    ],
-    deps = ["@maven//:com_google_guava_guava:annotations-gwt"],
 )

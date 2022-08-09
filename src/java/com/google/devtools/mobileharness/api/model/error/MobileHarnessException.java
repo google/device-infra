@@ -24,7 +24,6 @@ import javax.annotation.Nullable;
 /**
  * Base class of all Mobile Harness exceptions.
  *
- * @see <a href="http://go/mh-exception">MH Exception</a> for more detail and guidance
  */
 public class MobileHarnessException
     extends com.google.wireless.qa.mobileharness.shared.MobileHarnessException
@@ -102,9 +101,10 @@ public class MobileHarnessException
         return ErrorType.USERS_FAILURE;
       case UNCLASSIFIED:
       case UNDETERMINED:
-      default:
-        return ErrorType.UNCLASSIFIED_ERROR;
+      case UNRECOGNIZED:
+        break;
     }
+    return ErrorType.UNCLASSIFIED_ERROR;
   }
 
   /** Converts an old {@link MobileHarnessException} to a new {@link DeviceInfraException}. */

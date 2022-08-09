@@ -23,7 +23,6 @@ import javax.annotation.Nullable;
 /**
  * Utilities for {@link MobileHarnessException}.
  *
- * @see <a href="http://go/mh-exception">MH Exception</a> for more detail and guidance
  */
 public class MobileHarnessExceptions {
 

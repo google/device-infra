@@ -16,9 +16,6 @@
 
 package com.google.wireless.qa.mobileharness.shared;
 
-import com.google.common.annotations.DefaultConstructorForGwt;
-import com.google.common.annotations.GwtCompatible;
-import com.google.gwt.user.client.rpc.IsSerializable;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import javax.annotation.Nullable;
 
@@ -26,15 +23,14 @@ import javax.annotation.Nullable;
  * Deprecated. Use {@link com.google.devtools.mobileharness.api.model.error.MobileHarnessException}
  * or {@link com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions} instead.
  */
-@GwtCompatible
-public class MobileHarnessException extends Exception implements IsSerializable {
+  public class MobileHarnessException extends Exception {
 
   /**
    * Deprecated. Use {@link com.google.devtools.mobileharness.api.model.proto.Error.ErrorType}
    * instead.
    */
   @Deprecated
-  public enum ErrorType implements IsSerializable {
+    public enum ErrorType {
     // Default type, job/test result is very likely ERROR.
     UNCLASSIFIED_ERROR,
     // Errors caused by MH infrastructure, job/test result is very likely INFRA_ERROR.
@@ -127,7 +123,6 @@ public class MobileHarnessException extends Exception implements IsSerializable 
     this(errorCode, ErrorType.UNCLASSIFIED_ERROR, errorDetail, cause);
   }
 
-  @DefaultConstructorForGwt
   @SuppressWarnings("unused")
   @Deprecated
   private MobileHarnessException() {
@@ -177,7 +172,6 @@ public class MobileHarnessException extends Exception implements IsSerializable 
    * jcg/devtools/mobileharness/api/model/error. Will use the new ErrorId to replace the ErrorCode
    * enums. Before fully migrated, please use {@link #getErrorCode()}, {@link #getErrorName()},
    * {@link #getErrorType()} when you are still using this old MobileHarnessException, and avoid
-   * using this {@link #getErrorCodeEnum()} which is impossible to adapt to the new code/name/type
    * of the new ErrorIds.
    */
   @Deprecated

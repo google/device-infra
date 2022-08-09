@@ -18,22 +18,17 @@ java_library(
     srcs = glob(
         ["*.java"],
     ),
-    tags = [
-        "alt_dep=//java/com/google/devtools/mobileharness/api/model/error",
-        "avoid_dep",
-    ],
     visibility = [
         "//:deviceinfra_api_users",
-        "//java/com/google/devtools/mobileharness/api/model/error:error_user",
     ],
     deps = [
-        "//devtools/common/metrics/stability/model/proto:error_java_proto",
-        "//java/com/google/devtools/common/metrics/stability/model:error_id",
-        "//java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
-        "//java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
+        "//src/java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
         "//src/java/com/google/devtools/deviceinfra/api/error:exception",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],

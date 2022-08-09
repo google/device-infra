@@ -27,6 +27,5 @@ import com.google.devtools.deviceinfra.api.error.id.DeviceInfraErrorId;
  * @see BasicErrorId
  * @see InfraErrorId
  * @see ExtErrorId
- * @see <a href="http://go/mh-exception">MH Exception</a> for more detail and guidance
  */
 public interface ErrorId extends DeviceInfraErrorId {}

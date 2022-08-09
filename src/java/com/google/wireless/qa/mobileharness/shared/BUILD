@@ -20,17 +20,8 @@ package(
 java_library(
     name = "exception",
     srcs = ["MobileHarnessException.java"],
-    constraints = [
-        "gwt",
-        "public",
-    ],
-    tags = [
-        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared:exception",
-        "avoid_dep",
-    ],
     deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
-        "//third_party/java/gwt:gwt-dto-serializers",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
