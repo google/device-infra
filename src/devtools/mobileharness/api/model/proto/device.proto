@@ -1,0 +1,91 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.api.model;
+
+import "src/devtools/mobileharness/api/model/proto/lab.proto";
+
+option java_package = "com.google.devtools.mobileharness.api.model.proto";
+option java_outer_classname = "Device";
+option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
+
+// Status of a device during its life cycle.
+enum DeviceStatus {
+  INIT = 0;
+  IDLE = 1;
+  BUSY = 2;
+  DYING = 3;
+  PREPPING = 4;
+  // Used in Master only: just finished a test and is not ready for a new one.
+  DIRTY = 5;
+  // When all devices are in LAMEDUCK status, lab server is ready to shutdown.
+  LAMEDUCK = 6;
+  // Used in Master only:
+  // If the Lab Server doesn't send any heartbeat of a device to the Master for
+  // >= 2 minutes, the Master will mark the device as MISSING.
+  // If no heartbeat for >= 4 weeks, the device will be actually removed from
+  // the Master DB.
+  MISSING = 7;
+}
+
+// Status of a device, with the timestamp of the status.
+message DeviceStatusWithTimestamp {
+  DeviceStatus status = 1;  // required
+  int64 timestamp_ms = 2;   // required
+}
+
+message DeviceDimension {
+  string name = 1;   // Required
+  string value = 2;  // Required
+}
+
+message DeviceCompositeDimension {
+  repeated DeviceDimension supported_dimension = 1;
+  // See go/mh-required-dimensions.
+  repeated DeviceDimension required_dimension = 2;
+}
+
+// Device features.
+message DeviceFeature {
+  repeated string owner = 2;
+  repeated string type = 3;
+  repeated string driver = 4;
+  repeated string decorator = 5;
+  DeviceCompositeDimension composite_dimension = 6;
+  // Executors of the device. See more detail about the
+  // executor(go/mh-executor).
+  repeated string executor = 7;
+}
+
+// An equipvalant to
+// j/c/g/devtools/mobileharness/api/model/lab/DeviceLocator.java
+message DeviceLocator {
+  string id = 1;                                        // Required
+  .mobileharness.api.model.LabLocator lab_locator = 2;  // Required
+}
+
+// The device operation after the test.
+enum PostTestDeviceOp {
+  NONE = 0;
+  REBOOT = 1;
+}
+
+enum DeviceLogType {
+  DEVICE_LOG_TYPE_UNSPECIFIED = 0;
+  DEVICE_LOG_TYPE_ANDROID_LOGCAT = 1;
+}

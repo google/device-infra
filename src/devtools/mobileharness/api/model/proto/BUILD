@@ -21,6 +21,24 @@ licenses(["notice"])
 
 exports_files(["error.proto"])
 
+CC_API_VERSION = 2
+
+proto_library(
+    name = "device_proto",
+    srcs = ["device.proto"],
+    cc_api_version = CC_API_VERSION,
+    deps = [":lab_proto"],
+)
+
+java_proto_library(
+    name = "device_java_proto",
+    tags = [
+        "alt_dep=//devtools/mobileharness/api/model/proto:device_java_proto",
+        "avoid_dep",
+    ],
+    deps = [":device_proto"],
+)
+
 proto_library(
     name = "error_proto",
     srcs = ["error.proto"],
@@ -30,8 +48,57 @@ proto_library(
 java_proto_library(
     name = "error_java_proto",
     tags = [
-        "alt_dep=//devtools/mobileharness/api/model/error",
+        "alt_dep=//devtools/mobileharness/api/model/proto:error_java_proto",
         "avoid_dep",
     ],
     deps = [":error_proto"],
+)
+
+proto_library(
+    name = "job_proto",
+    srcs = ["job.proto"],
+    cc_api_version = CC_API_VERSION,
+)
+
+java_proto_library(
+    name = "job_java_proto",
+    tags = [
+        "alt_dep=//devtools/mobileharness/api/model/proto:job_java_proto",
+        "avoid_dep",
+    ],
+    deps = [":job_proto"],
+)
+
+proto_library(
+    name = "lab_proto",
+    srcs = ["lab.proto"],
+    cc_api_version = CC_API_VERSION,
+    deps = [
+        "//java/com/google/apps/jspb:jspb_proto",
+    ],
+)
+
+java_proto_library(
+    name = "lab_java_proto",
+    tags = [
+        "alt_dep=//devtools/mobileharness/api/model/proto:lab_java_proto",
+        "avoid_dep",
+    ],
+    deps = [":lab_proto"],
+)
+
+proto_library(
+    name = "test_proto",
+    srcs = ["test.proto"],
+    cc_api_version = CC_API_VERSION,
+    deps = [":job_proto"],
+)
+
+java_proto_library(
+    name = "test_java_proto",
+    tags = [
+        "alt_dep=//devtools/mobileharness/api/model/proto:test_java_proto",
+        "avoid_dep",
+    ],
+    deps = [":test_proto"],
 )

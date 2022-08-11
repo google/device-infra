@@ -1,0 +1,75 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.api.model;
+
+import "src/devtools/mobileharness/api/model/proto/job.proto";
+
+option java_package = "com.google.devtools.mobileharness.api.model.proto";
+option java_outer_classname = "Test";
+
+// Result of a single test.
+enum TestResult {
+  // Test not finished.
+  UNKNOWN = 0;
+  // Test passed.
+  PASS = 1;
+  // Test finished but failed. It is usually caused by the user config,
+  // problematic test cases, or real bugs of their apps under test. MH users are
+  // responsive to track/fix the failure.
+  FAIL = 2;
+  // Unclassified error, can be caused by user config/tests/AUT, MH infra, or
+  // the tools that MH are depending on.
+  ERROR = 3;
+  // Test timeout.
+  TIMEOUT = 4;
+  // Test is marked as skipped.
+  SKIP = 7;
+
+  // The following types are deprecated and shouldn't be used. See
+  // go/mh-test-result for more detail.
+  ABORT = 5 [deprecated = true];
+  INFRA_ERROR = 6 [deprecated = true];
+  ALLOC_FAIL = 8 [deprecated = true];
+  ALLOC_ERROR = 9 [deprecated = true];
+}
+
+// Status of a test during its life cycle.
+enum TestStatus {
+  // The test is new and not started.
+  NEW = 0;
+  // The test is assigned with a device but the test hasn't started running.
+  ASSIGNED = 1;
+  // The test is running.
+  RUNNING = 2;
+  // The test is finished.
+  DONE = 3;
+  // The test is suspended due to quota issues.
+  SUSPENDED = 4;
+}
+
+message TestIdName {
+  string id = 1;    // Required
+  string name = 2;  // Required
+}
+
+message TestLocator {
+  string id = 1;  // Required
+  string name = 2;
+  .mobileharness.api.model.JobLocator job_locator = 3;  // Required
+}

@@ -1,0 +1,52 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.api.model;
+
+import "java/com/google/apps/jspb/jspb.proto";
+
+option java_package = "com.google.devtools.mobileharness.api.model.proto";
+option java_outer_classname = "Lab";
+option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
+
+// Port types of a lab.
+enum PortType {
+  LAB_SERVER_RPC = 0;     // Lab server rpc port.
+  LAB_SERVER_SOCKET = 1;  // Lab server socket port.
+  LAB_SERVER_HTTP = 4;    // Lab server http port.
+}
+
+// Lab port type and number.
+message LabPort {
+  PortType type = 1;  // Required.
+  int32 num = 2;      // Required.
+}
+
+// Lab address and port information.
+message LabLocator {
+  option (jspb.generate_xid) = true;
+
+  string ip = 1;              // Required.
+  string host_name = 2;       // Required.
+  repeated LabPort port = 3;  // Lab port information.
+}
+
+// Lab Server setting.
+message LabServerSetting {
+  repeated LabPort port = 1;  // Lab port information.
+}
