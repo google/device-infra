@@ -13,8 +13,24 @@
 # limitations under the License.
 #
 
+# Description:
+#   Shared constants used by different parts of MobileHarness.
+
 package(
     default_visibility = ["//visibility:public"],
+)
+
+java_library(
+    name = "property",
+    srcs = ["PropertyName.java"],
+    constraints = [
+        "gwt",
+        "public",
+    ],
+    tags = [
+        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "avoid_dep",
+    ],
 )
 
 java_library(
