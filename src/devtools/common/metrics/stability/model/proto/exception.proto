@@ -60,3 +60,38 @@ message StackTraceElement {
   string file_name = 3;
   int32 line_number = 4;
 }
+
+// Non-recursive version of ExceptionDetail for Spanner or any other use cases
+// that doesn't allow recursive definition of proto. Note the suppressed errors
+// are dropped
+message FlattenedExceptionDetail {
+  // Required. It does not contain stack traces.
+  ExceptionSummary summary = 1;
+
+  // The cause chain. They don't contain stack traces.
+  repeated ExceptionSummary cause = 2;
+
+  // Serialized stack trace which contains the cause & suppressed exception
+  // info. Required for top level exception. Empty for cause/suppressed
+  // exceptions.
+  optional string complete_stack_trace = 3;
+
+  // Stack track of the error names, which contains the error names of the
+  // cause. Error names are joined with '|'. Such as:
+  // "CLIENT_TR_ALLOC_ERROR|GRPC_ERROR|COMMAND_ERROR".
+  optional string error_name_stack_trace = 4;
+
+  // Stack track of the error codes, which contains the error codes of the
+  // cause. Error names are joined with '|'. Such as "2354|1254|789".
+  optional string error_code_stack_trace = 5;
+
+  // SLO facing critical Error ID. Used for calculating the SLO of the current
+  // tool/system. It is the same as the first non-(UNCLASSIFIED/UNDETERMINED)
+  // Error ID from the summary to all causes in the cause chain, if any.
+  // Otherwise it is the same as the summary's Error ID.
+  optional stability.model.ErrorId critical_error_id = 6;
+
+  // User facing critical Error Id. Check go/critical_error_id_calc for detail
+  // algorithm.
+  optional stability.model.ErrorId user_facing_critical_error_id = 7;
+}
