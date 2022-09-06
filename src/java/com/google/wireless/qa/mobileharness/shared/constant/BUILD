@@ -37,3 +37,13 @@ java_library(
     name = "error_code",
     srcs = ["ErrorCode.java"],
 )
+
+java_library(
+    name = "exit_code",
+    srcs = ["ExitCode.java"],
+    tags = [
+        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/constant:exit_code",
+        "avoid_dep",
+    ],
+    deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/system/constant:exit_code"],
+)
