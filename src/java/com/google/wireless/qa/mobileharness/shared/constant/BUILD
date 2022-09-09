@@ -34,6 +34,19 @@ java_library(
 )
 
 java_library(
+    name = "dimension",
+    srcs = ["Dimension.java"],
+    constraints = [
+        "gwt",
+        "public",
+    ],
+    tags = [
+        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "avoid_dep",
+    ],
+)
+
+java_library(
     name = "error_code",
     srcs = ["ErrorCode.java"],
 )
