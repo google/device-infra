@@ -359,6 +359,13 @@ public interface PropertyName {
       TEST_SPECIFIC_TEST_ARGS,
     }
 
+    /** AndroidInstrumentation driver property name constants. */
+    public enum AndroidInstrumentationGroup implements PropertyName {
+
+      /** The current instrumentation index. */
+      INSTRUMENTATION_INDEX
+    }
+
     /** AndroidSetPropDecorator property name constants. */
     public enum AndroidSetPropDecorator implements PropertyName {
 
