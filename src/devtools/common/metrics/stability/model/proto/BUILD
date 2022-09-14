@@ -14,8 +14,7 @@
 #
 
 DEFAULT_VISIBILITY = [
-    "//:deviceinfra_all_pkg",
-    "//:deviceinfra_metrics_pkg",
+    "//visibility:public",
 ]
 
 package(default_visibility = DEFAULT_VISIBILITY)
