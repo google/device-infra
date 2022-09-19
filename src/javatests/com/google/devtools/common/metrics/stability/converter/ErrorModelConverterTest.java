@@ -19,13 +19,16 @@ package com.google.devtools.common.metrics.stability.converter;
 import static com.google.common.truth.Truth.assertThat;
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto.ErrorId;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionClassType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionSummary;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.FlattenedExceptionDetail;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTrace;
 import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
 import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
@@ -255,5 +258,80 @@ public class ErrorModelConverterTest {
         .asList()
         .containsExactlyElementsIn(DEVICE_INFRA_EXCEPTION.getSuppressed()[0].getStackTrace())
         .inOrder();
+  }
+
+  @Test
+  public void getCriticalErrorId_fromSummary_success() {
+    ExceptionDetail.Builder exceptionDetail = DEVICE_INFRA_EXCEPTION_DETAIL.toBuilder();
+    exceptionDetail.getSummaryBuilder().getErrorIdBuilder().setType(ErrorType.INFRA_ISSUE);
+    assertThat(ErrorModelConverter.getCriticalErrorId(exceptionDetail.build()))
+        .isEqualTo(
+            ErrorId.newBuilder()
+                .setCode(4000001)
+                .setName("REFLECTION_LOAD_CLASS_ERROR")
+                .setType(ErrorType.INFRA_ISSUE)
+                .setNamespace(Namespace.MH)
+                .build());
+  }
+
+  @Test
+  public void getCriticalErrorId_fromFirstCause_success() {
+    ExceptionDetail.Builder exceptionDetail = DEVICE_INFRA_EXCEPTION_DETAIL.toBuilder();
+    exceptionDetail.getSummaryBuilder().getErrorIdBuilder().setType(ErrorType.UNCLASSIFIED);
+    exceptionDetail
+        .getCauseBuilder()
+        .getSummaryBuilder()
+        .getErrorIdBuilder()
+        .setType(ErrorType.INFRA_ISSUE);
+
+    assertThat(ErrorModelConverter.getCriticalErrorId(exceptionDetail.build()))
+        .isEqualTo(
+            ErrorId.newBuilder()
+                .setCode(4000002)
+                .setName("REFLECTION_LOAD_CLASS_TYPE_MISMATCH")
+                .setType(ErrorType.INFRA_ISSUE)
+                .setNamespace(Namespace.MH)
+                .build());
+  }
+
+  @Test
+  public void exceptionDetail_toFlattenedExceptionDetail_success() {
+    ExceptionDetail.Builder detail = DEVICE_INFRA_EXCEPTION_DETAIL.toBuilder();
+    detail.getCauseBuilder().setCause(DEVICE_INFRA_EXCEPTION_DETAIL);
+    detail.getCauseBuilder().getCauseBuilder().setCause(DEVICE_INFRA_EXCEPTION_DETAIL);
+
+    FlattenedExceptionDetail flattenedExceptionDetail =
+        ErrorModelConverter.toFlattenedExceptionDetail(detail.build());
+
+    int expectedCauseCount = 4;
+    ImmutableList.Builder<ExceptionSummary> expectedCauseList = ImmutableList.builder();
+    for (int i = 0; i < expectedCauseCount; ++i) {
+      ExceptionDetail cause = detail.getCause();
+      for (int j = 0; j < i; j++) {
+        cause = cause.getCause();
+      }
+      expectedCauseList.add(cause.toBuilder().getSummaryBuilder().clearStackTrace().build());
+    }
+    assertThat(flattenedExceptionDetail.getCauseCount()).isEqualTo(expectedCauseCount);
+    assertThat(flattenedExceptionDetail.getCauseList())
+        .containsExactlyElementsIn(expectedCauseList.build());
+    assertThat(flattenedExceptionDetail.getErrorNameStackTrace())
+        .isEqualTo(
+            Joiner.on('|')
+                .join(
+                    flattenedExceptionDetail.getSummary().getErrorId().getName(),
+                    flattenedExceptionDetail.getCause(0).getErrorId().getName(),
+                    flattenedExceptionDetail.getCause(1).getErrorId().getName(),
+                    flattenedExceptionDetail.getCause(2).getErrorId().getName(),
+                    flattenedExceptionDetail.getCause(3).getErrorId().getName()));
+    assertThat(flattenedExceptionDetail.getErrorCodeStackTrace())
+        .isEqualTo(
+            Joiner.on('|')
+                .join(
+                    flattenedExceptionDetail.getSummary().getErrorId().getCode(),
+                    flattenedExceptionDetail.getCause(0).getErrorId().getCode(),
+                    flattenedExceptionDetail.getCause(1).getErrorId().getCode(),
+                    flattenedExceptionDetail.getCause(2).getErrorId().getCode(),
+                    flattenedExceptionDetail.getCause(3).getErrorId().getCode()));
   }
 }

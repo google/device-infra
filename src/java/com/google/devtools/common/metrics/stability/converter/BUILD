@@ -46,6 +46,7 @@ java_library(
     deps = [
         "deserialized_exception",
         ":internal",
+        "//devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
         "@maven//:com_google_guava_guava",

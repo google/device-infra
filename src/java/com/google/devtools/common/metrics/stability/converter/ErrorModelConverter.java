@@ -17,16 +17,20 @@
 package com.google.devtools.common.metrics.stability.converter;
 
 import static com.google.common.base.Strings.nullToEmpty;
+import static java.util.Arrays.stream;
 
+import com.google.common.base.Throwables;
 import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto;
+import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionClassType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionSummary;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.FlattenedExceptionDetail;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTrace;
-import java.util.Arrays;
+import java.util.Optional;
 import java.util.stream.Stream;
 
 /**
@@ -99,7 +103,7 @@ public class ErrorModelConverter {
   }
 
   private static StackTrace getStackTrace(Throwable throwable) {
-    return toStackTraceProto(Arrays.stream(throwable.getStackTrace()));
+    return toStackTraceProto(stream(throwable.getStackTrace()));
   }
 
   public static StackTrace toStackTraceProto(Stream<StackTraceElement> stackTraceElements) {
@@ -139,6 +143,104 @@ public class ErrorModelConverter {
               element.getLineNumber());
     }
     throwable.setStackTrace(result);
+  }
+
+  /** Converts an {@link ExceptionDetail} to {@link FlattenedExceptionDetail}. */
+  public static FlattenedExceptionDetail toFlattenedExceptionDetail(
+      ExceptionDetail exceptionDetail) {
+    ErrorIdProto.ErrorId criticalErrorId = getCriticalErrorId(exceptionDetail);
+    ErrorIdProto.ErrorId userFacingCriticalErrorId =
+        getUserFacingCriticalError(exceptionDetail).getSummary().getErrorId();
+    ErrorIdProto.ErrorId errorId = exceptionDetail.getSummary().getErrorId();
+    FlattenedExceptionDetail.Builder flattenedExceptionDetail =
+        FlattenedExceptionDetail.newBuilder()
+            .setSummary(exceptionDetail.getSummary())
+            .setCompleteStackTrace(getCompleteStackTrace(exceptionDetail))
+            .setCriticalErrorId(criticalErrorId)
+            .setUserFacingCriticalErrorId(userFacingCriticalErrorId);
+    StringBuilder errorNameStackTrace = new StringBuilder(errorId.getName());
+    StringBuilder errorCodeStackTrace = new StringBuilder(String.valueOf(errorId.getCode()));
+    ExceptionDetail cause = exceptionDetail;
+    while (cause.hasCause()) {
+      cause = cause.getCause();
+      flattenedExceptionDetail.addCause(cause.getSummary().toBuilder().clearStackTrace());
+      errorNameStackTrace.append("|").append(cause.getSummary().getErrorId().getName());
+      errorCodeStackTrace.append("|").append(cause.getSummary().getErrorId().getCode());
+    }
+
+    return flattenedExceptionDetail
+        .setErrorNameStackTrace(errorNameStackTrace.toString())
+        .setErrorCodeStackTrace(errorCodeStackTrace.toString())
+        .build();
+  }
+
+  public static String getCompleteStackTrace(ExceptionDetail detail) {
+    return Throwables.getStackTraceAsString(toDeserializedException(detail));
+  }
+
+  /**
+   * Returns the first non-(UNCLASSIFIED/UNDETERMINED) error type from the summary to all causes in
+   * the cause chain, if any, or returns the summary's error type, as the aggregated error type of
+   * an exception detail.
+   */
+  public static ErrorIdProto.ErrorId getCriticalErrorId(ExceptionDetail detail) {
+    return getCriticalError(detail).getSummary().getErrorId();
+  }
+
+  // LINT.IfChange
+  /**
+   * Returns the first non-(UNCLASSIFIED/UNDETERMINED) error from the summary to all causes in the
+   * cause chain. If not exists, the return value is the same to the pass-in argument.
+   */
+  public static ExceptionDetail getCriticalError(ExceptionDetail detail) {
+    Optional<ErrorType> aggregatedErrorType;
+    ExceptionDetail current = detail;
+    while (true) {
+      aggregatedErrorType = getDeterminedErrorType(current.getSummary().getErrorId().getType());
+      if (aggregatedErrorType.isPresent() || !current.hasCause()) {
+        break;
+      }
+      current = current.getCause();
+    }
+    if (aggregatedErrorType.isEmpty()) {
+      current = detail;
+    }
+    return current;
+  }
+  // LINT.ThenChange(//depot/google3/java/com/google/devtools/mobileharness/shared/util/error/ErrorModelConverter.java)
+
+  // LINT.IfChange
+  /*
+   * Returns the left-most INFRA_ISSUE or CUSTOMER_ISSUE error id, otherwise the right-most
+   * non-(UNCLASSIFIED/UNDETERMINED) error id.
+   */
+  public static ExceptionDetail getUserFacingCriticalError(ExceptionDetail detail) {
+    ExceptionDetail current = detail;
+    ExceptionDetail prevDetermined = detail;
+    while (true) {
+      ErrorType currentType = current.getSummary().getErrorId().getType();
+      if (currentType == ErrorType.INFRA_ISSUE || currentType == ErrorType.CUSTOMER_ISSUE) {
+        return current;
+      }
+      if (!current.hasCause()) { // The tail cause
+        return isDeterminedErrorType(currentType) ? current : prevDetermined;
+      }
+      if (isDeterminedErrorType(currentType)) { // always keep the last determined errorid
+        prevDetermined = current;
+      }
+      current = current.getCause();
+    }
+  }
+  // LINT.ThenChange(//depot/google3/java/com/google/devtools/mobileharness/shared/util/error/ErrorModelConverter.java)
+
+  /** Gets the determined error type if exists. */
+  private static Optional<ErrorType> getDeterminedErrorType(ErrorType errorType) {
+    return isDeterminedErrorType(errorType) ? Optional.of(errorType) : Optional.empty();
+  }
+
+  /** Whether the {@code errorType} is classfied or detemined. */
+  private static boolean isDeterminedErrorType(ErrorType errorType) {
+    return errorType != ErrorType.UNCLASSIFIED && errorType != ErrorType.UNDETERMINED;
   }
 
   private ErrorModelConverter() {}
