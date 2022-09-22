@@ -22,7 +22,6 @@ import "src/devtools/mobileharness/api/model/proto/lab.proto";
 
 option java_package = "com.google.devtools.mobileharness.api.model.proto";
 option java_outer_classname = "Device";
-option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
 
 // Status of a device during its life cycle.
 enum DeviceStatus {

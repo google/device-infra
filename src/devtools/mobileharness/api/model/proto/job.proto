@@ -20,7 +20,6 @@ package mobileharness.api.model;
 
 option java_package = "com.google.devtools.mobileharness.api.model.proto";
 option java_outer_classname = "Job";
-option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
 
 // Job timeout setting.
 message Timeout {

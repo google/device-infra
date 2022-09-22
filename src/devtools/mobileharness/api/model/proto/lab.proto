@@ -18,11 +18,8 @@ syntax = "proto3";
 
 package mobileharness.api.model;
 
-import "java/com/google/apps/jspb/jspb.proto";
-
 option java_package = "com.google.devtools.mobileharness.api.model.proto";
 option java_outer_classname = "Lab";
-option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
 
 // Port types of a lab.
 enum PortType {
@@ -39,7 +36,6 @@ message LabPort {
 
 // Lab address and port information.
 message LabLocator {
-  option (jspb.generate_xid) = true;
 
   string ip = 1;              // Required.
   string host_name = 2;       // Required.
