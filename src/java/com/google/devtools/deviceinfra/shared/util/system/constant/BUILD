@@ -13,30 +13,15 @@
 # limitations under the License.
 #
 
-# Description:
-#   Shared constants used by different parts of MobileHarness.
+# Shared constants used by system utilities in device infra.
 
 package(
-    default_visibility = ["//visibility:public"],
-)
-
-java_library(
-    name = "property",
-    srcs = ["PropertyName.java"],
-)
-
-java_library(
-    name = "dimension",
-    srcs = ["Dimension.java"],
-)
-
-java_library(
-    name = "error_code",
-    srcs = ["ErrorCode.java"],
+    default_visibility = [
+        "//:deviceinfra_pkg",
+    ],
 )
 
 java_library(
     name = "exit_code",
     srcs = ["ExitCode.java"],
-    deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/system/constant:exit_code"],
 )

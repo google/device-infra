@@ -14,29 +14,21 @@
 #
 
 # Description:
-#   Shared constants used by different parts of MobileHarness.
+#   Data models for Mobile Harness device manager dispatcher.
 
 package(
-    default_visibility = ["//visibility:public"],
+    default_visibility = ["//:deviceinfra_devicemanagement_pkg"],
 )
 
 java_library(
-    name = "property",
-    srcs = ["PropertyName.java"],
-)
-
-java_library(
-    name = "dimension",
-    srcs = ["Dimension.java"],
-)
-
-java_library(
-    name = "error_code",
-    srcs = ["ErrorCode.java"],
-)
-
-java_library(
-    name = "exit_code",
-    srcs = ["ExitCode.java"],
-    deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/system/constant:exit_code"],
+    name = "model",
+    srcs = [
+        "DetectionResult.java",
+        "DetectionResults.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
 )

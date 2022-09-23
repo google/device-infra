@@ -45,3 +45,16 @@ package_group(
         "//src/javatests/com/google/devtools/common/metrics/stability/...",
     ],
 )
+
+package_group(
+    name = "deviceinfra_devicemanagement_pkg",
+    packages = [
+        "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local/...",
+        "//src/java/com/google/devtools/deviceinfra/infra/core/devicemanager/...",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/...",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/...",
+        "//src/javatests/com/google/devtools/deviceinfra/infra/client/api/mode/local/...",
+        "//src/javatests/com/google/devtools/deviceinfra/infra/core/devicemanager/...",
+        "//src/javatests/com/google/devtools/mobileharness/api/devicemanager/...",
+    ],
+)
