@@ -22,7 +22,9 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto.ErrorId;
+import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionClassType;
@@ -333,5 +335,269 @@ public class ErrorModelConverterTest {
                     flattenedExceptionDetail.getCause(1).getErrorId().getCode(),
                     flattenedExceptionDetail.getCause(2).getErrorId().getCode(),
                     flattenedExceptionDetail.getCause(3).getErrorId().getCode()));
+  }
+
+  @Test
+  public void getCriticalErrorId() {
+    ExceptionProto.ExceptionDetail underterminedError =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(
+                ExceptionProto.ExceptionSummary.newBuilder()
+                    .setErrorId(
+                        ErrorIdProto.ErrorId.newBuilder()
+                            .setCode(1)
+                            .setType(ErrorTypeProto.ErrorType.UNDETERMINED)))
+            .setCause(
+                ExceptionProto.ExceptionDetail.newBuilder()
+                    .setSummary(
+                        ExceptionProto.ExceptionSummary.newBuilder()
+                            .setErrorId(
+                                ErrorIdProto.ErrorId.newBuilder()
+                                    .setCode(2)
+                                    .setType(ErrorTypeProto.ErrorType.UNCLASSIFIED)))
+                    .setCause(
+                        ExceptionProto.ExceptionDetail.newBuilder()
+                            .setSummary(
+                                ExceptionProto.ExceptionSummary.newBuilder()
+                                    .setErrorId(
+                                        ErrorIdProto.ErrorId.newBuilder()
+                                            .setCode(3)
+                                            .setType(ErrorTypeProto.ErrorType.UNDETERMINED)))))
+            .build();
+
+    ErrorIdProto.ErrorId criticalErrorId =
+        ErrorModelConverter.getCriticalErrorId(underterminedError);
+    assertThat(criticalErrorId.getCode()).isEqualTo(1);
+    assertThat(criticalErrorId.getType()).isEqualTo(ErrorTypeProto.ErrorType.UNDETERMINED);
+
+    ExceptionProto.ExceptionDetail determinedError =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(
+                ExceptionProto.ExceptionSummary.newBuilder()
+                    .setErrorId(
+                        ErrorIdProto.ErrorId.newBuilder()
+                            .setCode(1)
+                            .setType(ErrorTypeProto.ErrorType.UNDETERMINED)))
+            .setCause(
+                ExceptionProto.ExceptionDetail.newBuilder()
+                    .setSummary(
+                        ExceptionProto.ExceptionSummary.newBuilder()
+                            .setErrorId(
+                                ErrorIdProto.ErrorId.newBuilder()
+                                    .setCode(2)
+                                    .setType(ErrorTypeProto.ErrorType.UNCLASSIFIED)))
+                    .setCause(
+                        ExceptionProto.ExceptionDetail.newBuilder()
+                            .setSummary(
+                                ExceptionProto.ExceptionSummary.newBuilder()
+                                    .setErrorId(
+                                        ErrorIdProto.ErrorId.newBuilder()
+                                            .setCode(3)
+                                            .setType(ErrorTypeProto.ErrorType.INFRA_ISSUE)))
+                            .setCause(
+                                ExceptionProto.ExceptionDetail.newBuilder()
+                                    .setSummary(
+                                        ExceptionProto.ExceptionSummary.newBuilder()
+                                            .setErrorId(
+                                                ErrorIdProto.ErrorId.newBuilder()
+                                                    .setCode(4)
+                                                    .setType(
+                                                        ErrorTypeProto.ErrorType.UNDETERMINED))))))
+            .build();
+
+    criticalErrorId = ErrorModelConverter.getCriticalErrorId(determinedError);
+    assertThat(criticalErrorId.getCode()).isEqualTo(3);
+    assertThat(criticalErrorId.getType()).isEqualTo(ErrorTypeProto.ErrorType.INFRA_ISSUE);
+  }
+
+  @Test
+  public void getUserFacingCriticalErrorId_dependencyIssue() {
+    ErrorIdProto.ErrorId mhDependencyErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(1)
+            .setType(ErrorTypeProto.ErrorType.DEPENDENCY_ISSUE)
+            .setNamespace(Namespace.MH)
+            .build();
+    ErrorIdProto.ErrorId vinsonDependencyErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(2)
+            .setType(ErrorTypeProto.ErrorType.DEPENDENCY_ISSUE)
+            .setNamespace(Namespace.MH)
+            .build();
+    ErrorIdProto.ErrorId mhUndeterminedErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(3)
+            .setType(ErrorTypeProto.ErrorType.UNDETERMINED)
+            .setNamespace(Namespace.MH)
+            .build();
+    ExceptionProto.ExceptionDetail error =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(
+                ExceptionProto.ExceptionSummary.newBuilder().setErrorId(mhDependencyErrorId))
+            .setCause(
+                ExceptionProto.ExceptionDetail.newBuilder()
+                    .setSummary(
+                        ExceptionProto.ExceptionSummary.newBuilder()
+                            .setErrorId(vinsonDependencyErrorId))
+                    .setCause(
+                        ExceptionProto.ExceptionDetail.newBuilder()
+                            .setSummary(
+                                ExceptionProto.ExceptionSummary.newBuilder()
+                                    .setErrorId(mhUndeterminedErrorId))))
+            .build();
+
+    ErrorIdProto.ErrorId userfacingCriticalErrorId =
+        ErrorModelConverter.getUserFacingCriticalErrorId(error);
+    assertThat(userfacingCriticalErrorId).isEqualTo(vinsonDependencyErrorId);
+  }
+
+  @Test
+  public void getUserFacingCriticalErrorId_customerIssue() {
+    ErrorIdProto.ErrorId mhCustomerErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(1)
+            .setType(ErrorTypeProto.ErrorType.CUSTOMER_ISSUE)
+            .setNamespace(Namespace.MH)
+            .build();
+    ErrorIdProto.ErrorId vinsonDependencyErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(2)
+            .setType(ErrorTypeProto.ErrorType.DEPENDENCY_ISSUE)
+            .setNamespace(Namespace.MH)
+            .build();
+    ExceptionProto.ExceptionDetail error =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(ExceptionProto.ExceptionSummary.newBuilder().setErrorId(mhCustomerErrorId))
+            .setCause(
+                ExceptionProto.ExceptionDetail.newBuilder()
+                    .setSummary(
+                        ExceptionProto.ExceptionSummary.newBuilder()
+                            .setErrorId(vinsonDependencyErrorId)))
+            .build();
+
+    ErrorIdProto.ErrorId userfacingCriticalErrorId =
+        ErrorModelConverter.getUserFacingCriticalErrorId(error);
+    assertThat(userfacingCriticalErrorId).isEqualTo(mhCustomerErrorId);
+  }
+
+  @Test
+  public void getUserFacingCriticalErrorId_dependencyIssue_undeterminedIssue() {
+    ErrorIdProto.ErrorId mhDependencyErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(1)
+            .setType(ErrorTypeProto.ErrorType.DEPENDENCY_ISSUE)
+            .setNamespace(Namespace.MH)
+            .build();
+    ErrorIdProto.ErrorId vinsonUndeterminedErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(2)
+            .setType(ErrorTypeProto.ErrorType.UNDETERMINED)
+            .setNamespace(Namespace.MH)
+            .build();
+    ErrorIdProto.ErrorId mhUndeterminedErrorId =
+        ErrorIdProto.ErrorId.newBuilder()
+            .setCode(3)
+            .setType(ErrorTypeProto.ErrorType.UNDETERMINED)
+            .setNamespace(Namespace.MH)
+            .build();
+    ExceptionProto.ExceptionDetail error =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(
+                ExceptionProto.ExceptionSummary.newBuilder().setErrorId(mhDependencyErrorId))
+            .setCause(
+                ExceptionProto.ExceptionDetail.newBuilder()
+                    .setSummary(
+                        ExceptionProto.ExceptionSummary.newBuilder()
+                            .setErrorId(vinsonUndeterminedErrorId))
+                    .setCause(
+                        ExceptionProto.ExceptionDetail.newBuilder()
+                            .setSummary(
+                                ExceptionProto.ExceptionSummary.newBuilder()
+                                    .setErrorId(mhUndeterminedErrorId))))
+            .build();
+
+    ErrorIdProto.ErrorId userfacingCriticalErrorId =
+        ErrorModelConverter.getUserFacingCriticalErrorId(error);
+    assertThat(userfacingCriticalErrorId).isEqualTo(mhDependencyErrorId);
+  }
+
+  @Test
+  public void hasInfraIssue() {
+    ExceptionProto.ExceptionDetail error =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(
+                ExceptionProto.ExceptionSummary.newBuilder()
+                    .setErrorId(
+                        ErrorIdProto.ErrorId.newBuilder()
+                            .setCode(1)
+                            .setType(ErrorTypeProto.ErrorType.INFRA_ISSUE)))
+            .build();
+    assertThat(ErrorModelConverter.hasInfraIssue(error)).isTrue();
+
+    error =
+        ExceptionProto.ExceptionDetail.newBuilder()
+            .setSummary(
+                ExceptionProto.ExceptionSummary.newBuilder()
+                    .setErrorId(
+                        ErrorIdProto.ErrorId.newBuilder()
+                            .setCode(1)
+                            .setType(ErrorTypeProto.ErrorType.CUSTOMER_ISSUE)))
+            .setCause(
+                ExceptionProto.ExceptionDetail.newBuilder()
+                    .setSummary(
+                        ExceptionProto.ExceptionSummary.newBuilder()
+                            .setErrorId(
+                                ErrorIdProto.ErrorId.newBuilder()
+                                    .setCode(2)
+                                    .setType(ErrorTypeProto.ErrorType.UNCLASSIFIED)))
+                    .setCause(
+                        ExceptionProto.ExceptionDetail.newBuilder()
+                            .setSummary(
+                                ExceptionProto.ExceptionSummary.newBuilder()
+                                    .setErrorId(
+                                        ErrorIdProto.ErrorId.newBuilder()
+                                            .setCode(3)
+                                            .setType(ErrorTypeProto.ErrorType.UNDETERMINED)))))
+            .build();
+    assertThat(ErrorModelConverter.hasInfraIssue(error)).isFalse();
+
+    error =
+        error.toBuilder()
+            .addSuppressed(
+                ExceptionProto.ExceptionDetail.newBuilder()
+                    .setSummary(
+                        ExceptionProto.ExceptionSummary.newBuilder()
+                            .setErrorId(
+                                ErrorIdProto.ErrorId.newBuilder()
+                                    .setCode(4)
+                                    .setType(ErrorTypeProto.ErrorType.UNDETERMINED)))
+                    .setCause(
+                        ExceptionProto.ExceptionDetail.newBuilder()
+                            .setSummary(
+                                ExceptionProto.ExceptionSummary.newBuilder()
+                                    .setErrorId(
+                                        ErrorIdProto.ErrorId.newBuilder()
+                                            .setCode(4)
+                                            .setType(ErrorTypeProto.ErrorType.UNCLASSIFIED)))
+                            .setCause(
+                                ExceptionProto.ExceptionDetail.newBuilder()
+                                    .setSummary(
+                                        ExceptionProto.ExceptionSummary.newBuilder()
+                                            .setErrorId(
+                                                ErrorIdProto.ErrorId.newBuilder()
+                                                    .setCode(6)
+                                                    .setType(ErrorTypeProto.ErrorType.INFRA_ISSUE)))
+                                    .setCause(
+                                        ExceptionProto.ExceptionDetail.newBuilder()
+                                            .setSummary(
+                                                ExceptionProto.ExceptionSummary.newBuilder()
+                                                    .setErrorId(
+                                                        ErrorIdProto.ErrorId.newBuilder()
+                                                            .setCode(7)
+                                                            .setType(
+                                                                ErrorTypeProto.ErrorType
+                                                                    .UNDETERMINED)))))))
+            .build();
+    assertThat(ErrorModelConverter.hasInfraIssue(error)).isTrue();
   }
 }

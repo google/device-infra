@@ -187,7 +187,6 @@ public class ErrorModelConverter {
     return getCriticalError(detail).getSummary().getErrorId();
   }
 
-  // LINT.IfChange
   /**
    * Returns the first non-(UNCLASSIFIED/UNDETERMINED) error from the summary to all causes in the
    * cause chain. If not exists, the return value is the same to the pass-in argument.
@@ -207,9 +206,11 @@ public class ErrorModelConverter {
     }
     return current;
   }
-  // LINT.ThenChange(//depot/google3/java/com/google/devtools/mobileharness/shared/util/error/ErrorModelConverter.java)
 
-  // LINT.IfChange
+  public static ErrorIdProto.ErrorId getUserFacingCriticalErrorId(
+      ExceptionProto.ExceptionDetail detail) {
+    return getUserFacingCriticalError(detail).getSummary().getErrorId();
+  }
   /*
    * Returns the left-most INFRA_ISSUE or CUSTOMER_ISSUE error id, otherwise the right-most
    * non-(UNCLASSIFIED/UNDETERMINED) error id.
@@ -231,7 +232,6 @@ public class ErrorModelConverter {
       current = current.getCause();
     }
   }
-  // LINT.ThenChange(//depot/google3/java/com/google/devtools/mobileharness/shared/util/error/ErrorModelConverter.java)
 
   /** Gets the determined error type if exists. */
   private static Optional<ErrorType> getDeterminedErrorType(ErrorType errorType) {
@@ -241,6 +241,18 @@ public class ErrorModelConverter {
   /** Whether the {@code errorType} is classfied or detemined. */
   private static boolean isDeterminedErrorType(ErrorType errorType) {
     return errorType != ErrorType.UNCLASSIFIED && errorType != ErrorType.UNDETERMINED;
+  }
+
+  /**
+   * Return whether the given error is INFRA_ISSUE, or any of its cause/suppressed errors is
+   * INFRA_ISSUE.
+   */
+  public static boolean hasInfraIssue(ExceptionProto.ExceptionDetail detail) {
+    return detail.getSummary().getErrorId().getType() == ErrorType.INFRA_ISSUE
+        || Stream.concat(
+                detail.hasCause() ? Stream.of(detail.getCause()) : Stream.empty(),
+                detail.getSuppressedList().stream())
+            .anyMatch(ErrorModelConverter::hasInfraIssue);
   }
 
   private ErrorModelConverter() {}
