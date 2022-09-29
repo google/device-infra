@@ -18,11 +18,7 @@ syntax = "proto2";
 
 package mobileharness.shared;
 
-option jspb_use_correct_proto2_semantics = false;  // go/jspb-correct-proto2
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
-option cc_api_version = 2;
-option java_api_version = 2;
-option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
 
 // Status of the transferring process of a file.
 enum FileTransferStatus {
@@ -38,18 +34,6 @@ enum FileTransferStatus {
 message StrPair {
   required string name = 1;
   required string value = 2;
-}
-
-// Version information for checking the compatibility of the Stubby service and
-// stub.
-message VersionCheckInfo {
-  // Use //devtools/mobileharness/shared/version/proto/version.proto instead.
-  option deprecated = true;
-
-  // The version of the stub.
-  required string stub_version = 1;
-  // The minimal service version required by the stub.
-  required string min_service_version = 2;
 }
 
 // Error information.
