@@ -1,0 +1,61 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared;
+
+option jspb_use_correct_proto2_semantics = false;  // go/jspb-correct-proto2
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
+option cc_api_version = 2;
+option java_api_version = 2;
+option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
+
+// Status of the transferring process of a file.
+enum FileTransferStatus {
+  // File hasn't been sent to the lab yet.
+  NOT_SENT = 0;
+  // File is being sent to lab now.
+  SENDING = 1;
+  // File already exist in lab.
+  READY = 2;
+}
+
+// Name-value string pair which can be used as dimension or parameter.
+message StrPair {
+  required string name = 1;
+  required string value = 2;
+}
+
+// Version information for checking the compatibility of the Stubby service and
+// stub.
+message VersionCheckInfo {
+  // Use //devtools/mobileharness/shared/version/proto/version.proto instead.
+  option deprecated = true;
+
+  // The version of the stub.
+  required string stub_version = 1;
+  // The minimal service version required by the stub.
+  required string min_service_version = 2;
+}
+
+// Error information.
+message ErrorInfo {
+  optional int32 code = 1;      // required.
+  optional string message = 2;  // required.
+  optional string stack_trace = 3;
+  optional string name = 4;
+}
