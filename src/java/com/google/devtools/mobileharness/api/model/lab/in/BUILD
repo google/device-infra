@@ -19,13 +19,6 @@
 package(
     default_visibility = [
         "//:deviceinfra_pkg",
-        "//java/com/google/devtools/mobileharness/api/model:__subpackages__",
-        "//java/com/google/devtools/mobileharness/infra/container:__subpackages__",
-        "//java/com/google/devtools/mobileharness/infra/master:__subpackages__",
-        "//java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/api/model:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/infra/container:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/infra/master:__subpackages__",
     ],
 )
 
