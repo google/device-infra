@@ -1,0 +1,62 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.api.deviceconfig;
+
+import "google/protobuf/wrappers.proto";
+import "java/com/google/apps/jspb/jspb.proto";
+import "src/devtools/mobileharness/api/model/proto/device.proto";
+
+option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
+option java_outer_classname = "Basic";
+option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
+
+// Configuration of the WiFi.
+message WifiConfig {
+  option (jspb.generate_xid) = true;
+
+  // SSID of the WiFi, required.
+  string ssid = 1;
+
+  // PSK of the WiFi.
+  string psk = 2;
+}
+
+// The basic configuration of a device.
+message BasicDeviceConfig {
+  option (jspb.generate_xid) = true;
+
+  // Owners of the device.
+  repeated string owner = 1;
+
+  // Default WIFI that the device will connect to preferentially.
+  WifiConfig default_wifi = 2;
+
+  // Additional supported/required dimensions to be added to this device.
+  mobileharness.api.model.DeviceCompositeDimension composite_dimension = 3;
+
+  // The max consecutive tests allowed between two reboots.
+  google.protobuf.Int32Value max_consecutive_test = 4;
+
+  // The max consecutive failed tests for all drivers.
+  google.protobuf.Int32Value max_consecutive_fail = 5;
+
+  // Executors of the device. See more detail about the
+  // executor(go/mh-executor).
+  repeated string executor = 6;
+}

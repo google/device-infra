@@ -1,0 +1,72 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.api.deviceconfig;
+
+import "google/protobuf/any.proto";
+import "java/com/google/apps/jspb/jspb.proto";
+import "src/devtools/mobileharness/api/deviceconfig/proto/basic.proto";
+
+option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
+option java_outer_classname = "Device";
+option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
+
+// The device locator and config pair.
+message DeviceLocatorConfigPair {
+  // The locator of the device.
+  DeviceLocator device_locator = 1;
+
+  // The config of the device.
+  DeviceConfig device_config = 2;
+}
+
+// The locator to help gathering the data of a device.
+message DeviceLocator {
+  option (jspb.generate_xid) = true;
+
+  // The UUID of the device, to index the device in device config service.
+  string device_uuid = 1;
+
+  // The IP of the lab the device connects to, to query the summary of the
+  // device from master.
+  string lab_ip = 2;
+
+  // The host name of the lab the device connects to, to get device config from
+  // the lab server.
+  string lab_host = 3;
+
+  // The control ID of the device, to index the device in the master and lab
+  // server.
+  string device_control_id = 4;
+}
+
+// The configuration of a specific device.
+message DeviceConfig {
+  option (jspb.generate_xid) = true;
+
+  // The UUID of the device, which is used to store and index the
+  // configuration of devices in the config service and is global unique.
+  string uuid = 1;
+
+  // The basic configuration of this device defined above.
+  BasicDeviceConfig basic_config = 2;
+
+  // The customized configuration of a device in case any configuration could
+  // not be covered in BasicDeviceConfig, e.g. testbed config.
+  google.protobuf.Any customized_config = 3;
+}
