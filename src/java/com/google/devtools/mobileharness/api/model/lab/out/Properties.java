@@ -57,13 +57,17 @@ public interface Properties {
    */
   Optional<String> remove(String key);
 
-  /** @return an immutable copy of the device properties */
+  /**
+   * @return an immutable copy of the device properties
+   */
   Map<String, String> getAll();
 
   /** Clears all properties of the device. */
   void clear();
 
-  /** @return the integer property value, or empty if the value is not an integer or not present */
+  /**
+   * @return the integer property value, or empty if the value is not an integer or not present
+   */
   default Optional<Integer> getInteger(String key) {
     try {
       return get(key).map(Integer::parseInt);
@@ -72,12 +76,16 @@ public interface Properties {
     }
   }
 
-  /** @return the boolean property value, or false if the value is not a boolean or not present */
+  /**
+   * @return the boolean property value, or false if the value is not a boolean or not present
+   */
   default boolean getBoolean(String key) {
     return get(key).map(Boolean::parseBoolean).orElse(false);
   }
 
-  /** @return whether the given property is present */
+  /**
+   * @return whether the given property is present
+   */
   default boolean has(String key) {
     return get(key).isPresent();
   }

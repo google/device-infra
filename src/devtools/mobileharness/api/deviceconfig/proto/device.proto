@@ -35,7 +35,6 @@ message DeviceLocatorConfigPair {
 
 // The locator to help gathering the data of a device.
 message DeviceLocator {
-
   // The UUID of the device, to index the device in device config service.
   string device_uuid = 1;
 
@@ -54,7 +53,6 @@ message DeviceLocator {
 
 // The configuration of a specific device.
 message DeviceConfig {
-
   // The UUID of the device, which is used to store and index the
   // configuration of devices in the config service and is global unique.
   string uuid = 1;

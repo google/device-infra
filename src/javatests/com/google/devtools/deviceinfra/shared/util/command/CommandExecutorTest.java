@@ -21,8 +21,6 @@ import static com.google.devtools.deviceinfra.shared.util.command.LineCallback.a
 import static com.google.devtools.deviceinfra.shared.util.command.LineCallback.does;
 import static com.google.devtools.deviceinfra.shared.util.command.LineCallback.stopWhen;
 import static com.google.devtools.deviceinfra.shared.util.command.Timeout.fixed;
-;
-;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -38,7 +36,6 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.deviceinfra.api.error.id.defined.BasicErrorId;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
-
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -60,7 +57,6 @@ import org.junit.runners.JUnit4;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
-
 
 @RunWith(JUnit4.class)
 public class CommandExecutorTest {
@@ -276,7 +272,8 @@ public class CommandExecutorTest {
 
     ListenableFuture<String> resultFuture =
         executor.asyncRun(
-            Command.of("/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
+            Command.of(
+                "/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
 
     Thread.sleep(2_000L);
 
@@ -293,7 +290,8 @@ public class CommandExecutorTest {
 
     ListenableFuture<String> resultFuture =
         executor.asyncRun(
-            Command.of("/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
+            Command.of(
+                "/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
 
     Thread.sleep(2_000L);
 
@@ -427,7 +425,8 @@ public class CommandExecutorTest {
         .accept(anyString());
 
     executor.exec(
-        Command.of("/bin/bash", "-c", "echo line0 >&2; echo line1 >&2").onStderr(does(lineConsumer)));
+        Command.of("/bin/bash", "-c", "echo line0 >&2; echo line1 >&2")
+            .onStderr(does(lineConsumer)));
 
     verify(lineConsumer).accept("line0");
     verify(lineConsumer).accept("line1");
@@ -669,7 +668,8 @@ public class CommandExecutorTest {
 
     ListenableFuture<CommandResult> resultFuture =
         executor.asyncExec(
-            Command.of("/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
+            Command.of(
+                "/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
 
     Thread.sleep(2_000L);
 
@@ -686,7 +686,8 @@ public class CommandExecutorTest {
 
     ListenableFuture<CommandResult> resultFuture =
         executor.asyncExec(
-            Command.of("/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
+            Command.of(
+                "/bin/bash", "-c", "echo Hello > " + fileName + "; sleep 3s; rm " + fileName));
 
     Thread.sleep(2_000L);
 
@@ -732,16 +733,17 @@ public class CommandExecutorTest {
   private List<String> getUnkillableProcesses() throws CommandException, InterruptedException {
     return Splitter.onPattern("\r\n|\n|\r")
         .omitEmptyStrings()
-        .splitToStream(executor.run(Command.of("/bin/bash", "-c", "ps -ef | grep " + UNKILLABLE_SH)))
+        .splitToStream(
+            executor.run(Command.of("/bin/bash", "-c", "ps -ef | grep " + UNKILLABLE_SH)))
         .filter(line -> !line.contains("grep " + UNKILLABLE_SH))
         .collect(Collectors.toList());
   }
 
   @SuppressWarnings("UnnecessarilyFullyQualified")
   private static String getRunfilesLocation(String suffix) {
-     try {
-      return com.google.devtools.build.runfiles.Runfiles.create().rlocation(
-          TEST_DATA_ROOT_PATH + suffix);
+    try {
+      return com.google.devtools.build.runfiles.Runfiles.create()
+          .rlocation(TEST_DATA_ROOT_PATH + suffix);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }

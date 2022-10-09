@@ -29,7 +29,7 @@ import java.util.Optional;
 public interface ApiConfig {
 
   static ApiConfig getInstance() {
-     return DummyApiConfig.getInstance();
+    return DummyApiConfig.getInstance();
   }
 
   /** Initialize. */

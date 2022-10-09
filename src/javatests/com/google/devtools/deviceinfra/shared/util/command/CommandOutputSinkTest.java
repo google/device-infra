@@ -17,9 +17,7 @@
 package com.google.devtools.deviceinfra.shared.util.command;
 
 import static com.google.common.truth.Truth.assertThat;
-;
 import static org.junit.Assert.assertThrows;
-
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -119,7 +117,6 @@ public class CommandOutputSinkTest {
     assertThat(commandOutputSink.awaitResult()).isEqualTo("Hello\nHello\n");
   }
 
-  
   @Test
   public void closePipe() throws IOException, InterruptedException, ExecutionException {
     CommandOutputSink commandOutputSink = new CommandOutputSink(false, true, 1);

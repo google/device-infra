@@ -631,7 +631,7 @@ public class CommandExecutor {
     @SuppressWarnings("unused")
     private static <T extends Executor> T decorateWithLocalTraceSpan(
         T executor, Class<T> interfaceName) {
-       return executor;
+      return executor;
     }
   }
 }

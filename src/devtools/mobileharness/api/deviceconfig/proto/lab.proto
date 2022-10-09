@@ -25,7 +25,6 @@ option java_outer_classname = "Lab";
 
 // The configuration of a lab.
 message LabConfig {
-
   // The host name of the lab, used to index the config.
   string host_name = 1;
 

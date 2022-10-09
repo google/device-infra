@@ -67,8 +67,7 @@ public interface Dimensions {
   /** Adds all the given dimensions. */
   default Dimensions addAll(Collection<DeviceDimension> dimensions) {
     return addAll(
-        dimensions
-            .stream()
+        dimensions.stream()
             .collect(
                 Multimaps.toMultimap(
                     DeviceDimension::getName,
@@ -199,9 +198,7 @@ public interface Dimensions {
 
   /** Converts the dimensions to protos. */
   default List<DeviceDimension> toProtos() {
-    return getAll()
-        .entries()
-        .stream()
+    return getAll().entries().stream()
         .map(
             entry ->
                 DeviceDimension.newBuilder()

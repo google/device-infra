@@ -23,14 +23,14 @@ import javax.annotation.Nullable;
  * Deprecated. Use {@link com.google.devtools.mobileharness.api.model.error.MobileHarnessException}
  * or {@link com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions} instead.
  */
-  public class MobileHarnessException extends Exception {
+public class MobileHarnessException extends Exception {
 
   /**
    * Deprecated. Use {@link com.google.devtools.mobileharness.api.model.proto.Error.ErrorType}
    * instead.
    */
   @Deprecated
-    public enum ErrorType {
+  public enum ErrorType {
     // Default type, job/test result is very likely ERROR.
     UNCLASSIFIED_ERROR,
     // Errors caused by MH infrastructure, job/test result is very likely INFRA_ERROR.
@@ -171,8 +171,8 @@ import javax.annotation.Nullable;
    * We are migrating MobileHarnessException to the new version in
    * jcg/devtools/mobileharness/api/model/error. Will use the new ErrorId to replace the ErrorCode
    * enums. Before fully migrated, please use {@link #getErrorCode()}, {@link #getErrorName()},
-   * {@link #getErrorType()} when you are still using this old MobileHarnessException, and avoid
-   * of the new ErrorIds.
+   * {@link #getErrorType()} when you are still using this old MobileHarnessException, and avoid of
+   * the new ErrorIds.
    */
   @Deprecated
   public ErrorCode getErrorCodeEnum() {

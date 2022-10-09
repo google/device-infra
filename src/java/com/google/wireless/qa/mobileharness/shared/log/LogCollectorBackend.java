@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.api.model.lab.out;
+package com.google.wireless.qa.mobileharness.shared.log;
 
-/** Factory for creating {@link Properties}. */
-public class PropertiesFactory {
+/** Log collector backend. */
+public interface LogCollectorBackend<Data extends LogData> {
 
-  public static Properties create(String deviceId) {
-    return new LocalProperties();
-  }
-
-  private PropertiesFactory() {}
+  /**
+   * Logs a log data.
+   *
+   * <p>This method should not throw {@link RuntimeException}.
+   */
+  void log(Data data);
 }

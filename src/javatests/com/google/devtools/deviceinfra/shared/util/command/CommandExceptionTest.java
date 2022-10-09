@@ -29,8 +29,7 @@ public class CommandExceptionTest {
   @Test
   public void command() {
     CommandException exception =
-        new CommandException(
-            BasicErrorId.CMD_EXEC_FAIL, "Error", null, Command.of("echo", "123"));
+        new CommandException(BasicErrorId.CMD_EXEC_FAIL, "Error", null, Command.of("echo", "123"));
 
     assertThat(exception)
         .hasMessageThat()

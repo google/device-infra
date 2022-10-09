@@ -73,8 +73,7 @@ public class ScanSignalOutputCallback implements LineCallback {
   }
 
   @VisibleForTesting
-  ScanSignalOutputCallback(
-      String signal, boolean stopOnSignal, Sleeper sleeper, Clock clock) {
+  ScanSignalOutputCallback(String signal, boolean stopOnSignal, Sleeper sleeper, Clock clock) {
     this.signal = signal;
     this.stopOnSignal = stopOnSignal;
     this.sleeper = sleeper;

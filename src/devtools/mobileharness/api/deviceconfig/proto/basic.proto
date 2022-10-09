@@ -26,7 +26,6 @@ option java_outer_classname = "Basic";
 
 // Configuration of the WiFi.
 message WifiConfig {
-
   // SSID of the WiFi, required.
   string ssid = 1;
 
@@ -36,7 +35,6 @@ message WifiConfig {
 
 // The basic configuration of a device.
 message BasicDeviceConfig {
-
   // Owners of the device.
   repeated string owner = 1;
 

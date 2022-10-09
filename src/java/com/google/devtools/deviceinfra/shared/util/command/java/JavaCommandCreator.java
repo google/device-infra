@@ -32,8 +32,7 @@ public abstract class JavaCommandCreator {
    * Creates a {@link JavaCommandCreator}.
    *
    * @param useStandardInvocationForm it should be always {@code false} for external usage.
-   * @param javaLauncherPath must be present if {@code useStandardInvocationForm} is {@code
-  true}.
+   * @param javaLauncherPath must be present if {@code useStandardInvocationForm} is {@code true}.
    *     For example, "{@code java}" or "{@code /usr/local/buildtools/java/jdk/bin/java}".
    */
   public static JavaCommandCreator of(

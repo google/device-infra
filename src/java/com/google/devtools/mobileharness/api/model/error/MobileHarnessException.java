@@ -21,10 +21,7 @@ import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import javax.annotation.Nullable;
 
-/**
- * Base class of all Mobile Harness exceptions.
- *
- */
+/** Base class of all Mobile Harness exceptions. */
 public class MobileHarnessException
     extends com.google.wireless.qa.mobileharness.shared.MobileHarnessException
     implements ErrorIdProvider<ErrorId> {

@@ -16,14 +16,13 @@
 
 package com.google.devtools.deviceinfra.shared.util.time;
 
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.deviceinfra.shared.util.time.Sleeper.defaultSleeper;
 import static com.google.devtools.deviceinfra.shared.util.time.Sleeper.noOpSleeper;
-import static com.google.common.truth.Truth.assertThat;
 import static java.util.Arrays.asList;
 import static org.junit.Assert.assertThrows;
 
 import com.google.common.base.Stopwatch;
-
 import java.time.Duration;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -47,7 +46,6 @@ public class SleeperTest extends TestCase {
     }
   }
 
-  
   public void testSleepDurationsMax() throws Exception {
     ExecutorService executor = Executors.newSingleThreadExecutor();
     Runnable runnable =

@@ -36,7 +36,6 @@ message LabPort {
 
 // Lab address and port information.
 message LabLocator {
-
   string ip = 1;              // Required.
   string host_name = 2;       // Required.
   repeated LabPort port = 3;  // Lab port information.

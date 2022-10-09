@@ -20,10 +20,7 @@ import com.google.common.base.Throwables;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
-/**
- * Utilities for {@link MobileHarnessException}.
- *
- */
+/** Utilities for {@link MobileHarnessException}. */
 public class MobileHarnessExceptions {
 
   /**
