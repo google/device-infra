@@ -19,16 +19,13 @@ syntax = "proto3";
 package mobileharness.api.deviceconfig;
 
 import "google/protobuf/wrappers.proto";
-import "java/com/google/apps/jspb/jspb.proto";
 import "src/devtools/mobileharness/api/model/proto/device.proto";
 
 option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
 option java_outer_classname = "Basic";
-option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
 
 // Configuration of the WiFi.
 message WifiConfig {
-  option (jspb.generate_xid) = true;
 
   // SSID of the WiFi, required.
   string ssid = 1;
@@ -39,7 +36,6 @@ message WifiConfig {
 
 // The basic configuration of a device.
 message BasicDeviceConfig {
-  option (jspb.generate_xid) = true;
 
   // Owners of the device.
   repeated string owner = 1;

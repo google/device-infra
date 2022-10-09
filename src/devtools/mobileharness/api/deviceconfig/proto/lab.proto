@@ -18,7 +18,6 @@ syntax = "proto3";
 
 package mobileharness.api.deviceconfig;
 
-import "java/com/google/apps/jspb/jspb.proto";
 import "src/devtools/mobileharness/api/deviceconfig/proto/basic.proto";
 
 option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
@@ -26,7 +25,6 @@ option java_outer_classname = "Lab";
 
 // The configuration of a lab.
 message LabConfig {
-  option (jspb.generate_xid) = true;
 
   // The host name of the lab, used to index the config.
   string host_name = 1;

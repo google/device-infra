@@ -19,12 +19,10 @@ syntax = "proto3";
 package mobileharness.api.deviceconfig;
 
 import "google/protobuf/any.proto";
-import "java/com/google/apps/jspb/jspb.proto";
 import "src/devtools/mobileharness/api/deviceconfig/proto/basic.proto";
 
 option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
 option java_outer_classname = "Device";
-option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
 
 // The device locator and config pair.
 message DeviceLocatorConfigPair {
@@ -37,7 +35,6 @@ message DeviceLocatorConfigPair {
 
 // The locator to help gathering the data of a device.
 message DeviceLocator {
-  option (jspb.generate_xid) = true;
 
   // The UUID of the device, to index the device in device config service.
   string device_uuid = 1;
@@ -57,7 +54,6 @@ message DeviceLocator {
 
 // The configuration of a specific device.
 message DeviceConfig {
-  option (jspb.generate_xid) = true;
 
   // The UUID of the device, which is used to store and index the
   // configuration of devices in the config service and is global unique.

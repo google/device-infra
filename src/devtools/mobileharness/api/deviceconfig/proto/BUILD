@@ -18,7 +18,6 @@
 
 package(
     default_visibility = [
-        "//devtools/mobileharness/api/deviceconfig/proto:device_config_user",
         "//src/java/com/google/devtools/mobileharness/infra/shared/api:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/shared/api:__pkg__",
     ],
@@ -28,7 +27,6 @@ proto_library(
     name = "basic_proto",
     srcs = ["basic.proto"],
     deps = [
-        "//java/com/google/apps/jspb:jspb_proto",
         "//src/devtools/mobileharness/api/model/proto:device_proto",
         "@com_google_protobuf//:wrappers_proto",
     ],
@@ -44,7 +42,6 @@ proto_library(
     srcs = ["device.proto"],
     deps = [
         ":basic_proto",
-        "//java/com/google/apps/jspb:jspb_proto",
         "@com_google_protobuf//:any_proto",
     ],
 )
@@ -59,7 +56,6 @@ proto_library(
     srcs = ["lab.proto"],
     deps = [
         ":basic_proto",
-        "//java/com/google/apps/jspb:jspb_proto",
     ],
 )
 
