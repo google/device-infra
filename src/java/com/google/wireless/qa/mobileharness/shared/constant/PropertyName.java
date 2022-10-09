@@ -198,12 +198,6 @@ public interface PropertyName {
     RETRY_AFTER_SANDBOX_FAILS,
 
     /**
-     * Whether the test fails with
-     * AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_NO_VALID_UID_ASSIGNED.
-     */
-    RETRY_AFTER_NO_VALID_UID_ASSIGNED,
-
-    /**
      * The name of the test property indicates that the current test is a retry run. The property
      * value will be the brief reason.
      */
