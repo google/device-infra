@@ -19,12 +19,12 @@
 DEFAULT_VISIBILITY = [
     "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     "//src/java/com/google/devtools/mobileharness/api:__subpackages__",
-    "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:__subpackages__",
     "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
+    "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:__subpackages__",
+    "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
     "//src/java/com/google/devtools/mobileharness/infra/shared/api:__subpackages__",
     "//src/java/com/google/wireless/qa/mobileharness/shared/model:__subpackages__",
     "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
-    "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
     "//src/javatests/com/google/devtools/mobileharness/api/devicemanager:__subpackages__",
     "//src/javatests/com/google/devtools/mobileharness/infra/controller/scheduler:__subpackages__",
     "//src/javatests/com/google/devtools/mobileharness/infra/shared/api:__subpackages__",
@@ -50,5 +50,92 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/api/model/lab/in:ports",
         "@maven//:com_google_errorprone_error_prone_annotations",
+    ],
+)
+
+java_library(
+    name = "schedule_unit",
+    srcs = [
+        "DeviceScheduleUnit.java",
+        "LabScheduleUnit.java",
+    ],
+    deps = [
+        ":locator",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/in",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/in:lite_dimension_factory",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "device_id_descriptor",
+    srcs = ["DeviceId.java"],
+    visibility = DEFAULT_VISIBILITY,
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+    ],
+)
+
+java_library(
+    name = "device_info",
+    srcs = [
+        "DeviceInfo.java",
+    ],
+    visibility = DEFAULT_VISIBILITY + [
+        "//:deviceinfra_pkg",
+    ],
+    deps = [
+        ":device_id_descriptor",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/in",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/in:dimension",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/out:property",
+    ],
+)
+
+java_library(
+    name = "lab",
+    exports = [
+        ":device_id_descriptor",
+        ":device_info",
+        ":locator",
+        ":schedule_unit",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/in",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/out",
+    ],
+)
+
+java_library(
+    name = "device_info_factory",
+    srcs = [
+        "DeviceInfoFactory.java",
+    ],
+    visibility = [
+        # Do no add visibility here. Please use lite_device_info_factory instead.
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
+    ],
+    deps = [
+        ":device_id_descriptor",
+        ":device_info",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/in:dimension_factory",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/in:local_dimension",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/out:property_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/shared/api:config",
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
+)
+
+java_library(
+    name = "lite_device_info_factory",
+    srcs = [
+        "LiteDeviceInfoFactory.java",
+    ],
+    deps = [
+        ":device_id_descriptor",
+        ":device_info",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/in:lite_dimension_factory",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab/out:local_property_factory",
     ],
 )

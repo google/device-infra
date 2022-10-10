@@ -68,6 +68,24 @@ java_library(
 )
 
 java_library(
+    name = "dimension_factory",
+    srcs = [
+        "DimensionsFactory.java",
+    ],
+    visibility = [
+        # Do no add visibility here. Please use lite_dimension_factory instead.
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:__pkg__",
+    ],
+    deps = [
+        ":dimension",
+        ":local_configurable_dimension",
+        ":local_dimension",
+        "//src/java/com/google/devtools/mobileharness/infra/shared/api:config",
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
+)
+
+java_library(
     name = "lite_dimension_factory",
     srcs = [
         "LiteDimensionsFactory.java",
@@ -88,9 +106,29 @@ java_library(
     ],
     visibility = [
         # Do no add visibility here. Please use lite_dimension_factory instead.
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:__pkg__",
     ],
     deps = [
         ":dimension",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "local_configurable_dimension",
+    srcs = [
+        "LocalConfigurableDimensions.java",
+    ],
+    visibility = [
+        # Do no add visibility here. Please use lite_dimension_factory instead.
+    ],
+    deps = [
+        ":dimension",
+        ":local_dimension",
+        "//src/java/com/google/devtools/mobileharness/infra/shared/api:config",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",

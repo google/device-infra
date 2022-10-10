@@ -16,16 +16,16 @@
 
 package com.google.devtools.mobileharness.api.model.lab.in;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.devtools.mobileharness.api.model.proto.Lab;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabPort;
 import com.google.devtools.mobileharness.api.model.proto.Lab.PortType;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /** Server port information for locating a Mobile Harness lab. */
 public class Ports {
@@ -48,7 +48,7 @@ public class Ports {
   /** Sets all the given ports. */
   @CanIgnoreReturnValue
   public synchronized Ports addAll(List<LabPort> protos) {
-    protos.forEach(proto -> add(PortType.forNumber(proto.getType().getNumber()), proto.getNum()));
+    protos.forEach(proto -> add(proto.getType(), proto.getNum()));
     return this;
   }
 
@@ -69,7 +69,7 @@ public class Ports {
 
   /** See {@link #get(PortType)}. */
   public int getNonNull(PortType type) {
-    return get(type).orElseThrow(NoSuchElementException::new);
+    return get(type).orElseThrow();
   }
 
   /** Gets all the ports of this lab. */
@@ -82,7 +82,7 @@ public class Ports {
     if (this == obj) {
       return true;
     }
-    if (obj == null || getClass() != obj.getClass()) {
+    if (!(obj instanceof Ports)) {
       return false;
     }
     Ports that = (Ports) obj;
@@ -91,7 +91,7 @@ public class Ports {
 
   @Override
   public int hashCode() {
-    return Objects.hash(ports);
+    return Objects.hashCode(ports);
   }
 
   // Does not memorize this. Lab ports can be added afterwards.
@@ -103,6 +103,6 @@ public class Ports {
                     .setType(PortType.forNumber(e.getKey().getNumber()))
                     .setNum(e.getValue())
                     .build())
-        .collect(Collectors.toList());
+        .collect(toImmutableList());
   }
 }

@@ -16,21 +16,22 @@
 
 package com.google.devtools.mobileharness.api.model.lab.in;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.Multimaps.toMultimap;
+import static com.google.common.collect.Streams.stream;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
-import com.google.common.collect.Multimaps;
-import com.google.common.collect.Streams;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import java.util.Collection;
 import java.util.List;
 import java.util.NoSuchElementException;
-import java.util.stream.Collectors;
 import javax.annotation.concurrent.ThreadSafe;
 
 /** Supported/required dimensions of a device. */
@@ -56,9 +57,9 @@ public interface Dimensions {
   /** Adds all the given dimensions. */
   default Dimensions addAll(Iterable<StrPair> dimensions) {
     return addAll(
-        Streams.stream(dimensions)
+        stream(dimensions)
             .collect(
-                Multimaps.toMultimap(
+                toMultimap(
                     StrPair::getName,
                     StrPair::getValue,
                     () -> MultimapBuilder.hashKeys().arrayListValues().build())));
@@ -69,7 +70,7 @@ public interface Dimensions {
     return addAll(
         dimensions.stream()
             .collect(
-                Multimaps.toMultimap(
+                toMultimap(
                     DeviceDimension::getName,
                     DeviceDimension::getValue,
                     () -> MultimapBuilder.hashKeys().arrayListValues().build())));
@@ -80,7 +81,7 @@ public interface Dimensions {
 
   /** Gets the dimension value of the given dimension name. */
   default List<String> get(Dimension.Name name) {
-    return get(name.name().toLowerCase());
+    return get(Ascii.toLowerCase(name.name()));
   }
 
   /**
@@ -96,7 +97,7 @@ public interface Dimensions {
    * dimension with the given name.
    */
   default String getFirst(Dimension.Name name, String defaultValue) {
-    return getFirst(name.name().toLowerCase(), defaultValue);
+    return getFirst(Ascii.toLowerCase(name.name()), defaultValue);
   }
 
   /**
@@ -126,7 +127,7 @@ public interface Dimensions {
    * @throws IllegalArgumentException if there are multiple dimensions with the given name
    */
   default String getOnly(Dimension.Name name) {
-    return getOnly(name.name().toLowerCase());
+    return getOnly(Ascii.toLowerCase(name.name()));
   }
 
   /**
@@ -136,7 +137,7 @@ public interface Dimensions {
    * @throws IllegalArgumentException if there are multiple dimensions with the given name
    */
   default String getOnly(Dimension.Name name, String defaultValue) {
-    return getOnly(name.name().toLowerCase(), defaultValue);
+    return getOnly(Ascii.toLowerCase(name.name()), defaultValue);
   }
 
   /** Gets a copy of all the dimensions. */
@@ -161,7 +162,7 @@ public interface Dimensions {
    * dimensions are changed, customized dimensions will not be considered either.
    */
   default boolean replace(Dimension.Name name, List<String> newValues) {
-    return replace(name.name().toLowerCase(), newValues);
+    return replace(Ascii.toLowerCase(name.name()), newValues);
   }
 
   /**
@@ -177,12 +178,6 @@ public interface Dimensions {
     return replace(name, ImmutableList.of());
   }
 
-  // TODO: b/204978333 support clearing the entire DeviceInfo natively.
-  /** Clears all dimensions. */
-  default void removeAll() {
-    getAll().keySet().forEach(this::remove);
-  }
-
   /**
    * Removes all existing dimension values with the given name.
    *
@@ -193,7 +188,12 @@ public interface Dimensions {
    * @return whether the dimensions are changed
    */
   default boolean remove(Dimension.Name name) {
-    return remove(name.name().toLowerCase());
+    return remove(Ascii.toLowerCase(name.name()));
+  }
+
+  /** Clears all dimensions. */
+  default void removeAll() {
+    getAll().keySet().forEach(this::remove);
   }
 
   /** Converts the dimensions to protos. */
@@ -205,6 +205,6 @@ public interface Dimensions {
                     .setName(entry.getKey())
                     .setValue(entry.getValue())
                     .build())
-        .collect(Collectors.toList());
+        .collect(toImmutableList());
   }
 }

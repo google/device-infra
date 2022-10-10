@@ -82,7 +82,7 @@ public class Owners {
     if (this == obj) {
       return true;
     }
-    if (obj == null || getClass() != obj.getClass()) {
+    if (!(obj instanceof Owners)) {
       return false;
     }
     Owners that = (Owners) obj;

@@ -120,7 +120,7 @@ public class Types {
     if (this == obj) {
       return true;
     }
-    if (obj == null || getClass() != obj.getClass()) {
+    if (!(obj instanceof Types)) {
       return false;
     }
     Types that = (Types) obj;

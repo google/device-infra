@@ -120,7 +120,7 @@ public class Drivers {
     if (this == obj) {
       return true;
     }
-    if (obj == null || getClass() != obj.getClass()) {
+    if (!(obj instanceof Drivers)) {
       return false;
     }
     Drivers that = (Drivers) obj;

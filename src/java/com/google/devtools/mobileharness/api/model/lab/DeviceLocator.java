@@ -58,8 +58,7 @@ public abstract class DeviceLocator {
     }
   }
 
-  // Does not memorize
-  // this. Lab ports can be added afterwards.
+  // Does not memorize this. Lab ports can be added afterwards.
   public Device.DeviceLocator toProto() {
     return Device.DeviceLocator.newBuilder()
         .setId(id())
