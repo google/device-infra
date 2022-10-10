@@ -28,10 +28,6 @@ java_library(
         "LogCollector.java",
         "LoggingApi.java",
     ],
-    tags = [
-        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/log",
-        "avoid_dep",
-    ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -44,20 +40,12 @@ java_library(
     srcs = [
         "LogData.java",
     ],
-    tags = [
-        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/log:log_data",
-        "avoid_dep",
-    ],
 )
 
 java_library(
     name = "log_collector_backend",
     srcs = [
         "LogCollectorBackend.java",
-    ],
-    tags = [
-        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/log:log_collector_backend",
-        "avoid_dep",
     ],
     deps = [":log_data"],
 )
@@ -66,10 +54,6 @@ java_library(
     name = "log_context",
     srcs = [
         "LogContext.java",
-    ],
-    tags = [
-        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/log:log_context",
-        "avoid_dep",
     ],
     deps = [
         ":log",

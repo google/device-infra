@@ -17,9 +17,11 @@
 package com.google.wireless.qa.mobileharness.shared.log;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Strings.nullToEmpty;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.errorprone.annotations.CheckReturnValue;
+import com.google.errorprone.annotations.CompileTimeConstant;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 import java.util.Arrays;
@@ -97,10 +99,10 @@ public abstract class LogContext<Api extends LoggingApi<Api>, Data extends LogDa
   }
 
   @Override
-  public final void log(@Nullable String message) {
+  public final void log(@CompileTimeConstant @Nullable String message) {
     this.message = message;
     args = null;
-    formattedMessage = message == null ? "" : message;
+    formattedMessage = nullToEmpty(message);
     if (toLogCollector) {
       getBackend().log(data());
     }
@@ -108,7 +110,7 @@ public abstract class LogContext<Api extends LoggingApi<Api>, Data extends LogDa
       logger.log(level, message, cause);
     }
     if (googleLogger != null) {
-      googleLogger.at(level).withCause(cause).log((Object) message);
+      googleLogger.at(level).withCause(cause).log(message);
     }
   }
 

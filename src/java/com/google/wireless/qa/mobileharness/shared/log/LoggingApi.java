@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.log;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.errorprone.annotations.CheckReturnValue;
+import com.google.errorprone.annotations.CompileTimeConstant;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 import java.util.logging.Logger;
@@ -100,7 +101,7 @@ public interface LoggingApi<API extends LoggingApi<API>> {
    *
    * <p>This method should be the last operation on the API.
    */
-  void log(@Nullable String message);
+  void log(@CompileTimeConstant @Nullable String message);
 
   /**
    * Logs a message with arguments.
