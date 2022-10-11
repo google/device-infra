@@ -83,6 +83,7 @@ java_library(
     visibility = [
         # Do NOT add other packages here.
         # Used by command library only.
+        "//src/java/com/google/devtools/mobileharness/shared/util/command:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/backend",

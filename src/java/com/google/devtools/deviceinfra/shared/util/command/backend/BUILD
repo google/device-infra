@@ -18,6 +18,7 @@ java_library(
     srcs = glob(["*.java"]),
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/command:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
