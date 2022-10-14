@@ -68,6 +68,7 @@ java_library(
     visibility = [
         # Do not add other packages here.
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command/testing:__pkg__",
     ],
     exports = [
         ":command_result",

@@ -14,16 +14,14 @@
 #
 
 java_library(
-    name = "linecallback",
+    name = "testing",
+    testonly = 1,
     srcs = glob(["*.java"]),
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:__subpackages__",
+        "//:deviceinfra_pkg",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command:command_results",
     ],
 )
