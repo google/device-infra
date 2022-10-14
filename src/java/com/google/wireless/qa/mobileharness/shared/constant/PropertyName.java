@@ -48,9 +48,6 @@ public interface PropertyName {
     /** Sponge link of test. */
     SPONGE_LINK_OF_TEST,
 
-    /** Whether the main apk (the first apk in build_apk) is build from a google3 target. */
-    MAIN_APK_BUILD_FROM_GOOGLE3,
-
     MH_CLIENT_VERSION,
 
     /** The MHFE link for the job. */
@@ -82,9 +79,6 @@ public interface PropertyName {
 
     /** The client entry point of the job, e.g. ait, legacy_bin. */
     _CLIENT_TYPE,
-
-    /** The blaze target for the current job. */
-    BLAZE_TARGET,
 
     /** The MH client. */
     MH_CLIENT_NAME,
@@ -124,12 +118,6 @@ public interface PropertyName {
 
     /** The id of the device which runs the test. */
     DIMENSION_ID,
-
-    /**
-     * The environment the test is run in, values could be found in:
-     * http://google3/java/com/google/devtools/mobileharness/shared/constant/environment/MobileHarnessServerEnvironment.java?l=10&rcl=260630273.
-     */
-    ENVIRONMENT,
 
     /** The test id who initiates this test. */
     FOREGOING_TEST_ID,
