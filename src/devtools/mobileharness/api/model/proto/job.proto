@@ -43,9 +43,10 @@ message Retry {
     // A test retries when the result is ERROR/FAIL. Only the final result is
     // sent to Sponge. It can hide some test flakes.
     FAIL = 1;
+    // Deprecated. Use repeat_runs istead.
     // A test retries until the attempt number reach 'test_attempts'. All the
     // attempt results are sent to Sponge.
-    ALL = 2;
+    ALL = 2 [deprecated = true];
   }
 
   // The maximum number of times a test could retry. Default attempt is 2.
@@ -53,6 +54,11 @@ message Retry {
   // The retry level of Mobile harness job. Tests retry condition depends on the
   // level. Default level is ERROR.
   Level retry_level = 2;
+}
+
+// Job repeat_runs setting. Refer to go/mh-rerun for more details.
+message Repeat {
+  optional int32 repeat_runs = 1;
 }
 
 // Job priority.
