@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.shared.util.command.history;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.devtools.mobileharness.infra.container.util.ContainerEnvVarUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.CommandResults;
 import java.util.LinkedHashMap;
@@ -43,9 +42,7 @@ public class CommandHistory {
 
   private static final int DEFAULT_CAPACITY = 10_000;
 
-  private static final CommandHistory INSTANCE =
-      new CommandHistory(
-          new ContainerEnvVarUtil().isInContainer() ? Integer.MAX_VALUE : DEFAULT_CAPACITY);
+  private static final CommandHistory INSTANCE = new CommandHistory(DEFAULT_CAPACITY);
 
   private final Lock recordLock = new ReentrantLock();
 
@@ -57,9 +54,7 @@ public class CommandHistory {
     this.records = new RecordCache(capacity);
   }
 
-  /**
-   * @return all commands which are still saved.
-   */
+  /** Returns all commands which are still saved. */
   public List<CommandRecord> getAllCommands() {
     recordLock.lock();
     try {
@@ -69,9 +64,7 @@ public class CommandHistory {
     }
   }
 
-  /**
-   * @return all commands which are still saved and meet the requirements of the filter
-   */
+  /** Returns all commands which are still saved and meet the requirements of the filter. */
   public List<CommandRecord> searchCommands(Predicate<CommandRecord> commandRecordFilter) {
     return getAllCommands().stream().filter(commandRecordFilter).collect(Collectors.toList());
   }

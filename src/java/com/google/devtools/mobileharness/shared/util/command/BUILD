@@ -24,14 +24,12 @@ java_library(
     ),
     visibility = [
         "//:deviceinfra_pkg",
-        "//java/com/google/devtools/mobileharness/shared/util/command:command_users",
     ],
     exports = [
         ":command_result",
     ],
     deps = [
         ":command_results",
-        "//java/com/google/common/time",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command:command_process_impl",
@@ -39,7 +37,6 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/backend",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/io",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/tracing:local_trace_span_executors",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_context",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history",
@@ -47,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -70,8 +68,6 @@ java_library(
     visibility = [
         # Do not add other packages here.
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history:__pkg__",
-        "//java/com/google/devtools/mobileharness/shared/util/command/testing:__pkg__",
-        "//java/com/google/wireless/qa/mobileharness/shared/command:__pkg__",
     ],
     exports = [
         ":command_result",

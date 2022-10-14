@@ -28,7 +28,6 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.deviceinfra.shared.util.command.io.LineCollector;
 import com.google.devtools.deviceinfra.shared.util.command.io.LineReader;
-import com.google.devtools.deviceinfra.shared.util.tracing.LocalTraceSpanExecutors;
 import com.google.devtools.mobileharness.infra.controller.test.TestContext.TestContextRunnable;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback.Response;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecord;
@@ -42,6 +41,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
@@ -439,8 +439,7 @@ public class CommandExecutor {
   private com.google.devtools.deviceinfra.shared.util.command.backend.Command getBackendCommand(
       Command command, ByteSink stdoutSink, ByteSink stderrSink) {
     return com.google.devtools.deviceinfra.shared.util.command.backend.Command.command(
-            command.getExecutable(),
-            command.getArguments().toArray(new String[command.getArguments().size()]))
+            command.getExecutable(), command.getArguments().toArray(new String[0]))
         .withSuccessCondition(result -> command.getSuccessExitCodes().contains(result.exitCode()))
         .withEnvironment(SYSTEM_ENVIRONMENT)
         .withEnvironmentUpdated(getBaseEnvironment())
@@ -622,11 +621,11 @@ public class CommandExecutor {
                 getThreadFactory(/*threadName=*/ "default-mh-command-executor")));
 
     private static final ListeningExecutorService DEFAULT_THREAD_POOL =
-        LocalTraceSpanExecutors.decorate(
+        decorateWithLocalTraceSpan(
             DEFAULT_NON_PROPAGATING_THREAD_POOL, ListeningExecutorService.class);
 
     private static final ListeningScheduledExecutorService DEFAULT_TIMER =
-        LocalTraceSpanExecutors.decorate(
+        decorateWithLocalTraceSpan(
             MoreExecutors.listeningDecorator(
                 Executors.newScheduledThreadPool(
                     /*corePoolSize=*/ 3,
@@ -643,5 +642,11 @@ public class CommandExecutor {
         return thread;
       };
     }
+  }
+
+  @SuppressWarnings("unused")
+  private static <T extends Executor> T decorateWithLocalTraceSpan(
+      T executor, Class<T> interfaceName) {
+    return executor;
   }
 }

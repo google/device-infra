@@ -19,10 +19,10 @@ package com.google.devtools.mobileharness.shared.util.command.linecallback;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.time.Sleeper;
-import com.google.common.time.TimeSource;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import javax.annotation.Nullable;
@@ -57,8 +57,8 @@ public class ScanSignalOutputCallback implements LineCallback {
   @GuardedBy("handleOutputLock")
   private final StringBuilder output;
 
-  /** {@code TimeSource} for getting current system time. */
-  private final TimeSource timeSource;
+  /** {@code Clock} for getting current system time. */
+  private final Clock clock;
 
   private final Sleeper sleeper;
 
@@ -69,16 +69,15 @@ public class ScanSignalOutputCallback implements LineCallback {
    * @param stopOnSignal whether to terminate the command when the signal is caught
    */
   public ScanSignalOutputCallback(String signal, boolean stopOnSignal) {
-    this(signal, stopOnSignal, Sleeper.defaultSleeper(), TimeSource.system());
+    this(signal, stopOnSignal, Sleeper.defaultSleeper(), Clock.systemUTC());
   }
 
   @VisibleForTesting
-  ScanSignalOutputCallback(
-      String signal, boolean stopOnSignal, Sleeper sleeper, TimeSource timeSource) {
+  ScanSignalOutputCallback(String signal, boolean stopOnSignal, Sleeper sleeper, Clock clock) {
     this.signal = signal;
     this.stopOnSignal = stopOnSignal;
     this.sleeper = sleeper;
-    this.timeSource = timeSource;
+    this.clock = clock;
     this.output = new StringBuilder();
   }
 
@@ -123,8 +122,8 @@ public class ScanSignalOutputCallback implements LineCallback {
   public boolean waitForSignal(Duration timeout, @Nullable CommandProcess commandProcess)
       throws InterruptedException {
     boolean signalFound = false;
-    Instant expireTime = timeSource.now().plus(timeout);
-    while (timeSource.now().isBefore(expireTime)) {
+    Instant expireTime = clock.instant().plus(timeout);
+    while (clock.instant().isBefore(expireTime)) {
       if (isSignalCaught()) {
         break;
       }

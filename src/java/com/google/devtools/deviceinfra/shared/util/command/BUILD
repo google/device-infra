@@ -91,3 +91,17 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
+
+java_library(
+    name = "command_process_impls",
+    srcs = ["CommandProcessImpls.java"],
+    visibility = [
+        # Do NOT add other packages here.
+        # Used by command library only.
+        "//src/java/com/google/devtools/mobileharness/shared/util/command:__subpackages__",
+    ],
+    deps = [
+        ":command",
+        ":command_process_impl",
+    ],
+)

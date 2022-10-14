@@ -13,18 +13,17 @@
 # limitations under the License.
 #
 
-# Some commonly used LineCallback for go/mh-command
 java_library(
     name = "linecallback",
     srcs = glob(["*.java"]),
     visibility = [
-        "//javatests/com/google/devtools/mobileharness/shared/util/command/linecallback:__subpackages__",
+        "//javatests/com/google/devtools/mobileharness/shared/util/command/linecallback:__subpackages__",  # devicienfra:google3-only(internal)
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:__subpackages__",
     ],
     deps = [
-        "//java/com/google/common/time",
-        "//java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],

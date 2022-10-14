@@ -21,17 +21,10 @@ java_library(
         "CommandRecorderListener.java",
     ],
     visibility = [
-        "//java/com/google/devtools/mobileharness/shared/trace:__pkg__",
-        "//java/com/google/devtools/mobileharness/shared/util/command/history:__pkg__",
-        "//java/com/google/mobile/flutter/testing:__pkg__",
-        "//java/com/google/wireless/qa/mobileharness/shared/command:__pkg__",
-        "//javatests/com/google/devtools/mobileharness/infra/controller/test/util:__pkg__",
-        "//javatests/com/google/devtools/mobileharness/shared/util/command:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
     ],
     deps = [
-        "//java/com/google/devtools/mobileharness/infra/container/util:container_env_var",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/command:command_results",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -46,10 +39,6 @@ java_library(
     ],
     visibility = [
         # Do not add other packages here. Please use CommandExecutor instead.
-        "//java/com/google/wireless/qa/mobileharness/shared/command:__pkg__",
-        "//java/com/google/wireless/qa/mobileharness/client/bin:__pkg__",
-        "//java/com/google/devtools/mobileharness/service/gateway:__pkg__",
-        "//java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
     ],
     deps = [

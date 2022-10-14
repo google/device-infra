@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.shared.util.command;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.TunnelException.tunnel;
 import static com.google.devtools.deviceinfra.shared.util.command.Command.DEFAULT_NEED_STDERR_IN_RESULT;
 import static com.google.devtools.deviceinfra.shared.util.command.Command.DEFAULT_NEED_STDOUT_IN_RESULT;
 import static com.google.devtools.deviceinfra.shared.util.command.Command.DEFAULT_SHOW_FULL_RESULT_IN_EXCEPTION;
@@ -26,7 +25,6 @@ import static com.google.devtools.deviceinfra.shared.util.command.Command.DEFAUL
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
-import com.google.common.base.TunnelException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -1024,13 +1022,11 @@ public abstract class Command {
             .needStdoutInResult(getNeedStdoutInResult())
             .needStderrInResult(getNeedStderrInResult())
             .showFullResultInException(getShowFullResultInException());
-    try {
-      getTimeout().map(timeout -> tunnel(timeout::toNewTimeout)).ifPresent(result::timeout);
-      getStartTimeout()
-          .map(timeout -> tunnel(timeout::toNewTimeout))
-          .ifPresent(result::startTimeout);
-    } catch (TunnelException e) {
-      throw e.rethrow(MobileHarnessException.class);
+    if (getTimeout().isPresent()) {
+      result.timeout(getTimeout().get().toNewTimeout());
+    }
+    if (getStartTimeout().isPresent()) {
+      result.startTimeout(getStartTimeout().get().toNewTimeout());
     }
     getTimeoutCallback().ifPresent(result::timeoutCallback);
     getStdoutLineCallback()
