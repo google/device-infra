@@ -1,0 +1,60 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+java_library(
+    name = "history",
+    srcs = [
+        "CommandHistory.java",
+        "CommandRecord.java",
+        "CommandRecorderListener.java",
+    ],
+    visibility = [
+        "//java/com/google/devtools/mobileharness/shared/trace:__pkg__",
+        "//java/com/google/devtools/mobileharness/shared/util/command/history:__pkg__",
+        "//java/com/google/mobile/flutter/testing:__pkg__",
+        "//java/com/google/wireless/qa/mobileharness/shared/command:__pkg__",
+        "//javatests/com/google/devtools/mobileharness/infra/controller/test/util:__pkg__",
+        "//javatests/com/google/devtools/mobileharness/shared/util/command:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
+    ],
+    deps = [
+        "//java/com/google/devtools/mobileharness/infra/container/util:container_env_var",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command:command_results",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "recorder",
+    srcs = [
+        "CommandRecorder.java",
+    ],
+    visibility = [
+        # Do not add other packages here. Please use CommandExecutor instead.
+        "//java/com/google/wireless/qa/mobileharness/shared/command:__pkg__",
+        "//java/com/google/wireless/qa/mobileharness/client/bin:__pkg__",
+        "//java/com/google/devtools/mobileharness/service/gateway:__pkg__",
+        "//java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
+    ],
+    deps = [
+        ":history",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command:command_results",
+    ],
+)
