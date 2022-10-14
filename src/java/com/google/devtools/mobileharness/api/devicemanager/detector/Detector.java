@@ -18,7 +18,9 @@ package com.google.devtools.mobileharness.api.devicemanager.detector;
 
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
 /** Device detector for detecting active devices. */
 public interface Detector {
@@ -45,4 +47,13 @@ public interface Detector {
    * @throws MobileHarnessException if fails to detect devices
    */
   List<DetectionResult> detectDevices() throws MobileHarnessException, InterruptedException;
+
+  /**
+   * The detection interval of the detector, device manager will trigger the {@code detectDevices}
+   * based on the interval, if detector doesn't specify it, will use the default global interval
+   * instead.
+   */
+  default Optional<Duration> getDetectionInterval() {
+    return Optional.empty();
+  }
 }
