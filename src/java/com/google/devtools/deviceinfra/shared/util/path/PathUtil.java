@@ -16,6 +16,9 @@
 
 package com.google.devtools.deviceinfra.shared.util.path;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Utility methods for manipulation of UNIX-like paths. See PathUtilTest for examples.
  *
@@ -23,6 +26,42 @@ package com.google.devtools.deviceinfra.shared.util.path;
  * issues.
  */
 public final class PathUtil {
+  private static final Pattern SLASH_PREFIX_PATTERN = Pattern.compile("^/+");
+  private static final Pattern TWO_OR_MORE_SLASH_PATTERN = Pattern.compile("/{2,}");
+  private static final Pattern NON_SLASH_SUFFIX_PATTERN = Pattern.compile("(.*[^/])/+$");
+
+  /**
+   * Gets the final component from a path. Trailing slashes are removed.
+   *
+   * <p>Examples:
+   *
+   * <pre>{@code
+   * basename("/foo/bar/") = "bar"
+   * basename("/foo/bar") = "bar"
+   * basename("/foo") = "foo"
+   * basename("/") = ""
+   * }</pre>
+   *
+   * <p>The last example is inconsistent with Unix basename(1) which returns "/" as the basename of
+   * "/".
+   *
+   * @param path The path to apply the basename operation to.
+   * @return path, with any leading directory elements removed.
+   */
+  public static String basename(String path) {
+    path = removeLeadingSlashes(removeExtraneousSlashes(path));
+
+    if (path.length() == 0) {
+      return path;
+    }
+
+    int pos = path.lastIndexOf("/");
+    if (pos == -1) {
+      return path;
+    } else {
+      return path.substring(pos + 1);
+    }
+  }
 
   /**
    * Joins a set of path components into a single path. Empty path components are ignored.
@@ -56,6 +95,25 @@ public final class PathUtil {
       }
     }
     return new String(path, 0, i);
+  }
+
+  /**
+   * Removes extra slashes from a path. Leading slash is preserved, trailing slash is stripped, and
+   * any runs of more than one slash in the middle is replaced by a single slash.
+   */
+  public static String removeExtraneousSlashes(String s) {
+    Matcher m = NON_SLASH_SUFFIX_PATTERN.matcher(s);
+
+    if (m.matches()) {
+      s = s.substring(0, m.end(1));
+    }
+
+    return TWO_OR_MORE_SLASH_PATTERN.matcher(s).replaceAll("/");
+  }
+
+  /** Removes leading slashes from a string. */
+  public static String removeLeadingSlashes(String path) {
+    return SLASH_PREFIX_PATTERN.matcher(path).replaceFirst("");
   }
 
   private PathUtil() {}
