@@ -1,0 +1,94 @@
+# Copyright 2022 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Description:
+#   Shared IO libraries.
+package(
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
+
+java_library(
+    name = "base",
+    srcs = [
+        "ArrayUtil.java",
+        "PortManager.java",
+        "StrUtil.java",
+    ],
+    tags = [
+        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/util:base",
+        "avoid_dep",
+    ],
+    deps = [
+        "//java/com/google/devtools/mobileharness/infra/container/annotation",
+        "//java/com/google/testing/serverutil:portpicker",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//third_party/java/gson",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "device_info",
+    srcs = ["DeviceInfoUtil.java"],
+    visibility = [
+        "//java/com/google/devtools/mobileharness:__subpackages__",
+        "//java/com/google/wireless/qa/mobileharness:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:__pkg__",
+    ],
+    deps = [
+        "//devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "luhn",
+    srcs = ["LuhnUtil.java"],
+)
+
+java_library(
+    name = "resolution",
+    srcs = [
+        "ScreenResolution.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+    ],
+)
+
+java_library(
+    name = "reflection",
+    srcs = ["ReflectionUtil.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//learning/brain/models/app_benchmarks/other_frameworks:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/api/error:exception",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/reflection:reflection_util",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
+    ],
+)
