@@ -23,3 +23,12 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
 )
+
+java_library(
+    name = "time_util",
+    srcs = ["TimeUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness:__subpackages__",
+    ],
+    deps = [],
+)
