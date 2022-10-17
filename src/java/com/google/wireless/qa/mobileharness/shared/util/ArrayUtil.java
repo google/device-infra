@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-// Copyright 2012 Google Inc. All Rights Reserved.
-
 package com.google.wireless.qa.mobileharness.shared.util;
 
 /**
@@ -39,8 +37,8 @@ public final class ArrayUtil {
     int i = 0;
     for (String[] array : arrays) {
       if (array != null) {
-        for (int j = 0; j < array.length; j++) {
-          result[i++] = array[j];
+        for (String element : array) {
+          result[i++] = element;
         }
       }
     }
