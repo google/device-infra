@@ -57,6 +57,7 @@ java_library(
     visibility = [
         "//java/com/google/devtools/mobileharness/api/model/job/in:__pkg__",
         "//java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:__pkg__",
     ],
     runtime_deps = [
         # Otherwise wireless/android/comms/tools/mobileharness/plugins/testtracker/client/sponge:testtracker_sponge_uploader_client_test will break.
@@ -114,6 +115,7 @@ java_library(
         "//java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:__pkg__",
         "//java/com/google/devtools/mobileharness/shared/util/sharedpool:__pkg__",
         "//javatests/com/google/devtools/mobileharness/shared/util/sharedpool:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:__pkg__",
     ],
     deps = [
         "//devtools/mobileharness/service/moss/proto:slg_java_proto",
