@@ -18,33 +18,13 @@ package com.google.devtools.mobileharness.api.model.job.in;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.flags.Flag;
-import com.google.common.flags.FlagSpec;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.proto.Job;
 import java.time.Duration;
 
-/** Timeout setting of a job. See go/mh-timing for more detail. */
+/** Timeout setting of a job. */
 @AutoValue
 public abstract class Timeout {
-
-  private static class Flags {
-    // b/67647096
-    // Temporary flag, it will be removed once Wear LE DoU tests run stably on MH.
-    @FlagSpec(
-        name = "support_longevity_test_do_not_use",
-        help = "DO NOT USE except for Wear LE DoU tests")
-    private static final Flag<Boolean> supportLongevityTestDoNotUse = Flag.value(false);
-
-    // b/178227704. A temporary flag to support Wear simple longevity tests
-    // (http://go/mh-longevity-short-term-design)
-    @FlagSpec(
-        name = "support_simple_longevity_test_do_not_use",
-        help =
-            "DO NOT USE except for Wear simple longevity tests"
-                + " (http://go/mh-longevity-short-term-design)")
-    private static final Flag<Boolean> supportSimpleLongevityTestDoNotUse = Flag.value(false);
-  }
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -62,14 +42,12 @@ public abstract class Timeout {
 
   @VisibleForTesting
   static Duration initializeMaxJobTimeout() {
-    return getMaxJobTimeout(
-        Flags.supportSimpleLongevityTestDoNotUse.get() || Flags.supportLongevityTestDoNotUse.get());
+    return getMaxJobTimeout(false);
   }
 
   @VisibleForTesting
   static Duration initializeMaxTestTimeout() {
-    return getMaxTestTimeout(
-        Flags.supportSimpleLongevityTestDoNotUse.get() || Flags.supportLongevityTestDoNotUse.get());
+    return getMaxTestTimeout(false);
   }
 
   public static Duration getMaxJobTimeout(boolean supportLongevityTest) {
@@ -127,15 +105,6 @@ public abstract class Timeout {
       builder.setStartTimeout(Duration.ofMillis(proto.getStartTimeoutMs()));
     }
     return builder.build();
-  }
-
-  public static Timeout fromProto(
-      com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout proto) {
-    return newBuilder()
-        .setJobTimeout(Duration.ofMillis(proto.getJobTimeoutMs()))
-        .setTestTimeout(Duration.ofMillis(proto.getTestTimeoutMs()))
-        .setStartTimeout(Duration.ofMillis(proto.getStartTimeoutMs()))
-        .build();
   }
 
   public Job.Timeout toProto() {

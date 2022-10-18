@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.api.model.job.in;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
-import com.google.common.annotations.Beta;
 import com.google.devtools.mobileharness.api.model.proto.Job;
 import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in.DeviceRequirement;
 
@@ -30,7 +29,6 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in
  * Decorator namespaces.
  */
 @AutoValue
-@Beta
 public abstract class DeviceSpec {
 
   abstract DeviceRequirement deviceRequirement();

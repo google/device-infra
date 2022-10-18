@@ -21,13 +21,13 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_pkg",
-        "//java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:device_requirements_user",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in:decorators",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in:dimensions",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )

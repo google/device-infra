@@ -16,9 +16,7 @@
 
 package com.google.devtools.mobileharness.api.model.job.in;
 
-import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.service.moss.proto.Slg.DimensionsProto;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.util.Map;
@@ -29,7 +27,6 @@ import java.util.concurrent.ConcurrentHashMap;
  * Required dimensions for device allocations. Only the devices with all these dimensions can be
  * allocated.
  */
-@Beta
 public class Dimensions {
 
   /** Required dimensions of the target devices. */
@@ -37,14 +34,6 @@ public class Dimensions {
 
   /** Creates the dimensions of a job. */
   public Dimensions() {}
-
-  /**
-   * Creates the dimensions of a job by the given {@link DimensionsProto}. Note: please don't make
-   * this public at any time.
-   */
-  Dimensions(DimensionsProto dimensionsProto) {
-    this.dimensions.putAll(dimensionsProto.getDimensionsMap());
-  }
 
   /**
    * Adds the given dimension. If there is another dimension with the same name exists, it will be

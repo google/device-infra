@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.api.model.job.out;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.devtools.mobileharness.service.moss.proto.Result.TimeDetail;
 import java.time.Clock;
 import java.time.Instant;
 
@@ -47,18 +46,6 @@ public class TouchableTiming extends Timing implements Cloneable {
   public TouchableTiming(Clock clock, Instant createTime) {
     super(clock, createTime);
     this.modifyTime = getCreateTime();
-  }
-
-  /**
-   * Creates the time records by the given {@link TimeDetail}. Note: please don't make this public
-   * at any time.
-   */
-  TouchableTiming(TimeDetail timeDetail) {
-    super(
-        Clock.systemUTC(),
-        Instant.ofEpochMilli(timeDetail.getCreateTimeMs()),
-        Instant.ofEpochMilli(timeDetail.getStartTimeMs()));
-    this.modifyTime = Instant.ofEpochMilli(timeDetail.getModifyTimeMs());
   }
 
   private TouchableTiming(TouchableTiming other) {

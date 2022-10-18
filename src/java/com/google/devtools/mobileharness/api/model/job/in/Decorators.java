@@ -16,10 +16,8 @@
 
 package com.google.devtools.mobileharness.api.model.job.in;
 
-import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.gson.JsonArray;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -34,7 +32,6 @@ import java.util.List;
  * CompositeDeviceDecoratorAdapter and MoblyDecoratorAdapter). Need to add an ScopedSpecs field to
  * this class to hold it.
  */
-@Beta
 public class Decorators {
 
   private final List<String> decorators = new ArrayList<>();
@@ -81,16 +78,5 @@ public class Decorators {
   /** Gets the required decorators. */
   public synchronized List<String> getAll() {
     return ImmutableList.copyOf(decorators);
-  }
-
-  // TODO: Coverts this object to a json string by invoking the toJson() methods of every
-  // fields.
-  public JsonArray toJson() {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public String toString() {
-    return toJson().toString();
   }
 }

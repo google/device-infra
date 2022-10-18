@@ -16,16 +16,13 @@
 
 package com.google.devtools.mobileharness.api.model.job.in;
 
-import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableList;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.gson.JsonArray;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
 /** The requirements of the devices for every allocation. */
-@Beta
 public class DeviceSpecs {
   private final List<DeviceSpec> devices = new ArrayList<>();
 
@@ -100,11 +97,5 @@ public class DeviceSpecs {
   /** Returns the number of devices in every allocation. Should be >=1. */
   public int size() {
     return devices.size();
-  }
-
-  // TODO: Converts this object to a json string by invoking the toJson() methods of
-  // every fields.
-  public JsonArray toJson() {
-    throw new UnsupportedOperationException("Not implemented");
   }
 }

@@ -16,14 +16,12 @@
 
 package com.google.devtools.mobileharness.api.model.job.out;
 
-import com.google.common.annotations.Beta;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** The time records of the job/test. */
-@Beta
 public class Timing {
 
   /** The time when this job/test is created. */
@@ -49,13 +47,12 @@ public class Timing {
   }
 
   /** Creates the time records of the job/test. */
-  @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
   public Timing(Clock clock) {
     this(clock, clock.instant());
   }
 
   /** Creates the time records of the job/test. */
-  @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
+  @SuppressWarnings("GoodTime")
   public Timing(Clock clock, Instant createTime) {
     this.clock = clock;
     this.createTime = createTime;
@@ -72,7 +69,6 @@ public class Timing {
    * Creates the time records by the given create and start time. Note: please don't make this
    * public at any time.
    */
-  @SuppressWarnings("GoodTime") // TODO: fix GoodTime violation
   Timing(Clock clock, Instant createTime, Instant startTime) {
     this.clock = clock;
     this.createTime = createTime;

@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in;
 
-import com.google.common.annotations.Beta;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.proto.Job;
@@ -27,7 +26,6 @@ import java.util.Collections;
 import java.util.List;
 
 /** The requirements of the devices for every allocation. */
-@Beta
 public class DeviceRequirements {
 
   private final List<DeviceRequirement> devices = new ArrayList<>();

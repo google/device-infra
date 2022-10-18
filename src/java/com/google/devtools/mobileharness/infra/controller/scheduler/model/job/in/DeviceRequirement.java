@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.annotations.Beta;
 import com.google.devtools.mobileharness.api.model.job.in.Decorators;
 import com.google.devtools.mobileharness.api.model.job.in.Dimensions;
 import com.google.devtools.mobileharness.api.model.proto.Job;
@@ -26,7 +25,6 @@ import com.google.devtools.mobileharness.api.model.proto.Job;
  * The requirement of one device for every allocation. Note the job can specify multiple {@link
  * DeviceRequirement} to request multiple devices for a single allocation.
  */
-@Beta
 @AutoValue
 public abstract class DeviceRequirement {
 
