@@ -14,9 +14,6 @@
 #
 
 DEFAULT_VISIBILITY = [
-    "//devtools/mobileharness/project:stadia_engprod_leti",
-    "//java/com/google/devtools/common/metrics/stability/rpc:__subpackages__",
-    "//javatests/com/google/devtools/common/metrics/stability/rpc:__subpackages__",
     "//:deviceinfra_all_pkg",
 ]
 
@@ -27,16 +24,14 @@ java_library(
     srcs = ["ErrorModelConverter.java"],
     visibility = DEFAULT_VISIBILITY,
     deps = [
-        "//devtools/common/metrics/stability/model/proto:error_java_proto",
-        "//devtools/mobileharness/api/model/proto:error_java_proto",
-        "//devtools/mobileharness/service/moss/proto:result_java_proto",
-        "//java/com/google/devtools/common/metrics/stability/converter",
-        "//java/com/google/devtools/mobileharness/api/model/error",
-        "//java/com/google/devtools/mobileharness/shared/model/error:rpc_exception",
-        "//java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:error_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/deviceinfra/api/error:exception",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/model/error:unknown_error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],

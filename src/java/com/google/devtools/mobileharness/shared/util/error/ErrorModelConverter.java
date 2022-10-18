@@ -36,8 +36,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Error;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionSummary;
-import com.google.devtools.mobileharness.service.moss.proto.Result;
-import com.google.devtools.mobileharness.shared.model.error.MobileHarnessRpcException;
 import com.google.devtools.mobileharness.shared.model.error.UnknownErrorId;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -74,47 +72,6 @@ public class ErrorModelConverter {
         ? toOldException((DeviceInfraException) exception)
         : exception;
   }
-
-  // LINT.IfChange(toMossErrorInfo)
-  public static Result.ErrorInfo toMossErrorInfo(ExceptionProto.ExceptionDetail detail) {
-    ErrorIdProto.ErrorId criticalErrorId =
-        com.google.devtools.common.metrics.stability.converter.ErrorModelConverter
-            .getCriticalErrorId(detail);
-    ErrorIdProto.ErrorId userFacingCriticalErrorId =
-        com.google.devtools.common.metrics.stability.converter.ErrorModelConverter
-            .getUserFacingCriticalErrorId(detail);
-    ErrorIdProto.ErrorId errorId = detail.getSummary().getErrorId();
-    Result.ErrorInfo.Builder errorInfo =
-        Result.ErrorInfo.newBuilder()
-            // TODO: stop writing to deprecated_summary when all clients start to read
-            // from summary.
-            .setDeprecatedSummary(
-                toExceptionSummaryWithoutNamespace(
-                    detail.getSummary().toBuilder().clearStackTrace()))
-            .setSummary(detail.getSummary())
-            .setCompleteStackTrace(getCompleteStackTrace(detail))
-            .setCriticalErrorId(criticalErrorId)
-            .setUserFacingCriticalErrorId(userFacingCriticalErrorId)
-            .setAggregatedErrorType(criticalErrorId.getType());
-
-    StringBuilder errorNameStackTrace = new StringBuilder(errorId.getName());
-    StringBuilder errorCodeStackTrace = new StringBuilder(String.valueOf(errorId.getCode()));
-    ExceptionProto.ExceptionDetail cause = detail;
-    while (cause.hasCause()) {
-      cause = cause.getCause();
-      errorInfo.addDeprecatedCause(
-          toExceptionSummaryWithoutNamespace(cause.getSummary().toBuilder().clearStackTrace()));
-      errorInfo.addCause(cause.getSummary().toBuilder().clearStackTrace());
-      errorNameStackTrace.append("|").append(cause.getSummary().getErrorId().getName());
-      errorCodeStackTrace.append("|").append(cause.getSummary().getErrorId().getCode());
-    }
-
-    return errorInfo
-        .setErrorNameStackTrace(errorNameStackTrace.toString())
-        .setErrorCodeStackTrace(errorCodeStackTrace.toString())
-        .build();
-  }
-  // LINT.ThenChange(//depot/google3/third_party/deviceinfra/src/java/com/google/devtools/common/metrics/stability/converter/ErrorModelConverter.java:toFlattenedExceptionDetail)
 
   /**
    * @deprecated This method will set the NON_MH_ERROR as the ErrorId for any
@@ -156,7 +113,7 @@ public class ErrorModelConverter {
    */
   @Deprecated
   public static ExceptionDetail toExceptionDetail(Throwable throwable, @Nullable ErrorId errorId) {
-    return toExceptionDetail(throwable, errorId, true /* addStackTrace */);
+    return toExceptionDetail(throwable, errorId, /* addStackTrace= */ true);
   }
 
   /**
@@ -330,25 +287,6 @@ public class ErrorModelConverter {
       cause = toMobileHarnessException(detail.getCause());
     }
     MobileHarnessException result = new MobileHarnessException(errorId, errorMessage, cause);
-    result.setStackTrace(getStackTrace(detail.getSummary()));
-    detail
-        .getSuppressedList()
-        .forEach(suppressed -> result.addSuppressed(toMobileHarnessException(suppressed)));
-    return result;
-  }
-
-  public static MobileHarnessRpcException toMobileHarnessRpcException(
-      int rpcCanonicalCode, ExceptionDetail detail) {
-    ErrorId errorId = getErrorId(detail);
-    String errorMessage = getErrorMessage(errorId, detail.getSummary());
-    MobileHarnessException cause = null;
-    if (detail.hasCause()) {
-      cause = toMobileHarnessException(detail.getCause());
-    }
-    MobileHarnessRpcException result =
-        new MobileHarnessRpcException(rpcCanonicalCode, errorId, errorMessage, cause);
-    // TODO: Move mhException(detail) to the cause of this exception, or the top-level
-    // exception stack trace will be overrode.
     result.setStackTrace(getStackTrace(detail.getSummary()));
     detail
         .getSuppressedList()
