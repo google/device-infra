@@ -16,14 +16,12 @@
 
 package com.google.devtools.mobileharness.api.model.job.out;
 
-import com.google.common.annotations.Beta;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestStatus;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.logging.Logger;
 import javax.annotation.Nullable;
 
 /** Status of a job/test. */
-@Beta
 public class Status {
   // TODO: Rename TestStatus proto to Status.
   /** Status of this job/test. */

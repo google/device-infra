@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.api.model.job.out;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
-import com.google.common.annotations.Beta;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -30,7 +29,6 @@ import com.google.devtools.mobileharness.api.model.job.in.Params;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestStatus;
-import com.google.devtools.mobileharness.service.moss.proto.Slg.ResultProto;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.InlineMe;
@@ -39,12 +37,7 @@ import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
-/**
- * Result of a job/test.
- *
- * @see <a href="go/mh-test-result">MH Test Result Classification</a>
- */
-@Beta
+/** Result of a job/test. */
 public class Result {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -84,22 +77,6 @@ public class Result {
   public Result(TouchableTiming timing, Params params) {
     this.timing = timing;
     this.params = params;
-  }
-
-  /**
-   * Creates the result of a job/test by the given {@link ResultProto}. Note: please don't make this
-   * public at any time.
-   */
-  protected Result(TouchableTiming timing, Params params, ResultProto resultProto) {
-    this.timing = timing;
-    this.params = params;
-    synchronized (lock) {
-      this.result = resultProto.getResult();
-      this.cause =
-          resultProto.getCause().equals(ExceptionDetail.getDefaultInstance())
-              ? null
-              : ErrorModelConverter.toCommonExceptionDetail(resultProto.getCause());
-    }
   }
 
   /** Sets the test result to PASS, and cleans up the cause exception if any. */

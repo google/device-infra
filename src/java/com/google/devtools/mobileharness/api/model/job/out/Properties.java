@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.api.model.job.out;
 
-import com.google.common.annotations.Beta;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
@@ -29,7 +28,6 @@ import java.util.concurrent.ConcurrentMap;
 import javax.annotation.Nullable;
 
 /** Output properties of a job/test. */
-@Beta
 public class Properties {
   /** Properties generated during execution. */
   private final ConcurrentMap<String, String> properties = new ConcurrentHashMap<>();

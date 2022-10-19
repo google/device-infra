@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.api.model.job.out;
 
-import com.google.common.annotations.Beta;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
@@ -33,7 +32,6 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** Warnings of the job/test occur during the execution. */
-@Beta
 public class Warnings {
   /** Job/Test warnings. */
   private final ConcurrentLinkedDeque<ExceptionDetail> warnings = new ConcurrentLinkedDeque<>();
@@ -205,14 +203,14 @@ public class Warnings {
   }
 
   private void log(Throwable throwable, @Nullable FluentLogger logger, @Nullable ErrorId errorId) {
-    log.atWarning()
-        .alsoTo(logger)
-        .withCauseStack()
-        .withCause(throwable)
-        .log(
-            errorId == null
-                ? null
-                : String.format(
-                    "Error %s(%d)[%s]", errorId.name(), errorId.code(), errorId.namespace()));
+    if (errorId == null) {
+      log.atWarning().alsoTo(logger).withCauseStack().withCause(throwable).log(null);
+    } else {
+      log.atWarning()
+          .alsoTo(logger)
+          .withCauseStack()
+          .withCause(throwable)
+          .log("Error %s(%d)[%s]", errorId.name(), errorId.code(), errorId.namespace());
+    }
   }
 }
