@@ -68,6 +68,7 @@ java_library(
     srcs = ["Dimensions.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/sharedpool:__pkg__",
     ],
     deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
