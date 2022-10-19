@@ -47,11 +47,11 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:__pkg__",
     ],
     deps = [
-        "//java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out:timing",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
     ],
 )
 
