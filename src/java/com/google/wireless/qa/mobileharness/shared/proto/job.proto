@@ -1,0 +1,167 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared;
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
+
+// Type of a job, including the device type, driver and decorator information.
+message JobType {
+  // Name of the device, required.
+  optional string device = 4;
+  // Name of the driver, required.
+  optional string driver = 5;
+  // Decorators in decorating order and in reversed executing order, which
+  // means the preRun() of a decorator in the front will be executed AFTER
+  // preRun() of other decorators.
+  repeated string decorator = 6;
+}
+
+// Result of a single test.
+enum TestResult {
+  // Use
+  // //src/devtools/mobileharness/api/model/proto/test.proto
+  // instead.
+  option deprecated = true;
+
+  // Test not finished.
+  UNKNOWN = 0;
+  // Test passed.
+  PASS = 1;
+  // Test finished but failed (caused by users).
+  FAIL = 2;
+  // Unknown error occurs (most likely caused by third parties, also can be
+  // caused by either MH or users).
+  // For third party errors, MH will try best to "fix" them and find alternative
+  // solution. But there might be some known issues that can be not fixed.
+  ERROR = 3;
+  // Test timeout.
+  TIMEOUT = 4;
+  // Finished abnormally.
+  ABORT = 5;
+  // Infrastructure error occurs (caused by MH).
+  INFRA_ERROR = 6;
+  // Test is marked as skipped.
+  SKIP = 7;
+  // Test failed to allocate any device because:
+  // 1) No devices can meet all the requirements of the job. Users may need to
+  //    update the job/device config to fix it. The allocation diagnostic report
+  //    in test log will "guess" the closest match of your job and devices and
+  //    show the detail reason why they are not exactly matched.
+  // 2) All suitable devices are busy. Users may need to extend the timeout
+  //    setting(go/mh-timing) or request more devices.
+  ALLOC_FAIL = 8;
+  // Test failed to allocate any device and the reason is unclassified.
+  ALLOC_ERROR = 9;
+}
+
+// Status of a test during its life cycle.
+enum TestStatus {
+  // Use
+  // //src/devtools/mobileharness/api/model/proto/test.proto
+  // instead.
+  option deprecated = true;
+
+  // The test is new and not started.
+  NEW = 0;
+  // The test is assigned with a device but the test hasn't started running.
+  ASSIGNED = 1;
+  // The test is running.
+  RUNNING = 2;
+  // The test is finished.
+  DONE = 3;
+  // The test is suspended due to quota issues.
+  SUSPENDED = 4;
+}
+
+// Job timeout setting.
+message Timeout {
+  // Use
+  // //src/devtools/mobileharness/api/model/proto/job.proto
+  // instead.
+  option deprecated = true;
+
+  // Max execution time of a job. By default, it is 1 hour.
+  optional int64 job_timeout_ms = 1 [default = 3600000];
+  // Max execution time of a single test. By default, it is 5 minutes.
+  optional int64 test_timeout_ms = 2 [default = 300000];
+  // Timeout for starting the job and waiting for allocating the first device.
+  // By default, it is 5 minutes.
+  optional int64 start_timeout_ms = 3 [default = 300000];
+}
+
+// Job retry setting.
+message Retry {
+  // Use
+  // //src/devtools/mobileharness/api/model/proto/job.proto
+  // instead.
+  option deprecated = true;
+
+  // The retry level of Mobile harness job.
+  enum Level {
+    // Use
+    // //src/devtools/mobileharness/api/model/proto/job.proto
+    // instead.
+    option deprecated = true;
+
+    // A test retries until the attempt number reach 'test_attempts'. All the
+    // attempt results are sent to Sponge.
+    ALL = 0;
+    // A test retries when the result is ERROR/FAIL. Only the final result is
+    // sent to Sponge. It can hide some test flakes.
+    FAIL = 1;
+    // A test retries when the result is ERROR. Only the final result is sent to
+    // Sponge. It can hide some ERROR caused by devices.
+    ERROR = 2;
+  }
+  // The maximum number of times a test could retry.
+  optional int32 test_attempts = 1 [default = 2];
+  // If the test result is in this list, retry the test until reaching max
+  // attempts or getting a result not in this list.
+  optional bool force_retry = 2 [default = false, deprecated = true];
+  // The retry level of Mobile harness job. Tests retry condition depends on the
+  // level.
+  optional Level retry_level = 3 [default = ERROR];
+}
+
+// Test result and status count.
+message ResultCounter {
+  required int32 total = 1;
+  required int32 unknown = 2;
+  required int32 passed = 3;
+  required int32 failed = 4;
+  required int32 error = 5;
+  required int32 timeout = 6;
+  optional int32 abort = 7;
+  optional int32 infra_error = 8;
+  optional int32 skipped = 9;
+}
+
+// Job priority.
+enum Priority {
+  // Use
+  // //src/devtools/mobileharness/api/model/proto/job.proto
+  // instead.
+  option deprecated = true;
+
+  MIN = 0;
+  LOW = 10;
+  DEFAULT = 20;
+  HIGH = 30;
+  MAX = 40;
+}
