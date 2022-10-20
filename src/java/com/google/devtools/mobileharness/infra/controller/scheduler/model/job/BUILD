@@ -13,33 +13,27 @@
 # limitations under the License.
 #
 
-java_library(
-    name = "job_timer",
-    srcs = [
-        "JobTimer.java",
-    ],
-    visibility = [
-        "//java/com/google/devtools/mobileharness/infra/controller/scheduler:__subpackages__",  # deviceinfra:google-only(internal)
-        "//javatests/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",  # deviceinfra:google-only(internal)
-        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:__pkg__",
-    ],
-    deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/api/model/job/in",
-        "//src/java/com/google/devtools/mobileharness/api/model/job/out:timing",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
+# Description:
+#   Job/Test data models for Mobile Harness scheduler.
+
+package(
+    default_visibility = [
+        "//:deviceinfra_pkg",
     ],
 )
 
 java_library(
-    name = "test_runner_timing",
-    srcs = [
-        "TestRunnerTiming.java",
-    ],
-    visibility = [
-        "//java/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
+    name = "job",
+    srcs = glob(["*ScheduleUnit.java"]),
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/in",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/out:timing",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:device_requirements",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:job_timer",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
+        "@maven//:com_google_guava_guava",
     ],
 )
