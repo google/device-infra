@@ -27,36 +27,6 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
-        "//testing/mobileharness/shared/proto:lab_model_java_proto",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "lab",
-    srcs = glob(["*.java"]),
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//java/com/google/devtools/mobileharness/api/moreto/client:moreto_client_api_users",
-    ],
-    exports = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab/in",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab/out",
-    ],
-    deps = [
-        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
-        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab/in",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab/out",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
-        "//testing/mobileharness/shared/proto:lab_model_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",

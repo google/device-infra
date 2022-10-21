@@ -18,12 +18,10 @@ package com.google.wireless.qa.mobileharness.shared.model.lab;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabPort;
+import com.google.devtools.mobileharness.api.model.proto.Lab.PortType;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.proto.Lab;
-import com.google.wireless.qa.mobileharness.shared.proto.Lab.LabPort;
-import com.google.wireless.qa.mobileharness.shared.proto.Lab.PortType;
 import java.util.EnumMap;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -41,14 +39,6 @@ public class LabLocator {
   public LabLocator(String ip, @Nullable String hostName) {
     this.ip = checkNotNull(ip);
     this.hostName = hostName;
-  }
-
-  /** Creates the lab locator from the proto. */
-  public LabLocator(Lab.LabLocator proto) {
-    this(proto.getIp(), proto.getHostName());
-    for (LabPort port : proto.getPortList()) {
-      setPort(port.getType(), port.getNum());
-    }
   }
 
   public LabLocator(com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator proto) {
@@ -77,6 +67,7 @@ public class LabLocator {
    * @return the previous port number of the given type, or <tt>null</tt> if there was no such port
    */
   @Nullable
+  @CanIgnoreReturnValue
   public Integer setPort(PortType type, int port) {
     return ports.put(type, port);
   }
@@ -104,9 +95,7 @@ public class LabLocator {
     return ports.get(type);
   }
 
-  /**
-   * @see #getPort
-   */
+  /** See {@link #getPort}. */
   public int getPortNonNull(PortType type) {
     return checkNotNull(getPort(type));
   }
@@ -140,28 +129,13 @@ public class LabLocator {
     return Objects.hash(ip, hostName, ports);
   }
 
-  public Lab.LabLocator toProto() {
-    Lab.LabLocator.Builder proto = Lab.LabLocator.newBuilder().setIp(ip).setHostName(hostName);
-    for (Entry<PortType, Integer> entry : ports.entrySet()) {
-      proto.addPort(LabPort.newBuilder().setType(entry.getKey()).setNum(entry.getValue()).build());
-    }
-    return proto.build();
-  }
-
   public com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator toNewProto() {
     return com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator.newBuilder()
         .setIp(ip)
         .setHostName(hostName)
         .addAllPort(
             ports.entrySet().stream()
-                .map(
-                    e ->
-                        com.google.devtools.mobileharness.api.model.proto.Lab.LabPort.newBuilder()
-                            .setType(
-                                com.google.devtools.mobileharness.api.model.proto.Lab.PortType
-                                    .forNumber(e.getKey().getNumber()))
-                            .setNum(e.getValue())
-                            .build())
+                .map(e -> LabPort.newBuilder().setType(e.getKey()).setNum(e.getValue()).build())
                 .collect(Collectors.toList()))
         .build();
   }
