@@ -21,9 +21,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.proto.Lab;
 import com.google.wireless.qa.mobileharness.shared.proto.Lab.LabPort;
-import com.google.wireless.qa.mobileharness.shared.proto.Lab.LabProxy;
 import com.google.wireless.qa.mobileharness.shared.proto.Lab.PortType;
-import com.google.wireless.qa.mobileharness.shared.proto.Lab.ProxyType;
 import java.util.EnumMap;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -39,7 +37,6 @@ public class LabLocator {
   private final String ip;
   @Nullable private final String hostName;
   private final EnumMap<PortType, Integer> ports = new EnumMap<>(PortType.class);
-  private final EnumMap<ProxyType, String> proxies = new EnumMap<>(ProxyType.class);
 
   public LabLocator(String ip, @Nullable String hostName) {
     this.ip = checkNotNull(ip);
@@ -51,9 +48,6 @@ public class LabLocator {
     this(proto.getIp(), proto.getHostName());
     for (LabPort port : proto.getPortList()) {
       setPort(port.getType(), port.getNum());
-    }
-    for (LabProxy proxy : proto.getProxyList()) {
-      setProxy(proxy.getType(), proxy.getSpec());
     }
   }
 
@@ -122,34 +116,6 @@ public class LabLocator {
     return new EnumMap<>(ports);
   }
 
-  /**
-   * Sets the proxy spec for the given proxy type.
-   *
-   * @return the previous proxy spec of the given type, or <tt>null</tt> if there was no such port
-   */
-  @Nullable
-  public String setProxy(ProxyType type, String spec) {
-    return proxies.put(type, spec);
-  }
-
-  /** Sets all the given proxies. */
-  @CanIgnoreReturnValue
-  public LabLocator setAllProxies(EnumMap<ProxyType, String> proxies) {
-    this.proxies.putAll(proxies);
-    return this;
-  }
-
-  /** Gets the proxy spec of the given type. If not exist, returns <tt>null</tt>. */
-  @Nullable
-  public String getProxy(ProxyType type) {
-    return proxies.get(type);
-  }
-
-  /** Gets all the proxies of this lab. */
-  public EnumMap<ProxyType, String> getAllProxies() {
-    return new EnumMap<>(proxies);
-  }
-
   @Override
   public String toString() {
     if (hostName == null) {
@@ -163,10 +129,7 @@ public class LabLocator {
   public boolean equals(Object obj) {
     if (obj instanceof LabLocator) {
       LabLocator other = (LabLocator) obj;
-      return ip.equals(other.ip)
-          && hostName.equals(other.hostName)
-          && ports.equals(other.ports)
-          && proxies.equals(other.proxies);
+      return ip.equals(other.ip) && hostName.equals(other.hostName) && ports.equals(other.ports);
     } else {
       return false;
     }
@@ -174,17 +137,13 @@ public class LabLocator {
 
   @Override
   public int hashCode() {
-    return Objects.hash(ip, hostName, ports, proxies);
+    return Objects.hash(ip, hostName, ports);
   }
 
   public Lab.LabLocator toProto() {
     Lab.LabLocator.Builder proto = Lab.LabLocator.newBuilder().setIp(ip).setHostName(hostName);
     for (Entry<PortType, Integer> entry : ports.entrySet()) {
       proto.addPort(LabPort.newBuilder().setType(entry.getKey()).setNum(entry.getValue()).build());
-    }
-    for (Entry<ProxyType, String> entry : proxies.entrySet()) {
-      proto.addProxy(
-          LabProxy.newBuilder().setType(entry.getKey()).setSpec(entry.getValue()).build());
     }
     return proto.build();
   }
