@@ -30,6 +30,12 @@ public enum ExtErrorId implements ErrorId {
   // iOS: 60_001 ~ 80_000
   // ***********************************************************************************************
 
+  MOBLY_AOSP_CREATE_VENV_ERROR(81_081, ErrorType.INFRA_ISSUE),
+  MOBLY_AOSP_PYTHON_VERSION_NOT_FOUND_ERROR(81_082, ErrorType.INFRA_ISSUE),
+  MOBLY_AOSP_UNZIP_TEST_PACKAGE_ERROR(81_083, ErrorType.CUSTOMER_ISSUE),
+  MOBLY_AOSP_RESOLVE_TEST_PATH_ERROR(81_084, ErrorType.CUSTOMER_ISSUE),
+  MOBLY_AOSP_PIP_INSTALL_ERROR(81_085, ErrorType.CUSTOMER_ISSUE),
+
   EXT_PLACE_HOLDER_TO_BE_RENAMED(100_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = InfraErrorId.MAX_CODE + 1;
