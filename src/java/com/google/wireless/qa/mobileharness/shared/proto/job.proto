@@ -18,11 +18,7 @@ syntax = "proto2";
 
 package mobileharness.shared;
 
-option jspb_use_correct_proto2_semantics = false;  // go/jspb-correct-proto2
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
-option cc_api_version = 2;
-option java_api_version = 2;
-option go_api_flag = "OPEN_TO_OPAQUE_HYBRID";  // See http://go/go-api-flag.
 
 // Type of a job, including the device type, driver and decorator information.
 message JobType {
