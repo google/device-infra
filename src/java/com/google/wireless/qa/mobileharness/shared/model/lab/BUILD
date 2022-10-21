@@ -46,9 +46,9 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab/out",
     ],
     deps = [
-        "//devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
