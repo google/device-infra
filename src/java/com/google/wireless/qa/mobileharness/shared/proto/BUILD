@@ -19,6 +19,7 @@ package(default_visibility = ["//visibility:public"])
 
 exports_files([
     "common.proto",
+    "job.proto",
 ])
 
 proto_library(
@@ -29,4 +30,14 @@ proto_library(
 java_proto_library(
     name = "common_java_proto",
     deps = [":common_proto"],
+)
+
+proto_library(
+    name = "job_proto",
+    srcs = ["job.proto"],
+)
+
+java_proto_library(
+    name = "job_java_proto",
+    deps = [":job_proto"],
 )
