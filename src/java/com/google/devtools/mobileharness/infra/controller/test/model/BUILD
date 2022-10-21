@@ -41,13 +41,6 @@ java_library(
         "TestExecutionResult.java",
     ],
     visibility = [
-        "//java/com/google/devtools/mobileharness/infra/container:__subpackages__",
-        "//java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/infra/container:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",

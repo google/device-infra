@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:device_requirements",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:job_timer",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )
