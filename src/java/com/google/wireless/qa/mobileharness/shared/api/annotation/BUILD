@@ -13,33 +13,20 @@
 # limitations under the License.
 #
 
-# Description:
-#   Shared IO libraries.
-package(
-    default_visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+java_library(
+    name = "annotation",
+    srcs = glob(["*Annotation.java"]),
+    visibility = ["//visibility:public"],
+    deps = ["@maven//:com_google_errorprone_error_prone_annotations"],
 )
 
 java_library(
-    name = "base",
+    name = "basic_annotation",
     srcs = [
-        "ArrayUtil.java",
+        "FileAnnotation.java",
+        "ParamAnnotation.java",
     ],
-    deps = [
-    ],
-)
-
-java_library(
-    name = "reflection",
-    srcs = ["ReflectionUtil.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
-    ],
-    deps = [
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/reflection:reflection_util",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
     ],
 )

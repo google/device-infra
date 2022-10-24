@@ -40,7 +40,6 @@ java_library(
     srcs = glob(["*ScheduleUnit.java"]) + ["JobSetting.java"],
     deps = [
         ":locator",
-        "//java/com/google/testing/util:not-testonly",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -49,6 +48,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out:timing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -88,7 +88,6 @@ java_library(
     deps = [
         ":locator",
         ":schedule_unit",
-        "//java/com/google/common/util",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/path",
@@ -112,6 +111,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_java_proto",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )

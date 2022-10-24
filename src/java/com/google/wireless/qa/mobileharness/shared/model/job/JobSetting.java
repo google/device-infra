@@ -23,8 +23,6 @@ import com.google.devtools.mobileharness.api.model.proto.Job;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.api.model.proto.Job.Repeat;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
-import com.google.devtools.mobileharness.api.model.proto.Job.Retry.Level;
-import com.google.devtools.mobileharness.service.moss.proto.Slg.JobSettingProto;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
@@ -213,32 +211,6 @@ public class JobSetting {
 
   public static Builder newBuilder() {
     return new Builder();
-  }
-
-  /**
-   * Creates the settings of the job by the given {@link Dirs} and {@link JobSettingProto}. Note:
-   * please don't make this public at any time.
-   */
-  JobSetting(Dirs dirs, JobSettingProto jobSettingProto) {
-    this.newDirs = dirs;
-    this.newPriority = jobSettingProto.getPriority();
-    this.priority = Priority.valueOf(this.newPriority.name());
-    this.allocationExitStrategy = jobSettingProto.getAllocationExitStrategy();
-    this.newTimeout =
-        com.google.devtools.mobileharness.api.model.job.in.Timeout.fromProto(
-            jobSettingProto.getTimeout());
-    this.timeout =
-        Timeout.newBuilder()
-            .setJobTimeoutMs(this.newTimeout.jobTimeout().toMillis())
-            .setTestTimeoutMs(this.newTimeout.testTimeout().toMillis())
-            .setStartTimeoutMs(this.newTimeout.startTimeout().toMillis())
-            .build();
-    this.retry =
-        Retry.newBuilder()
-            .setTestAttempts(jobSettingProto.getRetry().getTestAttempts())
-            .setRetryLevel(Level.valueOf(jobSettingProto.getRetry().getRetryLevel().name()))
-            .build();
-    this.repeat = jobSettingProto.getRepeat();
   }
 
   private JobSetting(Builder builder) {
