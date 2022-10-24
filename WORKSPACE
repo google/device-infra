@@ -70,6 +70,7 @@ maven_install(
         "com.google.errorprone:error_prone_annotations:2.11.0",
         "com.google.flogger:flogger-system-backend:0.6",
         "com.google.flogger:flogger:0.6",
+        "com.google.code.gson:gson:2.9.1",
         "com.google.guava:guava:31.1-jre",
         "com.google.inject:guice:4.1.0",
         "com.google.truth.extensions:truth-proto-extension:1.1.3",

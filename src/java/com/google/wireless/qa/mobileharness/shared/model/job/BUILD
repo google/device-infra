@@ -34,3 +34,84 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "schedule_unit",
+    srcs = glob(["*ScheduleUnit.java"]) + ["JobSetting.java"],
+    deps = [
+        ":locator",
+        "//java/com/google/testing/util:not-testonly",
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/in",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out:timing",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "builder_adapter",
+    srcs = ["TestBuilderAdapter.java"],
+    visibility = [
+        # This target is only used for exposing the new TestInfo.Builder to the
+        # old TestInfo. DO NOT expose this "builder_adapter" target for other
+        # purposes.
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
+    ],
+    deps = [":job"],
+)
+
+java_library(
+    name = "job_helper",
+    srcs = ["JobHelper.java"],
+    visibility = [
+        # Note: this tool is only for for MH infra, please don't add more visibilities.
+    ],
+    deps = [
+        ":job",
+    ],
+)
+
+java_library(
+    name = "job",
+    srcs = glob(["*Info*.java"]) + ["JobSetting.java"],
+    visibility = ["//visibility:public"],
+    exports = [
+        ":locator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
+    ],
+    deps = [
+        ":locator",
+        ":schedule_unit",
+        "//java/com/google/common/util",
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/in",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/out",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
+        "//src/java/com/google/devtools/mobileharness/shared/util/dir:test_dir",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:job_type_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/util:result_comparator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_java_proto",
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
