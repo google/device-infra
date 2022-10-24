@@ -18,17 +18,6 @@
 
 package(
     default_visibility = [
-        "//java/com/google/devtools/mobileharness/api:__subpackages__",
-        "//java/com/google/devtools/mobileharness/infra:__subpackages__",
-        "//java/com/google/devtools/mobileharness/shared:__subpackages__",
-        "//java/com/google/wireless/qa/mobileharness/client:__subpackages__",
-        "//java/com/google/wireless/qa/mobileharness/shared:__subpackages__",
-        "//javatests/com/google/chrome/cloudcast/testing/leti/mobileharness:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/api:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/infra:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/shared:__subpackages__",
-        "//javatests/com/google/wireless/qa/mobileharness/client:__subpackages__",
-        "//javatests/com/google/wireless/qa/mobileharness/shared/controller:__subpackages__",
         "//src/java/com/google/devtools/deviceinfra/infra:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator:__pkg__",

@@ -22,18 +22,8 @@ package(
 
 java_library(
     name = "allocation",
-    srcs = glob(
-        ["*.java"],
-        exclude = [
-            "AllocationInternalFactory.java",
-        ],
-    ),
-    tags = [
-        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/model/allocation",
-        "avoid_dep",
-    ],
+    srcs = ["Allocation.java"],
     deps = [
-        "//devtools/mobileharness/service/moss/proto:slg_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
@@ -41,19 +31,5 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "allocation_factory",
-    srcs = ["AllocationInternalFactory.java"],
-    visibility = [
-        # Note: this tool is only for MH infra, please don't add more visibilities.
-        "//java/com/google/devtools/mobileharness/service/moss/util/slg:__pkg__",
-        "//javatests/com/google/wireless/qa/mobileharness/shared/model:__subpackages__",
-    ],
-    deps = [
-        ":allocation",
-        "//devtools/mobileharness/service/moss/proto:slg_java_proto",
     ],
 )
