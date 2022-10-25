@@ -601,17 +601,6 @@ public class ProtocolMessageOrBuilderJsonSerializer
       String protoPackage = fileDesc.getPackage();
       javaPackage = "com.google.protos" + ("".equals(protoPackage) ? "" : "." + protoPackage);
     }
-    // Check for the special dual-compiling case that is used when moving from proto1 to proto2
-    // Java API. If the proto file descriptor says that the Java API version is v1, then
-    // "proto2api" is added to the package name.
-    if (options.hasJavaApiVersion() && options.getJavaApiVersion() == 1) {
-      // Check for a specified v2 package name.
-      if (options.hasJavaAltApiPackage()) {
-        javaPackage = options.getJavaAltApiPackage();
-      } else {
-        javaPackage += ".proto2api";
-      }
-    }
     result.append(javaPackage).append(".");
 
     if (!options.getJavaMultipleFiles()) {

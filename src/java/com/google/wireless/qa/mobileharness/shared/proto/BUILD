@@ -23,6 +23,16 @@ exports_files([
 ])
 
 proto_library(
+    name = "communication_proto",
+    srcs = ["communication.proto"],
+)
+
+java_proto_library(
+    name = "communication_java_proto",
+    deps = [":communication_proto"],
+)
+
+proto_library(
     name = "common_proto",
     srcs = ["common.proto"],
 )
@@ -40,4 +50,24 @@ proto_library(
 java_proto_library(
     name = "job_java_proto",
     deps = [":job_proto"],
+)
+
+proto_library(
+    name = "job_config_proto",
+    srcs = ["job_config.proto"],
+    deps = [
+        ":job_proto",
+        "//src/devtools/mobileharness/api/model/proto:job_proto",
+        "@com_google_protobuf//:descriptor_proto",
+    ],
+)
+
+cc_proto_library(
+    name = "job_config_cc_proto",
+    deps = [":job_config_proto"],
+)
+
+java_proto_library(
+    name = "job_config_java_proto",
+    deps = [":job_config_proto"],
 )

@@ -16,13 +16,12 @@
 
 package com.google.wireless.qa.mobileharness.shared.model.job.out;
 
-import static com.google.thirdparty.jodatime.JodaTime.googleTimeZone;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.flogger.FluentLogger;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
+import com.google.errorprone.annotations.CompileTimeConstant;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollectorBackend;
@@ -30,19 +29,17 @@ import com.google.wireless.qa.mobileharness.shared.log.LogContext;
 import com.google.wireless.qa.mobileharness.shared.log.LogData;
 import com.google.wireless.qa.mobileharness.shared.log.LoggingApi;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Log.Api;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
+import java.util.TimeZone;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.annotation.Nullable;
-import org.joda.time.format.DateTimeFormat;
-import org.joda.time.format.DateTimeFormatter;
 
 /** Output log of the job/test. */
 public class Log implements LogCollector<Api> {
 
-  /**
-   * @see LoggingApi
-   */
+  /** See {@link LoggingApi}. */
   public interface Api extends LoggingApi<Api> {}
 
   private class LogCollectorBackendImpl implements LogCollectorBackend<LogData> {
@@ -53,7 +50,7 @@ public class Log implements LogCollector<Api> {
       String message = data.getFormattedMessage();
       Optional<Throwable> cause = data.getCause();
       append(
-          DATE_FORMAT.print(timing.getClock().instant().toEpochMilli())
+          DATE_FORMAT.format(timing.getClock().instant())
               + " "
               + data.getLevel().toString().charAt(0)
               + " "
@@ -105,7 +102,8 @@ public class Log implements LogCollector<Api> {
   /** Date time format of log message time stamp. Timezone will be configured to MTV timezone. */
   @VisibleForTesting
   static final DateTimeFormatter DATE_FORMAT =
-      DateTimeFormat.forPattern("yyyy-MM-dd HH:mm:ss:SSS z").withZone(googleTimeZone());
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS z")
+          .withZone(TimeZone.getTimeZone("UTC").toZoneId());
 
   /** Output logs will be appended to this buffer while running this job/test. */
   private final StringBuffer buffer = new StringBuffer();
@@ -130,7 +128,7 @@ public class Log implements LogCollector<Api> {
 
   /** Appends new logs. Also log with the given logger. */
   @CanIgnoreReturnValue
-  public Log append(String message, FluentLogger logger) {
+  public Log append(@CompileTimeConstant String message, FluentLogger logger) {
     append(message);
     logger.atInfo().log("%s", message);
     return this;
@@ -143,7 +141,7 @@ public class Log implements LogCollector<Api> {
    */
   @CanIgnoreReturnValue
   @Deprecated
-  public Log ln(String message) {
+  public Log ln(@CompileTimeConstant String message) {
     atInfo().log(message);
     return this;
   }
@@ -156,7 +154,7 @@ public class Log implements LogCollector<Api> {
    */
   @CanIgnoreReturnValue
   @Deprecated
-  public Log ln(String message, @Nullable FluentLogger logger) {
+  public Log ln(@CompileTimeConstant String message, @Nullable FluentLogger logger) {
     atInfo().alsoTo(logger).log(message);
     return this;
   }
@@ -172,9 +170,7 @@ public class Log implements LogCollector<Api> {
     return buffer.substring(offset);
   }
 
-  /**
-   * @return the current length of the log
-   */
+  /** Returns the current length of the log. */
   public int size() {
     return buffer.length();
   }
