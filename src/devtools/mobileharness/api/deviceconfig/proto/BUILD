@@ -19,7 +19,6 @@
 package(
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/shared/api:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/shared/api:__pkg__",
     ],
 )
