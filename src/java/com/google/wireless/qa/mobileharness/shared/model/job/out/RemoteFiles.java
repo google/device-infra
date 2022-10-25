@@ -16,11 +16,9 @@
 
 package com.google.wireless.qa.mobileharness.shared.model.job.out;
 
-import static com.google.common.labs.base.Optionals.optional;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.service.moss.proto.Slg.RemoteFilesProto;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Collection;
 import java.util.Optional;
@@ -44,17 +42,6 @@ public class RemoteFiles {
   public RemoteFiles(Timing timing, Optional<String> rootPath) {
     this.timing = timing;
     this.rootPath = rootPath;
-  }
-
-  /**
-   * Creates the remote files class by the given {@link RemoteFilesProto}. Note: please don't make
-   * this public at any time.
-   */
-  RemoteFiles(Timing timing, RemoteFilesProto remoteFilesProto) {
-    this.timing = timing;
-    this.rootPath =
-        optional(!remoteFilesProto.getRootPath().isEmpty(), remoteFilesProto.getRootPath());
-    this.generatedFiles.addAll(remoteFilesProto.getRemoteFilePathList());
   }
 
   /**

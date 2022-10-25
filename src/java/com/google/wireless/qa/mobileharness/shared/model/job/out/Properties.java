@@ -17,8 +17,8 @@
 package com.google.wireless.qa.mobileharness.shared.model.job.out;
 
 import com.google.common.base.Ascii;
-import com.google.common.base.StringUtil;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import java.util.Map;
@@ -234,7 +234,7 @@ public class Properties {
    */
   public Optional<Boolean> getBoolean(String key) {
     String value = get(key);
-    if (StringUtil.isEmptyOrWhitespace(value)) {
+    if (StrUtil.isEmptyOrWhitespace(value)) {
       return Optional.empty();
     } else if (Boolean.TRUE.toString().equalsIgnoreCase(value)) {
       return Optional.of(true);

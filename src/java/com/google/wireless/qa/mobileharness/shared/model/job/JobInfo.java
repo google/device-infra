@@ -16,11 +16,10 @@
 
 package com.google.wireless.qa.mobileharness.shared.model.job;
 
-import com.google.common.annotations.Beta;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ListMultimap;
-import com.google.common.util.PathUtil;
+import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
@@ -508,13 +507,11 @@ public class JobInfo extends JobScheduleUnit {
    *
    * @return the execution unit of the job
    */
-  @Beta
   public JobExecutionUnit toJobExecutionUnit() {
     return jobExecutionUnitSupplier.get();
   }
 
   /** <b>NOTE</b>: For internal use only. */
-  @Beta
   public JobFeature toFeature() {
     JobFeature.Builder jobFeatureBuilder =
         JobFeature.newBuilder().setUser(jobUser()).setDriver(type().getDriver());

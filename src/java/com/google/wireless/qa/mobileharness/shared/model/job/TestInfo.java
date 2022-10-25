@@ -27,7 +27,6 @@ import com.google.devtools.mobileharness.api.model.job.out.Warnings;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionUnit;
 import com.google.devtools.mobileharness.shared.util.dir.TestDirUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
@@ -342,12 +341,8 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
       fileUtil.grantFileOrDirFullAccess(testDir);
       return testDir;
     } else {
-      // GrantFileAccess can not work on FoM env. It is a short term workaround.
-      SystemUtil systemUtil = new SystemUtil();
-      if (!systemUtil.isOnMac() || !systemUtil.isOnForge()) {
-        fileUtil.prepareDir(jobDir);
-        fileUtil.grantFileOrDirFullAccess(jobDir);
-      }
+      fileUtil.prepareDir(jobDir);
+      fileUtil.grantFileOrDirFullAccess(jobDir);
       return jobDir;
     }
   }
