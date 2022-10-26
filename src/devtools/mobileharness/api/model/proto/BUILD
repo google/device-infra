@@ -15,6 +15,7 @@
 
 package(default_visibility = [
     "//:deviceinfra_api_users",
+    "//wireless/android/test_tools/tradefed_lab/ate/mh_config:__pkg__",
 ])
 
 licenses(["notice"])
