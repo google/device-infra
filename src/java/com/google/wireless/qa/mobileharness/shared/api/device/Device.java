@@ -23,9 +23,11 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeD
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLogType;
+import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
+import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.CommunicationList;
@@ -352,6 +354,71 @@ public interface Device {
 
   /**
    * Checks and update the device types, dimensions, and supported drivers/decorators.
+   *
+   * <p>MH Device Manager framework will invoked this method periodically when the device is IDLE,
+   * to make sure the device info in scheduler and frontend are up to date.
+   *
+   * <p>You can also set/unset the {@link #isPrepping()} state to make the device
+   * unallocatable/allocatable. For example, when the device checking logic finds the device is
+   * battery low, you can set the {@link #isPrepping()} to true to give some time for the device to
+   * recharge. And when the regular device checking finds the battery level is back to normal, you
+   * can set the {@link #isPrepping()} to false so it can be allocated by users.
+   *
+   * @return whether the device is changed, to notify the Device Manager to sync the new device info
+   * @throws MobileHarnessException if fails to check the device, will cause the device to {@link
+   *     #tearDown()}, and {@link #reboot()} if {@link #canReboot()} is {@code true}
+   */
+  boolean checkDevice() throws MobileHarnessException, InterruptedException;
+
+  /** Returns whether the device is is not yet ready for use; e.g. needs to recharge its battery. */
+  boolean isPrepping();
+
+  /**
+   * Preparation before loading driver and run test.
+   *
+   * @param testInfo the test going to run on this device
+   * @throws MobileHarnessException if fails to do the preparation
+   */
+  void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException;
+
+  /**
+   * Operations after a test and before resetting/reloading the driver. If any {@link
+   * MobileHarnessException} is thrown out, will cause the device to reboot.
+   *
+   * @param testInfo the test just finished with this device
+   * @throws MobileHarnessException if fails to do the operation
+   */
+  PostTestDeviceOp postRunTest(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException;
+
+  /**
+   * Cleans up when the device becomes undetectable/disconnected. Should have no effect if this
+   * method is invoked for the second time.
+   *
+   * @throws MobileHarnessException if fails to clean up
+   * @throws InterruptedException if the current thread or its sub-thread is {@linkplain
+   *     Thread#interrupt() interrupted} by another thread
+   */
+  void tearDown() throws MobileHarnessException, InterruptedException;
+
+  /**
+   * Returns whether the device can be rebooted. If false, it is useless to implement {@link
+   * #reboot()} because it will never be invoked by the framework.
+   */
+  boolean canReboot() throws InterruptedException;
+
+  /**
+   * Restarts the device. After rebooting, the device must be undetectable for a while to make the
+   * framework recycle the old device runner thread. "A while" is >= (the latency of
+   * Detector.detectDevices() + 2s interval) * 2. To enable this function, you MUST override {@link
+   * #canReboot()} and make it return true. Otherwise, this method will never be invoked by the
+   * framework.
+   *
+   * <p>MH will call this method in 2 ways:
+   *
+   * <ul>
+   *   <li>If a test is time out, MH will always reboot the device to avoid any leftover process to
+   *       run on the device.
    * </ul>
    *
    * @throws MobileHarnessException if fails to restart the device
