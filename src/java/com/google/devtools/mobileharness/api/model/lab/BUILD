@@ -132,6 +132,9 @@ java_library(
     srcs = [
         "LiteDeviceInfoFactory.java",
     ],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+    ],
     deps = [
         ":device_id_descriptor",
         ":device_info",
