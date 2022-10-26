@@ -74,3 +74,101 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "validator_factory",
+    srcs = ["validator/ValidatorFactory.java"],
+    visibility = [
+    ],
+    deps = [
+        ":api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "job_validator",
+    srcs = ["validator/JobValidator.java"],
+    deps = [
+        ":api",
+        ":validator_factory",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "base_device",
+    srcs = [
+        "device/BaseDevice.java",
+    ],
+    deps = [
+        ":api",
+        ":validator_factory",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device:base_device_helper",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:lite_device_info_factory",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
+        "//src/java/com/google/devtools/mobileharness/infra/container/annotation",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_info_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/shared/api:config",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:communication_java_proto",
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "base",
+    srcs = [
+        "decorator/AdapterDecorator.java",
+        "decorator/AsyncTimerDecorator.java",
+        "decorator/BaseDecorator.java",
+        "device/DeviceFactory.java",
+        "driver/BaseDriver.java",
+        "driver/DriverFactory.java",
+        "validator/AdapterValidator.java",
+        "validator/BaseValidator.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
+    ],
+    exports = [
+        ":base_device",
+        ":validator_factory",
+    ],
+    deps = [
+        ":api",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/container/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:reflection",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_assistedinject",
+        "@maven//:com_google_inject_guice",
+    ],
+)
