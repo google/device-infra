@@ -42,3 +42,19 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+
+java_library(
+    name = "device_id_manager",
+    srcs = ["DeviceIdManager.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/shared/api:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/shared/api:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
