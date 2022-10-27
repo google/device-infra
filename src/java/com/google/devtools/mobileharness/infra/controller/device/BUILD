@@ -43,7 +43,6 @@ java_library(
     ],
 )
 
-
 java_library(
     name = "device_id_manager",
     srcs = ["DeviceIdManager.java"],
@@ -57,4 +56,3 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
-

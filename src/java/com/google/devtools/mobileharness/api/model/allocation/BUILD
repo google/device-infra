@@ -24,7 +24,6 @@ package(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/controller:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/infra:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness:__subpackages__",
