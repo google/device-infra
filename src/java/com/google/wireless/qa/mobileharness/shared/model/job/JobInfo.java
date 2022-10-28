@@ -128,6 +128,13 @@ public class JobInfo extends JobScheduleUnit {
               + " used.\n")
   public static final String PARAM_SANDBOX_MEMORY_MB = "sandbox_memory_mb";
 
+  @ParamAnnotation(
+      required = false,
+      help =
+          "Whether to report test error as TOOL_FAILED. Default value is not set. Currently it only"
+              + " supports tests triggered by gateway.")
+  public static final String PARAM_REPORT_ERROR_AS_TOOL_FAILED = "report_error_as_tool_failed";
+
   /** Input files of the job. */
   private final Files files;
 
