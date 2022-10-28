@@ -1,0 +1,128 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.shared.query;
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.query";
+option java_outer_classname = "DeviceQuery";
+
+message DeviceQueryFilter {
+  // A device is matched only if each owner regex is matched by at least one
+  // owner of the device. Owner list of a public device (which does not have
+  // any owner) will be treated as ["public"] here. For example,
+  // ["alice|public"] to only match alice's devices or public devices; ["alice",
+  // ".*bob.*"] to only match devices whose owners have both alice and
+  // bob-related groups. An empty list matches all devices.
+  repeated string owner_regex = 1;
+  // A device is matched only if each type regex is matched by at least one type
+  // name of the device. For example, ["AndroidRealDevice",
+  // "AndroidFlashableDevice"] to only match devices which is both
+  // an Android real device and an Android flashable device;
+  // ["AndroidDevice|IosDevice"] to only match Android devices or iOS devices.
+  // An empty list matches all devices.
+  repeated string type_regex = 2;
+  // A device is matched only if each driver regex is matched by at least one
+  // driver name of the device. For example, ["AndroidInstrumentation",
+  // "AndroidMoreto"] to only match devices which have both
+  // AndroidInstrumentation driver and AndroidMoreto driver;
+  // ["AndroidInstrumentation|AndroidMoreto"] to only match devices which have
+  // AndroidInstrumentation driver or AndroidMoreto driver. An empty list
+  // matches all devices.
+  repeated string driver_regex = 3;
+  // A device is matched only if each decorator regex is matched by at least one
+  // decorator name of the device. For example, ["AndroidLocationDecorator",
+  // "AndroidAdbShellDecorator"] to only match devices which have both
+  // AndroidLocationDecorator and AndroidAdbShellDecorator;
+  // ["AndroidSetWifiDecorator|AndroidDumpSysDecorator"] to only match devices
+  // which have AndroidSetWifiDecorator or AndroidDumpSysDecorator. An empty
+  // list matches all devices.
+  repeated string decorator_regex = 4;
+  // A device is matched only if its status equals to one status in the status
+  // list ignoring case considerations (when the status list is not empty), or
+  // the status list is empty. For example, ["idle", "busy", "init"] to only
+  // match devices whose status is idle, busy or init. An empty list matches all
+  // devices. Typical device statuses includes init, idle, busy, dying and
+  // prepping. Device status information could be found at Mobile Harness FE:
+  // mhfe/.
+  repeated string status = 5;
+  // A device is matched only if each dimension filter is matched by at least
+  // one dimension of the device. For example, [<"model", "nexus 5">,
+  // <"sdk_version", "23">] to match only Nexus 5 devices whose SDK version
+  // is 23; [<"host_name", "(.*bej.*)|(.*mtv.*)">, <"brand", "((?!google).)*">]
+  // to only match only non-GED devices deployed in Beijing or MTV (whose host
+  // name is like "alice001.bej.xxx.google.com" or
+  // "alice001.mtv.xxx.google.com" and whose brand name does not contain the
+  // substring "google"). An empty list matches all devices.
+  repeated DimensionFilter dimension_filter = 6;
+}
+
+message DeviceQueryResult {
+  repeated DeviceInfo device_info = 1;
+}
+
+// A dimension filter is matched by one dimension of a device only if the
+// device dimension name equals to the dimension filter name and the device
+// dimension value matches the dimension filter value regex.
+message DimensionFilter {
+  // The key of the dimension.
+  string name = 1;
+  // Value regex. Please ommit the word "regex" and write the regex directly.
+  string value_regex = 2;
+}
+
+// Device info queried from the omni lab.
+message DeviceInfo {
+  // Device id.
+  string id = 1;
+  // Device status.
+  string status = 2;
+  // The list of device owners.
+  repeated string owner = 3;
+  // Device type.
+  repeated string type = 4;
+  // Supported drivers.
+  repeated string driver = 5;
+  // Supported decorators.
+  repeated string decorator = 6;
+  // Device dimensions.
+  repeated Dimension dimension = 7;
+  // The job_id ruuning on this device.
+  string job_id = 8;
+  // The job_name ruuning on this device.
+  string job_name = 9;
+  // The test_id ruuning on this device.
+  string test_id = 10;
+  // The test_name ruuning on this device.
+  string test_name = 11;
+  // Executors of the device.
+  repeated string executor = 12;
+}
+
+// The Dimension is a <name, value> pair specifying a device property.
+message Dimension {
+  // The key in the dimension map.
+  string name = 1;
+  // The value in the dimension map.
+  string value = 2;
+  // When a dimension is required, if a Mobile Harness test wants to be
+  // allocated on the device, its job config must contain this dimension.
+  // For example, if a device has a required dimension <"label", "moreto_demo">,
+  // a Mobile Harness job without dimension <"label", "moreto_demo"> will not
+  // get the device even if all its other dimensions are matched.
+  bool required = 3;
+}
