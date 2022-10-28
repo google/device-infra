@@ -39,7 +39,7 @@ message USB {
   // The hostPort for "363005DC750400EC" is "11.4".
   string host_port = 2;
   // Whether the usb address is managed by ADB.
-  bool adb_managed = 3;
+  bool adb_managed = 3 [deprecated = true];
   // Optional. The USB serial of the device. Some drivers can get the host_bus
   // and host_port from the serial.
   string serial = 4;
@@ -56,11 +56,26 @@ message ADB {
   string serial = 1;
 }
 
+// Some devices, like Android, build the ADB connection upon the underlying USB
+// connection. We group the ADB and USB communication together, so that users
+// can pick either of them.
+message ADBOverUSB {
+  ADB adb = 1;
+  USB usb = 2;
+}
+
 message Communication {
   oneof communication {
+    // Only one USB connection over the cable, no other communications (e.g.
+    // ADB) over it.
     USB usb = 1;
+    // For SSH communications over TCP.
     SSH ssh = 2;
+    // Only one ADB connection, no underlying USB connection information is
+    // provided.
     ADB adb = 3;
+    // The ADB and USB connection comes from the same hardware cable.
+    ADBOverUSB adb_over_usb = 4;
   }
 }
 

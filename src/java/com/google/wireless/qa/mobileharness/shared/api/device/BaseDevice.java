@@ -386,19 +386,29 @@ public abstract class BaseDevice implements Device {
   @Override
   public void setCommunicationDimensionAndProperty(CommunicationList communicationList) {
     for (Communication communication : communicationList.getCommunicationList()) {
-      String communicationTypeValue;
       if (communication.hasAdb()) {
-        communicationTypeValue = CommunicationTypeValue.ADB.name();
+        addDimension(
+            Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
+            CommunicationTypeValue.ADB.name());
       } else if (communication.hasUsb()) {
-        communicationTypeValue = CommunicationTypeValue.USB.name();
+        addDimension(
+            Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
+            CommunicationTypeValue.USB.name());
       } else if (communication.hasSsh()) {
-        communicationTypeValue = CommunicationTypeValue.SSH.name();
+        addDimension(
+            Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
+            CommunicationTypeValue.SSH.name());
+      } else if (communication.hasAdbOverUsb()) {
+        addDimension(
+            Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
+            CommunicationTypeValue.ADB.name());
+        addDimension(
+            Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
+            CommunicationTypeValue.USB.name());
       } else {
         logger.atWarning().log("Unknown communication: %s", communication);
         continue;
       }
-      addDimension(
-          Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()), communicationTypeValue);
     }
     setProperty(PROP_COMMUNICATION, communicationList.toString());
   }
