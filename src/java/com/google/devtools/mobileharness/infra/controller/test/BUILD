@@ -14,6 +14,25 @@
 #
 
 java_library(
+    name = "test_runner",
+    srcs = [
+        "TestRunner.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
+        "//src/javatests/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/allocation",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
+    ],
+)
+
+java_library(
     name = "test_context",
     srcs = ["TestContext.java"],
     visibility = [

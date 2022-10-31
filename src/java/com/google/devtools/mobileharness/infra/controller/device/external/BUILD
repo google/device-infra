@@ -18,16 +18,6 @@
 
 package(
     default_visibility = [
-        "//java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
-        "//java/com/google/devtools/mobileharness/infra/controller:__subpackages__",
-        "//java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-        "//java/com/google/wireless/qa/mobileharness/client/api/mode/local:__subpackages__",
-        "//java/com/google/wireless/qa/mobileharness/tool/android:__subpackages__",
-        "//javatests/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/infra/controller:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/infra/controller/device/external:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-        "//javatests/com/google/wireless/qa/mobileharness/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
@@ -40,7 +30,7 @@ java_library(
         "ExternalDeviceManager.java",
     ],
     deps = [
-        "//java/com/google/devtools/deviceinfra/host/daemon/health/handler:drain_handler",
+        "//src/java/com/google/devtools/deviceinfra/host/daemon/health/handler:drain_handler",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
 )

@@ -41,6 +41,8 @@ java_library(
         "TestExecutionResult.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",

@@ -21,7 +21,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.time.TimeSource;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
@@ -35,7 +34,6 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager.DeviceReservation;
-import com.google.devtools.mobileharness.infra.controller.device.faileddevice.FailedDeviceTable;
 import com.google.devtools.mobileharness.infra.controller.device.util.DeviceRebootUtil;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
@@ -52,7 +50,7 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceE
 import com.google.wireless.qa.mobileharness.shared.controller.stat.DeviceStat;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
-import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -125,7 +123,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   private volatile Instant lastCheckDeviceTime;
 
   /** clock for getting the current system time. */
-  private final TimeSource timeSource;
+  private final Clock clock;
 
   /** Multiple event buses to handle events in different scopes with different handlers. */
   private final EventBus globalInternalBus;
@@ -168,7 +166,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     addDeviceIdToDimension(deviceId);
     deviceStat = stat;
     deviceStat.onShowUp();
-    timeSource = TimeSource.system();
+    clock = Clock.systemUTC();
     extendExpireTime();
     this.globalInternalBus = globalInternalBus;
     this.deviceRebootUtil = new DeviceRebootUtil();
@@ -182,14 +180,14 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       Device device,
       DeviceStat stat,
       ApiConfig apiConfig,
-      TimeSource timeSource,
+      Clock clock,
       Thread runningThread,
       ExternalDeviceManager externalDeviceManager) {
     this.device = device;
     addDeviceIdToDimension(deviceId);
     this.deviceStat = stat;
     this.apiConfig = apiConfig;
-    this.timeSource = timeSource;
+    this.clock = clock;
     this.runningThread = runningThread;
 
     running = true;
@@ -295,11 +293,9 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
           deviceReservation != null
               ? deviceReservation
               : externalDeviceManager.reserveDevice(
-                  device.getDeviceId(), Duration.between(timeSource.now(), expireTime))) {
+                  device.getDeviceId(), Duration.between(clock.instant(), expireTime))) {
         device.tearDown();
-        if (needReboot
-            && !DeviceUtil.inSharedLab()
-            && !externalDeviceManager.isManagingDeviceLifeCycle()) {
+        if (needReboot && !externalDeviceManager.isManagingDeviceLifeCycle()) {
           // TODO: Leaves the device in an unusable state instead of put it in the reboot
           // loop when rebooting doesn't help.
           try {
@@ -364,7 +360,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   public boolean isAlive() {
     return running
         && !cancelled
-        && expireTime.isAfter(timeSource.now())
+        && expireTime.isAfter(clock.instant())
         && !Thread.currentThread().isInterrupted();
   }
 
@@ -393,7 +389,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
 
   @Override
   public boolean isTearingDown() {
-    return tearingDown && expireTime.isAfter(timeSource.now());
+    return tearingDown && expireTime.isAfter(clock.instant());
   }
 
   @SuppressWarnings("Interruption")
@@ -406,8 +402,8 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       }
       if (!isTearingDown()) {
         if (lastInterruptTime == null) {
-          lastInterruptTime = timeSource.now();
-        } else if (lastInterruptTime.isBefore(timeSource.now().minus(RUNNER_INTERRUPT_INTERVAL))
+          lastInterruptTime = clock.instant();
+        } else if (lastInterruptTime.isBefore(clock.instant().minus(RUNNER_INTERRUPT_INTERVAL))
             && runningThread != null) {
           logger.atInfo().log(
               "The device runner %s was not killed after being canceled for %s minutes, try to"
@@ -416,7 +412,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
           // b/191837695 to try to interrupt a timeout thread repeatedly to prevent some logic from
           // eating the InterruptException.
           runningThread.interrupt();
-          lastInterruptTime = timeSource.now();
+          lastInterruptTime = clock.instant();
         }
       }
     }
@@ -470,7 +466,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   public DeviceStatusWithTimestamp getDeviceStatusWithTimestamp() {
     return DeviceStatusWithTimestamp.newBuilder()
         .setStatus(getDeviceStatus())
-        .setTimestampMs(timeSource.now().toEpochMilli())
+        .setTimestampMs(clock.millis())
         .build();
   }
 
@@ -522,15 +518,10 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     } catch (MobileHarnessException e) {
       initialized = false;
       postDeviceErrorEvent(e);
-      if (!DeviceUtil.inSharedLab()
-          && DeviceUtil.isFailedDeviceCreationEnabled()
-          && !externalDeviceManager.isManagingDeviceRecovery()) {
-        transformToFailedDevice();
-      }
       throw e;
     }
     initialized = true;
-    lastCheckDeviceTime = timeSource.now();
+    lastCheckDeviceTime = clock.instant();
     deviceStat.onReady();
     extendExpireTime();
     // Sort dimensions for easier manual scanning.
@@ -551,13 +542,6 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         Joiner.on("\n").join(device.getDriverTypes()),
         Joiner.on("\n").join(device.getDecoratorTypes()));
     extendExpireTime();
-  }
-
-  /** Turn this device into a FailedDevice waiting for recovery job. */
-  void transformToFailedDevice() {
-    // After adding the device id to the FailedDeviceTable, this runner will be soon killed by the
-    // manager and be replaced by another runner with a new FailedDevice.
-    FailedDeviceTable.getInstance().add(device.getDeviceControlId());
   }
 
   @Override
@@ -622,7 +606,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
                 getDevice(), deviceStat, apiConfig, testExecutionResult);
         postTestExecutionEndedEvent(
             test.getTestRunner().getAllocation(), testExecutionResult.testResult(), needReboot);
-        if (needReboot && !DeviceUtil.inSharedLab()) {
+        if (needReboot) {
           // If the device needs to reboot based on the test results, the runner needs to be
           // cancelled.  This will only set a flag that marks this runner as cancelled.  Calling
           // code that checks isAlive() and isCancelled() would then interrupt our thread.
@@ -640,11 +624,11 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   }
 
   private void extendExpireTime() {
-    expireTime = timeSource.now().plus(RUNNER_EXPIRE);
+    expireTime = clock.instant().plus(RUNNER_EXPIRE);
   }
 
   private void extendExpireTime(Duration duration) {
-    expireTime = timeSource.now().plus(duration);
+    expireTime = clock.instant().plus(duration);
   }
 
   /**
@@ -653,14 +637,11 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
    * @return whether the device is changed, to notify the device management framework
    */
   private boolean checkDevice() throws InterruptedException, MobileHarnessException {
-    if (DeviceUtil.inSharedLab()) {
-      return false;
-    }
-    if (timeSource.now().minus(CHECK_DEVICE_INTERVAL).isBefore(lastCheckDeviceTime)) {
+    if (clock.instant().minus(CHECK_DEVICE_INTERVAL).isBefore(lastCheckDeviceTime)) {
       return false;
     }
     logger.atInfo().log("Start periodical check");
-    lastCheckDeviceTime = timeSource.now();
+    lastCheckDeviceTime = clock.instant();
     try {
       return device.checkDevice();
     } catch (MobileHarnessException e) {
@@ -727,7 +708,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
    * it with the test start time to calculate the allocation latency. See b/71722259.
    */
   private void recordBecomeIdleTime() {
-    Instant now = Instant.now();
+    Instant now = clock.instant();
     logger.atInfo().atMostEvery(10, TimeUnit.MINUTES).log(
         "Update device %s last IDLE time: %s", device.getDeviceId(), now);
     getDevice()

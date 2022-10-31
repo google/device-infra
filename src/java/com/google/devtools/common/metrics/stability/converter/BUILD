@@ -42,6 +42,7 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_metrics_pkg",
+        "//:deviceinfra_pkg",
     ],
     deps = [
         "deserialized_exception",

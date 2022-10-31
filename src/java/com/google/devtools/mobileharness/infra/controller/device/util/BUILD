@@ -19,7 +19,6 @@ java_library(
         "DeviceRebootUtil.java",
     ],
     visibility = [
-        "//javatests/com/google/devtools/mobileharness/infra/controller/device/util:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
     ],
     deps = [
