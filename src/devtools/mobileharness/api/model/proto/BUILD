@@ -24,7 +24,10 @@ exports_files(["error.proto"])
 proto_library(
     name = "device_proto",
     srcs = ["device.proto"],
-    deps = [":lab_proto"],
+    deps = [
+        ":lab_proto",
+        "//src/devtools/common/metrics/stability/model/proto:error_proto",
+    ],
 )
 
 java_proto_library(

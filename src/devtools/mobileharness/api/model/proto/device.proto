@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.api.model;
 
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/lab.proto";
 
 option java_package = "com.google.devtools.mobileharness.api.model.proto";
@@ -87,4 +88,9 @@ enum PostTestDeviceOp {
 enum DeviceLogType {
   DEVICE_LOG_TYPE_UNSPECIFIED = 0;
   DEVICE_LOG_TYPE_ANDROID_LOGCAT = 1;
+}
+
+message DeviceError {
+  int64 timestamp_ms = 1;
+  .stability.model.FlattenedExceptionDetail error = 2;
 }
