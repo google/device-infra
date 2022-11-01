@@ -16,19 +16,19 @@
 
 package com.google.devtools.mobileharness.infra.controller.device;
 
-import static com.google.common.labs.concurrent.LabsFutures.logFailure;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.util.concurrent.TimeUnit.MINUTES;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Pair;
 import com.google.common.cache.Cache;
 import com.google.common.eventbus.EventBus;
-import com.google.common.flags.Flag;
-import com.google.common.flags.FlagSpec;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.time.Sleeper;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResults;
@@ -39,7 +39,6 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
-import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
@@ -49,7 +48,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
 import javax.annotation.Nullable;
 
 /**
@@ -61,15 +59,9 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
     implements Runnable, DeviceHelperFactory, LocalDeviceRunnerProvider, DeviceStateChecker {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  @FlagSpec(
-      name = "detect_device_interval_sec",
-      help = "Interval in seconds for detecting the current active devices")
-  public static final Flag<Integer> FLAG_detectDeviceIntervalSec = Flag.value(1);
+  private static final int DETECT_DEVICE_INTERVAL_SEC = 1;
 
-  @FlagSpec(
-      name = "dispatch_device_interval_sec",
-      help = "Interval in seconds for dispatching the current active devices")
-  private static final Flag<Integer> FLAG_dispatchDeviceIntervalSec = Flag.value(2);
+  private static final int DISPATCH_DEVICE_INTERVAL_SEC = 1;
 
   /**
    * The max consecutive rounds of detection when detector meets exception. If reached, will clear
@@ -135,66 +127,76 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
     ListeningExecutorService detectorThreadPool =
         MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
     detectors.forEach(
-        detector ->
-            logFailure(
-                detectorThreadPool.submit(
-                    () -> {
-                      String detectorName = detector.getClass().getSimpleName();
-                      long detectDeviceIntervalMs =
-                          Duration.ofSeconds(FLAG_detectDeviceIntervalSec.getNonNull()).toMillis();
-                      // Use the detector's detection interval if specified, otherwise, use the
-                      // global interval instead.
-                      Optional<Duration> detectionIntervalPerDetector =
-                          detector.getDetectionInterval();
-                      if (detectionIntervalPerDetector.isPresent()) {
-                        detectDeviceIntervalMs = detectionIntervalPerDetector.get().toMillis();
-                      }
-                      while (!Thread.currentThread().isInterrupted()) {
-                        try {
-                          Thread.sleep(detectDeviceIntervalMs);
-                          detectionResultCache.put(detectorName, detector.detectDevices());
-                          deviceDetectionConsecutiveFailureRounds.put(detectorName, 0);
-                        } catch (MobileHarnessException e) {
-                          int consecutiveFailureRounds =
-                              deviceDetectionConsecutiveFailureRounds.getOrDefault(detectorName, 0)
-                                  + 1;
-                          deviceDetectionConsecutiveFailureRounds.put(
+        detector -> {
+          ListenableFuture<?> future =
+              detectorThreadPool.submit(
+                  () -> {
+                    String detectorName = detector.getClass().getSimpleName();
+                    long detectDeviceIntervalMs =
+                        Duration.ofSeconds(DETECT_DEVICE_INTERVAL_SEC).toMillis();
+                    // Use the detector's detection interval if specified, otherwise, use the
+                    // global interval instead.
+                    Optional<Duration> detectionIntervalPerDetector =
+                        detector.getDetectionInterval();
+                    if (detectionIntervalPerDetector.isPresent()) {
+                      detectDeviceIntervalMs = detectionIntervalPerDetector.get().toMillis();
+                    }
+                    while (!Thread.currentThread().isInterrupted()) {
+                      try {
+                        Thread.sleep(detectDeviceIntervalMs);
+                        detectionResultCache.put(detectorName, detector.detectDevices());
+                        deviceDetectionConsecutiveFailureRounds.put(detectorName, 0);
+                      } catch (MobileHarnessException e) {
+                        int consecutiveFailureRounds =
+                            deviceDetectionConsecutiveFailureRounds.getOrDefault(detectorName, 0)
+                                + 1;
+                        deviceDetectionConsecutiveFailureRounds.put(
+                            detectorName, consecutiveFailureRounds);
+                        if (consecutiveFailureRounds
+                                % MAX_DEVICE_DETECTION_CONSECUTIVE_FAILURE_ROUNDS
+                            == 0) {
+                          detectionResultCache.remove(detectorName);
+                          logger.atSevere().withCause(e).log(
+                              "The %s failed to detect device for %s consecutive rounds",
                               detectorName, consecutiveFailureRounds);
-                          if (consecutiveFailureRounds
-                                  % MAX_DEVICE_DETECTION_CONSECUTIVE_FAILURE_ROUNDS
-                              == 0) {
-                            detectionResultCache.remove(detectorName);
-                            logger.atSevere().withCause(e).log(
-                                "The %s failed to detect device for %s consecutive rounds",
-                                detectorName, consecutiveFailureRounds);
-                          } else {
-                            logger.atSevere().atMostEvery(1, MINUTES).withCause(e).log(
-                                "The %s failed to detect devices", detectorName);
-                          }
-                        } catch (InterruptedException e) {
-                          logger.atInfo().log("Interrupted: %s", e.getMessage());
+                        } else {
+                          logger.atSevere().atMostEvery(1, MINUTES).withCause(e).log(
+                              "The %s failed to detect devices", detectorName);
+                        }
+                      } catch (InterruptedException e) {
+                        logger.atInfo().log("Interrupted: %s", e.getMessage());
+                        break;
+                      } catch (
+                          @SuppressWarnings("CatchingUnchecked")
+                          RuntimeException e) {
+                        // Catches all exception to make sure this detector thread won't
+                        // be stopped.
+                        // Otherwise, no device can be detected.
+                        logger.atSevere().withCause(e).log("FATAL ERROR");
+                        if (!keepGoing) {
                           break;
-                        } catch (
-                            @SuppressWarnings("CatchingUnchecked")
-                            Exception e) {
-                          // Catches all exception to make sure this detector thread won't
-                          // be stopped.
-                          // Otherwise, no device can be detected.
-                          logger.atSevere().withCause(e).log("FATAL ERROR");
-                          if (!keepGoing) {
-                            break;
-                          }
                         }
                       }
-                      logger.atWarning().log("Current thread for %s is interrupted.", detectorName);
-                    }),
-                Level.SEVERE,
-                "Fatal error in detector [%s]",
-                detector.getClass().getSimpleName()));
+                    }
+                    logger.atWarning().log("Current thread for %s is interrupted.", detectorName);
+                  });
+          Futures.addCallback(
+              future,
+              new FutureCallback<Object>() {
+
+                @Override
+                public void onSuccess(@Nullable Object result) {}
+
+                @Override
+                public void onFailure(Throwable t) {
+                  logger.atSevere().withCause(t).log("Fatal error in detector.");
+                }
+              },
+              directExecutor());
+        });
     while (!Thread.currentThread().isInterrupted()) {
       try {
-        Sleeper.defaultSleeper()
-            .sleep(Duration.ofSeconds(FLAG_dispatchDeviceIntervalSec.getNonNull()));
+        Sleeper.defaultSleeper().sleep(Duration.ofSeconds(DISPATCH_DEVICE_INTERVAL_SEC));
         DetectionResults detectionResults = getCachedDetectionResults();
         localDeviceDispatch.dispatchDevices(detectionResults);
       } catch (InterruptedException e) {
@@ -214,9 +216,6 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
 
   /** Checks whether the device type is supported. */
   public boolean isDeviceTypeSupported(Class<? extends Device> deviceType) {
-    if (DeviceUtil.inSharedLab()) {
-      return true;
-    }
     return localDeviceDispatch.isDeviceTypeSupported(deviceType);
   }
 
@@ -269,9 +268,7 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
     LocalDeviceRunner deviceRunner = getLocalDeviceRunner(deviceId);
     if (deviceRunner == null) {
       throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-          !DeviceUtil.inSharedLab()
-              ? InfraErrorId.LAB_RPC_EXEC_TEST_KICK_OFF_TEST_DEVICE_NOT_FOUND
-              : InfraErrorId.LAB_RPC_EXEC_TEST_KICK_OFF_TEST_MNM_DEVICE_NOT_FOUND,
+          InfraErrorId.LAB_RPC_EXEC_TEST_KICK_OFF_TEST_DEVICE_NOT_FOUND,
           String.format(
               "Device runner [%s] is not found. Maybe the device is disconnected", deviceId));
     }
@@ -280,19 +277,18 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
 
   @Override
   @Nullable
-  public Pair<Device, DeviceStatusInfo> getDeviceAndStatusInfo(String deviceId) {
+  public DeviceWithStatusInfo getDeviceAndStatusInfo(String deviceId) {
     return getDeviceAndStatusInfo(deviceId, /*deviceType=*/ null);
   }
 
   @Override
   @Nullable
-  public Pair<Device, DeviceStatusInfo> getDeviceAndStatusInfo(
-      String deviceId, @Nullable String deviceType) {
+  public DeviceWithStatusInfo getDeviceAndStatusInfo(String deviceId, @Nullable String deviceType) {
     LocalDeviceRunner deviceRunner = getLocalDeviceRunner(deviceId, deviceType);
     if (deviceRunner == null) {
       return null;
     }
-    return Pair.of(
+    return DeviceWithStatusInfo.create(
         deviceRunner.getDevice(),
         DeviceStatusInfo.newBuilder()
             .setDeviceStatusWithTimestamp(deviceRunner.getDeviceStatusWithTimestamp())

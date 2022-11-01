@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.controller.device;
 
-import com.google.common.base.Pair;
+import com.google.auto.value.AutoValue;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.util.Map;
@@ -24,13 +24,23 @@ import javax.annotation.Nullable;
 
 /** Interface for providing device status. */
 public interface DeviceStatusProvider {
+  /** Inforamtion with a device and the status info. */
+  @AutoValue
+  public abstract static class DeviceWithStatusInfo {
+    public abstract Device device();
+
+    public abstract DeviceStatusInfo deviceStatusInfo();
+
+    public static DeviceWithStatusInfo create(Device device, DeviceStatusInfo deviceStatusInfo) {
+      return new AutoValue_DeviceStatusProvider_DeviceWithStatusInfo(device, deviceStatusInfo);
+    }
+  }
 
   /** Gets the device status according to its device ID. */
-  Pair<Device, DeviceStatusInfo> getDeviceAndStatusInfo(String deviceId);
+  DeviceWithStatusInfo getDeviceAndStatusInfo(String deviceId);
 
   /** Gets the device status according to its device ID and device type. */
-  Pair<Device, DeviceStatusInfo> getDeviceAndStatusInfo(
-      String deviceId, @Nullable String deviceType);
+  DeviceWithStatusInfo getDeviceAndStatusInfo(String deviceId, @Nullable String deviceType);
 
   /**
    * Gets the status of all devices. The devices which are not ready are excluded from the result.

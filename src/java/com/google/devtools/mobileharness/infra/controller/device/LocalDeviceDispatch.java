@@ -18,9 +18,7 @@ package com.google.devtools.mobileharness.infra.controller.device;
 
 import static java.util.stream.Collectors.joining;
 
-import com.google.common.annotations.Beta;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Pair;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResults;
@@ -35,7 +33,6 @@ import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.tracing.LocalTraceSpanBuilder;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceDownEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceEvent;
@@ -61,14 +58,13 @@ import javax.annotation.Nullable;
  * Manages devices, including the device dispatchers, and the management of the {@link
  * LocalDeviceRunner}s of the devices.
  */
-@Beta
 public class LocalDeviceDispatch {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final List<Dispatcher> dispatchers;
 
   /** Device {ID, {LocalDeviceRunner, Future}} of the devices detected and managed by this class. */
-  private final ConcurrentMap<String, Pair<LocalDeviceRunner, Future<?>>> devices =
+  private final ConcurrentMap<String, Entry<LocalDeviceRunner, Future<?>>> devices =
       new ConcurrentHashMap<>();
 
   /** The {@link DispatchResults} of the previous round of detection. */
@@ -163,10 +159,10 @@ public class LocalDeviceDispatch {
     previousResults = realtimeDispatchResults;
     mergedResults.mergeFrom(realtimeDispatchResults);
     Set<String> newIds = mergedResults.getDeviceControlIds(DispatchType.LIVE);
-    for (Entry<String, Pair<LocalDeviceRunner, Future<?>>> device : devices.entrySet()) {
+    for (Entry<String, Entry<LocalDeviceRunner, Future<?>>> device : devices.entrySet()) {
       String id = device.getKey();
-      LocalDeviceRunner runner = device.getValue().getFirst();
-      Future<?> future = device.getValue().getSecond();
+      LocalDeviceRunner runner = device.getValue().getKey();
+      Future<?> future = device.getValue().getValue();
       // Will kill the runner, or wait for its termination if:
       // - ID of the runner doesn't show up in the merged ids,
       // - or the runner is not alive,
@@ -250,10 +246,8 @@ public class LocalDeviceDispatch {
                 globalInternalBus,
                 deviceStat,
                 externalDeviceManager);
-        Future<?> future =
-            threadPool.submit(
-                new LocalTraceSpanBuilder("LocalDeviceDispatch", "dispatchDevices").wrap(runner));
-        devices.put(newId, Pair.of(runner, future));
+        Future<?> future = threadPool.submit(() -> runner.run());
+        devices.put(newId, Map.entry(runner, future));
         logger.atInfo().log("Post LocalDeviceUpEvent");
         globalInternalBus.post(
             new LocalDeviceUpEvent(
@@ -303,10 +297,10 @@ public class LocalDeviceDispatch {
       throws InterruptedException {
     if (deviceIdManager.containsUuid(deviceUuid)) {
       String deviceControlId = deviceIdManager.getDeviceIdFromUuid(deviceUuid).get().controlId();
-      Pair<LocalDeviceRunner, Future<?>> device = devices.get(deviceControlId);
+      Entry<LocalDeviceRunner, Future<?>> device = devices.get(deviceControlId);
       if (device != null) {
         // Found the device.
-        LocalDeviceRunner runner = device.getFirst();
+        LocalDeviceRunner runner = device.getKey();
         if (runner.isAlive()) {
           if (realtimeDispatch(detectionResults)
               .getDeviceControlIds(DispatchType.LIVE, DispatchType.CACHE)
@@ -335,9 +329,9 @@ public class LocalDeviceDispatch {
       deviceControlId =
           deviceIdManager.getDeviceIdFromUuid(deviceControlIdOrUuid).get().controlId();
     }
-    Pair<LocalDeviceRunner, Future<?>> device = devices.get(deviceControlId);
+    Entry<LocalDeviceRunner, Future<?>> device = devices.get(deviceControlId);
     if (device != null) {
-      return device.getFirst();
+      return device.getKey();
     }
     return null;
   }
@@ -356,8 +350,8 @@ public class LocalDeviceDispatch {
             ? realtimeDispatch(detectionResults)
                 .getDeviceControlIds(DispatchType.LIVE, DispatchType.CACHE)
             : null;
-    for (Pair<LocalDeviceRunner, Future<?>> device : devices.values()) {
-      LocalDeviceRunner runner = device.first;
+    for (Entry<LocalDeviceRunner, Future<?>> device : devices.values()) {
+      LocalDeviceRunner runner = device.getKey();
       if (realtimeIds != null && !realtimeIds.contains(runner.getDevice().getDeviceControlId())) {
         continue;
       }
