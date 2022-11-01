@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.shared.api;
+package com.google.devtools.mobileharness.infra.controller.device.config;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;

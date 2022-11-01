@@ -19,8 +19,8 @@ package com.google.devtools.mobileharness.infra.controller.device.util;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
-import com.google.devtools.mobileharness.infra.shared.api.ApiConfig;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.stat.DeviceStat;
 

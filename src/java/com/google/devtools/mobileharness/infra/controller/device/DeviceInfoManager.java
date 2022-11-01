@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfoFactory;
-import com.google.devtools.mobileharness.infra.shared.api.ApiConfig;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;

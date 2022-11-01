@@ -122,7 +122,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
         "//src/java/com/google/devtools/mobileharness/infra/container/annotation",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_info_manager",
-        "//src/java/com/google/devtools/mobileharness/infra/shared/api:config",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.shared.api;
+package com.google.devtools.mobileharness.infra.controller.device.config;
 
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.protobuf.Any;

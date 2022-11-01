@@ -35,7 +35,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.devtools.mobileharness.infra.container.annotation.ProcessIncompatible;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceInfoManager;
-import com.google.devtools.mobileharness.infra.shared.api.ApiConfig;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.TextFormat;

@@ -21,7 +21,7 @@ import static com.google.common.collect.Multimaps.toMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
-import com.google.devtools.mobileharness.infra.shared.api.ApiConfig;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import java.util.List;

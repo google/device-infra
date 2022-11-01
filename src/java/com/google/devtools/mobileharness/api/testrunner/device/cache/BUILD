@@ -18,8 +18,6 @@ java_library(
     srcs = ["DeviceCacheManager.java"],
     visibility = [
         # Do NOT add visibility here.
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/shared/api:__pkg__",
         "//:deviceinfra_devicemanagement_pkg",
     ],
     deps = [

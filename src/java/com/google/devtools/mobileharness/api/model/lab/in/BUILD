@@ -80,7 +80,7 @@ java_library(
         ":dimension",
         ":local_configurable_dimension",
         ":local_dimension",
-        "//src/java/com/google/devtools/mobileharness/infra/shared/api:config",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
@@ -127,7 +127,7 @@ java_library(
     deps = [
         ":dimension",
         ":local_dimension",
-        "//src/java/com/google/devtools/mobileharness/infra/shared/api:config",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",

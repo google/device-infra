@@ -32,12 +32,12 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWith
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCacheManager;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager.DeviceReservation;
 import com.google.devtools.mobileharness.infra.controller.device.util.DeviceRebootUtil;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
-import com.google.devtools.mobileharness.infra.shared.api.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;

@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.api.model.lab.in;
 
-import com.google.devtools.mobileharness.infra.shared.api.ApiConfig;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import javax.annotation.Nullable;
 
 /** Factory for creating {@link CompositeDimensions}. */
