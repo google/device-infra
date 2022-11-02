@@ -45,6 +45,12 @@ proto_library(
     ],
 )
 
+py_proto_library(
+    name = "device_py_pb2",
+    api_version = 2,
+    deps = [":device_proto"],
+)
+
 java_proto_library(
     name = "device_java_proto",
     deps = [":device_proto"],
