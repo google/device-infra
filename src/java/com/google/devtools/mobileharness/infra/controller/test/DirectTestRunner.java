@@ -68,7 +68,6 @@ public interface DirectTestRunner extends TestRunner {
   /**
    * Gets the plugin loading result of the test.
    *
-   * @see <a href="http://go/mh-tr-plugin-query">Test Runner Plugin Query API One-pager</a>
    * @since MH lab server 4.31.0 and MH client 4.163.0 (local test runner only)
    */
   default ListenableFuture<PluginLoadingResult> getPluginLoadingResult() {

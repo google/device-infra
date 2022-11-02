@@ -14,6 +14,52 @@
 #
 
 java_library(
+    name = "direct_test_runner",
+    srcs = [
+        "DirectTestRunner.java",
+        "PluginLoadingResult.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/launcher:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:__pkg__",
+        "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_runner",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "direct_test_runner_setting",
+    srcs = [
+        "DirectTestRunnerSetting.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
+        "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "test_runner",
     srcs = [
         "TestRunner.java",
