@@ -23,11 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.EventScope;
 import java.util.List;
 
-/**
- * Plugin loading result of the test
- *
- * @see <a href="http://go/mh-tr-plugin-query">Test Runner Plugin Query API One-pager</a>
- */
+/** Plugin loading result of the test */
 @AutoValue
 public abstract class PluginLoadingResult {
 

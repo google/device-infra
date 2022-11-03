@@ -164,6 +164,13 @@ public enum ErrorCode {
   REFLECTION_INSTANTIATION_ERROR(6004),
   REFLECTION_ACCESS_ERROR(6005),
 
+  // EVENT ERROR: 6300 ~ 6399
+  EVENT_NOT_POSTED(6301),
+  EVENT_HANDLER_ERROR(6302),
+  EVENT_SCOPE_NOT_FOUND(6303),
+  EVENT_NOT_SUPPORTED(6304),
+  EVENT_SCOPE_INIT_ERROR(6305),
+
   // ***********************************************************************************************
   // End. You should double check whether your error codes can fit into the above ranges before
   // adding error codes >= 20,000.

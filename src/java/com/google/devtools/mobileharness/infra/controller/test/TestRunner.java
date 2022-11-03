@@ -20,11 +20,7 @@ import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionUnit;
 
-/**
- * Test runner which is the main entry for controlling a generic Mobile Harness test.
- *
- * @see <a href="http://go/mh-tr-design">Mobile Harness Test Runner Design</a>
- */
+/** Test runner which is the main entry for controlling a generic Mobile Harness test. */
 public interface TestRunner {
 
   /**
