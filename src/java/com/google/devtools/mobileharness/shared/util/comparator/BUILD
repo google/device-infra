@@ -23,7 +23,6 @@ java_library(
         "TestResultComparator.java",
     ],
     visibility = [
-        "//javatests/com/google/devtools/mobileharness/shared/util/comparator:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:__subpackages__",
     ],
     deps = [

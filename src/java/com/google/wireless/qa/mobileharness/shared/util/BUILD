@@ -31,6 +31,22 @@ java_library(
 )
 
 java_library(
+    name = "device_info",
+    srcs = ["DeviceInfoUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "reflection",
     srcs = ["ReflectionUtil.java"],
     visibility = [

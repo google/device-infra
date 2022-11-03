@@ -326,6 +326,19 @@ public enum BasicErrorId implements ErrorId {
   // User plugin: 39_951 ~ 39_955
   USER_PLUGIN_ERROR(39_951, ErrorType.CUSTOMER_ISSUE),
 
+  /**
+   * @deprecated Please use USER_PLUGIN_SKIP_TEST or USER_PLUGIN_SKIP_JOB
+   */
+  @Deprecated
+  USER_PLUGIN_SKIP_TEST_OR_JOB(39_952, ErrorType.CUSTOMER_ISSUE),
+  INTEGRATION_TEST_ASSERTION_ERROR(39_953, ErrorType.CUSTOMER_ISSUE),
+  USER_PLUGIN_SKIP_JOB(
+      39_954, ErrorType.CUSTOMER_ISSUE), // Used by MobileHarnessUserPluginException only.
+  USER_PLUGIN_SKIP_TEST(
+      39_955, ErrorType.CUSTOMER_ISSUE), // Used by MobileHarnessUserPluginException only.
+  USER_PLUGIN_SKIP_JOB_BY_INTERRUPTED_EXCEPTION(39_956, ErrorType.CUSTOMER_ISSUE),
+  USER_PLUGIN_SKIP_TEST_BY_INTERRUPTED_EXCEPTION(39_957, ErrorType.CUSTOMER_ISSUE),
+
   // Command: 39_981 ~ 40_000
   COMMAND_START_ERROR(39_997, ErrorType.UNDETERMINED), // can be caused by bad start timeout config
   COMMAND_EXEC_FAIL(39_998, ErrorType.UNDETERMINED),

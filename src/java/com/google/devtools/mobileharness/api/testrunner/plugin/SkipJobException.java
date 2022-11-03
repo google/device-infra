@@ -33,7 +33,6 @@ import javax.annotation.Nullable;
  * result will <b>NOT</b> be changed by the exception either. Please set the job result directly in
  * your plugin in that case.
  *
- * @see <a href="http://go/mh-plugin-skip-job">User Manual</a>
  * @since MH client 4.28.2
  */
 public class SkipJobException extends Exception {

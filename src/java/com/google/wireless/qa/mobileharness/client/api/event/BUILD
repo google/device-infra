@@ -23,10 +23,6 @@ package(
 java_library(
     name = "job",
     srcs = glob(["Job*.java"]),
-    tags = [
-        "alt_dep=//java/com/google/wireless/qa/mobileharness/client/api/event:job",
-        "avoid_dep",
-    ],
     deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:base",

@@ -41,7 +41,6 @@ import javax.annotation.Nullable;
  * <b>TestEndingEvent</b> will <b>NOT</b> have any affect and the test result will <b>NOT</b> be
  * changed by the exception either. Please set the test result directly in your plugin in that case.
  *
- * @see <a href="http://go/mh-plugin-skip-test">User Manual</a>
  * @since MH lab server 4.39
  * @since MH client 4.28.2
  */

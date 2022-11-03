@@ -47,8 +47,7 @@ public final class ClientAllocErrorUtil {
     if (testInfo.resultWithCause().get().type() == Test.TestResult.ERROR
         && testInfo.resultWithCause().get().causeException().isPresent()) {
       ErrorId errorId = testInfo.resultWithCause().get().causeException().get().getErrorId();
-      return errorId.equals(InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR)
-          || errorId.equals(InfraErrorId.CLIENT_JR_MNM_ALLOC_DEVICE_NOT_SATISFY_SLO);
+      return errorId.equals(InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR);
     }
     return false;
   }

@@ -232,7 +232,7 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
                   exception);
         }
       }
-      testInfo.log().atInfo().log(stackTrace);
+      testInfo.log().atInfo().log("%s", stackTrace);
       logger.atWarning().log(
           "Error in the plugin of test %s: %n%s", testInfo.locator().getId(), stackTrace);
     } else if (isJobEvent(event)) {

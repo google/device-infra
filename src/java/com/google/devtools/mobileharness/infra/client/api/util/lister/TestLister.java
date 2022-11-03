@@ -77,7 +77,11 @@ public class TestLister {
             driver, driver + Lister.class.getSimpleName()));
     Lister lister = listFactory.createLister(listerClass);
 
-    jobInfo.log().ln("Generating tests using " + listerClass.getSimpleName() + "...", logger);
+    jobInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("enerating tests using %s...", listerClass.getSimpleName());
     // The test lister may add TestInfo into JobInfo directly.
     List<String> tests = lister.listTests(jobInfo);
     if (tests.isEmpty() && jobInfo.tests().isEmpty()) {
@@ -97,13 +101,13 @@ public class TestLister {
             String.format("Param %s is not a valid regular expression", filterRegex),
             exception);
       }
-      jobInfo.log().ln("lister_filter enabled: " + filterRegex, logger);
+      jobInfo.log().atInfo().alsoTo(logger).log("lister_filter enabled: %s", filterRegex);
     }
     // Filters the tests added by the lister.
     for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
       String testName = testInfo.locator().getName();
       if (filterPattern != null && !filterPattern.matcher(testName).matches()) {
-        jobInfo.log().ln(String.format("Test %s ignored by lister_filter", testName), logger);
+        jobInfo.log().atInfo().alsoTo(logger).log("Test %s ignored by lister_filter", testName);
         String testId = testInfo.locator().getId();
         jobInfo.tests().remove(testId);
       }
@@ -111,17 +115,15 @@ public class TestLister {
     // Filters the tests returned by the lister.
     for (String test : tests) {
       if (filterPattern != null && !filterPattern.matcher(test).matches()) {
-        jobInfo.log().ln(String.format("Test %s ignored by lister_filter", test), logger);
+        jobInfo.log().atInfo().alsoTo(logger).log("Test %s ignored by lister_filter", test);
       } else {
         jobInfo.tests().add(test.replace("$", "\\$"));
       }
     }
     jobInfo
         .log()
-        .ln(
-            String.format(
-                "Generated tests:\n- %s\n",
-                Joiner.on("\n- ").join(jobInfo.tests().getAll().keys())),
-            logger);
+        .atInfo()
+        .alsoTo(logger)
+        .log("Generated tests:\n- %s\n", Joiner.on("\n- ").join(jobInfo.tests().getAll().keys()));
   }
 }

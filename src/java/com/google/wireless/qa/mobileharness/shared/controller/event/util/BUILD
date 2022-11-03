@@ -41,9 +41,6 @@ java_library(
     name = "skip_information_handler",
     srcs = ["SkipInformationHandler.java"],
     visibility = [
-        "//java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
-        "//java/com/google/devtools/mobileharness/infra/client/api/controller/job:__subpackages__",
-        "//javatests/com/google/wireless/qa/mobileharness/shared/controller:__subpackages__",
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
@@ -58,6 +55,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
         "//src/java/com/google/devtools/mobileharness/shared/util/comparator",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )

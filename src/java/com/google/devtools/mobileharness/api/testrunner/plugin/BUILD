@@ -20,11 +20,10 @@ java_library(
         "SkipJobException.java",
         "SkipTestException.java",
     ],
-    tags = [
-        "alt_dep=//java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
-        "avoid_dep",
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:__subpackages__",
     ],
-    visibility = ["//java/com/google/devtools/mobileharness/api/testrunner/plugin:plugin_exception_users"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -40,10 +39,6 @@ java_library(
     ],
     visibility = [
         # The skip exception factory which can throw widely result, for MH internal use only.
-        "//java/com/google/devtools/mobileharness/infra/client/bin/pesto/api:__subpackages__",
-        "//java/com/google/devtools/mobileharness/platform/android/app/store:__subpackages__",
-        "//java/com/google/devtools/mobileharness/platform/android/appcrawler:__subpackages__",
-        "//javatests/com/google/wireless/qa/mobileharness/shared/controller:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
     ],
     deps = [
@@ -61,10 +56,6 @@ java_library(
         "SubscribeEventOfAllDrivers.java",
     ],
     visibility = [
-        "//java/com/google/devtools/build/buildjar/plugin/mobileharness:__pkg__",
-        "//java/com/google/devtools/mobileharness:__subpackages__",
-        "//javatests/com/google/devtools/build/buildjar/plugin/mobileharness:__pkg__",
-        "//javatests/com/google/devtools/mobileharness:__subpackages__",
         "//src/java/com/google/devtools/mobileharness:__subpackages__",
     ],
 )

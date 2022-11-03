@@ -20,11 +20,7 @@ import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.lister.Lister;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 
-/**
- * Simple factory for creating {@link Lister} instances.
- *
- * @author derekchen@google.com (Derek Chen)
- */
+/** Simple factory for creating {@link Lister} instances. */
 public class ListerFactory {
 
   /**

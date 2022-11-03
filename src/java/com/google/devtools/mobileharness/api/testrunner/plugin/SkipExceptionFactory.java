@@ -37,7 +37,7 @@ public final class SkipExceptionFactory {
    *
    * @param jobResult the desired job result and top-level test results which should not be {@link
    *     TestResult#UNKNOWN}.
-   * @param errorId the plugin defined errorId, used for tracing the errors in go/mh-data
+   * @param errorId the plugin defined errorId.
    */
   public static SkipJobException createSkipJobException(
       String reason, TestResult jobResult, ErrorId errorId, @Nullable Throwable cause) {

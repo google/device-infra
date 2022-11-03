@@ -30,14 +30,9 @@ java_library(
         "TestStartedEvent.java",
         "TestStartingEvent.java",
     ],
-    exported_plugins = [
-        "//java/com/google/devtools/build/buildjar/plugin/mobileharness:mobile_harness_plugin_checker",
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
     ],
-    tags = [
-        "alt_dep=//java/com/google/devtools/mobileharness/api/testrunner/event/test",
-        "avoid_dep",
-    ],
-    visibility = ["//java/com/google/devtools/mobileharness/api/testrunner/event/test:test_event_users"],
     exports = [
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:annotation",
     ],
