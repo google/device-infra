@@ -14,6 +14,26 @@
 #
 
 java_library(
+    name = "test_command_history_saver",
+    srcs = [
+        "TestCommandHistorySaver.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/allocation",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command/history",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "job_timer",
     srcs = [
         "JobTimer.java",
