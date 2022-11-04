@@ -1,0 +1,145 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.utp;
+
+option java_package = "com.google.devtools.mobileharness.infra.controller.test.local.utp.proto";
+option java_outer_classname = "BasicFlowProto";
+
+// Basic test flow definition of a MH local test runner, without detailed UTP
+// runner config.
+//
+// It is only about what driver and decorators the test runner will run in the
+// MH framework, including whether the test runner will run an original MH
+// driver or a MH UTP driver, what MH decorators the test runner will run, what
+// post processors / pre-processors a MH UTP driver will have if any, etc.
+message BasicFlow {
+  // Required.
+  //
+  // Original MH driver or MH UTP driver of a test.
+  Driver driver = 1;
+
+  // Required.
+  //
+  // It must contain at least one MH decorator stack and the stack count must
+  // not be changed during conversions.
+  //
+  // MH decorator stack of each device of a test, from the primary device to
+  // the secondary devices of the test.
+  //
+  // For a single-device test, it will contain and only contain one MH decorator
+  // stack.
+  repeated MobileHarnessDecoratorStack decorator_stack = 2;
+}
+
+// Original MH driver or MH UTP driver of a test.
+message Driver {
+  oneof driver {
+    // Conditionally required.
+    //
+    // Required if in a ConversionResult of a driver or decorator converter, or
+    // in a input TestFlow of a decorator converter.
+    //
+    // MH UTP driver.
+    //
+    // If present, the MH test will run in hybrid UTP mode, which means the
+    // original MH driver and some MH decorators of the MH test will be replaced
+    // by a UTP test runner, which is executed by a wrapper MH driver UtpDriver.
+    //
+    // Note that this MH driver has nothing to do with the "driver" concept in
+    // UTP test runner.
+    //
+    // If present, the "utp_runner_config" in TestFlow proto must also be
+    // present.
+    UtpDriver utp_driver = 1;
+
+    // Conditionally required.
+    //
+    // Required if in the original TestFlow of a MH test, or in a input TestFlow
+    // of a device converter.
+    //
+    // Original MH driver.
+    //
+    // If present, the MH test will run in MH classic mode.
+    MobileHarnessDriver mobile_harness_driver = 2;
+  }
+}
+
+// MH UTP driver.
+message UtpDriver {
+  // Required.
+  //
+  // It must contain at least one post processor and the first one must be
+  // the post processor of the original MH driver, which is responsible for
+  // setting MH test result based on the test suite result of the UTP test
+  // runner.
+  //
+  // Post processors of the converted MH driver and decorators, which will be
+  // executed by the MH UTP driver, after the UTP test runner exits. They are
+  // responsible for adapting UTP test suite result to MH test result,
+  // properties, warnings, etc.
+  repeated PostProcessor post_processor = 1;
+
+  // Required.
+  //
+  // Pre-processors of the converted MH driver and decorators, which will be
+  // executed by the MH UTP driver, before the UTP test runner starts.
+  repeated PreProcessor pre_processor = 2;
+
+  // Optional.
+  //
+  // Extra environment variables of the UTP test runner process.
+  map<string, string> extra_environment_variable = 3;
+}
+
+// Original MH driver.
+message MobileHarnessDriver {
+  // Required.
+  string driver_name = 1;
+}
+
+// MH decorator stack of one device of a MH test. For a single-device test,
+// there will be only one MH decorator stack.
+message MobileHarnessDecoratorStack {
+  // From outermost to innermost (executing order, reversed decorating order),
+  // which means the preRun() of the decorator in the head of the list will be
+  // executed firstly.
+  repeated string decorator_name = 1;
+}
+
+// Post processor of MH UTP driver.
+message PostProcessor {
+  // Required.
+  //
+  // Original MH driver or decorator name.
+  //
+  // The corresponding driver or decorator Converter class must implement the
+  // PostProcessor interface.
+  string driver_or_decorator_name = 1;
+}
+
+// Pre-processor of MH UTP driver.
+message PreProcessor {
+  // Required.
+  //
+  // Original MH driver or decorator name.
+  //
+  // The corresponding driver or decorator Converter class must implement the
+  // PreProcessor interface.
+  string driver_or_decorator_name = 1;
+}
