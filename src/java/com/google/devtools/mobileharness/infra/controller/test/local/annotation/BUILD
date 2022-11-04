@@ -18,6 +18,7 @@ java_library(
     srcs = ["DoNotSubscribeTestEvent.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc/controller:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
     ],
 )
