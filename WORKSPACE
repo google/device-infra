@@ -81,7 +81,7 @@ maven_install(
         "junit:junit:4.13",
         "org.apache.commons:commons-lang3:3.6",
         "org.mockito:mockito-core:4.3.1",
-        "org.reflections:reflections:0.10.2",
+        "org.reflections:reflections:0.9.10",
     ],
     fetch_sources = True,
     repositories = [

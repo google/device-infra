@@ -39,8 +39,6 @@ java_library(
         "JobTimer.java",
     ],
     visibility = [
-        "//java/com/google/devtools/mobileharness/infra/controller/scheduler:__subpackages__",  # deviceinfra:google-only(internal)
-        "//javatests/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",  # deviceinfra:google-only(internal)
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:__pkg__",
     ],
@@ -59,7 +57,6 @@ java_library(
         "TestRunnerTiming.java",
     ],
     visibility = [
-        "//java/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
     ],
 )

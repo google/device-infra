@@ -27,7 +27,8 @@ package(
 java_library(
     name = "device_state_checker",
     srcs = ["DeviceStateChecker.java"],
-    visibility = ["//java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__"],
+    visibility = [
+    ],
     deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
 )
 
@@ -35,13 +36,6 @@ java_library(
     name = "device_helper_factory",
     srcs = ["DeviceHelperFactory.java"],
     visibility = [
-        "//java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",  # deviceinfra:google-only(internal)
-        "//java/com/google/devtools/mobileharness/infra/container/testengine:__pkg__",  # deviceinfra:google-only(internal)
-        "//java/com/google/devtools/mobileharness/infra/container/testengine/controller:__pkg__",  # deviceinfra:google-only(internal)
-        "//java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",  # deviceinfra:google-only(internal)
-        "//java/com/google/devtools/mobileharness/shared/experiment:__subpackages__",  # deviceinfra:google-only(internal)
-        "//javatests/com/google/devtools/mobileharness/infra/lab:__subpackages__",  # deviceinfra:google-only(internal)
-        "//javatests/com/google/devtools/mobileharness/shared/experiment:__subpackages__",  # deviceinfra:google-only(internal)
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
