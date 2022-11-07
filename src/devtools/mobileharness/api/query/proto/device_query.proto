@@ -111,6 +111,8 @@ message DeviceInfo {
   string test_name = 11;
   // Executors of the device.
   repeated string executor = 12;
+  // The timestamp of the last time when the device was healthy.
+  int64 last_healthy_time_ms = 13;
 }
 
 // The Dimension is a <name, value> pair specifying a device property.
