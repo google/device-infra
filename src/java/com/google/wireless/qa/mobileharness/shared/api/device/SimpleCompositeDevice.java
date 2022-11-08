@@ -16,18 +16,21 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
+import java.util.List;
 
-/** A logical {@link Device} which represents multiple physical devices. */
-public interface CompositeDevice extends Device {
+/** A simple {@link CompositeDevice}. */
+public class SimpleCompositeDevice extends BaseDevice implements CompositeDevice {
 
-  /**
-   * Gets the subdevices managed by this {@link CompositeDevice}.
-   *
-   * <p>The devices may be of any type and do not have to all be of the same type.
-   *
-   * @return an ImmutableSet of devices managed by this {@link CompositeDevice}. Note that
-   *     ImmutableSet preserves the order of entries.
-   */
-  ImmutableSet<Device> getManagedDevices();
+  private final ImmutableSortedSet<Device> subDevices;
+
+  public SimpleCompositeDevice(String deviceId, List<Device> subDevices) {
+    super(deviceId, /* managedDeviceInfo= */ false);
+    this.subDevices = ImmutableSortedSet.copyOf(subDevices);
+  }
+
+  @Override
+  public ImmutableSortedSet<Device> getManagedDevices() {
+    return subDevices;
+  }
 }

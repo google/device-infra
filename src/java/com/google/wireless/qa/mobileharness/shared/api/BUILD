@@ -173,3 +173,13 @@ java_library(
         "@maven//:com_google_inject_guice",
     ],
 )
+
+java_library(
+    name = "simple_composite_device",
+    srcs = ["device/SimpleCompositeDevice.java"],
+    deps = [
+        ":api",
+        ":base_device",
+        "@maven//:com_google_guava_guava",
+    ],
+)
