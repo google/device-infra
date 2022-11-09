@@ -392,6 +392,9 @@ public interface PropertyName {
 
       /** Comma separated LSTs from TestaccountService of accounts in order of emails. */
       ANDROID_ACCOUNT_DECORATOR_LSTS_FROM_TAS,
+
+      /** Comma separated auth code of given accounts in the order of given accounts in emails. */
+      ANDROID_ACCOUNT_DECORATOR_AUTHCODES,
     }
 
     /** IosGoogleAccountDecorator property name constants. */
