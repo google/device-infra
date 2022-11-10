@@ -39,7 +39,8 @@ public enum AndroidVersion {
   ANDROID_10(29, 29),
   ANDROID_11(30, 30),
   ANDROID_12(31, 31),
-  ANDROID_12L(32, 32);
+  ANDROID_12L(32, 32),
+  ANDROID_13(33, 33);
 
   private final int startSdkVersion;
   private final int endSdkVersion;
@@ -47,7 +48,7 @@ public enum AndroidVersion {
   private static final AndroidVersion LATEST_ANDROID_VERSION;
 
   static {
-    AndroidVersion tmpAndroidVersion = AndroidVersion.ANDROID_12L;
+    AndroidVersion tmpAndroidVersion = AndroidVersion.ANDROID_13;
     for (AndroidVersion androidVersion : AndroidVersion.values()) {
       if (androidVersion.getStartSdkVersion() > tmpAndroidVersion.getStartSdkVersion()) {
         tmpAndroidVersion = androidVersion;
