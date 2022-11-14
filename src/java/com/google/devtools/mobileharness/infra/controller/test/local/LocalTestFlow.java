@@ -372,7 +372,7 @@ public class LocalTestFlow {
           device,
           allocation,
           deviceInfos == null ? null : deviceInfos.get(0),
-          /*shouldRebootDevice=*/ false,
+          /* shouldRebootDevice= */ false,
           testError);
     } else if (eventType
             == com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class

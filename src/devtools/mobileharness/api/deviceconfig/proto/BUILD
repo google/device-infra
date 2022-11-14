@@ -19,6 +19,7 @@
 package(
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config:__subpackages__",
+        "//wireless/android/test_tools/tradefed_lab/ate/mh_config:__subpackages__",
     ],
 )
 
@@ -60,5 +61,11 @@ proto_library(
 
 java_proto_library(
     name = "lab_java_proto",
+    deps = [":lab_proto"],
+)
+
+py_proto_library(
+    name = "lab_py_pb2",
+    api_version = 2,
     deps = [":lab_proto"],
 )

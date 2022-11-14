@@ -91,7 +91,7 @@ public class Timing {
    * @return whether the start time is updated from null
    */
   public boolean start() {
-    return startTime.compareAndSet(/*expectedValue=*/ null, clock.instant());
+    return startTime.compareAndSet(/* expectedValue= */ null, clock.instant());
   }
 
   /**
@@ -100,7 +100,7 @@ public class Timing {
    * @return whether the start time is updated from null
    */
   public boolean start(Instant startTime) {
-    return this.startTime.compareAndSet(/*expectedValue=*/ null, startTime);
+    return this.startTime.compareAndSet(/* expectedValue= */ null, startTime);
   }
 
   /**
@@ -127,7 +127,7 @@ public class Timing {
    * @return whether the start time is cleared
    */
   public boolean reset() {
-    return startTime.getAndSet(/*newValue=*/ null) != null;
+    return startTime.getAndSet(/* newValue= */ null) != null;
   }
 
   /** Returns the clock used by this instance. */
