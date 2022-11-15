@@ -64,6 +64,7 @@ load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 maven_install(
     artifacts = [
+        "com.beust:jcommander:1.82",
         "com.google.auto.value:auto-value:1.9",
         "com.google.auto.value:auto-value-annotations:1.9",
         "com.google.code.findbugs:jsr305:3.0.2",
