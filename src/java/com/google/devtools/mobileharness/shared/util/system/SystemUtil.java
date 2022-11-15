@@ -570,7 +570,7 @@ public class SystemUtil {
         parentProcessId,
         killSignal,
         /*ancestorsOfParentProcess */ new HashSet<>(),
-        /* killZombie = */ true);
+        /* killZombie= */ true);
   }
 
   private void killDescendantAndZombieProcesses(
@@ -714,7 +714,7 @@ public class SystemUtil {
         // Now pid is considred potentially "zombie". Kills its descendants first.
         try {
           killDescendantAndZombieProcesses(
-              node.pid, killSignal, ancestorsOfParentProcess, /* killZombie = */ false);
+              node.pid, killSignal, ancestorsOfParentProcess, /* killZombie= */ false);
         } catch (MobileHarnessException e) {
           logger.atWarning().log(
               "Failed to kill descendants of process %s (ignored):\n%s", node, e.getMessage());

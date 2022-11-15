@@ -95,7 +95,7 @@ public class CommandProcess {
       int exitCode = impl.backendProcess().await().exitCode();
       String stdout = impl.stdoutCollector().waitForAllLines();
       String stderr = impl.stderrCollector().waitForAllLines();
-      return getResult(stdout, stderr, exitCode, /*backendFailureException=*/ null);
+      return getResult(stdout, stderr, exitCode, /* backendFailureException= */ null);
     } catch (
         com.google.devtools.deviceinfra.shared.util.command.backend.CommandFailureException e) {
       int exitCode = e.result().exitCode();
@@ -121,7 +121,9 @@ public class CommandProcess {
    *     completed
    */
   public CommandResult await(Duration timeout)
-      throws CommandFailureException, CommandTimeoutException, InterruptedException,
+      throws CommandFailureException,
+          CommandTimeoutException,
+          InterruptedException,
           TimeoutException {
     Instant deadline = Clock.systemUTC().instant().plus(timeout);
     try {
@@ -135,7 +137,7 @@ public class CommandProcess {
       String stderr =
           impl.stderrCollector()
               .waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
-      return getResult(stdout, stderr, exitCode, /*backendFailureException=*/ null);
+      return getResult(stdout, stderr, exitCode, /* backendFailureException= */ null);
     } catch (
         com.google.devtools.deviceinfra.shared.util.command.backend.CommandFailureException e) {
       int exitCode = e.result().exitCode();

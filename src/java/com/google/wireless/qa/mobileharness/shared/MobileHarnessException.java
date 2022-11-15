@@ -88,7 +88,7 @@ public class MobileHarnessException extends Exception {
   @Deprecated
   public MobileHarnessException(
       ErrorCode errorCode, ErrorType errorType, String errorDetail, Throwable cause) {
-    this(errorCode, errorType, errorDetail, cause, /*addCauseToMessage=*/ true);
+    this(errorCode, errorType, errorDetail, cause, /* addCauseToMessage= */ true);
   }
 
   /**

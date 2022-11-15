@@ -43,7 +43,7 @@ public class CommandTimeoutException extends CommandExecutionException {
             finalizedStartTimeout == null
                 ? ""
                 : String.format(", start_timeout=%s", finalizedStartTimeout)),
-        /*cause=*/ null,
+        /* cause= */ null,
         command,
         commandResult);
   }

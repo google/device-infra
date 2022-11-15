@@ -31,8 +31,8 @@ public class CommandResults {
 
   public static CommandResult withoutOutput(CommandResult commandResult) {
     return new CommandResult(
-        /*stdout=*/ "",
-        /*stderr=*/ "",
+        /* stdout= */ "",
+        /* stderr= */ "",
         commandResult.exitCode(),
         commandResult.isTimeout(),
         commandResult.isStopped());

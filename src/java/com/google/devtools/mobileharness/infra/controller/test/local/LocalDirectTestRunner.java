@@ -263,7 +263,7 @@ public class LocalDirectTestRunner
         } else {
           getDecorated().run(testInfo);
         }
-        postLocalDriverEndedEvent(/*error=*/ null);
+        postLocalDriverEndedEvent(/* error= */ null);
       } catch (MobileHarnessException | InterruptedException e) {
         postLocalDriverEndedEvent(e);
         throw e;
@@ -402,7 +402,7 @@ public class LocalDirectTestRunner
         } else {
           getDecorated().run(testInfo);
         }
-        postLocalDecoratorPostForwardEvent(/*error=*/ null);
+        postLocalDecoratorPostForwardEvent(/* error= */ null);
       } catch (MobileHarnessException | InterruptedException e) {
         postLocalDecoratorPostForwardEvent(e);
         throw e;

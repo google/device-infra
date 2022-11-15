@@ -620,7 +620,9 @@ public class CommandExecutorTest {
 
   @Test
   public void start_await_timeout()
-      throws CommandStartException, InterruptedException, CommandFailureException,
+      throws CommandStartException,
+          InterruptedException,
+          CommandFailureException,
           CommandTimeoutException {
     CommandProcess process = executor.start(Command.of("/bin/bash", "-c", "sleep 3s; echo Hello"));
     assertThat(

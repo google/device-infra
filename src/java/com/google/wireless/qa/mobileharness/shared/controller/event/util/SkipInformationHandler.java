@@ -217,12 +217,12 @@ public final class SkipInformationHandler {
 
   public static SkipResultWithCause getJobResult(List<SkipInformation> skipInfos) {
     InternalSplittedSkipInfos splittedSkipInfos = splitSkipInfos(skipInfos);
-    String messageWithResult = createReport(splittedSkipInfos, /*isSkipJob = */ true);
+    String messageWithResult = createReport(splittedSkipInfos, /* isSkipJob= */ true);
     if (splittedSkipInfos.result().equals(TestResult.PASS)) {
       return SkipResultWithCause.of(splittedSkipInfos.result(), null, messageWithResult);
     } else {
       MobileHarnessException resultCauseException =
-          createResultCauseException(splittedSkipInfos, messageWithResult, /* isJob = */ true);
+          createResultCauseException(splittedSkipInfos, messageWithResult, /* isJob= */ true);
       return SkipResultWithCause.of(
           splittedSkipInfos.result(), resultCauseException, messageWithResult);
     }
@@ -235,7 +235,7 @@ public final class SkipInformationHandler {
       return SkipResultWithCause.of(TestResult.PASS, null, messageWithResult);
     } else {
       MobileHarnessException resultCauseException =
-          createResultCauseException(splittedSkipInfos, messageWithResult, /* isJob = */ false);
+          createResultCauseException(splittedSkipInfos, messageWithResult, /* isJob= */ false);
       return SkipResultWithCause.of(
           splittedSkipInfos.result(), resultCauseException, messageWithResult);
     }

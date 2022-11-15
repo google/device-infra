@@ -499,9 +499,9 @@ public class CommandExecutor {
       } catch (CommandExecutionException e) {
         result = e.result();
       } finally {
-        timeoutTaskFuture.cancel(/*mayInterruptIfRunning=*/ false);
+        timeoutTaskFuture.cancel(/* mayInterruptIfRunning= */ false);
         if (startTimeoutTaskFuture != null) {
-          startTimeoutTaskFuture.cancel(/*mayInterruptIfRunning=*/ false);
+          startTimeoutTaskFuture.cancel(/* mayInterruptIfRunning= */ false);
         }
       }
       CommandRecorder.getInstance().addCommandResult(commandRecord, result);
@@ -570,7 +570,7 @@ public class CommandExecutor {
     public boolean test(String line) {
       if (startTimeoutTaskFuture != null
           && testSuccessStartCondition(commandProcess.command(), line)) {
-        startTimeoutTaskFuture.cancel(/*mayInterruptIfRunning=*/ false);
+        startTimeoutTaskFuture.cancel(/* mayInterruptIfRunning= */ false);
         startTimeoutTaskFuture = null;
         if (lineCallback == null) {
           return true;
@@ -618,7 +618,7 @@ public class CommandExecutor {
     private static final ListeningExecutorService DEFAULT_NON_PROPAGATING_THREAD_POOL =
         MoreExecutors.listeningDecorator(
             Executors.newCachedThreadPool(
-                getThreadFactory(/*threadName=*/ "default-mh-command-executor")));
+                getThreadFactory(/* threadName= */ "default-mh-command-executor")));
 
     private static final ListeningExecutorService DEFAULT_THREAD_POOL =
         decorateWithLocalTraceSpan(
@@ -628,8 +628,8 @@ public class CommandExecutor {
         decorateWithLocalTraceSpan(
             MoreExecutors.listeningDecorator(
                 Executors.newScheduledThreadPool(
-                    /*corePoolSize=*/ 3,
-                    getThreadFactory(/*threadName=*/ "default-mh-command-executor-timer"))),
+                    /* corePoolSize= */ 3,
+                    getThreadFactory(/* threadName= */ "default-mh-command-executor-timer"))),
             ListeningScheduledExecutorService.class);
 
     private static ThreadFactory getThreadFactory(String threadName) {

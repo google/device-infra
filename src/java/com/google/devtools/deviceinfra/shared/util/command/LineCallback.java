@@ -81,7 +81,7 @@ public interface LineCallback {
         return Response.empty();
       } catch (IOException e) {
         throw new LineCallbackException(
-            "Failed to write", e, /*killCommand=*/ false, /*stopReadingOutput*/ true);
+            "Failed to write", e, /* killCommand= */ false, /*stopReadingOutput*/ true);
       }
     };
   }

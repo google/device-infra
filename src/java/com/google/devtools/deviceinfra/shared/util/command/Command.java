@@ -254,8 +254,8 @@ public abstract class Command {
    */
   public static Command of(List<String> command) {
     return newBuilder()
-        .executable(command.get(/*index=*/ 0))
-        .arguments(command.subList(/*fromIndex=*/ 1, command.size()))
+        .executable(command.get(/* index= */ 0))
+        .arguments(command.subList(/* fromIndex= */ 1, command.size()))
         .build();
   }
 
