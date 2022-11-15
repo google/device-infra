@@ -234,7 +234,7 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
   @Override
   @Nullable
   public LocalDeviceRunner getLocalDeviceRunner(String deviceId) {
-    return getLocalDeviceRunner(deviceId, /*deviceType=*/ null);
+    return getLocalDeviceRunner(deviceId, /* deviceType= */ null);
   }
 
   /**
@@ -278,7 +278,7 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
   @Override
   @Nullable
   public DeviceWithStatusInfo getDeviceAndStatusInfo(String deviceId) {
-    return getDeviceAndStatusInfo(deviceId, /*deviceType=*/ null);
+    return getDeviceAndStatusInfo(deviceId, /* deviceType= */ null);
   }
 
   @Override
