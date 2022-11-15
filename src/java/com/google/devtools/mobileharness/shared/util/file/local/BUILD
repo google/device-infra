@@ -29,3 +29,18 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "res_util",
+    srcs = ["ResUtil.java"],
+    deps = [
+        ":local",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
+        "@maven//:com_google_guava_guava",
+    ],
+)

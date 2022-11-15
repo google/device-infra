@@ -21,6 +21,14 @@ package(
 )
 
 java_library(
+    name = "dir",
+    srcs = ["DirCommon.java"],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+    ],
+)
+
+java_library(
     name = "property",
     srcs = ["PropertyName.java"],
 )

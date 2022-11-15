@@ -26,6 +26,18 @@ package com.google.devtools.deviceinfra.shared.util.flags;
 @SuppressWarnings({"NonPrivateFlag", "UnnecessarilyFullyQualified"})
 public class Flags {
 
+  @com.beust.jcommander.Parameter(
+      names = "--public_dir",
+      description = "The public directory of the Apache/GSE.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> publicDir = Flag.value("/var/www");
+
+  @com.beust.jcommander.Parameter(
+      names = "--resource_dir_name",
+      description = "Name of resource directory.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> resDirName = Flag.value("mh_res_files");
+
   // The flag for dynamically loading resource files from the supplemental directory instead of
   // unpacking from the JAR binary. It allows updating resource files without rebuilding the JAR
   // binary. Please only use it for local development and do not use it in production.
@@ -38,6 +50,12 @@ public class Flags {
               + " use it in production environment.",
       converter = Flag.StringConverter.class)
   public Flag<String> supplementalResDir = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--tmp_dir_root",
+      description = "The tmp Dir Root.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> tmpDirRoot = Flag.value("/usr/local/google/mobileharness");
 
   private static final Flags INSTANCE = new Flags();
 
