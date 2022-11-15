@@ -76,7 +76,6 @@ java_library(
     srcs = glob(["*.java"]),
     visibility = [
         "//src/javatests/com/google/devtools/deviceinfra/api/error/id:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/platform/android:__subpackages__",
     ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",

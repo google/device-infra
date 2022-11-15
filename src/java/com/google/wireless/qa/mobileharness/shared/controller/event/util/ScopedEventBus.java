@@ -42,7 +42,7 @@ public class ScopedEventBus<S extends Enum<S>> {
 
   /** Sets the given scope to a new event bus. */
   public void add(S scope) {
-    add(scope, /*bus=*/ null);
+    add(scope, /* bus= */ null);
   }
 
   /** Sets the given event bus to the given scope. */

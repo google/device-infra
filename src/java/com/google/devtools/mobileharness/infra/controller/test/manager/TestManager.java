@@ -120,7 +120,7 @@ public class TestManager<T extends TestRunner> implements Runnable {
       TestRunner runner = testRunners.get(testId);
       if (runner != null) {
         if (runner.isRunning()) {
-          runner.kill(/*timeout=*/ false);
+          runner.kill(/* timeout= */ false);
           logger.atInfo().log("Kill test %s", testId);
         } else {
           testRunners.remove(testId);
@@ -305,7 +305,7 @@ public class TestManager<T extends TestRunner> implements Runnable {
 
   private int killTimeoutTestRunner(TestRunner runner) throws InterruptedException {
     if (runner.isRunning()) {
-      int killCount = runner.kill(/*timeout=*/ true);
+      int killCount = runner.kill(/* timeout= */ true);
       TestLocator testLocator = runner.getTestExecutionUnit().locator();
       logger.atInfo().log("Kill test %s (kill_count=%d)", testLocator.id(), killCount);
       if (killCount >= MAX_KILL_COUNT) {
