@@ -57,3 +57,44 @@ java_proto_library(
     name = "job_spec_java_proto",
     deps = [":job_spec_proto"],
 )
+
+proto_library(
+    name = "no_op_driver_spec_proto",
+    srcs = ["driver/no_op_driver_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_proto",
+    ],
+)
+
+java_proto_library(
+    name = "no_op_driver_spec_java_proto",
+    deps = [":no_op_driver_spec_proto"],
+)
+
+proto_library(
+    name = "no_op_decorator_spec_proto",
+    srcs = ["decorator/no_op_decorator_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_proto",
+    ],
+)
+
+java_proto_library(
+    name = "no_op_decorator_spec_java_proto",
+    deps = [":no_op_decorator_spec_proto"],
+)
+
+proto_library(
+    name = "no_op_test_spec",
+    deps = [
+        ":no_op_decorator_spec_proto",
+        ":no_op_driver_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "no_op_test_spec_java_proto",
+    deps = [":no_op_test_spec"],
+)

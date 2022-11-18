@@ -55,6 +55,8 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
+        "//src/java/com/google/devtools/mobileharness/infra/container/sandbox/device:device_sandbox_controller",
+        "//src/java/com/google/devtools/mobileharness/infra/container/sandbox/device:unsupported_device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
@@ -180,6 +182,63 @@ java_library(
     deps = [
         ":api",
         ":base_device",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+################################################################################
+# NoOpDevice for Mobile Harness integration test only
+################################################################################
+
+java_library(
+    name = "no_op_device",
+    srcs = [
+        "device/NoOpDevice.java",
+    ],
+    deps = [
+        ":api",
+        ":base_device",
+        ":validator_factory",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
+        "//src/java/com/google/devtools/mobileharness/infra/container/sandbox/device:device_sandbox_controller",
+        "//src/java/com/google/devtools/mobileharness/infra/container/sandbox/device:no_op_device",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "no_op_test",
+    srcs = [
+        "decorator/NoOpDecorator.java",
+        "driver/NoOpDriver.java",
+        "lister/NoOpDriverLister.java",
+    ],
+    exports = [
+        ":no_op_device",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:base",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:no_op_decorator_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:no_op_driver_spec_java_proto",
         "@maven//:com_google_guava_guava",
     ],
 )

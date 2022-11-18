@@ -45,3 +45,16 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "usb_device_locator",
+    srcs = ["UsbDeviceLocator.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/container:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+    ],
+)

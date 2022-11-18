@@ -1,0 +1,63 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/devtools/mobileharness/api/model/proto/test.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+message NoOpDecoratorSpec {
+  extend DecoratorSpec {
+    optional NoOpDecoratorSpec ext = 138916212;
+  }
+
+  optional bool dummy_bool = 1 [(field_detail) = { help: "A bool." }];
+
+  optional string dummy_string = 2
+      [(field_detail) = { help: "A group of string." }];
+  repeated string dummy_string_group = 3
+      [(field_detail) = { help: "A group of strings." }];
+
+  optional int32 dummy_int = 4 [(field_detail) = { help: "An integer." }];
+  repeated int32 dummy_int_group = 5
+      [(field_detail) = { help: "A group of integers." }];
+
+  optional string dummy_file = 6 [(file_detail) = { help: "A file." }];
+
+  repeated string dummy_file_group = 7
+      [(file_detail) = { help: "A group of files." }];
+
+  message TagFile {
+    optional string tag = 1;
+    repeated string file = 2
+        [(file_detail) = { help: "Files which are binded to |tag|." }];
+  }
+  optional TagFile tag_file = 8;
+  repeated TagFile tag_file_group = 9;
+
+  optional mobileharness.api.model.TestResult
+      expected_result_before_post_run = 12 [(field_detail) = {
+    help: "Expected test result before the decorator starts to postRun()."
+          " If and only if the result matches, the final test result will be PASS."
+          " Otherwise, the final test result will be FAIL."
+          " It does not have default value."
+  }];
+}

@@ -27,6 +27,13 @@ package com.google.devtools.deviceinfra.shared.util.flags;
 public class Flags {
 
   @com.beust.jcommander.Parameter(
+      names = "--no_op_device_type",
+      description =
+          "Device type string supported, e.g. AndroidRealDevice, only for debug/test purpose.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> noOpDeviceType = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
       names = "--public_dir",
       description = "The public directory of the Apache/GSE.",
       converter = Flag.StringConverter.class)

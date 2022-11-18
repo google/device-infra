@@ -1,0 +1,50 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.driver";
+option java_multiple_files = true;
+
+// Spec for j/c/g/w/q/mobileharness/shared/api/decorator/NoOpDriver. It is
+// for unit test or acceptance test.
+message NoOpDriverSpec {
+  extend DriverSpec {
+    optional NoOpDriverSpec ext = 138898944;
+  }
+  optional int32 sleep_time_sec = 1 [(field_detail) = {
+    help: "The sleep time in seconds when the NoOpDriver runs. The default "
+          "value is 0."
+  }];
+
+  optional bool dummy_bool = 2 [(field_detail) = { help: "A bool." }];
+  repeated string dummy_string_group = 3
+      [(field_detail) = { help: "A group of string." }];
+  optional int32 dummy_int = 4 [(field_detail) = { help: "A int." }];
+
+  optional TestResult test_result = 5 [(field_detail) = {
+    help: "The result of the NoOpDriver test. The default value is PASS."
+  }];
+
+  optional string test_result_reason = 6 [(field_detail) = {
+    help: "The result reason for a non-passing test_result."
+  }];
+}
