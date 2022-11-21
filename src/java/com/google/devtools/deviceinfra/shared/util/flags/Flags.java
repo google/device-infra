@@ -40,6 +40,19 @@ public class Flags {
   public Flag<String> publicDir = Flag.value("/var/www");
 
   @com.beust.jcommander.Parameter(
+      names = "--real_time_job",
+      description = "If this flag is true, all submitted jobs will run as real-time jobs.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> realTimeJob = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--remove_job_gen_files_when_finished",
+      description =
+          "If this flag is true, all job generated files are removed after the job is done.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> removeJobGenFilesWhenFinished = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
       names = "--resource_dir_name",
       description = "Name of resource directory.",
       converter = Flag.StringConverter.class)

@@ -23,6 +23,15 @@ import javax.annotation.Nullable;
 /** A flag class providing similar interfaces of com.google.common.flags.Flag. */
 public class Flag<T> {
 
+  /** Converter for creating boolean flag from JCommander. */
+  public static class BooleanConverter implements IStringConverter<Flag<Boolean>> {
+
+    @Override
+    public Flag<Boolean> convert(String value) {
+      return value(Boolean.parseBoolean(value));
+    }
+  }
+
   /** Converter for creating string flag from JCommander. */
   public static class StringConverter implements IStringConverter<Flag<String>> {
 

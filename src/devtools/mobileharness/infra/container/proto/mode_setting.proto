@@ -1,0 +1,52 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.container;
+
+option java_package = "com.google.devtools.mobileharness.infra.container.proto";
+option java_outer_classname = "ModeSettingProto";
+
+// Job container mode preference.
+enum ContainerModePreference {
+  // Should be considered as MANDATORY_NON_CONTAINER because the client may
+  // be in an old version.
+  CONTAINER_MODE_PREFERENCE_UNSPECIFIED = 0;
+  // Client suggests running test in container mode.
+  CONTAINER = 1;
+  // Client suggests running test in non-container mode.
+  NON_CONTAINER = 2;
+  // Run test in container mode or fail.
+  MANDATORY_CONTAINER = 3;
+  // Run test in non-container mode or fail.
+  MANDATORY_NON_CONTAINER = 4;
+}
+
+// Job sandbox mode preference.
+enum SandboxModePreference {
+  // Should be considered as MANDATORY_NON_SANDBOX because the client may
+  // be in an old version.
+  SANDBOX_MODE_PREFERENCE_UNSPECIFIED = 0;
+  // Client suggests running test in sandbox mode.
+  SANDBOX = 1;
+  // Client suggests running test in non-sandbox mode.
+  NON_SANDBOX = 2;
+  // Run test in sandbox mode or fail.
+  MANDATORY_SANDBOX = 3;
+  // Run test in non-sandbox mode or fail.
+  MANDATORY_NON_SANDBOX = 4;
+}
