@@ -235,10 +235,13 @@ public class CommandExecutorTest {
     verify(lineConsumer).accept("Bye");
   }
 
-  @org.junit.Ignore
   @Test
   public void run_redirectStderr() throws CommandException, InterruptedException {
-    String output = executor.run(Command.of(STDOUT_STDERR_PRINTER).redirectStderr(true));
+    String output =
+        executor.run(
+            Command.of(STDOUT_STDERR_PRINTER)
+                .extraEnv("JAVA_TOOL_OPTIONS", "-Xlog:os+container=error")
+                .redirectStderr(true));
     assertThat(output).hasLength(31 * 100 * 2);
     assertThat(output).doesNotContain("OE");
     assertThat(output).doesNotContain("EO");
