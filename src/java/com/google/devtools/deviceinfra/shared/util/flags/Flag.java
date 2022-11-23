@@ -32,6 +32,15 @@ public class Flag<T> {
     }
   }
 
+  /** Converter for creating integer flag from JCommander. */
+  public static class IntegerConverter implements IStringConverter<Flag<Integer>> {
+
+    @Override
+    public Flag<Integer> convert(String value) {
+      return value(Integer.parseInt(value));
+    }
+  }
+
   /** Converter for creating string flag from JCommander. */
   public static class StringConverter implements IStringConverter<Flag<String>> {
 

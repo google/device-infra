@@ -28,3 +28,18 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
 )
+
+java_library(
+    name = "no_op",
+    srcs = ["NoOpDeviceDetector.java"],
+    runtime_deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_device",
+    ],
+    deps = [
+        ":base",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "@maven//:com_google_guava_guava",
+    ],
+)

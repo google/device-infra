@@ -27,6 +27,13 @@ package com.google.devtools.deviceinfra.shared.util.flags;
 public class Flags {
 
   @com.beust.jcommander.Parameter(
+      names = "--no_op_device_num",
+      description =
+          "The number of NoOpDevice to be started. If set all other devices will be disabled.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> noOpDeviceNum = Flag.value(0);
+
+  @com.beust.jcommander.Parameter(
       names = "--no_op_device_type",
       description =
           "Device type string supported, e.g. AndroidRealDevice, only for debug/test purpose.",
