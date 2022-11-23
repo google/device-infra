@@ -14,23 +14,18 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.shared.util.logging;
+package com.google.devtools.mobileharness.platform.android.shared.emulator;
 
 
-/** Utility to add logging tags. */
-public final class MobileHarnessLogTag {
+/** Utility about Android emulator IDs. */
+public class AndroidEmulatorIds {
 
-  public static final String DEVICE_ID = "device_id";
+  /** Checks whether the given device ID belongs to an emulator. */
+  public static boolean isAndroidEmulator(String deviceId) {
+    return deviceId.startsWith("emulator")
+        || deviceId.startsWith("localhost")
+        || deviceId.startsWith("127.0.0.1");
+  }
 
-  public static final String SUB_DEVICE_ID = "sub_device_id";
-
-  public static final String SESSION_ID = "session_id";
-
-  public static final String JOB_ID = "job_id";
-
-  public static final String TEST_ID = "test_id";
-
-  public static void addTag(String tag, String value) {}
-
-  private MobileHarnessLogTag() {}
+  private AndroidEmulatorIds() {}
 }

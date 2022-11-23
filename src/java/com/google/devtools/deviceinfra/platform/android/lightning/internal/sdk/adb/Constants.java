@@ -14,23 +14,15 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.shared.util.logging;
+package com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb;
 
+import java.time.Duration;
 
-/** Utility to add logging tags. */
-public final class MobileHarnessLogTag {
+/** Constants for the {@link Adb}. */
+public final class Constants {
 
-  public static final String DEVICE_ID = "device_id";
+  /** Default timeout of running commands. */
+  public static final Duration DEFAULT_ADB_COMMAND_TIMEOUT = Duration.ofMinutes(5L);
 
-  public static final String SUB_DEVICE_ID = "sub_device_id";
-
-  public static final String SESSION_ID = "session_id";
-
-  public static final String JOB_ID = "job_id";
-
-  public static final String TEST_ID = "test_id";
-
-  public static void addTag(String tag, String value) {}
-
-  private MobileHarnessLogTag() {}
+  private Constants() {}
 }

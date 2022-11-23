@@ -40,7 +40,7 @@ import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.EnumDescriptor;
 import com.google.protobuf.Descriptors.EnumValueDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
-import com.google.protobuf.GeneratedMessage;
+import com.google.protobuf.Message;
 import com.google.protobuf.MessageOrBuilder;
 import com.google.protobuf.ProtocolMessageEnum;
 import java.lang.reflect.InvocationTargetException;
@@ -134,7 +134,7 @@ public class ProtocolMessageOrBuilderJsonSerializer
   }
 
   /**
-   * Creates an instance using the provided {@link ProcotolMessageOrBuilderJsonSerializer.Builder}
+   * Creates an instance using the provided {@code ProcotolMessageOrBuilderJsonSerializer.Builder}
    */
   private ProtocolMessageOrBuilderJsonSerializer(Builder builder) {
     this.allowUnknownFields = builder.allowUnknownFields;
@@ -175,8 +175,8 @@ public class ProtocolMessageOrBuilderJsonSerializer
     }
 
     /**
-     * If enabled, {@link GeneratedMessage.Builder#buildPartial} will be used during deserialization
-     * while building the proto, thus skipping verification for required fields.
+     * If enabled, {@link Message.Builder#buildPartial} will be used during deserialization while
+     * building the proto, thus skipping verification for required fields.
      */
     @CanIgnoreReturnValue
     public Builder setPartialBuild(boolean value) {
@@ -358,8 +358,7 @@ public class ProtocolMessageOrBuilderJsonSerializer
     JsonObject obj = json.getAsJsonObject();
 
     Class<?> concreteClass = TypeToken.get(typeOfT).getRawType();
-    GeneratedMessage.Builder<? extends GeneratedMessage.Builder<?>> resultBuilder =
-        getBuilderForType(concreteClass);
+    Message.Builder resultBuilder = getBuilderForType(concreteClass);
 
     Descriptor descriptorForType = resultBuilder.getDescriptorForType();
 
@@ -418,16 +417,12 @@ public class ProtocolMessageOrBuilderJsonSerializer
   }
 
   protected void onDeserializeNullInArray(
-      GeneratedMessage.Builder<? extends GeneratedMessage.Builder<?>> resultBuilder,
-      Descriptors.FieldDescriptor desc,
-      JsonArray array) {
+      Message.Builder resultBuilder, Descriptors.FieldDescriptor desc, JsonArray array) {
     throw new JsonParseException("null values in JSON arrays are not allowed");
   }
 
   protected void onDeserializeRequiredFieldMissing(
-      GeneratedMessage.Builder<? extends GeneratedMessage.Builder<?>> resultBuilder,
-      Descriptors.FieldDescriptor desc,
-      JsonElement json) {
+      Message.Builder resultBuilder, Descriptors.FieldDescriptor desc, JsonElement json) {
     if (!partialBuild) {
       String fieldName = getFieldName(desc);
       throw new JsonParseException("Required Field: " + fieldName + " is missing. " + json);
@@ -435,16 +430,14 @@ public class ProtocolMessageOrBuilderJsonSerializer
   }
 
   protected void onDeserializeBuilderNotInitialized(
-      GeneratedMessage.Builder<? extends GeneratedMessage.Builder<?>> resultBuilder,
-      Class<?> concreteClass) {
+      Message.Builder resultBuilder, Class<?> concreteClass) {
     if (!partialBuild) {
       throw new JsonParseException(
           "Error Instantiating " + concreteClass.getName() + ": Initialization checks failed.");
     }
   }
 
-  protected MessageOrBuilder finalizeDeserialization(
-      GeneratedMessage.Builder<? extends GeneratedMessage.Builder<?>> builder) {
+  protected MessageOrBuilder finalizeDeserialization(Message.Builder builder) {
     if (partialBuild) {
       return builder.buildPartial();
     } else {
@@ -554,10 +547,9 @@ public class ProtocolMessageOrBuilderJsonSerializer
   /**
    * Gets a builder for the concrete class using reflection.
    *
-   * @param concreteClass the actual "GenerateMessage" class that will be built
+   * @param concreteClass the actual "Message" class that will be built
    */
-  private GeneratedMessage.Builder<? extends GeneratedMessage.Builder<?>> getBuilderForType(
-      Class<?> concreteClass) throws JsonParseException {
+  private Message.Builder getBuilderForType(Class<?> concreteClass) throws JsonParseException {
     Method newBuilderMethod;
     try {
       newBuilderMethod = concreteClass.getDeclaredMethod("newBuilder");
@@ -574,10 +566,7 @@ public class ProtocolMessageOrBuilderJsonSerializer
     }
 
     try {
-      GeneratedMessage.Builder<? extends GeneratedMessage.Builder<?>> builder =
-          (GeneratedMessage.Builder<? extends GeneratedMessage.Builder<?>>)
-              newBuilderMethod.invoke(null);
-      return builder;
+      return (Message.Builder) newBuilderMethod.invoke(null);
     } catch (IllegalAccessException e) {
       throw new JsonParseException("Error Instantiating " + concreteClass.getName(), e);
     } catch (InvocationTargetException e) {

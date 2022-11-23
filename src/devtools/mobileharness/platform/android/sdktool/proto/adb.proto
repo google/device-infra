@@ -1,0 +1,43 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.platform.android.sdktool;
+
+option java_package = "com.google.devtools.mobileharness.platform.android.sdktool.proto";
+option java_outer_classname = "Adb";
+
+// Params used by the MH Adb library.
+message AdbParam {
+  string adb_path = 1;
+  string stock_adb_path = 2;
+  string adb_key_path = 3;
+  int32 adb_server_port = 4;
+  string adb_server_host = 5;  // The adb server host that adb client is
+                               // connecting to e.g. localhost or 10.0.2.2
+  bool adb_libusb = 6;         // Starts the adb server in libusb mode
+                               // to support the USB attach/detach feature.
+  // Environment variables will be set in the Adb CommandExecutor
+  map<string, string> cmd_base_env_vars = 7;
+}
+
+message AdbInfo {
+  // Whether the current ADB binary supports device block feature.
+  bool support_device_block = 1;
+  // Whether the cuurent ADB binary supports "adb detach" feature.
+  bool support_adb_detach = 2;
+}

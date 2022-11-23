@@ -14,23 +14,24 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.shared.util.logging;
+package com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import javax.inject.Qualifier;
 
-/** Utility to add logging tags. */
-public final class MobileHarnessLogTag {
+/** Annotations for Guice for Adb. */
+public final class Annotations {
 
-  public static final String DEVICE_ID = "device_id";
+  /** Annotation for Adb param supplier. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface AdbParamSupplier {}
 
-  public static final String SUB_DEVICE_ID = "sub_device_id";
+  /** Annotation for Adb command executor supplier. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface AdbCommandExecutorSupplier {}
 
-  public static final String SESSION_ID = "session_id";
-
-  public static final String JOB_ID = "job_id";
-
-  public static final String TEST_ID = "test_id";
-
-  public static void addTag(String tag, String value) {}
-
-  private MobileHarnessLogTag() {}
+  private Annotations() {}
 }

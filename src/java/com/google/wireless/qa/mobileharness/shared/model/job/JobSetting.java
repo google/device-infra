@@ -29,6 +29,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.UUID;
 
 /** Immutable settings of a job. */
 public class JobSetting {
@@ -214,12 +215,30 @@ public class JobSetting {
   }
 
   private JobSetting(Builder builder) {
-    // TODO: Inveistigate how to deal with the dir when not specified in ATS 2.0.
+    // Finalizes the dirs.
+    String genFileDirPath;
+    if (builder.genFileDirPath == null) {
+      genFileDirPath = getDefaultTmpDir() + "/mh_gen_" + UUID.randomUUID();
+    } else {
+      genFileDirPath = builder.genFileDirPath;
+    }
+    String tmpFileDirPath;
+    if (builder.tmpFileDirPath == null) {
+      tmpFileDirPath = getDefaultTmpDir() + "/mh_tmp_" + UUID.randomUUID();
+    } else {
+      tmpFileDirPath = builder.tmpFileDirPath;
+    }
+    String runFileDirPath;
+    if (builder.runFileDirPath == null) {
+      runFileDirPath = getDefaultTmpDir() + "/mh_run_" + UUID.randomUUID();
+    } else {
+      runFileDirPath = builder.runFileDirPath;
+    }
     newDirs =
         new Dirs(
-            builder.genFileDirPath,
-            builder.tmpFileDirPath,
-            builder.runFileDirPath,
+            genFileDirPath,
+            tmpFileDirPath,
+            runFileDirPath,
             builder.remoteFileDirPath,
             builder.hasTestSubdirs,
             builder.localFileUtil == null ? new LocalFileUtil() : builder.localFileUtil);
@@ -355,10 +374,13 @@ public class JobSetting {
     return dirs().remoteFileDir();
   }
 
-  /**
-   * @return the job directory settings.
-   */
+  /** Returns the job directory settings. */
   public Dirs dirs() {
     return newDirs;
+  }
+
+  private static String getDefaultTmpDir() {
+    // https://bazel.build/reference/test-encyclopedia#test-interaction-filesystem
+    return System.getenv("TEST_TMPDIR");
   }
 }
