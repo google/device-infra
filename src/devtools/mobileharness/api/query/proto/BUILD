@@ -20,6 +20,9 @@ package(default_visibility = [
 proto_library(
     name = "device_query_proto",
     srcs = ["device_query.proto"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_proto",
+    ],
 )
 
 java_proto_library(
