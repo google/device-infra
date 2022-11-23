@@ -40,7 +40,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:locator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:schedule_unit",
-        "//third_party/java/joda_time",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",

@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.controller.scheduler;
 
-import com.google.common.base.Pair;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ContiguousSet;
 import com.google.common.collect.DiscreteDomain;
@@ -100,8 +99,8 @@ public class AdhocTestbedSchedulingUtil {
     final Future<List<DeviceScheduleUnit>> future =
         executor.submit(
             () -> {
-              Map<Pair<DeviceScheduleUnit, SubDeviceSpec>, Boolean> subDeviceSupportsSpecCache =
-                  new HashMap<>();
+              Map<Map.Entry<DeviceScheduleUnit, SubDeviceSpec>, Boolean>
+                  subDeviceSupportsSpecCache = new HashMap<>();
               for (List<Integer> permutedSpecIndices : Collections2.permutations(specIndices)) {
                 // For each permutation of spec indices, slide "current" along the list of devices
                 // and if the "current" device matches the first unmatched spec, add that device
@@ -114,12 +113,12 @@ public class AdhocTestbedSchedulingUtil {
                   while (permutedSpecIndices.size() - i <= devicePoolList.size() - current) {
                     // Because checking if a device matches a spec is costly and may happen again,
                     // cache the results.
-                    Pair<DeviceScheduleUnit, SubDeviceSpec> key =
-                        Pair.of(
+                    Map.Entry<DeviceScheduleUnit, SubDeviceSpec> key =
+                        Map.entry(
                             devicePoolList.get(current),
                             subDeviceSpecList.get(permutedSpecIndices.get(i).intValue()));
                     subDeviceSupportsSpecCache.computeIfAbsent(
-                        key, k -> subDeviceSupportsSpec(k.getFirst(), k.getSecond()));
+                        key, k -> subDeviceSupportsSpec(k.getKey(), k.getValue()));
                     if (subDeviceSupportsSpecCache.get(key)) {
                       // Found a match! Move onto the next spec and next device.
                       subDeviceIndices.add(current);
