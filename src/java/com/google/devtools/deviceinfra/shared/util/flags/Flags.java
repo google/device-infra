@@ -27,6 +27,42 @@ package com.google.devtools.deviceinfra.shared.util.flags;
 public class Flags {
 
   @com.beust.jcommander.Parameter(
+      names = "--adb",
+      description = "Android adb path, overriding the SDK location.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> adbPathFromUser = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--adb_dont_kill_server",
+      description = "Don't ever kill the adb server.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> adbDontKillServer = Flag.value(false);
+
+  /**
+   * Force the reboot of adb server regardless of other flags conditions. e.g. If both this flag and
+   * {@code adb_dont_kill_server} are set, this flag will override {@code adb_dont_kill_server}.
+   */
+  @com.beust.jcommander.Parameter(
+      names = "--adb_kill_server",
+      description = "Force to kill the adb server.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> adbForceKillServer = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--adb_libusb",
+      description = "Start the adb server with flag ADB_LIBUSB=1.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> adbLibusb = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--extra_adb_keys",
+      description =
+          ("Colon-separated list of adb keys (files or directories) to be used (see ADB_VENDOR_KEYS"
+              + " in adb --help for formatting details)."),
+      converter = Flag.StringConverter.class)
+  public Flag<String> adbKeyPathsFromUser = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
       names = "--no_op_device_num",
       description =
           "The number of NoOpDevice to be started. If set all other devices will be disabled.",
