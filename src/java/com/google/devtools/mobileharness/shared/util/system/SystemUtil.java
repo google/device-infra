@@ -74,6 +74,9 @@ public class SystemUtil {
   public static final String ENV_TEST_INFRASTRUCTURE_FAILURE_FILE =
       "TEST_INFRASTRUCTURE_FAILURE_FILE";
 
+  /** The JVM environment variable which specifies the test components directory. */
+  public static final String ENV_TEST_COMPONENTS_DIR = "TEST_COMPONENTS_DIR";
+
   /** Error message that no matching process when running "killall xxx" on Mac. */
   @VisibleForTesting static final String ERROR_MSG_NO_MATCHING_PROCESSES = "No matching processes";
 
@@ -1025,6 +1028,12 @@ public class SystemUtil {
   @Nullable
   public String getTestDiagnosticsOutputDir() {
     return System.getenv(ENV_TEST_DIAGNOSTICS_OUTPUT_DIR);
+  }
+
+  /** Gets the test components output directory from system environment. */
+  @Nullable
+  public String getTestComponentsOutputDir() {
+    return System.getenv(ENV_TEST_COMPONENTS_DIR);
   }
 
   /** Returns the env var to the given key. */

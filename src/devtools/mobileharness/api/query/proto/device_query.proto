@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package mobileharness.shared.query;
 
+import "src/devtools/mobileharness/api/model/proto/device.proto";
+
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto.query";
 option java_outer_classname = "DeviceQuery";
 
@@ -113,6 +115,8 @@ message DeviceInfo {
   repeated string executor = 12;
   // The timestamp of the last time when the device was healthy.
   int64 last_healthy_time_ms = 13;
+  // Optional. Errors on this device.
+  repeated .mobileharness.api.model.DeviceError device_error_from_lab = 14;
 }
 
 // The Dimension is a <name, value> pair specifying a device property.

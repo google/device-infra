@@ -13,19 +13,14 @@
 # limitations under the License.
 #
 
-package(default_visibility = [
-    "//:deviceinfra_all_pkg",
-])
-
-proto_library(
-    name = "device_query_proto",
-    srcs = ["device_query.proto"],
-    deps = [
-        "//src/devtools/mobileharness/api/model/proto:device_proto",
+java_library(
+    name = "localhost",
+    srcs = ["LocalHost.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
     ],
-)
-
-java_proto_library(
-    name = "device_query_java_proto",
-    deps = [":device_query_proto"],
+    deps = [
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
 )
