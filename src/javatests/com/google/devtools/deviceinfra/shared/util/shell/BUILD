@@ -13,19 +13,28 @@
 # limitations under the License.
 #
 
-package(default_visibility = [
-    "//:deviceinfra_all_pkg",
-])
+load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
-proto_library(
-    name = "device_query_proto",
-    srcs = ["device_query.proto"],
+package(
+    default_testonly = 1,
+)
+
+licenses(["notice"])
+
+java_library(
+    name = "shell",
+    srcs = glob(["*.java"]),
     deps = [
-        "//src/devtools/mobileharness/api/model/proto:device_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/shell",
+        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "@maven//:junit_junit",
     ],
 )
 
-java_proto_library(
-    name = "device_query_java_proto",
-    deps = [":device_query_proto"],
+junit_test_suites(
+    name = "tests",
+    sizes = [
+        "small",
+    ],
+    deps = [":shell"],
 )
