@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandHistorySaver;
+import com.google.devtools.mobileharness.platform.testbed.adhoc.controller.AdhocTestbedDriverFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.SubTask;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
@@ -89,6 +90,8 @@ public class LocalTestFlow {
 
   private final DriverFactory driverFactory;
 
+  private final AdhocTestbedDriverFactory adhocTestbedDriverFactory;
+
   private final ImmutableList<Object> builtinPlugins;
 
   private final PluginLoader.Factory pluginLoaderFactory;
@@ -105,16 +108,18 @@ public class LocalTestFlow {
           Ascii.toLowerCase(Dimension.Name.HOST_VERSION.name()));
 
   public LocalTestFlow(ListeningExecutorService threadPool, TestFlowConverter testFlowConverter) {
-    this(threadPool, new DriverFactory(), testFlowConverter);
+    this(threadPool, new DriverFactory(), new AdhocTestbedDriverFactory(), testFlowConverter);
   }
 
   @VisibleForTesting
   LocalTestFlow(
       ListeningExecutorService threadPool,
       DriverFactory driverFactory,
+      AdhocTestbedDriverFactory adhocTestbedDriverFactory,
       TestFlowConverter testFlowConverter) {
     this.testThreadPool = threadPool;
     this.driverFactory = driverFactory;
+    this.adhocTestbedDriverFactory = adhocTestbedDriverFactory;
     this.builtinPlugins = ImmutableList.of(new TestCommandHistorySaver());
     this.pluginLoaderFactory = new CommonPluginLoaderFactory();
     this.testFlowConverter = testFlowConverter;
@@ -525,26 +530,31 @@ public class LocalTestFlow {
       BiFunction<Driver, String, Decorator> driverWrapper,
       BiFunction<Driver, Class<? extends Decorator>, Decorator> decoratorExtender)
       throws MobileHarnessException, InterruptedException {
-    TestFlowConverter.Result testFlow = testFlowConverter.convert(testInfo, devices, allocation);
+    if (devices.size() == 1) {
+      TestFlowConverter.Result testFlow = testFlowConverter.convert(testInfo, devices, allocation);
 
-    Driver driver =
-        testFlow.utpDriver().isPresent()
-            // Fixed the name of UtpDriver to avoid the future class name change
-            // (e.g. UtpDriver -> UtpDriverImpl) affecting users who subscribes driver events.
-            ? driverWrapper.apply(testFlow.utpDriver().get(), UTP_DRIVER_NAME)
-            : driverFactory.createDriver(
-                devices.get(0),
-                testInfo,
-                ClassUtil.getDriverClass(
-                    testFlow.flow().getDriver().getMobileHarnessDriver().getDriverName()),
-                driverWrapper);
-    return driverFactory.decorateDriver(
-        driver,
-        testInfo,
-        ClassUtil.getDecoratorClasses(
-            Lists.reverse(testFlow.flow().getDecoratorStack(0).getDecoratorNameList())),
-        driverWrapper,
-        decoratorExtender);
+      Driver driver =
+          testFlow.utpDriver().isPresent()
+              // Fixed the name of UtpDriver to avoid the future class name change
+              // (e.g. UtpDriver -> UtpDriverImpl) affecting users who subscribes driver events.
+              ? driverWrapper.apply(testFlow.utpDriver().get(), UTP_DRIVER_NAME)
+              : driverFactory.createDriver(
+                  devices.get(0),
+                  testInfo,
+                  ClassUtil.getDriverClass(
+                      testFlow.flow().getDriver().getMobileHarnessDriver().getDriverName()),
+                  driverWrapper);
+      return driverFactory.decorateDriver(
+          driver,
+          testInfo,
+          ClassUtil.getDecoratorClasses(
+              Lists.reverse(testFlow.flow().getDecoratorStack(0).getDecoratorNameList())),
+          driverWrapper,
+          decoratorExtender);
+    } else {
+      return adhocTestbedDriverFactory.create(
+          devices, testInfo, testThreadPool, driverFactory, driverWrapper, decoratorExtender);
+    }
   }
 
   private void logDimensionsOfDevices(TestInfo testInfo, List<Device> devices) {
