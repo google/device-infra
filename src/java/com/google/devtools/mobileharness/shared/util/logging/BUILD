@@ -24,6 +24,5 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:__pkg__",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
     ],
 )

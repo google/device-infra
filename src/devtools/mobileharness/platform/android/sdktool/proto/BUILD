@@ -13,19 +13,17 @@
 # limitations under the License.
 #
 
-package(default_visibility = [
-    "//:deviceinfra_all_pkg",
-])
-
 proto_library(
-    name = "device_query_proto",
-    srcs = ["device_query.proto"],
-    deps = [
-        "//src/devtools/mobileharness/api/model/proto:device_proto",
+    name = "adb_proto",
+    srcs = ["adb.proto"],
+    visibility = [
     ],
 )
 
 java_proto_library(
-    name = "device_query_java_proto",
-    deps = [":device_query_proto"],
+    name = "adb_java_proto",
+    visibility = [
+        "//:deviceinfra_pkg",
+    ],
+    deps = [":adb_proto"],
 )
