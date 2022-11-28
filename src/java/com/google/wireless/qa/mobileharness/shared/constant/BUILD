@@ -24,8 +24,14 @@ java_library(
     name = "dir",
     srcs = ["DirCommon.java"],
     deps = [
+        ":gen_dir",
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
     ],
+)
+
+java_library(
+    name = "gen_dir",
+    srcs = ["GenDir.java"],
 )
 
 java_library(

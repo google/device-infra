@@ -30,12 +30,9 @@ public final class DirCommon {
   /** Default file name pattern of the log files. */
   public static final String DEFAULT_LOG_FILE_NAME = "log%g.txt";
 
-  /**
-   * The Android test arg name, or iOS/Java/Python ENV VAR name for the relative path of the test
-   * gen file dir.
-   */
+  /** See {@link GenDir#KEY_NAME_OF_TEST_GEN_FILE_DIR_RELATIVE_PATH}. */
   public static final String KEY_NAME_OF_TEST_GEN_FILE_DIR_RELATIVE_PATH =
-      "mh_gen_file_dir_relative_path";
+      GenDir.KEY_NAME_OF_TEST_GEN_FILE_DIR_RELATIVE_PATH;
 
   /** Returns the public directory of the Apache/GSE. */
   public static String getPublicDirRoot() {
