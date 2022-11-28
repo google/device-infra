@@ -18,6 +18,7 @@ package com.google.devtools.deviceinfra.shared.util.flags;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import java.time.Duration;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -25,12 +26,16 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class FlagsTest {
 
-  private static final String[] ARGS = {"--supplemental_res_dir=foo"};
+  private static final String[] ARGS = {
+    "--mh_adb_command_extra_timeout=123s", "--supplemental_res_dir=foo"
+  };
 
   @Test
   public void parse() throws Exception {
     Flags.parse(ARGS);
 
     assertThat(Flags.instance().supplementalResDir.getNonNull()).isEqualTo("foo");
+    assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull())
+        .isEqualTo(Duration.ofSeconds(123L));
   }
 }

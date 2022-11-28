@@ -13,9 +13,18 @@
 # limitations under the License.
 #
 
-package(
-    default_visibility = [
+java_library(
+    name = "flags",
+    srcs = [
+        "Flags.java",
+    ],
+    visibility = [
         "//:deviceinfra_all_pkg",
+    ],
+    deps = [
+        ":duration_flag",
+        ":flag",
+        "@maven//:com_beust_jcommander",
     ],
 )
 
@@ -31,12 +40,11 @@ java_library(
 )
 
 java_library(
-    name = "flags",
-    srcs = [
-        "Flags.java",
-    ],
+    name = "duration_flag",
+    srcs = ["DurationFlag.java"],
     deps = [
         ":flag",
         "@maven//:com_beust_jcommander",
+        "@maven//:com_google_guava_guava",
     ],
 )

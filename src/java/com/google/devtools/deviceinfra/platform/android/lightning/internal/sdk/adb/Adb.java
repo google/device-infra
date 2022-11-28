@@ -697,7 +697,7 @@ public class Adb {
   }
 
   /**
-   * Adds {@linkplain #extraAdbCommandTimeout extra ADB command timeout} to a command timeout.
+   * Adds {@linkplain Flags#extraAdbCommandTimeout extra ADB command timeout} to a command timeout.
    *
    * <p>If the original timeout is {@code null}, the {@linkplain CommandExecutor#getDefaultTimeout()
    * default timeout} of the command executor will be used as the original timeout.
@@ -714,7 +714,8 @@ public class Adb {
     if (originalPeriod.isEmpty()) {
       return originalTimeout;
     }
-    Duration newPeriod = originalPeriod.get();
+    Duration newPeriod =
+        originalPeriod.get().plus(Flags.instance().extraAdbCommandTimeout.getNonNull());
     return originalTimeout.withFixed(newPeriod);
   }
 

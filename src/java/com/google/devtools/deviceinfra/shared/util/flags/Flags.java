@@ -16,6 +16,7 @@
 
 package com.google.devtools.deviceinfra.shared.util.flags;
 
+import java.time.Duration;
 
 /**
  * All Device Infra flags.
@@ -69,6 +70,19 @@ public class Flags {
               + " Adb library. Default is true (stderr will be redirected to stdout).",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> defaultAdbCommandRedirectStderr = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--mh_adb_command_extra_timeout",
+      description =
+          "Extra timeout for each Device Infra(DI) ADB command executed by DI Adb library. Default"
+              + " is 0. Example: '4m'. When DI Adb library (used by most of DI Android utilities)"
+              + " executes an ADB command, the timeout of the command will be the original timeout"
+              + " plus this extra timeout. For example, when the extra timeout is 4 minutes, if an"
+              + " ADB command does not specify timeout (uses the default 5 minutes timeout), then"
+              + " the timeout will be 9 minutes, if an ADB command specifies 10 seconds timeout,"
+              + " then the timeout will be 4 minutes and 10 seconds.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> extraAdbCommandTimeout = DurationFlag.value(Duration.ZERO);
 
   @com.beust.jcommander.Parameter(
       names = "--no_op_device_num",

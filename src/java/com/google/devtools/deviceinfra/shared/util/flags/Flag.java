@@ -56,7 +56,7 @@ public class Flag<T> {
 
   private final T value;
 
-  private Flag(T value) {
+  Flag(T value) {
     this.value = value;
   }
 
