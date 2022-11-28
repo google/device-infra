@@ -379,7 +379,7 @@ public abstract class BaseDevice implements Device {
   }
 
   /** Gets the optional api configurations. */
-  protected ApiConfig getApiConfig() {
+  public ApiConfig getApiConfig() {
     return apiConfig;
   }
 

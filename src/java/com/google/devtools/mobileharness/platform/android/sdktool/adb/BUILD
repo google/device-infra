@@ -68,8 +68,10 @@ java_library(
     visibility = [
         "//:deviceinfra_devicemanagement_pkg",
         "//src/java/com/google/devtools/atsconsole:__subpackages__",
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
         "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
+        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/sdktool/adb:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
     ],
@@ -125,8 +127,10 @@ java_library(
     name = "usb_device_locator",
     srcs = ["UsbDeviceLocator.java"],
     visibility = [
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
+        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
     ],
     deps = [

@@ -18,8 +18,13 @@ package com.google.devtools.deviceinfra.ext.devicemanagement.device;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.Multimap;
+import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
+import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.time.Duration;
 import javax.annotation.Nullable;
 
 /** Helper class for {@code BaseDevice}. */
@@ -58,6 +63,20 @@ public class BaseDeviceHelper {
           .entrySet()
           .forEach(e -> device.updateDimension(e.getKey(), e.getValue().toArray(new String[0])));
     }
+  }
+
+  /** Gets the default device setup timeout for a base device. */
+  public static Duration getBaseDeviceSetupTimeout() {
+    return Duration.ofMinutes(5L);
+  }
+
+  /** Gets the directory for saving device screenshots. */
+  public static String getGenScreenshotPathWithDate(Device device) throws MobileHarnessException {
+    String screenshotFileName =
+        new SimpleDateFormat("yyyy_MM_dd_hh_mm_ss_SSS")
+                .format(new Timestamp(System.currentTimeMillis()))
+            + ".png";
+    return PathUtil.join(device.getGenFileDir(), screenshotFileName);
   }
 
   private BaseDeviceHelper() {}

@@ -81,6 +81,7 @@ java_library(
     name = "validator_factory",
     srcs = ["validator/ValidatorFactory.java"],
     visibility = [
+        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
     ],
     deps = [
         ":api",
