@@ -1,0 +1,42 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package deviceinfra.api.testrunner.info;
+
+option java_package = "com.google.devtools.deviceinfra.api.testrunner.info.proto";
+option java_outer_classname = "ResultProto";
+
+// Result setting options.
+message ResultSettingOptions {
+  // Optional.
+  ResultCauseStackTraceStrategy cause_stack_trace_strategy = 1;
+}
+
+// Strategy for handling the stack trace of the result cause (if any).
+enum ResultCauseStackTraceStrategy {
+  // Unspecified strategy. The test / job runner will decide a strategy by
+  // itself.
+  RESULT_CAUSE_STACK_TRACE_STRATEGY_UNSPECIFIED = 0;
+
+  // The stack trace of the result cause (if any) will be omitted (e.g., when
+  // rendering the result).
+  //
+  // It is useful when it is CERTAIN that the stack trace (where the result is
+  // set) will never help debug.
+  OMIT_STACK_TRACE = 1;
+}
