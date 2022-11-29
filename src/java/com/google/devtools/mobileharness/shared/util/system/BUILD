@@ -22,6 +22,7 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_pkg",
+    ] + [
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/java:java_command_creator",
