@@ -14,32 +14,6 @@
 #
 
 java_library(
-    name = "fastboot",
-    srcs = ["Fastboot.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-        "//src/javatests/com/google/devtools/deviceinfra/platform/android/sdk/fastboot:__pkg__",
-    ],
-    exports = [":enums"],
-    deps = [
-        ":enums",
-        "//src/devtools/mobileharness/shared/util/quota/proto:quota_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot/initializer:fastboot_initializer",
-        "//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot/initializer:fastboot_param",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:device_constant",
-        "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
-        "//src/java/com/google/devtools/mobileharness/shared/util/command",
-        "//src/java/com/google/devtools/mobileharness/shared/util/quota",
-        "//src/java/com/google/devtools/mobileharness/shared/util/system",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
-        "@maven//:org_apache_commons_commons_lang3",
-    ],
-)
-
-java_library(
     name = "enums",
     srcs = ["Enums.java"],
     visibility = [

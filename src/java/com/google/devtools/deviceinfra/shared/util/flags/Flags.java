@@ -56,6 +56,22 @@ public class Flags {
   public Flag<Boolean> adbLibusb = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
+      names = "--enable_ate_dual_stack",
+      description = "Whether to enable ATE dual stack mode, which runs tests from both MH and TFC.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableAteDualStack = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_failed_device_creation",
+      description =
+          "Whether the lab server should create FailedDevice when devices constantly fail to"
+              + " initialize. In some rare use cases devices might not finish initialization but"
+              + " still be able to work sometimes. This flag does not work in shared lab, the"
+              + " default value of this flag is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> createFailedDevice = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
       names = "--extra_adb_keys",
       description =
           ("Colon-separated list of adb keys (files or directories) to be used (see ADB_VENDOR_KEYS"
@@ -122,6 +138,15 @@ public class Flags {
       description = "Name of resource directory.",
       converter = Flag.StringConverter.class)
   public Flag<String> resDirName = Flag.value("mh_res_files");
+
+  @com.beust.jcommander.Parameter(
+      names = "--should_manage_devices",
+      description =
+          "Whether the lab server should actively manage and recover devices from bad state, or"
+              + " just let a test fail. True for traditional deployments, false for labs where some"
+              + " other component manages and recovers the devices. By default, it is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> shouldManageDevices = Flag.value(true);
 
   // The flag for dynamically loading resource files from the supplemental directory instead of
   // unpacking from the JAR binary. It allows updating resource files without rebuilding the JAR

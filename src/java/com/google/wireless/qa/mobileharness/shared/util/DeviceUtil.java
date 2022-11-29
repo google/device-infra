@@ -16,14 +16,12 @@
 
 package com.google.wireless.qa.mobileharness.shared.util;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.flags.Flag;
-import com.google.common.flags.FlagSpec;
 import com.google.common.net.HostAndPort;
 import com.google.common.net.InetAddresses;
+import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.InlineMe;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
@@ -34,31 +32,6 @@ import java.util.Map.Entry;
 
 /** Utilities related to devices. */
 public final class DeviceUtil {
-  // TODO: Move this under com.google.devtools.mobileharness.shared.util.sharedpool
-  @FlagSpec(
-      name = "should_manage_devices",
-      help =
-          "Whether the lab server should actively manage and recover devices from bad state, or"
-              + " just let a test fail. True for traditional deployments, false for labs where some"
-              + " other component manages and recovers the devices, e.g. http://go/m&mlabs. For"
-              + " Shared Lab, it is false. For Satellite Lab, it is true. By default it is true.")
-  @VisibleForTesting
-  public static final Flag<Boolean> FLAG_shouldManageDevices = Flag.value(true);
-
-  @FlagSpec(
-      name = "enable_failed_device_creation",
-      help =
-          "Whether the lab server should create FailedDevice when devices constantly fail to"
-              + " initialize. In some rare use cases devices might not finish initialization but"
-              + " still be able to work sometimes. This flag does not work in shared lab, the"
-              + " default value of this flag is true.")
-  @VisibleForTesting
-  public static final Flag<Boolean> FLAG_createFailedDevice = Flag.value(true);
-
-  @FlagSpec(
-      name = "enable_ate_dual_stack",
-      help = "Whether to enable ATE dual stack mode, which runs tests from both MH and TFC.")
-  public static final Flag<Boolean> enableAteDualStack = Flag.value(false);
 
   /**
    * Returns whether the lab server should actively manage and recover devices from bad state, or
@@ -97,7 +70,7 @@ public final class DeviceUtil {
    * @since lab server 4.158.0
    */
   public static boolean inSharedLab() {
-    return !FLAG_shouldManageDevices.getNonNull();
+    return !Flags.instance().shouldManageDevices.getNonNull();
   }
 
   /**
@@ -113,7 +86,7 @@ public final class DeviceUtil {
    * into FailedDevice when the device frequently fails initialization.
    */
   public static boolean isFailedDeviceCreationEnabled() {
-    return FLAG_createFailedDevice.getNonNull();
+    return Flags.instance().createFailedDevice.getNonNull();
   }
 
   /**
@@ -201,7 +174,9 @@ public final class DeviceUtil {
 
   /** Returns whether the ate dual stack is enabled. */
   public static boolean isAteDualStackEnabled() {
-    return enableAteDualStack.get() && !inSharedLab() && new SystemUtil().isOnLinux();
+    return Flags.instance().enableAteDualStack.get()
+        && !inSharedLab()
+        && new SystemUtil().isOnLinux();
   }
 
   private DeviceUtil() {}

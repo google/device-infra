@@ -31,6 +31,19 @@ java_library(
 )
 
 java_library(
+    name = "device",
+    srcs = ["DeviceUtil.java"],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "device_info",
     srcs = ["DeviceInfoUtil.java"],
     visibility = [
