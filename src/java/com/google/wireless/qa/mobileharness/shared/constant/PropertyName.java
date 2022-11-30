@@ -74,6 +74,9 @@ public interface PropertyName {
      */
     _IS_RESUMED_JOB,
 
+    /** Whether the job is resumable. (http://go/mh-longevity-short-term-design). */
+    IS_RESUMABLE,
+
     /** The parameters to be recorded from mobile_test macro to the job creation. */
     _PARAM_STATS,
 
