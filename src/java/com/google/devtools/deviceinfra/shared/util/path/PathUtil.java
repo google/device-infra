@@ -98,6 +98,60 @@ public final class PathUtil {
   }
 
   /**
+   * Determines the parent directory of the given path. This is similar to dirname(1).
+   *
+   * @param path The path to strip
+   * @return path, with trailing component removed.
+   */
+  public static String dirname(String path) {
+    path = removeExtraneousSlashes(path);
+
+    int lastSlash = path.lastIndexOf("/");
+
+    if ("/".equals(path) || lastSlash == 0) {
+      return "/";
+    } else if (lastSlash == -1) {
+      return ".";
+    } else {
+      return path.substring(0, lastSlash);
+    }
+  }
+
+  /**
+   * Returns a path that is relative to 'dir' for the given 'fullPath'. Never returns a string with
+   * a trailing slash.
+   *
+   * <p>Occurrences of ".." are silently ignored. It is the responsibility of the caller to ensure
+   * that the paths given to this method do not contain a "..".
+   *
+   * @param dir The path that you wish to make fullPath relative to
+   * @return a path relative to dir. The returned value will never start with a slash.
+   */
+  public static String makeRelative(String dir, String fullPath) {
+    dir = removeExtraneousSlashes(dir);
+    fullPath = removeExtraneousSlashes(fullPath);
+
+    /**
+     * If fullpath is indeed underneath dir, then we strip dir from fullPath to get the relative
+     * relativePath. If not, we just use fullPath and assume that it is already a relative
+     * relativePath.
+     */
+    String relativePath;
+    if (fullPath.startsWith(dir)) {
+      relativePath = fullPath.substring(dir.length());
+    } else {
+      relativePath = fullPath;
+    }
+
+    // Intentional denial: all components with ".." are removed.
+    String clean = relativePath.replace("/../", "/").replace("/..", "/").replace("../", "/");
+    relativePath = join(clean.split("/"));
+    relativePath = removeLeadingSlashes(relativePath);
+
+    return relativePath;
+  }
+
+  /**
    * Removes extra slashes from a path. Leading slash is preserved, trailing slash is stripped, and
    * any runs of more than one slash in the middle is replaced by a single slash.
    */

@@ -65,4 +65,69 @@ public class PathUtilTest extends TestCase {
     } catch (NullPointerException expected) {
     }
   }
+
+  public void testBasename() throws Exception {
+    assertEquals("", PathUtil.basename(""));
+    assertEquals("", PathUtil.basename("/"));
+    assertEquals("bar", PathUtil.basename("bar"));
+    assertEquals("bar", PathUtil.basename("bar///"));
+    assertEquals("bar", PathUtil.basename("/bar"));
+    assertEquals("bar", PathUtil.basename("/bar/"));
+    assertEquals("bar", PathUtil.basename("/bar///"));
+    assertEquals("bar", PathUtil.basename("///bar///"));
+    assertEquals("bar", PathUtil.basename("/foo/bar"));
+    assertEquals("bar", PathUtil.basename("/foo/bar/"));
+    assertEquals("bar", PathUtil.basename("//foo//bar//"));
+    assertEquals("bar", PathUtil.basename("//foo//baz//bar//"));
+  }
+
+  public void testDirname() throws Exception {
+    assertEquals(".", PathUtil.dirname(""));
+    assertEquals("/", PathUtil.dirname("/"));
+    assertEquals("/", PathUtil.dirname("/etc"));
+    assertEquals("/", PathUtil.dirname("/etc/"));
+    assertEquals("/etc", PathUtil.dirname("/etc/passwd"));
+    assertEquals("/etc", PathUtil.dirname("/etc/passwd/"));
+    assertEquals("/etc", PathUtil.dirname("/etc/passwd///"));
+    assertEquals("/etc", PathUtil.dirname("///etc/passwd///"));
+    assertEquals("/etc", PathUtil.dirname("///etc///passwd///"));
+    assertEquals("/usr/local", PathUtil.dirname("/usr/local/bin"));
+    assertEquals("/usr/local/bin", PathUtil.dirname("/usr/local/bin//binary"));
+    assertEquals(".", PathUtil.dirname("passwd"));
+  }
+
+  public void testMakeRelative() throws Exception {
+    assertEquals("simba", PathUtil.makeRelative("/gfs/bp/pso", "/gfs/bp/pso/simba"));
+    assertEquals("simba", PathUtil.makeRelative("/gfs/bp/pso", "/gfs/bp/pso/simba/"));
+    assertEquals("simba", PathUtil.makeRelative("/gfs/bp/pso/", "/gfs/bp/pso/simba"));
+    assertEquals("simba", PathUtil.makeRelative("/gfs/bp/pso/", "/gfs/bp/pso/simba/"));
+    assertEquals("simba/eeyore", PathUtil.makeRelative("/gfs/bp/pso/", "/gfs/bp/pso/simba/eeyore"));
+    assertEquals(
+        "simba/eeyore", PathUtil.makeRelative("/gfs/bp/pso/", "/gfs/bp/pso/simba/eeyore/"));
+    assertEquals("", PathUtil.makeRelative("/gfs/bp/pso/", "/gfs/bp/pso"));
+    assertEquals("", PathUtil.makeRelative("/gfs/bp/pso", "/gfs/bp/pso/"));
+    assertEquals("", PathUtil.makeRelative("/gfs/bp/pso", "/gfs/bp/pso///"));
+    assertEquals("", PathUtil.makeRelative("/gfs/bp/pso", "//gfs//bp//pso///"));
+    assertEquals("already_relative", PathUtil.makeRelative("/gfs/bp/pso", "already_relative"));
+    assertEquals("already/relative", PathUtil.makeRelative("/gfs/bp/pso", "already/relative"));
+    assertEquals("already/relative", PathUtil.makeRelative("/gfs/bp/pso", "already/relative/"));
+    assertEquals("already/relative", PathUtil.makeRelative("/gfs/bp/pso", "/already/relative/"));
+    assertEquals("already/relative", PathUtil.makeRelative("/gfs/bp/pso", "../already/relative/"));
+    assertEquals(
+        "already/relative", PathUtil.makeRelative("/gfs/bp/pso", "../already/../relative/"));
+    assertEquals(
+        "already/relative", PathUtil.makeRelative("/gfs/bp/pso", "../already//relative/.."));
+    assertEquals(
+        "already/relative", PathUtil.makeRelative("/gfs/bp/pso", "../already//relative/../"));
+    assertEquals(
+        "already/relative", PathUtil.makeRelative("/gfs/bp/pso", "../already//relative/../////"));
+    assertEquals(
+        "already/relative",
+        PathUtil.makeRelative("/gfs/bp/pso", "///../already//relative/../////"));
+    assertEquals("gfs/bp/psxfoo", PathUtil.makeRelative("/gfs/bp/pso/", "/gfs/bp/psxfoo/"));
+    assertEquals("foo", PathUtil.makeRelative("/gfs/bp/pso/", "/gfs/bp/psofoo/"));
+    assertEquals(
+        "../../../path/to/cookie",
+        PathUtil.makeRelative("/gfs/bp/pso", "..../../....../../....../../..path/to/cookie"));
+  }
 }
