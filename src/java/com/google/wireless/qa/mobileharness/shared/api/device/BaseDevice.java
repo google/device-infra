@@ -574,7 +574,7 @@ public abstract class BaseDevice implements Device {
    * Removes one supported decorator according to the decorator name. If the decorator class is not
    * found, just ignores it.
    */
-  protected final void removeSupportedDecorator(String decoratorClassSimpleName) {
+  public final void removeSupportedDecorator(String decoratorClassSimpleName) {
     Class<? extends Decorator> decoratorClass;
     try {
       decoratorClass = ClassUtil.getDecoratorClass(decoratorClassSimpleName);
@@ -586,7 +586,7 @@ public abstract class BaseDevice implements Device {
   }
 
   /** Removes one supported decorator. */
-  protected final void removeSupportedDecorator(Class<? extends Decorator> decoratorClass) {
+  public final void removeSupportedDecorator(Class<? extends Decorator> decoratorClass) {
     if (!info().supportedDecorators().contains(decoratorClass.getSimpleName())) {
       logger.atWarning().log(
           "Ignore removing %s as it is not in supported decorator list %s.",
