@@ -17,6 +17,7 @@
 #   Shared data models for Mobile Harness labs and devices.
 
 DEFAULT_VISIBILITY = [
+    "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
     "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     "//src/java/com/google/devtools/mobileharness/api:__subpackages__",
     "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
