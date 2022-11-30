@@ -88,7 +88,6 @@ public final class Dimension {
     NETWORK_ADDRESS,
     /** The network SSID. */
     NETWORK_SSID,
-    // LINT.IfChange(network_simulation_keys)
     /** Customized dimension, SSID for network simulation. */
     NETWORK_SIMULATION_NETTROL_BASE_URL,
     /** Customized dimension, PSK for network simulation. */
@@ -97,7 +96,6 @@ public final class Dimension {
     NETWORK_SIMULATION_SSID,
     /** Customized dimension, SSID for network simulation. */
     NETWORK_SIMULATION_USE_NETTROL,
-    // LINT.ThenChange(//depot/google3/communication/testing/mobly/networksimulation/network_traffic_shaper.py:network_simulation_keys)
     PING_GOOGLE_STABILITY,
     /** The mac address */
     /** Device pool name. Values include: shared/shared_without_recovery/gourp_shared/dedicated. */
@@ -267,6 +265,9 @@ public final class Dimension {
 
     /** Dimension value for public shared pool. */
     public static final String POOL_SHARED = "shared";
+
+    /** Dimension value that excludes the shared pool. */
+    public static final String POOL_NONSHARED = "^((?!shared).)*$";
 
     /** Dimension value for public shared default performance pool. */
     public static final String DEFAULT_PERFORMANCE_POOL_SHARED = "default";
