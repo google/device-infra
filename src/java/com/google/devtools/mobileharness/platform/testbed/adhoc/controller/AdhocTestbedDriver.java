@@ -462,6 +462,11 @@ public class AdhocTestbedDriver extends BaseDriver {
             .alsoTo(logger)
             .log("Waiting on post-driver barrier, device=[%s]", getDevice().getDeviceId());
         postDriverBarrier.await();
+
+        // If non of the sub device decorators failed, set the device TestInfo result to PASS.
+        if (testInfo.resultWithCause().get().type().equals(TestResult.UNKNOWN)) {
+          testInfo.resultWithCause().setPass();
+        }
       } catch (BrokenBarrierException e) {
         InterruptedException exception =
             new InterruptedException(
