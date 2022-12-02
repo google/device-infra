@@ -14,33 +14,22 @@
 #
 
 java_library(
-    name = "android_packages",
-    srcs = [
-        "AndroidPackages.java",
+    name = "aapt",
+    srcs = ["Aapt.java"],
+    resources = [
     ],
-    visibility = ["//:deviceinfra_all_pkg"],
-)
-
-java_library(
-    name = "sqlite",
-    srcs = ["Sqlite.java"],
     visibility = [
-        "//:deviceinfra_pkg",
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:android_device_spec_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:base",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "serial_console_util",
-    srcs = [
-        "SerialConsole.java",
-    ],
-    visibility = [
-        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
     ],
 )

@@ -28,8 +28,14 @@ import java.time.Duration;
 public class Flags {
 
   @com.beust.jcommander.Parameter(
+      names = "--aapt",
+      description = "Android AAPT path.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> aaptPath = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
       names = "--adb",
-      description = "Android adb path, overriding the SDK location.",
+      description = "Android ADB path.",
       converter = Flag.StringConverter.class)
   public Flag<String> adbPathFromUser = Flag.value("");
 
