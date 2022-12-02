@@ -59,6 +59,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
+@org.junit.Ignore("covered by internal")
 public class CommandExecutorTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
