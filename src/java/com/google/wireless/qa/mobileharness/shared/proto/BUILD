@@ -71,3 +71,38 @@ java_proto_library(
     name = "job_config_java_proto",
     deps = [":job_config_proto"],
 )
+
+# If you want to reference custom_apk_install to generate APK manifest, please
+# whitelist your packages here.
+package_group(
+    name = "custom_apk_install_manifest_builder",
+    includes = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
+
+proto_library(
+    name = "android_device_spec",
+    srcs = [
+        "android_device_spec.proto",
+    ],
+    visibility = [":custom_apk_install_manifest_builder"],
+)
+
+java_lite_proto_library(
+    name = "android_device_spec_java_proto_lite",
+    visibility = [":custom_apk_install_manifest_builder"],
+    deps = [":android_device_spec"],
+)
+
+cc_proto_library(
+    name = "android_device_spec_cc_proto",
+    visibility = [":custom_apk_install_manifest_builder"],
+    deps = [":android_device_spec"],
+)
+
+java_proto_library(
+    name = "android_device_spec_java_proto",
+    visibility = [":custom_apk_install_manifest_builder"],
+    deps = [":android_device_spec"],
+)

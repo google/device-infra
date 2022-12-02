@@ -1,0 +1,53 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.android_device_spec;
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
+
+// ABI supported by Android till Q4 2015.
+// Ref: http://developer.android.com/ndk/guides/abis.html
+enum Abi {
+  ARMEABI = 1;
+  ARMEABI_V7A = 2;
+  ARMEABI_V7A_HARD = 3;
+  ARM64_V8A = 4;
+  X86 = 5;
+  X86_64 = 6;
+  MIPS = 7;
+  MIPS64 = 8;
+}
+
+// Android device type.
+enum DeviceType {
+  HANDHELD = 1;
+  WEARABLE = 2;
+  TV = 3;
+  AUTO = 4;
+}
+
+// Screen density for devices.
+// Ref: http://developer.android.com/guide/practices/screens_support.html
+enum ScreenDensity {
+  LDPI = 1;
+  MDPI = 2;
+  HDPI = 3;
+  XHDPI = 4;
+  XXHDPI = 5;
+  XXXHDPI = 6;
+}

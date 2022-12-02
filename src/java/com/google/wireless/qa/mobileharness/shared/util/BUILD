@@ -60,6 +60,21 @@ java_library(
 )
 
 java_library(
+    name = "luhn",
+    srcs = ["LuhnUtil.java"],
+)
+
+java_library(
+    name = "resolution",
+    srcs = [
+        "ScreenResolution.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+    ],
+)
+
+java_library(
     name = "reflection",
     srcs = ["ReflectionUtil.java"],
     visibility = [

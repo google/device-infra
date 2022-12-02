@@ -1,0 +1,672 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.devtools.mobileharness.platform.android.systemspec;
+
+import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
+import static com.google.common.truth.Truth8.assertThat;
+import static org.junit.Assert.assertThrows;
+import static org.mockito.Mockito.when;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
+import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.UsbDeviceLocator;
+import com.google.wireless.qa.mobileharness.shared.proto.AndroidDeviceSpec.Abi;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
+
+@RunWith(JUnit4.class)
+public class AndroidSystemSpecUtilTest {
+
+  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+
+  @Mock private Adb adb;
+  @Mock private AndroidAdbInternalUtil adbInternalUtil;
+  @Mock private AndroidAdbUtil adbUtil;
+
+  private static final String SERIAL = "363005dc750400ec";
+  private static final String EMULATOR_SERIAL = "localhost:17605";
+
+  private AndroidSystemSpecUtil systemSpecUtil;
+
+  @Before
+  public void setUp() {
+    systemSpecUtil = new AndroidSystemSpecUtil(adb, adbInternalUtil, adbUtil);
+  }
+
+  @Test
+  public void getDeviceUsbLocator() throws Exception {
+    assertThat(systemSpecUtil.getUsbLocator("usb:2-5")).isEqualTo(UsbDeviceLocator.of(2, "5"));
+    assertThat(systemSpecUtil.getUsbLocator("usb:2-11.4"))
+        .isEqualTo(UsbDeviceLocator.of(2, "11.4"));
+
+    when(adbInternalUtil.listDevices(/* timeout= */ null))
+        .thenReturn(
+            ImmutableList.of(
+                "363005DC750400EC   device  usb:1-2",
+                "0288504043411157   device  usb:3-4.7",
+                "0288504043411158   device  usb:#-4.7"));
+    assertThat(systemSpecUtil.getUsbLocator("363005DC750400EC"))
+        .isEqualTo(UsbDeviceLocator.of(1, "2"));
+    assertThat(systemSpecUtil.getUsbLocator("0288504043411157"))
+        .isEqualTo(UsbDeviceLocator.of(3, "4.7"));
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getUsbLocator("whatever"))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_USB_LOCATOR_SERIAL_NOT_FOUND);
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class,
+                    () -> systemSpecUtil.getUsbLocator("0288504043411158"))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_USB_LOCATOR_INVALID_USB_ID);
+  }
+
+  @Test
+  public void getDeviceAbiShouldReturnDesiredValue() throws Exception {
+    Map<String, Abi> testCases =
+        new HashMap<>(
+            ImmutableMap.<String, Abi>builder()
+                .put("armeabi", Abi.ARMEABI) // grandmother android phone.
+                .put("armeabi-v7a", Abi.ARMEABI_V7A) // Nexus 5,6,7.
+                .put("armeabi-v7a-hard", Abi.ARMEABI_V7A_HARD)
+                // Just be here since it listed in android ABI doc.
+                .put("arm64-v8a", Abi.ARM64_V8A) // Nexus 9, 5x, 6p.
+                .put("x86", Abi.X86) // Some Intel Atom(TM)-based phone, emulator.
+                .put("x86_64", Abi.X86_64) // Emulator.
+                .put("mips", Abi.MIPS) // Just be here since it listed in android ABI doc.
+                .put("mips64", Abi.MIPS64) // Just be here since it listed in android ABI doc.
+                .buildOrThrow());
+
+    for (String abiString : testCases.keySet()) {
+      when(adbUtil.getProperty(SERIAL, AndroidProperty.ABI)).thenReturn(abiString);
+      assertWithMessage("Convert " + abiString)
+          .that(systemSpecUtil.getDeviceAbi(SERIAL))
+          .isEqualTo(testCases.get(abiString));
+    }
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.ABI)).thenReturn("ohno");
+    assertThat(
+            assertThrows(MobileHarnessException.class, () -> systemSpecUtil.getDeviceAbi(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_INVALID_ABI);
+
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.ABI)).thenThrow(new InterruptedException());
+    assertThrows(InterruptedException.class, () -> systemSpecUtil.getDeviceAbi(SERIAL));
+  }
+
+  @Test
+  public void getDeviceImei() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 4)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 0000000f 00360038 00390037 '........8.6.7.9.'\n"
+                + "  0x00000010: 00310038 00320030 00380031 00330039 '8.1.0.2.1.8.9.3.'\n"
+                + "  0x00000020: 00390038 00000039                   '8.9.9...        ')\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    Optional<String> optImei = systemSpecUtil.getDeviceImei(SERIAL, 29);
+    assertThat(optImei).hasValue("867981021893899");
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getDeviceImei(SERIAL, 29))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_IMEI_ERROR);
+  }
+
+  @Test
+  public void getDeviceImeiSdkVersion20() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 1)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 0000000f 00360038 00390037 '........8.6.7.9.'\n"
+                + "  0x00000010: 00310038 00320030 00380031 00330039 '8.1.0.2.1.8.9.3.'\n"
+                + "  0x00000020: 00390038 00000039                   '8.9.9...        ')\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    Optional<String> optImei = systemSpecUtil.getDeviceImei(SERIAL, 20);
+    assertThat(optImei).hasValue("867981021893899");
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getDeviceImei(SERIAL, 20))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_IMEI_ERROR);
+  }
+
+  @Test
+  public void getDeviceImeiSdkVersion30() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 5)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 0000000f 00360038 00390037 '........8.6.7.9.'\n"
+                + "  0x00000010: 00310038 00320030 00380031 00330039 '8.1.0.2.1.8.9.3.'\n"
+                + "  0x00000020: 00390038 00000039                   '8.9.9...        ')\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    Optional<String> optImei = systemSpecUtil.getDeviceImei(SERIAL, 30);
+    assertThat(optImei).hasValue("867981021893899");
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getDeviceImei(SERIAL, 30))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_IMEI_ERROR);
+  }
+
+  @Test
+  public void getDeviceImeiNoService() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 4)))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR,
+                "service: Service iphonesubinfo does not exist"));
+
+    assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
+  }
+
+  @Test
+  public void getDeviceImeiNoImei() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 4)))
+        .thenReturn("Result: Parcel(00000000 ffffffff   '........')\n");
+
+    assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
+  }
+
+  @Test
+  public void getDeviceImeiWrongLuhn() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 4)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 0000000f 00360038 00390037 '........8.6.7.9.'\n"
+                + "  0x00000010: 00310038 00320030 00380031 00330039 '8.1.0.2.1.8.9.3.'\n"
+                + "  0x00000020: 00390038 00000038                   '8.9.8...        ')\n");
+
+    assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
+  }
+
+  @Test
+  public void getDeviceImeiZeroIMEI() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 4)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 0000000f 00300030 00300030 '........0.0.0.0.'\n"
+                + "  0x00000010: 00300030 00300030 00300030 00300030 '0.0.0.0.0.0.0.0.'\n"
+                + "  0x00000020: 00300030 00000030                   '0.0.0...        ')\n");
+
+    assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
+  }
+
+  @Test
+  public void getDeviceIccid() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 11)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 00000013 00390038 00310030 '........8.9.0.1.'\n"
+                + "  0x00000010: 00360032 00390030 00310037 00340031 '2.6.0.9.7.1.1.4.'\n"
+                + "  0x00000020: 00340033 00310034 00320037 00000031 '3.4.4.1.7.2.1...')\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    Optional<String> optIccid = systemSpecUtil.getDeviceIccid(SERIAL, 29);
+    assertThat(optIccid).hasValue("8901260971143441721");
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getDeviceIccid(SERIAL, 29))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_ICCID_ERROR);
+  }
+
+  @Test
+  public void getDeviceIccidSdkVersion20() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 5)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 00000013 00390038 00310030 '........8.9.0.1.'\n"
+                + "  0x00000010: 00360032 00390030 00310037 00340031 '2.6.0.9.7.1.1.4.'\n"
+                + "  0x00000020: 00340033 00310034 00320037 00000031 '3.4.4.1.7.2.1...')\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    Optional<String> optIccid = systemSpecUtil.getDeviceIccid(SERIAL, 20);
+    assertThat(optIccid).hasValue("8901260971143441721");
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getDeviceIccid(SERIAL, 20))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_ICCID_ERROR);
+  }
+
+  @Test
+  public void getDeviceIccidSdkVersion21() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 12)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 00000013 00390038 00310030 '........8.9.0.1.'\n"
+                + "  0x00000010: 00360032 00390030 00310037 00340031 '2.6.0.9.7.1.1.4.'\n"
+                + "  0x00000020: 00340033 00310034 00320037 00000031 '3.4.4.1.7.2.1...')\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    Optional<String> optIccid = systemSpecUtil.getDeviceIccid(SERIAL, 21);
+    assertThat(optIccid).hasValue("8901260971143441721");
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getDeviceIccid(SERIAL, 21))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_ICCID_ERROR);
+  }
+
+  @Test
+  public void getDeviceIccidSdkVersion28() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 11)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 00000013 00390038 00310030 '........8.9.0.1.'\n"
+                + "  0x00000010: 00360032 00390030 00310037 00340031 '2.6.0.9.7.1.1.4.'\n"
+                + "  0x00000020: 00340033 00310034 00320037 00000031 '3.4.4.1.7.2.1...')\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    Optional<String> optIccid = systemSpecUtil.getDeviceIccid(SERIAL, 28);
+    assertThat(optIccid).hasValue("8901260971143441721");
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getDeviceIccid(SERIAL, 28))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_ICCID_ERROR);
+  }
+
+  @Test
+  public void getDeviceIccidSdkVersion30() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 14)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 00000013 00390038 00310030 '........8.9.0.1.'\n"
+                + "  0x00000010: 00360032 00390030 00310037 00340031 '2.6.0.9.7.1.1.4.'\n"
+                + "  0x00000020: 00340033 00310034 00320037 00000031 '3.4.4.1.7.2.1...')\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    Optional<String> optIccid = systemSpecUtil.getDeviceIccid(SERIAL, 30);
+    assertThat(optIccid).hasValue("8901260971143441721");
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getDeviceIccid(SERIAL, 30))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_ICCID_ERROR);
+  }
+
+  @Test
+  public void getDeviceIccidNoService() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 11)))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR,
+                "service: Service iphonesubinfo does not exist"));
+
+    assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
+  }
+
+  @Test
+  public void getDeviceIccidNoIccid() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 11)))
+        .thenReturn("Result: Parcel(00000000 ffffffff   '........')\n");
+
+    assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
+  }
+
+  @Test
+  public void getDeviceIccidWrongLuhn() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 11)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 00000013 00390038 00310030 '........8.9.0.1.'\n"
+                + "  0x00000010: 00360032 00390030 00310037 00340031 '2.6.0.9.7.1.1.4.'\n"
+                + "  0x00000020: 00340033 00310034 00320037 00000031 '3.4.4.1.7.2.2...')\n");
+
+    assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
+  }
+
+  @Test
+  public void getDeviceIccidZeroIccid() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 11)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 00000000 00000000 00000000 '........0.0.0.0.'\n"
+                + "  0x00000010: 00000000 00000000 00000000 00000000 '0.0.0.0.0.0.0.0.'\n"
+                + "  0x00000020: 00000000 00000000 00000000 00000000 '0.0.0.0.0.0.0...')\n");
+
+    assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
+  }
+
+  @Test
+  public void getDeviceIccidWrongPrefix() throws Exception {
+    when(adb.runShell(
+            SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 11)))
+        .thenReturn(
+            "Result: Parcel(\n"
+                + "  0x00000000: 00000000 00000013 00390038 00310030 '........1.1.0.1.'\n"
+                + "  0x00000010: 00360032 00390030 00310037 00340031 '2.6.0.9.7.1.1.4.'\n"
+                + "  0x00000020: 00340033 00310034 00320037 00000031 '3.4.4.1.7.2.1...')\n");
+
+    assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
+  }
+
+  @Test
+  public void getMacAddress() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_WIFI_MAC_ADDRESS))
+        .thenReturn("ac:cf:85:2a:3f:8a\r\n")
+        .thenReturn("ac:cf:85:2a:3f:8b\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    assertThat(systemSpecUtil.getMacAddress(SERIAL)).isEqualTo("ac:cf:85:2a:3f:8a");
+    assertThat(systemSpecUtil.getMacAddress(SERIAL)).isEqualTo("ac:cf:85:2a:3f:8b");
+    assertThat(
+            assertThrows(MobileHarnessException.class, () -> systemSpecUtil.getMacAddress(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_MAC_ADDRESS_ERROR);
+  }
+
+  @Test
+  public void getBluetoothMacAddress() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_BLUETOOTH_MAC_ADDRESS))
+        .thenReturn("00:9a:cd:56:0e:88\r\n")
+        .thenReturn("00:9a:cd:56:0e:99\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    assertThat(systemSpecUtil.getBluetoothMacAddress(SERIAL)).isEqualTo("00:9a:cd:56:0e:88");
+    assertThat(systemSpecUtil.getBluetoothMacAddress(SERIAL)).isEqualTo("00:9a:cd:56:0e:99");
+  }
+
+  @Test
+  public void getNumberOfCpus() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_CPU_INFO))
+        .thenReturn(
+            "Processor       : ARMv7 Processor rev 0 (v7l)\n"
+                + "processor       : 0\n"
+                + "BogoMIPS        : 13.53\n\n"
+                + "processor       : 1\n"
+                + "BogoMIPS        : 13.53\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"))
+        .thenReturn("");
+
+    assertThat(systemSpecUtil.getNumberOfCpus(SERIAL)).isEqualTo(2);
+    assertThat(
+            assertThrows(MobileHarnessException.class, () -> systemSpecUtil.getNumberOfCpus(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_CPU_INFO_ERROR);
+    assertThat(
+            assertThrows(MobileHarnessException.class, () -> systemSpecUtil.getNumberOfCpus(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_NO_CPU_FOUND);
+  }
+
+  @Test
+  public void getSystemFeatures_commaDelimitter() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn("feature:foo,feature:bar")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    assertThat(systemSpecUtil.getSystemFeatures(SERIAL))
+        .containsExactly("feature:foo", "feature:bar");
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> systemSpecUtil.getSystemFeatures(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_LIST_FEATURES_ERROR);
+  }
+
+  @Test
+  public void getSystemFeatures_newlineDelimitter() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn("feature:foo\nfeature:bar\n");
+
+    assertThat(systemSpecUtil.getSystemFeatures(SERIAL))
+        .containsExactly("feature:foo", "feature:bar");
+  }
+
+  @Test
+  public void getTotalMem() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_TOTAL_MEM))
+        .thenReturn(
+            "MemTotal:         742868 kB\n"
+                + "MemFree:          278656 kB\n"
+                + "Buffers:           93824 kB\n")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"))
+        .thenReturn("")
+        .thenReturn(
+            "MemTotal:         ### kB\n"
+                + "MemFree:          ### kB\n"
+                + "Buffers:           ### kB\n")
+        .thenReturn(
+            "MemTotal:         -9999 kB\n"
+                + "MemFree:          -9999 kB\n"
+                + "Buffers:           0 kB\n");
+
+    assertThat(systemSpecUtil.getTotalMem(SERIAL)).isEqualTo(742868);
+    assertThat(
+            assertThrows(MobileHarnessException.class, () -> systemSpecUtil.getTotalMem(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_GET_TOTAL_MEM_ERROR);
+    assertThat(
+            assertThrows(MobileHarnessException.class, () -> systemSpecUtil.getTotalMem(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_TOTAL_MEM_VALUE_NOT_FOUND);
+    assertThat(
+            assertThrows(MobileHarnessException.class, () -> systemSpecUtil.getTotalMem(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_INVALID_TOTAL_MEM_VALUE);
+    assertThat(
+            assertThrows(MobileHarnessException.class, () -> systemSpecUtil.getTotalMem(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_INVALID_TOTAL_MEM_VALUE);
+  }
+
+  @Test
+  public void isAndroidEmulator_serialStartsWithLocalhost_true() {
+    assertThat(AndroidSystemSpecUtil.isAndroidEmulator("localhost:8091")).isTrue();
+  }
+
+  @Test
+  public void isAndroidEmulator_serialStartsWithEmulator_true() {
+    assertThat(AndroidSystemSpecUtil.isAndroidEmulator("emulator-5554")).isTrue();
+  }
+
+  @Test
+  public void isAndroidEmulator_serialStartsWith127dot0dot0dot1_true() {
+    assertThat(AndroidSystemSpecUtil.isAndroidEmulator("127.0.0.1")).isTrue();
+  }
+
+  @Test
+  public void isAutomotiveDevice_byHardwareType() throws Exception {
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.HARDWARE_TYPE))
+        .thenReturn(AndroidSystemSpecUtil.AUTOMOTIVE_TYPE);
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn("");
+
+    assertThat(systemSpecUtil.isAutomotiveDevice(SERIAL)).isTrue();
+  }
+
+  @Test
+  public void isAutomotiveDevice_byFeature() throws Exception {
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.HARDWARE_TYPE)).thenReturn("");
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn("feature:android.hardware.type.automotive");
+
+    assertThat(systemSpecUtil.isAutomotiveDevice(SERIAL)).isTrue();
+  }
+
+  @Test
+  public void isAutomotiveDevice_false() throws Exception {
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.HARDWARE_TYPE)).thenReturn("");
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn("");
+
+    assertThat(systemSpecUtil.isAutomotiveDevice(SERIAL)).isFalse();
+  }
+
+  @Test
+  public void isPixelExperience_true() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn("feature:com.google.android.feature.PIXEL_EXPERIENCE");
+
+    assertThat(systemSpecUtil.isPixelExperience(SERIAL)).isTrue();
+  }
+
+  @Test
+  public void isPixelExperience_false() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn("");
+
+    assertThat(systemSpecUtil.isPixelExperience(SERIAL)).isFalse();
+  }
+
+  @Test
+  public void isPixelExperience_emulator() throws Exception {
+    when(adb.runShellWithRetry(EMULATOR_SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn("feature:com.google.android.feature.GOOGLE_EXPERIENCE")
+        .thenReturn("");
+
+    assertThat(systemSpecUtil.isPixelExperience(EMULATOR_SERIAL)).isTrue();
+    assertThat(systemSpecUtil.isPixelExperience(EMULATOR_SERIAL)).isFalse();
+  }
+
+  @Test
+  public void isGoDevice_true() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn(AndroidSystemSpecUtil.FEATURE_LOW_RAM);
+
+    assertThat(systemSpecUtil.isGoDevice(SERIAL)).isTrue();
+  }
+
+  @Test
+  public void isGoDevice_falseOnWearable() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn(
+            AndroidSystemSpecUtil.FEATURE_LOW_RAM + "\n" + AndroidSystemSpecUtil.FEATURE_WEARABLE);
+
+    assertThat(systemSpecUtil.isGoDevice(SERIAL)).isFalse();
+  }
+
+  @Test
+  public void isGoDevice_false() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn("");
+
+    assertThat(systemSpecUtil.isGoDevice(SERIAL)).isFalse();
+  }
+
+  @Test
+  public void isTvDevice_true() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn(AndroidSystemSpecUtil.FEATURE_TV);
+
+    assertThat(systemSpecUtil.isAndroidTvDevice(SERIAL)).isTrue();
+  }
+
+  @Test
+  public void isTvDevice_false() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn("");
+
+    assertThat(systemSpecUtil.isAndroidTvDevice(SERIAL)).isFalse();
+  }
+
+  @Test
+  public void isWearableDevice_byFeature_true() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn(AndroidSystemSpecUtil.FEATURE_WEARABLE);
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.CHARACTERISTICS))
+        .thenReturn("other characterristics");
+
+    assertThat(systemSpecUtil.isWearableDevice(SERIAL)).isTrue();
+  }
+
+  @Test
+  public void isWearableDevice_byCharacteristics_true() throws Exception {
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.CHARACTERISTICS))
+        .thenReturn(AndroidSystemSpecUtil.CHARACTERISTIC_WEARABLE);
+    assertThat(systemSpecUtil.isWearableDevice(SERIAL)).isTrue();
+  }
+
+  @Test
+  public void isWearableDevice_false() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_LIST_FEATURES))
+        .thenReturn("");
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.CHARACTERISTICS)).thenReturn("nosdcard");
+    assertThat(systemSpecUtil.isWearableDevice(SERIAL)).isFalse();
+  }
+}
