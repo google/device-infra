@@ -24,10 +24,6 @@ java_library(
 java_library(
     name = "sqlite",
     srcs = ["Sqlite.java"],
-    tags = [
-        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/android:sqlite",
-        "avoid_dep",
-    ],
     visibility = [
         "//:deviceinfra_pkg",
     ],
@@ -36,5 +32,15 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "serial_console_util",
+    srcs = [
+        "SerialConsole.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
     ],
 )
