@@ -224,6 +224,8 @@ public final class Dimension {
     WHITELISTED_PROXY_CTL,
     /** ICCID (Integrated Circuit Card Identifier) of the device. */
     ICCID,
+    /** A comma-separated string containing the ICCID of each SIM on the device. */
+    ICCIDS,
 
     // lab server level
     /** The disk usable size of the host. */
