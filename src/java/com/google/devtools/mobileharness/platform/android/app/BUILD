@@ -26,3 +26,11 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "version",
+    srcs = ["AndroidAppVersion.java"],
+    visibility = [
+    ],
+    deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value"],
+)
