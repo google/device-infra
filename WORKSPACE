@@ -75,6 +75,7 @@ maven_install(
         "com.google.guava:guava:31.1-jre",
         "com.google.inject.extensions:guice-assistedinject:5.1.0",
         "com.google.inject:guice:4.1.0",
+        "com.google.testparameterinjector:test-parameter-injector:1.10",
         "com.google.truth.extensions:truth-proto-extension:1.1.3",
         "com.google.truth.extensions:truth-java8-extension:1.1.3",
         "com.google.truth:truth:1.1.3",
