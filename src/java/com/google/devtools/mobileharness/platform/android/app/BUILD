@@ -31,6 +31,7 @@ java_library(
     name = "version",
     srcs = ["AndroidAppVersion.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller:__pkg__",
     ],
     deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value"],
 )
