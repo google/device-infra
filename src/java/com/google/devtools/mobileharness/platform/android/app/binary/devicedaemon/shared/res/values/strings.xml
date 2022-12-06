@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name_v1" translatable="false">MobileHarnessDaemonV1</string>
+    <string name="app_name_v2" translatable="false">MobileHarnessDaemonV2</string>
+    <string name="app_name_adbwatchdog" translatable="false">ADBWatchdog</string>
+    <string name="wifi_unknown" translatable="false">WiFi unknown</string>
+    <string name="wifi_disconnected" translatable="false">WiFi disconnected</string>
+    <string name="phone_unknown" translatable="false">Phone number unknown</string>
+</resources>

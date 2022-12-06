@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:keepScreenOn="true"
+    android:background="@drawable/mh_logo">
+    <LinearLayout
+        android:orientation="vertical"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <TextView
+            android:id="@+id/DeviceId"
+            android:gravity="end"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="#0F0F0F" />
+        <TextView
+            android:id="@+id/BuildInfo"
+            android:gravity="end"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#2F2F2F" />
+        <TextView
+            android:id="@+id/WifiInfo"
+            android:gravity="end"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#2F2F2F" />
+        <TextView
+            android:id="@+id/PhoneInfo"
+            android:gravity="end"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#2F2F2F" />
+        <TextView
+            android:id="@+id/HostInfo"
+            android:gravity="end"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textColor="#2F2F2F" />
+        <TextView
+            android:id="@+id/CustomLabels"
+            android:gravity="end"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#2F2F2F" />
+        <TextView
+            android:id="@+id/Owners"
+            android:gravity="end"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            android:textColor="#2F2F2F" />
+    </LinearLayout>
+    <TextView
+        android:id="@+id/MirroredDeviceId"
+        android:gravity="end"
+        android:rotation = "180"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentLeft="true"
+        android:textSize="28sp"
+        android:textStyle="bold"
+        android:textColor="#0F0F0F" />
+    <Button
+        android:id="@+id/finish"
+        android:textSize="18sp"
+        android:textColor="#2F2F2F"
+        android:text="Exit"
+        android:layout_width="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentRight="true"
+        android:layout_height="wrap_content" />
+</RelativeLayout>
