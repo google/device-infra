@@ -43,6 +43,35 @@ java_library(
 )
 
 java_library(
+    name = "runtime_charging_util",
+    srcs = ["RuntimeChargingUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
+        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "serial_console_util",
+    srcs = [
+        "SerialConsole.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
+    ],
+)
+
+java_library(
     name = "sqlite",
     srcs = ["Sqlite.java"],
     visibility = [
