@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.platform.android.shared.constant.Splitt
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidEmulatorIds;
 import com.google.wireless.qa.mobileharness.shared.proto.AndroidDeviceSpec.Abi;
 import com.google.wireless.qa.mobileharness.shared.util.LuhnUtil;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -82,6 +83,13 @@ public class AndroidSystemSpecUtil {
 
   /** ADB shell command for getting total memory. */
   @VisibleForTesting static final String ADB_SHELL_GET_TOTAL_MEM = "cat /proc/meminfo";
+
+  /** ADB shell command to query SIM info. */
+  @VisibleForTesting
+  static final String ADB_SHELL_QUERY_SIM_INFO = "content query --uri content://telephony/siminfo";
+
+  /** Pattern to find ICCIDs from queried SIM info. */
+  private static final Pattern PATTERN_SIM_INFO_ICCID = Pattern.compile("\\bicc_id=\\d+");
 
   /** Output signal of getting total memory info. */
   private static final String OUTPUT_TOTAL_MEM_INFO = "MemTotal";
@@ -553,6 +561,27 @@ public class AndroidSystemSpecUtil {
             .getProperty(serial, AndroidProperty.CHARACTERISTICS)
             .contains(CHARACTERISTIC_WEARABLE)
         || getSystemFeatures(serial).contains(FEATURE_WEARABLE);
+  }
+
+  /** Returns a list containing the ICCIDs of each SIM on the device. */
+  public ImmutableList<String> getIccids(String serial)
+      throws MobileHarnessException, InterruptedException {
+    String adbOutput = "";
+    try {
+      adbOutput = adb.runShellWithRetry(serial, ADB_SHELL_QUERY_SIM_INFO);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_SYSTEM_SPEC_QUERY_SIM_INFO_ERROR, e.getMessage(), e);
+    }
+
+    List<String> iccids = new ArrayList<>();
+    Matcher matcher = PATTERN_SIM_INFO_ICCID.matcher(adbOutput);
+    while (matcher.find()) {
+      // Example match: "icc_id=89010005475451640413"
+      iccids.add(matcher.group().split("=", -1)[1]);
+    }
+
+    return ImmutableList.copyOf(iccids);
   }
 
   /** Gets the appropriate command number in IPhoneSubInfo.aidl to use for looking up ICCID. */
