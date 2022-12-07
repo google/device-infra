@@ -16,10 +16,10 @@
 """ Rule for junit suite generation """
 
 def _package_from_path(package_path):
-    package = "com.google.devtools"
-    if not package_path.startswith("src/javatests/com/google/devtools"):
+    package = "com.google"
+    if not package_path.startswith("src/javatests/com/google"):
         fail("Not in javatests", "package_path")
-    return package + package_path[33:].replace("/", ".")
+    return package + package_path[24:].replace("/", ".")
 
 def junit_test_suites(
         name,
