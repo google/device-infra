@@ -86,6 +86,35 @@ public class Flags {
   public Flag<String> adbKeyPathsFromUser = Flag.value("");
 
   @com.beust.jcommander.Parameter(
+      names = "--fastboot",
+      description = "File path of the fastboot tool",
+      converter = Flag.StringConverter.class)
+  public Flag<String> fastbootPathFromUser = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--max_concurrent_adb_push_large_file",
+      description = "Maximum number of concurrent ADB push commands for large files",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> maxConcurrentAdbPushLargeFile = Flag.value(4);
+
+  @com.beust.jcommander.Parameter(
+      names = "--max_concurrent_flash_device",
+      description =
+          "Maximum number of concurrent device flashing. "
+              + "Do not set this flag too larger than max_concurrent_adb_push_large_file, "
+              + "because flashing img to different partitions is controlled by that flag. "
+              + "Setting this flag too larger may cause cache device timeout if there are "
+              + "many devices on the lab to be flashed at the same time.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> maxConcurrentFlashDevice = Flag.value(2);
+
+  @com.beust.jcommander.Parameter(
+      names = "--max_concurrent_unzip_large_file",
+      description = "Maximum number of concurrent large file unzipping",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> maxConcurrentUnzipLargeFile = Flag.value(2);
+
+  @com.beust.jcommander.Parameter(
       names = "--mh_adb_command_default_redirect_stderr",
       description =
           "Default redirect_stderr setting for each Device Infra(DI) ADB command executed by DI"

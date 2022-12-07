@@ -1,0 +1,48 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.shared.util.quota;
+
+option java_package = "com.google.devtools.mobileharness.shared.util.quota.proto";
+option java_outer_classname = "Quota";
+
+// Quota keys for Mobile Harness quota manager.
+enum QuotaKey {
+  UNSPECIFIED = 0;
+  // Quota key for ADB large file pushing. See b/28002182
+  ADB_PUSH_LARGE_FILE = 1;
+  // Quota key for unzipping large files. See b/34956945.
+  UNZIP_LARGE_FILE = 2;
+  // Quota key for concurrent flash device number.
+  FASTBOOT_FLASH_DEVICE = 3;
+  // Quota key for concurrent tf container number.
+  TF_CONTAINER_INSTANCE = 4;
+}
+
+enum TryAcquireQuotaResultCode {
+  UNKNOWN = 0;
+  SUCCESS = 1;
+  FAILED = 2;
+  NOT_MANAGED_KEY = 3;
+  INVALID_CONTAINER_ID = 4;
+}
+
+message TryAcquireQuotaResult {
+  TryAcquireQuotaResultCode result_code = 1;
+  string lease_id = 2;
+}
