@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutExcep
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -410,6 +411,7 @@ public class Adb {
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
+  @CanIgnoreReturnValue
   public String runShell(
       String serial,
       String command,

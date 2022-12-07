@@ -20,6 +20,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/file:__pkg__",
     ],
