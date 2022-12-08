@@ -103,7 +103,7 @@ public class Log implements LogCollector<Api> {
   @VisibleForTesting
   static final DateTimeFormatter DATE_FORMAT =
       DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss:SSS z")
-          .withZone(TimeZone.getTimeZone("UTC").toZoneId());
+          .withZone(TimeZone.getTimeZone("America/Los_Angeles").toZoneId());
 
   /** Output logs will be appended to this buffer while running this job/test. */
   private final StringBuffer buffer = new StringBuffer();
