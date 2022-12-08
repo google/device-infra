@@ -170,8 +170,8 @@ public class LocalMode implements ExecMode {
 
   protected ImmutableList<Detector> createDeviceDetectorCandidates() {
     ImmutableList.Builder<Detector> detectorCandidates = ImmutableList.builder();
-    // detectorCandidates.add(
-    //     new com.google.devtools.mobileharness.api.devicemanager.detector.BaseAdbDetector());
+    detectorCandidates.add(
+        new com.google.devtools.mobileharness.api.devicemanager.detector.BaseAdbDetector());
     if (Flags.instance().noOpDeviceNum.getNonNull() > 0) {
       detectorCandidates.add(new NoOpDeviceDetector());
     }
