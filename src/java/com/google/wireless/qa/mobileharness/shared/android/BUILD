@@ -72,27 +72,6 @@ java_library(
 )
 
 java_library(
-    name = "wifi_util",
-    srcs = ["WifiUtil.java"],
-    resources = [
-        "//src/devtools/mobileharness/platform/android/app/binary/wifiutil",
-    ],
-    visibility = [
-        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
-    ],
-    deps = [
-        ":aapt",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "sqlite",
     srcs = ["Sqlite.java"],
     visibility = [
