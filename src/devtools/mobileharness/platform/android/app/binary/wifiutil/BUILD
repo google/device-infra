@@ -13,8 +13,6 @@
 # limitations under the License.
 #
 
-# This WifiUtil is copied from tradefed.jar and for temporary use only.
-# TODO: Remove it once cl/225143917 submitted.
 package(
     default_visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:__pkg__",
