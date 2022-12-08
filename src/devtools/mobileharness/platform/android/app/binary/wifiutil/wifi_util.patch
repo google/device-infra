@@ -1,0 +1,19 @@
+diff --git a/util-apps/WifiUtil/src/com/android/tradefed/utils/wifi/WifiUtil.java b/util-apps/WifiUtil/src/com/android/tradefed/utils/wifi/WifiUtil.java
+index d311173..938c5d6 100644
+--- a/util-apps/WifiUtil/src/com/android/tradefed/utils/wifi/WifiUtil.java
++++ b/util-apps/WifiUtil/src/com/android/tradefed/utils/wifi/WifiUtil.java
+@@ -182,7 +182,13 @@ public class WifiUtil extends Instrumentation {
+             // As a pattern, method implementations below should gather arguments _first_, and then
+             // use those arguments so that the system is not left in an inconsistent state if an
+             // argument is missing in the middle of an implementation.
+-            if ("addOpenNetwork".equals(method)) {
++            if ("enableWifi".equals(method)) {
++                // Doesn't work on Q
++                result.putBoolean("result", wifiManager.setWifiEnabled(true));
++            } else if ("disableWifi".equals(method)) {
++                // Doesn't work on Q
++                result.putBoolean("result", wifiManager.setWifiEnabled(false));
++            } else if ("addOpenNetwork".equals(method)) {
+                 final String ssid = expectString("ssid");
+                 final boolean scanSsid = getBoolean("scan_ssid", false);
+ 
