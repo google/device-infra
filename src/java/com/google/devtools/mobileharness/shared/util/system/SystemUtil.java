@@ -956,10 +956,12 @@ public class SystemUtil {
       return getUserHome(getLoginUser());
     }
 
-    if (isOnMac()) {
+    String homeEnv = System.getenv("HOME");
+
+    if (homeEnv == null || isOnMac()) {
       return System.getProperty("user.home");
     }
-    return System.getenv("HOME");
+    return homeEnv;
   }
 
   /** Returns home directory of user {@code userName}. Must run as root. */
