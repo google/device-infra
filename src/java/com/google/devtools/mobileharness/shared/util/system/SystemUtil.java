@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.errorprone.annotations.DoNotCall;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import java.io.BufferedReader;
@@ -940,6 +941,12 @@ public class SystemUtil {
     try {
       loginUser = executor.exec(Command.of("logname")).stdoutWithoutTrailingLineTerminator();
     } catch (CommandException e) {
+      if (e instanceof CommandFailureException) {
+        if (((CommandFailureException) e).result().stdout().contains("no login name")
+            && runAsRoot()) {
+          return "root";
+        }
+      }
       throw new MobileHarnessException(
           BasicErrorId.SYSTEM_GET_LOGNAME_ERROR, "Failed to get logname.", e);
     }
