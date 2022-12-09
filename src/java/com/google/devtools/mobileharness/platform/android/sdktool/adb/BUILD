@@ -49,9 +49,7 @@ java_library(
 java_library(
     name = "android_adb_version_util",
     srcs = ["AndroidAdbVersionUtil.java"],
-    visibility = [
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/sdktool/adb:__pkg__",
-    ],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/platform/android/sdktool/adb:__pkg__"],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
