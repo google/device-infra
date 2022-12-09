@@ -35,6 +35,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -347,15 +348,18 @@ public class AndroidAdbInternalUtil {
         .collect(Collectors.toSet());
   }
 
-  /** Checks whether the environment has ADB tool. */
-  public boolean isAdbSupported() throws InterruptedException {
+  /**
+   * Checks whether the environment has ADB tool.
+   *
+   * @return empty if ADB is supported, detailed unsupported reason otherwise
+   */
+  public Optional<String> checkAdbSupport() throws InterruptedException {
     try {
       getAdbVersion();
+      return Optional.empty();
     } catch (MobileHarnessException e) {
-      logger.atInfo().log("Failed to detect device: %s", e.getMessage());
-      return false;
+      return Optional.of(e.getMessage());
     }
-    return true;
   }
 
   /**

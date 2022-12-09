@@ -78,7 +78,15 @@ public class BaseAdbDetector implements Detector {
 
   @Override
   public boolean precondition() throws InterruptedException {
-    return adbInternalUtil.isAdbSupported();
+    Optional<String> adbUnsupportedReason = adbInternalUtil.checkAdbSupport();
+    if (adbUnsupportedReason.isEmpty()) {
+      return true;
+    } else {
+      logger.atInfo().log(
+          "%s is disabled because ADB is not supported, reason=[%s]",
+          getClass().getSimpleName(), adbUnsupportedReason.get());
+      return false;
+    }
   }
 
   /**
