@@ -1,0 +1,4 @@
+TestBeds:
+  - Name: SampleTestBed
+    Controllers:
+        AndroidDevice: '*'

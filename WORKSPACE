@@ -81,10 +81,12 @@ maven_install(
         "com.google.truth:truth:1.1.3",
         "javax.inject:jsr330-api:0.9",
         "junit:junit:4.13",
+        "net.sf.kxml:kxml2:2.3.0",
         "org.apache.commons:commons-lang3:3.6",
         "org.mockito:mockito-core:4.3.1",
         "org.reflections:reflections:0.9.10",
         "org.yaml:snakeyaml:1.32",
+        "xmlpull:xmlpull:1.1.3.1",
     ],
     fetch_sources = True,
     repositories = [

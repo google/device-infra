@@ -1,0 +1,120 @@
+---
+Requested Tests:
+- test_hello_world1_1
+- test_hello_world1_2
+Type: TestNameList
+---
+Begin Time: 1663584277766
+Details: null
+End Time: 1663584280787
+Extra Errors: {}
+Extras: null
+Result: PASS
+Retry Parent: null
+Signature: test_hello_world1_1-1663584277766
+Stacktrace: null
+Termination Signal Type: null
+Test Class: HelloWorldTest1
+Test Name: test_hello_world1_1
+Type: Record
+UID: null
+---
+Begin Time: 1663584280794
+Details: null
+End Time: 1663584283819
+Extra Errors: {}
+Extras: null
+Result: PASS
+Retry Parent: null
+Signature: test_hello_world1_2-1663584280794
+Stacktrace: null
+Termination Signal Type: null
+Test Class: HelloWorldTest1
+Test Name: test_hello_world1_2
+Type: Record
+UID: null
+---
+Controller Info:
+-   build_info:
+        build_characteristics: nosdcard
+        build_fingerprint: google/redfin/redfin:12/SQ3A.220705.003.A1/8672226:userdebug/dev-keys
+        build_id: SQ3A.220705.003.A1
+        build_product: redfin
+        build_type: userdebug
+        build_version_codename: REL
+        build_version_incremental: '8672226'
+        build_version_sdk: '32'
+        debuggable: '1'
+        hardware: redfin
+        product_name: redfin
+    model: redfin
+    serial: 11191FDD4002M4
+    user_added_info: {}
+Controller Name: AndroidDevice
+Test Class: HelloWorldTest1
+Timestamp: 1663584283.894345
+Type: ControllerInfo
+---
+Requested Tests:
+- test_hello_world2_1
+- test_hello_world2_2
+Type: TestNameList
+---
+Begin Time: 1663584292294
+Details: null
+End Time: 1663584295323
+Extra Errors: {}
+Extras: null
+Result: PASS
+Retry Parent: null
+Signature: test_hello_world2_1-1663584292294
+Stacktrace: null
+Termination Signal Type: null
+Test Class: HelloWorldTest2
+Test Name: test_hello_world2_1
+Type: Record
+UID: null
+---
+Begin Time: 1663584295327
+Details: null
+End Time: 1663584298351
+Extra Errors: {}
+Extras: null
+Result: PASS
+Retry Parent: null
+Signature: test_hello_world2_2-1663584295327
+Stacktrace: null
+Termination Signal Type: null
+Test Class: HelloWorldTest2
+Test Name: test_hello_world2_2
+Type: Record
+UID: null
+---
+Controller Info:
+-   build_info:
+        build_characteristics: nosdcard
+        build_fingerprint: google/redfin/redfin:12/SQ3A.220705.003.A1/8672226:userdebug/dev-keys
+        build_id: SQ3A.220705.003.A1
+        build_product: redfin
+        build_type: userdebug
+        build_version_codename: REL
+        build_version_incremental: '8672226'
+        build_version_sdk: '32'
+        debuggable: '1'
+        hardware: redfin
+        product_name: redfin
+    model: redfin
+    serial: 11191FDD4002M4
+    user_added_info: {}
+Controller Name: AndroidDevice
+Test Class: HelloWorldTest2
+Timestamp: 1663584298.4268138
+Type: ControllerInfo
+---
+Error: 0
+Executed: 4
+Failed: 0
+Passed: 4
+Requested: 4
+Skipped: 0
+Type: Summary
