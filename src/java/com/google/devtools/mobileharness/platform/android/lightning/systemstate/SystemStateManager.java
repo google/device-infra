@@ -21,11 +21,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
-import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedLogUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
-import com.google.errorprone.annotations.ResultIgnorabilityUnspecified;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
@@ -82,7 +81,7 @@ public class SystemStateManager {
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
-  @ResultIgnorabilityUnspecified
+  @CanIgnoreReturnValue
   public boolean becomeRoot(Device device) throws MobileHarnessException, InterruptedException {
     return becomeRoot(device.getDeviceId(), device.getClass().getSimpleName());
   }
@@ -143,7 +142,6 @@ public class SystemStateManager {
       throws MobileHarnessException, InterruptedException {
     if (serial.matches(OXYGEN_DEVICE_REGEX)) {
       logger.atInfo().log("Found an oxygen device with device ID %s", serial);
-
       return systemStateUtil.isOxygenDeviceOnline(serial);
     }
     DeviceState deviceState = adbInternalUtil.getDeviceSerialsAsMap().getOrDefault(serial, null);
@@ -173,19 +171,24 @@ public class SystemStateManager {
       throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
     if (!device.canReboot()) {
-      SharedLogUtil.logMsg(
-          logger,
-          String.format("Skip rebooting device %s as it doesn't support reboot", deviceId),
-          log);
+      final String skipRebootingLogMsgTemplate =
+          "Skip rebooting device %s as it doesn't support reboot";
+      if (log != null) {
+        log.atInfo().alsoTo(logger).log(skipRebootingLogMsgTemplate, deviceId);
+      } else {
+        logger.atInfo().log(skipRebootingLogMsgTemplate, deviceId);
+      }
       return;
     }
 
     deviceReadyTimeout = deviceReadyTimeout == null ? DEVICE_READY_TIMEOUT : deviceReadyTimeout;
     Duration cacheDuration = deviceReadyTimeout.multipliedBy(2);
-    SharedLogUtil.logMsg(
-        logger,
-        String.format("Cache device %s before reboot with %s", deviceId, cacheDuration),
-        log);
+    final String cacheDeviceLogMsgTemplate = "Cache device %s before reboot with %s";
+    if (log != null) {
+      log.atInfo().alsoTo(logger).log(cacheDeviceLogMsgTemplate, deviceId, cacheDuration);
+    } else {
+      logger.atInfo().log(cacheDeviceLogMsgTemplate, deviceId, cacheDuration);
+    }
     cacheDevice(device, cacheDuration);
     try {
       device.reboot();
@@ -203,7 +206,12 @@ public class SystemStateManager {
     }
 
     becomeRoot(device);
-    SharedLogUtil.logMsg(logger, String.format("Device %s reboot finished.", deviceId), log);
+    final String rebootFinishedLogMsgTemplate = "Device %s reboot finished.";
+    if (log != null) {
+      log.atInfo().alsoTo(logger).log(rebootFinishedLogMsgTemplate, deviceId);
+    } else {
+      logger.atInfo().log(rebootFinishedLogMsgTemplate, deviceId);
+    }
   }
 
   private void cacheDevice(Device device, Duration timeout) {
