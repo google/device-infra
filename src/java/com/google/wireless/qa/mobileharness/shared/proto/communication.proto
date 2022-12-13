@@ -52,8 +52,15 @@ message SSH {
   string password = 4;
 }
 
+message TCP {
+  string ip = 1;
+  int32 port = 2;
+}
+
 message ADB {
   string serial = 1;
+  // Sets if the ADB is connected via TCP.
+  optional TCP tcp = 2;
 }
 
 // Some devices, like Android, build the ADB connection upon the underlying USB
