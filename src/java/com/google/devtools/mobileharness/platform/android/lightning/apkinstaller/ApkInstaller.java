@@ -22,10 +22,9 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
-import com.google.common.flags.Flag;
-import com.google.common.flags.FlagSpec;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.hash.Hashing;
+import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -43,7 +42,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
-import com.google.errorprone.annotations.ResultIgnorabilityUnspecified;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
@@ -65,11 +64,6 @@ import javax.annotation.Nullable;
  * <p>Please keep all methods in this class sorted in alphabetical order by name.
  */
 public class ApkInstaller {
-
-  @FlagSpec(
-      name = "cache_installed_apks",
-      help = "Cache installed apk in device property to avoid installing again.")
-  private static final Flag<Boolean> cacheInstalledApks = Flag.value(true);
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -177,7 +171,7 @@ public class ApkInstaller {
    * @return the app version info; or empty if failed to retrieve it from the device like app not
    *     installed
    */
-  @ResultIgnorabilityUnspecified
+  @CanIgnoreReturnValue
   @Beta
   public Optional<AndroidAppVersion> checkInstalledAppVersion(
       TestInfo testInfo, String deviceId, String packageName, @Nullable String apkName)
@@ -284,7 +278,8 @@ public class ApkInstaller {
    * Installs the APK into the android device.
    *
    * <p>Logs will be appended to the test's info. Once installed, it will set the device property to
-   * avoid installing the same apk again when flag {@link #cacheInstalledApks} is set to true.
+   * avoid installing the same apk again when flag {@link Flags#instance()}.{@link
+   * Flags#cacheInstalledApks cacheInstalledApks} is set to true.
    *
    * <p>NOTE: Do NOT use this method and {@link #installApkIfVersionMismatched} both for one APK.
    *
@@ -292,7 +287,7 @@ public class ApkInstaller {
    * @param installArgs arguments wrapper for apk installation
    * @return the package name of the apk
    */
-  @ResultIgnorabilityUnspecified
+  @CanIgnoreReturnValue
   public String installApk(Device device, ApkInstallArgs installArgs, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     String apkPath = installArgs.apkPath();
@@ -334,10 +329,12 @@ public class ApkInstaller {
     } catch (MobileHarnessException e) {
       // Apks may have empty version code, like
       // java/com/google/android/apps/common/testing/services/basic_services.apk
-      String message =
-          String.format(
-              "Failed to get a valid version code for apk %s:%n%s", apkPath, e.getMessage());
-      SharedLogUtil.logMsg(logger, message, log);
+      SharedLogUtil.logMsg(
+          logger,
+          log,
+          "Failed to get a valid version code for apk %s:%n%s",
+          apkPath,
+          e.getMessage());
     }
     if (apkVersionCode != null
         && shouldSkipOnVersionCode(
@@ -349,11 +346,14 @@ public class ApkInstaller {
             log)) {
       SharedLogUtil.logMsg(
           logger,
-          String.format(
-              "Skip installing apk %s (version:%s) on device %s, skipIfDowngrade = %s,"
-                  + " skipIfVersionMatch = %s.",
-              apkName, apkVersionCode, deviceId, skipIfDowngrade, skipIfVersionMatch),
-          log);
+          log,
+          "Skip installing apk %s (version:%s) on device %s, skipIfDowngrade = %s,"
+              + " skipIfVersionMatch = %s.",
+          apkName,
+          apkVersionCode,
+          deviceId,
+          skipIfDowngrade,
+          skipIfVersionMatch);
       return packageName;
     }
 
@@ -376,9 +376,11 @@ public class ApkInstaller {
     try {
       SharedLogUtil.logMsg(
           logger,
-          String.format(
-              "Start to install %s on device %s with user id %s", apkName, deviceId, userId),
-          log);
+          log,
+          "Start to install %s on device %s with user id %s",
+          apkName,
+          deviceId,
+          userId);
       if (forceQueryable) {
         extraArgs.add("--force-queryable");
       }
@@ -395,9 +397,9 @@ public class ApkInstaller {
           extraArgs.toArray(new String[0]));
       success = true;
       SharedLogUtil.logMsg(
-          logger, String.format("Successfully installed %s on device %s", apkName, deviceId), log);
+          logger, log, "Successfully installed %s on device %s", apkName, deviceId);
     } finally {
-      if (cacheInstalledApks.get()) {
+      if (Flags.instance().cacheInstalledApks.get()) {
         device.setProperty(
             String.format(DEVICE_PROP_INSTALLED_APK_KEY_TEMPLATE, userId) + packageName,
             success ? apkMd5 : null);
@@ -412,8 +414,7 @@ public class ApkInstaller {
     }
 
     if (clearAppData) {
-      SharedLogUtil.logMsg(
-          logger, String.format("Clear app %s after installation", packageName), log);
+      SharedLogUtil.logMsg(logger, log, "Clear app %s after installation", packageName);
       androidPackageManagerUtil.clearPackage(
           buildUtilArgs(deviceId, userId, deviceSdkVersion), packageName);
     }
@@ -426,7 +427,8 @@ public class ApkInstaller {
    * installed before.
    *
    * <p>Logs will be appended to the test's info. Once installed, it will set the device property to
-   * avoid installing the same apk again when flag {@link #cacheInstalledApks} is set to true.
+   * avoid installing the same apk again when flag {@link Flags#instance()}.{@link
+   * Flags#cacheInstalledApks cacheInstalledApks} is set to true.
    *
    * <p>NOTE: Do NOT use this method and {@link #installApkIfVersionMismatched} both for one APK.
    *
@@ -434,7 +436,7 @@ public class ApkInstaller {
    * @param installArgs arguments wrapper for apk installation
    * @return the package name of the apk
    */
-  @ResultIgnorabilityUnspecified
+  @CanIgnoreReturnValue
   public String installApkIfExist(
       Device device, ApkInstallArgs installArgs, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
@@ -446,7 +448,8 @@ public class ApkInstaller {
    * name installed before.
    *
    * <p>Logs will be appended to the test's info. Once installed, it will set the device property to
-   * avoid installing the same apk again when flag {@link #cacheInstalledApks} is set to true.
+   * avoid installing the same apk again when flag {@link Flags#instance()}.{@link
+   * Flags#cacheInstalledApks cacheInstalledApks} is set to true.
    *
    * <p>NOTE: Do NOT use this method and {@link #installApkIfVersionMismatched} both for one APK.
    *
@@ -454,7 +457,7 @@ public class ApkInstaller {
    * @param installArgs arguments wrapper for apk installation
    * @return the package name of the apk
    */
-  @ResultIgnorabilityUnspecified
+  @CanIgnoreReturnValue
   public String installApkIfNotExist(
       Device device, ApkInstallArgs installArgs, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
@@ -471,7 +474,8 @@ public class ApkInstaller {
    * {@link #installApkIfNotExist(Device, ApkInstallArgs, LogCollector)} instead.
    *
    * <p>NOTE: Do NOT use this method and {@link #installApkIfNotExist(Device, ApkInstallArgs,
-   * LogCollector)} both for one APK when flag {@link #cacheInstalledApks} is set to true.
+   * LogCollector)} both for one APK when flag {@link Flags#instance()}.{@link
+   * Flags#cacheInstalledApks cacheInstalledApks} is set to true.
    *
    * <p>NOTE: Do NOT use this method to install GMS.
    *
@@ -480,7 +484,7 @@ public class ApkInstaller {
    * @param log log collector for apk installation
    * @return the package name of the apk
    */
-  @ResultIgnorabilityUnspecified
+  @CanIgnoreReturnValue
   public String installApkIfVersionMismatched(
       Device device, ApkInstallArgs installArgs, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
@@ -572,11 +576,7 @@ public class ApkInstaller {
     } catch (MobileHarnessException e) {
       if (logFailures) {
         SharedLogUtil.logMsg(
-            logger,
-            String.format("Failed to get device %s sdk version.", deviceId),
-            Level.WARNING,
-            log,
-            e);
+            logger, Level.WARNING, log, e, "Failed to get device %s sdk version.", deviceId);
       }
     }
   }
@@ -608,10 +608,11 @@ public class ApkInstaller {
       if (logFailures) {
         SharedLogUtil.logMsg(
             logger,
-            String.format("Failed to get device %s sdk version.", device.getDeviceId()),
             Level.WARNING,
             log,
-            e);
+            e,
+            "Failed to get device %s sdk version.",
+            device.getDeviceId());
       }
     }
   }
@@ -640,12 +641,11 @@ public class ApkInstaller {
       throws InterruptedException {
     String deviceId = device.getDeviceId();
     try {
-      SharedLogUtil.logMsg(
-          logger, "Start to uninstall: " + packageName + " for user: " + userId, log);
+      SharedLogUtil.logMsg(logger, log, "Start to uninstall: %s for user: %s", packageName, userId);
       androidPackageManagerUtil.uninstallApk(
           buildUtilArgs(deviceId, userId, deviceSdkVersion), packageName);
       SharedLogUtil.logMsg(
-          logger, "Successfully uninstalled: " + packageName + " for user: " + userId, log);
+          logger, log, "Successfully uninstalled: %s for user: %s", packageName, userId);
 
       if (packageName.equals(PackageConstants.PACKAGE_NAME_GMS)) {
         updateGmsDimension(device, log);
@@ -654,22 +654,20 @@ public class ApkInstaller {
       if (logFailures) {
         SharedLogUtil.logMsg(
             logger,
-            "Failed to uninstall package "
-                + packageName
-                + " for user: "
-                + userId
-                + " with exception: "
-                + e.getMessage(),
             Level.WARNING,
             log,
-            e);
+            e,
+            "Failed to uninstall package %s for user: %s with exception: %s",
+            packageName,
+            userId,
+            e.getMessage());
       } else {
-        SharedLogUtil.logMsg(logger, "Skip uninstalling " + packageName, log);
+        SharedLogUtil.logMsg(logger, log, "Skip uninstalling %s", packageName);
       }
     } finally {
-      if (cacheInstalledApks.get()) {
+      if (Flags.instance().cacheInstalledApks.get()) {
         SharedLogUtil.logMsg(
-            logger, "Clear device property for cached installed apk: " + packageName, log);
+            logger, log, "Clear device property for cached installed apk: %s", packageName);
         device.setProperty(
             String.format(DEVICE_PROP_INSTALLED_APK_KEY_TEMPLATE, userId) + packageName, null);
       }
@@ -703,14 +701,16 @@ public class ApkInstaller {
     String installedApkMd5 = null;
     String propertyName =
         String.format(DEVICE_PROP_INSTALLED_APK_KEY_TEMPLATE, userId) + packageName;
-    if (cacheInstalledApks.get()) {
+    if (Flags.instance().cacheInstalledApks.get()) {
       installedApkMd5 = device.getProperty(propertyName);
       SharedLogUtil.logMsg(
           logger,
-          String.format(
-              "Package %s md5 retrieved from device %s property `%s` is: %s",
-              packageName, deviceId, propertyName, installedApkMd5),
-          log);
+          log,
+          "Package %s md5 retrieved from device %s property `%s` is: %s",
+          packageName,
+          deviceId,
+          propertyName,
+          installedApkMd5);
     }
     if (installedApkMd5 == null) {
       try {
@@ -721,10 +721,13 @@ public class ApkInstaller {
         installedApkMd5 = androidFileUtil.md5(deviceId, sdkVersion, apkInstalledPathOnDevice);
         SharedLogUtil.logMsg(
             logger,
-            String.format(
-                "Md5 for package %s installed on device %s for user %s with path %s is: %s",
-                packageName, deviceId, userId, apkInstalledPathOnDevice, installedApkMd5),
-            log);
+            log,
+            "Md5 for package %s installed on device %s for user %s with path %s is: %s",
+            packageName,
+            deviceId,
+            userId,
+            apkInstalledPathOnDevice,
+            installedApkMd5);
       } catch (MobileHarnessException e) {
         // Doesn't need to handle the failure of getting md5 from installed apk.
       }
@@ -732,13 +735,12 @@ public class ApkInstaller {
 
     // Skips installation if MD5s match.
     if (apkMd5.equals(installedApkMd5)) {
-      if (cacheInstalledApks.get() && Strings.isNullOrEmpty(device.getProperty(propertyName))) {
+      if (Flags.instance().cacheInstalledApks.get()
+          && Strings.isNullOrEmpty(device.getProperty(propertyName))) {
         device.setProperty(propertyName, apkMd5);
       }
       SharedLogUtil.logMsg(
-          logger,
-          String.format("Skip installing %s which has been installed before", apkName),
-          log);
+          logger, log, "Skip installing %s which has been installed before", apkName);
       return true;
     } else {
       return false;
@@ -751,14 +753,12 @@ public class ApkInstaller {
       throws MobileHarnessException, InterruptedException {
     String apkName = new File(apkPath).getName();
     int apkMinSdkVersion = aapt.getApkMinSdkVersion(apkPath);
-    String message =
-        String.format(
-            "Min sdk version of %s: %s",
-            apkName,
-            apkMinSdkVersion > 0
-                ? apkMinSdkVersion
-                : (apkMinSdkVersion < 0 ? "unknown" : "not set"));
-    SharedLogUtil.logMsg(logger, message, log);
+    SharedLogUtil.logMsg(
+        logger,
+        log,
+        "Min sdk version of %s: %s",
+        apkName,
+        apkMinSdkVersion > 0 ? apkMinSdkVersion : (apkMinSdkVersion < 0 ? "unknown" : "not set"));
     if (deviceSdkVersion < apkMinSdkVersion) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_APK_INSTALLER_DEVICE_SDK_TOO_LOW,
@@ -832,10 +832,12 @@ public class ApkInstaller {
       installExceptionMsg = e.getMessage();
       SharedLogUtil.logMsg(
           logger,
-          String.format("First attempt to install apk %s on device %s failed", apkPath, serial),
           Level.WARNING,
           log,
-          e);
+          e,
+          "First attempt to install apk %s on device %s failed",
+          apkPath,
+          serial);
     }
     if (!installThrowsException) {
       return;
@@ -848,18 +850,19 @@ public class ApkInstaller {
       } catch (MobileHarnessException e) {
         SharedLogUtil.logMsg(
             logger,
-            String.format(
-                "Failed to uninstall package %s on device %s due to error:%n%s%nPrior installation "
-                    + "error:%n%s",
-                packageName, serial, e.getMessage(), installExceptionMsg),
             Level.WARNING,
             log,
-            e);
+            e,
+            "Failed to uninstall package %s on device %s due to error:%n%s%nPrior installation "
+                + "error:%n%s",
+            packageName,
+            serial,
+            e.getMessage(),
+            installExceptionMsg);
       }
     }
     // Retry to install the apk again
-    SharedLogUtil.logMsg(
-        logger, String.format("Retry to install apk %s on device %s...", apkPath, serial), log);
+    SharedLogUtil.logMsg(logger, log, "Retry to install apk %s on device %s...", apkPath, serial);
     androidPackageManagerUtil.installApk(
         utilArgs,
         apkPath,
@@ -882,9 +885,7 @@ public class ApkInstaller {
       String... extraArgs)
       throws MobileHarnessException, InterruptedException {
     SharedLogUtil.logMsg(
-        logger,
-        String.format("Start to install multiple packages to device %s...", utilArgs.serial()),
-        log);
+        logger, log, "Start to install multiple packages to device %s...", utilArgs.serial());
     InstallCmdArgs.Builder installCmdArgs =
         InstallCmdArgs.builder()
             .setReplaceExistingApp(true)
@@ -901,9 +902,9 @@ public class ApkInstaller {
         installTimeout);
     SharedLogUtil.logMsg(
         logger,
-        String.format(
-            "Complete the install of multiple packages to device %s...", utilArgs.serial()),
-        log);
+        log,
+        "Complete the install of multiple packages to device %s...",
+        utilArgs.serial());
   }
 
   private static boolean isMultiUserSupported(int sdkVersion) {
@@ -933,20 +934,25 @@ public class ApkInstaller {
       deviceAppVersionCode = androidPackageManagerUtil.getAppVersionCode(deviceId, packageName);
     } catch (MobileHarnessException e) {
       // Nexus One/DroidX(2.3) may failed to get the version info of the GmsCore on the device.
-      String message =
-          String.format(
-              "Skip checking app version code because package (%s) info not found on device"
-                  + " %s:%n%s",
-              packageName, deviceId, e.getMessage());
-      SharedLogUtil.logMsg(logger, message, Level.WARNING, log, e);
+      SharedLogUtil.logMsg(
+          logger,
+          Level.WARNING,
+          log,
+          e,
+          "Skip checking app version code because package (%s) info not found on device %s:%n%s",
+          packageName,
+          deviceId,
+          e.getMessage());
     }
     if (deviceAppVersionCode != null) {
       SharedLogUtil.logMsg(
           logger,
-          String.format(
-              "Original app (%s) version on device %s: %d%nBeing installed apk version: %d",
-              packageName, deviceId, deviceAppVersionCode, targetVersionCode),
-          log);
+          log,
+          "Original app (%s) version on device %s: %d%nBeing installed apk version: %d",
+          packageName,
+          deviceId,
+          deviceAppVersionCode,
+          targetVersionCode);
       if (skipIfDowngrade && (deviceAppVersionCode > targetVersionCode)) {
         return true;
       }
@@ -962,7 +968,7 @@ public class ApkInstaller {
    *
    * @return {@code True} only if dimension update successfully
    */
-  @ResultIgnorabilityUnspecified
+  @CanIgnoreReturnValue
   private boolean updateGmsDimension(Device device, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
@@ -972,21 +978,21 @@ public class ApkInstaller {
       if ((version != null) && device.updateDimension(Dimension.Name.GMS_VERSION, version)) {
         SharedLogUtil.logMsg(
             logger,
-            String.format(
-                "Update Dimension %s to %s",
-                Ascii.toLowerCase(Dimension.Name.GMS_VERSION.name()), version),
-            log);
+            log,
+            "Update Dimension %s to %s",
+            Ascii.toLowerCase(Dimension.Name.GMS_VERSION.name()),
+            version);
         return true;
       }
     } catch (MobileHarnessException e) {
       SharedLogUtil.logMsg(
           logger,
-          PackageConstants.PACKAGE_NAME_GMS
-              + " version info not found. Dimension not up to date: "
-              + e.getMessage(),
           Level.WARNING,
           log,
-          e);
+          e,
+          "%s version info not found. Dimension not up to date: %s",
+          PackageConstants.PACKAGE_NAME_GMS,
+          e.getMessage());
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_APK_INSTALLER_UPDATE_DIMENSION_ERROR, e.getMessage(), e);
     }

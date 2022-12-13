@@ -13,17 +13,11 @@
 # limitations under the License.
 #
 
-load("//third_party/bazel_rules/rules_java/java:defs.bzl", "java_library")
-
 java_library(
     name = "apkinstaller",
     srcs = [
         "ApkInstallArgs.java",
         "ApkInstaller.java",
-    ],
-    tags = [
-        "alt_dep=//java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
-        "avoid_dep",
     ],
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
@@ -31,6 +25,7 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/path",
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
@@ -56,6 +51,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )

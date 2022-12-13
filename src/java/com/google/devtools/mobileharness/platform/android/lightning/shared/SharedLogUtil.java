@@ -17,7 +17,8 @@
 package com.google.devtools.mobileharness.platform.android.lightning.shared;
 
 import com.google.common.flogger.FluentLogger;
-import com.google.errorprone.annotations.CompileTimeConstant;
+import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
@@ -29,8 +30,11 @@ public final class SharedLogUtil {
    * Logs message at info level to {@code logger} and {@code log} if {@code log} is not {@code
    * null}.
    */
+  @SuppressWarnings("FloggerPassedAround")
   public static void logMsg(
-      FluentLogger logger, @CompileTimeConstant String message, @Nullable LogCollector<?> log) {
+      FluentLogger logger,
+      @com.google.errorprone.annotations.CompileTimeConstant String message,
+      @Nullable LogCollector<?> log) {
     logMsg(logger, message, Level.INFO, log, /* cause= */ null);
   }
 
@@ -38,9 +42,10 @@ public final class SharedLogUtil {
    * Logs message at given {@code level} to {@code logger} and {@code log} if {@code log} is not
    * {@code null}.
    */
+  @SuppressWarnings("FloggerPassedAround")
   public static void logMsg(
       FluentLogger logger,
-      @CompileTimeConstant String message,
+      @com.google.errorprone.annotations.CompileTimeConstant String message,
       Level level,
       @Nullable LogCollector<?> log,
       @Nullable Throwable cause) {
@@ -48,6 +53,40 @@ public final class SharedLogUtil {
       log.at(level).alsoTo(logger).withCause(cause).log(message);
     } else {
       logger.at(level).withCause(cause).log("%s", message);
+    }
+  }
+
+  /**
+   * Logs message at info level to {@code logger} and {@code log} if {@code log} is not {@code
+   * null}.
+   */
+  @FormatMethod
+  @SuppressWarnings("FloggerPassedAround")
+  public static void logMsg(
+      FluentLogger logger,
+      @Nullable LogCollector<?> log,
+      @FormatString String format,
+      Object... args) {
+    logMsg(logger, Level.INFO, log, /* cause= */ null, format, args);
+  }
+
+  /**
+   * Logs message at given {@code level} to {@code logger} and {@code log} if {@code log} is not
+   * {@code null}.
+   */
+  @FormatMethod
+  @SuppressWarnings("FloggerPassedAround")
+  public static void logMsg(
+      FluentLogger logger,
+      Level level,
+      @Nullable LogCollector<?> log,
+      @Nullable Throwable cause,
+      @FormatString String format,
+      Object... args) {
+    if (log != null) {
+      log.at(level).alsoTo(logger).withCause(cause).log(format, args);
+    } else {
+      logger.at(level).withCause(cause).logVarargs(format, args);
     }
   }
 

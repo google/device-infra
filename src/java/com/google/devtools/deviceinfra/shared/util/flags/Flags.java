@@ -62,6 +62,12 @@ public class Flags {
   public Flag<Boolean> adbLibusb = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
+      names = "--cache_installed_apks",
+      description = "Cache installed apk in device property to avoid installing again.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> cacheInstalledApks = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
       names = "--enable_ate_dual_stack",
       description = "Whether to enable ATE dual stack mode, which runs tests from both MH and TFC.",
       converter = Flag.BooleanConverter.class)
