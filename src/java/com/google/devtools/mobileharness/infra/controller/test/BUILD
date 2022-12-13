@@ -48,7 +48,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
