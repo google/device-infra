@@ -21,6 +21,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
+import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedLogUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
@@ -171,24 +172,15 @@ public class SystemStateManager {
       throws MobileHarnessException, InterruptedException {
     String deviceId = device.getDeviceId();
     if (!device.canReboot()) {
-      final String skipRebootingLogMsgTemplate =
-          "Skip rebooting device %s as it doesn't support reboot";
-      if (log != null) {
-        log.atInfo().alsoTo(logger).log(skipRebootingLogMsgTemplate, deviceId);
-      } else {
-        logger.atInfo().log(skipRebootingLogMsgTemplate, deviceId);
-      }
+      SharedLogUtil.logMsg(
+          logger, log, "Skip rebooting device %s as it doesn't support reboot", deviceId);
       return;
     }
 
     deviceReadyTimeout = deviceReadyTimeout == null ? DEVICE_READY_TIMEOUT : deviceReadyTimeout;
     Duration cacheDuration = deviceReadyTimeout.multipliedBy(2);
-    final String cacheDeviceLogMsgTemplate = "Cache device %s before reboot with %s";
-    if (log != null) {
-      log.atInfo().alsoTo(logger).log(cacheDeviceLogMsgTemplate, deviceId, cacheDuration);
-    } else {
-      logger.atInfo().log(cacheDeviceLogMsgTemplate, deviceId, cacheDuration);
-    }
+    SharedLogUtil.logMsg(
+        logger, log, "Cache device %s before reboot with %s", deviceId, cacheDuration);
     cacheDevice(device, cacheDuration);
     try {
       device.reboot();
@@ -206,12 +198,7 @@ public class SystemStateManager {
     }
 
     becomeRoot(device);
-    final String rebootFinishedLogMsgTemplate = "Device %s reboot finished.";
-    if (log != null) {
-      log.atInfo().alsoTo(logger).log(rebootFinishedLogMsgTemplate, deviceId);
-    } else {
-      logger.atInfo().log(rebootFinishedLogMsgTemplate, deviceId);
-    }
+    SharedLogUtil.logMsg(logger, log, "Device %s reboot finished.", deviceId);
   }
 
   private void cacheDevice(Device device, Duration timeout) {
