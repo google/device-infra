@@ -17,9 +17,7 @@
 #   Output data models for Mobile Harness labs and devices.
 
 package(
-    default_visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness:__subpackages__",
-    ],
+    default_visibility = ["//src/java/com/google/wireless/qa/mobileharness:__subpackages__"],
 )
 
 java_library(
