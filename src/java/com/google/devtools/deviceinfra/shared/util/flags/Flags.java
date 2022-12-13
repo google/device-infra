@@ -62,6 +62,12 @@ public class Flags {
   public Flag<Boolean> adbLibusb = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
+      names = "--android_device_daemon",
+      description = "Whether to install Mobile Harness Android daemon app on the device.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableDaemon = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
       names = "--cache_installed_apks",
       description = "Cache installed apk in device property to avoid installing again.",
       converter = Flag.BooleanConverter.class)
