@@ -59,6 +59,7 @@ public abstract class DetectionResult {
     MONITOR,
     NEST,
     NO_OP,
+    OPEN_WRT,
     SIMULATOR,
     STATIC_TESTBED,
     TTB,
