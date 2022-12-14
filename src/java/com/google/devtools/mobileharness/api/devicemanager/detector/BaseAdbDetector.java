@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.api.devicemanager.detector;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
@@ -80,6 +81,12 @@ public class BaseAdbDetector implements Detector {
   public boolean precondition() throws InterruptedException {
     Optional<String> adbUnsupportedReason = adbInternalUtil.checkAdbSupport();
     if (adbUnsupportedReason.isEmpty()) {
+      try {
+        logger.atInfo().log("Ensure adb server is alive.");
+        ImmutableList<String> unused = adbInternalUtil.listDevices(/* timeout= */ null);
+      } catch (MobileHarnessException e) {
+        logger.atInfo().withCause(e).log("Failed to check adb.");
+      }
       return true;
     } else {
       logger.atInfo().log(
