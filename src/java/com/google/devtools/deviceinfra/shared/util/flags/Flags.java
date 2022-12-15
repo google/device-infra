@@ -74,6 +74,35 @@ public class Flags {
   public Flag<Boolean> cacheInstalledApks = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
+      names = "--clear_android_device_multi_users",
+      description = "Whether to clear multi users in device setup and post-test. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> clearAndroidDeviceMultiUsers = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--device_ping_google",
+      description = "Whether to enable dimension ping_google_stability. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> pingGoogle = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--disable_calling",
+      description =
+          "Whether to disable outbound calling. "
+              + "By default it is TRUE. After calling is disabled, only reboot can re-enable it.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> disableCalling = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--disable_cellbroadcastreceiver",
+      description =
+          "Whether to disable cellbroadcast receiver. It stops the device to receive any "
+              + "message sent by cellbroadcast, e.g., emergency alert. Test runner is in charge to "
+              + "enable cellbroadcast receiver if the test wants the function.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> disableCellBroadcastReceiver = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
       names = "--enable_ate_dual_stack",
       description = "Whether to enable ATE dual stack mode, which runs tests from both MH and TFC.",
       converter = Flag.BooleanConverter.class)
@@ -90,6 +119,16 @@ public class Flags {
   public Flag<Boolean> createFailedDevice = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
+      names = "--enforce_safe_discharge",
+      description =
+          "Enable enforcing safe discharge mode for supported devices. For supported devices this "
+              + "will try to keep battery level at safe_charge_level. For devices which do not "
+              + "support safe_charge_level, this will try to turn charge off and on when reached "
+              + "stop_charge_level and start_charge_level respectively.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enforceSafeDischarge = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
       names = "--extra_adb_keys",
       description =
           ("Colon-separated list of adb keys (files or directories) to be used (see ADB_VENDOR_KEYS"
@@ -102,6 +141,16 @@ public class Flags {
       description = "File path of the fastboot tool",
       converter = Flag.StringConverter.class)
   public Flag<String> fastbootPathFromUser = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--internal_storage_alert_mb",
+      description =
+          "The threshold for insufficient internal storage alert. If the internal storage is lower "
+              + "than the threshold, device will go to prepping state that cannot run tests and "
+              + "the dimension 'internal_storage_status' will go from 'ok' to 'low'. Unit is MB. "
+              + "Default is 200 MB.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> internalStorageAlert = Flag.value(200);
 
   @com.beust.jcommander.Parameter(
       names = "--max_concurrent_adb_push_large_file",
@@ -148,6 +197,14 @@ public class Flags {
   public Flag<Duration> extraAdbCommandTimeout = DurationFlag.value(Duration.ZERO);
 
   @com.beust.jcommander.Parameter(
+      names = "--mute_android",
+      description =
+          "Whether to mute Android rooted devices. "
+              + "By default it is TRUE. After a device is muted, only reboot can re-enable sounds.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> muteAndroid = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
       names = "--no_op_device_num",
       description =
           "The number of NoOpDevice to be started. If set all other devices will be disabled.",
@@ -187,6 +244,22 @@ public class Flags {
   public Flag<String> resDirName = Flag.value("mh_res_files");
 
   @com.beust.jcommander.Parameter(
+      names = "--safe_charge_level",
+      description =
+          "Battery level devices should be kept at. Devices will be charged at most to this level."
+              + "Only works for devices which support this (i.e., marlin, sailfish).",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> safeChargeLevel = Flag.value(50);
+
+  @com.beust.jcommander.Parameter(
+      names = "--set_test_harness_property",
+      description =
+          "Whether to set ro.test_harness property on Android devices. If set restarting Zygote"
+              + " will skip setup wizard. By default it is TRUE.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> setTestHarnessProperty = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
       names = "--should_manage_devices",
       description =
           "Whether the lab server should actively manage and recover devices from bad state, or"
@@ -195,10 +268,48 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> shouldManageDevices = Flag.value(true);
 
+  @com.beust.jcommander.Parameter(
+      names = "--skip_connect_device_to_wifi",
+      description =
+          "Whether to skip connecting device to their default wifi network. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> skipConnectDeviceToWifi = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--skip_network",
+      description =
+          "Whether to skip network connection when set up and periodically check the device."
+              + " Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> skipNetwork = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--skip_recover_device_network",
+      description =
+          "Whether to skip recovering device network by connecting device to saved ssid. Default "
+              + "is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> skipRecoverDeviceNetwork = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--start_charge_level",
+      description =
+          "Battery level at which charging should start. Only works for devices which support this "
+              + "(i.e., angler, bullhead)",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> startChargeLevel = Flag.value(40);
+
+  @com.beust.jcommander.Parameter(
+      names = "--stop_charge_level",
+      description =
+          "Battery level at which charging should stop. Only works for devices which support this "
+              + "(i.e., angler, bullhead)",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> stopChargeLevel = Flag.value(80);
+
   // The flag for dynamically loading resource files from the supplemental directory instead of
   // unpacking from the JAR binary. It allows updating resource files without rebuilding the JAR
   // binary. Please only use it for local development and do not use it in production.
-  // See b/255255107.
   @com.beust.jcommander.Parameter(
       names = "--supplemental_res_dir",
       description =
