@@ -16,9 +16,13 @@
 
 package com.google.devtools.mobileharness.platform.android.systemspec;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
@@ -32,7 +36,6 @@ import com.google.devtools.mobileharness.platform.android.shared.constant.Splitt
 import com.google.devtools.mobileharness.platform.android.shared.emulator.AndroidEmulatorIds;
 import com.google.wireless.qa.mobileharness.shared.proto.AndroidDeviceSpec.Abi;
 import com.google.wireless.qa.mobileharness.shared.util.LuhnUtil;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -90,6 +93,16 @@ public class AndroidSystemSpecUtil {
 
   /** Pattern to find ICCIDs from queried SIM info. */
   private static final Pattern PATTERN_SIM_INFO_ICCID = Pattern.compile("\\bicc_id=\\d+");
+
+  /** Pattern to find physical SIM slot from queried SIM info. */
+  private static final Pattern PATTERN_SIM_INFO_PHYSICAL_SLOT = Pattern.compile("\\bsim_id=-?\\d+");
+
+  /** Pattern to find whether a SIM is an ESIM from queried SIM info. */
+  private static final Pattern PATTERN_SIM_INFO_IS_ESIM = Pattern.compile("\\bis_embedded=\\d+");
+
+  /** Pattern to find subscription type of a SIM from queried SIM info. */
+  private static final Pattern PATTERN_SIM_INFO_SUB_TYPE =
+      Pattern.compile("\\bsubscription_type=\\d+");
 
   /** Output signal of getting total memory info. */
   private static final String OUTPUT_TOTAL_MEM_INFO = "MemTotal";
@@ -563,7 +576,7 @@ public class AndroidSystemSpecUtil {
         || getSystemFeatures(serial).contains(FEATURE_WEARABLE);
   }
 
-  /** Returns a list containing the ICCIDs of each SIM on the device. */
+  /** Returns a list containing the ICCIDs of each valid SIM on the device. */
   public ImmutableList<String> getIccids(String serial)
       throws MobileHarnessException, InterruptedException {
     String adbOutput = "";
@@ -574,14 +587,47 @@ public class AndroidSystemSpecUtil {
           AndroidErrorId.ANDROID_SYSTEM_SPEC_QUERY_SIM_INFO_ERROR, e.getMessage(), e);
     }
 
-    List<String> iccids = new ArrayList<>();
-    Matcher matcher = PATTERN_SIM_INFO_ICCID.matcher(adbOutput);
-    while (matcher.find()) {
-      // Example match: "icc_id=89010005475451640413"
-      iccids.add(matcher.group().split("=", -1)[1]);
+    Splitter splitter = Splitter.onPattern("\n").omitEmptyStrings().trimResults();
+
+    return splitter
+        .splitToStream(adbOutput)
+        .filter(AndroidSystemSpecUtil::isAvailableSim)
+        .map(AndroidSystemSpecUtil::iccidFromSimInfo)
+        .map(Strings::nullToEmpty)
+        .filter(iccid -> !isNullOrEmpty(iccid))
+        .collect(toImmutableList());
+  }
+
+  /** Parses the {@code simInfo} string and returns {@code true} if the SIM is available. */
+  private static final boolean isAvailableSim(String simInfo) {
+    Matcher physicalSlotMatcher = PATTERN_SIM_INFO_PHYSICAL_SLOT.matcher(simInfo);
+    Matcher esimMatcher = PATTERN_SIM_INFO_IS_ESIM.matcher(simInfo);
+    Matcher subscriptionTypeMatcher = PATTERN_SIM_INFO_SUB_TYPE.matcher(simInfo);
+
+    if (!physicalSlotMatcher.find() || !esimMatcher.find() || !subscriptionTypeMatcher.find()) {
+      return false;
     }
 
-    return ImmutableList.copyOf(iccids);
+    Splitter splitter = Splitter.onPattern("=").trimResults();
+
+    // Invalid physical slot match: "sim_id=-1".
+    int physicalSlot = Integer.parseInt(splitter.splitToList(physicalSlotMatcher.group()).get(1));
+    // ESIM match: "is_embedded=1".
+    boolean isEsim = splitter.splitToList(esimMatcher.group()).get(1).equals("1");
+    // Remote SIM match: "subscription_type=1".
+    boolean isRemote = splitter.splitToList(subscriptionTypeMatcher.group()).get(1).equals("1");
+
+    return physicalSlot >= 0 || isEsim || isRemote;
+  }
+
+  /** Parses the {@code simInfo} string and returns the SIM's ICCID. */
+  private static final String iccidFromSimInfo(String simInfo) {
+    Matcher matcher = PATTERN_SIM_INFO_ICCID.matcher(simInfo);
+    // Example match: "icc_id=89010005475451640413"
+    if (!matcher.find()) {
+      return "";
+    }
+    return matcher.group().split("=", -1)[1];
   }
 
   /** Gets the appropriate command number in IPhoneSubInfo.aidl to use for looking up ICCID. */

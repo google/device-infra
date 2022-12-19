@@ -679,7 +679,7 @@ public class AndroidSystemSpecUtilTest {
   }
 
   @Test
-  public void getIccids_oneSim_returnsListWithOneIccid() throws Exception {
+  public void getIccids_oneValidSim_returnsListWithOneIccid() throws Exception {
     String oneSimAdbOutput =
         "Row: 0 _id=1, icc_id=89010005475451640413, sim_id=1, display_name=中華電信, carrier_name=沒有服務,"
             + " name_source=3, color=-16746133, number=NULL, display_number_format=1,"
@@ -709,7 +709,7 @@ public class AndroidSystemSpecUtilTest {
   }
 
   @Test
-  public void getIccids_twoSims_returnsListWithTwoIccids() throws Exception {
+  public void getIccids_twoValidSims_returnsListWithTwoIccids() throws Exception {
     String twoSimAdbOutput =
         "Row: 0 _id=1, icc_id=89010005475451640413, sim_id=1, display_name=中華電信, carrier_name=沒有服務,"
             + " name_source=3, color=-16746133, number=NULL, display_number_format=1,"
@@ -758,5 +758,176 @@ public class AndroidSystemSpecUtilTest {
 
     assertThat(systemSpecUtil.getIccids(SERIAL))
         .containsExactly("89010005475451640413", "89886017157803910426");
+  }
+
+  @Test
+  public void getIccids_physicalLocalSimWithInvalidSlot_returnsEmptyList() throws Exception {
+    String adbOutput =
+        "Row: 0 _id=1, icc_id=89010005475451640413, sim_id=-1, display_name=中華電信,"
+            + " carrier_name=沒有服務, name_source=3, color=-16746133, number=NULL,"
+            + " display_number_format=1, data_roaming=0, mcc=466, mnc=92, mcc_string=466,"
+            + " mnc_string=92, ehplmns=NULL, hplmns=NULL, sim_provisioning_status=0, is_embedded=0,"
+            + " card_id=89033023427100000000000001719763, access_rules=NULL,"
+            + " access_rules_from_carrier_configs=NULL, is_removable=0,"
+            + " enable_cmas_extreme_threat_alerts=1, enable_cmas_severe_threat_alerts=1,"
+            + " enable_cmas_amber_alerts=1, enable_emergency_alerts=1, alert_sound_duration=4,"
+            + " alert_reminder_interval=0, enable_alert_vibrate=1, enable_alert_speech=1,"
+            + " enable_etws_test_alerts=0, enable_channel_50_alerts=1, enable_cmas_test_alerts=0,"
+            + " show_cmas_opt_out_dialog=1, volte_vt_enabled=-1, vt_ims_enabled=-1,"
+            + " wfc_ims_enabled=-1, wfc_ims_mode=-1, wfc_ims_roaming_mode=-1,"
+            + " wfc_ims_roaming_enabled=-1, is_opportunistic=0, group_uuid=NULL, is_metered=1,"
+            + " iso_country_code=tw, carrier_id=1884, profile_class=2, subscription_type=0,"
+            + " group_owner=NULL, data_enabled_override_rules=NULL, imsi=466920123456789,"
+            + " uicc_applications_enabled=1, allowed_network_types=-1, ims_rcs_uce_enabled=0,"
+            + " cross_sim_calling_enabled=0, rcs_config=NULL,"
+            + " allowed_network_types_for_reasons=user=850943,carrier=588799, d2d_sharing_status=0,"
+            + " voims_opt_in_status=0, d2d_sharing_contacts=NULL, nr_advanced_calling_enabled=-1,"
+            + " phone_number_source_carrier=NULL, phone_number_source_ims=NULL, port_index=0,"
+            + " usage_setting=0\n";
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_QUERY_SIM_INFO))
+        .thenReturn(adbOutput);
+
+    assertThat(systemSpecUtil.getIccids(SERIAL)).isEmpty();
+  }
+
+  @Test
+  public void getIccids_physicalRemoteSimWithInvalidSlot_returnsListWithIccid() throws Exception {
+    String adbOutput =
+        "Row: 0 _id=1, icc_id=89010005475451640413, sim_id=-1, display_name=中華電信,"
+            + " carrier_name=沒有服務, name_source=3, color=-16746133, number=NULL,"
+            + " display_number_format=1, data_roaming=0, mcc=466, mnc=92, mcc_string=466,"
+            + " mnc_string=92, ehplmns=NULL, hplmns=NULL, sim_provisioning_status=0, is_embedded=0,"
+            + " card_id=89033023427100000000000001719763, access_rules=NULL,"
+            + " access_rules_from_carrier_configs=NULL, is_removable=0,"
+            + " enable_cmas_extreme_threat_alerts=1, enable_cmas_severe_threat_alerts=1,"
+            + " enable_cmas_amber_alerts=1, enable_emergency_alerts=1, alert_sound_duration=4,"
+            + " alert_reminder_interval=0, enable_alert_vibrate=1, enable_alert_speech=1,"
+            + " enable_etws_test_alerts=0, enable_channel_50_alerts=1, enable_cmas_test_alerts=0,"
+            + " show_cmas_opt_out_dialog=1, volte_vt_enabled=-1, vt_ims_enabled=-1,"
+            + " wfc_ims_enabled=-1, wfc_ims_mode=-1, wfc_ims_roaming_mode=-1,"
+            + " wfc_ims_roaming_enabled=-1, is_opportunistic=0, group_uuid=NULL, is_metered=1,"
+            + " iso_country_code=tw, carrier_id=1884, profile_class=2, subscription_type=1,"
+            + " group_owner=NULL, data_enabled_override_rules=NULL, imsi=466920123456789,"
+            + " uicc_applications_enabled=1, allowed_network_types=-1, ims_rcs_uce_enabled=0,"
+            + " cross_sim_calling_enabled=0, rcs_config=NULL,"
+            + " allowed_network_types_for_reasons=user=850943,carrier=588799, d2d_sharing_status=0,"
+            + " voims_opt_in_status=0, d2d_sharing_contacts=NULL, nr_advanced_calling_enabled=-1,"
+            + " phone_number_source_carrier=NULL, phone_number_source_ims=NULL, port_index=0,"
+            + " usage_setting=0\n";
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_QUERY_SIM_INFO))
+        .thenReturn(adbOutput);
+
+    assertThat(systemSpecUtil.getIccids(SERIAL)).containsExactly("89010005475451640413");
+  }
+
+  @Test
+  public void getIccids_embeddedLocalSimWithInvalidSlot_returnsListWithIccid() throws Exception {
+    String adbOutput =
+        "Row: 0 _id=1, icc_id=89010005475451640413, sim_id=-1, display_name=中華電信,"
+            + " carrier_name=沒有服務, name_source=3, color=-16746133, number=NULL,"
+            + " display_number_format=1, data_roaming=0, mcc=466, mnc=92, mcc_string=466,"
+            + " mnc_string=92, ehplmns=NULL, hplmns=NULL, sim_provisioning_status=0, is_embedded=1,"
+            + " card_id=89033023427100000000000001719763, access_rules=NULL,"
+            + " access_rules_from_carrier_configs=NULL, is_removable=0,"
+            + " enable_cmas_extreme_threat_alerts=1, enable_cmas_severe_threat_alerts=1,"
+            + " enable_cmas_amber_alerts=1, enable_emergency_alerts=1, alert_sound_duration=4,"
+            + " alert_reminder_interval=0, enable_alert_vibrate=1, enable_alert_speech=1,"
+            + " enable_etws_test_alerts=0, enable_channel_50_alerts=1, enable_cmas_test_alerts=0,"
+            + " show_cmas_opt_out_dialog=1, volte_vt_enabled=-1, vt_ims_enabled=-1,"
+            + " wfc_ims_enabled=-1, wfc_ims_mode=-1, wfc_ims_roaming_mode=-1,"
+            + " wfc_ims_roaming_enabled=-1, is_opportunistic=0, group_uuid=NULL, is_metered=1,"
+            + " iso_country_code=tw, carrier_id=1884, profile_class=2, subscription_type=0,"
+            + " group_owner=NULL, data_enabled_override_rules=NULL, imsi=466920123456789,"
+            + " uicc_applications_enabled=1, allowed_network_types=-1, ims_rcs_uce_enabled=0,"
+            + " cross_sim_calling_enabled=0, rcs_config=NULL,"
+            + " allowed_network_types_for_reasons=user=850943,carrier=588799, d2d_sharing_status=0,"
+            + " voims_opt_in_status=0, d2d_sharing_contacts=NULL, nr_advanced_calling_enabled=-1,"
+            + " phone_number_source_carrier=NULL, phone_number_source_ims=NULL, port_index=0,"
+            + " usage_setting=0\n";
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_QUERY_SIM_INFO))
+        .thenReturn(adbOutput);
+
+    assertThat(systemSpecUtil.getIccids(SERIAL)).containsExactly("89010005475451640413");
+  }
+
+  @Test
+  public void getIccids_physicalLocalSimWithValidSlot_returnsListWithIccid() throws Exception {
+    String adbOutput =
+        "Row: 0 _id=1, icc_id=89010005475451640413, sim_id=0, display_name=中華電信,"
+            + " carrier_name=沒有服務, name_source=3, color=-16746133, number=NULL,"
+            + " display_number_format=1, data_roaming=0, mcc=466, mnc=92, mcc_string=466,"
+            + " mnc_string=92, ehplmns=NULL, hplmns=NULL, sim_provisioning_status=0, is_embedded=0,"
+            + " card_id=89033023427100000000000001719763, access_rules=NULL,"
+            + " access_rules_from_carrier_configs=NULL, is_removable=0,"
+            + " enable_cmas_extreme_threat_alerts=1, enable_cmas_severe_threat_alerts=1,"
+            + " enable_cmas_amber_alerts=1, enable_emergency_alerts=1, alert_sound_duration=4,"
+            + " alert_reminder_interval=0, enable_alert_vibrate=1, enable_alert_speech=1,"
+            + " enable_etws_test_alerts=0, enable_channel_50_alerts=1, enable_cmas_test_alerts=0,"
+            + " show_cmas_opt_out_dialog=1, volte_vt_enabled=-1, vt_ims_enabled=-1,"
+            + " wfc_ims_enabled=-1, wfc_ims_mode=-1, wfc_ims_roaming_mode=-1,"
+            + " wfc_ims_roaming_enabled=-1, is_opportunistic=0, group_uuid=NULL, is_metered=1,"
+            + " iso_country_code=tw, carrier_id=1884, profile_class=2, subscription_type=0,"
+            + " group_owner=NULL, data_enabled_override_rules=NULL, imsi=466920123456789,"
+            + " uicc_applications_enabled=1, allowed_network_types=-1, ims_rcs_uce_enabled=0,"
+            + " cross_sim_calling_enabled=0, rcs_config=NULL,"
+            + " allowed_network_types_for_reasons=user=850943,carrier=588799, d2d_sharing_status=0,"
+            + " voims_opt_in_status=0, d2d_sharing_contacts=NULL, nr_advanced_calling_enabled=-1,"
+            + " phone_number_source_carrier=NULL, phone_number_source_ims=NULL, port_index=0,"
+            + " usage_setting=0\n";
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_QUERY_SIM_INFO))
+        .thenReturn(adbOutput);
+
+    assertThat(systemSpecUtil.getIccids(SERIAL)).containsExactly("89010005475451640413");
+  }
+
+  @Test
+  public void getIccids_oneValidSimAndOneInvalidSim_returnsListWithValidIccid() throws Exception {
+    String adbOutput =
+        "Row: 0 _id=1, icc_id=89010005475451640413, sim_id=0, display_name=中華電信, carrier_name=沒有服務,"
+            + " name_source=3, color=-16746133, number=NULL, display_number_format=1,"
+            + " data_roaming=0, mcc=466, mnc=92, mcc_string=466, mnc_string=92, ehplmns=NULL,"
+            + " hplmns=NULL, sim_provisioning_status=0, is_embedded=1,"
+            + " card_id=89033023427100000000000001719763, access_rules=NULL,"
+            + " access_rules_from_carrier_configs=NULL, is_removable=0,"
+            + " enable_cmas_extreme_threat_alerts=1, enable_cmas_severe_threat_alerts=1,"
+            + " enable_cmas_amber_alerts=1, enable_emergency_alerts=1, alert_sound_duration=4,"
+            + " alert_reminder_interval=0, enable_alert_vibrate=1, enable_alert_speech=1,"
+            + " enable_etws_test_alerts=0, enable_channel_50_alerts=1, enable_cmas_test_alerts=0,"
+            + " show_cmas_opt_out_dialog=1, volte_vt_enabled=-1, vt_ims_enabled=-1,"
+            + " wfc_ims_enabled=-1, wfc_ims_mode=-1, wfc_ims_roaming_mode=-1,"
+            + " wfc_ims_roaming_enabled=-1, is_opportunistic=0, group_uuid=NULL, is_metered=1,"
+            + " iso_country_code=tw, carrier_id=1884, profile_class=2, subscription_type=0,"
+            + " group_owner=NULL, data_enabled_override_rules=NULL, imsi=466920123456789,"
+            + " uicc_applications_enabled=1, allowed_network_types=-1, ims_rcs_uce_enabled=0,"
+            + " cross_sim_calling_enabled=0, rcs_config=NULL,"
+            + " allowed_network_types_for_reasons=user=850943,carrier=588799, d2d_sharing_status=0,"
+            + " voims_opt_in_status=0, d2d_sharing_contacts=NULL, nr_advanced_calling_enabled=-1,"
+            + " phone_number_source_carrier=NULL, phone_number_source_ims=NULL, port_index=0,"
+            + " usage_setting=0\n"
+            + "Row: 1 _id=-1, icc_id=89886017157803910426, sim_id=-1, display_name=遠傳電信,"
+            + " carrier_name=遠傳電信, name_source=3, color=-13408298, number=,"
+            + " display_number_format=1, data_roaming=0, mcc=466, mnc=1, mcc_string=466,"
+            + " mnc_string=01, ehplmns=, hplmns=46601, sim_provisioning_status=0, is_embedded=0,"
+            + " card_id=89886017157803910426, access_rules=NULL,"
+            + " access_rules_from_carrier_configs=NULL, is_removable=0,"
+            + " enable_cmas_extreme_threat_alerts=1, enable_cmas_severe_threat_alerts=1,"
+            + " enable_cmas_amber_alerts=1, enable_emergency_alerts=1, alert_sound_duration=4,"
+            + " alert_reminder_interval=0, enable_alert_vibrate=1, enable_alert_speech=1,"
+            + " enable_etws_test_alerts=0, enable_channel_50_alerts=1, enable_cmas_test_alerts=0,"
+            + " show_cmas_opt_out_dialog=1, volte_vt_enabled=-1, vt_ims_enabled=-1,"
+            + " wfc_ims_enabled=-1, wfc_ims_mode=-1, wfc_ims_roaming_mode=-1,"
+            + " wfc_ims_roaming_enabled=-1, is_opportunistic=0, group_uuid=NULL, is_metered=1,"
+            + " iso_country_code=tw, carrier_id=1881, profile_class=-1, subscription_type=0,"
+            + " group_owner=NULL, data_enabled_override_rules=NULL, imsi=466011700391046,"
+            + " uicc_applications_enabled=1, allowed_network_types=-1, ims_rcs_uce_enabled=0,"
+            + " cross_sim_calling_enabled=0, rcs_config=NULL,"
+            + " allowed_network_types_for_reasons=user=850943,carrier=588799, d2d_sharing_status=0,"
+            + " voims_opt_in_status=0, d2d_sharing_contacts=NULL, nr_advanced_calling_enabled=-1,"
+            + " phone_number_source_carrier=NULL, phone_number_source_ims=+886989055881,"
+            + " port_index=0, usage_setting=0\n";
+    when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_QUERY_SIM_INFO))
+        .thenReturn(adbOutput);
+
+    assertThat(systemSpecUtil.getIccids(SERIAL)).containsExactly("89010005475451640413");
   }
 }

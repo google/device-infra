@@ -1720,7 +1720,7 @@ public abstract class AndroidRealDeviceDelegate {
   /** Returns a comma-separated string of the ICCIDs of the SIMs on the device. */
   private String getCommaSeparatedIccids() throws MobileHarnessException, InterruptedException {
     ImmutableList<String> iccids = systemSpecUtil.getIccids(deviceId);
-    return iccids == null ? "" : Joiner.on(",").join(systemSpecUtil.getIccids(deviceId));
+    return iccids == null ? "" : Joiner.on(",").join(iccids);
   }
 
   /**
