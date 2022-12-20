@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
@@ -576,7 +575,13 @@ public class AndroidSystemSpecUtil {
         || getSystemFeatures(serial).contains(FEATURE_WEARABLE);
   }
 
-  /** Returns a list containing the ICCIDs of each valid SIM on the device. */
+  /**
+   * Returns a list containing the ICCIDs of each valid SIM on the device.
+   *
+   * <p>Replicates Android's {@link SubscriptionController#getAvailableSubscriptionInfoList(String,
+   * String)} which has specific logic for filtering available SIM info from a list of all SIMs that
+   * include removed-but-cached SIMs.
+   */
   public ImmutableList<String> getIccids(String serial)
       throws MobileHarnessException, InterruptedException {
     String adbOutput = "";
@@ -593,7 +598,6 @@ public class AndroidSystemSpecUtil {
         .splitToStream(adbOutput)
         .filter(AndroidSystemSpecUtil::isAvailableSim)
         .map(AndroidSystemSpecUtil::iccidFromSimInfo)
-        .map(Strings::nullToEmpty)
         .filter(iccid -> !isNullOrEmpty(iccid))
         .collect(toImmutableList());
   }
