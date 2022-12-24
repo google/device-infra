@@ -146,7 +146,7 @@ public class LabAssessment implements Assessment<LabQueryResult> {
 
     List<DeviceCandidate> candidates = requirementsToSortedCandidates.get(specs.get(specIndex));
     int bestScore = 0;
-    int searchDepth = Math.min(candidates.size(), specs.size() + 1);
+    int searchDepth = 2; // Select at most 2 candidates to reduce running time.
     for (int i = 0; i < searchDepth; i++) {
       DeviceCandidate candidate = candidates.get(i);
       if (currentSerials.contains(candidate.id())) {
