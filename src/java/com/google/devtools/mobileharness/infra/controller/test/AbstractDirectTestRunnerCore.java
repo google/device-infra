@@ -312,7 +312,14 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
                   testLocator.getName(), deviceLocators);
 
           boolean skipRunTest = false;
-          if (!jobInfo.properties().getBoolean(PropertyName.Job._IS_RESUMED_JOB).orElse(false)) {
+          if (jobInfo.properties().getBoolean(PropertyName.Job._IS_RESUMED_JOB).orElse(false)
+              && testInfo.properties().has(PropertyName.Test._TEST_ENGINE_LOCATOR)) {
+            testInfo
+                .log()
+                .atInfo()
+                .alsoTo(logger)
+                .log("Skip doPreRunTest because it is a resumed job");
+          } else {
             try (MobileHarnessAutoCloseable preRunTestSpan = getPreRunTestSpan()) {
               skipRunTest = doPreRunTest();
             } finally {
@@ -325,12 +332,6 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
                       testLocator.getName(),
                       skipRunTest ? " and test running will be skipped" : "");
             }
-          } else {
-            testInfo
-                .log()
-                .atInfo()
-                .alsoTo(logger)
-                .log("Skip doPreRunTest because it is a resumed job");
           }
           if (!skipRunTest && !Thread.currentThread().isInterrupted()) {
             testInfo
