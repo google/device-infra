@@ -20,7 +20,6 @@ package(
     default_visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     ],
 )
 
