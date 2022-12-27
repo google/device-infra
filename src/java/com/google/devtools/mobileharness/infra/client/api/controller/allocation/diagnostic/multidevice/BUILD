@@ -21,7 +21,6 @@ package(
         "//java/com/google/devtools/mobileharness/infra/client/api/controller:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/infra/client/api/controller:__subpackages__",
         "//src/java/com/google/devtools/deviceinfra/infra/client/controller:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client/controller:__subpackages__",
     ],
 )
 
