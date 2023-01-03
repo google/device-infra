@@ -1360,13 +1360,20 @@ public abstract class AndroidRealDeviceDelegate {
     if (!ifTrySetDevicePropertiesAndDisablePackages()) {
       return;
     }
+    if (ifClearAnyReadOnlyTestProperties() && ifReadOnlyTestPropertiesChanged()) {
+      logger.atInfo().log("Reboot device %s to clear ro properties", serial);
+      systemStateManager.reboot(device, /* log= */ null, /* deviceReadyTimeout= */ null);
+    }
     if (Flags.instance().disableCalling.getNonNull()) {
+      logger.atInfo().log("Disable calling on device %s", serial);
       androidAdbUtil.setProperty(serial, "ro.telephony.disable-call", "true", true);
     }
     if (Flags.instance().setTestHarnessProperty.getNonNull()) {
+      logger.atInfo().log("Set property ro.test_harness to 1 on device %s", serial);
       androidAdbUtil.setProperty(serial, "ro.test_harness", "1", true);
     }
     if (Flags.instance().muteAndroid.getNonNull()) {
+      logger.atInfo().log("Mute audio on device %s", serial);
       androidAdbUtil.setProperty(serial, "ro.audio.silent", "1", true);
     }
     if (Flags.instance().disableCellBroadcastReceiver.getNonNull()) {
@@ -1379,6 +1386,28 @@ public abstract class AndroidRealDeviceDelegate {
             serial);
       }
     }
+  }
+
+  private boolean ifClearAnyReadOnlyTestProperties() {
+    return !Flags.instance().disableCalling.getNonNull()
+        || !Flags.instance().setTestHarnessProperty.getNonNull()
+        || !Flags.instance().muteAndroid.getNonNull();
+  }
+
+  private boolean ifReadOnlyTestPropertiesChanged()
+      throws MobileHarnessException, InterruptedException {
+    return ifReadOnlyPropertyChanged(
+            "ro.telephony.disable-call", Flags.instance().disableCalling.getNonNull() ? "true" : "")
+        || ifReadOnlyPropertyChanged(
+            "ro.test_harness", Flags.instance().setTestHarnessProperty.getNonNull() ? "1" : "")
+        || ifReadOnlyPropertyChanged(
+            "ro.audio.silent", Flags.instance().muteAndroid.getNonNull() ? "1" : "");
+  }
+
+  private boolean ifReadOnlyPropertyChanged(String roPropName, String newValue)
+      throws MobileHarnessException, InterruptedException {
+    String devicePropValue = androidAdbUtil.getProperty(deviceId, ImmutableList.of(roPropName));
+    return !Ascii.equalsIgnoreCase(devicePropValue, newValue);
   }
 
   /**
