@@ -1698,17 +1698,12 @@ public abstract class AndroidRealDeviceDelegate {
         logger.atWarning().withCause(e).log(
             "Failed to get device %s battery temperature", deviceId);
       }
+      isDimensionChanged |= device.updateDimension(Dimension.Name.BATTERY_STATUS, batteryStatus);
+      isDimensionChanged |=
+          device.updateDimension(Dimension.Name.BATTERY_LEVEL, String.valueOf(batteryLevel));
       isDimensionChanged |=
           device.updateDimension(
-              AndroidRealDeviceConstants.DIMENSION_NAME_BATTERY_STATUS, batteryStatus);
-      isDimensionChanged |=
-          device.updateDimension(
-              AndroidRealDeviceConstants.DIMENSION_NAME_BATTERY_LEVEL,
-              String.valueOf(batteryLevel));
-      isDimensionChanged |=
-          device.updateDimension(
-              AndroidRealDeviceConstants.DIMENSION_NAME_BATTERY_TEMPERATURE,
-              String.valueOf(batteryTemperature));
+              Dimension.Name.BATTERY_TEMPERATURE, String.valueOf(batteryTemperature));
     }
     return isDimensionChanged;
   }

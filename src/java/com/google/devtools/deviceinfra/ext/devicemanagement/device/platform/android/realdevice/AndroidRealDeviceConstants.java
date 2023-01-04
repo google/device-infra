@@ -49,9 +49,6 @@ public class AndroidRealDeviceConstants {
   /** Name of the dimension whose indicates Android device could be flashed. */
   public static final String ANDROID_FLASHABLE_DEVICE = "AndroidFlashableDevice";
 
-  /** Name of the dimension which means indicate the battery level. */
-  public static final String DIMENSION_NAME_BATTERY_LEVEL = "battery_level";
-
   /** Default user id for system user. */
   public static final int DEFAULT_SYSTEM_USER = 0;
 
@@ -78,12 +75,6 @@ public class AndroidRealDeviceConstants {
 
   /** Name of the dimension which declares the writable external storage path. */
   public static final String DIMENSION_NAME_WRITABLE_EXTERNAL_STORAGE = "writable_external_storage";
-
-  /** Name of the dimension which means indicate the battery status. */
-  public static final String DIMENSION_NAME_BATTERY_STATUS = "battery_status";
-
-  /** Name of the dimension which means indicate the battery temperature. */
-  public static final String DIMENSION_NAME_BATTERY_TEMPERATURE = "battery_temperature";
 
   /** Name of the dimension which means indicate the network SSID. */
   public static final String DIMENSION_NAME_NETWORK_SSID = "network_ssid";
