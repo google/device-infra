@@ -249,6 +249,26 @@ java_library(
 ################################################################################
 
 java_library(
+    name = "android_real_device",
+    srcs = ["device/AndroidRealDevice.java"],
+    deps = [
+        ":android_device",
+        ":api",
+        ":validator_factory",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:android_real_device_delegate",
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:android_real_device_delegate_impl",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/container/sandbox/device:device_sandbox_controller",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+    ],
+)
+
+java_library(
     name = "android_device",
     srcs = ["device/AndroidDevice.java"],
     visibility = [

@@ -110,6 +110,7 @@ java_library(
     name = "android_real_device_delegate_impl",
     srcs = ["AndroidRealDeviceDelegateImpl.java"],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__subpackages__",
     ],
     deps = [
