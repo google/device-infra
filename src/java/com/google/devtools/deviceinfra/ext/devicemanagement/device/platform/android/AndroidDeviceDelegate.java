@@ -598,6 +598,9 @@ public abstract class AndroidDeviceDelegate {
     // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some
     // settings may not be supported for emulators.
     device.addSupportedDecorator("AndroidDeviceSettingsDecorator");
+
+    // This will replace `AndroidChromeWebViewInstallerDecorator` when it's ready. DO NOT USE YET!
+    device.addSupportedDecorator("AndroidChromeInstallerDecorator");
   }
 
   /** List of additional decorators/drivers that should be supported by root/non-root devices. */
