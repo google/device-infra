@@ -430,7 +430,7 @@ public abstract class AndroidRealDeviceDelegate {
       device.addDimension(
           AndroidRealDeviceConstants.DIMENSION_NAME_TOTAL_MEMORY, totalMemInMb + " MB");
       device.addDimension(
-          AndroidRealDeviceConstants.DIMENSION_NAME_SVELTE_DEVICE,
+          Dimension.Name.SVELTE_DEVICE,
           String.valueOf(totalMemInMb <= AndroidRealDeviceConstants.MAX_SVELTE_MEMORY_IN_MB));
       Set<String> whiteListFeatures = getSystemFeaturesByWhitelist(deviceId);
       for (String whitelistFeature : whiteListFeatures) {

@@ -95,9 +95,6 @@ public class AndroidRealDeviceConstants {
   /** Name of the GEL package */
   public static final String PACKAGE_NAME_LAUNCHER_GEL = "com.google.android.launcher";
 
-  /** Name of the dimension whose values will be shown on device daemon. */
-  public static final String DIMENSION_NAME_SVELTE_DEVICE = "svelte_device";
-
   /** Device property(in host machine memory) names of labels to show on device daemon. */
   public static final String PROP_LABELS = "labels";
 
