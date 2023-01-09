@@ -214,8 +214,7 @@ public abstract class AndroidRealDeviceDelegate {
           "Device is undetectable. Please replug the usb cable or reboot the device.");
     }
 
-    device.updateDimension(
-        Ascii.toLowerCase(Dimension.Name.SUPPORTS_GMSCORE.name()), Dimension.Value.TRUE);
+    device.updateDimension(Dimension.Name.SUPPORTS_GMSCORE, Dimension.Value.TRUE);
     extrasInSetUp();
 
     lastSetupTime = clock.instant();
@@ -281,11 +280,11 @@ public abstract class AndroidRealDeviceDelegate {
       device.addSupportedDriver(AndroidRealDeviceConstants.ACID_REMOTE_DRIVER);
       String hardware = fastboot.getVar(deviceId, FastbootProperty.PRODUCT);
       if (!Strings.isNullOrEmpty(hardware)) {
-        device.updateDimension(Ascii.toLowerCase(Dimension.Name.HARDWARE.name()), hardware);
+        device.updateDimension(Dimension.Name.HARDWARE, hardware);
       }
       String unlocked = fastboot.getVar(deviceId, FastbootProperty.UNLOCKED);
       if (!Strings.isNullOrEmpty(unlocked)) {
-        device.updateDimension(Ascii.toLowerCase(Dimension.Name.OEM_UNLOCK.name()), unlocked);
+        device.updateDimension(Dimension.Name.OEM_UNLOCK, unlocked);
       }
       device.addSupportedDecorator("AndroidFlashDeviceDecorator");
       device.addSupportedDecorator("AndroidFlashstationDecorator");
@@ -406,23 +405,20 @@ public abstract class AndroidRealDeviceDelegate {
       logger.atInfo().log("%s", e.getMessage());
     }
     try {
-      device.addDimension(
-          Ascii.toLowerCase(Dimension.Name.MAC_ADDRESS.name()),
-          systemSpecUtil.getMacAddress(deviceId));
+      device.addDimension(Dimension.Name.MAC_ADDRESS, systemSpecUtil.getMacAddress(deviceId));
     } catch (MobileHarnessException e) {
       logger.atInfo().log("%s", e.getMessage());
     }
     try {
       device.addDimension(
-          Ascii.toLowerCase(Dimension.Name.BLUETOOTH_MAC_ADDRESS.name()),
-          systemSpecUtil.getBluetoothMacAddress(deviceId));
+          Dimension.Name.BLUETOOTH_MAC_ADDRESS, systemSpecUtil.getBluetoothMacAddress(deviceId));
     } catch (MobileHarnessException e) {
       logger.atInfo().log("%s", e.getMessage());
     }
 
     try {
       device.addDimension(
-          Ascii.toLowerCase(Dimension.Name.MCC_MNC.name()),
+          Dimension.Name.MCC_MNC,
           androidAdbUtil.getProperty(
               deviceId, ImmutableList.of(AndroidRealDeviceConstants.DEVICE_PROP_NAME_MCC_MNC)));
     } catch (MobileHarnessException e) {
@@ -438,7 +434,7 @@ public abstract class AndroidRealDeviceDelegate {
           String.valueOf(totalMemInMb <= AndroidRealDeviceConstants.MAX_SVELTE_MEMORY_IN_MB));
       Set<String> whiteListFeatures = getSystemFeaturesByWhitelist(deviceId);
       for (String whitelistFeature : whiteListFeatures) {
-        device.addDimension(Ascii.toLowerCase(Dimension.Name.FEATURE.name()), whitelistFeature);
+        device.addDimension(Dimension.Name.FEATURE, whitelistFeature);
       }
     } catch (MobileHarnessException e) {
       logger.atInfo().log("%s", e.getMessage());
@@ -1647,9 +1643,8 @@ public abstract class AndroidRealDeviceDelegate {
     }
     boolean isNetworkAddressDimensionUpdated =
         Strings.isNullOrEmpty(linkAddress)
-            ? device.removeDimension(Ascii.toLowerCase(Dimension.Name.NETWORK_ADDRESS.name()))
-            : device.updateDimension(
-                Ascii.toLowerCase(Dimension.Name.NETWORK_ADDRESS.name()), linkAddress);
+            ? device.removeDimension(Dimension.Name.NETWORK_ADDRESS)
+            : device.updateDimension(Dimension.Name.NETWORK_ADDRESS, linkAddress);
     isDimensionChanged |= isNetworkAddressDimensionUpdated;
 
     boolean isInternetDimensionUpdated =
@@ -1759,25 +1754,23 @@ public abstract class AndroidRealDeviceDelegate {
     boolean isDimensionChanged = false;
 
     String storageFreePercentageStr;
-    String dimensionStorageStatus;
-    String dimensionFreeStorage;
-    String dimensionFreeStoragePercentage;
+    Dimension.Name dimensionStorageStatus;
+    Dimension.Name dimensionFreeStorage;
+    Dimension.Name dimensionFreeStoragePercentage;
     String externalOrInternal;
     int freeStorageAlertMB;
     StorageInfo storageInfo = null;
 
     if (isExternal) {
-      dimensionStorageStatus = Ascii.toLowerCase(Dimension.Name.EXTERNAL_STORAGE_STATUS.name());
-      dimensionFreeStorage = Ascii.toLowerCase(Dimension.Name.FREE_EXTERNAL_STORAGE.name());
-      dimensionFreeStoragePercentage =
-          Ascii.toLowerCase(Dimension.Name.FREE_EXTERNAL_STORAGE_PERCENTAGE.name());
+      dimensionStorageStatus = Dimension.Name.EXTERNAL_STORAGE_STATUS;
+      dimensionFreeStorage = Dimension.Name.FREE_EXTERNAL_STORAGE;
+      dimensionFreeStoragePercentage = Dimension.Name.FREE_EXTERNAL_STORAGE_PERCENTAGE;
       externalOrInternal = AndroidRealDeviceConstants.STRING_EXTERNAL;
       freeStorageAlertMB = AndroidRealDeviceConstants.FREE_EXTERNAL_STORAGE_ALERT_MB;
     } else {
-      dimensionStorageStatus = Ascii.toLowerCase(Dimension.Name.INTERNAL_STORAGE_STATUS.name());
-      dimensionFreeStorage = Ascii.toLowerCase(Dimension.Name.FREE_INTERNAL_STORAGE.name());
-      dimensionFreeStoragePercentage =
-          Ascii.toLowerCase(Dimension.Name.FREE_INTERNAL_STORAGE_PERCENTAGE.name());
+      dimensionStorageStatus = Dimension.Name.INTERNAL_STORAGE_STATUS;
+      dimensionFreeStorage = Dimension.Name.FREE_INTERNAL_STORAGE;
+      dimensionFreeStoragePercentage = Dimension.Name.FREE_INTERNAL_STORAGE_PERCENTAGE;
       externalOrInternal = AndroidRealDeviceConstants.STRING_INTERNAL;
       freeStorageAlertMB = Flags.instance().internalStorageAlert.getNonNull();
     }
@@ -2107,15 +2100,13 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Checks whether the device support recovering. */
   private boolean isRecoveryDevice() {
-    List<String> dimensionList =
-        device.getDimension(Ascii.toLowerCase(Dimension.Name.RECOVERY.name()));
+    List<String> dimensionList = device.getDimension(Dimension.Name.RECOVERY);
     return (dimensionList.size() == 1);
   }
 
   /** Checks whether the device support wiping recovering. */
   private boolean isWipeRecoveryDevice() {
-    List<String> dimensionList =
-        device.getDimension(Ascii.toLowerCase(Dimension.Name.RECOVERY.name()));
+    List<String> dimensionList = device.getDimension(Dimension.Name.RECOVERY);
     return (dimensionList.size() == 1
         && Ascii.equalsIgnoreCase(
             dimensionList.get(0), AndroidRealDeviceConstants.RECOVERY_TYPE_WIPE));
@@ -2123,8 +2114,7 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Checks whether the device support test harness recovering. */
   private boolean isTestHarnessRecoveryDevice() {
-    List<String> dimensionList =
-        device.getDimension(Ascii.toLowerCase(Dimension.Name.RECOVERY.name()));
+    List<String> dimensionList = device.getDimension(Dimension.Name.RECOVERY);
     return (dimensionList.size() == 1
         && Ascii.equalsIgnoreCase(
             dimensionList.get(0), AndroidRealDeviceConstants.RECOVERY_TYPE_TEST_HARNESS));
