@@ -1941,8 +1941,7 @@ public abstract class AndroidRealDeviceDelegate {
     boolean isDimensionChanged = false;
     Integer version = device.getSdkVersion();
     if (version == null || version < 19) {
-      isDimensionChanged |=
-          device.removeDimension(AndroidRealDeviceConstants.DIMENSION_NAME_WIFI_RSSI);
+      isDimensionChanged |= device.removeDimension(Dimension.Name.WIFI_RSSI);
     } else {
       String wifiRssiValue = null;
       try {
@@ -1951,12 +1950,9 @@ public abstract class AndroidRealDeviceDelegate {
         logger.atWarning().withCause(e).log("Failed to get device %s WIFI RSSI", deviceId);
       }
       if (wifiRssiValue == null) {
-        isDimensionChanged |=
-            device.removeDimension(AndroidRealDeviceConstants.DIMENSION_NAME_WIFI_RSSI);
+        isDimensionChanged |= device.removeDimension(Dimension.Name.WIFI_RSSI);
       } else {
-        isDimensionChanged |=
-            device.updateDimension(
-                AndroidRealDeviceConstants.DIMENSION_NAME_WIFI_RSSI, wifiRssiValue);
+        isDimensionChanged |= device.updateDimension(Dimension.Name.WIFI_RSSI, wifiRssiValue);
       }
     }
     return isDimensionChanged;

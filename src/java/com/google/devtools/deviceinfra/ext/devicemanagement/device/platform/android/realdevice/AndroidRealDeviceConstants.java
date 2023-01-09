@@ -71,9 +71,6 @@ public class AndroidRealDeviceConstants {
   /** Name of the dimension which declares the writable external storage path. */
   public static final String DIMENSION_NAME_WRITABLE_EXTERNAL_STORAGE = "writable_external_storage";
 
-  /** Name of the dimension which means indicate the WIFI RSSI. */
-  public static final String DIMENSION_NAME_WIFI_RSSI = "wifi_rssi";
-
   /** Name of the dimension whose values will be shown on device daemon. */
   public static final String DIMENSION_NAME_NUMBER_OF_CPUS = "num_cpus";
 
