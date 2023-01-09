@@ -16,11 +16,13 @@
 
 package com.google.devtools.atsconsole;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.tokenize;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.command.RootCommand;
 import com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
@@ -43,6 +45,7 @@ import picocli.CommandLine;
 
 /** ATS Console. */
 public class AtsConsole extends Thread {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String APPNAME = "AtsConsole";
 
@@ -52,6 +55,8 @@ public class AtsConsole extends Thread {
   private static final String TEST_RESULTS_DIR = System.getProperty("TEST_RESULTS_DIR");
   private static final String MOBLY_TEST_ZIP_SUITE_MAIN_FILE =
       System.getProperty("MOBLY_TEST_ZIP_SUITE_MAIN_FILE");
+  private static final String DEVICE_INFRA_SERVICE_FLAGS =
+      System.getProperty("DEVICE_INFRA_SERVICE_FLAGS");
 
   @Nullable private final LineReader consoleReader;
   private final Sleeper sleeper;
@@ -60,6 +65,21 @@ public class AtsConsole extends Thread {
   private List<String> mainArgs = new ArrayList<>();
 
   public static void main(String[] args) {
+    if (!isNullOrEmpty(DEVICE_INFRA_SERVICE_FLAGS)) {
+      List<String> deviceInfraServiceFlags = new ArrayList<>();
+      try {
+        tokenize(deviceInfraServiceFlags, DEVICE_INFRA_SERVICE_FLAGS);
+      } catch (TokenizationException e) {
+        logger.atSevere().withCause(e).log(
+            "Failed to parse flags to device infra service: [%s]", DEVICE_INFRA_SERVICE_FLAGS);
+      }
+      if (!deviceInfraServiceFlags.isEmpty()) {
+        logger.atInfo().log("Device infra service flags: %s", deviceInfraServiceFlags);
+        com.google.devtools.deviceinfra.shared.util.flags.Flags.parse(
+            deviceInfraServiceFlags.toArray(new String[0]));
+      }
+    }
+
     AtsConsole console = new AtsConsole();
 
     startConsole(console, args);

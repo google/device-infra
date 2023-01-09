@@ -33,6 +33,8 @@ java_library(
         ":console_util",
         ":guice_factory",
         "//src/java/com/google/devtools/atsconsole/command",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/shell",
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "@maven//:com_google_code_findbugs_jsr305",
