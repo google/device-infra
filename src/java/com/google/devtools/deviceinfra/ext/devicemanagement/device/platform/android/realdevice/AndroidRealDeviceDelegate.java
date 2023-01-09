@@ -692,7 +692,7 @@ public abstract class AndroidRealDeviceDelegate {
     }
   }
 
-  private void setUpRecoveryModeDevice() throws MobileHarnessException, InterruptedException {
+  private void setUpRecoveryModeDevice() throws MobileHarnessException {
     logger.atInfo().log("Setting up recovery mode device for device %s", deviceId);
     AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
     throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
@@ -1656,8 +1656,7 @@ public abstract class AndroidRealDeviceDelegate {
     isDimensionChanged |= isNetworkAddressDimensionUpdated;
 
     boolean isInternetDimensionUpdated =
-        device.updateDimension(
-            AndroidRealDeviceConstants.DIMENSION_NAME_INTERNET, String.valueOf(hasInternet));
+        device.updateDimension(Dimension.Name.INTERNET, String.valueOf(hasInternet));
     isDimensionChanged |= isInternetDimensionUpdated;
 
     return isDimensionChanged;
@@ -1740,8 +1739,7 @@ public abstract class AndroidRealDeviceDelegate {
   @VisibleForTesting
   boolean checkPingGoogle() throws InterruptedException {
     boolean isDimensionChanged = false;
-    boolean hasInternetConnection =
-        device.getDimension(AndroidRealDeviceConstants.DIMENSION_NAME_INTERNET).contains("true");
+    boolean hasInternetConnection = device.getDimension(Dimension.Name.INTERNET).contains("true");
     if (hasInternetConnection) {
       double pingGoogleSuccessRate = connectivityUtil.pingSuccessRate(deviceId, "google.com", 5);
       isDimensionChanged |=

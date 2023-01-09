@@ -70,9 +70,6 @@ public class AndroidRealDeviceConstants {
 
   public static final String DIMENSION_NAME_ROOTED = "rooted";
 
-  /** Name of the dimension which means whether the device can access Internet. */
-  public static final String DIMENSION_NAME_INTERNET = "internet";
-
   /** Name of the dimension which declares the writable external storage path. */
   public static final String DIMENSION_NAME_WRITABLE_EXTERNAL_STORAGE = "writable_external_storage";
 
