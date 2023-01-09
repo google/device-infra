@@ -1635,9 +1635,8 @@ public abstract class AndroidRealDeviceDelegate {
     boolean isDimensionChanged = false;
     boolean isNetworkSsidDimensionUpdated =
         currentSsid.isPresent()
-            ? device.updateDimension(
-                AndroidRealDeviceConstants.DIMENSION_NAME_NETWORK_SSID, currentSsid.get())
-            : device.removeDimension(AndroidRealDeviceConstants.DIMENSION_NAME_NETWORK_SSID);
+            ? device.updateDimension(Dimension.Name.NETWORK_SSID, currentSsid.get())
+            : device.removeDimension(Dimension.Name.NETWORK_SSID);
     isDimensionChanged |= isNetworkSsidDimensionUpdated;
 
     String linkAddress = null;
