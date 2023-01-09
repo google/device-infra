@@ -75,9 +75,6 @@ public class AndroidRealDeviceConstants {
   public static final String DIMENSION_NAME_WIFI_RSSI = "wifi_rssi";
 
   /** Name of the dimension whose values will be shown on device daemon. */
-  public static final String DIMENSION_NAME_LABELS = "label";
-
-  /** Name of the dimension whose values will be shown on device daemon. */
   public static final String DIMENSION_NAME_NUMBER_OF_CPUS = "num_cpus";
 
   /** Name of the dimension whose values will be shown on device daemon. */

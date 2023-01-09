@@ -820,9 +820,7 @@ public abstract class AndroidRealDeviceDelegate {
       boolean shouldInstallAndStartDaemon = false;
 
       // Shows dimension labels as a custom property.
-      String dimensionLabels =
-          Joiner.on('\n')
-              .join(device.getDimension(AndroidRealDeviceConstants.DIMENSION_NAME_LABELS));
+      String dimensionLabels = Joiner.on('\n').join(device.getDimension(Dimension.Name.LABEL));
       String propLabels = device.getProperty(AndroidRealDeviceConstants.PROP_LABELS);
       if (propLabels == null) {
         device.setProperty(AndroidRealDeviceConstants.PROP_LABELS, dimensionLabels);
