@@ -68,8 +68,6 @@ public class AndroidRealDeviceConstants {
   /** The timeout for waiting the Internet to be ready. */
   public static final Duration WAIT_FOR_INTERNET = Duration.ofMinutes(1);
 
-  public static final String DIMENSION_NAME_ROOTED = "rooted";
-
   /** Name of the dimension which declares the writable external storage path. */
   public static final String DIMENSION_NAME_WRITABLE_EXTERNAL_STORAGE = "writable_external_storage";
 
