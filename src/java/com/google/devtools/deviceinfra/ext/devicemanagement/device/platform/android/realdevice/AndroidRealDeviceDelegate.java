@@ -427,8 +427,7 @@ public abstract class AndroidRealDeviceDelegate {
 
     try {
       int totalMemInMb = systemSpecUtil.getTotalMem(deviceId) / 1024;
-      device.addDimension(
-          AndroidRealDeviceConstants.DIMENSION_NAME_TOTAL_MEMORY, totalMemInMb + " MB");
+      device.addDimension(Dimension.Name.TOTAL_MEMORY, totalMemInMb + " MB");
       device.addDimension(
           Dimension.Name.SVELTE_DEVICE,
           String.valueOf(totalMemInMb <= AndroidRealDeviceConstants.MAX_SVELTE_MEMORY_IN_MB));

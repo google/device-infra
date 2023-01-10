@@ -75,9 +75,6 @@ public class AndroidRealDeviceConstants {
   public static final String DIMENSION_NAME_NUMBER_OF_CPUS = "num_cpus";
 
   /** Name of the dimension whose values will be shown on device daemon. */
-  public static final String DIMENSION_NAME_TOTAL_MEMORY = "total_memory";
-
-  /** Name of the dimension whose values will be shown on device daemon. */
   public static final String DIMENSION_NAME_LAUNCHER_1 = "launcher_1";
 
   /** Name of the launcher 1 package */
