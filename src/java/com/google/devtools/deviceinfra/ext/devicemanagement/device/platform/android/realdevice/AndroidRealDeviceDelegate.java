@@ -293,6 +293,7 @@ public abstract class AndroidRealDeviceDelegate {
         device.addSupportedDecorator("AndroidSerialConsoleLoggerDecorator");
       }
 
+      // TODO: update this to support any amlogic devices without hardcoding them in
       if ("atom".equals(hardware)
           || "Beast".equals(hardware)
           || "deadpool".equals(hardware)
@@ -489,6 +490,8 @@ public abstract class AndroidRealDeviceDelegate {
             || prodBoards.contains("deadpool")
             || prodBoards.contains("sabrina")
             || prodBoards.contains("boreal")) {
+          // TODO: update this to support any amlogic devices without hard-coding them
+          // in
           device.addSupportedDecorator("AndroidAmlogicFlashDecorator");
           device.addSupportedDecorator("AndroidFlashstationDecorator");
         } else {
@@ -679,6 +682,7 @@ public abstract class AndroidRealDeviceDelegate {
     systemSettingUtil.forceUsbToAdbMode(deviceId);
 
     // Try to disable screen lock.
+    // ScreenLock not used on Android Automotive devices due to b/135046763#comment51
     Set<String> features = systemSpecUtil.getSystemFeatures(deviceId);
     if (!features.contains(AndroidRealDeviceConstants.FEATURE_EMBEDDED)
         && !features.contains(AndroidRealDeviceConstants.FEATURE_AUTOMOTIVE)) {
@@ -785,6 +789,8 @@ public abstract class AndroidRealDeviceDelegate {
     if (onlyCheckNetworkWhenCheckOnlineModeDevice()) {
       return isDimensionChanged || isNetworkChanged;
     }
+    // Device services should be available at this point but need to confirm, otherwise latter adb
+    // commands may fail (b/134529577). In this case, try to reboot device to recover it.
     checkOnlineModeDeviceServiceAvailable(deviceId);
     isDimensionChanged =
         isDimensionChanged
@@ -957,6 +963,7 @@ public abstract class AndroidRealDeviceDelegate {
           logger.atInfo().log("Failed to disable device %s NFC: %s", deviceId, e.getMessage());
         }
       }
+      // start charge in case the device got power off during long test. b/148306058
       enableDeviceChargeBeforeTest(testInfo);
     }
     if (testInfo
@@ -980,6 +987,7 @@ public abstract class AndroidRealDeviceDelegate {
   @CanIgnoreReturnValue
   public PostTestDeviceOp postRunTest(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
+    // Removes the device cache after tests finish, otherwise device status may be wrong. b/32101092
     DeviceCache.getInstance().invalidateCache(device.info().deviceId().controlId());
 
     prependedRealDeviceAfterTestProcess(testInfo);
@@ -1214,6 +1222,7 @@ public abstract class AndroidRealDeviceDelegate {
     if (Ascii.equalsIgnoreCase(brandName, "nvidia")) {
       return true;
     }
+    // http://b/191498942 Helios device contains release-keys, but can be rootable.
     String typeName = androidAdbUtil.getProperty(deviceId, AndroidProperty.TYPE);
     if (Ascii.equalsIgnoreCase(typeName, "helios")) {
       return true;
@@ -1261,6 +1270,7 @@ public abstract class AndroidRealDeviceDelegate {
       return setupTimeoutForRecoveryAndFastbootDevice.get();
     }
     // Add a timeout shift to make sure setup timeout is bigger than command timeout.
+    // Check b/36156147 for more information.
     return BaseDeviceHelper.getBaseDeviceSetupTimeout()
         .plus(AndroidRealDeviceConstants.DEVICE_SETUP_TIMEOUT_SHIFT);
   }
@@ -1335,6 +1345,8 @@ public abstract class AndroidRealDeviceDelegate {
    *
    * <p>Note we can only set these properties after a device become root. Also, once set, the test
    * properties can not be overwritten until we reboot the device.
+   *
+   * @see <a href="http://b/14574172">background</a>
    */
   private void enableTestPropertiesAndDisablePackages(String serial)
       throws MobileHarnessException, InterruptedException {
@@ -1432,6 +1444,7 @@ public abstract class AndroidRealDeviceDelegate {
   @VisibleForTesting
   boolean checkNetwork() throws InterruptedException {
     if (needToInstallWifiApk()) {
+      // Install the wifi apk for Stallite lab only. (b/200517628)
       try {
         WifiUtil wifiUtil = new WifiUtil();
         apkInstaller.installApk(
@@ -1441,7 +1454,9 @@ public abstract class AndroidRealDeviceDelegate {
                 .setSkipIfCached(true)
                 .setSkipIfVersionMatch(false)
                 .setSkipDowngrade(false)
-                .setGrantPermissions(false)
+                .setGrantPermissions(
+                    false) // Do not grant permission, either the installation fails on some OEM
+                // device. {@link b/197480620#comment6}.
                 .build(),
             null);
       } catch (MobileHarnessException e) {
@@ -1845,6 +1860,7 @@ public abstract class AndroidRealDeviceDelegate {
       logger.atWarning().withCause(e).log("Failed to clean device %s temp apks: %s", deviceId, e);
     }
 
+    // Devices are getting full because of generated smlog files (b/65023626).
     logger.atInfo().log("Cleaning device %s smlogs files...", deviceId);
     try {
       androidFileUtil.removeFiles(deviceId, AndroidRealDeviceConstants.SMLOG_PATH);
@@ -1994,6 +2010,7 @@ public abstract class AndroidRealDeviceDelegate {
     }
 
     // For headless system, default user should be a secondary user, as UserType.secondary.
+    // TODO: add logic for clean up headless system.
     int defaultUser = AndroidRealDeviceConstants.DEFAULT_SYSTEM_USER;
     int currentUser = androidUserUtil.getCurrentUser(serial, sdkVersion);
 
@@ -2051,7 +2068,8 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   /**
-   * Check whether UID for Android package manager got exhausted (UID = 19999).
+   * Check whether UID for Android package manager got exhausted (UID = 19999). Android
+   * packagemanager has bug (b/24328998) which requires device reboot when UID reached 19999.
    *
    * @param serial serial number of the device
    * @return true or false
@@ -2175,7 +2193,7 @@ public abstract class AndroidRealDeviceDelegate {
 
   /*
    * Enable the device charge before test for supported devices. Tries to avoid the device get power
-   * off during long running test.
+   * off during long running test. b/148306058.
    *
    * <p>See {@link RuntimeChargingUtil.SupportedDeviceModel} for supported device models.
    *
@@ -2211,7 +2229,7 @@ public abstract class AndroidRealDeviceDelegate {
       // above first device root succeeds. This is to ensure device is really rooted in case other
       // DMs reset or reboot device in the middle of SystemStateManager#becomeRoot. And if the reset
       // or reboot happens in this safety rooting which doesn't cached device, detectors would
-      // likely kill the device runner and device will go thru the setup process again.
+      // likely kill the device runner and device will go thru the setup process again. b/241503198
       rooted = systemStateUtil.becomeRoot(deviceId);
       systemStateUtil.waitUntilReady(deviceId);
     }
