@@ -400,8 +400,7 @@ public abstract class AndroidRealDeviceDelegate {
     // Adds real device specific dimensions.
     try {
       device.addDimension(
-          AndroidRealDeviceConstants.DIMENSION_NAME_NUMBER_OF_CPUS,
-          String.valueOf(systemSpecUtil.getNumberOfCpus(deviceId)));
+          Dimension.Name.NUM_CPUS, String.valueOf(systemSpecUtil.getNumberOfCpus(deviceId)));
     } catch (MobileHarnessException e) {
       logger.atInfo().log("%s", e.getMessage());
     }
@@ -1895,7 +1894,7 @@ public abstract class AndroidRealDeviceDelegate {
 
   /**
    * Adds dimensions about the launcher state; currently detects the original built-in launcher
-   * ("laucher_1"), the newer launcher ("launcher_3") and the Google Experience Launcher
+   * ("launcher_1"), the newer launcher ("launcher_3") and the Google Experience Launcher
    * ("launcher_gel").
    *
    * @return whethere there is any dimension changed

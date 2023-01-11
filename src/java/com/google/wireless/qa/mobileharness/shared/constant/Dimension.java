@@ -98,7 +98,7 @@ public final class Dimension {
     NETWORK_SIMULATION_USE_NETTROL,
     PING_GOOGLE_STABILITY,
     /** The mac address */
-    /** Device pool name. Values include: shared/shared_without_recovery/gourp_shared/dedicated. */
+    /** Device pool name. Values include: shared/shared_without_recovery/group_shared/dedicated. */
     POOL,
     /** The release version of the device. */
     RELEASE_VERSION,
@@ -169,6 +169,8 @@ public final class Dimension {
     INTERNAL_STORAGE_STATUS,
     /** Moreto lab version for Moreto remote control protocol backward compatibility. */
     MORETO_LAB_VERSION,
+    /** Number of CPUs on the android device */
+    NUM_CPUS,
     /** The oem unlock statue of the device. Only used in fastboot mode. */
     OEM_UNLOCK,
     /** The recovery tag name of the device. */
