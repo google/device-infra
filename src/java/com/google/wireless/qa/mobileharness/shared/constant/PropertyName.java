@@ -84,7 +84,7 @@ public interface PropertyName {
     MH_CLIENT_NAME,
 
     /** The master spec. */
-    MASTER_SPEC
+    MASTER_SPEC;
   }
 
   /** Mobile Harness test property name constants. */
