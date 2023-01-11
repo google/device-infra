@@ -71,6 +71,8 @@ public class ClientApiTest {
 
   @After
   public void tearDown() {
+    Flags.resetToDefault();
+
     Logger.getLogger("").removeHandler(logHandler);
   }
 

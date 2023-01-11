@@ -19,6 +19,7 @@ package com.google.devtools.deviceinfra.shared.util.flags;
 import static com.google.common.truth.Truth.assertThat;
 
 import java.time.Duration;
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -26,16 +27,33 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class FlagsTest {
 
-  private static final String[] ARGS = {
-    "--mh_adb_command_extra_timeout=123s", "--supplemental_res_dir=foo"
-  };
+  @After
+  public void tearDown() {
+    Flags.resetToDefault();
+  }
 
   @Test
   public void parse() throws Exception {
-    Flags.parse(ARGS);
+    assertThat(Flags.instance().supplementalResDir.getNonNull()).isEmpty();
+    assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull()).isEqualTo(Duration.ZERO);
+
+    Flags.parse(new String[] {"--mh_adb_command_extra_timeout=123s"});
+
+    assertThat(Flags.instance().supplementalResDir.getNonNull()).isEmpty();
+    assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull())
+        .isEqualTo(Duration.ofSeconds(123L));
+
+    Flags.parse(new String[] {"--supplemental_res_dir=foo"});
 
     assertThat(Flags.instance().supplementalResDir.getNonNull()).isEqualTo("foo");
     assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull())
         .isEqualTo(Duration.ofSeconds(123L));
+
+    Flags.resetToDefault();
+
+    // deviceinfra:oss-insert-begin(external)
+    // assertThat(Flags.instance().supplementalResDir.getNonNull()).isEmpty();
+    // assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull()).isEqualTo(Duration.ZERO);
+    // deviceinfra:oss-insert-end
   }
 }
