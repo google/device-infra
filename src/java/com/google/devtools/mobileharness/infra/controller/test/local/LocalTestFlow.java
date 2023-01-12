@@ -422,7 +422,9 @@ public class LocalTestFlow {
         .atInfo()
         .alsoTo(logger)
         .log("--------- Device: PreRunTest (%s) ---------", testInfo.locator().getId());
-
+    ImmutableList<String> deviceIds =
+        devices.stream().map(Device::getDeviceId).collect(toImmutableList());
+    testInfo.properties().add(PropertyName.Test.DEVICE_ID_LIST, String.join(",", deviceIds));
     // Starts all devices' preRunTest().
     ConcurrencyUtil.runInParallel(
         devices.stream()

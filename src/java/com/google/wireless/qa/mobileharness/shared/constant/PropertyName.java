@@ -119,6 +119,9 @@ public interface PropertyName {
     /** Only available in Remote Mode. This is the duration the device is occupied for this test. */
     DEVICE_USAGE_DURATION_MS,
 
+    /** The comma separated string of device ids to indicate devices order in the this test. */
+    DEVICE_ID_LIST,
+
     /** The id of the device which runs the test. */
     DIMENSION_ID,
 
