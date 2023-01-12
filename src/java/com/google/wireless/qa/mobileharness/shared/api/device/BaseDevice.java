@@ -385,6 +385,7 @@ public abstract class BaseDevice implements Device {
 
   @Override
   public void setCommunicationDimensionAndProperty(CommunicationList communicationList) {
+    removeDimension(Dimension.Name.COMMUNICATION_TYPE.name());
     for (Communication communication : communicationList.getCommunicationList()) {
       if (communication.hasAdb()) {
         addDimension(

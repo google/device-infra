@@ -307,23 +307,28 @@ public abstract class AndroidRealDeviceDelegate {
     }
   }
 
-  private void addFastbootCommunication(String deviceId) throws InterruptedException {
-    String usbLocation = fastboot.getUsbLocation(deviceId);
+  private Optional<USB.Builder> parseUsbLocation(String usbLocation) {
+    logger.atInfo().log("Parsing usb location %s of device %s", usbLocation, deviceId);
     if (usbLocation.isEmpty()) {
-      return;
+      return Optional.empty();
     }
     List<String> usbBusAndPort = Splitter.onPattern("-").splitToList(usbLocation);
     if (usbBusAndPort.size() != 2) {
-      return;
+      return Optional.empty();
     }
+    return Optional.of(
+        USB.newBuilder()
+            .setHostBus(Integer.parseInt(usbBusAndPort.get(0)))
+            .setHostPort(usbBusAndPort.get(1)));
+  }
+
+  private void addFastbootCommunication(String deviceId) throws InterruptedException {
+    Optional<USB.Builder> usbLocation = parseUsbLocation(fastboot.getUsbLocation(deviceId));
     device.setCommunicationDimensionAndProperty(
         CommunicationList.newBuilder()
             .addCommunication(
                 Communication.newBuilder()
-                    .setUsb(
-                        USB.newBuilder()
-                            .setHostBus(Integer.parseInt(usbBusAndPort.get(0)))
-                            .setHostPort(usbBusAndPort.get(1))))
+                    .setUsb(usbLocation.orElse(USB.newBuilder().setSerial(deviceId))))
             .build());
   }
 
