@@ -288,6 +288,7 @@ public abstract class AndroidRealDeviceDelegate {
       }
       device.addSupportedDecorator("AndroidFlashDeviceDecorator");
       device.addSupportedDecorator("AndroidFlashstationDecorator");
+      device.addSupportedDecorator("AndroidAutomotiveFlashDecorator");
       addFastbootCommunication(deviceId);
       if (!device.getDimension(SerialConsole.DIMENSION_SERIAL_CONSOLE_ID).isEmpty()) {
         device.addSupportedDecorator("AndroidSerialConsoleLoggerDecorator");
@@ -501,6 +502,7 @@ public abstract class AndroidRealDeviceDelegate {
         } else {
           device.addSupportedDecorator("AndroidFlashDeviceDecorator");
           device.addSupportedDecorator("AndroidFlashstationDecorator");
+          device.addSupportedDecorator("AndroidAutomotiveFlashDecorator");
         }
       }
     }
