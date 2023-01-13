@@ -484,7 +484,7 @@ public class LocalFileUtil {
     // $ du -s /var/www/
     // 9539176 /var/www/
     List<String> words = Splitter.onPattern("\\s+").splitToList(output);
-    if (words.size() != 2) {
+    if (words.size() < 2) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_OR_DIR_PARSE_SIZE_ERROR,
           String.format(
