@@ -296,6 +296,7 @@ public abstract class AndroidRealDeviceDelegate {
 
       // TODO: update this to support any amlogic devices without hardcoding them in
       if ("atom".equals(hardware)
+          || "adt4".equals(hardware)
           || "Beast".equals(hardware)
           || "deadpool".equals(hardware)
           || "sabrina".equals(hardware)
@@ -571,6 +572,8 @@ public abstract class AndroidRealDeviceDelegate {
 
     // Set Wifi ssid on a real device before running a test.
     device.addSupportedDecorator("AndroidSetWifiDecorator");
+    // Wifi Decorator for use with troublesome Android TV devices
+    device.addSupportedDecorator("AndroidSetWifiForTvDecorator");
 
     device.addSupportedDecorator("AndroidKibbleDecorator");
 
