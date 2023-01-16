@@ -25,6 +25,7 @@ DEFAULT_VISIBILITY = [
     "//javatests/com/google/devtools/mobileharness/platform/fitbit:__subpackages__",
     "//javatests/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
     "//java/com/google/devtools/mobileharness/platform/fitbit/plugins:__subpackages__",
+    "//devtools/mobileharness/project:android_dialer",
 ]
 
 package(
