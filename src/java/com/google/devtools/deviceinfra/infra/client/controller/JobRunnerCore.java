@@ -328,18 +328,18 @@ public class JobRunnerCore implements Runnable {
     scopedEventBus.add(EventScope.GLOBAL_INTERNAL, globalInternalBus);
 
     internalPluginExceptionHandler =
-        new SubscriberExceptionLoggingHandler(true /* saveException */, false /*isUserPlugin */);
+        new SubscriberExceptionLoggingHandler(/* saveException= */ true, /* isUserPlugin= */ false);
     scopedEventBus.add(EventScope.INTERNAL_PLUGIN, new EventBus(internalPluginExceptionHandler));
 
     // Now user provided plugins via MH Java Client API are also using this handler. But considered
     // there are only a few users doing this, set the isUserPlugin=false here. Further breaking down
     // the plugin type would be great for further breaking down the error types.
     apiPluginExceptionHandler =
-        new SubscriberExceptionLoggingHandler(true /* saveException */, false /*isUserPlugin */);
+        new SubscriberExceptionLoggingHandler(/* saveException= */ true, /* isUserPlugin= */ false);
     scopedEventBus.add(EventScope.API_PLUGIN, new EventBus(apiPluginExceptionHandler));
 
     jarPluginExceptionHandler =
-        new SubscriberExceptionLoggingHandler(true /* saveException */, true /*isUserPlugin*/);
+        new SubscriberExceptionLoggingHandler(/* saveException= */ true, /* isUserPlugin= */ true);
     scopedEventBus.add(EventScope.JAR_PLUGIN, new EventBus(jarPluginExceptionHandler));
     this.jobValidator = jobValidator;
     this.pluginLoaderFactory = pluginLoaderFactory;
@@ -847,7 +847,9 @@ public class JobRunnerCore implements Runnable {
           .add(PropertyName.Job.MH_CLIENT_VERSION, Version.CLIENT_VERSION.toString());
       addTracePropertiesToJob(jobInfo);
       // TODO: Not do validation check for ait-triggered test to reduce binary size.
-      if (!"ait".equals(jobInfo.properties().get("client"))) {
+      // Explicitly disable job validation for ACID jobs as we don't want to introduce driver deps
+      // in the acid frontend binary.
+      if (!"ait".equals(jobInfo.properties().get("client")) && !jobInfo.params().has("acid_id")) {
         jobValidator.validateJob(jobInfo);
       }
       resolveJobFiles(jobInfo);
