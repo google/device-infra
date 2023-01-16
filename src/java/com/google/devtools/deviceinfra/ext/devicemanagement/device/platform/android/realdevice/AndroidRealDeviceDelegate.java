@@ -451,9 +451,7 @@ public abstract class AndroidRealDeviceDelegate {
       Integer sdkVersion = device.getSdkVersion();
       String externalStoragePath =
           androidFileUtil.getExternalStoragePath(deviceId, sdkVersion == null ? 0 : sdkVersion);
-      device.addDimension(
-          AndroidRealDeviceConstants.DIMENSION_NAME_WRITABLE_EXTERNAL_STORAGE,
-          externalStoragePath.trim());
+      device.addDimension(Dimension.Name.WRITABLE_EXTERNAL_STORAGE, externalStoragePath.trim());
       logger.atInfo().log("Device %s external storage writable: %s", deviceId, externalStoragePath);
     } catch (MobileHarnessException e) {
       logger.atWarning().log("%s", e.getMessage());

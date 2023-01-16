@@ -194,6 +194,8 @@ public final class Dimension {
     SUPPORTS_GMSCORE,
     /** The product_board dimension. */
     PRODUCT_BOARD,
+    /** The path of writable external storage on the device. */
+    WRITABLE_EXTERNAL_STORAGE,
 
     // iOS
     /** Whether the device has blocked the iOS version upgrade successfully. */
