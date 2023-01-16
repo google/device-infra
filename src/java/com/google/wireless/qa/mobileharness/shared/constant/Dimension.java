@@ -167,6 +167,12 @@ public final class Dimension {
      * 1.0G, this value will be LOW.
      */
     INTERNAL_STORAGE_STATUS,
+    /** Launcher 1 package. */
+    LAUNCHER_1,
+    /** Launcher 3 package. */
+    LAUNCHER_3,
+    /** The Google Experience Launcher package. */
+    LAUNCHER_GEL,
     /** Moreto lab version for Moreto remote control protocol backward compatibility. */
     MORETO_LAB_VERSION,
     /** Number of CPUs on the android device */

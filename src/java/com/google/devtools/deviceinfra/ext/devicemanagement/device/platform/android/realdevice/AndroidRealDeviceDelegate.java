@@ -1911,17 +1911,17 @@ public abstract class AndroidRealDeviceDelegate {
       if (launchers != null) {
         isDimensionChanged |=
             device.updateDimension(
-                AndroidRealDeviceConstants.DIMENSION_NAME_LAUNCHER_1,
+                Dimension.Name.LAUNCHER_1,
                 String.valueOf(
                     launchers.contains(AndroidRealDeviceConstants.PACKAGE_NAME_LAUNCHER_1)));
         isDimensionChanged |=
             device.updateDimension(
-                AndroidRealDeviceConstants.DIMENSION_NAME_LAUNCHER_3,
+                Dimension.Name.LAUNCHER_3,
                 String.valueOf(
                     launchers.contains(AndroidRealDeviceConstants.PACKAGE_NAME_LAUNCHER_3)));
         isDimensionChanged |=
             device.updateDimension(
-                AndroidRealDeviceConstants.DIMENSION_NAME_LAUNCHER_GEL,
+                Dimension.Name.LAUNCHER_GEL,
                 String.valueOf(
                     launchers.contains(AndroidRealDeviceConstants.PACKAGE_NAME_LAUNCHER_GEL)));
       }

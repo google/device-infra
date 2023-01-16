@@ -68,20 +68,11 @@ public class AndroidRealDeviceConstants {
   /** The timeout for waiting the Internet to be ready. */
   public static final Duration WAIT_FOR_INTERNET = Duration.ofMinutes(1);
 
-  /** Name of the dimension whose values will be shown on device daemon. */
-  public static final String DIMENSION_NAME_LAUNCHER_1 = "launcher_1";
-
   /** Name of the launcher 1 package */
   public static final String PACKAGE_NAME_LAUNCHER_1 = "com.android.launcher";
 
-  /** Name of the dimension whose values will be shown on device daemon. */
-  public static final String DIMENSION_NAME_LAUNCHER_3 = "launcher_3";
-
   /** Name of the launcher 3 package */
   public static final String PACKAGE_NAME_LAUNCHER_3 = "com.android.launcher3";
-
-  /** Name of the dimension whose values will be shown on device daemon. */
-  public static final String DIMENSION_NAME_LAUNCHER_GEL = "launcher_gel";
 
   /** Name of the GEL package */
   public static final String PACKAGE_NAME_LAUNCHER_GEL = "com.google.android.launcher";
