@@ -62,9 +62,6 @@ public interface PropertyName {
     /** The stack driver trace link for the job. */
     STACK_DRIVER_TRACE_LINK,
 
-    /** The runner for the job. */
-    RUNNER,
-
     /** The job allocation fails after start_timeout is reached. */
     ALLOCATION_FAIL_AFTER_START_TIMEOUT,
 
