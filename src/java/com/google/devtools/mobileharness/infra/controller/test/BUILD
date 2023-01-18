@@ -22,7 +22,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/launcher:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:__pkg__",
@@ -46,9 +45,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
@@ -67,9 +64,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
@@ -87,7 +82,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
     ],
     exports = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/exception",
