@@ -114,7 +114,6 @@ java_library(
         "DeviceInfoFactory.java",
     ],
     visibility = [
-        # Do no add visibility here. Please use lite_device_info_factory instead.
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
     ],
     deps = [
