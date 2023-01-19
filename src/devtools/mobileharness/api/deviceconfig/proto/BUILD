@@ -18,6 +18,8 @@
 
 package(
     default_visibility = [
+        "//java/com/google/devtools/mobileharness/platform/fitbit:__subpackages__",
+        "//javatests/com/google/devtools/mobileharness/platform/fitbit:__subpackages__",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
