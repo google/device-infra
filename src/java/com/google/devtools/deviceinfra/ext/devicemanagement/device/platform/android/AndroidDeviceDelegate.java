@@ -557,7 +557,6 @@ public abstract class AndroidDeviceDelegate {
   /** List of decorators that should be supported by root/non-root devices. */
   public void basicAndroidDecoratorConfiguration() throws InterruptedException {
     // Adds general decorators.
-    device.addSupportedDecorator("AcuitiDecorator");
     device.addSupportedDecorator("AndroidAccountDecorator");
     device.addSupportedDecorator("AndroidAdbShellDecorator");
     device.addSupportedDecorator("AndroidAppVersionDecorator");
