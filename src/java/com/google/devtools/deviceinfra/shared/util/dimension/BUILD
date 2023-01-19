@@ -20,10 +20,8 @@ package(
     default_visibility = [
         "//java/com/google/devtools/deviceinfra:__subpackages__",
         "//java/com/google/devtools/mobileharness:__subpackages__",
-        "//java/com/google/wireless/qa/mobileharness:__subpackages__",
         "//javatests/com/google/devtools/deviceinfra:__subpackages__",
         "//javatests/com/google/devtools/mobileharness:__subpackages__",
-        "//javatests/com/google/wireless/qa/mobileharness:__subpackages__",
         "//src:__subpackages__",
     ],
 )
