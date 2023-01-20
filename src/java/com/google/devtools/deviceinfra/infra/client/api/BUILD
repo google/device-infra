@@ -17,6 +17,7 @@ java_library(
     name = "api",
     srcs = ["ClientApi.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/server:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__pkg__",
     ],
     deps = [
@@ -25,6 +26,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/infra/client/controller:job_factory",
         "//src/java/com/google/devtools/deviceinfra/infra/client/plugin:job_reporter",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:util",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/lister",
@@ -44,7 +46,10 @@ java_library(
 java_library(
     name = "module",
     srcs = ["ClientApiModule.java"],
-    visibility = ["//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/server:__pkg__",
+        "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__pkg__",
+    ],
     deps = [
         ":annotations",
         "//src/java/com/google/devtools/deviceinfra/infra/client/controller:job_factory",

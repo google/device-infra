@@ -29,13 +29,14 @@ import com.google.devtools.deviceinfra.infra.client.api.Annotations.ShutdownJobT
 import com.google.devtools.deviceinfra.infra.client.controller.JobManagerCore;
 import com.google.devtools.deviceinfra.infra.client.controller.JobManagerCoreFactory;
 import com.google.devtools.deviceinfra.infra.client.plugin.JobReporter;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecModeUtil;
 import com.google.devtools.mobileharness.infra.client.api.util.lister.TestLister;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -130,9 +131,10 @@ public class ClientApi {
 
       // Finally, starts the job.
       jobManager.startJob(jobInfo, execMode, jobPlugins);
-    } catch (MobileHarnessException e) {
+    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       jobInfo.errors().add(e);
-      throw e;
+      throw new MobileHarnessException(
+          InfraErrorId.CLIENT_API_START_JOB_ERROR, "Failed to start job", e);
     } catch (Throwable e) {
       jobInfo.errors().add(ErrorCode.JOB_CONFIG_ERROR, e);
       throw e;
