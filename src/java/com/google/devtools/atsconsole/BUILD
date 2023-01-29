@@ -73,7 +73,7 @@ java_library(
     name = "console_command_module",
     srcs = ["ConsoleCommandModule.java"],
     visibility = [
-        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
     ],
     deps = [
         ":console_info",
