@@ -1357,9 +1357,14 @@ public abstract class AndroidRealDeviceDelegate {
     if (!ifTrySetDevicePropertiesAndDisablePackages()) {
       return;
     }
-    if (ifClearAnyReadOnlyTestProperties() && ifReadOnlyTestPropertiesChanged()) {
-      logger.atInfo().log("Reboot device %s to clear ro properties", serial);
-      systemStateManager.reboot(device, /* log= */ null, /* deviceReadyTimeout= */ null);
+    try {
+      if (needRebootToClearReadOnlyTestProperties()) {
+        logger.atInfo().log("Reboot device %s to clear ro properties", serial);
+        systemStateManager.reboot(device, /* log= */ null, /* deviceReadyTimeout= */ null);
+      }
+    } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to check device %s read only properties.", serial);
     }
     if (Flags.instance().disableCalling.getNonNull()) {
       logger.atInfo().log("Disable calling on device %s", serial);
@@ -1385,25 +1390,36 @@ public abstract class AndroidRealDeviceDelegate {
     }
   }
 
+  @VisibleForTesting
+  boolean needRebootToClearReadOnlyTestProperties()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
+    if (!ifClearAnyReadOnlyTestProperties()) {
+      return false;
+    }
+    return needRebootToClearTestProperty(
+            "ro.telephony.disable-call",
+            Flags.instance().disableCalling.getNonNull() ? "true" : "false")
+        || needRebootToClearTestProperty(
+            "ro.test_harness", Flags.instance().setTestHarnessProperty.getNonNull() ? "1" : "0")
+        || needRebootToClearTestProperty(
+            "ro.audio.silent", Flags.instance().muteAndroid.getNonNull() ? "1" : "0");
+  }
+
   private boolean ifClearAnyReadOnlyTestProperties() {
     return !Flags.instance().disableCalling.getNonNull()
         || !Flags.instance().setTestHarnessProperty.getNonNull()
         || !Flags.instance().muteAndroid.getNonNull();
   }
 
-  private boolean ifReadOnlyTestPropertiesChanged()
-      throws MobileHarnessException, InterruptedException {
-    return ifReadOnlyPropertyChanged(
-            "ro.telephony.disable-call", Flags.instance().disableCalling.getNonNull() ? "true" : "")
-        || ifReadOnlyPropertyChanged(
-            "ro.test_harness", Flags.instance().setTestHarnessProperty.getNonNull() ? "1" : "")
-        || ifReadOnlyPropertyChanged(
-            "ro.audio.silent", Flags.instance().muteAndroid.getNonNull() ? "1" : "");
-  }
-
-  private boolean ifReadOnlyPropertyChanged(String roPropName, String newValue)
-      throws MobileHarnessException, InterruptedException {
+  private boolean needRebootToClearTestProperty(String roPropName, String newValue)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     String devicePropValue = androidAdbUtil.getProperty(deviceId, ImmutableList.of(roPropName));
+    // If current read only prop is not set, no need device reboot.
+    if (Strings.isNullOrEmpty(devicePropValue)) {
+      return false;
+    }
     return !Ascii.equalsIgnoreCase(devicePropValue, newValue);
   }
 
