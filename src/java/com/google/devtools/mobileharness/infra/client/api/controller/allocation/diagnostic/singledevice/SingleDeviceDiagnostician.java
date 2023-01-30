@@ -118,8 +118,7 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
       }
     }
 
-    boolean isProdMaster =
-        job.properties().getOptional(Job.MASTER_SPEC).orElse("").contains("PROD");
+    boolean isProdMaster = isUsingProdMaster(job);
 
     // When the overall assessment has MAX_SCORE, means every job requirements can always be
     // supported by some devices. But no single device supports all job requirements. So need to
@@ -212,6 +211,7 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
         return filter.build();
       }
     }
+
     return filter.getFilter(job);
   }
 
@@ -275,5 +275,9 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
       }
     }
     return deviceInfo;
+  }
+
+  private static boolean isUsingProdMaster(JobInfo job) {
+    return job.properties().getOptional(Job.MASTER_SPEC).orElse("").contains("PROD");
   }
 }
