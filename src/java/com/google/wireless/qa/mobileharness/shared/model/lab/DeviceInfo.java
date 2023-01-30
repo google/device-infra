@@ -16,11 +16,15 @@
 
 package com.google.wireless.qa.mobileharness.shared.model.lab;
 
+import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceError;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.lab.out.Status;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfoOrBuilder;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
+import java.util.List;
 import java.util.Optional;
 
 /** A thread-safe data model containing all information of a single device. */
@@ -28,10 +32,22 @@ public class DeviceInfo extends DeviceScheduleUnit {
   /** Device status. */
   private final Status status;
 
+  /** Device errors collected from the lab server. */
+  private final ImmutableList<DeviceError> deviceErrors;
+
   /** Create a device data model with the give locator and status. */
   public DeviceInfo(DeviceLocator deviceLocator, DeviceStatus status) {
     super(deviceLocator);
     this.status = new Status(status);
+    this.deviceErrors = ImmutableList.of();
+  }
+
+  /** Create a device data model with the give locator and status. */
+  private DeviceInfo(
+      DeviceLocator deviceLocator, DeviceStatus status, List<DeviceError> deviceErrors) {
+    super(deviceLocator);
+    this.status = new Status(status);
+    this.deviceErrors = ImmutableList.copyOf(deviceErrors);
   }
 
   /**
@@ -55,7 +71,8 @@ public class DeviceInfo extends DeviceScheduleUnit {
                         () ->
                             new IllegalArgumentException(
                                 "Device info does not include host name")))),
-        DeviceStatus.valueOf(deviceInfo.getStatus().toUpperCase()));
+        DeviceStatus.valueOf(Ascii.toUpperCase(deviceInfo.getStatus())),
+        deviceInfo.getDeviceErrorFromLabList());
     types().addAll(deviceInfo.getTypeList());
     drivers().addAll(deviceInfo.getDriverList());
     decorators().addAll(deviceInfo.getDecoratorList());
@@ -71,6 +88,16 @@ public class DeviceInfo extends DeviceScheduleUnit {
   /** Device status. */
   public Status status() {
     return status;
+  }
+
+  /** Device id. */
+  public String deviceId() {
+    return this.locator().getSerial();
+  }
+
+  /** Device errors. */
+  public ImmutableList<DeviceError> deviceErrors() {
+    return deviceErrors;
   }
 
   private static Optional<String> getDimensionValue(
