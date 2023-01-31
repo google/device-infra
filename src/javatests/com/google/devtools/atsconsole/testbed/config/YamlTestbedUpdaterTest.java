@@ -64,6 +64,9 @@ public final class YamlTestbedUpdaterTest {
   private static final String EXPECTED_GENERATED_MOBLY_CONFIG_MULTIPLE_DEVICES =
       TestRunfilesUtil.getRunfilesLocation(
           "testbed/config/testdata/expected_generated_mobly_config_multiple_devices.yaml");
+  private static final String EXPECTED_GENERATED_MOBLY_CONFIG_SINGLE_LOCALHOST_DEVICE =
+      TestRunfilesUtil.getRunfilesLocation(
+          "testbed/config/testdata/expected_generated_mobly_config_single_localhost_device.yaml");
 
   private static final String UPSERTED_SERIAL = "11191FDD4002M4";
 
@@ -169,5 +172,21 @@ public final class YamlTestbedUpdaterTest {
     assertThat(realLocalFileUtil.readFile(configPath).trim())
         .isEqualTo(
             realLocalFileUtil.readFile(EXPECTED_GENERATED_MOBLY_CONFIG_MULTIPLE_DEVICES).trim());
+  }
+
+  @Test
+  public void prepareMoblyConfig_singleLocalhostDevice_success() throws Exception {
+    File outputDir = temporaryFolder.newFolder("output");
+    String configPath =
+        yamlTestbedUpdater.prepareMoblyConfig(
+            ImmutableList.of("localhost:0001"),
+            outputDir.getPath(),
+            /* outputConfigFileName= */ null);
+    assertThat(configPath).endsWith("/testbed_localhost-0001.yaml");
+    assertThat(realLocalFileUtil.readFile(configPath).trim())
+        .isEqualTo(
+            realLocalFileUtil
+                .readFile(EXPECTED_GENERATED_MOBLY_CONFIG_SINGLE_LOCALHOST_DEVICE)
+                .trim());
   }
 }

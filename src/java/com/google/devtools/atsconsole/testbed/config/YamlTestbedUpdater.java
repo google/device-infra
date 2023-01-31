@@ -166,6 +166,10 @@ public class YamlTestbedUpdater {
     controllersJsonObj.add(CONFIG_KEY_TESTBED_CONTROLLERS_ANDROID_DEVICE, androidDeviceJsonArray);
     JsonObject testBedJsonObj = new JsonObject();
     String testBedName = "testbed_" + Joiner.on("_").join(androidDeviceSerials);
+    if (testBedName.contains(":")) {
+      // Testbed name cannot have ':'
+      testBedName = testBedName.replace(':', '-');
+    }
     testBedJsonObj.addProperty(CONFIG_KEY_TESTBEDS_NAME, testBedName);
     testBedJsonObj.add(CONFIG_KEY_TESTBED_CONTROLLERS, controllersJsonObj);
 
