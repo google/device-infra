@@ -93,7 +93,7 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String DIMENSION_POOL =
-      "dimension_" + Ascii.toLowerCase(Dimension.Name.POOL.name());
+      PropertyName.Test.PREFIX_DIMENSION + Ascii.toLowerCase(Dimension.Name.POOL.name());
 
   /**
    * Multiple event buses to handle events in different scopes with different handlers.
