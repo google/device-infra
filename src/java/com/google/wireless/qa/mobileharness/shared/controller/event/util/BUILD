@@ -43,7 +43,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
