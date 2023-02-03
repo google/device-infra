@@ -122,10 +122,13 @@ public interface PropertyName {
     /** The id of the device which runs the test. */
     DIMENSION_ID,
 
-    /** The test id who initiates this test. */
+    /** If the current test needs a retry, fullfil this property with the current test id. */
     FOREGOING_TEST_ID,
 
-    /** The result (name()) of the test who initiates this retry test. */
+    /**
+     * If the current test needs a retry, fullfil this propertywith the result (name()) of this
+     * test.
+     */
     FOREGOING_TEST_RESULT,
 
     /** Boolean. True to indicate that the test has user specified UTP configs (e.g., plugins). */
