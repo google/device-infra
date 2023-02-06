@@ -19,8 +19,6 @@ package(
     default_testonly = 1,
 )
 
-licenses(["notice"])
-
 java_library(
     name = "api",
     srcs = glob(["*.java"]),

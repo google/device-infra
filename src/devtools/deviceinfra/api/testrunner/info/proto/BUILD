@@ -19,8 +19,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 proto_library(
     name = "result_proto",
     srcs = ["result.proto"],

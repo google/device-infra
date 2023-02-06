@@ -20,8 +20,6 @@ package(
     ],
 )
 
-licenses(["notice"])
-
 proto_library(
     name = "error_code_range_proto",
     srcs = ["error_code_range.proto"],

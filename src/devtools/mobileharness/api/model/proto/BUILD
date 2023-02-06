@@ -17,8 +17,6 @@ package(default_visibility = [
     "//:deviceinfra_api_users",
 ])
 
-licenses(["notice"])
-
 exports_files(["error.proto"])
 
 proto_library(
