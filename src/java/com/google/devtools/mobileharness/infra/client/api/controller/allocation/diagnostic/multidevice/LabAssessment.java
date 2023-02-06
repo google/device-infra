@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.multidevice;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
@@ -146,7 +149,8 @@ public class LabAssessment implements Assessment<LabQueryResult> {
 
     List<DeviceCandidate> candidates = requirementsToSortedCandidates.get(specs.get(specIndex));
     int bestScore = 0;
-    int searchDepth = 2; // Select at most 2 candidates to reduce running time.
+    int searchDepth =
+        min(2, candidates.size()); // Select at most 2 candidates to reduce running time.
     for (int i = 0; i < searchDepth; i++) {
       DeviceCandidate candidate = candidates.get(i);
       if (currentSerials.contains(candidate.id())) {
@@ -155,8 +159,7 @@ public class LabAssessment implements Assessment<LabQueryResult> {
       currentCandidateSet.add(candidate);
       currentSerials.add(candidate.id());
       bestScore =
-          Math.max(
-              bestScore, computeScore(specs, specIndex + 1, currentCandidateSet, currentSerials));
+          max(bestScore, computeScore(specs, specIndex + 1, currentCandidateSet, currentSerials));
       currentCandidateSet.remove(candidate);
       currentSerials.remove(candidate.id());
     }
