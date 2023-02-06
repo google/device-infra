@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.util;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.stream.Collectors.joining;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -33,8 +36,9 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
@@ -67,6 +71,11 @@ public class TestCommandHistorySaver {
   private static final String FILE_NAME = "command_history.txt";
 
   private static final String FIRST_LINE = "start_time(sec) end_time(sec) exit_code command";
+  private static final String SECOND_LINE = "0.000 NA NA # testInfo startTime ";
+
+  // ISO_INSTANT formatter which always emits milliseconds, even when zero.
+  private static final DateTimeFormatter FORMATTER =
+      new DateTimeFormatterBuilder().appendInstant(3).toFormatter();
 
   private final CommandHistory commandHistory;
   private final boolean saveAllHistory;
@@ -102,16 +111,19 @@ public class TestCommandHistorySaver {
                                         allocation.getAllDevices().stream()
                                             .map(DeviceLocator::id)
                                             .anyMatch(command::contains))));
-    List<String> result =
+    ImmutableList<String> result =
         testCommands.stream()
             .map(
                 commandRecord ->
                     TestCommandHistorySaver.formatCommandRecord(
                         commandRecord, testInfo.timing().getStartTime()))
-            .collect(Collectors.toList());
+            .collect(toImmutableList());
     Files.write(
         Paths.get(testInfo.getGenFileDir(), FILE_NAME),
-        Iterables.concat(ImmutableList.of(FIRST_LINE), result));
+        Iterables.concat(
+            ImmutableList.of(
+                FIRST_LINE, SECOND_LINE + FORMATTER.format(testInfo.timing().getStartTime())),
+            result));
   }
 
   private static String formatCommandRecord(CommandRecord commandRecord, Instant testStartTime) {
@@ -125,7 +137,7 @@ public class TestCommandHistorySaver {
     builder.add(
         commandRecord.result().map(result -> Integer.toString(result.exitCode())).orElse("NA"));
     return Stream.concat(builder.build(), formatCommand(commandRecord.command()))
-        .collect(Collectors.joining(" "));
+        .collect(joining(" "));
   }
 
   private static String formatCommandTime(Duration relativeCommandTime) {
