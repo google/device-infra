@@ -11,6 +11,15 @@ http_archive(
     urls = ["https://github.com/google/googletest/archive/5a509dbd2e5a6c694116e329c5a20dc190653724.zip"],
 )
 
+# License rules.
+http_archive(
+    name = "rules_license",
+    sha256 = "6157e1e68378532d0241ecd15d3c45f6e5cfd98fc10846045509fb2a7cc9e381",
+    urls = [
+        "https://github.com/bazelbuild/rules_license/releases/download/0.0.4/rules_license-0.0.4.tar.gz",
+    ],
+)
+
 # Proto library target in bazel.
 http_archive(
     name = "rules_proto",
