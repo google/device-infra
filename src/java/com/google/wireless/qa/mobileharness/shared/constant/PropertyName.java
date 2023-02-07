@@ -83,6 +83,9 @@ public interface PropertyName {
     /** The MH client. */
     MH_CLIENT_NAME,
 
+    /** Whether upload runfiles to CNS. */
+    UPLOAD_RUNFILES,
+
     /** The master spec. */
     MASTER_SPEC
   }
