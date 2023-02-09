@@ -19,7 +19,6 @@
 package(
     default_visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra:__subpackages__",
     ],
 )
 
