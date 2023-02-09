@@ -15,6 +15,8 @@
 
 # Auto value classes used by Mobile Harness Lightning API (go/mh-lightning-api)
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "util_args",
     srcs = [

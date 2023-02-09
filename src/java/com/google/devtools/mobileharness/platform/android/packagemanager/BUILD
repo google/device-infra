@@ -13,9 +13,12 @@
 # limitations under the License.
 #
 
-package(default_visibility = [
-    "//:deviceinfra_pkg",
-])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_pkg",
+    ],
+)
 
 java_library(
     name = "android_package_manager_util",

@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "mobly_aosp_test_setup_util",
     srcs = ["MoblyAospTestSetupUtil.java"],

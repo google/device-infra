@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "system_state_util",
     srcs = ["AndroidSystemStateUtil.java"],
