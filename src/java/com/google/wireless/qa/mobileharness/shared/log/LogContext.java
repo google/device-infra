@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Strings.nullToEmpty;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.common.flogger.LogSites;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.CompileTimeConstant;
 import com.google.errorprone.annotations.FormatMethod;
@@ -127,7 +128,11 @@ public abstract class LogContext<Api extends LoggingApi<Api>, Data extends LogDa
       logger.log(level, formattedMessage, cause);
     }
     if (googleLogger != null) {
-      googleLogger.at(level).withCause(cause).logVarargs(message, args);
+      googleLogger
+          .at(level)
+          .withCause(cause)
+          .withInjectedLogSite(LogSites.callerOf(getClass()))
+          .logVarargs(message, args);
     }
   }
 
