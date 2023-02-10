@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "android_real_device_spec",
     srcs = ["AndroidRealDeviceSpec.java"],

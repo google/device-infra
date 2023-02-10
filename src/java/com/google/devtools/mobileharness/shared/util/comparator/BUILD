@@ -16,6 +16,8 @@
 # Description:
 #   Utilities to Mobile Harness compactor.
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "comparator",
     srcs = [

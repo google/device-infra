@@ -16,6 +16,8 @@
 # Description:
 #   Mobile Harness test message mechanism.
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "cacheable_test_message_handler",
     srcs = ["CacheableTestMessageHandler.java"],

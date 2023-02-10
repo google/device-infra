@@ -20,7 +20,10 @@ visibility = [
     "//:deviceinfra_all_pkg",
 ]
 
-package(default_visibility = visibility)
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = visibility,
+)
 
 java_library(
     name = "checksum",
