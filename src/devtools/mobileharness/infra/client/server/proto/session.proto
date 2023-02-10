@@ -1,0 +1,126 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.client.server;
+
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
+
+option java_package = "com.google.devtools.mobileharness.infra.client.server.proto";
+option java_outer_classname = "SessionProto";
+
+message SessionId {
+  // Required.
+  string id = 1;
+}
+
+enum SessionStatus {
+  SESSION_STATUS_UNSPECIFIED = 0;
+
+  // The session has been submitted to the session queue but has not started.
+  SESSION_SUBMITTED = 100;
+
+  // The session is running.
+  SESSION_RUNNING = 200;
+
+  // The session has finished (successfully or unsuccessfully).
+  SESSION_FINISHED = 300;
+}
+
+// Configuration of a session.
+message SessionConfig {
+  // Required.
+  string session_name = 1;
+
+  // Session properties specified by the session config.
+  map<string, string> session_property = 2;
+
+  // Optional.
+  SessionPluginConfig session_plugin_config = 3;
+}
+
+// Configuration of session plugins.
+//
+// A session plugin is a Java class, which contains @Subscribe methods receiving
+// session events like SessionStartingEvent and SessionEndedEvent, and OmniLab
+// job / test events.
+//
+// A session plugin can have an @Inject constructor and SessionInfo will be
+// bound automatically.
+message SessionPluginConfig {
+  // Builtin session plugins.
+  repeated BuiltinSessionPlugin builtin_plugin = 1;
+}
+
+// A builtin session plugin, whose Java class needs to be included in the JAR of
+// the server (e.g., by runtime_deps).
+message BuiltinSessionPlugin {
+  // Required.
+  SessionPluginLoadingConfig loading_config = 1;
+}
+
+// Config about loading a session plugin.
+message SessionPluginLoadingConfig {
+  // Required.
+  //
+  // Full class name of the session plugin.
+  string plugin_class_name = 1;
+}
+
+message SessionOutput {
+  // Properties of the session.
+  map<string, string> session_property = 1;
+
+  repeated SessionPluginError session_plugin_error = 2;
+}
+
+// An exception thrown from a session plugin.
+message SessionPluginError {
+  // Required.
+  string plugin_class_name = 1;
+
+  // Required.
+  string method_name = 2;
+
+  // Required.
+  string event_class_name = 3;
+
+  // Required.
+  int32 plugin_identity_hash_code = 4;
+
+  // Required.
+  stability.model.ExceptionDetail error = 5;
+}
+
+message SessionDetail {
+  // Required.
+  SessionId session_id = 1;
+
+  // Required.
+  SessionStatus session_status = 2;
+
+  // Required.
+  SessionConfig session_config = 3;
+
+  // Required.
+  SessionOutput session_output = 4;
+
+  // Optional.
+  //
+  // Exception thrown from the session runner (if necessary).
+  stability.model.ExceptionDetail session_runner_error = 5;
+}

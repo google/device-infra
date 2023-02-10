@@ -53,6 +53,18 @@ http_archive(
     ],
 )
 
+# gRPC
+http_archive(
+    name = "io_grpc_grpc_java",
+    sha256 = "b6cfc524647cc680e66989ab22a10b66dc5de8c6d8499f91a7e633634c594c61",
+    strip_prefix = "grpc-java-1.51.1",
+    url = "https://github.com/grpc/grpc-java/archive/v1.51.1.tar.gz",
+)
+
+load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS", "grpc_java_repositories")
+
+grpc_java_repositories()
+
 # Java Maven-based repositories.
 http_archive(
     name = "rules_jvm_external",
@@ -100,11 +112,17 @@ maven_install(
         "org.reflections:reflections:0.9.10",
         "org.yaml:snakeyaml:1.32",
         "xmlpull:xmlpull:1.1.3.1",
-    ],
+    ] + IO_GRPC_GRPC_JAVA_ARTIFACTS,
     fetch_sources = True,
+    generate_compat_repositories = True,
+    override_targets = IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS,
     repositories = [
         "https://maven.google.com",
         "https://repo1.maven.org/maven2",
         "https://repository.mulesoft.org/nexus/content/repositories/public",
     ],
 )
+
+load("@maven//:compat.bzl", "compat_repositories")
+
+compat_repositories()
