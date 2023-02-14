@@ -592,6 +592,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidPerfettoDecorator");
     device.addSupportedDecorator("AndroidWebviewBridgeDecorator");
     device.addSupportedDecorator("ManekiYouTubeLauncherDecorator");
+    device.addSupportedDecorator("ManekiAndroidWebdriverPortForwardDecorator");
     device.addSupportedDecorator("MaskImageDecorator");
 
     // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some
