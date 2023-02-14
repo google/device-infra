@@ -15,7 +15,10 @@
 
 # Mobile Harness shared spec proto files.
 
-package(default_visibility = ["//visibility:public"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = ["//visibility:public"],
+)
 
 CC_API_VERSION = 2
 

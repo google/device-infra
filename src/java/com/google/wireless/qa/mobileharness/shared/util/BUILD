@@ -16,6 +16,7 @@
 # Description:
 #   Shared IO libraries.
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
     ],

@@ -16,6 +16,8 @@
 # Description:
 #   Shared data models for Mobile Harness labs and devices.
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "locator",
     srcs = glob(["*Locator.java"]),

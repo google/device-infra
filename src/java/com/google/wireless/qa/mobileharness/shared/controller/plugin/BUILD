@@ -16,6 +16,8 @@
 # Description:
 #   Mobile Harness plugin annotation.
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "plugin",
     srcs = [

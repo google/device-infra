@@ -17,6 +17,7 @@
 #   Data models for Mobile Harness jobs and tests.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
     ],

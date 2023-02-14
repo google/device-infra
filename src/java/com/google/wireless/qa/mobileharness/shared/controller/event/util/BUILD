@@ -21,7 +21,10 @@ DEFAULT_VISIBILITY = [
     "//javatests/com/google/wireless/qa/mobileharness:__subpackages__",
 ]
 
-package(default_visibility = DEFAULT_VISIBILITY)
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = DEFAULT_VISIBILITY,
+)
 
 java_library(
     name = "scoped_bus",

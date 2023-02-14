@@ -17,6 +17,7 @@
 #   Data models for the allocations of the devices for the tests.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:public"],
 )
 

@@ -17,6 +17,7 @@
 #   Fake log collector for testing.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_testonly = 1,
     default_visibility = [
         "//java/com/google/wireless/qa/mobileharness/shared/log/testing:__subpackages__",
