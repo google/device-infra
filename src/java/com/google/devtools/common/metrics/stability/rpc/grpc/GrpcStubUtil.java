@@ -17,8 +17,7 @@
 package com.google.devtools.common.metrics.stability.rpc.grpc;
 
 import com.google.devtools.common.metrics.stability.model.ErrorId;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.errorprone.annotations.ResultIgnorabilityUnspecified;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.grpc.StatusRuntimeException;
 
 /** The util class for invoking common gRPC methods. */
@@ -39,7 +38,7 @@ public final class GrpcStubUtil {
    * @param errorMessage the error message set into the thrown exception if failed to invoke the rpc
    * @throws GrpcExceptionWithErrorId if a {@link StatusRuntimeException} occurs during the rpc call
    */
-  @ResultIgnorabilityUnspecified
+  @CanIgnoreReturnValue
   public static <ReqT, RespT> RespT invoke(
       GrpcMethod<ReqT, RespT> grpcMethod, ReqT request, ErrorId errorId, String errorMessage)
       throws GrpcExceptionWithErrorId {
@@ -47,28 +46,6 @@ public final class GrpcStubUtil {
       return grpcMethod.execute(request);
     } catch (StatusRuntimeException e) {
       throw GrpcExceptionUtil.toGrpcExceptionWithErrorId(errorId, errorMessage, e);
-    }
-  }
-
-  /**
-   * This is for the backward support of the legacy Mobile Harness services which haven't been fully
-   * migrated to encode the error information by using the {@link
-   * GrpcExceptionUtil#toStatusRuntimeException(Throwable)}, but are still using the {@linkplain
-   * com.google.devtools.mobileharness.shared.util.error.GrpcErrorUtil#toStatusRuntimeException(MobileHarnessException)}.
-   *
-   * @deprecated For migration(b/158279165) only. This method will be removed once the migration is
-   *     done.
-   */
-  @Deprecated
-  public static <ReqT, RespT> RespT invokeWithBackwardOfMobileHarnessRpcPayload(
-      GrpcMethod<ReqT, RespT> grpcMethod, ReqT request, ErrorId errorId, String errorMessage)
-      throws GrpcExceptionWithErrorId {
-    try {
-      return grpcMethod.execute(request);
-    } catch (StatusRuntimeException e) {
-      throw GrpcExceptionUtil
-          .toGrpcExceptionWithErrorIdWithBackwardSupportOfMobileHarnessRpcPayload(
-              errorId, errorMessage, e);
     }
   }
 }

@@ -26,8 +26,6 @@ java_library(
         "GrpcExceptionWithErrorId.java",
     ],
     deps = [
-        "//java/com/google/devtools/mobileharness/shared/model/error:rpc_exception",
-        "//java/com/google/devtools/mobileharness/shared/util/error:grpc",
         "//src/devtools/common/metrics/stability/rpc/proto:rpc_error_java_proto",
         "//src/devtools/common/metrics/stability/rpc/proto:rpc_error_payload_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",

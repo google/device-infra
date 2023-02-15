@@ -24,8 +24,6 @@ import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.rpc.RpcErrorUtil;
 import com.google.devtools.common.metrics.stability.rpc.proto.RpcErrorPayloadProto.RpcErrorPayload;
 import com.google.devtools.common.metrics.stability.rpc.proto.RpcErrorProto.RpcError;
-import com.google.devtools.mobileharness.shared.model.error.MobileHarnessRpcException;
-import com.google.devtools.mobileharness.shared.util.error.GrpcErrorUtil;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
@@ -110,39 +108,6 @@ public class GrpcExceptionUtil {
     return result;
   }
 
-  /**
-   * This is for the backward support of the legacy Mobile Harness services which haven't been fully
-   * migrated to encode the error information by using the {@link
-   * #toStatusRuntimeException(Throwable)} , but are still using the {@link
-   * GrpcErrorUtil#toStatusRuntimeException(Throwable)}.
-   *
-   * @deprecated For migration(b/158279165) only. This method will be removed once the migration is
-   *     done.
-   */
-  @Deprecated
-  public static GrpcExceptionWithErrorId
-      toGrpcExceptionWithErrorIdWithBackwardSupportOfMobileHarnessRpcPayload(
-          ErrorId errorId, String message, StatusRuntimeException grpcException) {
-    if (getPayload(grpcException).isPresent()) {
-      return toGrpcExceptionWithErrorId(errorId, message, grpcException);
-    } else {
-      MobileHarnessRpcException mhRpcException =
-          GrpcErrorUtil.toMobileHarnessRpcException(grpcException);
-      DeserializedException deserializedException =
-          ErrorModelConverter.toDeserializedException(
-              com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter
-                  .toCommonExceptionDetail(
-                      com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter
-                          .toExceptionDetail(mhRpcException)));
-      return new GrpcExceptionWithErrorId(
-          errorId,
-          message,
-          mhRpcException.getRpcCanonicalCode(),
-          deserializedException,
-          grpcException);
-    }
-  }
-
   private static Optional<DeserializedException> getApplicationError(
       StatusRuntimeException grpcException) throws IOException {
     Optional<RpcError> payload = getPayload(grpcException);
@@ -168,7 +133,7 @@ public class GrpcExceptionUtil {
                 Metadata.Key.of(
                     String.format(
                         "__crpc_mse_%d%s", // See com.google.cloud.rpc2.prodx.MessageSetErrors.
-                        RpcErrorPayload.MESSAGE_SET_EXTENSION_FIELD_NUMBER,
+                        300713958, // RpcErrorPayload.MESSAGE_SET_EXTENSION_FIELD_NUMBER
                         Metadata.BINARY_HEADER_SUFFIX),
                     Metadata.BINARY_BYTE_MARSHALLER));
         if (bytes == null) {
@@ -176,8 +141,7 @@ public class GrpcExceptionUtil {
         } else {
           RpcErrorPayload payloadFromBinary = null;
           try {
-            payloadFromBinary =
-                RpcErrorPayload.parseFrom(bytes, ExtensionRegistry.getGeneratedRegistry());
+            payloadFromBinary = RpcErrorPayload.parseFrom(bytes, ExtensionRegistry.newInstance());
           } catch (InvalidProtocolBufferException e) {
             logger.atWarning().withCause(grpcException).log(
                 "Failed to parse payload from StatusRuntimeException trailers: %s", trailers);
@@ -201,7 +165,7 @@ public class GrpcExceptionUtil {
             String.format(
                 "%s%d%s",
                 "__crpc_mse_",
-                RpcErrorPayload.MESSAGE_SET_EXTENSION_FIELD_NUMBER,
+                300713958, // RpcErrorPayload.MESSAGE_SET_EXTENSION_FIELD_NUMBER
                 Metadata.BINARY_HEADER_SUFFIX),
             Metadata.BINARY_BYTE_MARSHALLER);
     metadata.put(key, message.toByteArray());
