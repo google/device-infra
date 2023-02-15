@@ -15,6 +15,8 @@
 
 # Package for Mobile Harness device daemon utils related.
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "device_daemon_apk_info",
     visibility = [

@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "local_device_test_runner_launcher",
     srcs = ["LocalDeviceTestRunnerLauncher.java"],

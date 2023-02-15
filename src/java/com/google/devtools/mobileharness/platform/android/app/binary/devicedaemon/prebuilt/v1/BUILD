@@ -23,3 +23,5 @@ filegroup(
     name = "daemon",
     srcs = ["daemon.apk"],
 )
+
+package(default_applicable_licenses = ["//:license"])
