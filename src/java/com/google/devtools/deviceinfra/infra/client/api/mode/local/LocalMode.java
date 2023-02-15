@@ -170,8 +170,10 @@ public class LocalMode implements ExecMode {
 
   protected ImmutableList<Detector> createDeviceDetectorCandidates() {
     ImmutableList.Builder<Detector> detectorCandidates = ImmutableList.builder();
-    detectorCandidates.add(
-        new com.google.devtools.mobileharness.api.devicemanager.detector.BaseAdbDetector());
+    if (Flags.instance().detectAdbDevice.getNonNull()) {
+      detectorCandidates.add(
+          new com.google.devtools.mobileharness.api.devicemanager.detector.BaseAdbDetector());
+    }
     if (Flags.instance().noOpDeviceNum.getNonNull() > 0) {
       detectorCandidates.add(new NoOpDeviceDetector());
     }
@@ -179,8 +181,10 @@ public class LocalMode implements ExecMode {
   }
 
   protected void addDeviceDispatchers(DispatcherManager dispatcherManager) {
-    // Adds Android real device dispatcher.
-    // dispatcherManager.add(AndroidRealDeviceDispatcher.class);
+    if (Flags.instance().detectAdbDevice.getNonNull()) {
+      // Adds Android real device dispatcher.
+      // dispatcherManager.add(AndroidRealDeviceDispatcher.class);
+    }
 
     // Adds NoOp dispatcher.
     if (Flags.instance().noOpDeviceNum.getNonNull() > 0) {

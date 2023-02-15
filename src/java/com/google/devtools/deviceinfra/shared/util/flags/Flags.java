@@ -98,6 +98,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> clearAndroidDeviceMultiUsers = clearAndroidDeviceMultiUsersDefault;
 
+  private static final Flag<Boolean> detectAdbDeviceDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--detect_adb_device",
+      description = "Whether to enable ADB detector. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> detectAdbDevice = detectAdbDeviceDefault;
+
   private static final Flag<Boolean> pingGoogleDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -271,6 +279,14 @@ public class Flags {
           "Device type string supported, e.g. AndroidRealDevice, only for debug/test purpose.",
       converter = Flag.StringConverter.class)
   public Flag<String> noOpDeviceType = noOpDeviceTypeDefault;
+
+  private static final Flag<Integer> olcServerPortDefault = Flag.value(7030);
+
+  @com.beust.jcommander.Parameter(
+      names = "--olc_server_port",
+      description = "OLC server port. By default, it is 7030.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> olcServerPort = olcServerPortDefault;
 
   private static final Flag<String> publicDirDefault = Flag.value("/var/www");
 
