@@ -31,3 +31,5 @@ java_library(
         "@maven//:com_google_truth_truth",
     ],
 )
+
+package(default_applicable_licenses = ["//:license"])

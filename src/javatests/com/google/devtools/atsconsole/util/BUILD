@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "test_runfiles_util",
     srcs = ["TestRunfilesUtil.java"],
