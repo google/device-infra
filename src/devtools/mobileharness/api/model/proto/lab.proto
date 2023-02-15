@@ -45,3 +45,14 @@ message LabLocator {
 message LabServerSetting {
   repeated LabPort port = 1;  // Lab port information.
 }
+
+// The host dimension.
+message HostDimension {
+  string key = 1;
+  string value = 2;
+}
+
+// The List of host dimensions.
+message HostDimensions {
+  repeated HostDimension host_dimension = 1;
+}

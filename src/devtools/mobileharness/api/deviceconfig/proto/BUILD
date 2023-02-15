@@ -58,6 +58,7 @@ proto_library(
     srcs = ["lab.proto"],
     deps = [
         ":basic_proto",
+        "//src/devtools/mobileharness/api/model/proto:lab_proto",
     ],
 )
 

@@ -19,6 +19,7 @@ syntax = "proto3";
 package mobileharness.api.deviceconfig;
 
 import "src/devtools/mobileharness/api/deviceconfig/proto/basic.proto";
+import "src/devtools/mobileharness/api/model/proto/lab.proto";
 
 option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
 option java_outer_classname = "Lab";
@@ -47,6 +48,9 @@ message LabConfig {
 
   // The UUID of testbed configs of this lab.
   repeated string testbed_uuid = 5;
+
+  // The host dimensions of this lab.
+  mobileharness.api.model.HostDimensions host_dimensions = 8;
 }
 
 // The configuration of an over SSH device.
