@@ -16,6 +16,8 @@
 # Description:
 #   Data models for Mobile Harness device manager dispatcher.
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "model",
     srcs = [

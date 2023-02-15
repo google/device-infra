@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "thread_factory_util",
     srcs = ["ThreadFactoryUtil.java"],

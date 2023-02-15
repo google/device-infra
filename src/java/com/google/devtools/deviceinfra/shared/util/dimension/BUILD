@@ -17,6 +17,7 @@
 #   Module for dimension.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//java/com/google/devtools/deviceinfra:__subpackages__",
         "//java/com/google/devtools/mobileharness:__subpackages__",

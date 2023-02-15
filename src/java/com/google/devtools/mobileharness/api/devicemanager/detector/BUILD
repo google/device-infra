@@ -17,6 +17,7 @@
 #   Interface for Device Infra device management detector.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = ["//:deviceinfra_devicemanagement_pkg"],
 )
 

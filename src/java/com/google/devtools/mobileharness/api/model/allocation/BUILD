@@ -17,6 +17,7 @@
 #   Data models for the device allocations for tests.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test:__subpackages__",

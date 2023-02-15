@@ -16,6 +16,7 @@
 # Shared constants used by system utilities in device infra.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_pkg",
     ],

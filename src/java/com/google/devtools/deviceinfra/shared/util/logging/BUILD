@@ -21,3 +21,5 @@ java_library(
         "@maven//:com_google_flogger_flogger_system_backend",
     ],
 )
+
+package(default_applicable_licenses = ["//:license"])

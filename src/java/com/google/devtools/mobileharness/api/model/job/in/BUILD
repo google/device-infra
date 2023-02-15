@@ -16,6 +16,8 @@
 # Description:
 #   Basic input data models of Mobile Harness jobs and tests.
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "in",
     visibility = [
