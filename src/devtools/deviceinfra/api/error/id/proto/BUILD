@@ -15,6 +15,7 @@
 
 # deviceinfra:oss-insert load("@rules_proto//proto:defs.bzl", "proto_library")
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_api_users",
     ],

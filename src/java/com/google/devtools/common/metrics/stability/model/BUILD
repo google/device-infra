@@ -18,7 +18,10 @@ DEFAULT_VISIBILITY = [
     "//:deviceinfra_all_pkg",
 ]
 
-package(default_visibility = DEFAULT_VISIBILITY)
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = DEFAULT_VISIBILITY,
+)
 
 java_library(
     name = "error_id",

@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 proto_library(
     name = "mode_setting_proto",
     srcs = ["mode_setting.proto"],

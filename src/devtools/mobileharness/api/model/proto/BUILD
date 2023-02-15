@@ -13,9 +13,12 @@
 # limitations under the License.
 #
 
-package(default_visibility = [
-    "//:deviceinfra_api_users",
-])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_api_users",
+    ],
+)
 
 exports_files(["error.proto"])
 

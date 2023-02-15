@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 proto_library(
     name = "adb_proto",
     srcs = ["adb.proto"],

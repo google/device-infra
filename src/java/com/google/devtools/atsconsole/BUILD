@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 java_binary(
     name = "atsconsole",
     main_class = "com.google.devtools.atsconsole.AtsConsole",

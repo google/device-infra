@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "yaml_testbed_updater",
     srcs = ["YamlTestbedUpdater.java"],

@@ -16,6 +16,7 @@
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/server:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/server:__subpackages__",

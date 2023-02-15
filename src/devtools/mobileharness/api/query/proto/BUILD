@@ -13,9 +13,12 @@
 # limitations under the License.
 #
 
-package(default_visibility = [
-    "//:deviceinfra_all_pkg",
-])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
 
 proto_library(
     name = "device_query_proto",
