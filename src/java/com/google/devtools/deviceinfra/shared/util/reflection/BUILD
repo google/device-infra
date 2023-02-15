@@ -20,6 +20,7 @@ java_library(
     srcs = ["ReflectionUtil.java"],
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/core/testrunner:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/server/controller:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:__subpackages__",
     ],
     deps = [

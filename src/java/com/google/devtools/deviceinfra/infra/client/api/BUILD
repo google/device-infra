@@ -19,6 +19,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/server:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/server/controller:__pkg__",
     ],
     deps = [
         ":annotations",
