@@ -111,7 +111,11 @@ public abstract class LogContext<Api extends LoggingApi<Api>, Data extends LogDa
       logger.log(level, message, cause);
     }
     if (googleLogger != null) {
-      googleLogger.at(level).withCause(cause).log(message);
+      googleLogger
+          .at(level)
+          .withCause(cause)
+          .withInjectedLogSite(LogSites.callerOf(LogContext.class))
+          .log(message);
     }
   }
 
@@ -131,7 +135,7 @@ public abstract class LogContext<Api extends LoggingApi<Api>, Data extends LogDa
       googleLogger
           .at(level)
           .withCause(cause)
-          .withInjectedLogSite(LogSites.callerOf(getClass()))
+          .withInjectedLogSite(LogSites.callerOf(LogContext.class))
           .logVarargs(message, args);
     }
   }
