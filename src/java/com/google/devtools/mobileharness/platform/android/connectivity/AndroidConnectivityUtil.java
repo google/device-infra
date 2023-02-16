@@ -841,6 +841,7 @@ public class AndroidConnectivityUtil {
     // For debugging purpose, dump real time wifi scan results to logs.
     logger.atWarning().log(
         "Can't find any matched SSID for ssid [%s].%n"
+            + "If the SSID is hidden, please specify \"wifi_scan_ssid\": \"true\" in the params.%n"
             + "Analyzed wifi latest scan results for device %s:%n%s%n"
             + "Current wifi scan results for debugging purpose:%n%s",
         ssid, serial, wifiLatestScanResult, dumpWifiScanResults(serial, sdkVersion));
