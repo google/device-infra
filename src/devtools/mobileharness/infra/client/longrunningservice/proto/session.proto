@@ -16,11 +16,11 @@
 
 syntax = "proto3";
 
-package mobileharness.infra.client.server;
+package mobileharness.infra.client.longrunningservice;
 
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 
-option java_package = "com.google.devtools.mobileharness.infra.client.server.proto";
+option java_package = "com.google.devtools.mobileharness.infra.client.longrunningservice.proto";
 option java_outer_classname = "SessionProto";
 
 message SessionId {

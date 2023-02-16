@@ -17,9 +17,9 @@ java_library(
     name = "api",
     srcs = ["ClientApi.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/client/server:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/server/controller:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
     ],
     deps = [
         ":annotations",
@@ -48,7 +48,7 @@ java_library(
     name = "module",
     srcs = ["ClientApiModule.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/client/server:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__pkg__",
     ],
     deps = [
