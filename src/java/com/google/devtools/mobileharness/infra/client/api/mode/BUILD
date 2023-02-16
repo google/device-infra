@@ -16,6 +16,8 @@
 # Description:
 #   Execution mode of the Mobile Harness client.
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "mode",
     srcs = ["ExecMode.java"],

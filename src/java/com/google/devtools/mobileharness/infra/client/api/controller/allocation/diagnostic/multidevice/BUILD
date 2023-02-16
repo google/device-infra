@@ -17,6 +17,7 @@
 #   Allocation diagnostics for multi-device tests.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//java/com/google/devtools/mobileharness/infra/client/api/controller:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/infra/client/api/controller:__subpackages__",

@@ -23,6 +23,7 @@ DEFAULT_VISIBILITY = [
 ]
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = DEFAULT_VISIBILITY,
 )
 

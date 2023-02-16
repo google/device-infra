@@ -16,6 +16,8 @@
 # Description:
 #   Mobile Harness test events.
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "test",
     srcs = [
