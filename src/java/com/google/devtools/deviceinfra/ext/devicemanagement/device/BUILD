@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "base_device_helper",
     srcs = ["BaseDeviceHelper.java"],

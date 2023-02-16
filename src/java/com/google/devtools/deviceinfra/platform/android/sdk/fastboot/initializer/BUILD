@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "fastboot_initializer",
     srcs = ["FastbootInitializer.java"],
