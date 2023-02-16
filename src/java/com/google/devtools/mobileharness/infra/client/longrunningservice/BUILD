@@ -21,7 +21,6 @@ java_library(
     ],
     deps = [
         ":server_module",
-        "//java/com/google/wireless/qa/mobileharness/shared:log",
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/path",
@@ -31,6 +30,7 @@ java_library(
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//netty",
         "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 

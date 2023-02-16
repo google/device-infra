@@ -17,9 +17,9 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice.controller;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.util.concurrent.Callables.threadRenaming;
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.min;
 
@@ -76,9 +76,10 @@ public class SessionManager {
   private final Map<String, SessionRunner> sessionRunners = new HashMap<>();
 
   /** Archived sessions. */
+  @SuppressWarnings("Convert2Diamond")
   @GuardedBy("lock")
   private final LinkedHashMap<String, SessionDetail> archivedSessions =
-      new LinkedHashMap<>() {
+      new LinkedHashMap<String, SessionDetail>() {
         @Override
         protected boolean removeEldestEntry(Entry<String, SessionDetail> eldest) {
           return size() > ARCHIVED_SESSION_CAPACITY;

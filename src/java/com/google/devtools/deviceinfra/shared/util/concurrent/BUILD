@@ -13,14 +13,25 @@
 # limitations under the License.
 #
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
+
+java_library(
+    name = "callables",
+    srcs = ["Callables.java"],
+    deps = [
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
 
 java_library(
     name = "thread_factory_util",
     srcs = ["ThreadFactoryUtil.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",

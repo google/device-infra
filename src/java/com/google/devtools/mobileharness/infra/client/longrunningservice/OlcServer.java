@@ -18,12 +18,9 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
-import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
 import com.google.inject.Guice;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
-import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import io.grpc.Server;
 import io.grpc.netty.NettyServerBuilder;
 import java.io.IOException;
@@ -55,8 +52,7 @@ public class OlcServer {
   }
 
   private void run(List<String> args) throws IOException, InterruptedException {
-    // Initializes logger.
-    MobileHarnessLogger.init(PathUtil.join(DirCommon.getPublicDirRoot(), "olc_server_log"));
+
     logger.atInfo().log("Arguments: %s", args);
 
     // Starts RPC server.

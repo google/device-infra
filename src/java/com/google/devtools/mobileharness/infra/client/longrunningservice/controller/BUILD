@@ -74,6 +74,7 @@ java_library(
         ":session_runner",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@com_google_protobuf//:protobuf_java",
