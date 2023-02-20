@@ -16,6 +16,7 @@
 
 package com.google.devtools.deviceinfra.shared.util.command;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.deviceinfra.shared.util.command.LineCallback.answerLn;
 import static com.google.devtools.deviceinfra.shared.util.command.LineCallback.does;
@@ -31,23 +32,22 @@ import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.deviceinfra.api.error.id.defined.BasicErrorId;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
+import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -63,13 +63,16 @@ import org.mockito.junit.MockitoRule;
 public class CommandExecutorTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-  private static final String TEST_DATA_ROOT_PATH =
-      "com_google_deviceinfra/src/javatests/com/google/devtools/deviceinfra/";
-  private static final String TEST_SH = getRunfilesLocation("shared/util/command/testdata/test.sh");
+
+  private static final String TEST_SH =
+      RunfilesUtil.getRunfilesLocation(
+          "javatests/com/google/devtools/deviceinfra/shared/util/command/testdata/test.sh");
   private static final String UNKILLABLE_SH =
-      getRunfilesLocation("shared/util/command/testdata/unkillable.sh");
+      RunfilesUtil.getRunfilesLocation(
+          "javatests/com/google/devtools/deviceinfra/shared/util/command/testdata/unkillable.sh");
   private static final String STDOUT_STDERR_PRINTER =
-      getRunfilesLocation("shared/util/command/stdout_stderr_printer");
+      RunfilesUtil.getRunfilesLocation(
+          "javatests/com/google/devtools/deviceinfra/shared/util/command/stdout_stderr_printer");
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
@@ -87,12 +90,12 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void run() throws CommandException, InterruptedException {
+  public void run() throws Exception {
     assertThat(executor.run(Command.of("echo", "Hello"))).isEqualTo("Hello\n");
   }
 
   @Test
-  public void run_input() throws CommandException, InterruptedException {
+  public void run_input() throws Exception {
     assertThat(executor.run(Command.of("/bin/bash", "-c", "read A; echo $A").inputLn("Y")))
         .isEqualTo("Y\n");
   }
@@ -111,7 +114,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void run_noStartTimeout() throws CommandException, InterruptedException {
+  public void run_noStartTimeout() throws Exception {
     assertThat(
             executor.run(
                 Command.of(TEST_SH, "0s", "4s")
@@ -123,7 +126,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void run_successStartCondition() throws CommandException, InterruptedException {
+  public void run_successStartCondition() throws Exception {
     assertThat(
             executor.run(
                 Command.of(TEST_SH, "0s", "4s")
@@ -150,8 +153,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void run_successStartCondition_runtimeException()
-      throws CommandException, InterruptedException {
+  public void run_successStartCondition_runtimeException() throws Exception {
     assertThat(
             executor.run(
                 Command.of("/bin/bash", "-c", "echo Hello; echo Bye")
@@ -168,14 +170,13 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void run_stdoutCallback_stopWhen() throws CommandException, InterruptedException {
+  public void run_stdoutCallback_stopWhen() throws Exception {
     assertThat(executor.run(Command.of(TEST_SH, "0s", "5s").onStdout(stopWhen(line -> true))))
         .isEqualTo("Hello\n");
   }
 
   @Test
-  public void run_stdoutCallback_exception_stop()
-      throws CommandException, InterruptedException, LineCallbackException {
+  public void run_stdoutCallback_exception_stop() throws Exception {
     doThrow(new LineCallbackException("Error", null, true, false))
         .when(lineCallback)
         .onLine(anyString());
@@ -187,8 +188,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void run_stdoutCallback_exception_stopReading()
-      throws CommandException, InterruptedException, LineCallbackException {
+  public void run_stdoutCallback_exception_stopReading() throws Exception {
     doThrow(new LineCallbackException("Error", null, false, true))
         .when(lineCallback)
         .onLine(anyString());
@@ -202,7 +202,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void run_stdoutCallback_answer() throws CommandException, InterruptedException {
+  public void run_stdoutCallback_answer() throws Exception {
     assertThat(
             executor
                 .exec(
@@ -224,7 +224,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void run_stdoutCallback_runtimeException() throws CommandException, InterruptedException {
+  public void run_stdoutCallback_runtimeException() throws Exception {
     doThrow(RuntimeException.class).doNothing().when(lineConsumer).accept(anyString());
 
     assertThat(
@@ -238,7 +238,7 @@ public class CommandExecutorTest {
 
   @org.junit.Ignore
   @Test
-  public void run_redirectStderr() throws CommandException, InterruptedException {
+  public void run_redirectStderr() throws Exception {
     String output = executor.run(Command.of(STDOUT_STDERR_PRINTER).redirectStderr(true));
     assertThat(output).hasLength(31 * 100 * 2);
     assertThat(output).doesNotContain("OE");
@@ -246,7 +246,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void asyncRun() throws ExecutionException, InterruptedException {
+  public void asyncRun() throws Exception {
     assertThat(executor.asyncRun(Command.of("echo", "Hello")).get()).isEqualTo("Hello\n");
   }
 
@@ -269,7 +269,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void asyncRun_cancelInterrupted() throws InterruptedException, CommandException {
+  public void asyncRun_cancelInterrupted() throws Exception {
     String fileName = PathUtil.join(tmpFolder.getRoot().getAbsolutePath(), "test_file_name");
 
     ListenableFuture<String> resultFuture =
@@ -287,7 +287,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void asyncRun_cancelUninterrupted() throws InterruptedException, CommandException {
+  public void asyncRun_cancelUninterrupted() throws Exception {
     String fileName = PathUtil.join(tmpFolder.getRoot().getAbsolutePath(), "test_file_name");
 
     ListenableFuture<String> resultFuture =
@@ -368,7 +368,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void exec_stdoutCallback_does() throws CommandException, InterruptedException {
+  public void exec_stdoutCallback_does() throws Exception {
     executor.exec(
         Command.of("/bin/bash", "-c", "echo line0; echo line1").onStdout(does(lineConsumer)));
 
@@ -377,7 +377,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void exec_stdoutCallback_block() throws CommandException, InterruptedException {
+  public void exec_stdoutCallback_block() throws Exception {
     doAnswer(
             invocation -> {
               Thread.sleep(4_000L);
@@ -394,7 +394,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void exec_stderrCallback_does() throws CommandException, InterruptedException {
+  public void exec_stderrCallback_does() throws Exception {
     assertThat(
             executor
                 .exec(
@@ -408,7 +408,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void exec_stderrCallback_redirectStderr() throws CommandException, InterruptedException {
+  public void exec_stderrCallback_redirectStderr() throws Exception {
     assertThat(
             executor
                 .exec(Command.of("echo", "Hello").redirectStderr(true).onStderr(does(lineConsumer)))
@@ -417,7 +417,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void exec_stderrCallback_block() throws CommandException, InterruptedException {
+  public void exec_stderrCallback_block() throws Exception {
     doAnswer(
             invocation -> {
               Thread.sleep(4_000L);
@@ -435,7 +435,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void exec_exitCallback() throws CommandException, InterruptedException {
+  public void exec_exitCallback() throws Exception {
     CommandResult result = executor.exec(Command.of("echo", "Hello").onExit(exitCallback));
 
     verify(exitCallback, timeout(5_000)).accept(result);
@@ -455,7 +455,7 @@ public class CommandExecutorTest {
   }
 
   @Test(timeout = 3950L)
-  public void exec_exitCallback_block() throws CommandException, InterruptedException {
+  public void exec_exitCallback_block() throws Exception {
     doAnswer(
             invocation -> {
               Thread.sleep(4_000L);
@@ -468,7 +468,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void exec_interrupted() throws CommandException, InterruptedException {
+  public void exec_interrupted() throws Exception {
     Thread currentThread = Thread.currentThread();
     new Thread(
             () -> {
@@ -500,7 +500,7 @@ public class CommandExecutorTest {
   }
 
   @Test(timeout = 4_000L)
-  public void start_kill() throws CommandStartException {
+  public void start_kill() throws Exception {
     CommandProcess process = executor.start(Command.of("sleep", "30s"));
     process.kill();
 
@@ -513,7 +513,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void start_killForcibly() throws CommandException, InterruptedException {
+  public void start_killForcibly() throws Exception {
     assertThat(getUnkillableProcesses()).isEmpty();
 
     CommandProcess process = executor.start(Command.of(UNKILLABLE_SH, "30s"));
@@ -536,7 +536,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void start_killWithSignal() throws CommandException, InterruptedException {
+  public void start_killWithSignal() throws Exception {
     assertThat(getUnkillableProcesses()).isEmpty();
 
     CommandProcess process = executor.start(Command.of(UNKILLABLE_SH, "30s"));
@@ -559,7 +559,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void start_isAlive_stdoutCallback() throws CommandException, InterruptedException {
+  public void start_isAlive_stdoutCallback() throws Exception {
     doAnswer(
             invocation -> {
               Thread.sleep(4_000L);
@@ -576,7 +576,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void start_stdinStream() throws CommandException, IOException, InterruptedException {
+  public void start_stdinStream() throws Exception {
     CommandProcess process =
         executor.start(Command.of("/bin/bash", "-c", "read A; read B; echo $A $B"));
     Writer writer =
@@ -587,8 +587,9 @@ public class CommandExecutorTest {
     assertThat(process.await(Duration.ofSeconds(10L)).stdout()).isEqualTo("hello goodbye\n");
   }
 
+  @SuppressWarnings("resource")
   @Test
-  public void start_stdinWriter() throws CommandException, IOException, InterruptedException {
+  public void start_stdinWriter() throws Exception {
     CommandProcess process =
         executor.start(Command.of("/bin/bash", "-c", "read A; read B; echo $A $B"));
     Writer writer = process.stdinWriter();
@@ -598,16 +599,16 @@ public class CommandExecutorTest {
     assertThat(process.await(Duration.ofSeconds(10L)).stdout()).isEqualTo("hello goodbye\n");
   }
 
+  @SuppressWarnings("resource")
   @Test
-  public void start_stdinWriterAfterExited()
-      throws CommandStartException, InterruptedException, IOException {
+  public void start_stdinWriterAfterExited() throws Exception {
     CommandProcess process = executor.start(Command.of("echo", "Hello"));
     Thread.sleep(100L);
     process.stdinWriter().write("Input");
   }
 
   @Test
-  public void start_stdoutCallback_does() throws CommandException, InterruptedException {
+  public void start_stdoutCallback_does() throws Exception {
     CommandProcess process =
         executor.start(
             Command.of("/bin/bash", "-c", "echo line0 >&2; echo line1 >&2")
@@ -621,11 +622,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void start_await_timeout()
-      throws CommandStartException,
-          InterruptedException,
-          CommandFailureException,
-          CommandTimeoutException {
+  public void start_await_timeout() throws Exception {
     CommandProcess process = executor.start(Command.of("/bin/bash", "-c", "sleep 3s; echo Hello"));
     assertThat(
             assertThrows(CommandException.class, () -> process.await(Duration.ofMillis(100L)))
@@ -635,7 +632,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void start_exitCallback() throws CommandStartException {
+  public void start_exitCallback() throws Exception {
     CommandProcess process = executor.start(Command.of("echo", "Hello").onExit(exitCallback));
 
     verify(exitCallback, timeout(5_000)).accept(any(CommandResult.class));
@@ -644,7 +641,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void asyncExec() throws ExecutionException, InterruptedException {
+  public void asyncExec() throws Exception {
     assertThat(executor.asyncExec(Command.of("echo", "Hello")).get().stdout()).isEqualTo("Hello\n");
   }
 
@@ -667,7 +664,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void asyncExec_cancelInterrupted() throws InterruptedException, CommandException {
+  public void asyncExec_cancelInterrupted() throws Exception {
     String fileName = PathUtil.join(tmpFolder.getRoot().getAbsolutePath(), "test_file_name");
 
     ListenableFuture<CommandResult> resultFuture =
@@ -685,7 +682,7 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void asyncExec_cancelUninterrupted() throws InterruptedException, CommandException {
+  public void asyncExec_cancelUninterrupted() throws Exception {
     String fileName = PathUtil.join(tmpFolder.getRoot().getAbsolutePath(), "test_file_name");
 
     ListenableFuture<CommandResult> resultFuture =
@@ -707,14 +704,14 @@ public class CommandExecutorTest {
   }
 
   @Test
-  public void setDefaultWorkDirectory() throws CommandException, InterruptedException {
+  public void setDefaultWorkDirectory() throws Exception {
     assertThat(
             executor.setDefaultWorkDirectory(tmpFolder.getRoot().toPath()).run(Command.of("pwd")))
         .isEqualTo(tmpFolder.getRoot().getAbsolutePath() + "\n");
   }
 
   @Test
-  public void setEnvironment() throws CommandException, InterruptedException {
+  public void setEnvironment() throws Exception {
     assertThat(
             executor
                 .setBaseEnvironment(ImmutableMap.of("k1", "v1", "k2", "v2"))
@@ -734,22 +731,12 @@ public class CommandExecutorTest {
         .isEqualTo("v3\nv4\n");
   }
 
-  private List<String> getUnkillableProcesses() throws CommandException, InterruptedException {
+  private ImmutableList<String> getUnkillableProcesses() throws Exception {
     return Splitter.onPattern("\r\n|\n|\r")
         .omitEmptyStrings()
         .splitToStream(
             executor.run(Command.of("/bin/bash", "-c", "ps -ef | grep " + UNKILLABLE_SH)))
         .filter(line -> !line.contains("grep " + UNKILLABLE_SH))
-        .collect(Collectors.toList());
-  }
-
-  @SuppressWarnings("UnnecessarilyFullyQualified")
-  private static String getRunfilesLocation(String suffix) {
-    try {
-      return com.google.devtools.build.runfiles.Runfiles.create()
-          .rlocation(TEST_DATA_ROOT_PATH + suffix);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+        .collect(toImmutableList());
   }
 }

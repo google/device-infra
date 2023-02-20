@@ -36,7 +36,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/path",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
-        "@bazel_tools//tools/java/runfiles",
+        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",

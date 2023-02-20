@@ -16,13 +16,13 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_testonly = 1,
+    default_visibility = ["//:deviceinfra_pkg"],
 )
 
 java_library(
-    name = "test_runfiles_util",
-    srcs = ["TestRunfilesUtil.java"],
-    visibility = ["//src/javatests/com/google/devtools/atsconsole:__subpackages__"],
+    name = "runfiles_util",
+    srcs = ["RunfilesUtil.java"],
     deps = [
-        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
+        "@bazel_tools//tools/java/runfiles",
     ],
 )

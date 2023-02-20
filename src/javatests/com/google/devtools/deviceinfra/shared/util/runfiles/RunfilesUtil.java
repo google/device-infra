@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-package com.google.devtools.atsconsole.util;
+package com.google.devtools.deviceinfra.shared.util.runfiles;
 
-import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 
-/** Util to handle test runfiles (like test data files) for unit tests. */
-public final class TestRunfilesUtil {
+/** Utility for getting runfiles paths in oss/non-oss. */
+public class RunfilesUtil {
 
   public static String getRunfilesLocation(String suffix) {
-    return RunfilesUtil.getRunfilesLocation("javatests/com/google/devtools/atsconsole/" + suffix);
+    try {
+      return com.google.devtools.build.runfiles.Runfiles.create()
+          .rlocation("com_google_deviceinfra/src/" + suffix);
+    } catch (java.io.IOException e) {
+      throw new java.io.UncheckedIOException(e);
+    }
   }
 
-  private TestRunfilesUtil() {}
+  private RunfilesUtil() {}
 }

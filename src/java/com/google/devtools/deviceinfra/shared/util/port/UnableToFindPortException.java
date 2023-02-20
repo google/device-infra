@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-package com.google.devtools.atsconsole.util;
+package com.google.devtools.deviceinfra.shared.util.port;
 
-import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
+/** Exception thrown when an attempt to find a free port fails. */
+public class UnableToFindPortException extends RuntimeException {
 
-/** Util to handle test runfiles (like test data files) for unit tests. */
-public final class TestRunfilesUtil {
-
-  public static String getRunfilesLocation(String suffix) {
-    return RunfilesUtil.getRunfilesLocation("javatests/com/google/devtools/atsconsole/" + suffix);
+  public UnableToFindPortException(String message) {
+    super(message);
   }
-
-  private TestRunfilesUtil() {}
 }

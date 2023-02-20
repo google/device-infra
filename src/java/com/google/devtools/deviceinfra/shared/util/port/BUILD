@@ -13,16 +13,18 @@
 # limitations under the License.
 #
 
-package(
-    default_applicable_licenses = ["//:license"],
-    default_testonly = 1,
-)
-
 java_library(
-    name = "test_runfiles_util",
-    srcs = ["TestRunfilesUtil.java"],
-    visibility = ["//src/javatests/com/google/devtools/atsconsole:__subpackages__"],
+    name = "portprober",
+    srcs = [
+        "PortProber.java",
+        "UnableToFindPortException.java",
+        "UnexpectedPortStateException.java",
+    ],
+    visibility = [
+        "//:deviceinfra_pkg",
+    ],
     deps = [
-        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
     ],
 )

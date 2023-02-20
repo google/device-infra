@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.apache.commons.lang3.CharEncoding.UTF_8;
 
 import com.google.common.hash.Hashing;
+import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
@@ -35,17 +36,26 @@ import org.junit.runners.JUnit4;
 /** Unit tests for {@link ChecksumUtil}. */
 @RunWith(JUnit4.class)
 public final class ChecksumUtilTest {
+
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
 
-  private static final String TEST_DATA_ROOT_PATH =
-      "com_google_deviceinfra/src/javatests/com/google/devtools/mobileharness/"
-          + "shared/util/file/checksum/testdata/";
+  private static final Path TEST_DATA_DIR =
+      Paths.get(
+          RunfilesUtil.getRunfilesLocation(
+              "javatests/com/google/devtools/mobileharness/"
+                  + "shared/util/file/checksum/testdata/"));
 
-  private static final Path TEST_DATA_DIR = Paths.get(getRunfilesLocation(""));
+  private static final Path SMALL_FILE =
+      Paths.get(
+          RunfilesUtil.getRunfilesLocation(
+              "javatests/com/google/devtools/mobileharness/"
+                  + "shared/util/file/checksum/testdata/Md5.small"));
 
-  private static final Path SMALL_FILE = Paths.get(getRunfilesLocation("Md5.small"));
-
-  private static final Path EMPTY_FILE = Paths.get(getRunfilesLocation("Md5.empty"));
+  private static final Path EMPTY_FILE =
+      Paths.get(
+          RunfilesUtil.getRunfilesLocation(
+              "javatests/com/google/devtools/mobileharness/"
+                  + "shared/util/file/checksum/testdata/Md5.empty"));
 
   private final LocalFileUtil fileUtil = new LocalFileUtil();
   private final ChecksumUtil util = new ChecksumUtil();
@@ -142,14 +152,5 @@ public final class ChecksumUtilTest {
     Sleeper.defaultSleeper().sleep(Duration.ofMillis(2));
     fileUtil.writeToFile(file + "/Md5.empty", "aa");
     assertThat(util.fingerprint(file)).isEqualTo("fe6765c7");
-  }
-
-  private static String getRunfilesLocation(String suffix) {
-    try {
-      return com.google.devtools.build.runfiles.Runfiles.create()
-          .rlocation(TEST_DATA_ROOT_PATH + suffix);
-    } catch (java.io.IOException e) {
-      throw new RuntimeException(e);
-    }
   }
 }

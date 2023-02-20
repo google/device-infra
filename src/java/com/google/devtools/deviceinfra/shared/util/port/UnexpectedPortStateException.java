@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package com.google.devtools.atsconsole.util;
+package com.google.devtools.deviceinfra.shared.util.port;
 
-import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
+/**
+ * Thrown when a port being checked is in an unexpected state, e.g., it is busy when it is expected
+ * to be free or vice versa.
+ */
+public class UnexpectedPortStateException extends UnableToFindPortException {
 
-/** Util to handle test runfiles (like test data files) for unit tests. */
-public final class TestRunfilesUtil {
-
-  public static String getRunfilesLocation(String suffix) {
-    return RunfilesUtil.getRunfilesLocation("javatests/com/google/devtools/atsconsole/" + suffix);
+  public UnexpectedPortStateException(String message) {
+    super(message);
   }
-
-  private TestRunfilesUtil() {}
 }
