@@ -56,3 +56,8 @@ message HostDimension {
 message HostDimensions {
   repeated HostDimension host_dimension = 1;
 }
+
+// Lab Server feature.
+message LabServerFeature {
+  HostDimensions host_dimensions = 1;
+}
