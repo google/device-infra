@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.controller.device.config;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.protobuf.Any;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import java.util.List;
@@ -106,5 +107,10 @@ public class DummyApiConfig extends Observable implements ApiConfig {
   @Override
   public Map<String, List<String>> getOverSshDevice() {
     return ImmutableMap.of();
+  }
+
+  @Override
+  public LabServerFeature getLabServerFeature() {
+    return LabServerFeature.getDefaultInstance();
   }
 }
