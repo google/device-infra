@@ -16,8 +16,13 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.singledevice;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
+import com.google.common.base.Ascii;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.LinkedListMultimap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
@@ -31,8 +36,12 @@ import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceInfo;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /** Assessment of a device or a group of device, about their support of a given job */
@@ -88,6 +97,9 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
   private boolean idle = false;
   private boolean missing = true;
 
+  private final List<String> requestedSharedDimensionNames;
+  private final ListMultimap<String, String> supportedSharedDimensions;
+
   /** Assessment of a job. */
   SingleDeviceAssessment(JobScheduleUnit job) {
     this(
@@ -112,12 +124,14 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
       Map<String, String> unsupportedDimensions) {
     this.user = job.user();
     this.driver = job.type().getDriver();
+    this.requestedSharedDimensionNames = job.subDeviceSpecs().getSharedDimensionNames();
     this.deviceType = spec == null ? job.type().getDevice() : spec.type();
     this.requestedDimensions =
         ImmutableMap.copyOf(spec == null ? job.dimensions().getAll() : spec.dimensions().getAll());
     this.unsupportedDecorators = unsupportedDecorators;
     this.unsupportedDimensions = unsupportedDimensions;
     this.unsatisfiedDimensions = null;
+    this.supportedSharedDimensions = LinkedListMultimap.create();
   }
 
   /** Adds a device into the assessment for a job. */
@@ -145,6 +159,13 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
           device
               .dimensions()
               .getUnsupportedJobDimensions(unsupportedDimensions, false /*failFast*/);
+    }
+    for (String sharedDimensionName : requestedSharedDimensionNames) {
+      Stream.concat(
+              device.dimensions().supported().get(sharedDimensionName).stream(),
+              device.dimensions().required().get(sharedDimensionName).stream())
+          .forEach(
+              dimensionValue -> supportedSharedDimensions.put(sharedDimensionName, dimensionValue));
     }
     DeviceStatus deviceStatus = device.status().get();
     idle |= (deviceStatus == DeviceStatus.IDLE);
@@ -208,12 +229,33 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
 
   /** Whether any devices support the required dimensions of the job. */
   public boolean isDimensionsSupported() {
-    return unsupportedDimensions.isEmpty();
+    return unsupportedDimensions.isEmpty()
+        && supportedSharedDimensions.keySet().size() == requestedSharedDimensionNames.size();
   }
 
   /** Gets the job required dimensions which are not supported by any devices. */
   public Map<String, String> getUnsupportedDimensions() {
-    return Collections.unmodifiableMap(unsupportedDimensions);
+    if (supportedSharedDimensions.keySet().size() != requestedSharedDimensionNames.size()) {
+      ImmutableMap<String, String> unsupportedSharedDimensions =
+          requestedSharedDimensionNames.stream()
+              .filter(name -> !supportedSharedDimensions.containsKey(name))
+              .collect(toImmutableMap(Function.identity(), entry -> ""));
+      if (unsupportedDimensions.isEmpty()) {
+        return Collections.unmodifiableMap(unsupportedSharedDimensions);
+      } else {
+        return Collections.unmodifiableMap(
+            Stream.concat(
+                    unsupportedSharedDimensions.entrySet().stream(),
+                    unsupportedDimensions.entrySet().stream())
+                .collect(toImmutableMap(Entry::getKey, Entry::getValue)));
+      }
+    } else {
+      return Collections.unmodifiableMap(unsupportedDimensions);
+    }
+  }
+
+  public Multimap<String, String> getSupportedSharedDimensions() {
+    return supportedSharedDimensions;
   }
 
   /** Whether any device required dimensions are already satisfied by the job dimensions. */
@@ -277,8 +319,8 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
 
   private int getSupportedDimensionScore() {
     int score =
-        WEIGHT_SUPPORTED_DIMENSION - unsupportedDimensions.size() * DUDUCTION_SINGLE_DIMENSION;
-    if (unsupportedDimensions.containsKey(Dimension.Name.LABEL.name().toLowerCase())) {
+        WEIGHT_SUPPORTED_DIMENSION - getUnsupportedDimensions().size() * DUDUCTION_SINGLE_DIMENSION;
+    if (getUnsupportedDimensions().containsKey(Ascii.toLowerCase(Dimension.Name.LABEL.name()))) {
       score = score - DUDUCTION_LABEL_DIMENSION + DUDUCTION_SINGLE_DIMENSION;
     }
     return Math.max(MIN_SCORE, score);
