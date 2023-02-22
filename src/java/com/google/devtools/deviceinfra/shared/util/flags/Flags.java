@@ -143,6 +143,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAteDualStack = enableAteDualStackDefault;
 
+  private static final Flag<Boolean> enableDebugModeDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_debug_mode",
+      description = "Whether enable debug mode to print more detailed logs.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableDebugMode = enableDebugModeDefault;
+
   private static final Flag<Boolean> createFailedDeviceDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -196,6 +204,14 @@ public class Flags {
               + "Default is 200 MB.",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> internalStorageAlert = internalStorageAlertDefault;
+
+  private static final Flag<Integer> logFileNumDefault = Flag.value(100);
+
+  @com.beust.jcommander.Parameter(
+      names = "--log_file_num",
+      description = "Max number of the rotated log files. Max size of each file is 10 MB.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> logFileNum = logFileNumDefault;
 
   private static final Flag<Integer> maxConcurrentAdbPushLargeFileDefault = Flag.value(4);
 

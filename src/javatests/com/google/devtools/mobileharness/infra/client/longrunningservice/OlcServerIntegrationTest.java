@@ -130,8 +130,8 @@ public class OlcServerIntegrationTest {
       serverProcess = new CommandExecutor().start(serverCommand);
 
       // Waits until the server starts successfully.
-      assertWithMessage("The server has not started in 10 seconds")
-          .that(serverStartedLatch.await(10L, SECONDS))
+      assertWithMessage("The server has not started in 15 seconds")
+          .that(serverStartedLatch.await(15L, SECONDS))
           .isTrue();
       assertWithMessage("The server does not start successfully")
           .that(serverStartedSuccessfully.get())

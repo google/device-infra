@@ -16,6 +16,18 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
+    name = "formatter",
+    srcs = ["MobileHarnessLogFormatter.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared:__pkg__",
+    ],
+    deps = [
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "tag",
     srcs = ["MobileHarnessLogTag.java"],
     visibility = [

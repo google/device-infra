@@ -26,6 +26,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:session_service",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:version_service",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:log",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//netty",
