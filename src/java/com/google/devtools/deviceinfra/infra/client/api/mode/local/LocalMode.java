@@ -71,10 +71,8 @@ public class LocalMode implements ExecMode {
   /** Synchronization lock for {@link #localDeviceManager} and {@link #localScheduler}. */
   private static final Object LOCAL_ENV_LOCK = new Object();
 
-  /**
-   * Creates the singleton {@link #localDeviceManager} and {@link #localScheduler} if not created.
-   */
-  private void checkLocalEnv(EventBus globalInternalBus) throws InterruptedException {
+  /** Starts the singleton local device manager and the local scheduler, if has not. */
+  public void initialize(EventBus globalInternalBus) throws InterruptedException {
     if (localDeviceManager == null) {
       synchronized (LOCAL_ENV_LOCK) {
         if (localDeviceManager == null) {
@@ -113,7 +111,7 @@ public class LocalMode implements ExecMode {
   @Override
   public DeviceAllocator createDeviceAllocator(JobInfo jobInfo, EventBus globalInternalBus)
       throws InterruptedException {
-    checkLocalEnv(globalInternalBus);
+    initialize(globalInternalBus);
     return new LocalDeviceAllocator(jobInfo, localDeviceManager, localScheduler);
   }
 
@@ -126,7 +124,7 @@ public class LocalMode implements ExecMode {
   public DirectTestRunner createTestRunner(
       DirectTestRunnerSetting setting, ListeningExecutorService testThreadPool)
       throws MobileHarnessException, InterruptedException {
-    checkLocalEnv(
+    initialize(
         setting
             .globalInternalBus()
             .orElseThrow(

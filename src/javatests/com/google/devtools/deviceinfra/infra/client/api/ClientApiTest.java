@@ -23,11 +23,15 @@ import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.Iterables;
+import com.google.common.eventbus.EventBus;
+import com.google.devtools.deviceinfra.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.inject.Guice;
+import com.google.inject.testing.fieldbinder.Bind;
+import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
@@ -56,6 +60,8 @@ public class ClientApiTest {
 
   @Mock private Handler logHandler;
 
+  @Bind @GlobalInternalEventBus private EventBus globalInternalEventBus;
+
   @Captor private ArgumentCaptor<LogRecord> logRecordCaptor;
 
   @Inject private ClientApi clientApi;
@@ -66,7 +72,9 @@ public class ClientApiTest {
 
     Logger.getLogger("").addHandler(logHandler);
 
-    Guice.createInjector(new ClientApiModule()).injectMembers(this);
+    globalInternalEventBus = new EventBus();
+
+    Guice.createInjector(new ClientApiModule(), BoundFieldModule.of(this)).injectMembers(this);
   }
 
   @After

@@ -16,14 +16,17 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
+import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.deviceinfra.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.deviceinfra.infra.client.api.ClientApi;
 import com.google.devtools.deviceinfra.infra.client.api.ClientApiModule;
 import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
+import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
@@ -58,5 +61,12 @@ public class ServerModule extends AbstractModule {
   @Provides
   Sleeper provideSleeper() {
     return Sleeper.defaultSleeper();
+  }
+
+  @Provides
+  @Singleton
+  @GlobalInternalEventBus
+  EventBus provideGlobalInternalEventBus() {
+    return new EventBus(new SubscriberExceptionLoggingHandler());
   }
 }

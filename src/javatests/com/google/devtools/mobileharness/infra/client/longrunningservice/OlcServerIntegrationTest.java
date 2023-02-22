@@ -90,6 +90,7 @@ public class OlcServerIntegrationTest {
 
     CountDownLatch serverStartedLatch = new CountDownLatch(1);
     AtomicBoolean serverStartedSuccessfully = new AtomicBoolean();
+    CountDownLatch deviceFound = new CountDownLatch(1);
 
     try {
       // Starts the server.
@@ -120,6 +121,8 @@ public class OlcServerIntegrationTest {
                         if (stderr.contains("OLC server started")) {
                           serverStartedSuccessfully.set(true);
                           serverStartedLatch.countDown();
+                        } else if (stderr.contains("New device NoOpDevice-0")) {
+                          deviceFound.countDown();
                         }
                       }))
               .onExit(result -> serverStartedLatch.countDown())
@@ -135,6 +138,11 @@ public class OlcServerIntegrationTest {
           .isTrue();
       assertWithMessage("The server does not start successfully")
           .that(serverStartedSuccessfully.get())
+          .isTrue();
+
+      // Verifies the local device manager starts successfully.
+      assertWithMessage("The local device manager has not started in 5 seconds")
+          .that(deviceFound.await(5L, SECONDS))
           .isTrue();
 
       ManagedChannel channel = ChannelFactory.createLocalChannel(serverPort);

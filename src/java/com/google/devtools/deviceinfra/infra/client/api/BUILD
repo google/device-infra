@@ -34,7 +34,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:util",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/lister",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
@@ -66,5 +65,11 @@ java_library(
 java_library(
     name = "annotations",
     srcs = ["Annotations.java"],
-    deps = ["@maven//:javax_inject_jsr330_api"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__subpackages__",
+    ],
+    deps = [
+        "@maven//:javax_inject_jsr330_api",
+    ],
 )

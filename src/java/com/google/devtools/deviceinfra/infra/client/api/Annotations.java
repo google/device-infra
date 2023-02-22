@@ -20,7 +20,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import javax.inject.Qualifier;
 
-class Annotations {
+/** Annotations for {@code ClientApi}. */
+public class Annotations {
 
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
@@ -41,6 +42,10 @@ class Annotations {
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   @interface ShutdownJobThreadWhenShutdownProcess {}
+
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface GlobalInternalEventBus {}
 
   private Annotations() {}
 }

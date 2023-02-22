@@ -16,7 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
+import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.deviceinfra.infra.client.api.Annotations.GlobalInternalEventBus;
+import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
@@ -47,11 +50,19 @@ public class OlcServer {
 
   private final SessionService sessionService;
   private final VersionService versionService;
+  private final LocalMode localMode;
+  private final EventBus globalInternalEventBus;
 
   @Inject
-  OlcServer(SessionService sessionService, VersionService versionService) {
+  OlcServer(
+      SessionService sessionService,
+      VersionService versionService,
+      LocalMode localMode,
+      @GlobalInternalEventBus EventBus globalInternalEventBus) {
     this.sessionService = sessionService;
     this.versionService = versionService;
+    this.localMode = localMode;
+    this.globalInternalEventBus = globalInternalEventBus;
   }
 
   private void run(List<String> args) throws IOException, InterruptedException {
@@ -68,6 +79,11 @@ public class OlcServer {
             .addService(versionService)
             .build();
     server.start();
+
+    // Starts local device manager.
+    logger.atInfo().log("Starting local device manager");
+    localMode.initialize(globalInternalEventBus);
+
     logger.atInfo().log("OLC server started, port=%s", port);
 
     server.awaitTermination();

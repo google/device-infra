@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.deviceinfra.infra.client.api.Annotations.EnvThreadPool;
 import com.google.devtools.deviceinfra.infra.client.api.Annotations.ExtraGlobalInternalPlugins;
 import com.google.devtools.deviceinfra.infra.client.api.Annotations.ExtraJobInternalPlugins;
+import com.google.devtools.deviceinfra.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.deviceinfra.infra.client.api.Annotations.JobThreadPool;
 import com.google.devtools.deviceinfra.infra.client.api.Annotations.ShutdownJobThreadWhenShutdownProcess;
 import com.google.devtools.deviceinfra.infra.client.controller.JobManagerCore;
@@ -35,7 +36,6 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecModeUtil;
 import com.google.devtools.mobileharness.infra.client.api.util.lister.TestLister;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
-import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
@@ -71,16 +71,16 @@ public class ClientApi {
       JobManagerCoreFactory jobManagerCoreFactory,
       @ExtraGlobalInternalPlugins ImmutableList<Object> extraGlobalInternalPlugins,
       @ExtraJobInternalPlugins ImmutableList<Object> extraJobInternalPlugins,
-      @ShutdownJobThreadWhenShutdownProcess boolean shutdownJobThreadWhenShutdownProcess) {
-    EventBus globalInternalBus = new EventBus(new SubscriberExceptionLoggingHandler());
-
+      @ShutdownJobThreadWhenShutdownProcess boolean shutdownJobThreadWhenShutdownProcess,
+      @GlobalInternalEventBus EventBus globalInternalEventBus) {
     jobManager =
-        jobManagerCoreFactory.create(jobThreadPool, globalInternalBus, extraJobInternalPlugins);
+        jobManagerCoreFactory.create(
+            jobThreadPool, globalInternalEventBus, extraJobInternalPlugins);
 
     ImmutableList<Object> builtinGlobalInternalPlugins =
         ImmutableList.of(new JobReporter(), new TestLister(), jobManager);
     Stream.concat(builtinGlobalInternalPlugins.stream(), extraGlobalInternalPlugins.stream())
-        .forEach(globalInternalBus::register);
+        .forEach(globalInternalEventBus::register);
 
     jobManagerThreadFuture = envThreadPool.submit(jobManager);
 
