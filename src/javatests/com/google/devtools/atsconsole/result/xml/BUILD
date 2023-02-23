@@ -30,6 +30,7 @@ java_library(
         ":testdata",
     ],
     deps = [
+        "//src/devtools/atsconsole/result/proto:result_java_proto",
         "//src/java/com/google/devtools/atsconsole/result/mobly:parser",
         "//src/java/com/google/devtools/atsconsole/result/xml:mobly_result_info",
         "//src/java/com/google/devtools/atsconsole/result/xml:xml_result_formatter",
@@ -39,6 +40,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/atsconsole/util:test_runfiles_util",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",

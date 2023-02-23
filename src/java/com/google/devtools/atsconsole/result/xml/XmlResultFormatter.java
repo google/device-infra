@@ -42,6 +42,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -55,6 +56,7 @@ public class XmlResultFormatter {
   public static final String NS = null;
   private static final String ENCODING = "UTF-8";
   @VisibleForTesting static final String TEST_RESULT_FILE_NAME = "test_result.xml";
+  @VisibleForTesting static final String TEST_RESULT_PB_FILE_NAME = "test_result.pb";
 
   // XML constants
   // <Result> element
@@ -103,7 +105,7 @@ public class XmlResultFormatter {
 
   /**
    * Loads and parses Mobly test summary yaml files, converts and combines them into a CTS test
-   * result XML file.
+   * result XML file and stores in a protobuf binary file too.
    *
    * @param resultInfo info about the Mobly test results
    * @param outputDir the directory in which the generated XML file will be saved, the xml file name
@@ -299,6 +301,12 @@ public class XmlResultFormatter {
     }
 
     serializer.endDocument();
+
+    // Writes to test_result.pb
+    Path testResultProtoPath = resultDir.toPath().resolve(TEST_RESULT_PB_FILE_NAME);
+    try (FileOutputStream fos = new FileOutputStream(testResultProtoPath.toFile())) {
+      resultEl.writeTo(fos);
+    }
   }
 
   private void serializeTestCases(XmlSerializer serializer, List<TestCaseElement> testCases)

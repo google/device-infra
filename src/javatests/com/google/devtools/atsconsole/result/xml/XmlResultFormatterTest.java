@@ -24,9 +24,13 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.atsconsole.result.mobly.MoblyYamlParser;
+import com.google.devtools.atsconsole.result.proto.ResultProto.ElementAttribute;
+import com.google.devtools.atsconsole.result.proto.ResultProto.ResultElement;
 import com.google.devtools.atsconsole.util.TestRunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.protobuf.ExtensionRegistry;
 import java.io.File;
+import java.io.FileInputStream;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -89,6 +93,26 @@ public final class XmlResultFormatterTest {
                     .trim()))
         .isEqualTo(
             replaceLineBreak(realLocalFileUtil.readFile(EXPECTED_XML_FOR_TEST_SUMMARY_1N2).trim()));
+
+    try (FileInputStream fis =
+        new FileInputStream(
+            xmlResultDir.toPath().resolve(XmlResultFormatter.TEST_RESULT_PB_FILE_NAME).toFile())) {
+      ResultElement resultEl =
+          ResultElement.newBuilder().mergeFrom(fis, ExtensionRegistry.newInstance()).build();
+      assertThat(resultEl.getAttributeList())
+          .containsExactly(
+              ElementAttribute.newBuilder()
+                  .setKey("result_attr1")
+                  .setValue("result_attr1_value")
+                  .build(),
+              ElementAttribute.newBuilder()
+                  .setKey("result_attr2")
+                  .setValue("result_attr2_value")
+                  .build());
+      assertThat(resultEl.getBuildElement().getAttributeList()).hasSize(2);
+      assertThat(resultEl.getSummaryElement().getAttributeList()).hasSize(4);
+      assertThat(resultEl.getModuleElementList()).hasSize(2);
+    }
   }
 
   @Test
