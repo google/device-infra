@@ -28,7 +28,7 @@ import java.util.Optional;
 /**
  * A template defines the adb initialization steps.
  *
- * <p>Sub-classes can or need to override some of methods to handle the adb initialization, or its
+ * <p>Sub-classes can or need to override some methods to handle the adb initialization, or its
  * default implementation will be used.
  */
 public abstract class AdbInitializeTemplate {
@@ -104,7 +104,7 @@ public abstract class AdbInitializeTemplate {
    *
    * <p>This retrieved adb param will be returned to the caller immediately. If no adb param
    * returned, it will continue the rest of part of retrieving the adb param, see {@link
-   * #initializeAdb()} for more details. By default it will do nothing.
+   * #initializeAdb()} for more details. By default, it will do nothing.
    */
   protected Optional<AdbParam> getAdbParamFromRemoteIfNeeded() {
     return Optional.empty();
@@ -141,7 +141,7 @@ public abstract class AdbInitializeTemplate {
     return stockAdbPath;
   }
 
-  /** Checks whether need to kill the existing adb server in the adb initialization process. */
+  /** Checks whether it needs to kill the existing adb server in the adb initialization process. */
   protected abstract boolean ifKillAdbServer();
 
   /** The step to manage the adb server in the adb initialization process. */
@@ -182,22 +182,22 @@ public abstract class AdbInitializeTemplate {
     return commandEnvVars.buildOrThrow();
   }
 
-  /** Gets the value of flag {@link #adbPathFromUser}. */
+  /** Gets the value of flag {@link Flags#adbPathFromUser}. */
   protected String getAdbPathFromUser() {
     return Flags.instance().adbPathFromUser.getNonNull();
   }
 
-  /** Gets the value of flag {@link #adbKeyPathsFromUser}. */
+  /** Gets the value of flag {@link Flags#adbKeyPathsFromUser}. */
   protected String getAdbKeyPathsFromUser() {
     return Flags.instance().adbKeyPathsFromUser.getNonNull();
   }
 
-  /** Gets the value of flag {@link #adbForceKillServer}. */
+  /** Gets the value of flag {@link Flags#adbForceKillServer}. */
   protected boolean getAdbForceKillServer() {
     return Flags.instance().adbForceKillServer.getNonNull();
   }
 
-  /** Gets the value of flag {@link #adbDontKillServer}. */
+  /** Gets the value of flag {@link Flags#adbDontKillServer}. */
   protected boolean getAdbDontKillServer() {
     return Flags.instance().adbDontKillServer.getNonNull();
   }
