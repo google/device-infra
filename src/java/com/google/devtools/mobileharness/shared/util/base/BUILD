@@ -13,18 +13,32 @@
 # limitations under the License.
 #
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_pkg",
+    ],
+)
 
 java_library(
     name = "base",
     srcs = [
         "StrUtil.java",
     ],
-    visibility = [
-        "//:deviceinfra_pkg",
-    ],
     deps = [
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "supplier",
+    srcs = [
+        "MoreSuppliers.java",
+        "ThrowingSupplier.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@maven//:com_google_guava_guava",
     ],
 )
