@@ -27,6 +27,7 @@ import com.google.devtools.deviceinfra.infra.core.devicemanager.DispatcherManage
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.NoOpDeviceDetector;
+import com.google.devtools.mobileharness.api.devicemanager.dispatcher.AndroidRealDeviceDispatcher;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.Dispatcher;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.NoOpDeviceDispatcher;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
@@ -56,7 +57,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
 
 /** Execution mode which run tests on local devices. */
 public class LocalMode implements ExecMode {
@@ -143,7 +143,7 @@ public class LocalMode implements ExecMode {
     }
     LocalDeviceTestRunner primaryDeviceRunner = deviceRunners.get(0);
     List<LocalDeviceTestRunner> secondaryDeviceRunners =
-        deviceRunners.stream().skip(1L).collect(Collectors.toList());
+        deviceRunners.stream().skip(1L).collect(toImmutableList());
     TestRunnerLauncher<TestRunner> launcher =
         new LocalDeviceTestRunnerLauncher(primaryDeviceRunner, secondaryDeviceRunners);
     List<Device> devices =
@@ -179,9 +179,9 @@ public class LocalMode implements ExecMode {
   }
 
   protected void addDeviceDispatchers(DispatcherManager dispatcherManager) {
+    // Adds Android real device dispatcher.
     if (Flags.instance().detectAdbDevice.getNonNull()) {
-      // Adds Android real device dispatcher.
-      // dispatcherManager.add(AndroidRealDeviceDispatcher.class);
+      dispatcherManager.add(AndroidRealDeviceDispatcher.class);
     }
 
     // Adds NoOp dispatcher.

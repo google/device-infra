@@ -98,8 +98,7 @@ public final class ClassUtil {
   public static Class<? extends Device> getDeviceClass(Class<? extends Dispatcher> dispatcherClass)
       throws MobileHarnessException {
     return getDeviceClass(
-        dispatcherClass.getSimpleName().replaceAll("Dispatcher$", ""),
-        Device.class.getPackage().getName());
+        getDeviceClassSimpleNameOfDispatcher(dispatcherClass), Device.class.getPackage().getName());
   }
 
   /**
@@ -116,9 +115,19 @@ public final class ClassUtil {
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           BasicErrorId.CLASS_DEVICE_CLASS_NOT_FOUND,
-          "Device \"" + deviceClassSimpleName + "\" does not exist",
+          "Device class [" + deviceClassSimpleName + "] does not exist",
           e);
     }
+  }
+
+  /**
+   * Gets the class simple name of the {@link Device} class of the given dispatcher type.
+   *
+   * <p>See {@link #getDeviceClass(Class)}.
+   */
+  public static String getDeviceClassSimpleNameOfDispatcher(
+      Class<? extends Dispatcher> dispatcherClass) {
+    return dispatcherClass.getSimpleName().replaceAll("Dispatcher$", "");
   }
 
   private ClassUtil() {}

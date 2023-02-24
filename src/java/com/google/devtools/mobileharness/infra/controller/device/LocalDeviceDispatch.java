@@ -90,6 +90,7 @@ public class LocalDeviceDispatch {
 
   private final ExternalDeviceManager externalDeviceManager;
 
+  @SuppressWarnings("FloggerLogWithCause")
   public LocalDeviceDispatch(
       List<Class<? extends Dispatcher>> dispatchers,
       LocalDeviceManager deviceManager,
@@ -115,8 +116,9 @@ public class LocalDeviceDispatch {
             "Failed to generate the classifier instance of classifier type %s",
             dispatcher.getSimpleName());
       } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to find device class for dispatcher type %s", dispatcher.getSimpleName());
+        logger.atWarning().log(
+            "Device class [%s] of dispatcher [%s] not found (not in runtime_deps of the jar)",
+            ClassUtil.getDeviceClassSimpleNameOfDispatcher(dispatcher), dispatcher.getSimpleName());
       }
     }
   }
@@ -145,6 +147,7 @@ public class LocalDeviceDispatch {
    *
    * @return whether the device set are changed
    */
+  @SuppressWarnings("Interruption")
   @CanIgnoreReturnValue
   public boolean dispatchDevices(DetectionResults detectionResults) throws InterruptedException {
     boolean isChanged = false;
