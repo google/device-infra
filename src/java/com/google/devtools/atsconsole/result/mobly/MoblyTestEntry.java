@@ -17,8 +17,8 @@
 package com.google.devtools.atsconsole.result.mobly;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Optional;
 import com.google.devtools.atsconsole.result.proto.ResultProto.MoblyResult;
+import java.util.Optional;
 
 /**
  * A general container class for a document that contains the result of a single Mobly test.

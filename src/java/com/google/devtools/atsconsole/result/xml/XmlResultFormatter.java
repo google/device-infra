@@ -195,7 +195,7 @@ public class XmlResultFormatter {
     for (MoblyYamlDocEntry moblyDocEntry : moblyDocEntries) {
       if (moblyDocEntry instanceof MoblyTestEntry) {
         MoblyTestEntry testEntry = (MoblyTestEntry) moblyDocEntry;
-        runtime += max(testEntry.getEndTime().or(0L) - testEntry.getBeginTime().or(0L), 0L);
+        runtime += max(testEntry.getEndTime().orElse(0L) - testEntry.getBeginTime().orElse(0L), 0L);
         testEntriesMapBuilder.put(testEntry.getTestClass(), testEntry);
       } else if (moblyDocEntry instanceof MoblySummaryEntry) {
         MoblySummaryEntry summaryEntry = (MoblySummaryEntry) moblyDocEntry;

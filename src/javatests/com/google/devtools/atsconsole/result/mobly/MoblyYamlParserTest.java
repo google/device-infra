@@ -17,6 +17,7 @@
 package com.google.devtools.atsconsole.result.mobly;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.atsconsole.result.proto.ResultProto.MoblyResult;
