@@ -30,18 +30,22 @@ public class AdbInitializeTemplateImpl extends AdbInitializeTemplate {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final LocalFileUtil localFileUtil;
+  private static final String DEFAULT_STOCK_ADB_PATH = "adb";
 
+  private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
+  private final CommandExecutor commandExecutor;
 
   public AdbInitializeTemplateImpl() {
-    this(new LocalFileUtil(), new SystemUtil());
+    this(new LocalFileUtil(), new SystemUtil(), new CommandExecutor());
   }
 
   @VisibleForTesting
-  AdbInitializeTemplateImpl(LocalFileUtil localFileUtil, SystemUtil systemUtil) {
+  AdbInitializeTemplateImpl(
+      LocalFileUtil localFileUtil, SystemUtil systemUtil, CommandExecutor commandExecutor) {
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
+    this.commandExecutor = commandExecutor;
   }
 
   @Override
@@ -71,15 +75,19 @@ public class AdbInitializeTemplateImpl extends AdbInitializeTemplate {
 
   @Override
   protected String getStockAdbPath() {
-    String adbPath = "";
-    if (!getAdbPathFromUser().isEmpty()) {
-      adbPath = getAdbPathFromUser();
+    String adbPath;
+    String adbPathFromUser = getAdbPathFromUser();
+    if (!adbPathFromUser.isEmpty()) {
+      adbPath = adbPathFromUser;
     } else {
-      logger.atSevere().log("Must pass adb binary absolute path to flag '--adb=</path/to/adb>'");
+      logger.atInfo().log(
+          "Flag \"--adb=</path/to/adb>\" not specified. Use \"%s\" as ADB path",
+          DEFAULT_STOCK_ADB_PATH);
+      adbPath = DEFAULT_STOCK_ADB_PATH;
     }
-    if (adbPath.isEmpty() || !localFileUtil.isFileExist(adbPath)) {
-      logger.atSevere().log("The given adb binary with path [%s] doesn't exist.", adbPath);
-      return "";
+    if (!AdbInitializerHelper.checkAdbPath(adbPath, commandExecutor, localFileUtil)) {
+      logger.atWarning().log(
+          "Invalid ADB path [%s] (file doesn't exist or isn't in PATH dirs)", adbPath);
     }
     return adbPath;
   }
