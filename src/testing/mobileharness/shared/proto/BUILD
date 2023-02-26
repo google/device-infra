@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 proto_library(
     name = "lab_query_proto",
     srcs = ["lab_query.proto"],
