@@ -13,19 +13,16 @@
 # limitations under the License.
 #
 
-DEFAULT_VISIBILITY = [
-    "//:deviceinfra_all_pkg",
-]
-
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
 )
 
 java_library(
     name = "error_model_converter",
     srcs = ["ErrorModelConverter.java"],
-    visibility = DEFAULT_VISIBILITY,
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:error_java_proto",
@@ -38,4 +35,9 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
+)
+
+java_library(
+    name = "more_throwables",
+    srcs = ["MoreThrowables.java"],
 )

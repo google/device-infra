@@ -302,8 +302,7 @@ public class CommandExecutor {
     try {
       backendProcess = backend.start(backendCommand);
     } catch (com.google.devtools.deviceinfra.shared.util.command.backend.CommandStartException e) {
-      throw new CommandStartException(
-          "Failed to start command because " + e.getMessage(), e, command);
+      throw new CommandStartException("Failed to start command", e, command);
     }
 
     // Creates command process.

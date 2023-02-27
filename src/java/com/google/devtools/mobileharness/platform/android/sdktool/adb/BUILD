@@ -87,6 +87,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/emulator:emulator_id",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
