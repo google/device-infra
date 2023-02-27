@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.controller.device;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResults;
@@ -61,6 +62,8 @@ import javax.annotation.Nullable;
 public class LocalDeviceDispatch {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private final ImmutableList<Class<? extends Dispatcher>> dispatcherClasses;
+
   private final List<Dispatcher> dispatchers;
 
   /** Device {ID, {LocalDeviceRunner, Future}} of the devices detected and managed by this class. */
@@ -90,13 +93,13 @@ public class LocalDeviceDispatch {
 
   private final ExternalDeviceManager externalDeviceManager;
 
-  @SuppressWarnings("FloggerLogWithCause")
   public LocalDeviceDispatch(
-      List<Class<? extends Dispatcher>> dispatchers,
+      List<Class<? extends Dispatcher>> dispatcherClasses,
       LocalDeviceManager deviceManager,
       ExecutorService threadPool,
       EventBus globalInternalBus,
       ExternalDeviceManager externalDeviceManager) {
+    this.dispatcherClasses = ImmutableList.copyOf(dispatcherClasses);
     this.deviceManager = deviceManager;
     this.labStat = StatManager.getInstance().getOrCreateLabStat(LabLocator.LOCALHOST.ip());
     this.threadPool = threadPool;
@@ -105,22 +108,6 @@ public class LocalDeviceDispatch {
     this.dispatchers = new ArrayList<>();
     this.dispatcherToDevice = new HashMap<>();
     this.externalDeviceManager = externalDeviceManager;
-    for (Class<? extends Dispatcher> dispatcher : dispatchers) {
-      try {
-        Constructor<? extends Dispatcher> dispatcherConstructor = dispatcher.getConstructor();
-        Dispatcher dispatcherInstance = dispatcherConstructor.newInstance();
-        this.dispatcherToDevice.put(dispatcher, ClassUtil.getDeviceClass(dispatcher));
-        this.dispatchers.add(dispatcherInstance);
-      } catch (ReflectiveOperationException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to generate the classifier instance of classifier type %s",
-            dispatcher.getSimpleName());
-      } catch (MobileHarnessException e) {
-        logger.atWarning().log(
-            "Device class [%s] of dispatcher [%s] not found (not in runtime_deps of the jar)",
-            ClassUtil.getDeviceClassSimpleNameOfDispatcher(dispatcher), dispatcher.getSimpleName());
-      }
-    }
   }
 
   @VisibleForTesting
@@ -131,6 +118,7 @@ public class LocalDeviceDispatch {
       ExecutorService threadPool,
       EventBus globalInternalBus,
       ExternalDeviceManager externalDeviceManager) {
+    this.dispatcherClasses = ImmutableList.of();
     this.deviceManager = deviceManager;
     this.labStat = StatManager.getInstance().getOrCreateLabStat(LabLocator.LOCALHOST.ip());
     this.threadPool = threadPool;
@@ -139,6 +127,37 @@ public class LocalDeviceDispatch {
     this.dispatchers = dispatchers;
     this.dispatcherToDevice = dispatcherToDevice;
     this.externalDeviceManager = externalDeviceManager;
+  }
+
+  @SuppressWarnings("FloggerLogWithCause")
+  public void initialize() {
+    for (Class<? extends Dispatcher> dispatcher : dispatcherClasses) {
+      // Creates Dispatcher instance.
+      Dispatcher dispatcherInstance;
+      try {
+        Constructor<? extends Dispatcher> dispatcherConstructor = dispatcher.getConstructor();
+        dispatcherInstance = dispatcherConstructor.newInstance();
+      } catch (ReflectiveOperationException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to generate the classifier instance of classifier type %s",
+            dispatcher.getSimpleName());
+        continue;
+      }
+
+      // Loads Device class.
+      Class<? extends Device> deviceClass;
+      try {
+        deviceClass = ClassUtil.getDeviceClass(dispatcher);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().log(
+            "Device class [%s] of dispatcher [%s] not found (not in runtime_deps of the jar)",
+            ClassUtil.getDeviceClassSimpleNameOfDispatcher(dispatcher), dispatcher.getSimpleName());
+        continue;
+      }
+
+      this.dispatcherToDevice.put(dispatcher, deviceClass);
+      this.dispatchers.add(dispatcherInstance);
+    }
   }
 
   /**

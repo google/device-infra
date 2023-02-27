@@ -120,6 +120,11 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
     this.keepGoing = keepGoing;
   }
 
+  /** Initializes the local device manager. */
+  public void initialize() {
+    localDeviceDispatch.initialize();
+  }
+
   @Override
   public void run() {
     logger.atInfo().log("Running...");

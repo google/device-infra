@@ -90,6 +90,7 @@ public class LocalMode implements ExecMode {
                   localEnvThreadPool,
                   globalInternalBus,
                   new NoopExternalDeviceManager());
+          localDeviceManager.initialize();
 
           // Prepares the global scheduler.
           localScheduler = new SimpleScheduler(localEnvThreadPool);
