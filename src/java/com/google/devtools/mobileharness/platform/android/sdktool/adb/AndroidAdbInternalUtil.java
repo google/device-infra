@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -358,7 +359,7 @@ public class AndroidAdbInternalUtil {
       getAdbVersion();
       return Optional.empty();
     } catch (MobileHarnessException e) {
-      return Optional.of(e.getMessage());
+      return Optional.of(shortDebugString(e, /* maxLength= */ 2));
     }
   }
 

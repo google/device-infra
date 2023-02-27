@@ -669,7 +669,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
    */
   private void postDeviceErrorEvent(Exception e) {
     ExceptionDetail exceptionDetail = ErrorModelConverter.toExceptionDetail(e);
-    logger.atInfo().log("Post LocalDeviceErrorEvent with exception detail: %s", exceptionDetail);
+    logger.atInfo().log("Post LocalDeviceErrorEvent");
     globalInternalBus.post(
         new LocalDeviceErrorEvent(
             device.getDeviceControlId(),

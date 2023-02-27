@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base_adb",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:no_op",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_real_device",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:no_op_device",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
