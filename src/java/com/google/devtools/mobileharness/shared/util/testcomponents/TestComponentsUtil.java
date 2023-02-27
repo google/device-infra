@@ -50,7 +50,9 @@ public class TestComponentsUtil {
   }
   /**
    * Gets the path of the test components directory, and prepares the dir. Test runners can write
-   * test components files to this directory on the lab side.
+   * test components files to this directory on the lab side. Note to make sure the test components
+   * files have different file name to avoid overwriting when merging test components files in tests
+   * belonging to the same job.
    *
    * <p>The purpose of this directory is so that test runners on the lab side can use write test
    * components in the same way as specified in go/sponge-test-components.
@@ -58,16 +60,19 @@ public class TestComponentsUtil {
    * @param testInfo the TestInfo for the test
    */
   public String prepareAndGetTestComponentsDir(TestInfo testInfo) throws MobileHarnessException {
-    String dir =
-        PathUtil.join(testInfo.jobInfo().setting().getGenFileDir(), TEST_COMPONENTS_DIR_NAME);
-    if (!fileUtil.isDirExist(dir)) { // The dir could be created by other test in the same job.
+    String dir = PathUtil.join(testInfo.getGenFileDir(), TEST_COMPONENTS_DIR_NAME);
+    if (!fileUtil.isDirExist(dir)) {
       fileUtil.prepareDir(dir);
       fileUtil.grantFileOrDirFullAccess(dir);
     }
     return dir;
   }
 
-  /** Moves all the test components dir in {@code srcDir} to {@code destDir}. */
+  /**
+   * Moves all the test components dir in {@code srcDir} to {@code destDir}.
+   *
+   * <p>The logic is called in MH client only.
+   */
   public void moveTestComponentsDir(String srcDir, String destDir) throws InterruptedException {
     try {
       for (File dir : fileUtil.listDirs(srcDir, testComponentsDirFilter)) {
