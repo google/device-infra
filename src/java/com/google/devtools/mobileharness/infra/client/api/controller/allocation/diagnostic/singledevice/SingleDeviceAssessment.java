@@ -76,11 +76,11 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
 
   // The mismatch of a single dimension will drop 2 score. So that one dimension un-matched devices'
   // scores are smaller than those busy or mobileharness-device-default-owner devices.
-  static final int DUDUCTION_SINGLE_DIMENSION = 2;
+  static final int DEDUCTION_SINGLE_DIMENSION = 2;
 
   // When user requires the "label", decrease the ranks of those that don't have "label" to
   // promote the devices with "label".
-  static final int DUDUCTION_LABEL_DIMENSION = 3;
+  static final int DEDUCTION_LABEL_DIMENSION = 3;
 
   private final String user;
   private final String driver;
@@ -319,9 +319,9 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
 
   private int getSupportedDimensionScore() {
     int score =
-        WEIGHT_SUPPORTED_DIMENSION - getUnsupportedDimensions().size() * DUDUCTION_SINGLE_DIMENSION;
+        WEIGHT_SUPPORTED_DIMENSION - getUnsupportedDimensions().size() * DEDUCTION_SINGLE_DIMENSION;
     if (getUnsupportedDimensions().containsKey(Ascii.toLowerCase(Dimension.Name.LABEL.name()))) {
-      score = score - DUDUCTION_LABEL_DIMENSION + DUDUCTION_SINGLE_DIMENSION;
+      score = score - DEDUCTION_LABEL_DIMENSION + DEDUCTION_SINGLE_DIMENSION;
     }
     return Math.max(MIN_SCORE, score);
   }
