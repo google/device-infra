@@ -16,20 +16,25 @@
 
 package com.google.devtools.mobileharness.api.devicemanager.dispatcher;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Enums.FastbootDeviceState;
+import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResults;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.model.DispatchResult.DispatchType;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.model.DispatchResults;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.util.DeviceIdGenerator;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.util.Collection;
 import java.util.Map;
-import java.util.stream.Collectors;
+import java.util.Optional;
 
 /** Dispatcher for Android real devices. */
 public class AndroidRealDeviceDispatcher extends CacheableDispatcher {
@@ -45,6 +50,16 @@ public class AndroidRealDeviceDispatcher extends CacheableDispatcher {
   }
 
   @Override
+  public Optional<String> precondition() {
+    try {
+      new Fastboot().checkFastboot();
+      return Optional.empty();
+    } catch (MobileHarnessException e) {
+      return Optional.of(MoreThrowables.shortDebugString(e, 0));
+    }
+  }
+
+  @Override
   public Map<String, DispatchType> dispatchLiveDevices(
       DetectionResults detectionResults, DispatchResults dispatchResults) {
     Collection<DetectionResult> resultList =
@@ -56,7 +71,7 @@ public class AndroidRealDeviceDispatcher extends CacheableDispatcher {
     resultList.addAll(
         detectionResults.getByTypeAndDetail(DetectionType.FASTBOOT, FastbootDeviceState.FASTBOOT));
     return resultList.stream()
-        .collect(Collectors.toMap(DetectionResult::deviceControlId, v -> DispatchType.LIVE));
+        .collect(toImmutableMap(DetectionResult::deviceControlId, v -> DispatchType.LIVE));
   }
 
   @Override

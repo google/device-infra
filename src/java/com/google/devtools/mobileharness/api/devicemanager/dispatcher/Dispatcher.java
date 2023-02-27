@@ -22,9 +22,20 @@ import com.google.devtools.mobileharness.api.devicemanager.dispatcher.model.Disp
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import java.util.Map;
+import java.util.Optional;
 
 /** Device dispatcher for dispatching devices. */
 public interface Dispatcher {
+
+  /**
+   * Checks whether this dispatcher can work in the current environment.
+   *
+   * @return empty if the dispatcher can work, or return the detailed incompatible reason
+   */
+  default Optional<String> precondition() {
+    return Optional.empty();
+  }
+
   /**
    * Dispatches the device base on the {@link DetectionResults} detector detected and the {@link
    * DispatchResults} previous dispatcher generated, returns the dispatch results.
