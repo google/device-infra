@@ -68,7 +68,7 @@ public class ClientApiTest {
 
   @Before
   public void setUp() {
-    Flags.parse(new String[] {"--no_op_device_num=1"});
+    Flags.parse(new String[] {"--no_op_device_num=1", "--detect_adb_device=false"});
 
     Logger.getLogger("").addHandler(logHandler);
 
