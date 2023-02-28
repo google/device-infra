@@ -548,8 +548,6 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDriver("VinsonDriver");
     device.addSupportedDriver("NoOpDriver");
     device.addSupportedDriver("AndroidCopycatRemoteControlledMoblySnippetTest");
-    // Adds UtpTest without class validation since the driver does not exist.
-    device.info().supportedDrivers().add("UtpTest");
 
     basicAndroidDecoratorConfiguration();
   }

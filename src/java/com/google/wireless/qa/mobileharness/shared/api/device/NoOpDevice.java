@@ -54,8 +54,6 @@ public class NoOpDevice extends BaseDevice {
     addSupportedDriver("NoOpDriver");
     addSupportedDriver("AndroidCommsActsTest");
     addSupportedDriver("AndroidTradefedTest");
-    // Adds UtpTest without class validation since the driver does not exist.
-    info().supportedDrivers().add("UtpTest");
 
     addSupportedDecorator("NoOpDecorator");
 
