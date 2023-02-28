@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.api.devicemanager.dispatcher;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Enums.FastbootDeviceState;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
@@ -31,13 +32,19 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 /** Dispatcher for Android real devices. */
 public class AndroidRealDeviceDispatcher extends CacheableDispatcher {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   private final DeviceIdGenerator deviceIdGenerator;
 
   public AndroidRealDeviceDispatcher() {
@@ -51,12 +58,24 @@ public class AndroidRealDeviceDispatcher extends CacheableDispatcher {
 
   @Override
   public Optional<String> precondition() {
+    logger.atInfo().log("Checking environment for %s", getClass().getSimpleName());
+
+    // Checks fastboot.
+    List<String> errors = new ArrayList<>();
     try {
       new Fastboot().checkFastboot();
-      return Optional.empty();
     } catch (MobileHarnessException e) {
-      return Optional.of(MoreThrowables.shortDebugString(e, 0));
+      errors.add(MoreThrowables.shortDebugString(e, 0));
     }
+
+    // Checks AAPT.
+    try {
+      new Aapt().checkAapt();
+    } catch (MobileHarnessException e) {
+      errors.add(MoreThrowables.shortDebugString(e, 0));
+    }
+
+    return errors.isEmpty() ? Optional.empty() : Optional.of(errors.toString());
   }
 
   @Override

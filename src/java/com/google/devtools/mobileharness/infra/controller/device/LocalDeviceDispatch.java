@@ -131,32 +131,41 @@ public class LocalDeviceDispatch {
 
   @SuppressWarnings("FloggerLogWithCause")
   public void initialize() {
-    for (Class<? extends Dispatcher> dispatcher : dispatcherClasses) {
+    for (Class<? extends Dispatcher> dispatcherClass : dispatcherClasses) {
+      String dispatcherName = dispatcherClass.getSimpleName();
+
       // Creates Dispatcher instance.
-      Dispatcher dispatcherInstance;
+      Dispatcher dispatcher;
       try {
-        Constructor<? extends Dispatcher> dispatcherConstructor = dispatcher.getConstructor();
-        dispatcherInstance = dispatcherConstructor.newInstance();
+        Constructor<? extends Dispatcher> dispatcherConstructor = dispatcherClass.getConstructor();
+        dispatcher = dispatcherConstructor.newInstance();
       } catch (ReflectiveOperationException e) {
         logger.atWarning().withCause(e).log(
-            "Failed to generate the classifier instance of classifier type %s",
-            dispatcher.getSimpleName());
+            "Failed to generate the classifier instance of classifier type %s", dispatcherName);
         continue;
       }
 
       // Loads Device class.
       Class<? extends Device> deviceClass;
       try {
-        deviceClass = ClassUtil.getDeviceClass(dispatcher);
+        deviceClass = ClassUtil.getDeviceClass(dispatcherClass);
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Device class [%s] of dispatcher [%s] not found (not in runtime_deps of the jar)",
-            ClassUtil.getDeviceClassSimpleNameOfDispatcher(dispatcher), dispatcher.getSimpleName());
+            ClassUtil.getDeviceClassSimpleNameOfDispatcher(dispatcherClass), dispatcherName);
         continue;
       }
 
-      this.dispatcherToDevice.put(dispatcher, deviceClass);
-      this.dispatchers.add(dispatcherInstance);
+      // Checks Dispatcher.precondition().
+      Optional<String> dispatcherDisabledReason = dispatcher.precondition();
+      if (dispatcherDisabledReason.isPresent()) {
+        logger.atWarning().log(
+            "Dispatcher [%s] is disabled because [%s]", dispatcherName, dispatcherDisabledReason);
+        continue;
+      }
+
+      this.dispatcherToDevice.put(dispatcherClass, deviceClass);
+      this.dispatchers.add(dispatcher);
     }
   }
 
@@ -238,7 +247,7 @@ public class LocalDeviceDispatch {
       // Increases the device status counter.
       runner.updateStatusStat();
 
-      // If the newIds contains the current runner, removes it from the newIds so we will not
+      // If the newIds contains the current runner, removes it from the newIds, so we will not
       // create new runner for it.
       newIds.remove(id);
     }
@@ -314,7 +323,7 @@ public class LocalDeviceDispatch {
     }
   }
 
-  /** Checks whether the device is alive. Will double check with a real-time detection. */
+  /** Checks whether the device is alive. Will double-check with a real-time detection. */
   boolean isDeviceAlive(String deviceUuid, DetectionResults detectionResults)
       throws InterruptedException {
     if (deviceIdManager.containsUuid(deviceUuid)) {

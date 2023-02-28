@@ -123,13 +123,13 @@ public class Aapt {
       if (!Flags.instance().aaptPath.get().isEmpty()) {
         path = Flags.instance().aaptPath.get();
       } else {
-        error = "AAPT path --aapt is not specified but Aapt class is used";
+        error = "AAPT path --aapt is not specified";
       }
       AAPT_PATH = path;
       ERROR = error;
       logger.atInfo().log("Android SDK AAPT tool path: %s", AAPT_PATH);
       if (ERROR != null) {
-        logger.atSevere().log("Failed to initialize AAPT: %s", ERROR);
+        logger.atWarning().log("Failed to initialize AAPT: %s", ERROR);
       }
     }
 
@@ -493,7 +493,7 @@ public class Aapt {
    *
    * @throws MobileHarnessException if fails to initialize the AAPT
    */
-  private void checkAapt() throws MobileHarnessException {
+  public void checkAapt() throws MobileHarnessException {
     if (aaptPath == null) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_AAPT_PATH_NOT_SET, LazyInitializer.ERROR);
