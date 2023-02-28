@@ -27,21 +27,44 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class OlcServerBinarySizeTest {
 
-  private static final long MAX_SERVER_BINARY_SIZE_BYTE = 21_000_000L;
+  private static final long MAX_BASE_SERVER_BINARY_SIZE_BYTE = 21_000_000L;
 
-  private static final String SERVER_BINARY_FILE_PATH =
+  private static final long MAX_ANDROID_SERVER_BINARY_SIZE_BYTE = 26_000_000L;
+
+  private static final String BASE_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "javatests/com/google/devtools/mobileharness"
               + "/infra/client/longrunningservice/OlcServerForTesting_deploy.jar");
 
+  private static final String ANDROID_SERVER_BINARY_FILE_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "javatests/com/google/devtools/mobileharness"
+              + "/infra/client/longrunningservice/OlcServerWithAndroidDevice_deploy.jar");
+
   @Test
-  public void checkServerBinarySize() throws Exception {
+  public void checkBaseServerBinarySize() throws Exception {
+    checkBinarySize(
+        "OmniLab client with no_op test",
+        MAX_BASE_SERVER_BINARY_SIZE_BYTE,
+        BASE_SERVER_BINARY_FILE_PATH);
+  }
+
+  @Test
+  public void checkAndroidServerBinarySize() throws Exception {
+    checkBinarySize(
+        "OmniLab client with Android device",
+        MAX_ANDROID_SERVER_BINARY_SIZE_BYTE,
+        ANDROID_SERVER_BINARY_FILE_PATH);
+  }
+
+  private static void checkBinarySize(String name, long maxSizeByte, String filePath)
+      throws Exception {
     assertWithMessage(
-            "The binary size of an OmniLab client with no_op test should be less than %s bytes. If"
-                + " you are sure that the new added deps are necessary to its core infra, please"
+            "The binary size of %s should be less than %s bytes. If"
+                + " you are sure that the new added deps are necessary, please"
                 + " update the number and explain the necessity. file_path=%s",
-            MAX_SERVER_BINARY_SIZE_BYTE, SERVER_BINARY_FILE_PATH)
-        .that(new LocalFileUtil().getFileSize(SERVER_BINARY_FILE_PATH))
-        .isLessThan(MAX_SERVER_BINARY_SIZE_BYTE);
+            name, maxSizeByte, filePath)
+        .that(new LocalFileUtil().getFileSize(filePath))
+        .isLessThan(maxSizeByte);
   }
 }

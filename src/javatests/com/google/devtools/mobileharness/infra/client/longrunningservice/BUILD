@@ -30,6 +30,7 @@ java_library(
     ),
     data = [
         ":OlcServerForTesting_deploy.jar",
+        ":OlcServerWithAndroidDevice_deploy.jar",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
@@ -59,6 +60,14 @@ olc_server_binary(
     name = "OlcServerForTesting",
     extra_runtime_deps = [
         ":session_plugin_for_testing",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
+    ],
+)
+
+olc_server_binary(
+    name = "OlcServerWithAndroidDevice",
+    extra_runtime_deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
     ],
 )
