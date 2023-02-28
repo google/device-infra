@@ -228,6 +228,13 @@ public class LocalDeviceDispatch {
             logger.atInfo().log(
                 "Failed to cancel runner thread of dead device %s(%s)", id, deadReason);
           }
+          if (dispatchResult != null
+              && dispatchResult.dispatchType().equals(DispatchType.SUB_DEVICE)) {
+            // If the device is be recognized as a sub-device, device manager will not manage it
+            // anymore, immediately clean up the device info to avoid duplication.
+            // Otherwise, it will remove in device runner with a delay.
+            DeviceInfoManager.getInstance().remove(id);
+          }
         }
         runner.cancel();
         if (runner.isStopped() && future.isDone()) {

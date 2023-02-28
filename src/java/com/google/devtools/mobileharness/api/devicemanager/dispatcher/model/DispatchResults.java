@@ -105,6 +105,7 @@ public class DispatchResults {
         .forEach(
             dispatchResult -> {
               if (!results.containsKey(dispatchResult.deviceId().controlId())
+                  || dispatchResult.dispatchType().equals(DispatchType.SUB_DEVICE)
                   || results
                       .get(dispatchResult.deviceId().controlId())
                       .dispatchType()
