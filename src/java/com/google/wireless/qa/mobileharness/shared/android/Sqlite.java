@@ -69,7 +69,7 @@ public class Sqlite {
     if (output.startsWith("Error:")) {
       throw new MobileHarnessException(
           ErrorCode.ANDROID_SQLITE_ERROR,
-          String.format("Failed to run [%s] with db [%s]:%n%s", sql, dbPath, output));
+          String.format("Failed to run [%s] with db [%s]: %s", sql, dbPath, output));
     }
     return output;
   }

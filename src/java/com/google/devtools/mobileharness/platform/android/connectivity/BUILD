@@ -40,6 +40,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/autovalue:util_args",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
         "@maven//:com_google_code_findbugs_jsr305",

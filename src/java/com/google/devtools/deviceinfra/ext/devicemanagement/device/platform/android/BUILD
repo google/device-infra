@@ -37,6 +37,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:android_packages",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:sqlite",

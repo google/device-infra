@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.WaitArgs;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
@@ -56,6 +57,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.regex.Matcher;
@@ -637,8 +639,9 @@ public class AndroidConnectivityUtil {
         output = adb.runShell(serial, shell, SHORT_PING_TIMEOUT.plus(PING_COMMAND_DELAY));
         sleeper.sleep(CHECK_PING_INTERVAL);
       } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Device %s failed to ping %s (times=%d)", serial, host, i);
+        logger.atWarning().log(
+            "Device %s failed to ping %s (times=%d): %s",
+            serial, host, i, MoreThrowables.shortDebugString(e, 0));
         continue;
       }
       logger.atInfo().log("Device %s pings %s (times=%d):%n%s", serial, host, i, output);
@@ -676,7 +679,9 @@ public class AndroidConnectivityUtil {
         return true;
       }
     } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Device %s failed to ping %s", serial, targetUrl);
+      logger.atWarning().log(
+          "Device %s failed to ping %s: %s",
+          serial, targetUrl, MoreThrowables.shortDebugString(e, 0));
     }
     return false;
   }
@@ -948,8 +953,9 @@ public class AndroidConnectivityUtil {
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
-      logger.atWarning().withCause(e).log(
-          "Failed to check if the build on device %s is S or above.", serial);
+      logger.atWarning().log(
+          "Failed to check if the build on device %s is S or above: %s",
+          serial, MoreThrowables.shortDebugString(e, 0));
       return false;
     }
   }
@@ -1195,7 +1201,7 @@ public class AndroidConnectivityUtil {
   @VisibleForTesting
   static boolean checkWifiScanResults(String wifiScanResults, boolean isAboveNougat) {
     return isAboveNougat
-        ? WIFI_SCAN_IDLE_STATE.equals(parseSingleScanStateMachineCurState(wifiScanResults))
+        ? Objects.equals(parseSingleScanStateMachineCurState(wifiScanResults), WIFI_SCAN_IDLE_STATE)
         : !parseLatestScanResults(wifiScanResults).isEmpty();
   }
 

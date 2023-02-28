@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilA
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.wireless.qa.mobileharness.shared.android.AndroidPackages;
 import com.google.wireless.qa.mobileharness.shared.android.Sqlite;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
@@ -206,7 +207,9 @@ public abstract class AndroidDeviceDelegate {
       logger.atInfo().log("Update device %s locale and language from ActivityManager.", deviceId);
       return true;
     } catch (MobileHarnessException ex) {
-      logger.atWarning().withCause(ex).log("Update device %s Locale and Language fails.", deviceId);
+      logger.atWarning().log(
+          "Update device %s Locale and Language fails: %s",
+          deviceId, MoreThrowables.shortDebugString(ex, 0));
       return false;
     }
   }
@@ -333,7 +336,9 @@ public abstract class AndroidDeviceDelegate {
       logger.atInfo().log("Got device %s GService Android ID: %s", deviceId, gservicesAndroidId);
       isUpdated = device.updateDimension(Dimension.Name.GSERVICES_ANDROID_ID, gservicesAndroidId);
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Failed to get device %s GService Android ID", deviceId);
+      logger.atWarning().log(
+          "Failed to get device %s GService Android ID: %s",
+          deviceId, MoreThrowables.shortDebugString(e, 0));
     }
     return isUpdated;
   }
@@ -402,9 +407,9 @@ public abstract class AndroidDeviceDelegate {
             device.setProperty(
                 PROPERTY_NAME_CACHED_SCREEN_DENSITY, Integer.toString(Integer.parseInt(value)));
           } catch (NumberFormatException e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to parse device %s screen density '%s' from device property",
-                deviceId, value);
+            logger.atWarning().log(
+                "Failed to parse device %s screen density '%s' from device property: %s",
+                deviceId, value, MoreThrowables.shortDebugString(e, 0));
           }
           break;
         case SDK_VERSION:
@@ -412,8 +417,9 @@ public abstract class AndroidDeviceDelegate {
             device.setProperty(
                 PROPERTY_NAME_CACHED_SDK_VERSION, Integer.toString(Integer.parseInt(value)));
           } catch (NumberFormatException e) {
-            logger.atWarning().withCause(e).log(
-                "Failed to parse device %s sdk version '%s' from device property", deviceId, value);
+            logger.atWarning().log(
+                "Failed to parse device %s sdk version '%s' from device property: %s",
+                deviceId, value, MoreThrowables.shortDebugString(e, 0));
           }
           break;
         default:
@@ -665,7 +671,9 @@ public abstract class AndroidDeviceDelegate {
         device.addDimension(Dimension.Name.GMS_VERSION, version);
       }
     } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Failed to get device %s GMS version", deviceId);
+      logger.atWarning().log(
+          "Failed to get device %s GMS version: %s",
+          deviceId, MoreThrowables.shortDebugString(e, 0));
     }
 
     // Gets the current override size of the screen of the device.
@@ -676,7 +684,9 @@ public abstract class AndroidDeviceDelegate {
           Dimension.Name.SCREEN_SIZE,
           String.format("%sx%s", screenResolution.curWidth(), screenResolution.curHeight()));
     } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log("Failed to get screen size for device %s", deviceId);
+      logger.atWarning().log(
+          "Failed to get screen size for device %s: %s",
+          deviceId, MoreThrowables.shortDebugString(e, 0));
     }
   }
 
