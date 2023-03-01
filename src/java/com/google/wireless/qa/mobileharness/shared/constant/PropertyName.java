@@ -677,5 +677,11 @@ public interface PropertyName {
        */
       MH_UTP_DRIVER_UTP_COMMAND,
     }
+
+    /** AdhocTestbedDriver property name constants. */
+    public enum AdhocTestbedDriver implements PropertyName {
+      /** Whether the TestInfo is for a adhoc testbed sub device. */
+      IS_ADHOC_TESTBED_SUB_DEVICE,
+    }
   }
 }

@@ -43,6 +43,7 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.BaseDriver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.ArrayList;
 import java.util.List;
@@ -149,6 +150,12 @@ public class AdhocTestbedDriver extends BaseDriver {
                                     .add(
                                         driver.getDevice().getDeviceId(),
                                         createTestNameOnSubDriver(driver, testInfo));
+                            subTestInfo
+                                .properties()
+                                .add(
+                                    PropertyName.Test.AdhocTestbedDriver
+                                        .IS_ADHOC_TESTBED_SUB_DEVICE,
+                                    "true");
                             // If parent TestInfo fileTag contains device ID, attach them to
                             // subTestInfo so decorators in sub-device stack can retrieve those
                             // files (b/162563952).
