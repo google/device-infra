@@ -120,16 +120,24 @@ public class Aapt {
     static {
       String path = null;
       String error = null;
-      if (!Flags.instance().aaptPath.get().isEmpty()) {
-        path = Flags.instance().aaptPath.get();
-      } else {
-        error = "AAPT path --aapt is not specified";
+      try {
+        path = getAaptPathExternal();
+      } catch (IllegalStateException e) {
+        error = e.getMessage();
       }
       AAPT_PATH = path;
       ERROR = error;
       logger.atInfo().log("Android SDK AAPT tool path: %s", AAPT_PATH);
       if (ERROR != null) {
         logger.atWarning().log("Failed to initialize AAPT: %s", ERROR);
+      }
+    }
+
+    private static String getAaptPathExternal() {
+      if (!Flags.instance().aaptPath.get().isEmpty()) {
+        return Flags.instance().aaptPath.get();
+      } else {
+        throw new IllegalStateException("AAPT path --aapt is not specified");
       }
     }
 
