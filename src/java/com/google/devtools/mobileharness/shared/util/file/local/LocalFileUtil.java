@@ -76,7 +76,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
@@ -340,7 +339,7 @@ public class LocalFileUtil {
                       Stream.of(
                           srcFileOrDir.toAbsolutePath().toString(),
                           desFileOrDir.toAbsolutePath().toString()))
-                  .collect(Collectors.toList())));
+                  .collect(toImmutableList())));
     } catch (CommandException e) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_OR_DIR_COPY_ERROR, "Failed to copy file or dir", e);
@@ -560,7 +559,7 @@ public class LocalFileUtil {
       return;
     }
 
-    // Do NOT use AbstractFile.setPermissions(). It does not work on mac.
+    // Do NOT use AbstractFile.setPermissions(). It does not work on Mac.
     File fileOrDir = checkFileOrDir(fileOrDirPath);
 
     List<String> errors = new ArrayList<>();
@@ -608,7 +607,7 @@ public class LocalFileUtil {
       return;
     }
 
-    // Does NOT use AbstractFile.setPermissions(). It does not work on mac.
+    // Does NOT use AbstractFile.setPermissions(). It does not work on Mac.
     File fileOrDir = checkFileOrDir(fileOrDirPath);
     try {
       // Does not use fileOrDir.setReadable()..., since it cannot take effect recursively.
@@ -700,6 +699,28 @@ public class LocalFileUtil {
     } catch (MobileHarnessException e) {
       return false;
     }
+  }
+
+  /**
+   * Returns true if this file exists, OR exists in at least one dir (not including sub dirs) of the
+   * PATH environment variable.
+   *
+   * <p>In another word, if this method returns true, it means the file path can be used as the
+   * executable of a command (of course, the file itself needs to be executable).
+   *
+   * <p>The file path can be an absolute path, a relative path, or a file name (without "/") in
+   * PATH.
+   */
+  public boolean isFileExistInPath(String filePath) {
+    if (isFileExist(filePath)) {
+      return true;
+    }
+    if (filePath.contains(File.separator)) {
+      return false;
+    }
+    return stream(System.getenv("PATH").split(Pattern.quote(File.pathSeparator)))
+        .map(Path::of)
+        .anyMatch(path -> isFileExist(path.resolve(filePath)));
   }
 
   /** Returns true only if the file/dir is local. */
@@ -1358,7 +1379,7 @@ public class LocalFileUtil {
    */
   public String readFile(Path file) throws MobileHarnessException {
     try {
-      return new String(Files.readAllBytes(file), UTF_8);
+      return Files.readString(file);
     } catch (IOException e) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_READ_STRING_ERROR, "Failed to read content of file " + file, e);
@@ -1458,7 +1479,7 @@ public class LocalFileUtil {
     } catch (UnsupportedOperationException | IOException | SecurityException e) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_OR_DIR_READ_SYMLINK_ERROR,
-          "Failed to read thre real path of symbolic link " + symbolicLink,
+          "Failed to read the real path of symbolic link " + symbolicLink,
           e);
     }
   }
@@ -1502,7 +1523,7 @@ public class LocalFileUtil {
    * @param dirPath the directory under which you find the files or directories to delete
    * @param fileOrDirNameRegExp the regular expression to match the files or directories' name to be
    *     deleted; use {@code null} to match all files
-   * @throws MobileHarnessException if the directory does not exists, or fails to delete files or
+   * @throws MobileHarnessException if the directory does not exist, or fails to delete files or
    *     directories
    */
   public void removeFilesOrDirs(String dirPath, @Nullable String fileOrDirNameRegExp)
@@ -1510,7 +1531,7 @@ public class LocalFileUtil {
     File dir = checkDir(dirPath);
     @Nullable
     Pattern pattern = fileOrDirNameRegExp == null ? null : Pattern.compile(fileOrDirNameRegExp);
-    for (File fileOrDir : listFilesOrDirs(dir, null /* filter */)) {
+    for (File fileOrDir : listFilesOrDirs(dir, /* filter= */ null)) {
       if (pattern == null || pattern.matcher(fileOrDir.getName()).matches()) {
         removeFileOrDir(fileOrDir.getAbsolutePath());
       }
@@ -1521,7 +1542,7 @@ public class LocalFileUtil {
    * Cleans up the files or directories under the given directory.
    *
    * @param dirPath the directory under which you find the files or directories to delete
-   * @throws MobileHarnessException if the directory does not exists, or fails to delete files or
+   * @throws MobileHarnessException if the directory does not exist, or fails to delete files or
    *     directories
    */
   public void removeFilesOrDirs(String dirPath)
@@ -1560,8 +1581,8 @@ public class LocalFileUtil {
 
   /**
    * Updates the last updated timestamp of the given file/dir. If the file/dir does not exist, it
-   * can create the an empty file if the {@code ifCreateNewFile} is set to {@code true}. When it
-   * creates a new file, it will automatically prepare its parent dirs.
+   * can create an empty file if the {@code ifCreateNewFile} is set to {@code true}. When it creates
+   * a new file, it will automatically prepare its parent dirs.
    *
    * @param ifCreateNewFile whether to create an empty file if the file does not exist
    * @return a boolean flag to indicate the file create/update result
@@ -1594,7 +1615,7 @@ public class LocalFileUtil {
 
   /**
    * Updates the last updated timestamp of the given file/dir. If the file/dir does not exist, it
-   * can create the an empty file if the {@code ifCreateNewFile} is set to {@code true}.
+   * can create an empty file if the {@code ifCreateNewFile} is set to {@code true}.
    *
    * <p>It's the same a s{@link #touchFileOrDir(String, boolean)}, but uses java.nio.files.Paths as
    * the input.
@@ -1636,7 +1657,7 @@ public class LocalFileUtil {
    *     reason, or an I/O error occurs while writing or closing
    */
   public void writeToFile(String filePath, String content) throws MobileHarnessException {
-    writeToFile(filePath, content, false /* append */);
+    writeToFile(filePath, content, /* append= */ false);
   }
 
   /**
@@ -1881,8 +1902,8 @@ public class LocalFileUtil {
    * @param sortFile whether to attach the files to the zip file in order.
    * @param storeOnly whether pack all file together without any compression
    * @param compressionLevel the level of compression (1-9), where 1 indicates the fastest
-   *     compression speed (less compression) and 9 indicates the slowest compression speed (best
-   *     compression). If null, use the default configuration of "zip" commmand.
+   *     compression speed (less compression) and 9 indicates the slowest compression speed (the
+   *     best compression). If null, use the default configuration of "zip" command.
    * @param timeout the timeout of the zip operation; null means default timeout
    * @return the log
    */
@@ -1929,7 +1950,7 @@ public class LocalFileUtil {
           files.stream()
               .sorted()
               .map(file -> absSourceDirPath.relativize(Paths.get(file).toAbsolutePath()).toString())
-              .collect(Collectors.toList()));
+              .collect(toImmutableList()));
     } else {
       arguments.add(".");
     }
