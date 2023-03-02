@@ -28,6 +28,7 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.graph.Traverser;
 import com.google.devtools.deviceinfra.shared.util.command.java.JavaCommandCreator;
+import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -1116,7 +1117,7 @@ public class SystemUtil {
 
   /** Gets the java command path on the running machine. */
   public String getJavaCommandPath() {
-    return "java";
+    return Flags.instance().javaCommandPath.getNonNull();
   }
 
   /** Gets the total amount of memory in bytes on the local system. */

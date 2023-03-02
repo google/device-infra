@@ -24,10 +24,10 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_pkg",
-    ] + [
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/java:java_command_creator",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

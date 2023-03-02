@@ -214,6 +214,14 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> internalStorageAlert = internalStorageAlertDefault;
 
+  private static final Flag<String> javaCommandPathDefault = Flag.value("java");
+
+  @com.beust.jcommander.Parameter(
+      names = "--java_command_path",
+      description = "The path of Java",
+      converter = Flag.StringConverter.class)
+  public Flag<String> javaCommandPath = javaCommandPathDefault;
+
   private static final Flag<Integer> logFileNumDefault = Flag.value(100);
 
   @com.beust.jcommander.Parameter(
