@@ -29,6 +29,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/constant:splitters",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:android_device_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:base",
         "@maven//:com_google_code_findbugs_jsr305",

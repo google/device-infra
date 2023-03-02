@@ -34,18 +34,15 @@ public class AdbInitializeTemplateImpl extends AdbInitializeTemplate {
 
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
-  private final CommandExecutor commandExecutor;
 
   public AdbInitializeTemplateImpl() {
-    this(new LocalFileUtil(), new SystemUtil(), new CommandExecutor());
+    this(new LocalFileUtil(), new SystemUtil());
   }
 
   @VisibleForTesting
-  AdbInitializeTemplateImpl(
-      LocalFileUtil localFileUtil, SystemUtil systemUtil, CommandExecutor commandExecutor) {
+  AdbInitializeTemplateImpl(LocalFileUtil localFileUtil, SystemUtil systemUtil) {
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
-    this.commandExecutor = commandExecutor;
   }
 
   @Override
@@ -81,11 +78,11 @@ public class AdbInitializeTemplateImpl extends AdbInitializeTemplate {
       adbPath = adbPathFromUser;
     } else {
       logger.atInfo().log(
-          "Flag \"--adb=</path/to/adb>\" not specified. Use \"%s\" as ADB path",
+          "Flag --adb=</path/to/adb> not specified, use \"%s\" as ADB path",
           DEFAULT_STOCK_ADB_PATH);
       adbPath = DEFAULT_STOCK_ADB_PATH;
     }
-    if (!AdbInitializerHelper.checkAdbPath(adbPath, commandExecutor, localFileUtil)) {
+    if (!localFileUtil.isFileExistInPath(adbPath)) {
       logger.atWarning().log(
           "Invalid ADB path [%s] (file doesn't exist or isn't in PATH dirs)", adbPath);
     }

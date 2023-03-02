@@ -104,7 +104,7 @@ public final class AdbInitializerHelper {
       SystemUtil systemUtil,
       boolean ifKillAdbServer) {
 
-    boolean validAdbPath = checkAdbPath(adbPath, commandExecutor, localFileUtil);
+    boolean validAdbPath = localFileUtil.isFileExistInPath(adbPath);
     if (!validAdbPath) {
       logger.atInfo().log("Skip managing ADB server because ADB path [%s] is invalid", adbPath);
       return;
@@ -148,26 +148,6 @@ public final class AdbInitializerHelper {
                       logger.atInfo().withCause(e).log("Failed to stop ADB server");
                     }
                   }));
-    }
-  }
-
-  /**
-   * Returns {@code true} if the file path exists or a {@code which} command with the path succeeds
-   * (whose exit code is 0).
-   */
-  public static boolean checkAdbPath(
-      String adbPath, CommandExecutor commandExecutor, LocalFileUtil localFileUtil) {
-    if (localFileUtil.isFileExist(adbPath)) {
-      return true;
-    }
-    try {
-      commandExecutor.run(Command.of("which", adbPath));
-      return true;
-    } catch (CommandException | InterruptedException e) {
-      if (e instanceof InterruptedException) {
-        Thread.currentThread().interrupt();
-      }
-      return false;
     }
   }
 

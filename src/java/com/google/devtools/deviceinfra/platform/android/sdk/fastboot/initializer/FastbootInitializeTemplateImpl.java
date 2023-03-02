@@ -18,10 +18,7 @@ package com.google.devtools.deviceinfra.platform.android.sdk.fastboot.initialize
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import java.util.Optional;
 
 /** Fastboot initializer for initializing fastboot tools for a machine. */
 public class FastbootInitializeTemplateImpl extends FastbootInitializeTemplate {
@@ -39,23 +36,25 @@ public class FastbootInitializeTemplateImpl extends FastbootInitializeTemplate {
   }
 
   @Override
-  protected Optional<FastbootParam> initializeFastbootToolsFromUser() {
+  public FastbootParam initializeFastboot() {
     String fastbootPath = getFastbootPathFromUser();
-    try {
-      checkFastbootToolsInDir(PathUtil.dirname(fastbootPath));
-      logger.atInfo().log("Path of fastboot binary from user: %s", fastbootPath);
-      return Optional.of(FastbootParam.builder().setFastbootPath(fastbootPath).build());
-    } catch (MobileHarnessException e) {
+
+    if (fastbootPath.isEmpty()) {
+      logger.atInfo().log(
+          "Fastboot binary path --fastboot not specified, use \"fastboot\" as fastboot path");
+      fastbootPath = "fastboot";
+    } else {
+      logger.atInfo().log("Fastboot binary path from user: %s", fastbootPath);
+    }
+
+    if (localFileUtil.isFileExistInPath(fastbootPath)) {
+      return FastbootParam.builder().setFastbootPath(fastbootPath).build();
+    } else {
       String error =
           String.format(
-              "Error when checking given fastboot tools, please point --fastboot to a valid"
-                  + " fastboot binary:\n%s",
-              e.getMessage());
-      return Optional.of(FastbootParam.builder().setInitializationError(error).build());
+              "Invalid fastboot path [%s] (file doesn't exist or isn't in PATH dirs)",
+              fastbootPath);
+      return FastbootParam.builder().setInitializationError(error).build();
     }
-  }
-
-  private void checkFastbootToolsInDir(String dir) throws MobileHarnessException {
-    localFileUtil.checkFile(PathUtil.join(dir, "fastboot"));
   }
 }

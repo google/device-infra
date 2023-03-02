@@ -16,13 +16,14 @@
 
 package com.google.wireless.qa.mobileharness.shared.android;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.command.LineCallback.does;
-import static java.util.stream.Collectors.toList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
@@ -34,6 +35,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutException;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.proto.AndroidDeviceSpec.Abi;
 import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
 import java.util.ArrayList;
@@ -87,8 +89,8 @@ public class Aapt {
   private final String aaptPath;
 
   /**
-   * Whether or not to cache aapt command output. The default value is {@link
-   * #DEFAULT_ENABLE_AAPT_OUTPUT_CACHE}
+   * Whether to cache aapt command output. The default value is {@link
+   * #DEFAULT_ENABLE_AAPT_OUTPUT_CACHE}.
    */
   private final boolean enableAaptOutputCache;
 
@@ -97,7 +99,7 @@ public class Aapt {
   /** System command executor. */
   private final CommandExecutor cmdExecutor;
   /** Patterns for native code are not always present, so the list may stay empty. */
-  private static final String NATVIE_CODE_PREFIX = "native-code: ";
+  private static final String NATIVE_CODE_PREFIX = "native-code: ";
 
   private static final String ALT_NATIVE_CODE_PREFIX = "alt-native-code: ";
 
@@ -134,10 +136,20 @@ public class Aapt {
     }
 
     private static String getAaptPathExternal() {
-      if (!Flags.instance().aaptPath.get().isEmpty()) {
-        return Flags.instance().aaptPath.get();
+      String result = Flags.instance().aaptPath.getNonNull();
+      if (result.isEmpty()) {
+        logger.atInfo().log("AAPT path --aapt not specified, use \"aapt\" as AAPT path");
+        result = "aapt";
       } else {
-        throw new IllegalStateException("AAPT path --aapt is not specified");
+        logger.atInfo().log("AAPT path from user: %s", result);
+      }
+
+      if (new LocalFileUtil().isFileExistInPath(result)) {
+        return result;
+      } else {
+        throw new IllegalStateException(
+            String.format(
+                "Invalid AAPT path [%s] (file doesn't exist or isn't in PATH dirs)", result));
       }
     }
 
@@ -150,9 +162,9 @@ public class Aapt {
   }
 
   /**
-   * Creates a executor for running AAPT commands using Android SDK tools.
+   * Creates an executor for running AAPT commands using Android SDK tools.
    *
-   * @param enableAaptOutputCache whether or not to cache aapt command output.
+   * @param enableAaptOutputCache whether to cache aapt command output
    */
   public Aapt(boolean enableAaptOutputCache) {
     this(LazyInitializer.getAaptPath(), enableAaptOutputCache, new CommandExecutor());
@@ -517,17 +529,17 @@ public class Aapt {
    *
    * @param output of aapt dump badging
    */
-  private static List<String> parseNativeCode(String output) {
+  private static ImmutableList<String> parseNativeCode(String output) {
     List<String> allNativeCodes = Lists.newArrayList();
     for (String line : LINE_SPLITTER.split(output)) {
-      if (line.startsWith(NATVIE_CODE_PREFIX) || line.startsWith(ALT_NATIVE_CODE_PREFIX)) {
+      if (line.startsWith(NATIVE_CODE_PREFIX) || line.startsWith(ALT_NATIVE_CODE_PREFIX)) {
         Matcher matcher = BADGING_REPEATED_FIELD_PATTERN.matcher(line);
         while (matcher.find()) {
           allNativeCodes.add(matcher.group(1));
         }
       }
     }
-    return allNativeCodes.stream().filter(Aapt::isAbi).collect(toList());
+    return allNativeCodes.stream().filter(Aapt::isAbi).collect(toImmutableList());
   }
 
   /** Checks if a string represents a valid abi value. */
