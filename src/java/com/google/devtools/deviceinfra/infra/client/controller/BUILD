@@ -61,7 +61,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:future",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:tag",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",

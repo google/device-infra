@@ -70,7 +70,6 @@ import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarness
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.inject.AbstractModule;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
@@ -430,7 +429,6 @@ public class JobRunnerCore implements Runnable {
   public void run() {
     String oldThreadName = Thread.currentThread().getName();
     Thread.currentThread().setName("job-runner-" + jobInfo.locator().getId());
-    MobileHarnessLogTag.addTag(MobileHarnessLogTag.JOB_ID, jobInfo.locator().getId());
     running = true;
     jobInfo.status().set(TestStatus.RUNNING);
     Throwable jobError = null;
