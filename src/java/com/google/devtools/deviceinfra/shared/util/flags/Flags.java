@@ -151,6 +151,15 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDebugMode = enableDebugModeDefault;
 
+  private static final Flag<Boolean> enableDeviceAirplaneModeDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_device_airplane_mode",
+      description =
+          "Turn device airplane mode on or off. True is on, false is off. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableDeviceAirplaneMode = enableDeviceAirplaneModeDefault;
+
   private static final Flag<Boolean> createFailedDeviceDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

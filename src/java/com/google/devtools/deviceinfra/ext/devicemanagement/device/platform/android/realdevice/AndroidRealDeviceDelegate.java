@@ -650,11 +650,17 @@ public abstract class AndroidRealDeviceDelegate {
     if (sdkVersion != null && sdkVersion >= 17) {
       logger.atInfo().log("Checking device %s airplane mode...", deviceId);
       try {
-        if (systemSettingUtil.getAirplaneMode(deviceId)) {
-          logger.atInfo().log("Device %s airplane mode is on, disable airplane mode", deviceId);
-          systemSettingUtil.disableAirplaneMode(deviceId);
+        boolean currentAirplaneMode = systemSettingUtil.getAirplaneMode(deviceId);
+        boolean targetAirplaneMode = Flags.instance().enableDeviceAirplaneMode.getNonNull();
+        if (currentAirplaneMode ^ targetAirplaneMode) {
+          logger.atInfo().log(
+              "Device %s current airplane mode is [%s], set its airplane mode to [%s].",
+              deviceId, currentAirplaneMode, targetAirplaneMode);
+          systemSettingUtil.setAirplaneMode(deviceId, targetAirplaneMode);
         } else {
-          logger.atInfo().log("Device %s airplane mode is off", deviceId);
+          logger.atInfo().log(
+              "Device %s current airplane mode is [%s], which is same as the target.",
+              deviceId, currentAirplaneMode);
         }
       } catch (MobileHarnessException e) {
         logger.atInfo().log("%s", e.getMessage());

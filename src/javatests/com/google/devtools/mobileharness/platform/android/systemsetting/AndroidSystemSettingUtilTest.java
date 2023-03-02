@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -109,12 +110,13 @@ public class AndroidSystemSettingUtilTest {
             UtilArgs.builder().setSerial(DEVICE_ID).build(),
             IntentArgs.builder()
                 .setAction(AndroidSystemSettingUtil.ADB_SHELL_BROADCAST_AIRPLANE_MODE)
+                .setExtrasBoolean(ImmutableMap.of("state", false))
                 .build(),
             /* checkCmdOutput= */ false,
             AndroidSystemSettingUtil.BROADCAST_AIRPLANE_MODE_TIMEOUT))
         .thenReturn(AndroidAdbUtil.OUTPUT_BROADCAST_SUCCESS);
 
-    settingUtil.disableAirplaneMode(DEVICE_ID);
+    settingUtil.setAirplaneMode(DEVICE_ID, /* enable= */ false);
   }
 
   @Test
@@ -131,6 +133,7 @@ public class AndroidSystemSettingUtilTest {
             UtilArgs.builder().setSerial(DEVICE_ID).build(),
             IntentArgs.builder()
                 .setAction(AndroidSystemSettingUtil.ADB_SHELL_BROADCAST_AIRPLANE_MODE)
+                .setExtrasBoolean(ImmutableMap.of("state", false))
                 .build(),
             /* checkCmdOutput= */ false,
             AndroidSystemSettingUtil.BROADCAST_AIRPLANE_MODE_TIMEOUT))
@@ -139,7 +142,7 @@ public class AndroidSystemSettingUtilTest {
             any(UtilArgs.class), any(AndroidSettings.Spec.class), any(Duration.class)))
         .thenReturn("0");
 
-    settingUtil.disableAirplaneMode(DEVICE_ID);
+    settingUtil.setAirplaneMode(DEVICE_ID, /* enable= */ false);
   }
 
   @Test
@@ -152,6 +155,7 @@ public class AndroidSystemSettingUtilTest {
             UtilArgs.builder().setSerial(DEVICE_ID).build(),
             IntentArgs.builder()
                 .setAction(AndroidSystemSettingUtil.ADB_SHELL_BROADCAST_AIRPLANE_MODE)
+                .setExtrasBoolean(ImmutableMap.of("state", false))
                 .build(),
             /* checkCmdOutput= */ false,
             AndroidSystemSettingUtil.BROADCAST_AIRPLANE_MODE_TIMEOUT))
@@ -159,9 +163,28 @@ public class AndroidSystemSettingUtilTest {
 
     assertThat(
             assertThrows(
-                    MobileHarnessException.class, () -> settingUtil.disableAirplaneMode(DEVICE_ID))
+                    MobileHarnessException.class,
+                    () -> settingUtil.setAirplaneMode(DEVICE_ID, /* enable= */ false))
                 .getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SETTING_DISABLE_AIRPLANE_MODE_ERROR);
+  }
+
+  @Test
+  public void enableAirplaneMode_success() throws Exception {
+    when(adbUtil.settings(
+            any(UtilArgs.class), any(AndroidSettings.Spec.class), any(Duration.class)))
+        .thenReturn("");
+    when(adbUtil.broadcast(
+            UtilArgs.builder().setSerial(DEVICE_ID).build(),
+            IntentArgs.builder()
+                .setAction(AndroidSystemSettingUtil.ADB_SHELL_BROADCAST_AIRPLANE_MODE)
+                .setExtrasBoolean(ImmutableMap.of("state", true))
+                .build(),
+            /* checkCmdOutput= */ false,
+            AndroidSystemSettingUtil.BROADCAST_AIRPLANE_MODE_TIMEOUT))
+        .thenReturn(AndroidAdbUtil.OUTPUT_BROADCAST_SUCCESS);
+
+    settingUtil.setAirplaneMode(DEVICE_ID, /* enable= */ true);
   }
 
   @Test

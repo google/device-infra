@@ -22,6 +22,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
@@ -410,25 +411,29 @@ public class AndroidSystemSettingUtil {
   }
 
   /**
-   * Disable airplane mode. Only works with API level >= 17. Supports production build with API
-   * level < 24. For production build with API level >= 24, airplane mode may not be broadcasted
-   * properly.
+   * Sets airplane mode. Only works with API level >= 17. Supports production build with API level <
+   * 24. For production build with API level >= 24, airplane mode may not be broadcasted properly.
    */
-  public void disableAirplaneMode(String serial)
+  public void setAirplaneMode(String serial, boolean enable)
       throws MobileHarnessException, InterruptedException {
     String output = "";
+    String targetAirplaneModeState = enable ? "1" : "0";
     try {
       // Airplane read/write commands are very slow. DOES NOT retry.
       // Sets timeout to 60s to fail fast.
-      String disableAirplaneMode = ADB_SHELL_SETTINGS_AIRPLANE_MODE + " 0";
+      String airplaneModeState =
+          String.format("%s %s", ADB_SHELL_SETTINGS_AIRPLANE_MODE, targetAirplaneModeState);
       AndroidSettings.Spec spec =
           AndroidSettings.Spec.create(
-              AndroidSettings.Command.PUT, AndroidSettings.NameSpace.GLOBAL, disableAirplaneMode);
+              AndroidSettings.Command.PUT, AndroidSettings.NameSpace.GLOBAL, airplaneModeState);
       adbUtil.settings(UtilArgs.builder().setSerial(serial).build(), spec, Duration.ofSeconds(60));
       output =
           adbUtil.broadcast(
               UtilArgs.builder().setSerial(serial).build(),
-              IntentArgs.builder().setAction(ADB_SHELL_BROADCAST_AIRPLANE_MODE).build(),
+              IntentArgs.builder()
+                  .setAction(ADB_SHELL_BROADCAST_AIRPLANE_MODE)
+                  .setExtrasBoolean(ImmutableMap.of("state", enable))
+                  .build(),
               /* checkCmdOutput= */ false,
               BROADCAST_AIRPLANE_MODE_TIMEOUT);
     } catch (MobileHarnessException e) {
@@ -446,11 +451,11 @@ public class AndroidSystemSettingUtil {
             adbUtil
                 .settings(UtilArgs.builder().setSerial(serial).build(), spec, SHORT_COMMAND_TIMEOUT)
                 .trim();
-        if (checkModeOutput.equals("0")) {
+        if (checkModeOutput.equals(targetAirplaneModeState)) {
           logger.atInfo().log(
               "Failed to broadcast %s because the caller is not system."
-                  + " But airplane mode is off.",
-              exceptionMatcher.group(1));
+                  + " But current airplane mode is same as the target one [%s].",
+              exceptionMatcher.group(1), targetAirplaneModeState);
           return;
         }
       }
