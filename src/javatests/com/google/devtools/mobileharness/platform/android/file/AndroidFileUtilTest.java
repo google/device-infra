@@ -1039,6 +1039,26 @@ public final class AndroidFileUtilTest {
   }
 
   @Test
+  public void remountSdk33Emulator() throws Exception {
+    when(adb.run(eq(SERIAL), aryEq(new String[] {"shell", "remount"})))
+        .thenReturn("")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(33);
+    when(androidSystemSpecUtil.isEmulator(eq(SERIAL))).thenReturn(true);
+
+    androidFileUtil.remount(SERIAL);
+    verify(adb).run(eq(SERIAL), aryEq(new String[] {"shell", "remount"}));
+
+    assertThat(
+            assertThrows(MobileHarnessException.class, () -> androidFileUtil.remount(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_FILE_UTIL_REMOUNT_ERROR);
+  }
+
+  @Test
   public void removeFiles() throws Exception {
     String fileOrDirPathPattern = "/sdcard\"'(xxxx";
     String args =

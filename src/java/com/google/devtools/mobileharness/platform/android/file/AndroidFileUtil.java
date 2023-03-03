@@ -940,10 +940,14 @@ public class AndroidFileUtil {
    */
   public void remount(String serial) throws MobileHarnessException, InterruptedException {
     try {
-      if (androidSystemSpecUtil.isEmulator(serial)
-          && (androidSystemSettingUtil.getDeviceSdkVersion(serial)
-              >= AndroidVersion.ANDROID_11.getStartSdkVersion())) {
-        String result = adb.run(serial, new String[] {"shell", "mount", "-o", "rw,remount", "/"});
+      if (androidSystemSpecUtil.isEmulator(serial)) {
+        int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(serial);
+        String result = "";
+        if (sdkVersion >= AndroidVersion.ANDROID_13.getStartSdkVersion()) {
+          result = adb.run(serial, new String[] {"shell", "remount"});
+        } else if (sdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()) {
+          result = adb.run(serial, new String[] {"shell", "mount", "-o", "rw,remount", "/"});
+        }
         if (result.contains(ADB_REMOUNT_SUCCESS_INDICATOR)) {
           return;
         }
