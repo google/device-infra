@@ -245,9 +245,9 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
       } else {
         return Collections.unmodifiableMap(
             Stream.concat(
-                    unsupportedSharedDimensions.entrySet().stream(),
-                    unsupportedDimensions.entrySet().stream())
-                .collect(toImmutableMap(Entry::getKey, Entry::getValue)));
+                    unsupportedDimensions.entrySet().stream(),
+                    unsupportedSharedDimensions.entrySet().stream())
+                .collect(toImmutableMap(Entry::getKey, Entry::getValue, (first, second) -> first)));
       }
     } else {
       return Collections.unmodifiableMap(unsupportedDimensions);
