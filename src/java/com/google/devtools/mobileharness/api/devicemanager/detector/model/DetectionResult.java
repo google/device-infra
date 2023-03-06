@@ -52,6 +52,7 @@ public abstract class DetectionResult {
     FAILED,
     FASTBOOT,
     FUCHSIA,
+    HEARABLES,
     LINUX,
     IDEVICE_ID,
     MAC,
