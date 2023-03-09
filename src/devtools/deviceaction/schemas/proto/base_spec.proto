@@ -1,0 +1,123 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package devtools.deviceaction.schemas.proto;
+
+import "google/protobuf/duration.proto";
+
+option java_package = "com.google.devtools.deviceaction.framework.proto";
+option java_multiple_files = true;
+
+enum DeviceType {
+  UNSPECIFIED_DEVICE_TYPE = 0;
+  ANDROID_PHONE = 1;
+}
+
+// Specifications for an action operand.
+message Operand {
+  optional string uuid = 1;
+  optional DeviceType device_type = 2;
+}
+
+message UnspecifiedSpec {}
+
+message AndroidPhoneSpec {
+  // Device properties 1 ~ 30
+  // ro.product.brand
+  optional string brand = 1;
+  // Options for adb commands 31 ~ 100
+  optional google.protobuf.Duration reboot_await = 31;
+  optional google.protobuf.Duration reboot_timeout = 32;
+  optional google.protobuf.Duration testharness_boot_await = 33;
+  optional google.protobuf.Duration testharness_boot_timeout = 34;
+  // Other options 101 ~
+  optional bool wifi_24_only = 101;
+}
+
+// Device Specs to create Device objects.
+message DeviceSpec {
+  oneof device_spec {
+    UnspecifiedSpec unspecified_spec = 1;
+    AndroidPhoneSpec android_phone_spec = 2;
+  }
+}
+
+// Proto for data to query in database.
+//
+// For example:
+//    message SomeBinaryActionSpec {
+//      extend Binary {
+//        optional SomeBinaryActionSpec some_binary_action_spec =
+//        <your_cl_number>;
+//      }
+//      ...
+//    }
+message DeviceConfig {
+  optional DeviceSpec device_spec = 1;
+  // Spec for actions.
+  extensions 1000 to max;
+}
+
+// Action specs to create Action objects.
+message ActionSpec {
+  // Classify actions by the arity.
+  oneof action {
+    Nullary nullary = 2;
+    Unary unary = 3;
+    Binary binary = 4;
+  }
+}
+
+// Specs for nullary actions.
+// For example:
+//    message SomeNullaryActionSpec {
+//      extend Nullary {
+//        optional SomeNullaryActionSpec ext = <your_cl_number>;
+//      }
+//      ...
+//    }
+message Nullary {
+  extensions 1000 to max;
+}
+
+// Specs for unary actions.
+// For example:
+//    message SomeUnaryActionSpec {
+//      extend Unary {
+//        optional SomeUnaryActionSpec ext = <your_cl_number>;
+//      }
+//      ...
+//    }
+message Unary {
+  optional Operand first = 1;
+  extensions 1000 to max;
+}
+
+// Specs for binary actions.
+// For example:
+//    message SomeBinaryActionSpec {
+//      extend Binary {
+//        optional SomeBinaryActionSpec ext = <your_cl_number>;
+//      }
+//      ...
+//    }
+message Binary {
+  optional Operand first = 1;
+  optional Operand second = 2;
+  extensions 1000 to max;
+}
