@@ -61,6 +61,8 @@ message OverSshDevice {
   string username = 2;  // Required
   // The password for the SSH connection, optional.
   string password = 3;
+  // The device type of ssh device, Required
+  string ssh_device_type = 4;
 }
 
 // The configuration of an USB device.
