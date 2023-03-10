@@ -88,6 +88,7 @@ public enum BasicErrorId implements ErrorId {
   TEST_RESULT_FAILED_IN_TEST_XML(20_319, ErrorType.CUSTOMER_ISSUE),
 
   TEST_DOWNLOAD_GEN_DIRECTORY_FROM_LAB_INTERRUPTED(20_320, ErrorType.UNDETERMINED),
+  TEST_RESULT_SKIPPED_IN_TEST_XML(20_321, ErrorType.CUSTOMER_ISSUE),
 
   // ***********************************************************************************************
   // Util: 30_001 ~ 35_000,
