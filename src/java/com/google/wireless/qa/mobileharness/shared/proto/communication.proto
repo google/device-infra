@@ -71,6 +71,11 @@ message ADBOverUSB {
   USB usb = 2;
 }
 
+message VIDEO {
+  // Determine which video device connected.
+  string device_fd = 1;
+}
+
 message Communication {
   oneof communication {
     // Only one USB connection over the cable, no other communications (e.g.
@@ -83,6 +88,8 @@ message Communication {
     ADB adb = 3;
     // The ADB and USB connection comes from the same hardware cable.
     ADBOverUSB adb_over_usb = 4;
+    // For video device.
+    VIDEO video = 5;
   }
 }
 
