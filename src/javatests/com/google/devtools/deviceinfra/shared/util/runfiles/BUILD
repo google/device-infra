@@ -22,6 +22,10 @@ package(
 java_library(
     name = "runfiles_util",
     srcs = ["RunfilesUtil.java"],
+    visibility = [
+        "//:deviceinfra_pkg",
+        "//javatests/com/google/devtools/mobileharness/platform/hearables:__pkg__",
+    ],
     deps = [
         "@bazel_tools//tools/java/runfiles",
     ],
