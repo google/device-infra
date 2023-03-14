@@ -92,10 +92,8 @@ java_library(
     name = "net_util",
     srcs = ["NetUtil.java"],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:__pkg__",
-        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/util:__pkg__",
     ],
     deps = [
