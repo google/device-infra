@@ -20,7 +20,10 @@ java_library(
     srcs = [
         "ProtocolMessageOrBuilderJsonSerializer.java",
     ],
-    visibility = ["//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in:__pkg__"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/jobconfig:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in:__pkg__",
+    ],
     deps = [
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_gson_gson",
