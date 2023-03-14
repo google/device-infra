@@ -22,6 +22,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.DeviceFilter;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.Report;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
@@ -126,19 +127,25 @@ public class SingleDeviceReport implements Report {
     if (overallAssessment == null) {
       return Result.create(
           InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR,
-          "No " + jobType.getDevice() + " found" + getDiagnosticCandidateFilterSuffix());
+          "No " + jobType.getDevice() + " found" + getDiagnosticCandidateFilterSuffix(),
+          null);
     }
 
     StringBuilder report = new StringBuilder();
 
+    MobileHarnessException cause = null;
     if (overallAssessment.getScore() < SingleDeviceAssessment.MAX_SCORE) {
       if (!overallAssessment.isAccessible()) {
-        report.append(
+        String msg =
             String.format(
                 "You (%s) don't have access to any %s%s. Please use the 'run_as' flag to specify"
                     + " an authorized MDB group you are in, or contact the device owners"
                     + " to request access.\n",
-                job.user(), jobType.getDevice(), getDiagnosticCandidateFilterSuffix()));
+                job.user(), jobType.getDevice(), getDiagnosticCandidateFilterSuffix());
+        report.append(msg);
+        cause =
+            new MobileHarnessException(
+                InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR_DEVICE_NO_ACCESS, msg);
       }
       if (!overallAssessment.isDriverSupported()) {
         report.append(
@@ -161,12 +168,18 @@ public class SingleDeviceReport implements Report {
                 getDiagnosticCandidateFilterSuffix()));
       }
       if (!overallAssessment.isDimensionsSupported()) {
-        report.append(
+        String msg =
             String.format(
                 "No %s can support job dimensions %s%s.\n",
                 jobType.getDevice(),
                 overallAssessment.getUnsupportedDimensions(),
-                getDiagnosticCandidateFilterSuffix()));
+                getDiagnosticCandidateFilterSuffix());
+        report.append(msg);
+        if (cause == null) { // Do not override the cause
+          cause =
+              new MobileHarnessException(
+                  InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR_DEVICE_NOT_EXIST, msg);
+        }
       }
       if (!overallAssessment.isDimensionsSatisfied()) {
         report.append(
@@ -184,7 +197,7 @@ public class SingleDeviceReport implements Report {
       }
 
       return Result.create(
-          InfraErrorId.CLIENT_JR_MNM_ALLOC_DEVICE_NOT_SATISFY_SLO, report.toString());
+          InfraErrorId.CLIENT_JR_MNM_ALLOC_DEVICE_NOT_SATISFY_SLO, report.toString(), cause);
     }
 
     // Checks whether there are any devices can support all requirements.
@@ -200,7 +213,8 @@ public class SingleDeviceReport implements Report {
                             + "Please increase your start_timeout setting "
                             + "to >60 seconds and try again",
                         job.setting().getTimeout().getStartTimeoutMs()))
-                .toString());
+                .toString(),
+            null);
       } else if (noPerfectCandidate) {
         return Result.create(
             InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR,
@@ -210,7 +224,8 @@ public class SingleDeviceReport implements Report {
                         "MH failed to find suitable device with allocation exit strategy %s."
                             + " Consider to use another allocation exit strategy.",
                         job.setting().getAllocationExitStrategy()))
-                .toString());
+                .toString(),
+            null);
       } else {
         report
             .append("Your job should be able to allocate the following ")
@@ -226,11 +241,12 @@ public class SingleDeviceReport implements Report {
               .append(goodIds.size() - maxCandidateType)
               .append(" devices)...");
         }
-        return Result.create(InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR, report.toString());
+        return Result.create(InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR, report.toString(), null);
       }
     }
 
     // Gives suggestions.
+    // And also generates a cause with the best guess.
     List<String> candidateTypes = new ArrayList<>(maxCandidateType);
     for (int score = SingleDeviceAssessment.MAX_SCORE - 1;
         score >= SingleDeviceAssessment.MIN_SCORE;
@@ -248,6 +264,13 @@ public class SingleDeviceReport implements Report {
           error.append("============ Score ").append(score).append(" ============\nErrors:");
           if (!assessment.isAccessible()) {
             error.append("\n - NO_ACCESS (current user: ").append(job.user()).append(")");
+            if (cause == null) {
+              String msg =
+                  String.format("NO_ACCESS (current user: %s) for device %s.", job.user(), id);
+              cause =
+                  new MobileHarnessException(
+                      InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR_DEVICE_NO_ACCESS, msg);
+            }
           }
           if (assessment.isPotentialAccessible()) {
             error
@@ -255,6 +278,16 @@ public class SingleDeviceReport implements Report {
                     "\n - POTENTIAL_ACCESS: The device owner is the default value. Need to change"
                         + " to the current user: ")
                 .append(job.user());
+            if (cause == null) {
+              String msg =
+                  String.format(
+                      "POTENTIAL_ACCESS: The device %s owner is the default value. Need to change "
+                          + " to the current user: %s",
+                      id, job.user());
+              cause =
+                  new MobileHarnessException(
+                      InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR_DEVICE_NO_ACCESS, msg);
+            }
           }
           if (!assessment.isDriverSupported()) {
             error.append("\n - DRIVER_NOT_SUPPORTED: ").append(jobType.getDriver());
@@ -279,8 +312,20 @@ public class SingleDeviceReport implements Report {
           }
           if (assessment.isMissing()) {
             error.append("\n - DEVICE_IS_MISSING");
+            if (cause == null) {
+              String msg = String.format("DEVICE_IS_MISSING for device %s.", id);
+              cause =
+                  new MobileHarnessException(
+                      InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR_DEVICE_MISSING, msg);
+            }
           } else if (!assessment.isIdle()) {
             error.append("\n - NOT_IDLE");
+            if (cause == null) {
+              String msg = String.format("NOT_IDLE for device %s.", id);
+              cause =
+                  new MobileHarnessException(
+                      InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR_DEVICE_BUSY, msg);
+            }
           }
           errorToIds.put(error.toString(), id);
         }
@@ -314,7 +359,8 @@ public class SingleDeviceReport implements Report {
     if (candidateTypes.isEmpty()) {
       return Result.create(
           InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR,
-          "Diagnostician can not determine why devices were not allocated.");
+          "Diagnostician can not determine why devices were not allocated.",
+          null);
     }
 
     // Print the candidate types.
@@ -326,7 +372,7 @@ public class SingleDeviceReport implements Report {
     if (candidateTypes.size() >= maxCandidateType) {
       report.append("\n==== (truncated other candidate devices) ====");
     }
-    return Result.create(InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR, report.toString());
+    return Result.create(InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR, report.toString(), cause);
   }
 
   /** A postfix about diagnostic candidate filter in the report. */

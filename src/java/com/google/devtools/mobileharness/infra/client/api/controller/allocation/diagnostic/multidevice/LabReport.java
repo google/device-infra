@@ -84,7 +84,8 @@ public final class LabReport implements Report {
     if (assessments.isEmpty()) {
       return Report.Result.create(
           InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR,
-          "There are no lab hosts to evaluate. Please file a bug through go/mh-bug.");
+          "There are no lab hosts to evaluate. Please file a bug through go/mh-bug.",
+          null);
     }
 
     ImmutableList<LabAssessment> labs = getSortedAssessments();
@@ -103,7 +104,8 @@ public final class LabReport implements Report {
                 "MH failed to allocate any devices within %d ms. "
                     + "Please increase your start_timeout setting (refer to go/mh-timing) "
                     + "to >60 seconds and try again.\n",
-                job.setting().getTimeout().getStartTimeoutMs()));
+                job.setting().getTimeout().getStartTimeoutMs()),
+            null);
       }
       readableReport.append(
           "Your job should be able to allocate devices on any of the following lab hosts but MH "
@@ -111,7 +113,7 @@ public final class LabReport implements Report {
               + "retrying, please file a bug via go/mh-bug.\n\n");
       writeLabs(readableReport, specs, perfectLabs);
       return Report.Result.create(
-          InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR, readableReport.toString());
+          InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR, readableReport.toString(), null);
     }
 
     // List the top MAX_LABS candidates
@@ -122,7 +124,7 @@ public final class LabReport implements Report {
             labs.size()));
     writeLabs(readableReport, specs, labs);
     return Report.Result.create(
-        InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR, readableReport.toString());
+        InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR, readableReport.toString(), null);
   }
 
   private static void writeRequirements(StringBuilder readableReport, List<SubDeviceSpec> specs) {

@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.infra.client.api.controller.allocation
 
 import com.google.auto.value.AutoValue;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import javax.annotation.Nullable;
 
 /** A human readable explanation of the cause of an allocation failure. */
 public interface Report {
@@ -31,13 +33,19 @@ public interface Report {
   /** Diagnostic result which contains the readable report as well as the error type. */
   @AutoValue
   abstract class Result {
-    public static Result create(ErrorId errorId, String readableReport) {
-      return new AutoValue_Report_Result(errorId, readableReport);
+    public static Result create(
+        ErrorId errorId, String readableReport, @Nullable MobileHarnessException cause) {
+      return new AutoValue_Report_Result(errorId, readableReport, cause);
     }
 
+    // The top error id.
     public abstract ErrorId errorId();
 
     public abstract String readableReport();
+
+    // The cause of the result if any.
+    @Nullable
+    public abstract MobileHarnessException cause();
   }
 
   String DECORATORS_NOT_SUPPORTED = "DECORATORS_NOT_SUPPORTED";

@@ -82,6 +82,10 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
   // promote the devices with "label".
   static final int DEDUCTION_LABEL_DIMENSION = 3;
 
+  // When user requires the "id" or "host_name" or "host_ip", decrease the ranks of those that don't
+  // support these fields.
+  static final int DEDUCTION_STRONG_DIMENSION = 4;
+
   private final String user;
   private final String driver;
   private final String deviceType;
@@ -158,7 +162,7 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
       unsupportedDimensions =
           device
               .dimensions()
-              .getUnsupportedJobDimensions(unsupportedDimensions, false /*failFast*/);
+              .getUnsupportedJobDimensions(unsupportedDimensions, /* failFast= */ false);
     }
     for (String sharedDimensionName : requestedSharedDimensionNames) {
       Stream.concat(
@@ -173,7 +177,9 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
 
     // Check device required dimensions.
     Multimap<String, String> newUnsatisfiedDimensions =
-        device.dimensions().getUnsatisfiedDeviceDimensions(requestedDimensions, false /*failFast*/);
+        device
+            .dimensions()
+            .getUnsatisfiedDeviceDimensions(requestedDimensions, /* failFast= */ false);
     if (unsatisfiedDimensions == null) {
       unsatisfiedDimensions = HashMultimap.create();
       unsatisfiedDimensions.putAll(newUnsatisfiedDimensions);
@@ -318,10 +324,20 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
   }
 
   private int getSupportedDimensionScore() {
+    Map<String, String> calculatedUnsupportedDimensions = getUnsupportedDimensions();
     int score =
-        WEIGHT_SUPPORTED_DIMENSION - getUnsupportedDimensions().size() * DEDUCTION_SINGLE_DIMENSION;
-    if (getUnsupportedDimensions().containsKey(Ascii.toLowerCase(Dimension.Name.LABEL.name()))) {
+        WEIGHT_SUPPORTED_DIMENSION
+            - calculatedUnsupportedDimensions.size() * DEDUCTION_SINGLE_DIMENSION;
+    if (calculatedUnsupportedDimensions.containsKey(
+        Ascii.toLowerCase(Dimension.Name.LABEL.name()))) {
       score = score - DEDUCTION_LABEL_DIMENSION + DEDUCTION_SINGLE_DIMENSION;
+    }
+    if (calculatedUnsupportedDimensions.containsKey(Ascii.toLowerCase(Dimension.Name.ID.name()))
+        || calculatedUnsupportedDimensions.containsKey(
+            Ascii.toLowerCase(Dimension.Name.HOST_IP.name()))
+        || calculatedUnsupportedDimensions.containsKey(
+            Ascii.toLowerCase(Dimension.Name.HOST_NAME.name()))) {
+      score = score - DEDUCTION_STRONG_DIMENSION + DEDUCTION_SINGLE_DIMENSION;
     }
     return Math.max(MIN_SCORE, score);
   }

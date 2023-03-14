@@ -1229,6 +1229,7 @@ public class JobRunnerCore implements Runnable {
               } while (diagnosticTimes < MAX_ALLOCATION_DIAGNOSE_TIMES);
 
               ErrorId errorId = InfraErrorId.CLIENT_JR_ALLOC_UNKNOWN_ERROR;
+              MobileHarnessException cause = null;
               if (diagnosticReport.isPresent()) {
                 errorId = diagnosticReport.get().getResult().errorId();
                 if (errorId == InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR) {
@@ -1239,6 +1240,7 @@ public class JobRunnerCore implements Runnable {
                   hasAllocFailTests = true;
                 }
                 errMsg += String.format("Diagnostic result: %s:\n%s\n", errorId, diagnosticResult);
+                cause = diagnosticReport.get().getResult().cause();
               }
 
               errMsg += TEST_NOT_ASSIGNED_ERROR_MSG;
@@ -1251,7 +1253,7 @@ public class JobRunnerCore implements Runnable {
                   .result()
                   .toNewResult()
                   .setNonPassing(
-                      Test.TestResult.ERROR, new MobileHarnessException(errorId, errMsg));
+                      Test.TestResult.ERROR, new MobileHarnessException(errorId, errMsg, cause));
             }
           } else if (failFastError.isPresent()) {
             hasAllocFailTests = true;
