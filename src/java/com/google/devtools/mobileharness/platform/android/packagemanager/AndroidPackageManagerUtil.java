@@ -52,7 +52,9 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -205,6 +207,15 @@ public class AndroidPackageManagerUtil {
   @VisibleForTesting static final Duration SHORT_TIMEOUT = Duration.ofSeconds(5);
 
   private static final String SESSION_CREATION_START = "Created";
+
+  private static final String SHOW_VERSION_CODE_FLAG = "--show-versioncode";
+
+  private static final Pattern LIST_PACKAGE_WITH_SOURCE_DIR_AND_VERSION_REGEX =
+      Pattern.compile("package:(?<sourceDir>.*)=(?<pkgName>.*) versionCode:(?<versionCode>\\d+)");
+  private static final String ADB_SHELL_GET_MODULEINFO = "pm get-moduleinfo";
+
+  private static final Pattern MODULEINFO_REGEX =
+      Pattern.compile("ModuleInfo\\{[0-9a-fA-F]+ (?<name>.*)\\} packageName: (?<pkgName>.*)");
 
   /** Android SDK ADB command line tools executor. */
   private final Adb adb;
@@ -1424,6 +1435,162 @@ public class AndroidPackageManagerUtil {
     }
 
     return packages;
+  }
+
+  /**
+   * List all Apex package infos installed on the device.
+   *
+   * <p>This method only works for SDK version >= Q.
+   *
+   * @param serial id for the device.
+   * @return a sorted set of package infos.
+   */
+  public SortedSet<PackageInfo> listApexPackageInfos(String serial)
+      throws MobileHarnessException, InterruptedException {
+    return listApexPackageInfos(UtilArgs.builder().setSerial(serial).build());
+  }
+
+  /**
+   * List all Apex package infos installed on the device.
+   *
+   * <p>This method only works for SDK version >= Q.
+   *
+   * @param utilArgs args with serial, sdkVersion and userId.
+   * @return a sorted set of package infos.
+   */
+  public SortedSet<PackageInfo> listApexPackageInfos(UtilArgs utilArgs)
+      throws MobileHarnessException, InterruptedException {
+    String serial = utilArgs.serial();
+    SortedSet<PackageInfo> packages = new TreeSet<>();
+
+    String[] adbCommand =
+        new String[] {ADB_SHELL_LIST_PACKAGES, SHOW_VERSION_CODE_FLAG, "--apex-only", "-f"};
+
+    if (utilArgs.userId().isPresent()) {
+      adbCommand = ArrayUtil.join(adbCommand, "--user", utilArgs.userId().get());
+    }
+
+    String output;
+    try {
+      output = adb.runShellWithRetry(serial, Joiner.on(' ').skipNulls().join(adbCommand));
+      logger.atInfo().log("List apex packages\n%s", output);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_LIST_APEX_PACKAGES_ERROR, e.getMessage(), e);
+    }
+    for (String line : Splitters.LINE_SPLITTER.trimResults().split(output)) {
+      Matcher matcher;
+      if ((matcher = LIST_PACKAGE_WITH_SOURCE_DIR_AND_VERSION_REGEX.matcher(line)).matches()) {
+        packages.add(
+            PackageInfo.builder()
+                .setPackageName(matcher.group("pkgName"))
+                .setSourceDir(matcher.group("sourceDir"))
+                .setVersionCode(Long.parseLong(matcher.group("versionCode")))
+                .setIsApex(true)
+                .build());
+      } else {
+        logger.atWarning().log("The line %s doesn't match the package pattern", line);
+      }
+    }
+
+    return packages;
+  }
+
+  /**
+   * List all package infos installed on the device.
+   *
+   * <p>This method only works for SDK version >= Q.
+   *
+   * @param serial id for the device.
+   * @return a sorted set of package infos.
+   */
+  public SortedSet<PackageInfo> listPackageInfos(String serial)
+      throws MobileHarnessException, InterruptedException {
+    return listPackageInfos(UtilArgs.builder().setSerial(serial).build());
+  }
+
+  /**
+   * List all package infos installed on the device.
+   *
+   * <p>This method only works for SDK version >= Q.
+   *
+   * @param utilArgs args with serial, sdkVersion and userId.
+   * @return a sorted set of package infos.
+   */
+  public SortedSet<PackageInfo> listPackageInfos(UtilArgs utilArgs)
+      throws MobileHarnessException, InterruptedException {
+    String serial = utilArgs.serial();
+    SortedSet<PackageInfo> packages = new TreeSet<>();
+
+    String[] adbCommand = new String[] {ADB_SHELL_LIST_PACKAGES, SHOW_VERSION_CODE_FLAG, "-f"};
+
+    if (utilArgs.userId().isPresent()) {
+      adbCommand = ArrayUtil.join(adbCommand, "--user", utilArgs.userId().get());
+    }
+
+    String output;
+    try {
+      output = adb.runShellWithRetry(serial, Joiner.on(' ').skipNulls().join(adbCommand));
+      logger.atInfo().log("List apk packages\n%s", output);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_LIST_PACKAGES_ERROR, e.getMessage(), e);
+    }
+
+    for (String line : Splitters.LINE_SPLITTER.trimResults().split(output)) {
+      Matcher matcher;
+      if ((matcher = LIST_PACKAGE_WITH_SOURCE_DIR_AND_VERSION_REGEX.matcher(line)).matches()) {
+        packages.add(
+            PackageInfo.builder()
+                .setPackageName(matcher.group("pkgName"))
+                .setSourceDir(matcher.group("sourceDir"))
+                .setVersionCode(Long.parseLong(matcher.group("versionCode")))
+                .build());
+      } else {
+        logger.atWarning().log("The line %s doesn't match the package pattern", line);
+      }
+    }
+
+    return packages;
+  }
+
+  /**
+   * List all module infos.
+   *
+   * <p>This method only works for SDK version >= Q.
+   *
+   * @param serial id for the device.
+   * @return a sorted set of the module infos.
+   */
+  public SortedSet<ModuleInfo> listModuleInfos(String serial)
+      throws MobileHarnessException, InterruptedException {
+    SortedSet<ModuleInfo> modules = new TreeSet<>();
+
+    String[] adbCommand = new String[] {ADB_SHELL_GET_MODULEINFO, "--all"};
+
+    String output;
+    try {
+      output = adb.runShellWithRetry(serial, Joiner.on(' ').skipNulls().join(adbCommand));
+      logger.atInfo().log("List modules\n%s", output);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_LIST_MODULES_ERROR, e.getMessage(), e);
+    }
+
+    for (String line : Splitters.LINE_SPLITTER.trimResults().split(output)) {
+      Matcher matcher;
+      if ((matcher = MODULEINFO_REGEX.matcher(line)).matches()) {
+        modules.add(
+            ModuleInfo.builder()
+                .setName(matcher.group("name"))
+                .setPackageName(matcher.group("pkgName"))
+                .build());
+      } else {
+        logger.atWarning().log("The line %s doesn't match the module info pattern", line);
+      }
+    }
+
+    return modules;
   }
 
   /**

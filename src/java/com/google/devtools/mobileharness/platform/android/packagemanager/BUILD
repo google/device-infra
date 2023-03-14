@@ -26,6 +26,7 @@ java_library(
     deps = [
         ":constants",
         ":enums",
+        ":info",
         ":install_cmd_args",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
@@ -72,5 +73,17 @@ java_library(
     name = "constants",
     srcs = [
         "Constants.java",
+    ],
+)
+
+java_library(
+    name = "info",
+    srcs = [
+        "ModuleInfo.java",
+        "PackageInfo.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
     ],
 )
