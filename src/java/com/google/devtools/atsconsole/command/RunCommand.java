@@ -83,7 +83,7 @@ final class RunCommand implements Callable<Integer> {
   private String config;
 
   @ArgGroup(exclusive = false, multiplicity = "0..*")
-  List<ModuleTestOptionsGroup> moduleTestOptionsGroups;
+  private List<ModuleTestOptionsGroup> moduleTestOptionsGroups;
 
   static class ModuleTestOptionsGroup {
     @Option(
@@ -97,7 +97,7 @@ final class RunCommand implements Callable<Integer> {
       names = {"-s", "--serial"},
       paramLabel = "deviceID",
       description = "Run test on the specific device.")
-  String serialOpt;
+  private String serialOpt;
 
   @Option(
       names = {"--serials"},
@@ -108,7 +108,7 @@ final class RunCommand implements Callable<Integer> {
               + " comma). For example, `--serials <device_a>,<device_b>`. No spaces around the"
               + " comma. Note: the order of pass-in device serial numbers will be kept when passing"
               + " them to the test infra.")
-  List<String> androidDeviceSerialList;
+  private List<String> androidDeviceSerialList;
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -116,7 +116,8 @@ final class RunCommand implements Callable<Integer> {
   private static final String DEFAULT_MOBLY_LOGPATH = "/tmp/logs/mobly";
   private static final String MOBLY_TEST_ZIP_DEFAULT_TEST = "suite_main.py";
 
-  @Spec CommandSpec spec; // injected by picocli
+  @Spec private CommandSpec spec;
+
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
   private final AndroidAdbInternalUtil androidAdbInternalUtil;
@@ -190,7 +191,7 @@ final class RunCommand implements Callable<Integer> {
 
         String moblyConfigFile =
             yamlTestbedUpdater.prepareMoblyConfig(
-                serials, consoleInfo.getMoblyTestCasesDir().get(), null);
+                serials, consoleInfo.getMoblyTestCasesDir().orElseThrow(), null);
 
         // Mobly log root directory contains all logs from each Mobly test zip run
         String moblyLogDir = prepareMoblyLogDir();
@@ -200,10 +201,9 @@ final class RunCommand implements Callable<Integer> {
         for (MoblyTestRunEntry moblyTestRunEntry : moblyTestRunEntries) {
           Optional<Path> moblyTestSummaryYaml =
               runSingleMoblyTestZip(moblyTestRunEntry, moblyConfigFile, moblyLogDir);
-          if (moblyTestSummaryYaml.isPresent()) {
-            moblyTestSummaryYamlFilesBuilder.put(
-                moblyTestRunEntry.name(), moblyTestSummaryYaml.get().toString());
-          }
+          moblyTestSummaryYaml.ifPresent(
+              path ->
+                  moblyTestSummaryYamlFilesBuilder.put(moblyTestRunEntry.name(), path.toString()));
         }
         Instant endTime = Clock.systemUTC().instant();
 
@@ -320,7 +320,7 @@ final class RunCommand implements Callable<Integer> {
     }
 
     try {
-      String moblyTestZipPath = moblyTestRunEntry.moblyTestZipPath();
+      Path moblyTestZipPath = Paths.get(moblyTestRunEntry.moblyTestZipPath());
 
       Path testRunTmpDir = curMoblyLogDir.get().resolve("tmp");
       Path moblyUnzipDir = testRunTmpDir.resolve("mobly");
@@ -331,7 +331,7 @@ final class RunCommand implements Callable<Integer> {
 
       String[] commandArray =
           moblyAospTestSetupUtil.setupEnvAndGenerateTestCommand(
-              Paths.get(moblyTestZipPath),
+              moblyTestZipPath,
               moblyUnzipDir,
               testRunTmpDir.resolve("venv"),
               Paths.get(moblyConfigFile),
@@ -341,7 +341,7 @@ final class RunCommand implements Callable<Integer> {
 
       com.google.devtools.mobileharness.shared.util.command.Command cmd =
           com.google.devtools.mobileharness.shared.util.command.Command.of(commandArray)
-              .workDir(Paths.get(moblyTestZipPath).getParent())
+              .workDir(moblyTestZipPath.getParent())
               .redirectStderr(true)
               .onStdout(LineCallback.does(consoleUtil::printLine));
 
@@ -439,7 +439,7 @@ final class RunCommand implements Callable<Integer> {
                 .map(String::trim)
                 .filter(((Predicate<String>) String::isEmpty).negate())
                 .collect(toImmutableList());
-        if (androidDeviceSerialList.stream().allMatch(devices::contains)) {
+        if (devices.containsAll(androidDeviceSerialList)) {
           return ImmutableList.copyOf(androidDeviceSerialList);
         } else {
           logger.atWarning().log(
@@ -462,7 +462,8 @@ final class RunCommand implements Callable<Integer> {
   }
 
   private String getMoblyTestZipSuiteMainFilePath() {
-    return consoleUtil.completeHomeDirectory(consoleInfo.getMoblyTestZipSuiteMainFile().get());
+    return consoleUtil.completeHomeDirectory(
+        consoleInfo.getMoblyTestZipSuiteMainFile().orElseThrow());
   }
 
   @AutoValue
