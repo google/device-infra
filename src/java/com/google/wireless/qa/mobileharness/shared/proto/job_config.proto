@@ -118,6 +118,18 @@ message JobConfig {
   // Execution mode.
   optional string exec_mode = 27;
 
+  // The group you want to run as, you must belong to this group, otherwise
+  // the job will fail before it's started.
+  optional string run_as = 16;
+
+  // Timeout for a whole job, in second. Notice that if you don't set it either
+  // in flag or here, we will use the default value 3600 in
+  // com.google.wireless.qa.mobileharness.shared.Constants.
+  optional int32 job_timeout_sec = 28;
+
+  // Timeout for a single test, in second. Notice that if you don't set it
+  // either in flag or here, we will use the default value 300 in
+  // com.google.wireless.qa.mobileharness.shared.Constants.
   optional int32 test_timeout_sec = 29;
 
   // Timeout for staring job.
