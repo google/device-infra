@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.BuiltinSessionPlugin;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.inject.AbstractModule;
 import com.google.inject.CreationException;
 import com.google.inject.Guice;
@@ -57,7 +58,9 @@ public class SessionPluginLoader {
       logger.atInfo().log("Loading builtin session plugin: %s", shortDebugString(builtinPlugin));
       Class<?> builtinSessionPluginClass =
           loadBuiltinSessionPluginClass(builtinPlugin.getLoadingConfig().getPluginClassName());
-      Object builtinSessionPlugin = createSessionPlugin(builtinSessionPluginClass, sessionInfo);
+      Object builtinSessionPlugin =
+          createSessionPlugin(
+              builtinSessionPluginClass, sessionInfo, builtinPlugin.getExecutionConfig());
       sessionPlugins.add(builtinSessionPlugin);
     }
     return sessionPlugins.build();
@@ -82,10 +85,13 @@ public class SessionPluginLoader {
     }
   }
 
-  private Object createSessionPlugin(Class<?> sessionPluginClass, SessionInfo sessionInfo)
+  private Object createSessionPlugin(
+      Class<?> sessionPluginClass,
+      SessionInfo sessionInfo,
+      SessionPluginExecutionConfig executionConfig)
       throws MobileHarnessException {
     try {
-      return Guice.createInjector(new SessionPluginModule(sessionInfo))
+      return Guice.createInjector(new SessionPluginModule(sessionInfo, executionConfig))
           .getInstance(sessionPluginClass);
     } catch (CreationException | ProvisionException e) {
       throw new MobileHarnessException(
@@ -98,14 +104,22 @@ public class SessionPluginLoader {
   private static class SessionPluginModule extends AbstractModule {
 
     private final SessionInfo sessionInfo;
+    private final SessionPluginExecutionConfig executionConfig;
 
-    private SessionPluginModule(SessionInfo sessionInfo) {
+    private SessionPluginModule(
+        SessionInfo sessionInfo, SessionPluginExecutionConfig executionConfig) {
       this.sessionInfo = sessionInfo;
+      this.executionConfig = executionConfig;
     }
 
     @Provides
     SessionInfo provideSessionInfo() {
       return sessionInfo;
+    }
+
+    @Provides
+    SessionPluginExecutionConfig provideExecutionConfig() {
+      return executionConfig;
     }
   }
 }

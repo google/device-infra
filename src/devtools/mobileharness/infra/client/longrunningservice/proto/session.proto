@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.infra.client.longrunningservice;
 
+import "google/protobuf/any.proto";
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 
 option java_package = "com.google.devtools.mobileharness.infra.client.longrunningservice.proto";
@@ -59,8 +60,8 @@ message SessionConfig {
 // session events like SessionStartingEvent and SessionEndedEvent, and OmniLab
 // job / test events.
 //
-// A session plugin can have an @Inject constructor and SessionInfo will be
-// bound automatically.
+// A session plugin can have an @Inject constructor. SessionInfo and
+// SessionPluginExecutionConfig will be bound automatically.
 message SessionPluginConfig {
   // Builtin session plugins.
   repeated BuiltinSessionPlugin builtin_plugin = 1;
@@ -71,6 +72,9 @@ message SessionPluginConfig {
 message BuiltinSessionPlugin {
   // Required.
   SessionPluginLoadingConfig loading_config = 1;
+
+  // Required.
+  SessionPluginExecutionConfig execution_config = 2;
 }
 
 // Config about loading a session plugin.
@@ -79,6 +83,12 @@ message SessionPluginLoadingConfig {
   //
   // Full class name of the session plugin.
   string plugin_class_name = 1;
+}
+
+// Config provided to the @Inject constructor of a session plugin.
+message SessionPluginExecutionConfig {
+  // Required.
+  google.protobuf.Any config = 2;
 }
 
 message SessionOutput {
