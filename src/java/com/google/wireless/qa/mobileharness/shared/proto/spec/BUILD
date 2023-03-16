@@ -101,3 +101,14 @@ java_proto_library(
     name = "no_op_test_spec_java_proto",
     deps = [":no_op_test_spec"],
 )
+
+proto_library(
+    name = "xts_tradefed_test_spec_proto",
+    srcs = ["driver/xts_tradefed_test_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "xts_tradefed_test_spec_java_proto",
+    deps = [":xts_tradefed_test_spec_proto"],
+)

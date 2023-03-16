@@ -42,10 +42,10 @@ java_library(
         "device/CompositeDevice.java",
         "device/Device.java",
         "decorator/Decorator.java",
-        "driver/Driver.java",
         "lister/BaseLister.java",
         "lister/Lister.java",
-        "validator/Validator.java",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:Driver.java",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:Validator.java",
     ],
     visibility = [
         "//:deviceinfra_pkg",
@@ -80,7 +80,7 @@ java_library(
 
 java_library(
     name = "validator_factory",
-    srcs = ["validator/ValidatorFactory.java"],
+    srcs = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:ValidatorFactory.java"],
     visibility = [
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
     ],
@@ -94,7 +94,7 @@ java_library(
 
 java_library(
     name = "job_validator",
-    srcs = ["validator/JobValidator.java"],
+    srcs = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:JobValidator.java"],
     deps = [
         ":api",
         ":validator_factory",
@@ -148,15 +148,17 @@ java_library(
         "decorator/AsyncTimerDecorator.java",
         "decorator/BaseDecorator.java",
         "device/DeviceFactory.java",
-        "driver/BaseDriver.java",
-        "driver/DriverFactory.java",
-        "validator/AdapterValidator.java",
-        "validator/BaseValidator.java",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:BaseDriver.java",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:DriverFactory.java",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:AdapterValidator.java",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:BaseValidator.java",
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc/controller:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
     ],
     exports = [
         ":base_device",
@@ -218,8 +220,8 @@ java_library(
     name = "no_op_test",
     srcs = [
         "decorator/NoOpDecorator.java",
-        "driver/NoOpDriver.java",
         "lister/NoOpDriverLister.java",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:NoOpDriver.java",
     ],
     exports = [
         ":no_op_device",
