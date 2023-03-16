@@ -114,6 +114,15 @@ public class Timing {
   }
 
   /**
+   * If end time is null, uses the given time as end time.
+   *
+   * @return whether the end time is updated
+   */
+  public boolean end(Instant endTime) {
+    return this.endTime.compareAndSet(/* expectedValue= */ null, endTime);
+  }
+
+  /**
    * Returns the end time, or empty if it is not ended. The end time should be set when the client
    * test runner stops running.
    */
