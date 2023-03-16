@@ -129,6 +129,15 @@ public class Timing implements Cloneable {
   }
 
   /**
+   * If end time is null, records the given time as end time.
+   *
+   * @return whether the end time is updated from null
+   */
+  public boolean end(Instant endTime) {
+    return newTiming.end(endTime);
+  }
+
+  /**
    * Reset the start time to null.
    *
    * @return whether the start time is cleared
