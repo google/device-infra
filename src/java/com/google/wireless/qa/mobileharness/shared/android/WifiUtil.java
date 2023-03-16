@@ -59,8 +59,10 @@ public class WifiUtil {
       try {
         path = resUtil.getResourceFile(WifiUtil.class, WIFI_UTIL_APK_RES_PATH);
         if (path != null) {
-          versionCode = aapt.getApkVersionCode(path);
+          // The apk must have the package name while it may not have the version code, so get the
+          // package name first
           name = aapt.getApkPackageName(path);
+          versionCode = aapt.getApkVersionCode(path);
         }
       } catch (MobileHarnessException e) {
         logger.atSevere().log(
