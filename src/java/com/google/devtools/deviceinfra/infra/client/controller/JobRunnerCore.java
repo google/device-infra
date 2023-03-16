@@ -183,7 +183,8 @@ public class JobRunnerCore implements Runnable {
   private static final Duration CHECK_NEW_TESTS_INTERVAL = Duration.ofSeconds(30);
 
   /** Link to the helper page for the information about why a test failed to allocate any device. */
-  private static final String TEST_NOT_ASSIGNED_HELPER_LINK = "http://go/why-test-not-assigned";
+  private static final String TEST_NOT_ASSIGNED_HELPER_LINK =
+      "http://go/omnilab-why-test-not-assigned";
 
   /** Error message to point users to the help page. */
   private static final String TEST_NOT_ASSIGNED_ERROR_MSG =
