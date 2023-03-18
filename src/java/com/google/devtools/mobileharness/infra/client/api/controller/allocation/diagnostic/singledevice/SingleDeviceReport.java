@@ -141,7 +141,9 @@ public class SingleDeviceReport implements Report {
                 "You (%s) don't have access to any %s%s. Please use the 'run_as' flag to specify"
                     + " an authorized MDB group you are in, or contact the device owners"
                     + " to request access.\n",
-                job.user(), jobType.getDevice(), getDiagnosticCandidateFilterSuffix());
+                job.jobUser().getRunAs(),
+                jobType.getDevice(),
+                getDiagnosticCandidateFilterSuffix());
         report.append(msg);
         cause =
             new MobileHarnessException(
@@ -263,10 +265,14 @@ public class SingleDeviceReport implements Report {
           StringBuilder error = new StringBuilder();
           error.append("============ Score ").append(score).append(" ============\nErrors:");
           if (!assessment.isAccessible()) {
-            error.append("\n - NO_ACCESS (current user: ").append(job.user()).append(")");
+            error
+                .append("\n - NO_ACCESS (current user: ")
+                .append(job.jobUser().getRunAs())
+                .append(")");
             if (cause == null) {
               String msg =
-                  String.format("NO_ACCESS (current user: %s) for device %s.", job.user(), id);
+                  String.format(
+                      "NO_ACCESS (current user: %s) for device %s.", job.jobUser().getRunAs(), id);
               cause =
                   new MobileHarnessException(
                       InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR_DEVICE_NO_ACCESS, msg);
@@ -277,13 +283,13 @@ public class SingleDeviceReport implements Report {
                 .append(
                     "\n - POTENTIAL_ACCESS: The device owner is the default value. Need to change"
                         + " to the current user: ")
-                .append(job.user());
+                .append(job.jobUser().getRunAs());
             if (cause == null) {
               String msg =
                   String.format(
                       "POTENTIAL_ACCESS: The device %s owner is the default value. Need to change "
                           + " to the current user: %s",
-                      id, job.user());
+                      id, job.jobUser().getRunAs());
               cause =
                   new MobileHarnessException(
                       InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR_DEVICE_NO_ACCESS, msg);

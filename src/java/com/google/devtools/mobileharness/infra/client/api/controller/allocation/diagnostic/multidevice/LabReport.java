@@ -211,7 +211,8 @@ public final class LabReport implements Report {
       StringBuilder readableReport, SingleDeviceAssessment deviceAssessment, String indent) {
     if (!deviceAssessment.isAccessible()) {
       readableReport.append(
-          String.format("%s- %s (current user: %s)\n", indent, Report.NO_ACCESS, job.user()));
+          String.format(
+              "%s- %s (current user: %s)\n", indent, Report.NO_ACCESS, job.jobUser().getRunAs()));
     }
     if (!deviceAssessment.isDriverSupported()) {
       readableReport.append(String.format("%s- %s\n", indent, Report.DRIVER_NOT_SUPPORTED));

@@ -126,7 +126,7 @@ public class SingleDeviceAssessment implements Assessment<DeviceInfo> {
       @Nullable SubDeviceSpec spec,
       Set<String> unsupportedDecorators,
       Map<String, String> unsupportedDimensions) {
-    this.user = job.user();
+    this.user = job.jobUser().getRunAs();
     this.driver = job.type().getDriver();
     this.requestedSharedDimensionNames = job.subDeviceSpecs().getSharedDimensionNames();
     this.deviceType = spec == null ? job.type().getDevice() : spec.type();
