@@ -36,6 +36,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
+import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
@@ -103,8 +104,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
 
@@ -206,7 +205,7 @@ public class JobRunnerCore implements Runnable {
   protected final TestManager<DirectTestRunner> testManager;
 
   /** Test manager and runner thread pool. */
-  private final ListeningExecutorService jobThreadPool;
+  private final ListeningExecutorService testManagerThreadPool;
 
   /** Whether the current thread is running. */
   private volatile boolean running = false;
@@ -271,26 +270,7 @@ public class JobRunnerCore implements Runnable {
         new TestManager<>(),
         MoreExecutors.listeningDecorator(
             Executors.newCachedThreadPool(
-                new ThreadFactory() {
-
-                  private final AtomicInteger threadCount = new AtomicInteger();
-
-                  @Override
-                  public Thread newThread(Runnable runnable) {
-                    Thread thread =
-                        new Thread(
-                            runnable,
-                            "mh-job-thread-"
-                                + jobInfo.locator().getId()
-                                + "-"
-                                + threadCount.getAndIncrement());
-                    thread.setUncaughtExceptionHandler(
-                        (t, e) ->
-                            logger.atSevere().withCause(e).log(
-                                "Uncaught exception from thread [%s]", t.getName()));
-                    return thread;
-                  }
-                })),
+                ThreadFactoryUtil.createThreadFactory("test-manager-thread"))),
         new LocalFileUtil(),
         Clock.systemUTC(),
         Sleeper.defaultSleeper(),
@@ -304,7 +284,7 @@ public class JobRunnerCore implements Runnable {
       DeviceAllocator deviceAllocator,
       ExecMode execMode,
       TestManager<DirectTestRunner> testManager,
-      ListeningExecutorService jobThreadPool,
+      ListeningExecutorService testManagerThreadPool,
       LocalFileUtil fileUtil,
       Clock clock,
       Sleeper sleeper,
@@ -320,9 +300,12 @@ public class JobRunnerCore implements Runnable {
     this.clock = clock;
     this.sleeper = sleeper;
     this.deviceQuerier = execMode.createDeviceQuerier();
-    this.jobThreadPool = jobThreadPool;
+    this.testManagerThreadPool = testManagerThreadPool;
     this.testManager = testManager;
-    logFailure(jobThreadPool.submit(testManager), Level.SEVERE, "Fatal error in test manager");
+    logFailure(
+        this.testManagerThreadPool.submit(testManager),
+        Level.SEVERE,
+        "Fatal error in test manager");
     scopedEventBus = new ScopedEventBus<>(EventScope.class);
     scopedEventBus.add(EventScope.CLASS_INTERNAL);
     scopedEventBus.add(EventScope.GLOBAL_INTERNAL, globalInternalBus);
@@ -612,7 +595,8 @@ public class JobRunnerCore implements Runnable {
                           scopeEventSubscribers.get(EventScope.INTERNAL_PLUGIN),
                           scopeEventSubscribers.get(EventScope.API_PLUGIN),
                           scopeEventSubscribers.get(EventScope.JAR_PLUGIN));
-                  DirectTestRunner testRunner = execMode.createTestRunner(setting, jobThreadPool);
+                  DirectTestRunner testRunner =
+                      execMode.createTestRunner(setting, testManagerThreadPool);
 
                   // Subscribes test messages of the test.
                   synchronized (testMessageSubscribers) {
@@ -996,8 +980,8 @@ public class JobRunnerCore implements Runnable {
       // executed. It is OK to swallow InterruptedException here, the job thread is ending soon.
       logger.atInfo().log("Shutdown test thread pool");
       try {
-        jobThreadPool.shutdownNow();
-        jobThreadPool.awaitTermination(TERMINATE_TEST_TIMEOUT_MS, MILLISECONDS);
+        testManagerThreadPool.shutdownNow();
+        testManagerThreadPool.awaitTermination(TERMINATE_TEST_TIMEOUT_MS, MILLISECONDS);
       } catch (InterruptedException e) {
         jobInfo
             .errors()
