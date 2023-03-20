@@ -135,16 +135,6 @@ public class JobScheduleUnit implements Cloneable {
     return jobUser;
   }
 
-  /**
-   * Returns the user of the test.
-   *
-   * @deprecated use {@link JobInfo#jobUser()} instead.
-   */
-  @Deprecated
-  public String user() {
-    return jobUser.getRunAs();
-  }
-
   /** Gets the job type, which contains the required device, driver and decorators information. */
   public JobType type() {
     return type;

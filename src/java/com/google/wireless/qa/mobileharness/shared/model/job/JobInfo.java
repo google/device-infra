@@ -293,18 +293,6 @@ public class JobInfo extends JobScheduleUnit {
       return this;
     }
 
-    /**
-     * Optional.
-     *
-     * @deprecated use {@link Builder#setJobUser} instead.
-     */
-    @CanIgnoreReturnValue
-    @Deprecated
-    public Builder setUser(String user) {
-      this.jobUser = JobUser.newBuilder().setRunAs(user).setActualUser(user).build();
-      return this;
-    }
-
     /** Optional. */
     @CanIgnoreReturnValue
     public Builder setJobUser(JobUser jobUser) {
