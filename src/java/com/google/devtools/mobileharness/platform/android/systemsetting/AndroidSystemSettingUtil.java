@@ -1558,7 +1558,8 @@ public class AndroidSystemSettingUtil {
               operation, exception == null ? output : exception.getMessage()),
           exception);
     }
-    if (output.contains("Now reboot your device for settings to take effect")) {
+    if (output.contains("Now reboot your device for settings to take effect")
+        || output.contains("Reboot the device")) {
       return PostSetDmVerityDeviceOp.REBOOT;
     }
     return PostSetDmVerityDeviceOp.NONE;

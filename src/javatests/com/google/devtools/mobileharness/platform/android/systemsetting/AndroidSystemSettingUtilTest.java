@@ -729,6 +729,13 @@ public class AndroidSystemSettingUtilTest {
 
     assertThat(settingUtil.setDmVerityChecking(DEVICE_ID, true))
         .isEqualTo(PostSetDmVerityDeviceOp.REBOOT);
+
+    when(adb.runWithRetry(
+            eq(DEVICE_ID), aryEq(new String[] {AndroidSystemSettingUtil.ADB_ARG_ENABLE_VERITY})))
+        .thenReturn("dm-verity enabled\nReboot the device for new settings to take effect");
+
+    assertThat(settingUtil.setDmVerityChecking(DEVICE_ID, true))
+        .isEqualTo(PostSetDmVerityDeviceOp.REBOOT);
   }
 
   @Test
