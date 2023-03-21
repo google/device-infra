@@ -154,6 +154,8 @@ public enum ErrorCode {
 
   // FILE ERROR: 1200 ~ 1299
   FILE_NOT_FOUND(1200),
+  FILE_READ_ERROR(1201),
+  FILE_DELETE_ERROR(1215),
 
   // ***********************************************************************************************
   // Android devices: 2000 ~ 2999

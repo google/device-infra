@@ -222,6 +222,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> javaCommandPath = javaCommandPathDefault;
 
+  private static final Flag<String> jobConfigsJsonDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--job_configs_json",
+      description = "File path of json string that is parsed from mobileharness.client.JobConfigs.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> jobConfigsJson = jobConfigsJsonDefault;
+
   private static final Flag<Integer> logFileNumDefault = Flag.value(100);
 
   @com.beust.jcommander.Parameter(
