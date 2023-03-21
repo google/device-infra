@@ -259,6 +259,7 @@ public final class Dimension {
     ADB,
     USB,
     SSH,
+    VIDEO,
   }
 
   /** Dimension values. */

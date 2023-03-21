@@ -406,6 +406,10 @@ public abstract class BaseDevice implements Device {
         addDimension(
             Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
             CommunicationTypeValue.USB.name());
+      } else if (communication.hasVideo()) {
+        addDimension(
+            Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
+            CommunicationTypeValue.VIDEO.name());
       } else {
         logger.atWarning().log("Unknown communication: %s", communication);
         continue;
