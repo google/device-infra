@@ -44,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/shell",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
@@ -53,6 +54,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:xts_tradefed_test_spec_java_proto",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )
