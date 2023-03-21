@@ -211,7 +211,8 @@ public class AndroidPackageManagerUtil {
   private static final String SHOW_VERSION_CODE_FLAG = "--show-versioncode";
 
   private static final Pattern LIST_PACKAGE_WITH_SOURCE_DIR_AND_VERSION_REGEX =
-      Pattern.compile("package:(?<sourceDir>.*)=(?<pkgName>.*) versionCode:(?<versionCode>\\d+)");
+      Pattern.compile(
+          "package:(?<sourceDir>.*)=(?<pkgName>[^=]*) versionCode:(?<versionCode>\\d+)");
   private static final String ADB_SHELL_GET_MODULEINFO = "pm get-moduleinfo";
 
   private static final Pattern MODULEINFO_REGEX =
