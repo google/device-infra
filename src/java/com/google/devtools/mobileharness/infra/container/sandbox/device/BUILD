@@ -58,6 +58,7 @@ java_library(
     name = "unsupported_device",
     srcs = ["UnsupportedDeviceSandboxController.java"],
     visibility = [
+        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
     deps = [
