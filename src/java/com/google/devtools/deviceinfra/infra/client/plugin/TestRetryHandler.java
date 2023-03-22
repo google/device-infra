@@ -407,20 +407,16 @@ public class TestRetryHandler {
    * We consider tests satisfying the following requirement a potential container error:
    *
    * <ol>
+   *   <li>It is not mandatory sandbox or mandatory container.
    *   <li>It runs in container-mode.
-   *   <li>Its result is not PASS or FAIL.
-   *   <li>It has error but not customer issue error.
+   *   <li>Its result is not PASS.
    * </ol>
    */
   private static boolean isPotentialContainerError(TestInfo testInfo) {
     TestResult testResult = testInfo.result().get();
     return !isMandatorySandboxOrContainerMode(testInfo.jobInfo())
         && testInfo.properties().getBoolean(Test.CONTAINER_MODE).orElse(false)
-        && testResult != TestResult.PASS
-        && testResult != TestResult.FAIL
-        && !(testResult == TestResult.ERROR
-            && testInfo.resultWithCause().get().causeNonEmpty().getSummary().getErrorType()
-                == ErrorType.CUSTOMER_ISSUE);
+        && testResult != TestResult.PASS;
   }
 
   /**
