@@ -39,7 +39,6 @@ import com.google.devtools.mobileharness.shared.util.command.CommandStartExcepti
 import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
-import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import java.util.Optional;
@@ -80,31 +79,25 @@ public class Adb {
   public Adb() {
     this(
         Suppliers.memoize(() -> new AdbInitializer().initializeAdbEnvironment()),
-        new CommandExecutor(),
-        new SystemUtil());
+        new CommandExecutor());
   }
 
-  @VisibleForTesting
-  Adb(Supplier<AdbParam> adbParamSupplier, CommandExecutor commandExecutor, SystemUtil systemUtil) {
+  private Adb(Supplier<AdbParam> adbParamSupplier, CommandExecutor commandExecutor) {
     this(
         adbParamSupplier,
         Suppliers.memoize(
             () -> {
               commandExecutor.setBaseEnvironment(adbParamSupplier.get().getCmdBaseEnvVarsMap());
               return commandExecutor;
-            }),
-        systemUtil);
+            }));
   }
 
   @VisibleForTesting
   Adb(
       @AdbParamSupplier Supplier<AdbParam> adbParamSupplier,
-      @AdbCommandExecutorSupplier Supplier<CommandExecutor> commandExecutorSupplier,
-      SystemUtil systemUtil) {
+      @AdbCommandExecutorSupplier Supplier<CommandExecutor> commandExecutorSupplier) {
     this.adbParamSupplier = adbParamSupplier;
     this.commandExecutorSupplier = commandExecutorSupplier;
-
-    String unused = getAdbPath();
   }
 
   public String getAdbPath() {
@@ -513,11 +506,10 @@ public class Adb {
           int exitCode = commandResult.exitCode();
           if (successExitCodes.contains(exitCode)) {
             logger.atInfo().log(
-                "Backgrounded command [%s] on device %s finished.", commandStr, serial);
+                "Background command [%s] on device %s finished.", commandStr, serial);
           } else if (exitCode == 143) {
             // The command is killed.
-            logger.atInfo().log(
-                "Backgrounded command [%s] on device %s killed.", commandStr, serial);
+            logger.atInfo().log("Background command [%s] on device %s killed.", commandStr, serial);
           } else {
             logger.atWarning().log("Error from background command: %s", commandResult);
           }
@@ -526,7 +518,7 @@ public class Adb {
     Runnable timeoutCallback =
         () ->
             logger.atWarning().log(
-                "Backgrounded command [%s] on device %s timeout.", commandStr, serial);
+                "Background command [%s] on device %s timeout.", commandStr, serial);
 
     OutputCallbackImpl outputCallback =
         new OutputCallbackImpl(String.format("Command [%s] output:", commandStr));
