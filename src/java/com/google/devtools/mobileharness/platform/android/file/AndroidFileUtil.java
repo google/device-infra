@@ -93,6 +93,9 @@ public class AndroidFileUtil {
   /** Indicator for the success of remounting the device. */
   private static final String ADB_REMOUNT_SUCCESS_INDICATOR = "remount succeeded";
 
+  private static final String SECTION_SEPARATOR =
+      "\n========================================================\n";
+
   /** Indicator for a file showed in "adb shell ls -l". */
   private static final char ADB_SHELL_LIST_FILE_INDICATOR = '-';
 
@@ -938,21 +941,27 @@ public class AndroidFileUtil {
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
-  public void remount(String serial) throws MobileHarnessException, InterruptedException {
+  @CanIgnoreReturnValue
+  public String remount(String serial) throws MobileHarnessException, InterruptedException {
     try {
+      String result = "";
       if (androidSystemSpecUtil.isEmulator(serial)) {
         int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(serial);
-        String result = "";
         if (sdkVersion >= AndroidVersion.ANDROID_13.getStartSdkVersion()) {
           result = adb.run(serial, new String[] {"shell", "remount"});
         } else if (sdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()) {
           result = adb.run(serial, new String[] {"shell", "mount", "-o", "rw,remount", "/"});
         }
         if (result.contains(ADB_REMOUNT_SUCCESS_INDICATOR)) {
-          return;
+          return result;
         }
       }
-      String unused = adb.run(serial, new String[] {ADB_ARG_REMOUNT});
+      String output = adb.run(serial, new String[] {ADB_ARG_REMOUNT});
+      if (result.isEmpty()) {
+        return output;
+      } else {
+        return result + SECTION_SEPARATOR + output;
+      }
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_FILE_UTIL_REMOUNT_ERROR, e.getMessage(), e);

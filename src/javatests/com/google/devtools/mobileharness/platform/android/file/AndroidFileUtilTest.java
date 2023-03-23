@@ -1001,7 +1001,7 @@ public final class AndroidFileUtilTest {
   @Test
   public void remount() throws Exception {
     when(adb.run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT})))
-        .thenReturn("")
+        .thenReturn("remount succeeded")
         .thenThrow(
             new MobileHarnessException(
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
@@ -1009,8 +1009,9 @@ public final class AndroidFileUtilTest {
     when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(29);
     when(androidSystemSpecUtil.isEmulator(eq(SERIAL))).thenReturn(false);
 
-    androidFileUtil.remount(SERIAL);
+    String output = androidFileUtil.remount(SERIAL);
     verify(adb).run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT}));
+    assertThat(output).isEqualTo("remount succeeded");
 
     assertThat(
             assertThrows(MobileHarnessException.class, () -> androidFileUtil.remount(SERIAL))
