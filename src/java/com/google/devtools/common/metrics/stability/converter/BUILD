@@ -46,6 +46,7 @@ java_library(
     visibility = [
         "//:deviceinfra_metrics_pkg",
         "//:deviceinfra_pkg",
+        "//java/com/google/wireless/android/pixel/testing/fusion/mobileharness/plugin:__pkg__",
     ],
     deps = [
         "deserialized_exception",

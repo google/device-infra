@@ -49,6 +49,7 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_pkg",
+        "//java/com/google/wireless/android/pixel/testing/fusion/mobileharness/plugin:__pkg__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
