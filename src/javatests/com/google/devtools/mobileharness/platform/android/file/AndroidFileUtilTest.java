@@ -785,6 +785,28 @@ public final class AndroidFileUtilTest {
   }
 
   @Test
+  public void listFilesInOrder() throws Exception {
+    String fileOrDirPath = "/sdcard/test";
+    when(adb.runShellWithRetry(SERIAL, AndroidFileUtil.ADB_SHELL_LIST_FILES + " " + fileOrDirPath))
+        .thenReturn(fileOrDirPath)
+        .thenReturn("file2\n" + "file1\n" + "a.txt\n" + "_132\n" + "ABC\n")
+        .thenReturn("error:" + AndroidFileUtil.OUTPUT_NO_FILE_OR_DIR)
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "error"));
+
+    assertThat(androidFileUtil.listFilesInOrder(SERIAL, fileOrDirPath))
+        .containsExactly(fileOrDirPath);
+    assertThat(androidFileUtil.listFilesInOrder(SERIAL, fileOrDirPath))
+        .containsExactly("ABC", "_132", "a.txt", "file1", "file2")
+        .inOrder();
+    assertThat(androidFileUtil.listFilesInOrder(SERIAL, fileOrDirPath)).isEmpty();
+    assertThrows(
+        MobileHarnessException.class,
+        () -> androidFileUtil.listFilesInOrder(SERIAL, fileOrDirPath));
+  }
+
+  @Test
   public void makeDirectory() throws Exception {
     String dirPathOnDevice = "/abc";
     when(adb.runShellWithRetry(

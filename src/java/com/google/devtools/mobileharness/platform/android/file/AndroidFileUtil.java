@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.platform.android.file;
 
+import static java.util.stream.Collectors.toCollection;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
@@ -44,6 +46,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.SortedSet;
+import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -674,6 +678,29 @@ public class AndroidFileUtil {
               fileOrDirPath, serial, e.getMessage()),
           e);
     }
+  }
+
+  /**
+   * List all files and dirs under the {@code fileOrDirPath} on the device in alphabetic order.
+   *
+   * <p>If the path is file, will return the path of the file if exists. If the path is dir, will
+   * return contents under the directory if exists. Return empty set if the file or dir not exists.
+   *
+   * @param serial serial number of the device
+   * @param fileOrDirPath path of the file or directory to be listed
+   * @return ordered set of files and dirs.
+   */
+  public SortedSet<String> listFilesInOrder(String serial, String fileOrDirPath)
+      throws MobileHarnessException, InterruptedException {
+    String output = listFiles(serial, fileOrDirPath, /* showDetails= */ false);
+    if (output.contains(OUTPUT_NO_FILE_OR_DIR)) {
+      return new TreeSet<>();
+    }
+    return Splitters.LINE_SPLITTER
+        .trimResults()
+        .omitEmptyStrings()
+        .splitToStream(output)
+        .collect(toCollection(TreeSet::new));
   }
 
   /**
