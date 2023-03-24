@@ -39,9 +39,9 @@ java_library(
         "job/*.java",
     ]) + [
         "ClassUtil.java",
+        "decorator/Decorator.java",
         "device/CompositeDevice.java",
         "device/Device.java",
-        "decorator/Decorator.java",
         "lister/BaseLister.java",
         "lister/Lister.java",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:Driver.java",
