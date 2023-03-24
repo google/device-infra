@@ -471,6 +471,8 @@ public abstract class AndroidRealDeviceDelegate {
       String allCharacteristics = Joiner.on(' ').join(characteristics);
       List<String> brandNames =
           device.getDimension(Ascii.toLowerCase(AndroidProperty.BRAND.name()));
+      List<String> deviceNames =
+          device.getDimension(Ascii.toLowerCase(AndroidProperty.DEVICE.name()));
       List<String> prodBoards =
           device.getDimension(Ascii.toLowerCase(AndroidProperty.PRODUCT_BOARD.name()));
       if (brandNames.contains("google")
@@ -479,6 +481,7 @@ public abstract class AndroidRealDeviceDelegate {
           || brandNames.contains("qti")
           || brandNames.contains("exynos")
           || brandNames.contains("jio")
+          || deviceNames.contains("moohan")
           || allCharacteristics.contains("watch")
           || features.contains(AndroidRealDeviceConstants.FEATURE_IOT)
           || features.contains(AndroidRealDeviceConstants.FEATURE_EMBEDDED)
