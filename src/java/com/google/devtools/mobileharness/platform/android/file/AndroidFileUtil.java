@@ -966,6 +966,21 @@ public class AndroidFileUtil {
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
   public void remount(String serial) throws MobileHarnessException, InterruptedException {
+    // Due to legacy issues, the results are not checked by default.
+    remount(serial, /* checkResults= */ false);
+  }
+
+  /**
+   * Remounts the /system and /vendor (if present) partitions on the device read-write. This only
+   * works if the device has root access and has already become root, and it affects all users.
+   *
+   * @param serial serial number of the device
+   * @param checkResults if check the output for success
+   * @throws MobileHarnessException if fails to execute the commands or timeout
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public void remount(String serial, boolean checkResults)
+      throws MobileHarnessException, InterruptedException {
     try {
       if (androidSystemSpecUtil.isEmulator(serial)) {
         int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(serial);
@@ -979,7 +994,12 @@ public class AndroidFileUtil {
           return;
         }
       }
-      String unused = adb.run(serial, new String[] {ADB_ARG_REMOUNT});
+      String output = adb.run(serial, new String[] {ADB_ARG_REMOUNT});
+      if (checkResults && !output.contains(ADB_REMOUNT_SUCCESS_INDICATOR)) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_FILE_UTIL_REMOUNT_ERROR,
+            "The output of adb remount doesn't indicate the success: " + output);
+      }
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_FILE_UTIL_REMOUNT_ERROR, e.getMessage(), e);
