@@ -301,6 +301,8 @@ public class AndroidFileUtil {
             adb.runShellWithRetry(serial, ADB_SHELL_GET_EXTERNAL_STORAGE, SHORT_COMMAND_TIMEOUT);
       } else {
         int currentUser = androidUserUtil.getCurrentUser(serial, sdkVersion);
+        logger.atInfo().log(
+            "Device %s current user: %s, sdk version: %s", serial, currentUser, sdkVersion);
         if (currentUser == SYSTEM_USER
             || sdkVersion < AndroidVersion.ANDROID_11.getStartSdkVersion()) {
           externalStoragePath = "/storage/emulated/" + currentUser;
