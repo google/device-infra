@@ -25,6 +25,7 @@ java_library(
     srcs = ["SessionDetailHolder.java"],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
@@ -48,9 +49,18 @@ java_library(
     srcs = ["SessionInfo.java"],
     deps = [
         ":session_detail_holder",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "session_plugin",
+    srcs = ["SessionPlugin.java"],
+    deps = [
+        ":session_info",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus_backend",
     ],
 )

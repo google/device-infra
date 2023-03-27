@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import java.time.Duration;
-import java.util.Collection;
 import java.util.List;
 import javax.inject.Inject;
 
@@ -51,11 +50,9 @@ public class SessionJobRunner {
     this.sleeper = sleeper;
   }
 
-  public void runJobs(
-      SessionDetailHolder sessionDetailHolder,
-      List<JobInfo> jobs,
-      Collection<Object> sessionPlugins)
+  public void runJobs(SessionDetailHolder sessionDetailHolder, List<Object> sessionPlugins)
       throws MobileHarnessException, InterruptedException {
+    List<JobInfo> jobs = sessionDetailHolder.getAllJobs();
     ImmutableList<String> jobIds =
         jobs.stream().map(JobInfo::locator).map(JobLocator::getId).collect(toImmutableList());
     try {

@@ -16,79 +16,56 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.controller;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-
-import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginError;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
-import com.google.devtools.mobileharness.shared.util.event.EventBusBackend;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethod;
-import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethodSearchResult;
-import java.util.Map;
+import java.util.List;
+import java.util.function.Function;
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 
 /** Runner for running session plugins. */
 public class SessionPluginRunner {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final EventBusBackend eventBusBackend;
-
   /** Set after {@link #initialize} is called. */
   private volatile SessionDetailHolder sessionDetailHolder;
 
   /** Set after {@link #initialize} is called. */
-  private volatile SessionInfo sessionInfo;
-
-  /** Set after {@link #initialize} is called. */
   private volatile ImmutableList<SessionPlugin> sessionPlugins;
-
-  @Inject
-  SessionPluginRunner(EventBusBackend eventBusBackend) {
-    this.eventBusBackend = eventBusBackend;
-  }
 
   /** Initializes the plugin runner and scans all subscriber methods from session plugins. */
   public void initialize(
-      SessionDetailHolder sessionDetailHolder,
-      SessionInfo sessionInfo,
-      Map<SessionPluginLabel, Object> sessionPlugins) {
+      SessionDetailHolder sessionDetailHolder, List<SessionPlugin> sessionPlugins) {
     this.sessionDetailHolder = sessionDetailHolder;
-    this.sessionInfo = sessionInfo;
-    this.sessionPlugins =
-        sessionPlugins.entrySet().stream()
-            .map(
-                entry ->
-                    SessionPlugin.of(
-                        entry.getKey(), eventBusBackend.searchSubscriberMethods(entry.getValue())))
-            .collect(toImmutableList());
+    this.sessionPlugins = ImmutableList.copyOf(sessionPlugins);
   }
 
   /** Posts {@link SessionStartingEvent} to session plugins. */
   public void onSessionStarting() {
-    postEvent(new SessionStartingEvent(sessionInfo));
+    postEvent(SessionStartingEvent::new, SessionStartingEvent.class);
   }
 
   /** Posts {@link SessionEndedEvent} to session plugins. */
   public void onSessionEnded(@Nullable Throwable error) {
-    postEvent(new SessionEndedEvent(sessionInfo, error));
+    postEvent(sessionInfo -> new SessionEndedEvent(sessionInfo, error), SessionEndedEvent.class);
   }
 
-  private void postEvent(Object event) {
-    logger.atInfo().log("Posting %s", event);
+  private <T> void postEvent(Function<SessionInfo, T> eventGenerator, Class<T> eventClass) {
+    logger.atInfo().log("Posting %s", eventClass.getSimpleName());
     // TODO: Supports skipping session.
     for (SessionPlugin sessionPlugin : sessionPlugins) {
+      T event = eventGenerator.apply(sessionPlugin.sessionInfo());
       for (SubscriberMethod subscriberMethod :
           sessionPlugin.subscriberMethodSearchResult().subscriberMethods()) {
-        if (subscriberMethod.canReceiveEvent(event.getClass())) {
+        if (subscriberMethod.canReceiveEvent(eventClass)) {
           logger.atInfo().log("Posting %s to subscriber [%s]", event, subscriberMethod);
           try {
             subscriberMethod.receiveEvent(event);
@@ -99,7 +76,7 @@ public class SessionPluginRunner {
 
             sessionDetailHolder.addSessionPluginError(
                 SessionPluginError.newBuilder()
-                    .setPluginLabel(sessionPlugin.sessionPluginLabel())
+                    .setPluginLabel(sessionPlugin.sessionInfo().getSessionPluginLabel())
                     .setPluginClassName(subscriberMethod.clazz().getName())
                     .setMethodName(subscriberMethod.method().getName())
                     .setEventClassName(event.getClass().getName())
@@ -114,21 +91,6 @@ public class SessionPluginRunner {
           }
         }
       }
-    }
-  }
-
-  @AutoValue
-  abstract static class SessionPlugin {
-
-    abstract SessionPluginLabel sessionPluginLabel();
-
-    abstract SubscriberMethodSearchResult subscriberMethodSearchResult();
-
-    private static SessionPlugin of(
-        SessionPluginLabel sessionPluginLabel,
-        SubscriberMethodSearchResult subscriberMethodSearchResult) {
-      return new AutoValue_SessionPluginRunner_SessionPlugin(
-          sessionPluginLabel, subscriberMethodSearchResult);
     }
   }
 }

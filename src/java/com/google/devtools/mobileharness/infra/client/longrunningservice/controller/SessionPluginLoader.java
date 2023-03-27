@@ -18,23 +18,27 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 
 import static com.google.protobuf.TextFormat.shortDebugString;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
 import com.google.devtools.deviceinfra.shared.util.reflection.ReflectionUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfigs;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
+import com.google.devtools.mobileharness.shared.util.event.EventBusBackend;
+import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethodSearchResult;
 import com.google.inject.AbstractModule;
 import com.google.inject.CreationException;
 import com.google.inject.Guice;
 import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
+import java.util.HashSet;
+import java.util.Set;
 import javax.inject.Inject;
 
 /** Loader for loading session plugins. */
@@ -43,45 +47,62 @@ public class SessionPluginLoader {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final ReflectionUtil reflectionUtil;
+  private final EventBusBackend eventBusBackend;
 
   @Inject
-  SessionPluginLoader(ReflectionUtil reflectionUtil) {
+  SessionPluginLoader(ReflectionUtil reflectionUtil, EventBusBackend eventBusBackend) {
     this.reflectionUtil = reflectionUtil;
+    this.eventBusBackend = eventBusBackend;
   }
 
-  public ImmutableMap<SessionPluginLabel, Object> loadSessionPlugins(
-      SessionPluginConfigs sessionPluginConfigs, SessionInfo sessionInfo)
+  public ImmutableList<SessionPlugin> loadSessionPlugins(SessionDetailHolder sessionDetailHolder)
       throws MobileHarnessException {
-    ImmutableMap.Builder<SessionPluginLabel, Object> sessionPlugins = ImmutableMap.builder();
+    ImmutableList.Builder<SessionPlugin> sessionPlugins = ImmutableList.builder();
+
+    Set<SessionPluginLabel> existingLabels = new HashSet<>();
+
     for (SessionPluginConfig sessionPluginConfig :
-        sessionPluginConfigs.getSessionPluginConfigList()) {
+        sessionDetailHolder
+            .getSessionConfig()
+            .getSessionPluginConfigs()
+            .getSessionPluginConfigList()) {
       SessionPluginLabel sessionPluginLabel = getSessionPluginLabel(sessionPluginConfig);
       logger.atInfo().log(
           "Loading session plugin: label=[%s], config=[%s]",
           shortDebugString(sessionPluginLabel), shortDebugString(sessionPluginConfig));
 
+      // Checks plugin label.
+      if (existingLabels.contains(sessionPluginLabel)) {
+        throw new MobileHarnessException(
+            InfraErrorId.OLCS_DUPLICATED_SESSION_PLUGIN_LABEL,
+            String.format(
+                "Duplicated session plugin label [%s]. If you want to specify more than one session"
+                    + " plugins whose class names are the same, you should specify [explicit_label]"
+                    + " for those plugins.",
+                shortDebugString(sessionPluginLabel)));
+      } else {
+        existingLabels.add(sessionPluginLabel);
+      }
+
       // Loads plugin class.
       Class<?> sessionPluginClass = loadSessionPluginClass(sessionPluginConfig.getLoadingConfig());
 
+      // Creates SessionInfo for the plugin.
+      SessionInfo sessionInfo =
+          new SessionInfo(
+              sessionDetailHolder, sessionPluginLabel, sessionPluginConfig.getExecutionConfig());
+
       // Creates plugin instance.
-      Object sessionPlugin =
-          createSessionPlugin(
-              sessionPluginClass,
-              sessionInfo,
-              sessionPluginConfig.getExecutionConfig(),
-              sessionPluginLabel);
-      sessionPlugins.put(sessionPluginLabel, sessionPlugin);
+      Object sessionPlugin = createSessionPlugin(sessionPluginClass, sessionInfo);
+
+      // Searches subscriber methods.
+      SubscriberMethodSearchResult subscriberMethodSearchResult =
+          eventBusBackend.searchSubscriberMethods(sessionPlugin);
+
+      sessionPlugins.add(
+          SessionPlugin.of(sessionInfo, sessionPlugin, subscriberMethodSearchResult));
     }
-    try {
-      return sessionPlugins.buildOrThrow();
-    } catch (IllegalArgumentException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.OLCS_DUPLICATED_SESSION_PLUGIN_LABEL,
-          "Duplicated session plugin label. If you want to specify more than one session plugins"
-              + " whose class names are the same, you should specify [explicit_label] for those"
-              + " plugins.",
-          e);
-    }
+    return sessionPlugins.build();
   }
 
   private SessionPluginLabel getSessionPluginLabel(SessionPluginConfig sessionPluginConfig) {
@@ -113,14 +134,10 @@ public class SessionPluginLoader {
     }
   }
 
-  private Object createSessionPlugin(
-      Class<?> sessionPluginClass,
-      SessionInfo sessionInfo,
-      SessionPluginExecutionConfig executionConfig,
-      SessionPluginLabel label)
+  private Object createSessionPlugin(Class<?> sessionPluginClass, SessionInfo sessionInfo)
       throws MobileHarnessException {
     try {
-      return Guice.createInjector(new SessionPluginModule(sessionInfo, executionConfig, label))
+      return Guice.createInjector(new SessionPluginModule(sessionInfo))
           .getInstance(sessionPluginClass);
     } catch (CreationException | ProvisionException e) {
       throw new MobileHarnessException(
@@ -133,31 +150,14 @@ public class SessionPluginLoader {
   private static class SessionPluginModule extends AbstractModule {
 
     private final SessionInfo sessionInfo;
-    private final SessionPluginExecutionConfig executionConfig;
-    private final SessionPluginLabel label;
 
-    private SessionPluginModule(
-        SessionInfo sessionInfo,
-        SessionPluginExecutionConfig executionConfig,
-        SessionPluginLabel label) {
+    private SessionPluginModule(SessionInfo sessionInfo) {
       this.sessionInfo = sessionInfo;
-      this.executionConfig = executionConfig;
-      this.label = label;
     }
 
     @Provides
     SessionInfo provideSessionInfo() {
       return sessionInfo;
-    }
-
-    @Provides
-    SessionPluginExecutionConfig provideExecutionConfig() {
-      return executionConfig;
-    }
-
-    @Provides
-    SessionPluginLabel provideLabel() {
-      return label;
     }
   }
 }

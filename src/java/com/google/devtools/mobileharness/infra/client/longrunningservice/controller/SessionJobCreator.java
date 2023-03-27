@@ -18,19 +18,14 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 
-/** Creator for creating {@link SessionInfo}. */
-public class SessionInfoCreator {
+/** Creator for creating OmniLab jobs for a session. */
+public class SessionJobCreator {
 
-  /**
-   * Creates a {@link SessionInfo} and generates job list of the session based on {@link
-   * SessionConfig}.
-   */
-  public SessionInfo create(SessionDetailHolder sessionDetailHolder) {
-    return new SessionInfo(sessionDetailHolder, createJobs(sessionDetailHolder.getSessionConfig()));
+  public void createAndAddJobs(SessionDetailHolder sessionDetailHolder) {
+    createJobs(sessionDetailHolder.getSessionConfig()).forEach(sessionDetailHolder::addJob);
   }
 
   private ImmutableList<JobInfo> createJobs(
