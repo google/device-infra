@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
@@ -26,10 +27,11 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginError;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethod;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethodSearchResult;
-import java.util.List;
+import java.util.Map;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -47,7 +49,7 @@ public class SessionPluginRunner {
   private volatile SessionInfo sessionInfo;
 
   /** Set after {@link #initialize} is called. */
-  private volatile ImmutableList<SubscriberMethodSearchResult> sessionPlugins;
+  private volatile ImmutableList<SessionPlugin> sessionPlugins;
 
   @Inject
   SessionPluginRunner(EventBusBackend eventBusBackend) {
@@ -58,12 +60,15 @@ public class SessionPluginRunner {
   public void initialize(
       SessionDetailHolder sessionDetailHolder,
       SessionInfo sessionInfo,
-      List<Object> sessionPlugins) {
+      Map<SessionPluginLabel, Object> sessionPlugins) {
     this.sessionDetailHolder = sessionDetailHolder;
     this.sessionInfo = sessionInfo;
     this.sessionPlugins =
-        sessionPlugins.stream()
-            .map(eventBusBackend::searchSubscriberMethods)
+        sessionPlugins.entrySet().stream()
+            .map(
+                entry ->
+                    SessionPlugin.of(
+                        entry.getKey(), eventBusBackend.searchSubscriberMethods(entry.getValue())))
             .collect(toImmutableList());
   }
 
@@ -80,8 +85,9 @@ public class SessionPluginRunner {
   private void postEvent(Object event) {
     logger.atInfo().log("Posting %s", event);
     // TODO: Supports skipping session.
-    for (SubscriberMethodSearchResult sessionPlugin : sessionPlugins) {
-      for (SubscriberMethod subscriberMethod : sessionPlugin.subscriberMethods()) {
+    for (SessionPlugin sessionPlugin : sessionPlugins) {
+      for (SubscriberMethod subscriberMethod :
+          sessionPlugin.subscriberMethodSearchResult().subscriberMethods()) {
         if (subscriberMethod.canReceiveEvent(event.getClass())) {
           logger.atInfo().log("Posting %s to subscriber [%s]", event, subscriberMethod);
           try {
@@ -93,6 +99,7 @@ public class SessionPluginRunner {
 
             sessionDetailHolder.addSessionPluginError(
                 SessionPluginError.newBuilder()
+                    .setPluginLabel(sessionPlugin.sessionPluginLabel())
                     .setPluginClassName(subscriberMethod.clazz().getName())
                     .setMethodName(subscriberMethod.method().getName())
                     .setEventClassName(event.getClass().getName())
@@ -107,6 +114,21 @@ public class SessionPluginRunner {
           }
         }
       }
+    }
+  }
+
+  @AutoValue
+  abstract static class SessionPlugin {
+
+    abstract SessionPluginLabel sessionPluginLabel();
+
+    abstract SubscriberMethodSearchResult subscriberMethodSearchResult();
+
+    private static SessionPlugin of(
+        SessionPluginLabel sessionPluginLabel,
+        SubscriberMethodSearchResult subscriberMethodSearchResult) {
+      return new AutoValue_SessionPluginRunner_SessionPlugin(
+          sessionPluginLabel, subscriberMethodSearchResult);
     }
   }
 }

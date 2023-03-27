@@ -16,12 +16,13 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.controller;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.inject.assistedinject.Assisted;
-import java.util.List;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 
@@ -60,9 +61,9 @@ public class SessionRunner implements Callable<Void> {
     SessionInfo sessionInfo = sessionInfoCreator.create(sessionDetailHolder);
 
     // Loads session plugins.
-    List<Object> sessionPlugins =
+    ImmutableMap<SessionPluginLabel, Object> sessionPlugins =
         sessionPluginLoader.loadSessionPlugins(
-            sessionDetailHolder.getSessionConfig().getSessionPluginConfig(), sessionInfo);
+            sessionDetailHolder.getSessionConfig().getSessionPluginConfigs(), sessionInfo);
     sessionPluginRunner.initialize(sessionDetailHolder, sessionInfo, sessionPlugins);
 
     // Calls sessionPlugin.onStarting().
@@ -71,7 +72,8 @@ public class SessionRunner implements Callable<Void> {
     Throwable sessionError = null;
     try {
       // Starts all jobs and wait until they finish.
-      sessionJobRunner.runJobs(sessionDetailHolder, sessionInfo.getAllJobs(), sessionPlugins);
+      sessionJobRunner.runJobs(
+          sessionDetailHolder, sessionInfo.getAllJobs(), sessionPlugins.values());
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
       sessionError = e;
       throw e;

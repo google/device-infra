@@ -26,12 +26,12 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.port.PortProber;
 import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.BuiltinSessionPlugin;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfigs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
@@ -163,10 +163,10 @@ public class OlcServerIntegrationTest {
               .setSessionConfig(
                   SessionConfig.newBuilder()
                       .setSessionName("session_with_no_op_test")
-                      .setSessionPluginConfig(
-                          SessionPluginConfig.newBuilder()
-                              .addBuiltinPlugin(
-                                  BuiltinSessionPlugin.newBuilder()
+                      .setSessionPluginConfigs(
+                          SessionPluginConfigs.newBuilder()
+                              .addSessionPluginConfig(
+                                  SessionPluginConfig.newBuilder()
                                       .setLoadingConfig(
                                           SessionPluginLoadingConfig.newBuilder()
                                               .setPluginClassName(
