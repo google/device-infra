@@ -16,26 +16,30 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.model;
 
-import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginOutput;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import javax.annotation.concurrent.GuardedBy;
+import java.util.function.Function;
 
-/** Information of a running session. */
+/** Information of a running session for a session plugin. */
 public class SessionInfo {
 
   private final SessionDetailHolder sessionDetailHolder;
+  private final SessionPluginLabel sessionPluginLabel;
+  private final SessionPluginExecutionConfig sessionPluginExecutionConfig;
 
-  @GuardedBy("itself")
-  private final List<JobInfo> jobs;
-
-  public SessionInfo(SessionDetailHolder sessionDetailHolder, List<JobInfo> jobs) {
+  public SessionInfo(
+      SessionDetailHolder sessionDetailHolder,
+      SessionPluginLabel sessionPluginLabel,
+      SessionPluginExecutionConfig sessionPluginExecutionConfig) {
     this.sessionDetailHolder = sessionDetailHolder;
-    this.jobs = new ArrayList<>(jobs);
+    this.sessionPluginLabel = sessionPluginLabel;
+    this.sessionPluginExecutionConfig = sessionPluginExecutionConfig;
   }
 
   public String getSessionId() {
@@ -62,14 +66,30 @@ public class SessionInfo {
    * starts all jobs of it (e.g., in {@code SessionStartingEvent}).
    */
   public void addJob(JobInfo jobInfo) {
-    synchronized (jobs) {
-      jobs.add(jobInfo);
-    }
+    sessionDetailHolder.addJob(jobInfo);
   }
 
   public List<JobInfo> getAllJobs() {
-    synchronized (jobs) {
-      return ImmutableList.copyOf(jobs);
-    }
+    return sessionDetailHolder.getAllJobs();
+  }
+
+  /**
+   * Sets the output of the session plugin.
+   *
+   * @param outputComputingFunction the session plugin output computing function, whose parameter is
+   *     the old output (if any) or null (if no old output), and whose return value is the new
+   *     output (or null to remove the old output)
+   */
+  public void setSessionPluginOutput(
+      Function<SessionPluginOutput, SessionPluginOutput> outputComputingFunction) {
+    sessionDetailHolder.setSessionPluginOutput(sessionPluginLabel, outputComputingFunction);
+  }
+
+  public SessionPluginLabel getSessionPluginLabel() {
+    return sessionPluginLabel;
+  }
+
+  public SessionPluginExecutionConfig getSessionPluginExecutionConfig() {
+    return sessionPluginExecutionConfig;
   }
 }

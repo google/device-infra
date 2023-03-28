@@ -25,6 +25,7 @@ java_library(
     srcs = ["SessionDetailHolder.java"],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
@@ -37,6 +38,11 @@ java_library(
         "SessionEvent.java",
         "SessionStartingEvent.java",
     ],
+    visibility = [
+        "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+    ],
     deps = [
         ":session_info",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -46,11 +52,25 @@ java_library(
 java_library(
     name = "session_info",
     srcs = ["SessionInfo.java"],
+    visibility = [
+        "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+    ],
     deps = [
         ":session_detail_holder",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "session_plugin",
+    srcs = ["SessionPlugin.java"],
+    deps = [
+        ":session_info",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus_backend",
     ],
 )

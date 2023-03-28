@@ -16,26 +16,35 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.model;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginError;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginOutput;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import javax.annotation.concurrent.GuardedBy;
 
-/** Internal data model for managing {@link SessionDetail} of a running session. */
+/** Internal data model for managing states of a running session. */
 public class SessionDetailHolder {
 
   private final Object lock = new Object();
 
+  @GuardedBy("itself")
+  private final List<JobInfo> jobs;
+
   /**
-   * {@link SessionDetail} without {@link SessionOutput#getSessionPropertyMap()} and {@link
-   * SessionOutput#getSessionPluginErrorList()}.
+   * {@link SessionDetail} without {@link SessionOutput#getSessionPropertyMap()}, {@link
+   * SessionOutput#getSessionPluginErrorList()} and {@link
+   * SessionOutput#getSessionPluginOutputMap()}.
    */
   @GuardedBy("lock")
   private final SessionDetail.Builder sessionDetailBuilder;
@@ -48,15 +57,32 @@ public class SessionDetailHolder {
   @GuardedBy("lock")
   private final List<SessionPluginError> sessionPluginErrors = new ArrayList<>();
 
+  /** {@link SessionOutput#getSessionPluginOutputMap()}. */
+  @GuardedBy("lock")
+  private final Map<String, SessionPluginOutput> sessionPluginOutputs = new HashMap<>();
+
   /**
    * Constructor with an initial {@link SessionDetail}. {@link
    * SessionOutput#getSessionPropertyMap()} will be copied from {@link
    * SessionConfig#getSessionPropertyMap()}.
    */
   public SessionDetailHolder(SessionDetail sessionDetail) {
+    this.jobs = new ArrayList<>();
     this.sessionDetailBuilder = sessionDetail.toBuilder();
     this.sessionProperties =
         new HashMap<>(sessionDetail.getSessionConfig().getSessionPropertyMap());
+  }
+
+  public void addJob(JobInfo jobInfo) {
+    synchronized (jobs) {
+      jobs.add(jobInfo);
+    }
+  }
+
+  public List<JobInfo> getAllJobs() {
+    synchronized (jobs) {
+      return ImmutableList.copyOf(jobs);
+    }
   }
 
   /** Builds and returns a latest {@link SessionDetail}. */
@@ -67,6 +93,8 @@ public class SessionDetailHolder {
       sessionOutputBuilder.putAllSessionProperty(sessionProperties);
       sessionOutputBuilder.clearSessionPluginError();
       sessionOutputBuilder.addAllSessionPluginError(sessionPluginErrors);
+      sessionOutputBuilder.clearSessionPluginOutput();
+      sessionOutputBuilder.putAllSessionPluginOutput(sessionPluginOutputs);
       return sessionDetailBuilder.build();
     }
   }
@@ -104,6 +132,16 @@ public class SessionDetailHolder {
   public void addSessionPluginError(SessionPluginError sessionPluginError) {
     synchronized (lock) {
       sessionPluginErrors.add(sessionPluginError);
+    }
+  }
+
+  public void setSessionPluginOutput(
+      SessionPluginLabel sessionPluginLabel,
+      Function<SessionPluginOutput, SessionPluginOutput> outputComputingFunction) {
+    synchronized (lock) {
+      sessionPluginOutputs.compute(
+          sessionPluginLabel.getLabel(),
+          (key, oldValue) -> outputComputingFunction.apply(oldValue));
     }
   }
 }

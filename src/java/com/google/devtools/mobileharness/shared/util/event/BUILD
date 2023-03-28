@@ -17,7 +17,8 @@ java_library(
     name = "event_bus_backend",
     srcs = ["EventBusBackend.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",

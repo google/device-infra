@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
+import static com.google.protobuf.TextFormat.shortDebugString;
+
 import com.google.common.collect.Iterables;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
@@ -23,6 +25,11 @@ import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingOutput;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginOutput;
+import com.google.protobuf.Any;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
@@ -42,8 +49,15 @@ public class SessionPluginForTesting {
   }
 
   @Subscribe
-  public void onSessionStarting(SessionStartingEvent event) {
-    logger.atInfo().log("Creating JobInfo");
+  public void onSessionStarting(SessionStartingEvent event) throws InvalidProtocolBufferException {
+    SessionPluginForTestingConfig config =
+        sessionInfo
+            .getSessionPluginExecutionConfig()
+            .getConfig()
+            .unpack(SessionPluginForTestingConfig.class);
+
+    logger.atInfo().log("Creating JobInfo, config=%s", shortDebugString(config));
+
     JobInfo jobInfo =
         JobInfo.newBuilder()
             .setLocator(new JobLocator("fake_job_name"))
@@ -53,7 +67,7 @@ public class SessionPluginForTesting {
                     .setRetry(Retry.newBuilder().setTestAttempts(1).build())
                     .build())
             .build();
-    jobInfo.params().add("sleep_time_sec", "2");
+    jobInfo.params().add("sleep_time_sec", Integer.toString(config.getNoOpDriverSleepTimeSec()));
 
     sessionInfo.addJob(jobInfo);
     logger.atInfo().log("JobInfo added");
@@ -74,7 +88,18 @@ public class SessionPluginForTesting {
     logger.atInfo().log("Parsing job result");
 
     JobInfo jobInfo = Iterables.getOnlyElement(sessionInfo.getAllJobs());
-    sessionInfo.putSessionProperty("job_result", jobInfo.resultWithCause().get().type().name());
+    String jobResultTypeName = jobInfo.resultWithCause().get().type().name();
+    sessionInfo.putSessionProperty("job_result", jobResultTypeName);
+
+    sessionInfo.setSessionPluginOutput(
+        oldOutput ->
+            SessionPluginOutput.newBuilder()
+                .setOutput(
+                    Any.pack(
+                        SessionPluginForTestingOutput.newBuilder()
+                            .setJobResultTypeName(jobResultTypeName)
+                            .build()))
+                .build());
 
     logger.atInfo().log("Job result parsed");
   }

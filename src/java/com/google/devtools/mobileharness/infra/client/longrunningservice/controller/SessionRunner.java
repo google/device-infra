@@ -16,12 +16,13 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.controller;
 
-import com.google.common.collect.ImmutableMap;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.inject.assistedinject.Assisted;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
@@ -36,7 +37,7 @@ public class SessionRunner implements Callable<Void> {
   }
 
   private final SessionDetailHolder sessionDetailHolder;
-  private final SessionInfoCreator sessionInfoCreator;
+  private final SessionJobCreator sessionJobCreator;
   private final SessionJobRunner sessionJobRunner;
   private final SessionPluginLoader sessionPluginLoader;
   private final SessionPluginRunner sessionPluginRunner;
@@ -44,12 +45,12 @@ public class SessionRunner implements Callable<Void> {
   @Inject
   SessionRunner(
       @Assisted SessionDetail sessionDetail,
-      SessionInfoCreator sessionInfoCreator,
+      SessionJobCreator sessionJobCreator,
       SessionJobRunner sessionJobRunner,
       SessionPluginLoader sessionPluginLoader,
       SessionPluginRunner sessionPluginRunner) {
     this.sessionDetailHolder = new SessionDetailHolder(sessionDetail);
-    this.sessionInfoCreator = sessionInfoCreator;
+    this.sessionJobCreator = sessionJobCreator;
     this.sessionJobRunner = sessionJobRunner;
     this.sessionPluginLoader = sessionPluginLoader;
     this.sessionPluginRunner = sessionPluginRunner;
@@ -57,14 +58,13 @@ public class SessionRunner implements Callable<Void> {
 
   @Override
   public Void call() throws MobileHarnessException, InterruptedException {
-    // Creates SessionInfo and JobInfo.
-    SessionInfo sessionInfo = sessionInfoCreator.create(sessionDetailHolder);
+    // Creates OmniLab jobs.
+    sessionJobCreator.createAndAddJobs(sessionDetailHolder);
 
     // Loads session plugins.
-    ImmutableMap<SessionPluginLabel, Object> sessionPlugins =
-        sessionPluginLoader.loadSessionPlugins(
-            sessionDetailHolder.getSessionConfig().getSessionPluginConfigs(), sessionInfo);
-    sessionPluginRunner.initialize(sessionDetailHolder, sessionInfo, sessionPlugins);
+    ImmutableList<SessionPlugin> sessionPlugins =
+        sessionPluginLoader.loadSessionPlugins(sessionDetailHolder);
+    sessionPluginRunner.initialize(sessionDetailHolder, sessionPlugins);
 
     // Calls sessionPlugin.onStarting().
     sessionPluginRunner.onSessionStarting();
@@ -73,7 +73,8 @@ public class SessionRunner implements Callable<Void> {
     try {
       // Starts all jobs and wait until they finish.
       sessionJobRunner.runJobs(
-          sessionDetailHolder, sessionInfo.getAllJobs(), sessionPlugins.values());
+          sessionDetailHolder,
+          sessionPlugins.stream().map(SessionPlugin::plugin).collect(toImmutableList()));
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
       sessionError = e;
       throw e;

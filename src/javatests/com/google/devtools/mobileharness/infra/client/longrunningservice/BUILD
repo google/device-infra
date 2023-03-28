@@ -33,6 +33,7 @@ java_library(
         ":OlcServerWithAndroidDevice_deploy.jar",
     ],
     deps = [
+        ":session_plugin_for_testing_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",
@@ -76,16 +77,30 @@ java_library(
     name = "session_plugin_for_testing",
     srcs = ["SessionPluginForTesting.java"],
     deps = [
+        ":session_plugin_for_testing_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_event",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
+)
+
+proto_library(
+    name = "session_plugin_for_testing_proto",
+    srcs = ["session_plugin_for_testing.proto"],
+)
+
+java_proto_library(
+    name = "session_plugin_for_testing_java_proto",
+    deps = [":session_plugin_for_testing_proto"],
 )
 
 junit_test_suites(

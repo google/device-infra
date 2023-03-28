@@ -26,13 +26,17 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.port.PortProber;
 import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfigs;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
@@ -47,6 +51,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.protobuf.Any;
 import com.google.protobuf.FieldMask;
 import io.grpc.ManagedChannel;
 import java.time.Duration;
@@ -158,6 +163,9 @@ public class OlcServerIntegrationTest {
       SessionStub sessionStub = new SessionStub(channel);
 
       // Creates a session.
+      String pluginClassName =
+          "com.google.devtools.mobileharness.infra.client.longrunningservice"
+              + ".SessionPluginForTesting";
       CreateSessionRequest createSessionRequest =
           CreateSessionRequest.newBuilder()
               .setSessionConfig(
@@ -169,10 +177,15 @@ public class OlcServerIntegrationTest {
                                   SessionPluginConfig.newBuilder()
                                       .setLoadingConfig(
                                           SessionPluginLoadingConfig.newBuilder()
-                                              .setPluginClassName(
-                                                  "com.google.devtools.mobileharness.infra.client."
-                                                      + "longrunningservice."
-                                                      + "SessionPluginForTesting")))))
+                                              .setPluginClassName(pluginClassName))
+                                      .setExecutionConfig(
+                                          SessionPluginExecutionConfig.newBuilder()
+                                              .setConfig(
+                                                  Any.pack(
+                                                      SessionPluginForTestingConfig.newBuilder()
+                                                          .setNoOpDriverSleepTimeSec(2)
+                                                          .build()))
+                                              .build()))))
               .build();
       CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
       SessionId sessionId = createSessionResponse.getSessionId();
@@ -204,7 +217,16 @@ public class OlcServerIntegrationTest {
                           .setSessionOutput(
                               SessionOutput.newBuilder()
                                   .putSessionProperty("job_result", "PASS")
-                                  .putSessionProperty("job_result_from_job_event", "PASS")))
+                                  .putSessionProperty("job_result_from_job_event", "PASS")
+                                  .putSessionPluginOutput(
+                                      pluginClassName,
+                                      SessionPluginOutput.newBuilder()
+                                          .setOutput(
+                                              Any.pack(
+                                                  SessionPluginForTestingOutput.newBuilder()
+                                                      .setJobResultTypeName("PASS")
+                                                      .build()))
+                                          .build())))
                   .build());
     } catch (
         @SuppressWarnings("InterruptedExceptionSwallowed")

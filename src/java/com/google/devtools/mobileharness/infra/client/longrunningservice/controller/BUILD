@@ -39,12 +39,11 @@ java_library(
 )
 
 java_library(
-    name = "session_info_creator",
-    srcs = ["SessionInfoCreator.java"],
+    name = "session_job_creator",
+    srcs = ["SessionJobCreator.java"],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
     ],
@@ -93,7 +92,10 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/reflection:reflection_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_plugin",
+        "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus_backend",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
@@ -107,15 +109,14 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_event",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_plugin",
         "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus_backend",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -123,14 +124,14 @@ java_library(
     name = "session_runner",
     srcs = ["SessionRunner.java"],
     deps = [
-        ":session_info_creator",
+        ":session_job_creator",
         ":session_job_runner",
         ":session_plugin_loader",
         ":session_plugin_runner",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_plugin",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_assistedinject",
         "@maven//:javax_inject_jsr330_api",
