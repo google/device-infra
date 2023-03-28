@@ -16,6 +16,8 @@
 
 package com.google.devtools.deviceinfra.shared.util.command.history;
 
+import static java.lang.Math.min;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.deviceinfra.shared.util.command.CommandResult;
@@ -31,12 +33,13 @@ import java.util.UUID;
 public abstract class CommandRecord {
 
   static CommandRecord create(List<String> command) {
-    StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+    StackTraceElement[] stackTrace = new Throwable().getStackTrace();
+    int startPosition = min(2, stackTrace.length);
+    int endPosition = min(startPosition + 3, stackTrace.length);
     return new AutoValue_CommandRecord(
         UUID.randomUUID().toString(),
         ImmutableList.copyOf(command),
-        ImmutableList.copyOf(
-            Arrays.asList(stackTrace).subList(Math.min(3, stackTrace.length), stackTrace.length)),
+        ImmutableList.copyOf(Arrays.asList(stackTrace).subList(startPosition, endPosition)),
         Thread.currentThread().getName(),
         Clock.systemUTC().instant(),
         Optional.empty(),

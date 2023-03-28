@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.util.command.history;
 
+import static java.lang.Math.min;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
@@ -31,11 +33,12 @@ public abstract class CommandRecord {
 
   static CommandRecord create(List<String> command) {
     StackTraceElement[] stackTrace = new Throwable().getStackTrace();
+    int startPosition = min(2, stackTrace.length);
+    int endPosition = min(startPosition + 3, stackTrace.length);
     return new AutoValue_CommandRecord(
         UUID.randomUUID().toString(),
         ImmutableList.copyOf(command),
-        ImmutableList.copyOf(
-            Arrays.asList(stackTrace).subList(Math.min(2, stackTrace.length), stackTrace.length)),
+        ImmutableList.copyOf(Arrays.asList(stackTrace).subList(startPosition, endPosition)),
         Thread.currentThread().getName(),
         Instant.now(),
         Optional.empty(),
@@ -53,21 +56,15 @@ public abstract class CommandRecord {
         Optional.of(Instant.now()));
   }
 
-  /**
-   * @return the record id
-   */
+  /** Returns the record id */
   public abstract String id();
 
   public abstract ImmutableList<String> command();
 
-  /**
-   * @return the stack trace for executing the command
-   */
+  /** Returns the stack trace for executing the command */
   public abstract ImmutableList<StackTraceElement> stackTrace();
 
-  /**
-   * @return the name of the thread for executing the command
-   */
+  /** Returns the name of the thread for executing the command */
   public abstract String threadName();
 
   public abstract Instant startTime();
