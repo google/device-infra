@@ -19,8 +19,11 @@ package com.google.devtools.mobileharness.infra.controller.device.config;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.protobuf.Any;
+import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import java.util.List;
 import java.util.Map;
@@ -92,6 +95,27 @@ public class DummyApiConfig extends Observable implements ApiConfig {
   @Override
   public Basic.WifiConfig getDefaultWifi(String deviceControlId) {
     return Basic.WifiConfig.getDefaultInstance();
+  }
+
+  @Override
+  public void setDeviceConfigs(Map<String, DeviceConfig> deviceConfigList) {}
+
+  @Override
+  public void setLabConfig(LabConfig labConfig) throws MobileHarnessException {}
+
+  @Override
+  public Optional<DeviceConfig> getDeviceConfigToStore(String deviceControlId) {
+    return Optional.empty();
+  }
+
+  @Override
+  public LabConfig getLabConfigToStore() {
+    return LabConfig.getDefaultInstance();
+  }
+
+  @Override
+  public List<String> getTestbedUuidList() {
+    return ImmutableList.of();
   }
 
   @Override

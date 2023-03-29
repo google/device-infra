@@ -33,6 +33,8 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -40,7 +42,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "@com_google_protobuf_protobuf_java",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )

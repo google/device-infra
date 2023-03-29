@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.infra.controller.device.config;
 
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.protobuf.Any;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -68,6 +70,16 @@ public interface ApiConfig {
 
   /** Gets the wifi config for the given device. */
   WifiConfig getDefaultWifi(String deviceControlId);
+
+  void setDeviceConfigs(Map<String, DeviceConfig> deviceConfigList);
+
+  void setLabConfig(LabConfig labConfig) throws MobileHarnessException;
+
+  Optional<DeviceConfig> getDeviceConfigToStore(String deviceControlId);
+
+  LabConfig getLabConfigToStore();
+
+  List<String> getTestbedUuidList();
 
   /** Gets the lab server feature. */
   LabServerFeature getLabServerFeature();
