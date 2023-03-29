@@ -38,7 +38,8 @@ public abstract class AsyncTimerDecorator extends AdapterDecorator {
       throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Started");
     onStart(testInfo);
-    final Timer timer = new Timer();
+    final Timer timer =
+        new Timer(String.format("timer-%s-%s", getClass().getSimpleName(), testInfo.getId()));
     long intervalMs = getIntervalMs(testInfo);
     Boolean fixedScheduleRate = getFixedScheduleRate(testInfo);
 
