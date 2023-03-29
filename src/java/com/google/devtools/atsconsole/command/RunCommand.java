@@ -30,6 +30,7 @@ import com.google.devtools.atsconsole.result.xml.MoblyResultInfo;
 import com.google.devtools.atsconsole.result.xml.XmlResultFormatter;
 import com.google.devtools.atsconsole.result.xml.XmlResultUtil;
 import com.google.devtools.atsconsole.testbed.config.YamlTestbedUpdater;
+import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
@@ -46,6 +47,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -155,77 +157,11 @@ final class RunCommand implements Callable<Integer> {
     try {
       validateConfig();
 
-      if (CTSV_CONFIG.equals(config)) {
-        if (!checkCtsvPreparation()) {
-          return 1;
-        }
-        ImmutableMap<String, ModuleTestOptionsGroup> moduleTestOptionsGroupMap =
-            getModuleTestOptionsGroupMap();
-
-        ImmutableList<MoblyTestRunEntry> moblyTestRunEntries = getMoblyTestRunEntries();
-
-        // Filter Mobly test zips per commandline options
-        if (!moduleTestOptionsGroupMap.isEmpty()) {
-          moblyTestRunEntries =
-              moblyTestRunEntries.stream()
-                  .filter(
-                      moblyTestRunEntry ->
-                          moduleTestOptionsGroupMap.containsKey(moblyTestRunEntry.name()))
-                  .collect(toImmutableList());
-        }
-
-        if (moblyTestRunEntries.isEmpty()) {
-          consoleUtil.printLine(
-              String.format(
-                  "Found no match Mobly test zip(s) under directory [%s], skip running.",
-                  consoleInfo.getMoblyTestCasesDir().orElse(null)));
-          return 0;
-        }
-
-        ImmutableList<String> serials = getDeviceSerialsBeforeTest();
-        if (serials.isEmpty()) {
-          logger.atWarning().log(
-              "Found no matched and connected Android devices on the host, skip running.");
-          return 0;
-        }
-
-        String moblyConfigFile =
-            yamlTestbedUpdater.prepareMoblyConfig(
-                serials, consoleInfo.getMoblyTestCasesDir().orElseThrow(), null);
-
-        // Mobly log root directory contains all logs from each Mobly test zip run
-        String moblyLogDir = prepareMoblyLogDir();
-        ImmutableMap.Builder<String, String> moblyTestSummaryYamlFilesBuilder =
-            ImmutableMap.builder();
-        Instant startTime = Clock.systemUTC().instant();
-        for (MoblyTestRunEntry moblyTestRunEntry : moblyTestRunEntries) {
-          Optional<Path> moblyTestSummaryYaml =
-              runSingleMoblyTestZip(moblyTestRunEntry, moblyConfigFile, moblyLogDir);
-          moblyTestSummaryYaml.ifPresent(
-              path ->
-                  moblyTestSummaryYamlFilesBuilder.put(moblyTestRunEntry.name(), path.toString()));
-        }
-        Instant endTime = Clock.systemUTC().instant();
-
-        ImmutableMap<String, String> moblyTestSummaryYamlFiles =
-            moblyTestSummaryYamlFilesBuilder.buildOrThrow();
-        if (!moblyTestSummaryYamlFiles.isEmpty()) {
-          xmlResultFormatter.writeMoblyResults(
-              MoblyResultInfo.of(
-                  moblyTestSummaryYamlFiles,
-                  xmlResultUtil.prepareResultElementAttrs(startTime, endTime, serials),
-                  !serials.isEmpty()
-                      ? xmlResultUtil.prepareBuildElementAttrs(serials.get(0))
-                      : ImmutableMap.of()),
-              moblyLogDir);
-          String resultZipDes = moblyLogDir + ".zip";
-          logger.atInfo().log(
-              "Zipping Mobly result directory \"%s\" to zip file \"%s\"...",
-              moblyLogDir, resultZipDes);
-          localFileUtil.zipDir(moblyLogDir, resultZipDes);
-          logger.atInfo().log("Zipping Mobly result directory \"%s\" done", moblyLogDir);
+      if (Objects.equals(config, CTSV_CONFIG)) {
+        if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
+          return runCtsvInM1();
         } else {
-          logger.atWarning().log("Found no Mobly test summary yaml files after the test run.");
+          return runCtsvInM0();
         }
       }
 
@@ -233,6 +169,80 @@ final class RunCommand implements Callable<Integer> {
     } finally {
       moduleTestOptionsGroups = null; // reset the group to clear the history
     }
+  }
+
+  private int runCtsvInM0() throws MobileHarnessException, InterruptedException, IOException {
+    if (!checkCtsvPreparation()) {
+      return 1;
+    }
+    ImmutableMap<String, ModuleTestOptionsGroup> moduleTestOptionsGroupMap =
+        getModuleTestOptionsGroupMap();
+
+    ImmutableList<MoblyTestRunEntry> moblyTestRunEntries = getMoblyTestRunEntries();
+
+    // Filter Mobly test zips per commandline options
+    if (!moduleTestOptionsGroupMap.isEmpty()) {
+      moblyTestRunEntries =
+          moblyTestRunEntries.stream()
+              .filter(
+                  moblyTestRunEntry ->
+                      moduleTestOptionsGroupMap.containsKey(moblyTestRunEntry.name()))
+              .collect(toImmutableList());
+    }
+
+    if (moblyTestRunEntries.isEmpty()) {
+      consoleUtil.printLine(
+          String.format(
+              "Found no match Mobly test zip(s) under directory [%s], skip running.",
+              consoleInfo.getMoblyTestCasesDir().orElse(null)));
+      return 0;
+    }
+
+    ImmutableList<String> serials = getDeviceSerialsBeforeTest();
+    if (serials.isEmpty()) {
+      logger.atWarning().log(
+          "Found no matched and connected Android devices on the host, skip running.");
+      return 0;
+    }
+
+    String moblyConfigFile =
+        yamlTestbedUpdater.prepareMoblyConfig(
+            serials, consoleInfo.getMoblyTestCasesDir().orElseThrow(), null);
+
+    // Mobly log root directory contains all logs from each Mobly test zip run
+    String moblyLogDir = prepareMoblyLogDir();
+    ImmutableMap.Builder<String, String> moblyTestSummaryYamlFilesBuilder = ImmutableMap.builder();
+    Instant startTime = Clock.systemUTC().instant();
+    for (MoblyTestRunEntry moblyTestRunEntry : moblyTestRunEntries) {
+      Optional<Path> moblyTestSummaryYaml =
+          runSingleMoblyTestZip(moblyTestRunEntry, moblyConfigFile, moblyLogDir);
+      moblyTestSummaryYaml.ifPresent(
+          path -> moblyTestSummaryYamlFilesBuilder.put(moblyTestRunEntry.name(), path.toString()));
+    }
+    Instant endTime = Clock.systemUTC().instant();
+
+    ImmutableMap<String, String> moblyTestSummaryYamlFiles =
+        moblyTestSummaryYamlFilesBuilder.buildOrThrow();
+    if (!moblyTestSummaryYamlFiles.isEmpty()) {
+      xmlResultFormatter.writeMoblyResults(
+          MoblyResultInfo.of(
+              moblyTestSummaryYamlFiles,
+              xmlResultUtil.prepareResultElementAttrs(startTime, endTime, serials),
+              xmlResultUtil.prepareBuildElementAttrs(serials.get(0))),
+          moblyLogDir);
+      String resultZipDes = moblyLogDir + ".zip";
+      logger.atInfo().log(
+          "Zipping Mobly result directory \"%s\" to zip file \"%s\"...", moblyLogDir, resultZipDes);
+      localFileUtil.zipDir(moblyLogDir, resultZipDes);
+      logger.atInfo().log("Zipping Mobly result directory \"%s\" done", moblyLogDir);
+    } else {
+      logger.atWarning().log("Found no Mobly test summary yaml files after the test run.");
+    }
+    return 0;
+  }
+
+  private int runCtsvInM1() {
+    throw new UnsupportedOperationException();
   }
 
   private void validateConfig() {

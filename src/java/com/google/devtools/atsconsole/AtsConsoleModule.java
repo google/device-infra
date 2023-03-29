@@ -21,7 +21,7 @@ import com.google.inject.Provides;
 import javax.inject.Singleton;
 
 /** Guice Module for ATS console. */
-final class ConsoleCommandModule extends AbstractModule {
+final class AtsConsoleModule extends AbstractModule {
 
   @Provides
   @Singleton

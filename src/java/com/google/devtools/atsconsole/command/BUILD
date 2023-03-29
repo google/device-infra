@@ -36,6 +36,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole/result/xml:xml_result_util",
         "//src/java/com/google/devtools/atsconsole/testbed/config:yaml_testbed_updater",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",

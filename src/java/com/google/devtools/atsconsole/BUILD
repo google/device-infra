@@ -30,7 +30,7 @@ java_library(
         "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
     ],
     deps = [
-        ":console_command_module",
+        ":ats_console_module",
         ":console_info",
         ":console_util",
         ":guice_factory",
@@ -72,11 +72,8 @@ java_library(
 )
 
 java_library(
-    name = "console_command_module",
-    srcs = ["ConsoleCommandModule.java"],
-    visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
-    ],
+    name = "ats_console_module",
+    srcs = ["AtsConsoleModule.java"],
     deps = [
         ":console_info",
         "@maven//:com_google_inject_guice",

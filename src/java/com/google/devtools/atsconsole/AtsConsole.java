@@ -75,8 +75,8 @@ public class AtsConsole extends Thread {
       }
       if (!deviceInfraServiceFlags.isEmpty()) {
         logger.atInfo().log("Device infra service flags: %s", deviceInfraServiceFlags);
-        com.google.devtools.deviceinfra.shared.util.flags.Flags.parse(
-            deviceInfraServiceFlags.toArray(new String[0]));
+        String[] deviceInfraServiceFlagsArray = deviceInfraServiceFlags.toArray(new String[0]);
+        com.google.devtools.deviceinfra.shared.util.flags.Flags.parse(deviceInfraServiceFlagsArray);
       }
     }
 
@@ -85,9 +85,9 @@ public class AtsConsole extends Thread {
     startConsole(console, args);
   }
 
-  public static void startConsole(AtsConsole console, String[] args) {
+  private static void startConsole(AtsConsole console, String[] args) {
     console.setArgs(Arrays.asList(args));
-    // Set console thread as user thread so it can wait for user inputs.
+    // Set console thread as user thread, so it can wait for user inputs.
     console.setDaemon(false);
 
     console.start();
@@ -98,7 +98,7 @@ public class AtsConsole extends Thread {
   }
 
   @VisibleForTesting
-  AtsConsole(LineReader reader, Sleeper sleeper, ConsoleUtil consoleUtil) {
+  AtsConsole(@Nullable LineReader reader, Sleeper sleeper, ConsoleUtil consoleUtil) {
     this.consoleReader = reader;
     this.sleeper = sleeper;
     this.consoleUtil = consoleUtil;
@@ -113,14 +113,14 @@ public class AtsConsole extends Thread {
   public void run() {
     List<String> args = mainArgs;
 
-    Injector injector = Guice.createInjector(new ConsoleCommandModule());
+    Injector injector = Guice.createInjector(new AtsConsoleModule());
     CommandLine commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
     ConsoleInfo consoleInfo = injector.getInstance(ConsoleInfo.class);
     initConsoleInfo(consoleInfo);
 
     try {
-      String input = "";
-      List<String> tokens = new ArrayList<>();
+      String input;
+      List<String> tokens;
 
       do {
         if (args.isEmpty()) {
@@ -184,8 +184,7 @@ public class AtsConsole extends Thread {
    * console is not available, readLine was interrupted (for example Ctrl-C), or an EOF has been
    * found (for example Ctrl-D).
    */
-  @VisibleForTesting
-  Optional<String> getConsoleInput() {
+  private Optional<String> getConsoleInput() {
     if (consoleReader != null) {
       try {
         return Optional.of(consoleReader.readLine(getConsolePrompt()));
