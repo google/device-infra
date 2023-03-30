@@ -53,9 +53,7 @@ public class DummyApiConfig extends Observable implements ApiConfig {
   DummyApiConfig() {}
 
   @Override
-  public void init(boolean isLocalMode) {
-    return;
-  }
+  public void init(boolean isDefaultPublic) {}
 
   @Override
   public int getMaxConsecutiveFail(String deviceControlId) {
