@@ -21,10 +21,12 @@ import static com.google.common.collect.Multimaps.toMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.MultimapBuilder;
+import com.google.common.collect.SetMultimap;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -100,6 +102,7 @@ class LocalConfigurableDimensions implements Dimensions {
                   : otherSourceLocalDimensions.get(name).stream())
           .reduce(Stream::concat)
           .orElseGet(Stream::empty)
+          .distinct()
           .collect(Collectors.toList());
     }
   }
@@ -107,7 +110,7 @@ class LocalConfigurableDimensions implements Dimensions {
   @Override
   public ListMultimap<String, String> getAll() {
     synchronized (dimensions) {
-      ListMultimap<String, String> result =
+      SetMultimap<String, String> result =
           (apiConfig == null
                   ? Stream.<StrPair>empty()
                   : (required
@@ -118,12 +121,19 @@ class LocalConfigurableDimensions implements Dimensions {
                   toMultimap(
                       StrPair::getName,
                       StrPair::getValue,
-                      () -> MultimapBuilder.hashKeys().arrayListValues().build()));
+                      () -> MultimapBuilder.linkedHashKeys().linkedHashSetValues().build()));
       result.putAll(dimensions.getAll());
       if (otherSourceLocalDimensions != null) {
         result.putAll(otherSourceLocalDimensions.getAll());
       }
-      return result;
+      // Use a LinkedHashMultimap to dedup the same <key, value> entries and then convert to a
+      // ListMultimap.
+      return result.entries().stream()
+          .collect(
+              toMultimap(
+                  Entry::getKey,
+                  Entry::getValue,
+                  () -> MultimapBuilder.hashKeys().arrayListValues().build()));
     }
   }
 
