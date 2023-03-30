@@ -17,6 +17,7 @@ load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suite
 load("//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:server.bzl", "olc_server_binary")
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_testonly = 1,
 )
 

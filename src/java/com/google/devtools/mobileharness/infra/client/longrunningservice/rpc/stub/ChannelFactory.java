@@ -19,13 +19,15 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.st
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NegotiationType;
 import io.grpc.netty.NettyChannelBuilder;
+import java.util.concurrent.Executor;
 
 /** Factory for creating {@link ManagedChannel} to the server. */
 public class ChannelFactory {
 
-  public static ManagedChannel createLocalChannel(int port) {
+  public static ManagedChannel createLocalChannel(int port, Executor executor) {
     return NettyChannelBuilder.forAddress("localhost", port)
         .negotiationType(NegotiationType.PLAINTEXT)
+        .executor(executor)
         .build();
   }
 

@@ -14,7 +14,10 @@
 #
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/java/com/google/devtools/atsconsole/controller:__subpackages__",
+        "//src/javatests/com/google/devtools/atsconsole/controller:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
 )
@@ -51,5 +54,6 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@io_grpc_grpc_java//core",
+        "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )

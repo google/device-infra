@@ -20,13 +20,12 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import java.time.Duration;
-import java.util.Arrays;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
 import org.junit.Before;
@@ -52,7 +51,7 @@ public final class AtsConsoleTest {
 
   @Before
   public void setUp() {
-    atsConsole = new AtsConsole(lineReader, sleeper, consoleUtil);
+    atsConsole = new AtsConsole(ImmutableList.of(), lineReader, sleeper, consoleUtil);
     doCallRealMethod().when(consoleUtil).printLine(anyString());
     when(lineReader.getHistory()).thenReturn(history);
   }
@@ -68,13 +67,13 @@ public final class AtsConsoleTest {
 
     assertThat(atsConsole.isAlive()).isFalse();
     verify(sleeper).sleep(Duration.ofMillis(100));
-    verify(lineReader, times(1)).readLine(anyString());
+    verify(lineReader).readLine(anyString());
   }
 
   @Test
   public void startsConsoleWithHelp_exitConsoleAfterCommandExecution() throws Exception {
     atsConsole.setName("startsConsoleWithHelp_exitConsoleAfterCommandExecution");
-    atsConsole.setArgs(Arrays.asList("--help"));
+    atsConsole.setArgs(ImmutableList.of("--help"));
 
     atsConsole.start();
     // join has a timeout otherwise it may hang forever.

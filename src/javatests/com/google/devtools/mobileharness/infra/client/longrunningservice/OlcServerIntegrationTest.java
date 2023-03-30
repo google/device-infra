@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.devtools.mobileharness.shared.util.command.LineCallback.does;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -150,7 +151,7 @@ public class OlcServerIntegrationTest {
           .that(deviceFound.await(5L, SECONDS))
           .isTrue();
 
-      ManagedChannel channel = ChannelFactory.createLocalChannel(serverPort);
+      ManagedChannel channel = ChannelFactory.createLocalChannel(serverPort, directExecutor());
 
       // Checks the server version.
       VersionStub versionStub = new VersionStub(channel);

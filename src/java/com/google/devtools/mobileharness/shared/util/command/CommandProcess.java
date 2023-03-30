@@ -25,6 +25,7 @@ import java.io.Writer;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.OptionalInt;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
 
@@ -261,6 +262,14 @@ public class CommandProcess {
       return (int) impl.backendProcess().processId();
     } catch (UnsupportedOperationException e) {
       throw new ReflectiveOperationException(e);
+    }
+  }
+
+  public OptionalInt getUnixPidIfAny() {
+    try {
+      return OptionalInt.of(getUnixPid());
+    } catch (ReflectiveOperationException e) {
+      return OptionalInt.empty();
     }
   }
 }

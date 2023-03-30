@@ -61,12 +61,14 @@ public class AtsConsole extends Thread {
   @Nullable private final LineReader consoleReader;
   private final Sleeper sleeper;
   private final ConsoleUtil consoleUtil;
+  private final ImmutableList<String> deviceInfraServiceFlags;
 
-  private List<String> mainArgs = new ArrayList<>();
+  /** Set in {@link #startConsole}. */
+  private volatile List<String> mainArgs = new ArrayList<>();
 
   public static void main(String[] args) {
+    List<String> deviceInfraServiceFlags = new ArrayList<>();
     if (!isNullOrEmpty(DEVICE_INFRA_SERVICE_FLAGS)) {
-      List<String> deviceInfraServiceFlags = new ArrayList<>();
       try {
         tokenize(deviceInfraServiceFlags, DEVICE_INFRA_SERVICE_FLAGS);
       } catch (TokenizationException e) {
@@ -80,7 +82,7 @@ public class AtsConsole extends Thread {
       }
     }
 
-    AtsConsole console = new AtsConsole();
+    AtsConsole console = new AtsConsole(deviceInfraServiceFlags);
 
     startConsole(console, args);
   }
@@ -93,12 +95,21 @@ public class AtsConsole extends Thread {
     console.start();
   }
 
-  private AtsConsole() {
-    this(getReader().orElse(null), Sleeper.defaultSleeper(), new ConsoleUtil());
+  private AtsConsole(List<String> deviceInfraServiceFlags) {
+    this(
+        deviceInfraServiceFlags,
+        getReader().orElse(null),
+        Sleeper.defaultSleeper(),
+        new ConsoleUtil());
   }
 
   @VisibleForTesting
-  AtsConsole(@Nullable LineReader reader, Sleeper sleeper, ConsoleUtil consoleUtil) {
+  AtsConsole(
+      List<String> deviceInfraServiceFlags,
+      @Nullable LineReader reader,
+      Sleeper sleeper,
+      ConsoleUtil consoleUtil) {
+    this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
     this.consoleReader = reader;
     this.sleeper = sleeper;
     this.consoleUtil = consoleUtil;
@@ -113,7 +124,7 @@ public class AtsConsole extends Thread {
   public void run() {
     List<String> args = mainArgs;
 
-    Injector injector = Guice.createInjector(new AtsConsoleModule());
+    Injector injector = Guice.createInjector(new AtsConsoleModule(deviceInfraServiceFlags));
     CommandLine commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
     ConsoleInfo consoleInfo = injector.getInstance(ConsoleInfo.class);
     initConsoleInfo(consoleInfo);

@@ -24,6 +24,7 @@ import java.io.Writer;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.OptionalInt;
 import java.util.concurrent.TimeoutException;
 import javax.annotation.Nullable;
 
@@ -250,6 +251,14 @@ public class CommandProcess {
     } catch (UnsupportedOperationException e) {
       throw new CommandException(
           BasicErrorId.CMD_PROCESS_GET_ID_FAILURE, "Failed to get UNIX PID", e, command);
+    }
+  }
+
+  public OptionalInt getUnixPidIfAny() {
+    try {
+      return OptionalInt.of(getUnixPid());
+    } catch (CommandException e) {
+      return OptionalInt.empty();
     }
   }
 

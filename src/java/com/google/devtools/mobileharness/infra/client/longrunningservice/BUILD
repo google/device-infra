@@ -13,10 +13,13 @@
 # limitations under the License.
 #
 
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
     name = "olc_server",
     srcs = ["OlcServer.java"],
     visibility = [
+        "//src/java/com/google/devtools/atsconsole/controller:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
     deps = [

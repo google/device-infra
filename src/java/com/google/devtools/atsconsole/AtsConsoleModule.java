@@ -16,16 +16,50 @@
 
 package com.google.devtools.atsconsole;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
+import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import java.util.List;
+import java.util.concurrent.Executors;
 import javax.inject.Singleton;
 
 /** Guice Module for ATS console. */
 final class AtsConsoleModule extends AbstractModule {
 
+  private final ImmutableList<String> deviceInfraServiceFlags;
+
+  AtsConsoleModule(List<String> deviceInfraServiceFlags) {
+    this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
+  }
+
   @Provides
   @Singleton
   ConsoleInfo provideConsoleInfo() {
     return ConsoleInfo.getInstance();
+  }
+
+  @Provides
+  @DeviceInfraServiceFlags
+  ImmutableList<String> provideDeviceInfraServiceFlags() {
+    return deviceInfraServiceFlags;
+  }
+
+  @Provides
+  @Singleton
+  ListeningScheduledExecutorService provideThreadPool() {
+    return MoreExecutors.listeningDecorator(
+        Executors.newScheduledThreadPool(
+            /* corePoolSize= */ 5,
+            ThreadFactoryUtil.createThreadFactory("ats-console-main-thread")));
+  }
+
+  @Provides
+  Sleeper provideSleeper() {
+    return Sleeper.defaultSleeper();
   }
 }

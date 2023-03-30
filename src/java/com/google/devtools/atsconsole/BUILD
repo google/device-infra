@@ -15,16 +15,26 @@
 
 package(default_applicable_licenses = ["//:license"])
 
+java_library(
+    name = "annotations",
+    srcs = ["Annotations.java"],
+    visibility = [
+        "//src/java/com/google/devtools/atsconsole:__subpackages__",
+        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
+    ],
+    deps = ["@maven//:javax_inject_jsr330_api"],
+)
+
 java_binary(
     name = "atsconsole",
     main_class = "com.google.devtools.atsconsole.AtsConsole",
     runtime_deps = [
-        ":atsconsole_lib",
+        ":ats_console_lib",
     ],
 )
 
 java_library(
-    name = "atsconsole_lib",
+    name = "ats_console_lib",
     srcs = ["AtsConsole.java"],
     visibility = [
         "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
@@ -48,6 +58,20 @@ java_library(
 )
 
 java_library(
+    name = "ats_console_module",
+    srcs = ["AtsConsoleModule.java"],
+    deps = [
+        ":annotations",
+        ":console_info",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "console_info",
     srcs = ["ConsoleInfo.java"],
     visibility = [
@@ -56,28 +80,6 @@ java_library(
     ],
     deps = [
         "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "guice_factory",
-    srcs = ["GuiceFactory.java"],
-    visibility = [
-        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
-    ],
-    deps = [
-        "@maven//:com_google_inject_guice",
-        "@maven//:info_picocli_picocli",
-    ],
-)
-
-java_library(
-    name = "ats_console_module",
-    srcs = ["AtsConsoleModule.java"],
-    deps = [
-        ":console_info",
-        "@maven//:com_google_inject_guice",
-        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -94,12 +96,14 @@ java_library(
 )
 
 java_library(
-    name = "apache_commons_io",
+    name = "guice_factory",
+    srcs = ["GuiceFactory.java"],
     visibility = [
-        "//src/java/com/google/devtools/atsconsole/command:__pkg__",
+        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
     ],
-    exports = [
-        "@maven//:commons_io_commons_io",
+    deps = [
+        "@maven//:com_google_inject_guice",
+        "@maven//:info_picocli_picocli",
     ],
 )
 
@@ -110,4 +114,14 @@ java_library(
         "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
     ],
     deps = [":console_info"],
+)
+
+java_library(
+    name = "apache_commons_io",
+    visibility = [
+        "//src/java/com/google/devtools/atsconsole/command:__pkg__",
+    ],
+    exports = [
+        "@maven//:commons_io_commons_io",
+    ],
 )
