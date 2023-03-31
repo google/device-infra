@@ -27,9 +27,11 @@ java_library(
         "//src/java/com/google/devtools/atsconsole/controller/olcserver:AtsOlcServer_deploy.jar",
     ],
     deps = [
+        "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
         "//src/java/com/google/devtools/atsconsole:annotations",
         "//src/java/com/google/devtools/atsconsole/controller/olcserver:annotations",
+        "//src/java/com/google/devtools/atsconsole/controller/olcserver:ats_session_stub",
         "//src/java/com/google/devtools/atsconsole/controller/olcserver:module",
         "//src/java/com/google/devtools/atsconsole/controller/olcserver:server_preparer",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
@@ -44,6 +46,7 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",
         "@maven//:com_google_inject_guice",
+        "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
     ],
@@ -52,7 +55,7 @@ java_library(
 junit_test_suites(
     name = "gen_tests",
     sizes = [
-        "small",
+        "medium",
     ],
     deps = [":olcserver"],
 )

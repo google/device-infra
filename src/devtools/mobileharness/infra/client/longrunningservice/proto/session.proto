@@ -118,6 +118,10 @@ message SessionOutput {
   repeated SessionPluginError session_plugin_error = 2;
 
   // SessionPluginOutput by session plugin labels.
+  //
+  // A plugin can set its output by SessionInfo.setSessionPluginOutput().
+  //
+  // A plugin may not set its output, which needs to check by the client side.
   map<string, SessionPluginOutput> session_plugin_output = 3;
 }
 
@@ -143,6 +147,8 @@ message SessionPluginError {
 }
 
 // Output message (if any) of a session plugin.
+//
+// A plugin can set its output by SessionInfo.setSessionPluginOutput().
 message SessionPluginOutput {
   // Optional.
   google.protobuf.Any output = 1;

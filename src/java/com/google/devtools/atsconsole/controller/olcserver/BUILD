@@ -18,7 +18,8 @@ load("//src/java/com/google/devtools/mobileharness/infra/client/longrunningservi
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/javatests/com/google/devtools/atsconsole/controller:__subpackages__",
+        "//src/java/com/google/devtools/atsconsole:__subpackages__",
+        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
     ],
 )
 
@@ -33,6 +34,28 @@ java_library(
     name = "annotations",
     srcs = ["Annotations.java"],
     deps = ["@maven//:javax_inject_jsr330_api"],
+)
+
+java_library(
+    name = "ats_session_stub",
+    srcs = ["AtsSessionStub.java"],
+    deps = [
+        ":annotations",
+        "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/converter",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:callables",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf_protobuf_java",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
 )
 
 java_library(

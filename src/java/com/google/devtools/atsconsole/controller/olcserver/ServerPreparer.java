@@ -44,7 +44,7 @@ import javax.inject.Singleton;
 
 /** Server preparer for preparing an OLC server instance. */
 @Singleton
-class ServerPreparer {
+public class ServerPreparer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
