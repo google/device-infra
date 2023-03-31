@@ -162,6 +162,9 @@ public class LocalTestFlow {
             labPluginPaths,
             labPluginClasses,
             labPluginModuleClasses,
+            // TODO: Add a PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX, similar to
+            //   PARAM_CLIENT_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX
+            /* forceLoadFromJarClassRegex= */ null,
             PluginType.LAB,
             testInfo.log());
     if (loader.load()) {

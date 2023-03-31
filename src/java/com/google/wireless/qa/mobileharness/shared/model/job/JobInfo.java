@@ -92,6 +92,17 @@ public class JobInfo extends JobScheduleUnit {
   public static final String PARAM_CLIENT_PLUGIN_MODULES = "client_plugin_module_classes";
 
   /**
+   * Param name of the regex of class names that we force to be loaded from the client plugin's
+   * classloader.
+   *
+   * <p>If specified, this can be used to resolve problems arising from a plugin's unintended use of
+   * classes from Mobile Harness, rather than its own classes (since parent classes are always used,
+   * if they are present).
+   */
+  public static final String PARAM_CLIENT_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX =
+      "client_plugin_force_load_from_jar_class_regex";
+
+  /**
    * Param name of the canonical class name of the plugin handler for test start/end events. The
    * handler is executed on lab server side.
    */
