@@ -23,9 +23,10 @@ import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.util.ErrorIdFormatter;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.errorprone.annotations.FormatMethod;
 import javax.annotation.Nullable;
 
-/** Specifies device action exceptions. */
+/** A dedicated exception class for device action. */
 public final class DeviceActionException extends Exception
     implements ErrorIdProvider<DeviceActionErrorId> {
 
@@ -55,9 +56,15 @@ public final class DeviceActionException extends Exception
     this(createErrorId(name, type), message, cause);
   }
 
-  /** Converts a MobileHarness exception to a device action exception. */
+  /** Converts a MobileHarness exception to a {@link DeviceActionException}. */
   public DeviceActionException(MobileHarnessException e, String message) {
     this(createErrorId(e.getErrorId()), message, e);
+  }
+
+  /** Converts a MobileHarness exception to a {@link DeviceActionException}. */
+  @FormatMethod
+  public DeviceActionException(MobileHarnessException e, String message, Object... args) {
+    this(e, String.format(message, args));
   }
 
   @Override
@@ -66,7 +73,7 @@ public final class DeviceActionException extends Exception
   }
 
   private static String formatMessageWithErrorId(DeviceActionErrorId errorId, String message) {
-    return String.format("%s %s", message, ErrorIdFormatter.formatErrorId(errorId));
+    return String.format("%s %s", ErrorIdFormatter.formatErrorId(errorId), message);
   }
 
   private static DeviceActionErrorId createErrorId(String name, ErrorType type) {
