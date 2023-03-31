@@ -72,3 +72,14 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "xml_constants",
+    srcs = [
+        "XmlConstants.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/atsconsole:__subpackages__",
+        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
+    ],
+)

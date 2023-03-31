@@ -30,3 +30,13 @@ java_proto_library(
     name = "result_java_proto",
     deps = [":result_proto"],
 )
+
+proto_library(
+    name = "report_proto",
+    srcs = ["report.proto"],
+)
+
+java_proto_library(
+    name = "report_java_proto",
+    deps = [":report_proto"],
+)

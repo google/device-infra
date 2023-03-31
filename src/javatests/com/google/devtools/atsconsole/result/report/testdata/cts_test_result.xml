@@ -1,0 +1,44 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no' ?><?xml-stylesheet type="text/xsl" href="compatibility_result.xsl"?>
+<Result start="1678951330449" end="1678951395733" start_display="Thu Mar 16 00:22:10 PDT 2023" end_display="Thu Mar 16 00:23:15 PDT 2023" command_line_args="cts -s 12241FDD4002Z6">
+  <Build invocation-id="1" command_line_args="cts -s 12241FDD4002Z6" adb_version="1.0.41 install path: /usr/bin/adb" java_version="19.0.2" />
+  <RunHistory>
+    <Run start="1678951330449" end="1678951360449" pass="9" failed="1" command_line_args="cts -s 12241FDD4002Z6" host_name="myhostname" />
+    <Run start="1678951361000" end="1678951395733" pass="9" failed="1" command_line_args="cts -s 12241FDD4002Z6" host_name="myhostname" />
+  </RunHistory>
+  <Summary pass="9" failed="1" modules_done="2" modules_total="2" />
+  <Module name="Module1" abi="arm64-v8a" runtime="7495" done="true" pass="3" total_tests="4">
+    <Reason message="Module1 has test failure" error_name="TEST FAILURE" error_code="1" />
+    <TestCase name="android.cts.Dummy1Test">
+      <Test result="fail" name="testMethod1">
+        <Failure message="testMethod1 failed" error_name="TEST FAILURE" error_code="1">
+          <StackTrace>Test Error</StackTrace>
+        </Failure>
+        <BugReport file_name="bugreport.zip">BugReport content</BugReport>
+        <Logcat file_name="logcat.txt">Logcat content</Logcat>
+        <Screenshot file_name="screenshot.jpeg">Screenshot JPEG description</Screenshot>
+        <Screenshot file_name="screenshot.png">Screenshot PNG description</Screenshot>
+        <Metric key="metric1">Metric1 content</Metric>
+        <Metric key="metric2">Metric2 content</Metric>
+      </Test>
+      <Test result="pass" name="testMethod2" />
+    </TestCase>
+    <TestCase name="android.cts.Dummy2Test">
+      <Test result="pass" name="testMethod1" />
+      <Test result="pass" name="testMethod2" />
+    </TestCase>
+  </Module>
+  <Module name="Module2" abi="arm64-v8a" runtime="7495" done="true" pass="6" total_tests="6">
+    <TestCase name="android.cts.Hello1Test">
+      <Test result="pass" name="testMethod1" />
+      <Test result="pass" name="testMethod2" />
+    </TestCase>
+    <TestCase name="android.cts.Hello2Test">
+      <Test result="pass" name="testMethod1" />
+      <Test result="pass" name="testMethod2" />
+    </TestCase>
+    <TestCase name="android.cts.Hello3Test">
+      <Test result="pass" name="testMethod1" />
+      <Test result="pass" name="testMethod2" />
+    </TestCase>
+  </Module>
+</Result>
