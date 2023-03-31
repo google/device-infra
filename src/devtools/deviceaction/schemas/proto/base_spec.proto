@@ -36,20 +36,33 @@ message Operand {
 
 message UnspecifiedSpec {}
 
+// Specs for Android phones.
 message AndroidPhoneSpec {
-  // Device properties 1 ~ 30
-  // ro.product.brand
+  // Device properties 1 ~ 50
+  // Brand from ro.product.brand.
   optional string brand = 1;
-  // Options for adb commands 31 ~ 100
-  optional google.protobuf.Duration reboot_await = 31;
-  optional google.protobuf.Duration reboot_timeout = 32;
-  optional google.protobuf.Duration testharness_boot_await = 33;
-  optional google.protobuf.Duration testharness_boot_timeout = 34;
+  // Options for adb commands 51 ~ 100
+  // Wait for boot start.
+  optional google.protobuf.Duration reboot_await = 51;
+  // Wait for boot complete.
+  optional google.protobuf.Duration reboot_timeout = 52;
+  // Wait for testharness boot start.
+  optional google.protobuf.Duration testharness_boot_await = 53;
+  // Wait for testharness boot complete.
+  optional google.protobuf.Duration testharness_boot_timeout = 54;
+  // Timeout to get stage ready. It is a parameter to pass to device package
+  // manager.
+  optional google.protobuf.Duration staged_ready_timeout = 55;
+  // Extra wait time for stage ready. It is a parameter for the host thread.
+  optional google.protobuf.Duration extra_wait_for_staging = 56;
   // Other options 101 ~
+  // Can only connect to wifi 2.4
   optional bool wifi_24_only = 101;
+  optional bool need_disable_package_cache = 102;
+  optional bool reload_by_factory_reset = 103;
 }
 
-// Device Specs to create Device objects.
+// Specs for devices.
 message DeviceSpec {
   oneof device_spec {
     UnspecifiedSpec unspecified_spec = 1;
@@ -57,7 +70,7 @@ message DeviceSpec {
   }
 }
 
-// Proto for data to query in database.
+// Configs for devices.
 //
 // For example:
 //    message SomeBinaryActionSpec {
@@ -73,7 +86,7 @@ message DeviceConfig {
   extensions 1000 to max;
 }
 
-// Action specs to create Action objects.
+// Specs for device actions.
 message ActionSpec {
   // Classify actions by the arity.
   oneof action {
