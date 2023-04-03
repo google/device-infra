@@ -27,5 +27,17 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface DeviceInfraServiceFlags {}
 
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface MainArgs {}
+
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface ConsoleLineReader {}
+
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface ConsoleOutput {}
+
   private Annotations() {}
 }

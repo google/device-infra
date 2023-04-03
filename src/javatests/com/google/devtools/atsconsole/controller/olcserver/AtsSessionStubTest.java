@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
-import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerBinary;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerSessionStub;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
@@ -60,7 +59,6 @@ public class AtsSessionStubTest {
 
   @Bind private ListeningScheduledExecutorService threadPool;
   @Bind private Sleeper sleeper;
-  @Bind @ServerBinary private Path serverBinary;
   @Bind @DeviceInfraServiceFlags private ImmutableList<String> deviceInfraServiceFlags;
 
   @Inject private ServerPreparer serverPreparer;
@@ -80,16 +78,18 @@ public class AtsSessionStubTest {
     Flags.parse(deviceInfraServiceFlags.toArray(new String[0]));
 
     sleeper = Sleeper.defaultSleeper();
-    serverBinary =
-        Path.of(
-            RunfilesUtil.getRunfilesLocation(
-                "java/com/google/devtools/atsconsole/controller/olcserver/AtsOlcServer_deploy.jar"));
     threadPool =
         MoreExecutors.listeningDecorator(
             Executors.newScheduledThreadPool(
                 /* corePoolSize= */ 5, ThreadFactoryUtil.createThreadFactory("main-thread")));
 
-    Guice.createInjector(new OlcServerModule(), BoundFieldModule.of(this)).injectMembers(this);
+    Path serverBinary =
+        Path.of(
+            RunfilesUtil.getRunfilesLocation(
+                "java/com/google/devtools/atsconsole/controller/olcserver/AtsOlcServer_deploy.jar"));
+
+    Guice.createInjector(new OlcServerModule(() -> serverBinary), BoundFieldModule.of(this))
+        .injectMembers(this);
   }
 
   @After

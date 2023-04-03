@@ -21,7 +21,7 @@ import com.google.inject.Injector;
 import picocli.CommandLine;
 import picocli.CommandLine.IFactory;
 
-/** Instantiates commands with the given injector. */
+/** Factory for instantiating commands with the given injector. */
 public final class GuiceFactory implements IFactory {
 
   private final Injector injector;
@@ -31,11 +31,16 @@ public final class GuiceFactory implements IFactory {
   }
 
   @Override
-  public <K> K create(Class<K> cls) throws Exception {
+  public <T> T create(Class<T> clazz) {
     try {
-      return injector.getInstance(cls);
-    } catch (ConfigurationException ex) { // no implementation found in Guice configuration
-      return CommandLine.defaultFactory().create(cls); // fallback if missing
+      return injector.getInstance(clazz);
+    } catch (ConfigurationException e) { // No implementation found in Guice configuration.
+      try {
+        return CommandLine.defaultFactory().create(clazz); // Falls back for command options.
+      } catch (Exception e2) {
+        e.addSuppressed(e2);
+        throw e;
+      }
     }
   }
 }

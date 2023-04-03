@@ -17,24 +17,33 @@
 package com.google.devtools.atsconsole;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
+import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.tokenize;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+import static java.util.Arrays.asList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.atsconsole.Annotations.ConsoleLineReader;
+import com.google.devtools.atsconsole.Annotations.MainArgs;
 import com.google.devtools.atsconsole.command.RootCommand;
+import com.google.devtools.deviceinfra.shared.util.shell.ShellUtils;
 import com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.Nullable;
+import java.util.concurrent.Callable;
+import java.util.logging.Level;
+import javax.inject.Inject;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
 import org.jline.reader.LineReaderBuilder;
@@ -44,7 +53,8 @@ import org.jline.terminal.TerminalBuilder;
 import picocli.CommandLine;
 
 /** ATS Console. */
-public class AtsConsole extends Thread {
+public class AtsConsole implements Callable<Void> {
+
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String APPNAME = "AtsConsole";
@@ -58,22 +68,15 @@ public class AtsConsole extends Thread {
   private static final String DEVICE_INFRA_SERVICE_FLAGS =
       System.getProperty("DEVICE_INFRA_SERVICE_FLAGS");
 
-  @Nullable private final LineReader consoleReader;
-  private final Sleeper sleeper;
-  private final ConsoleUtil consoleUtil;
-  private final ImmutableList<String> deviceInfraServiceFlags;
-
-  /** Set in {@link #startConsole}. */
-  private volatile List<String> mainArgs = new ArrayList<>();
-
-  public static void main(String[] args) {
+  public static void main(String[] args) throws IOException {
+    // Parses flags.
     List<String> deviceInfraServiceFlags = new ArrayList<>();
     if (!isNullOrEmpty(DEVICE_INFRA_SERVICE_FLAGS)) {
       try {
-        tokenize(deviceInfraServiceFlags, DEVICE_INFRA_SERVICE_FLAGS);
+        ShellUtils.tokenize(deviceInfraServiceFlags, DEVICE_INFRA_SERVICE_FLAGS);
       } catch (TokenizationException e) {
         logger.atSevere().withCause(e).log(
-            "Failed to parse flags to device infra service: [%s]", DEVICE_INFRA_SERVICE_FLAGS);
+            "Failed to parse flags for device infra service: [%s]", DEVICE_INFRA_SERVICE_FLAGS);
       }
       if (!deviceInfraServiceFlags.isEmpty()) {
         logger.atInfo().log("Device infra service flags: %s", deviceInfraServiceFlags);
@@ -82,49 +85,54 @@ public class AtsConsole extends Thread {
       }
     }
 
-    AtsConsole console = new AtsConsole(deviceInfraServiceFlags);
+    // Creates line reader.
+    LineReader lineReader = createLineReader();
 
-    startConsole(console, args);
+    // Creates Guice injector.
+    injector =
+        Guice.createInjector(
+            new AtsConsoleModule(
+                deviceInfraServiceFlags,
+                asList(args),
+                lineReader,
+                System.out,
+                AtsConsole::getOlcServerBinary));
+
+    // Creates ATS console.
+    AtsConsole atsConsole = injector.getInstance(AtsConsole.class);
+
+    // Starts ATS console.
+    logFailure(
+        newDirectExecutorService()
+            .submit(threadRenaming(atsConsole, () -> "ats-console-main-thread")),
+        Level.SEVERE,
+        "Console received an unexpected exception (shown below); shutting down ATS Console.");
   }
 
-  private static void startConsole(AtsConsole console, String[] args) {
-    console.setArgs(Arrays.asList(args));
-    // Set console thread as user thread, so it can wait for user inputs.
-    console.setDaemon(false);
+  /** Set in {@link #main}; */
+  @VisibleForTesting static volatile Injector injector;
 
-    console.start();
-  }
+  private final ImmutableList<String> mainArgs;
+  private final LineReader lineReader;
+  private final Sleeper sleeper;
+  private final ConsoleUtil consoleUtil;
 
-  private AtsConsole(List<String> deviceInfraServiceFlags) {
-    this(
-        deviceInfraServiceFlags,
-        getReader().orElse(null),
-        Sleeper.defaultSleeper(),
-        new ConsoleUtil());
-  }
-
-  @VisibleForTesting
+  @Inject
   AtsConsole(
-      List<String> deviceInfraServiceFlags,
-      @Nullable LineReader reader,
+      @MainArgs ImmutableList<String> mainArgs,
+      @ConsoleLineReader LineReader lineReader,
       Sleeper sleeper,
       ConsoleUtil consoleUtil) {
-    this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
-    this.consoleReader = reader;
+    this.mainArgs = mainArgs;
+    this.lineReader = lineReader;
     this.sleeper = sleeper;
     this.consoleUtil = consoleUtil;
   }
 
-  @VisibleForTesting
-  void setArgs(List<String> mainArgs) {
-    this.mainArgs = mainArgs;
-  }
-
   @Override
-  public void run() {
-    List<String> args = mainArgs;
+  public Void call() throws InterruptedException {
+    ImmutableList<String> args = mainArgs;
 
-    Injector injector = Guice.createInjector(new AtsConsoleModule(deviceInfraServiceFlags));
     CommandLine commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
     ConsoleInfo consoleInfo = injector.getInstance(ConsoleInfo.class);
     initConsoleInfo(consoleInfo);
@@ -158,13 +166,11 @@ public class AtsConsole extends Thread {
         } else {
           consoleUtil.printLine(
               String.format("Using commandline arguments as starting command: %s", args));
-          if (consoleReader != null) {
-            String cmd = Joiner.on(" ").join(args);
-            consoleReader.getHistory().add(cmd);
-          }
+          String cmd = Joiner.on(" ").join(args);
+          lineReader.getHistory().add(cmd);
           tokens = args;
           if (args.get(0).matches(HELP_PATTERN)) {
-            // if starts from command line with args "--help", "-h", return to shell
+            // If starts from command line with args "--help", "-h", returns to shell.
             consoleInfo.setShouldExitConsole(true);
           }
           args = ImmutableList.of();
@@ -174,15 +180,10 @@ public class AtsConsole extends Thread {
 
         sleeper.sleep(Duration.ofMillis(100));
       } while (!consoleInfo.getShouldExitConsole());
-    } catch (Throwable e) {
-      if (e instanceof InterruptedException) {
-        Thread.currentThread().interrupt();
-      }
-      consoleUtil.printLine(
-          "Console received an unexpected exception (shown below); shutting down ATS Console.");
-      e.printStackTrace();
+
+      return null;
     } finally {
-      // Make sure that we don't quit with messages still in the buffers.
+      // Makes sure that we don't quit with messages still in the buffers.
       System.err.flush();
       System.out.flush();
     }
@@ -196,39 +197,35 @@ public class AtsConsole extends Thread {
    * found (for example Ctrl-D).
    */
   private Optional<String> getConsoleInput() {
-    if (consoleReader != null) {
-      try {
-        return Optional.of(consoleReader.readLine(getConsolePrompt()));
-      } catch (UserInterruptException e) {
-        consoleUtil.printLine("\nInterrupted by the user.");
-      } catch (EndOfFileException e) {
-        consoleUtil.printLine("\nReceived EOF.");
-      }
+    try {
+      return Optional.of(lineReader.readLine(getConsolePrompt()));
+    } catch (UserInterruptException e) {
+      consoleUtil.printLine("\nInterrupted by the user.");
+    } catch (EndOfFileException e) {
+      consoleUtil.printLine("\nReceived EOF.");
     }
     return Optional.empty();
   }
 
-  /** Returns the text {@link String} to display for the console prompt. */
+  /** Returns the text to display as the console prompt. */
   private static String getConsolePrompt() {
     return "ats-console > ";
+  }
+
+  private static Path getOlcServerBinary() {
+    return Path.of(""); // TODO: Provides binary path.
   }
 
   /**
    * Returns a new LineReader, or {@code null} if an IOException occurs. Note that this function
    * must be static so that we can run it before the superclass constructor.
    */
-  private static Optional<LineReader> getReader() {
-    try {
-      return Optional.of(
-          LineReaderBuilder.builder()
-              .appName(APPNAME)
-              .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
-              .history(new DefaultHistory())
-              .build());
-    } catch (IOException e) {
-      System.err.format("Failed to initialize LineReader: %s\n", e.getMessage());
-      return Optional.empty();
-    }
+  private static LineReader createLineReader() throws IOException {
+    return LineReaderBuilder.builder()
+        .appName(APPNAME)
+        .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
+        .history(new DefaultHistory())
+        .build();
   }
 
   private void initConsoleInfo(ConsoleInfo consoleInfo) {

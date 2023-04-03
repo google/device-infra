@@ -31,6 +31,8 @@ java_library(
         "//src/java/com/google/devtools/atsconsole:apache_commons_io",
         "//src/java/com/google/devtools/atsconsole:console_info",
         "//src/java/com/google/devtools/atsconsole:console_util",
+        "//src/java/com/google/devtools/atsconsole/controller/olcserver:ats_session_stub",
+        "//src/java/com/google/devtools/atsconsole/controller/olcserver:server_preparer",
         "//src/java/com/google/devtools/atsconsole/result/xml:mobly_result_info",
         "//src/java/com/google/devtools/atsconsole/result/xml:xml_result_formatter",
         "//src/java/com/google/devtools/atsconsole/result/xml:xml_result_util",

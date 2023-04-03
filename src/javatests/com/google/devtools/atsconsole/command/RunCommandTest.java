@@ -21,6 +21,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -110,7 +111,13 @@ public final class RunCommandTest {
     err.reset();
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
-    doCallRealMethod().when(consoleUtil).printLine(anyString());
+    doAnswer(
+            invocation -> {
+              System.out.println(invocation.getArgument(0, String.class));
+              return null;
+            })
+        .when(consoleUtil)
+        .printLine(anyString());
     doCallRealMethod().when(consoleUtil).completeHomeDirectory(anyString());
     when(localFileUtil.isDirExist(MOBLY_TESTCASES_DIR)).thenReturn(true);
     when(localFileUtil.isFileExist(MOBLY_TEST_ZIP_SUITE_MAIN_FILE)).thenReturn(true);
@@ -129,7 +136,7 @@ public final class RunCommandTest {
     System.setOut(originalOut);
     System.setErr(originalErr);
 
-    // Also prints out and err so they can be shown on the sponge
+    // Also prints out and err, so they can be shown on the sponge
     System.out.println(output);
     System.out.println(error);
   }
@@ -137,7 +144,7 @@ public final class RunCommandTest {
   @Test
   public void run_unsupportedConfig() {
     // Exiting with code 2 corresponds to picocli.CommandLine.ParameterException.
-    int exitCode = commandLine.execute(new String[] {"run", "cts"});
+    int exitCode = commandLine.execute("run", "cts");
 
     assertThat(exitCode).isEqualTo(2);
   }
@@ -145,7 +152,7 @@ public final class RunCommandTest {
   @Test
   public void run_emptyConfig() {
     // Exiting with code 2 corresponds to picocli.CommandLine.ParameterException.
-    int exitCode = commandLine.execute(new String[] {"run", ""});
+    int exitCode = commandLine.execute("run", "");
 
     assertThat(exitCode).isEqualTo(2);
   }
@@ -159,7 +166,7 @@ public final class RunCommandTest {
     injector.injectMembers(this);
     commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
 
-    int exitCode = commandLine.execute(new String[] {"run", "cts-v"});
+    int exitCode = commandLine.execute("run", "cts-v");
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(out.toString(UTF_8.name())).contains("Mobly test cases dir is not set");
@@ -174,7 +181,7 @@ public final class RunCommandTest {
     injector.injectMembers(this);
     commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
 
-    int exitCode = commandLine.execute(new String[] {"run", "cts-v"});
+    int exitCode = commandLine.execute("run", "cts-v");
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(out.toString(UTF_8.name())).contains("\"suite_main.py\" file is required");
@@ -197,10 +204,10 @@ public final class RunCommandTest {
             eq("python3")))
         .thenReturn(new String[] {""});
 
-    commandLine.execute(new String[] {"run", "cts-v", "-m", "mobly_test_zip_a"});
+    commandLine.execute("run", "cts-v", "-m", "mobly_test_zip_a");
 
     verify(localFileUtil, times(3)).prepareDir(any(Path.class));
-    verify(commandExecutor, times(1)).exec(any(Command.class));
+    verify(commandExecutor).exec(any(Command.class));
   }
 
   @Test
@@ -220,7 +227,7 @@ public final class RunCommandTest {
             eq("python3")))
         .thenReturn(new String[] {""});
 
-    commandLine.execute(new String[] {"run", "cts-v"});
+    commandLine.execute("run", "cts-v");
 
     verify(localFileUtil, times(5)).prepareDir(any(Path.class));
     verify(commandExecutor, times(2)).exec(any(Command.class));
@@ -231,7 +238,7 @@ public final class RunCommandTest {
     when(localFileUtil.listFiles(MOBLY_TESTCASES_DIR, /* recursively= */ false))
         .thenReturn(ImmutableList.of(MOBLY_TEST_ZIP_C_WITH_WRONG_FILE_EXTENSION));
 
-    commandLine.execute(new String[] {"run", "cts-v"});
+    commandLine.execute("run", "cts-v");
 
     assertThat(out.toString(UTF_8.name())).contains("Found no match");
     verify(commandExecutor, never()).exec(any(Command.class));
@@ -244,7 +251,7 @@ public final class RunCommandTest {
     when(androidAdbInternalUtil.getDeviceSerialsByState(DeviceState.DEVICE))
         .thenReturn(ImmutableSet.of());
 
-    commandLine.execute(new String[] {"run", "cts-v"});
+    commandLine.execute("run", "cts-v");
 
     verify(androidAdbInternalUtil).getDeviceSerialsByState(DeviceState.DEVICE);
     verify(localFileUtil, never()).prepareDir(any(Path.class));
@@ -256,7 +263,7 @@ public final class RunCommandTest {
     when(localFileUtil.listFiles(MOBLY_TESTCASES_DIR, /* recursively= */ false))
         .thenReturn(ImmutableList.of(MOBLY_TEST_ZIP_A));
 
-    commandLine.execute(new String[] {"run", "cts-v", "-s", "abc"});
+    commandLine.execute("run", "cts-v", "-s", "abc");
 
     verify(androidAdbInternalUtil).getDeviceSerialsByState(DeviceState.DEVICE);
     verify(localFileUtil, never()).prepareDir(any(Path.class));
@@ -280,10 +287,10 @@ public final class RunCommandTest {
             eq("python3")))
         .thenReturn(new String[] {""});
 
-    commandLine.execute(new String[] {"run", "cts-v", "-s", CONNECTED_DEVICE2_SERIAL});
+    commandLine.execute("run", "cts-v", "-s", CONNECTED_DEVICE2_SERIAL);
 
     verify(localFileUtil, times(3)).prepareDir(any(Path.class));
-    verify(commandExecutor, times(1)).exec(any(Command.class));
+    verify(commandExecutor).exec(any(Command.class));
   }
 
   @Test
@@ -294,9 +301,7 @@ public final class RunCommandTest {
         .thenReturn(ImmutableSet.of(CONNECTED_DEVICE1_SERIAL));
 
     commandLine.execute(
-        new String[] {
-          "run", "cts-v", "--serials", CONNECTED_DEVICE1_SERIAL + ", " + CONNECTED_DEVICE2_SERIAL
-        });
+        "run", "cts-v", "--serials", CONNECTED_DEVICE1_SERIAL + ", " + CONNECTED_DEVICE2_SERIAL);
 
     verify(androidAdbInternalUtil).getDeviceSerialsByState(DeviceState.DEVICE);
     verify(localFileUtil, never()).prepareDir(any(Path.class));
@@ -323,11 +328,9 @@ public final class RunCommandTest {
         .thenReturn(new String[] {""});
 
     commandLine.execute(
-        new String[] {
-          "run", "cts-v", "--serials", CONNECTED_DEVICE1_SERIAL + ", " + CONNECTED_DEVICE2_SERIAL
-        });
+        "run", "cts-v", "--serials", CONNECTED_DEVICE1_SERIAL + ", " + CONNECTED_DEVICE2_SERIAL);
 
     verify(localFileUtil, times(3)).prepareDir(any(Path.class));
-    verify(commandExecutor, times(1)).exec(any(Command.class));
+    verify(commandExecutor).exec(any(Command.class));
   }
 }

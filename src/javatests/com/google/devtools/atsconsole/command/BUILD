@@ -53,7 +53,12 @@ java_library(
     name = "console_command_test_module",
     srcs = ["ConsoleCommandTestModule.java"],
     deps = [
+        "//src/java/com/google/devtools/atsconsole:annotations",
         "//src/java/com/google/devtools/atsconsole:console_info",
+        "//src/java/com/google/devtools/atsconsole/controller/olcserver:module",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],
 )

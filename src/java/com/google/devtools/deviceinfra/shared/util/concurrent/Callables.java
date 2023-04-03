@@ -32,8 +32,8 @@ public final class Callables {
    * Wraps the given callable such that for the duration of {@link Callable#call} the thread that is
    * running will have the given name.
    *
-   * @param callable The callable to wrap
-   * @param nameSupplier The supplier of thread names, {@link Supplier#get get} will be called once
+   * @param callable the callable to wrap
+   * @param nameSupplier the supplier of thread names, {@link Supplier#get get} will be called once
    *     for each invocation of the wrapped callable.
    */
   public static <T> Callable<T> threadRenaming(
@@ -46,6 +46,31 @@ public final class Callables {
       boolean restoreName = trySetName(nameSupplier.get(), currentThread);
       try {
         return callable.call();
+      } finally {
+        if (restoreName) {
+          trySetName(oldName, currentThread);
+        }
+      }
+    };
+  }
+
+  /**
+   * Wraps the given runnable such that for the duration of {@link Runnable#run} the thread that is
+   * running will have the given name.
+   *
+   * @param runnable the runnable to wrap
+   * @param nameSupplier the supplier of thread names, {@link Supplier#get get} will be called once
+   *     for each invocation of the wrapped runnable.
+   */
+  public static Runnable threadRenaming(Runnable runnable, Supplier<String> nameSupplier) {
+    checkNotNull(nameSupplier);
+    checkNotNull(runnable);
+    return () -> {
+      Thread currentThread = Thread.currentThread();
+      String oldName = currentThread.getName();
+      boolean restoreName = trySetName(nameSupplier.get(), currentThread);
+      try {
+        runnable.run();
       } finally {
         if (restoreName) {
           trySetName(oldName, currentThread);

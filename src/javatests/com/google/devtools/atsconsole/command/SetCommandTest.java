@@ -19,7 +19,7 @@ package com.google.devtools.atsconsole.command;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -77,7 +77,13 @@ public final class SetCommandTest {
     err.reset();
     System.setOut(new PrintStream(out));
     System.setErr(new PrintStream(err));
-    doCallRealMethod().when(consoleUtil).printLine(anyString());
+    doAnswer(
+            invocation -> {
+              System.out.println(invocation.getArgument(0, String.class));
+              return null;
+            })
+        .when(consoleUtil)
+        .printLine(anyString());
     when(consoleUtil.completeHomeDirectory(anyString())).thenCallRealMethod();
   }
 
@@ -89,7 +95,7 @@ public final class SetCommandTest {
     System.setOut(originalOut);
     System.setErr(originalErr);
 
-    // Also prints out and err so they can be shown on the sponge
+    // Also prints out and err, so they can be shown on the sponge
     System.out.println(output);
     System.out.println(error);
   }
@@ -99,8 +105,7 @@ public final class SetCommandTest {
     String newMoblyTestCasesDir = "/path/to/another_mobly_testcases_dir";
     when(localFileUtil.isDirExist(newMoblyTestCasesDir)).thenReturn(true);
 
-    int exitCode =
-        commandLine.execute(new String[] {"set", "--mobly_testcases_dir", newMoblyTestCasesDir});
+    int exitCode = commandLine.execute("set", "--mobly_testcases_dir", newMoblyTestCasesDir);
 
     assertThat(exitCode).isEqualTo(0);
     assertThat(consoleInfo.getMoblyTestCasesDir().orElse("")).isEqualTo(newMoblyTestCasesDir);
@@ -111,8 +116,7 @@ public final class SetCommandTest {
     String newMoblyTestCasesDir = "/path/to/not_exist_mobly_testcases_dir";
     when(localFileUtil.isDirExist(newMoblyTestCasesDir)).thenReturn(false);
 
-    int exitCode =
-        commandLine.execute(new String[] {"set", "--mobly_testcases_dir", newMoblyTestCasesDir});
+    int exitCode = commandLine.execute("set", "--mobly_testcases_dir", newMoblyTestCasesDir);
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getMoblyTestCasesDir().orElse("")).isEqualTo(MOBLY_TESTCASES_DIR);
@@ -123,8 +127,7 @@ public final class SetCommandTest {
   public void setMoblyTestCasesDir_givenDirEmpty() throws Exception {
     String newMoblyTestCasesDir = "";
 
-    int exitCode =
-        commandLine.execute(new String[] {"set", "--mobly_testcases_dir", newMoblyTestCasesDir});
+    int exitCode = commandLine.execute("set", "--mobly_testcases_dir", newMoblyTestCasesDir);
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getMoblyTestCasesDir().orElse("")).isEqualTo(MOBLY_TESTCASES_DIR);
@@ -136,7 +139,7 @@ public final class SetCommandTest {
     String newResultsDir = "/path/to/another_test_results_dir";
     when(localFileUtil.isDirExist(newResultsDir)).thenReturn(true);
 
-    int exitCode = commandLine.execute(new String[] {"set", "--results_dir", newResultsDir});
+    int exitCode = commandLine.execute("set", "--results_dir", newResultsDir);
 
     assertThat(exitCode).isEqualTo(0);
     assertThat(consoleInfo.getResultsDirectory().orElse("")).isEqualTo(newResultsDir);
@@ -147,7 +150,7 @@ public final class SetCommandTest {
     String newResultsDir = "/path/to/not_exist_dir";
     when(localFileUtil.isDirExist(newResultsDir)).thenReturn(false);
 
-    int exitCode = commandLine.execute(new String[] {"set", "--results_dir", newResultsDir});
+    int exitCode = commandLine.execute("set", "--results_dir", newResultsDir);
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getResultsDirectory().orElse("")).isEqualTo(TEST_RESULTS_DIR);
@@ -158,7 +161,7 @@ public final class SetCommandTest {
   public void setResultsDir_givenDirEmpty() throws Exception {
     String newResultsDir = "";
 
-    int exitCode = commandLine.execute(new String[] {"set", "--results_dir", newResultsDir});
+    int exitCode = commandLine.execute("set", "--results_dir", newResultsDir);
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getResultsDirectory().orElse("")).isEqualTo(TEST_RESULTS_DIR);
@@ -174,9 +177,7 @@ public final class SetCommandTest {
 
     int exitCode =
         commandLine.execute(
-            new String[] {
-              "set", "--results_dir", newResultsDir, "--mobly_testcases_dir", newMoblyTestCasesDir
-            });
+            "set", "--results_dir", newResultsDir, "--mobly_testcases_dir", newMoblyTestCasesDir);
 
     assertThat(exitCode).isEqualTo(0);
     assertThat(consoleInfo.getResultsDirectory().orElse("")).isEqualTo(newResultsDir);
@@ -186,7 +187,7 @@ public final class SetCommandTest {
   }
 
   @Test
-  public void set_resultsDirSuccess_oblyTestCasesDirFail() {
+  public void set_resultsDirSuccess_moblyTestCasesDirFail() {
     String newMoblyTestCasesDir = "/path/to/another_mobly_testcases_dir";
     String newResultsDir = "/path/to/another_test_results_dir";
     when(localFileUtil.isDirExist(newResultsDir)).thenReturn(true);
@@ -194,9 +195,7 @@ public final class SetCommandTest {
 
     int exitCode =
         commandLine.execute(
-            new String[] {
-              "set", "--results_dir", newResultsDir, "--mobly_testcases_dir", newMoblyTestCasesDir
-            });
+            "set", "--results_dir", newResultsDir, "--mobly_testcases_dir", newMoblyTestCasesDir);
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getResultsDirectory().orElse("")).isEqualTo(newResultsDir);

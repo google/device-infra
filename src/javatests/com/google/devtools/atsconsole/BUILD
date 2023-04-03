@@ -25,10 +25,11 @@ java_library(
     ),
     deps = [
         "//src/java/com/google/devtools/atsconsole:ats_console_lib",
-        "//src/java/com/google/devtools/atsconsole:console_util",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "//src/java/com/google/devtools/atsconsole:ats_console_module",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_jline_jline",
         "@maven//:org_mockito_mockito_core",

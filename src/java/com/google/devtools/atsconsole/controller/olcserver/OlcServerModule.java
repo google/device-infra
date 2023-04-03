@@ -17,6 +17,7 @@
 package com.google.devtools.atsconsole.controller.olcserver;
 
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerBinary;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerChannel;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerSessionStub;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerVersionStub;
@@ -27,10 +28,23 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stu
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import io.grpc.ManagedChannel;
+import java.nio.file.Path;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 
 /** Module for ATS console OLC server. */
 public class OlcServerModule extends AbstractModule {
+
+  private final Provider<Path> serverBinary;
+
+  public OlcServerModule(Provider<Path> serverBinary) {
+    this.serverBinary = serverBinary;
+  }
+
+  @Override
+  protected void configure() {
+    bind(Path.class).annotatedWith(ServerBinary.class).toProvider(serverBinary);
+  }
 
   @Provides
   @Singleton

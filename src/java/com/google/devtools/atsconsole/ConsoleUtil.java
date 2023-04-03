@@ -16,15 +16,23 @@
 
 package com.google.devtools.atsconsole;
 
+import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.zip.ZipFile;
+import javax.inject.Inject;
 import org.apache.commons.io.FilenameUtils;
 
 /** Util class for the console. */
 public class ConsoleUtil {
 
-  ConsoleUtil() {}
+  private final PrintStream consoleOutput;
+
+  @Inject
+  ConsoleUtil(@ConsoleOutput PrintStream consoleOutput) {
+    this.consoleOutput = consoleOutput;
+  }
 
   /** Expands path prefixed with "~/" with user home expanded path. */
   public String completeHomeDirectory(String path) {
@@ -43,8 +51,7 @@ public class ConsoleUtil {
    * @param output which is displayed on the console
    */
   public void printLine(String output) {
-    System.out.print(output);
-    System.out.println();
+    consoleOutput.println(output);
   }
 
   /** Checks if the given file is a zip file. */
@@ -53,20 +60,10 @@ public class ConsoleUtil {
     if (!fileExt.isEmpty() && !"zip".equals(fileExt)) {
       return false;
     }
-    ZipFile zipFile = null;
-    try {
-      zipFile = new ZipFile(file);
+    try (ZipFile ignored = new ZipFile(file)) {
+      return true;
     } catch (IOException e) {
       return false;
-    } finally {
-      if (zipFile != null) {
-        try {
-          zipFile.close();
-        } catch (IOException e) {
-          // Ignored
-        }
-      }
     }
-    return true;
   }
 }

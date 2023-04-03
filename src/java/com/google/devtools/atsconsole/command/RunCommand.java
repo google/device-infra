@@ -26,6 +26,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
+import com.google.devtools.atsconsole.controller.olcserver.AtsSessionStub;
+import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
 import com.google.devtools.atsconsole.result.xml.MoblyResultInfo;
 import com.google.devtools.atsconsole.result.xml.XmlResultFormatter;
 import com.google.devtools.atsconsole.result.xml.XmlResultUtil;
@@ -110,6 +112,7 @@ final class RunCommand implements Callable<Integer> {
               + " comma). For example, `--serials <device_a>,<device_b>`. No spaces around the"
               + " comma. Note: the order of pass-in device serial numbers will be kept when passing"
               + " them to the test infra.")
+  @SuppressWarnings("PreferredInterfaceType")
   private List<String> androidDeviceSerialList;
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -130,6 +133,12 @@ final class RunCommand implements Callable<Integer> {
   private final XmlResultUtil xmlResultUtil;
   private final MoblyAospTestSetupUtil moblyAospTestSetupUtil;
 
+  @SuppressWarnings({"unused", "FieldCanBeLocal"})
+  private final ServerPreparer serverPreparer;
+
+  @SuppressWarnings({"unused", "FieldCanBeLocal"})
+  private final AtsSessionStub atsSessionStub;
+
   @Inject
   RunCommand(
       ConsoleInfo consoleInfo,
@@ -140,7 +149,9 @@ final class RunCommand implements Callable<Integer> {
       YamlTestbedUpdater yamlTestbedUpdater,
       XmlResultFormatter xmlResultFormatter,
       XmlResultUtil xmlResultUtil,
-      MoblyAospTestSetupUtil moblyAospTestSetupUtil) {
+      MoblyAospTestSetupUtil moblyAospTestSetupUtil,
+      ServerPreparer serverPreparer,
+      AtsSessionStub atsSessionStub) {
     this.consoleInfo = consoleInfo;
     this.commandExecutor = commandExecutor;
     this.consoleUtil = consoleUtil;
@@ -150,6 +161,8 @@ final class RunCommand implements Callable<Integer> {
     this.xmlResultFormatter = xmlResultFormatter;
     this.xmlResultUtil = xmlResultUtil;
     this.moblyAospTestSetupUtil = moblyAospTestSetupUtil;
+    this.serverPreparer = serverPreparer;
+    this.atsSessionStub = atsSessionStub;
   }
 
   @Override
@@ -251,7 +264,7 @@ final class RunCommand implements Callable<Integer> {
           spec.commandLine(), "Missing param <config> after command \"run\".");
     }
 
-    if (!CTSV_CONFIG.equals(config)) {
+    if (!Objects.equals(config, CTSV_CONFIG)) {
       throw new ParameterException(
           spec.commandLine(), "Only supports config \"cts-v\" at this point.");
     }

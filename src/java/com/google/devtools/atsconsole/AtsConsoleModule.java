@@ -19,22 +19,48 @@ package com.google.devtools.atsconsole;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.atsconsole.Annotations.ConsoleLineReader;
+import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
+import com.google.devtools.atsconsole.Annotations.MainArgs;
+import com.google.devtools.atsconsole.controller.olcserver.OlcServerModule;
 import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import java.io.PrintStream;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.Executors;
+import javax.inject.Provider;
 import javax.inject.Singleton;
+import org.jline.reader.LineReader;
 
 /** Guice Module for ATS console. */
 final class AtsConsoleModule extends AbstractModule {
 
   private final ImmutableList<String> deviceInfraServiceFlags;
+  private final ImmutableList<String> mainArgs;
+  private final LineReader consoleLineReader;
+  private final PrintStream consoleOutput;
+  private final Provider<Path> olcServerBinary;
 
-  AtsConsoleModule(List<String> deviceInfraServiceFlags) {
+  AtsConsoleModule(
+      List<String> deviceInfraServiceFlags,
+      List<String> mainArgs,
+      LineReader consoleLineReader,
+      PrintStream consoleOutput,
+      Provider<Path> olcServerBinary) {
     this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
+    this.mainArgs = ImmutableList.copyOf(mainArgs);
+    this.consoleLineReader = consoleLineReader;
+    this.consoleOutput = consoleOutput;
+    this.olcServerBinary = olcServerBinary;
+  }
+
+  @Override
+  protected void configure() {
+    install(new OlcServerModule(olcServerBinary));
   }
 
   @Provides
@@ -50,12 +76,31 @@ final class AtsConsoleModule extends AbstractModule {
   }
 
   @Provides
+  @MainArgs
+  ImmutableList<String> provideMainArgs() {
+    return mainArgs;
+  }
+
+  @Provides
+  @ConsoleLineReader
+  LineReader provideConsoleLineReader() {
+    return consoleLineReader;
+  }
+
+  @SuppressWarnings("CloseableProvides")
+  @Provides
+  @ConsoleOutput
+  PrintStream provideConsoleOutput() {
+    return consoleOutput;
+  }
+
+  @Provides
   @Singleton
   ListeningScheduledExecutorService provideThreadPool() {
     return MoreExecutors.listeningDecorator(
         Executors.newScheduledThreadPool(
             /* corePoolSize= */ 5,
-            ThreadFactoryUtil.createThreadFactory("ats-console-main-thread")));
+            ThreadFactoryUtil.createThreadFactory("ats-console-thread-pool", /* daemon= */ true)));
   }
 
   @Provides

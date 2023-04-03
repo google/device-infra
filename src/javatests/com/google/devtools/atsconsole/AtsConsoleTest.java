@@ -17,17 +17,20 @@
 package com.google.devtools.atsconsole;
 
 import static com.google.common.truth.Truth.assertThat;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
-import java.time.Duration;
+import com.google.inject.Guice;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
+import java.nio.file.Path;
+import javax.inject.Inject;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -40,48 +43,66 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class AtsConsoleTest {
 
-  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Rule public MockitoRule mockito = MockitoJUnit.rule();
 
   @Mock private LineReader lineReader;
   @Mock private History history;
-  @Mock private Sleeper sleeper;
-  @Mock private ConsoleUtil consoleUtil;
 
-  private AtsConsole atsConsole;
+  private ByteArrayOutputStream consoleOutputStream;
+  private PrintStream consolePrintStream;
+
+  @Inject private AtsConsole atsConsole;
 
   @Before
-  public void setUp() {
-    atsConsole = new AtsConsole(ImmutableList.of(), lineReader, sleeper, consoleUtil);
-    doCallRealMethod().when(consoleUtil).printLine(anyString());
+  public void setUp() throws Exception {
+    consoleOutputStream = new ByteArrayOutputStream();
+    consolePrintStream = new PrintStream(consoleOutputStream, false, UTF_8);
     when(lineReader.getHistory()).thenReturn(history);
+
+    AtsConsole.injector =
+        Guice.createInjector(
+            new AtsConsoleModule(
+                ImmutableList.of(),
+                ImmutableList.of(),
+                lineReader,
+                consolePrintStream,
+                () -> Path.of("")));
+    AtsConsole.injector.injectMembers(this);
+  }
+
+  @After
+  public void tearDown() {
+    AtsConsole.injector = null;
+
+    System.out.println(consoleOutputStream.toString(UTF_8));
   }
 
   @Test
   public void exitConsole() throws Exception {
-    atsConsole.setName("exitConsole");
     when(lineReader.readLine(anyString())).thenReturn("exit");
 
-    atsConsole.start();
-    // join has a timeout otherwise it may hang forever.
-    atsConsole.join(30000);
+    atsConsole.call();
 
-    assertThat(atsConsole.isAlive()).isFalse();
-    verify(sleeper).sleep(Duration.ofMillis(100));
-    verify(lineReader).readLine(anyString());
+    assertThat(consoleOutputStream.toString(UTF_8)).isEmpty();
   }
 
   @Test
   public void startsConsoleWithHelp_exitConsoleAfterCommandExecution() throws Exception {
-    atsConsole.setName("startsConsoleWithHelp_exitConsoleAfterCommandExecution");
-    atsConsole.setArgs(ImmutableList.of("--help"));
+    AtsConsole.injector =
+        Guice.createInjector(
+            new AtsConsoleModule(
+                ImmutableList.of(),
+                ImmutableList.of("--help"),
+                lineReader,
+                consolePrintStream,
+                () -> Path.of("")));
+    AtsConsole.injector.injectMembers(this);
 
-    atsConsole.start();
-    // join has a timeout otherwise it may hang forever.
-    atsConsole.join(2000);
+    atsConsole.call();
 
-    assertThat(atsConsole.isAlive()).isFalse();
-    verify(sleeper).sleep(Duration.ofMillis(100));
-    verify(lineReader, never()).readLine(anyString());
+    assertThat(consoleOutputStream.toString(UTF_8))
+        .isEqualTo("Using commandline arguments as starting command: [--help]\n");
+
     verify(history).add("--help");
   }
 }
