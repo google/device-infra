@@ -22,6 +22,7 @@ import static com.google.devtools.deviceinfra.shared.util.command.LineCallback.a
 import static com.google.devtools.deviceinfra.shared.util.command.LineCallback.does;
 import static com.google.devtools.deviceinfra.shared.util.command.LineCallback.stopWhen;
 import static com.google.devtools.deviceinfra.shared.util.command.Timeout.fixed;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -42,7 +43,6 @@ import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import java.io.BufferedWriter;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Optional;
@@ -236,7 +236,24 @@ public class CommandExecutorTest {
     verify(lineConsumer).accept("Bye");
   }
 
-  @org.junit.Ignore
+  @SuppressWarnings("DirectInvocationOnMock")
+  @Test
+  public void run_stdoutCallback_stopReadingOutput() throws Exception {
+    assertThat(
+            executor.run(
+                Command.of("/bin/bash", "-c", "echo Hello; echo Bye")
+                    .onStdout(
+                        line -> {
+                          lineConsumer.accept(line);
+                          return LineCallback.Response.stopReadingOutput();
+                        })))
+        .isEqualTo("Hello\nBye\n");
+
+    verify(lineConsumer).accept("Hello");
+    verify(lineConsumer, never()).accept("Bye");
+  }
+
+  @org.junit.Ignore("b/259907665")
   @Test
   public void run_redirectStderr() throws Exception {
     String output = executor.run(Command.of(STDOUT_STDERR_PRINTER).redirectStderr(true));
@@ -579,8 +596,7 @@ public class CommandExecutorTest {
   public void start_stdinStream() throws Exception {
     CommandProcess process =
         executor.start(Command.of("/bin/bash", "-c", "read A; read B; echo $A $B"));
-    Writer writer =
-        new BufferedWriter(new OutputStreamWriter(process.stdinStream(), StandardCharsets.UTF_8));
+    Writer writer = new BufferedWriter(new OutputStreamWriter(process.stdinStream(), UTF_8));
     writer.write("hello\n");
     writer.write("goodbye\n");
     writer.flush();

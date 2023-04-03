@@ -591,6 +591,12 @@ public class CommandExecutor {
                 "Stop command [%s] by its callback, line=[%s]", commandProcess.command(), line);
             commandProcess.stop();
           }
+          if (response.getStopReadingOutput()) {
+            lineCallback = null;
+            if (startTimeoutTaskFuture == null) {
+              return true;
+            }
+          }
         }
       }
       return false;

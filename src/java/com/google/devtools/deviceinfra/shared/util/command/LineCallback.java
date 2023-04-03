@@ -81,7 +81,7 @@ public interface LineCallback {
         return Response.empty();
       } catch (IOException e) {
         throw new LineCallbackException(
-            "Failed to write", e, /* killCommand= */ false, /*stopReadingOutput*/ true);
+            "Failed to write", e, /* killCommand= */ false, /* stopReadingOutput= */ true);
       }
     };
   }
@@ -119,18 +119,21 @@ public interface LineCallback {
   @AutoValue
   abstract class Response {
 
-    /** A response to tell command executor not to stop the command or write anything to stdin. */
+    /**
+     * A response to tell command executor not to stop the command, not to write anything to stdin,
+     * and not to stop reading output from stdout/stderr.
+     */
     public static Response empty() {
       return notStop();
     }
 
-    /** A response to tell command executor not to stop the command or write anything to stdin. */
+    /** A response to tell command executor not to stop the command. */
     public static Response notStop() {
       return stop(false);
     }
 
     /**
-     * A response to tell command executor to stop the command and not to write anything to stdin.
+     * A response to tell command executor to stop the command.
      *
      * <p>If a command is stopped, getting its result by {@link CommandExecutor#run(Command)},
      * {@link CommandExecutor#exec(Command)} and {@link CommandProcess#await()} will not throw
@@ -141,8 +144,7 @@ public interface LineCallback {
     }
 
     /**
-     * A response to tell command executor not to write anything to stdin and to stop the command
-     * specified by {@code stop}.
+     * A response to tell command executor to stop the command specified by {@code stop}.
      *
      * <p>If a command is stopped, getting its result by {@link CommandExecutor#run(Command)},
      * {@link CommandExecutor#exec(Command)} and {@link CommandProcess#await()} will not throw
@@ -152,48 +154,45 @@ public interface LineCallback {
       return builder().stop(stop).build();
     }
 
-    /**
-     * A response to tell command executor not to stop the command and to write {@code answer} to
-     * stdin.
-     */
+    /** A response to tell command executor to write {@code answer} to stdin. */
     public static Response answer(String answer) {
       return builder().answer(answer).build();
     }
 
-    /**
-     * A response to tell command executor not to stop the command and to write {@code answer} +
-     * "\n" to stdin.
-     */
+    /** A response to tell command executor to write {@code answer} + "\n" to stdin. */
     public static Response answerLn(String answer) {
       return answer(answer + "\n");
     }
 
-    /**
-     * A response to tell command executor to stop the command specified by {@code stop} and to
-     * write {@code answer} to stdin.
-     *
-     * <p>If a command is stopped, getting its result by {@link CommandExecutor#run(Command)},
-     * {@link CommandExecutor#exec(Command)} and {@link CommandProcess#await()} will not throw
-     * {@link CommandFailureException} no matter if the command successes.
-     *
-     * <p>If {@code answer} is {@code null}, it is equivalent to call {@link #stop(boolean)}.
-     */
-    public static Response of(boolean stop, @Nullable String answer) {
-      return builder().stop(stop).answer(answer).build();
+    /** A response to tell command executor to stop reading output from stdout/stderr. */
+    public static Response stopReadingOutput() {
+      return builder().stopReadingOutput(true).build();
     }
 
     /**
-     * A response to tell command executor to stop the command specified by {@code stop} and to
-     * write {@code answer} + "\n" to stdin.
+     * A response to tell command executor to stop the command specified by {@code stop}, write
+     * {@code answer} to stdin, and stop reading output from stdout/stderr specified by {@code
+     * stopReadingOutput}.
      *
      * <p>If a command is stopped, getting its result by {@link CommandExecutor#run(Command)},
      * {@link CommandExecutor#exec(Command)} and {@link CommandProcess#await()} will not throw
      * {@link CommandFailureException} no matter if the command successes.
-     *
-     * <p>If {@code answer} is {@code null}, it is equivalent to call {@link #stop(boolean)}.
      */
-    public static Response ofLn(boolean stop, @Nullable String answer) {
-      return of(stop, answer == null ? null : answer + "\n");
+    public static Response of(boolean stop, @Nullable String answer, boolean stopReadingOutput) {
+      return builder().stop(stop).answer(answer).stopReadingOutput(stopReadingOutput).build();
+    }
+
+    /**
+     * A response to tell command executor to stop the command specified by {@code stop}, write
+     * {@code answer} + "\n" to stdin, and stop reading output from stdout/stderr specified by
+     * {@code stopReadingOutput}.
+     *
+     * <p>If a command is stopped, getting its result by {@link CommandExecutor#run(Command)},
+     * {@link CommandExecutor#exec(Command)} and {@link CommandProcess#await()} will not throw
+     * {@link CommandFailureException} no matter if the command successes.
+     */
+    public static Response ofLn(boolean stop, @Nullable String answer, boolean stopReadingOutput) {
+      return of(stop, answer == null ? null : answer + "\n", stopReadingOutput);
     }
 
     /**
@@ -254,11 +253,24 @@ public interface LineCallback {
       return withAnswer(answer + "\n");
     }
 
+    /**
+     * Returns a new response that behaves equivalently to this response, but with the specified
+     * stop_reading_output argument in place of the current stop_reading_output argument.
+     *
+     * <p>The new response tells command executor to stop reading output from stdout/stderr.
+     */
+    public Response withStopReadingOutput() {
+      return toBuilder().stopReadingOutput(true).build();
+    }
+
     /** Gets whether to stop the command. */
     public abstract boolean getStop();
 
     /** Gets the answer to write to stdin of the command. */
     public abstract Optional<String> getAnswer();
+
+    /** Gets whether to stop reading the following output from stdout/stderr */
+    public abstract boolean getStopReadingOutput();
 
     @AutoValue.Builder
     abstract static class Builder {
@@ -267,13 +279,15 @@ public interface LineCallback {
 
       abstract Builder answer(@Nullable String answer);
 
+      abstract Builder stopReadingOutput(boolean stopReadingOutput);
+
       abstract Response build();
     }
 
     abstract Builder toBuilder();
 
     private static Builder builder() {
-      return new AutoValue_LineCallback_Response.Builder().stop(false);
+      return new AutoValue_LineCallback_Response.Builder().stop(false).stopReadingOutput(false);
     }
   }
 }

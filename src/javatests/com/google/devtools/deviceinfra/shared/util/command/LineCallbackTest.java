@@ -52,21 +52,21 @@ public class LineCallbackTest {
   @Mock private Predicate<String> stopPredicate;
 
   @Test
-  public void does() throws LineCallbackException {
+  public void does() throws Exception {
     assertThat(LineCallback.does(lineConsumer).onLine(LINE)).isEqualTo(Response.empty());
 
     verify(lineConsumer).accept(LINE);
   }
 
   @Test
-  public void writeTo() throws LineCallbackException, IOException {
+  public void writeTo() throws Exception {
     assertThat(LineCallback.writeTo(writer).onLine(LINE)).isEqualTo(Response.empty());
 
     verify(writer).write(LINE + "\n");
   }
 
   @Test
-  public void writeTo_ioException() throws IOException {
+  public void writeTo_ioException() throws Exception {
     doThrow(IOException.class).when(writer).write(anyString());
 
     LineCallbackException exception =
@@ -77,7 +77,7 @@ public class LineCallbackTest {
   }
 
   @Test
-  public void answer() throws LineCallbackException {
+  public void answer() throws Exception {
     when(answerFunction.apply(LINE)).thenReturn(Optional.of("Answer")).thenReturn(Optional.empty());
 
     assertThat(LineCallback.answer(answerFunction).onLine(LINE))
@@ -86,7 +86,7 @@ public class LineCallbackTest {
   }
 
   @Test
-  public void answerLn() throws LineCallbackException {
+  public void answerLn() throws Exception {
     when(answerFunction.apply(LINE)).thenReturn(Optional.of("Answer")).thenReturn(Optional.empty());
 
     assertThat(LineCallback.answerLn(answerFunction).onLine(LINE))
@@ -95,7 +95,7 @@ public class LineCallbackTest {
   }
 
   @Test
-  public void stopWhen() throws LineCallbackException {
+  public void stopWhen() throws Exception {
     when(stopPredicate.test(LINE)).thenReturn(true);
 
     assertThat(LineCallback.stopWhen(stopPredicate).onLine(LINE)).isEqualTo(Response.stop(true));
@@ -109,11 +109,11 @@ public class LineCallbackTest {
     assertThat(Response.stop(true).getStop()).isTrue();
     assertThat(Response.answer("Answer").getAnswer()).hasValue("Answer");
     assertThat(Response.answerLn("Answer").getAnswer()).hasValue("Answer\n");
-    assertThat(Response.of(true, "Answer").getStop()).isTrue();
-    assertThat(Response.of(true, "Answer").getAnswer()).hasValue("Answer");
-    assertThat(Response.ofLn(true, "Answer").getAnswer()).hasValue("Answer\n");
-    assertThat(Response.of(true, null).getAnswer()).isEmpty();
-    assertThat(Response.ofLn(true, null).getAnswer()).isEmpty();
+    assertThat(Response.of(true, "Answer", true).getStop()).isTrue();
+    assertThat(Response.of(true, "Answer", true).getAnswer()).hasValue("Answer");
+    assertThat(Response.ofLn(true, "Answer", true).getAnswer()).hasValue("Answer\n");
+    assertThat(Response.of(true, null, true).getAnswer()).isEmpty();
+    assertThat(Response.ofLn(true, null, true).getAnswer()).isEmpty();
     assertThat(Response.answer("Answer").withStop().getStop()).isTrue();
     assertThat(Response.answer("Answer").withNotStop().getStop()).isFalse();
     assertThat(Response.answer("Answer").withStop(true).getStop()).isTrue();
