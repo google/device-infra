@@ -16,7 +16,10 @@
 
 package com.google.wireless.qa.mobileharness.shared.util;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.auto.value.AutoValue;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -32,7 +35,6 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 /**
  * Utility class for common network operation. It contains methods for determining what location a
@@ -41,13 +43,22 @@ import java.util.stream.Collectors;
 public class NetUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final NetworkUtil newUtil = new NetworkUtil();
+  private final NetworkUtil newUtil;
 
   /** The location type of a host. */
   public enum LocationType {
     IN_CHINA,
     NOT_IN_CHINA,
     INDETERMINABLE;
+  }
+
+  public NetUtil() {
+    this(new NetworkUtil());
+  }
+
+  @VisibleForTesting
+  NetUtil(NetworkUtil networkUtil) {
+    this.newUtil = networkUtil;
   }
 
   /** The network interface info matching an interface with its valid IP addresses. */
@@ -167,9 +178,7 @@ public class NetUtil {
 
       // List the non-site-local IP addresses.
       List<InetAddress> corpAddressList =
-          ips.stream()
-              .filter(address -> !address.isSiteLocalAddress())
-              .collect(Collectors.toList());
+          ips.stream().filter(address -> !address.isSiteLocalAddress()).collect(toImmutableList());
       // If only one non-site-local address in the list.
       if (corpAddressList != null && corpAddressList.size() == 1) {
         return Optional.of(corpAddressList.get(0).getHostAddress());

@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.controller.device.config;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
-import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostDimensions;
 import com.google.protobuf.Any;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
@@ -82,7 +82,7 @@ public interface ApiConfig {
   List<String> getTestbedUuidList();
 
   /** Gets the lab server feature. */
-  LabServerFeature getLabServerFeature();
+  HostDimensions getHostDimensions();
 
   /** Adds the observer to listen to config change. */
   void addObserver(Observer observer);

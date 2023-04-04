@@ -20,19 +20,27 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil.NetworkInterfaceInfo;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 /** The unit tests for {@link NetUtil}. */
 @RunWith(JUnit4.class)
 public class NetUtilTest {
+
+  @Rule public final MockitoRule mocks = MockitoJUnit.rule();
+  @Mock private NetworkUtil networkUtil;
 
   private NetUtil netUtil;
 

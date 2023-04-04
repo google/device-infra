@@ -23,11 +23,13 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",  # deviceinfra:google-only(internal)
+        "//src/java/com/google/devtools/mobileharness/shared/util/network",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:luhn",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 
