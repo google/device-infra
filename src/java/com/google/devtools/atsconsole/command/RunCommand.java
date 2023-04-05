@@ -24,21 +24,27 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.controller.olcserver.AtsSessionStub;
 import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.result.xml.MoblyResultInfo;
 import com.google.devtools.atsconsole.result.xml.XmlResultFormatter;
 import com.google.devtools.atsconsole.result.xml.XmlResultUtil;
 import com.google.devtools.atsconsole.testbed.config.YamlTestbedUpdater;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
+import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -79,6 +85,8 @@ import picocli.CommandLine.Spec;
     })
 final class RunCommand implements Callable<Integer> {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   @Parameters(
       index = "0",
       arity = "1",
@@ -115,13 +123,11 @@ final class RunCommand implements Callable<Integer> {
   @SuppressWarnings("PreferredInterfaceType")
   private List<String> androidDeviceSerialList;
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  @Spec private CommandSpec spec;
 
   private static final String CTSV_CONFIG = "cts-v";
   private static final String DEFAULT_MOBLY_LOGPATH = "/tmp/logs/mobly";
   private static final String MOBLY_TEST_ZIP_DEFAULT_TEST = "suite_main.py";
-
-  @Spec private CommandSpec spec;
 
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
@@ -133,10 +139,7 @@ final class RunCommand implements Callable<Integer> {
   private final XmlResultUtil xmlResultUtil;
   private final MoblyAospTestSetupUtil moblyAospTestSetupUtil;
 
-  @SuppressWarnings({"unused", "FieldCanBeLocal"})
   private final ServerPreparer serverPreparer;
-
-  @SuppressWarnings({"unused", "FieldCanBeLocal"})
   private final AtsSessionStub atsSessionStub;
 
   @Inject
@@ -170,92 +173,125 @@ final class RunCommand implements Callable<Integer> {
     try {
       validateConfig();
 
-      if (Objects.equals(config, CTSV_CONFIG)) {
-        if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
-          return runCtsvInM1();
-        } else {
-          return runCtsvInM0();
-        }
+      if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
+        return runInM1();
+      } else {
+        return runInM0();
       }
-
-      return 0;
     } finally {
       moduleTestOptionsGroups = null; // reset the group to clear the history
     }
   }
 
-  private int runCtsvInM0() throws MobileHarnessException, InterruptedException, IOException {
-    if (!checkCtsvPreparation()) {
-      return 1;
-    }
-    ImmutableMap<String, ModuleTestOptionsGroup> moduleTestOptionsGroupMap =
-        getModuleTestOptionsGroupMap();
+  private int runInM0() throws MobileHarnessException, InterruptedException, IOException {
+    if (Objects.equals(config, CTSV_CONFIG)) {
+      if (!checkCtsvPreparation()) {
+        return 1;
+      }
+      ImmutableMap<String, ModuleTestOptionsGroup> moduleTestOptionsGroupMap =
+          getModuleTestOptionsGroupMap();
 
-    ImmutableList<MoblyTestRunEntry> moblyTestRunEntries = getMoblyTestRunEntries();
+      ImmutableList<MoblyTestRunEntry> moblyTestRunEntries = getMoblyTestRunEntries();
 
-    // Filter Mobly test zips per commandline options
-    if (!moduleTestOptionsGroupMap.isEmpty()) {
-      moblyTestRunEntries =
-          moblyTestRunEntries.stream()
-              .filter(
-                  moblyTestRunEntry ->
-                      moduleTestOptionsGroupMap.containsKey(moblyTestRunEntry.name()))
-              .collect(toImmutableList());
-    }
+      // Filter Mobly test zips per commandline options
+      if (!moduleTestOptionsGroupMap.isEmpty()) {
+        moblyTestRunEntries =
+            moblyTestRunEntries.stream()
+                .filter(
+                    moblyTestRunEntry ->
+                        moduleTestOptionsGroupMap.containsKey(moblyTestRunEntry.name()))
+                .collect(toImmutableList());
+      }
 
-    if (moblyTestRunEntries.isEmpty()) {
-      consoleUtil.printLine(
-          String.format(
-              "Found no match Mobly test zip(s) under directory [%s], skip running.",
-              consoleInfo.getMoblyTestCasesDir().orElse(null)));
-      return 0;
-    }
+      if (moblyTestRunEntries.isEmpty()) {
+        consoleUtil.printLine(
+            String.format(
+                "Found no match Mobly test zip(s) under directory [%s], skip running.",
+                consoleInfo.getMoblyTestCasesDir().orElse(null)));
+        return 0;
+      }
 
-    ImmutableList<String> serials = getDeviceSerialsBeforeTest();
-    if (serials.isEmpty()) {
-      logger.atWarning().log(
-          "Found no matched and connected Android devices on the host, skip running.");
-      return 0;
-    }
+      ImmutableList<String> serials = getDeviceSerialsBeforeTest();
+      if (serials.isEmpty()) {
+        logger.atWarning().log(
+            "Found no matched and connected Android devices on the host, skip running.");
+        return 0;
+      }
 
-    String moblyConfigFile =
-        yamlTestbedUpdater.prepareMoblyConfig(
-            serials, consoleInfo.getMoblyTestCasesDir().orElseThrow(), null);
+      String moblyConfigFile =
+          yamlTestbedUpdater.prepareMoblyConfig(
+              serials, consoleInfo.getMoblyTestCasesDir().orElseThrow(), null);
 
-    // Mobly log root directory contains all logs from each Mobly test zip run
-    String moblyLogDir = prepareMoblyLogDir();
-    ImmutableMap.Builder<String, String> moblyTestSummaryYamlFilesBuilder = ImmutableMap.builder();
-    Instant startTime = Clock.systemUTC().instant();
-    for (MoblyTestRunEntry moblyTestRunEntry : moblyTestRunEntries) {
-      Optional<Path> moblyTestSummaryYaml =
-          runSingleMoblyTestZip(moblyTestRunEntry, moblyConfigFile, moblyLogDir);
-      moblyTestSummaryYaml.ifPresent(
-          path -> moblyTestSummaryYamlFilesBuilder.put(moblyTestRunEntry.name(), path.toString()));
-    }
-    Instant endTime = Clock.systemUTC().instant();
+      // Mobly log root directory contains all logs from each Mobly test zip run
+      String moblyLogDir = prepareMoblyLogDir();
+      ImmutableMap.Builder<String, String> moblyTestSummaryYamlFilesBuilder =
+          ImmutableMap.builder();
+      Instant startTime = Clock.systemUTC().instant();
+      for (MoblyTestRunEntry moblyTestRunEntry : moblyTestRunEntries) {
+        Optional<Path> moblyTestSummaryYaml =
+            runSingleMoblyTestZip(moblyTestRunEntry, moblyConfigFile, moblyLogDir);
+        moblyTestSummaryYaml.ifPresent(
+            path ->
+                moblyTestSummaryYamlFilesBuilder.put(moblyTestRunEntry.name(), path.toString()));
+      }
+      Instant endTime = Clock.systemUTC().instant();
 
-    ImmutableMap<String, String> moblyTestSummaryYamlFiles =
-        moblyTestSummaryYamlFilesBuilder.buildOrThrow();
-    if (!moblyTestSummaryYamlFiles.isEmpty()) {
-      xmlResultFormatter.writeMoblyResults(
-          MoblyResultInfo.of(
-              moblyTestSummaryYamlFiles,
-              xmlResultUtil.prepareResultElementAttrs(startTime, endTime, serials),
-              xmlResultUtil.prepareBuildElementAttrs(serials.get(0))),
-          moblyLogDir);
-      String resultZipDes = moblyLogDir + ".zip";
-      logger.atInfo().log(
-          "Zipping Mobly result directory \"%s\" to zip file \"%s\"...", moblyLogDir, resultZipDes);
-      localFileUtil.zipDir(moblyLogDir, resultZipDes);
-      logger.atInfo().log("Zipping Mobly result directory \"%s\" done", moblyLogDir);
-    } else {
-      logger.atWarning().log("Found no Mobly test summary yaml files after the test run.");
+      ImmutableMap<String, String> moblyTestSummaryYamlFiles =
+          moblyTestSummaryYamlFilesBuilder.buildOrThrow();
+      if (!moblyTestSummaryYamlFiles.isEmpty()) {
+        xmlResultFormatter.writeMoblyResults(
+            MoblyResultInfo.of(
+                moblyTestSummaryYamlFiles,
+                xmlResultUtil.prepareResultElementAttrs(startTime, endTime, serials),
+                xmlResultUtil.prepareBuildElementAttrs(serials.get(0))),
+            moblyLogDir);
+        String resultZipDes = moblyLogDir + ".zip";
+        logger.atInfo().log(
+            "Zipping Mobly result directory \"%s\" to zip file \"%s\"...",
+            moblyLogDir, resultZipDes);
+        localFileUtil.zipDir(moblyLogDir, resultZipDes);
+        logger.atInfo().log("Zipping Mobly result directory \"%s\" done", moblyLogDir);
+      } else {
+        logger.atWarning().log("Found no Mobly test summary yaml files after the test run.");
+      }
     }
     return 0;
   }
 
-  private int runCtsvInM1() {
-    throw new UnsupportedOperationException();
+  private int runInM1() throws InterruptedException, MobileHarnessException {
+    serverPreparer.prepareOlcServer();
+
+    ImmutableList<String> deviceSerials =
+        serialOpt != null
+            ? ImmutableList.of(serialOpt)
+            : (androidDeviceSerialList != null
+                ? ImmutableList.copyOf(androidDeviceSerialList)
+                : ImmutableList.of());
+    ImmutableList<String> modules =
+        moduleTestOptionsGroups != null
+            ? moduleTestOptionsGroups.stream()
+                .map(module -> module.module)
+                .collect(toImmutableList())
+            : ImmutableList.of();
+
+    ListenableFuture<AtsSessionPluginOutput> outputFuture =
+        atsSessionStub.runSession(
+            "run_command",
+            AtsSessionPluginConfig.newBuilder()
+                .setRunCommand(
+                    SessionPluginProto.RunCommand.newBuilder()
+                        .setTestPlan(config)
+                        .addAllDeviceSerial(deviceSerials)
+                        .addAllModules(modules))
+                .build());
+
+    logger.atInfo().log("Waiting for ATS session result");
+    AtsSessionPluginOutput output =
+        MoreFutures.get(
+            outputFuture, InfraErrorId.ATSC_RUN_COMMAND_ATS_SESSION_UNEXPECTED_EXCEPTION);
+    consoleUtil.printLine(String.format("ATS session result: [%s]", output));
+
+    return 0;
   }
 
   private void validateConfig() {

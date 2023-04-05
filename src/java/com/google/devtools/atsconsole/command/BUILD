@@ -28,6 +28,7 @@ java_library(
         "//src/javatests/com/google/devtools/atsconsole/command:__subpackages__",
     ],
     deps = [
+        "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
         "//src/java/com/google/devtools/atsconsole:apache_commons_io",
         "//src/java/com/google/devtools/atsconsole:console_info",
         "//src/java/com/google/devtools/atsconsole:console_util",
@@ -45,6 +46,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_aosp_test_setup_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:future",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",

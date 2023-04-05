@@ -82,6 +82,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDaemon = enableDaemonDefault;
 
+  private static final Flag<String> atsConsoleOlcServerPathDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_console_olc_server_path",
+      description = "Path of OLC server in ATS console.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> atsConsoleOlcServerPath = atsConsoleOlcServerPathDefault;
+
   private static final Flag<Boolean> cacheInstalledApksDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

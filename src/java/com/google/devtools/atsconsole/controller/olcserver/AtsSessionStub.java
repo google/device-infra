@@ -119,7 +119,9 @@ public class AtsSessionStub {
                                     .setExplicitLabel(
                                         SessionPluginLabel.newBuilder().setLabel(SESSION_LABEL)))))
             .build();
-    logger.atInfo().log("Creating session, request=[%s]", shortDebugString(createSessionRequest));
+    logger.atInfo().log(
+        "Creating session, plugin_config=[%s], request=[%s]",
+        shortDebugString(config), shortDebugString(createSessionRequest));
     CreateSessionResponse createSessionResponse;
     try {
       createSessionResponse = sessionStub.createSession(createSessionRequest);

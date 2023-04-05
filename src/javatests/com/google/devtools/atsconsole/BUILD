@@ -15,18 +15,24 @@
 
 load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_testonly = 1,
+)
 
 java_library(
     name = "atsconsole",
-    testonly = True,
-    srcs = glob(
-        ["*.java"],
-    ),
+    srcs = glob(["*.java"]),
+    data = [
+        "//src/java/com/google/devtools/atsconsole/controller/olcserver:AtsOlcServer_deploy.jar",
+    ],
     deps = [
         "//src/java/com/google/devtools/atsconsole:ats_console_lib",
         "//src/java/com/google/devtools/atsconsole:ats_console_module",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/port:portprober",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",

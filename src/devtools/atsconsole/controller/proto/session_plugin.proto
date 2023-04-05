@@ -21,6 +21,23 @@ package atsconsole.controller;
 option java_package = "com.google.devtools.atsconsole.controller.proto";
 option java_outer_classname = "SessionPluginProto";
 
-message AtsSessionPluginConfig {}
+message AtsSessionPluginConfig {
+  oneof command {
+    RunCommand run_command = 1;
+  }
+}
 
 message AtsSessionPluginOutput {}
+
+message RunCommand {
+  // Required.
+  //
+  // Example: "cts".
+  string test_plan = 1;
+
+  // Optional.
+  repeated string device_serial = 2;
+
+  // Optional.
+  repeated string modules = 3;
+}

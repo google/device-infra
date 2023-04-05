@@ -16,12 +16,14 @@
 
 package com.google.devtools.atsconsole.controller.olcserver;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -70,11 +72,18 @@ public class AtsSessionStubTest {
     int serverPort = PortProber.pickUnusedPort();
     String publicDirPath = tmpFolder.newFolder("public_dir").toString();
 
+    ImmutableMap<String, String> flagMap =
+        ImmutableMap.of(
+            "olc_server_port",
+            Integer.toString(serverPort),
+            "public_dir",
+            publicDirPath,
+            "detect_adb_device",
+            "false");
     deviceInfraServiceFlags =
-        ImmutableList.of(
-            "--olc_server_port=" + serverPort,
-            "--public_dir=" + publicDirPath,
-            "--detect_adb_device=false");
+        flagMap.entrySet().stream()
+            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
+            .collect(toImmutableList());
     Flags.parse(deviceInfraServiceFlags.toArray(new String[0]));
 
     sleeper = Sleeper.defaultSleeper();

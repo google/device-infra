@@ -17,6 +17,7 @@
 package com.google.devtools.atsconsole.controller.olcserver;
 
 import static com.google.protobuf.TextFormat.shortDebugString;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
@@ -34,10 +35,12 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
+import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import io.grpc.Status.Code;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
@@ -50,6 +53,7 @@ public class ServerPreparer {
 
   private final CommandExecutor commandExecutor;
   private final Sleeper sleeper;
+  private final SystemUtil systemUtil;
   private final VersionStub versionStub;
   private final Provider<Path> serverBinary;
   private final ImmutableList<String> deviceInfraServiceFlags;
@@ -58,11 +62,13 @@ public class ServerPreparer {
   ServerPreparer(
       CommandExecutor commandExecutor,
       Sleeper sleeper,
+      SystemUtil systemUtil,
       @ServerVersionStub VersionStub versionStub,
       @ServerBinary Provider<Path> serverBinary,
       @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags) {
     this.commandExecutor = commandExecutor;
     this.sleeper = sleeper;
+    this.systemUtil = systemUtil;
     this.versionStub = versionStub;
     this.serverBinary = serverBinary;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
@@ -90,33 +96,48 @@ public class ServerPreparer {
     // Starts a new server if not exists.
     logger.atInfo().log("OLC server doesn't exist, starting a new one");
     String serverBinaryPath = serverBinary.get().toString();
-    CommandProcess serverProcess;
+    CommandProcess serverProcess = null;
+    CountDownLatch serverStartedLatch = new CountDownLatch(1);
     try {
-      serverProcess =
-          commandExecutor.start(
-              Command.of(
-                      new SystemUtil()
-                          .getJavaCommandCreator()
-                          .createJavaCommand(
-                              serverBinaryPath,
-                              deviceInfraServiceFlags,
-                              /* nativeArguments= */ ImmutableList.of()))
-                  .redirectStderr(false)
-                  .needStdoutInResult(false)
-                  .needStderrInResult(false));
-    } catch (CommandStartException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_SERVER_PREPARER_START_OLC_SERVER_ERROR,
-          "Failed to start OLC server",
-          e);
-    }
+      try {
+        serverProcess =
+            commandExecutor.start(
+                Command.of(
+                        systemUtil
+                            .getJavaCommandCreator()
+                            .createJavaCommand(
+                                serverBinaryPath,
+                                deviceInfraServiceFlags,
+                                /* nativeArguments= */ ImmutableList.of()))
+                    .onStderr(new ServerStderrLineCallback(serverStartedLatch))
+                    .redirectStderr(false)
+                    .needStdoutInResult(false)
+                    .needStderrInResult(false));
+      } catch (CommandStartException e) {
+        throw new MobileHarnessException(
+            InfraErrorId.ATSC_SERVER_PREPARER_START_OLC_SERVER_ERROR,
+            "Failed to start OLC server",
+            e);
+      }
 
-    // Waits until the server starts.
-    logger.atInfo().log("Wait until OLC server starts, command=[%s]", serverProcess.command());
-    connectWithRetry();
-    logger.atInfo().log(
-        "OLC server started, port=%s, pid=%s",
-        Flags.instance().olcServerPort.getNonNull(), serverProcess.getUnixPidIfAny().orElse(0));
+      // Waits until the server starts.
+      logger.atInfo().log("Wait until OLC server starts, command=[%s]", serverProcess.command());
+      if (!serverStartedLatch.await(15L, SECONDS)) {
+        throw new MobileHarnessException(
+            InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_INITIALIZE_ERROR,
+            "OLC server initialization error");
+      }
+      connectWithRetry();
+      logger.atInfo().log(
+          "OLC server started, port=%s, pid=%s",
+          Flags.instance().olcServerPort.getNonNull(), serverProcess.getUnixPidIfAny().orElse(0));
+    } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+      if (serverProcess != null) {
+        logger.atInfo().log("Killing OLC server");
+        serverProcess.kill();
+      }
+      throw e;
+    }
   }
 
   private void connectWithRetry() throws MobileHarnessException, InterruptedException {
@@ -127,7 +148,7 @@ public class ServerPreparer {
         return;
       } catch (GrpcExceptionWithErrorId e) {
         count++;
-        if (count == 30) {
+        if (count == 15) {
           throw new MobileHarnessException(
               InfraErrorId.ATSC_SERVER_PREPARER_CONNECT_NEW_OLC_SERVER_ERROR,
               "Failed to connect new OLC server",
@@ -135,6 +156,29 @@ public class ServerPreparer {
         } else {
           sleeper.sleep(Duration.ofSeconds(1L));
         }
+      }
+    }
+  }
+
+  private static class ServerStderrLineCallback implements LineCallback {
+
+    private static final String SERVER_STARTED_SIGNAL = "OLC server started";
+
+    private final CountDownLatch serverStartedLatch;
+
+    private ServerStderrLineCallback(CountDownLatch serverStartedLatch) {
+      this.serverStartedLatch = serverStartedLatch;
+    }
+
+    @Override
+    public Response onLine(String stderrLine) {
+      logger.atInfo().log("olc_server_stderr: %s", stderrLine);
+
+      if (stderrLine.contains(SERVER_STARTED_SIGNAL)) {
+        serverStartedLatch.countDown();
+        return Response.stopReadingOutput();
+      } else {
+        return Response.empty();
       }
     }
   }

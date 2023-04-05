@@ -22,9 +22,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.zip.ZipFile;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 import org.apache.commons.io.FilenameUtils;
 
 /** Util class for the console. */
+@Singleton
 public class ConsoleUtil {
 
   private final PrintStream consoleOutput;

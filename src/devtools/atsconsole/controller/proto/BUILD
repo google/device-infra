@@ -16,8 +16,8 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/devtools/atsconsole/controller:__subpackages__",
-        "//src/javatests/com/google/devtools/atsconsole/controller:__subpackages__",
+        "//src/java/com/google/devtools/atsconsole:__subpackages__",
+        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
     ],
 )
 

@@ -50,13 +50,13 @@ public class Flag<T> {
     }
   }
 
-  static <T> Flag<T> value(T defaultValue) {
+  static <T> Flag<T> value(@Nullable T defaultValue) {
     return new Flag<>(defaultValue);
   }
 
-  private final T value;
+  @Nullable private final T value;
 
-  Flag(T value) {
+  Flag(@Nullable T value) {
     this.value = value;
   }
 

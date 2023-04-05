@@ -16,6 +16,7 @@
 
 package com.google.devtools.atsconsole;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -23,7 +24,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.devtools.deviceinfra.shared.util.flags.Flags;
+import com.google.devtools.deviceinfra.shared.util.port.PortProber;
+import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.Guice;
+import com.google.inject.Injector;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
@@ -34,6 +40,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
@@ -44,6 +51,7 @@ import org.mockito.junit.MockitoRule;
 public final class AtsConsoleTest {
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Mock private LineReader lineReader;
   @Mock private History history;
@@ -55,24 +63,49 @@ public final class AtsConsoleTest {
 
   @Before
   public void setUp() throws Exception {
+    int olcServerPort = PortProber.pickUnusedPort();
+    String publicDirPath = tmpFolder.newFolder("public_dir").toString();
+
+    ImmutableMap<String, String> flagMap =
+        ImmutableMap.of(
+            "olc_server_port",
+            Integer.toString(olcServerPort),
+            "public_dir",
+            publicDirPath,
+            "detect_adb_device",
+            "false",
+            "enable_ats_console_olc_server",
+            "true");
+    ImmutableList<String> deviceInfraServiceFlags =
+        flagMap.entrySet().stream()
+            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
+            .collect(toImmutableList());
+    Flags.parse(deviceInfraServiceFlags.toArray(new String[0]));
+
+    Path olcServerBinary =
+        Path.of(
+            RunfilesUtil.getRunfilesLocation(
+                "java/com/google/devtools/atsconsole/controller/olcserver/AtsOlcServer_deploy.jar"));
+
     consoleOutputStream = new ByteArrayOutputStream();
     consolePrintStream = new PrintStream(consoleOutputStream, false, UTF_8);
     when(lineReader.getHistory()).thenReturn(history);
 
-    AtsConsole.injector =
+    Injector injector =
         Guice.createInjector(
             new AtsConsoleModule(
-                ImmutableList.of(),
+                deviceInfraServiceFlags,
                 ImmutableList.of(),
                 lineReader,
                 consolePrintStream,
-                () -> Path.of("")));
-    AtsConsole.injector.injectMembers(this);
+                () -> olcServerBinary));
+    injector.injectMembers(this);
+    atsConsole.injector = injector;
   }
 
   @After
   public void tearDown() {
-    AtsConsole.injector = null;
+    Flags.resetToDefault();
 
     System.out.println(consoleOutputStream.toString(UTF_8));
   }
@@ -88,7 +121,7 @@ public final class AtsConsoleTest {
 
   @Test
   public void startsConsoleWithHelp_exitConsoleAfterCommandExecution() throws Exception {
-    AtsConsole.injector =
+    Injector injector =
         Guice.createInjector(
             new AtsConsoleModule(
                 ImmutableList.of(),
@@ -96,7 +129,8 @@ public final class AtsConsoleTest {
                 lineReader,
                 consolePrintStream,
                 () -> Path.of("")));
-    AtsConsole.injector.injectMembers(this);
+    injector.injectMembers(this);
+    atsConsole.injector = injector;
 
     atsConsole.call();
 
@@ -104,5 +138,14 @@ public final class AtsConsoleTest {
         .isEqualTo("Using commandline arguments as starting command: [--help]\n");
 
     verify(history).add("--help");
+  }
+
+  @Test
+  public void runCtsv_enableAtsConsoleOlcServer() throws Exception {
+    when(lineReader.readLine(anyString())).thenReturn("run -s abc cts-v").thenReturn("exit");
+
+    atsConsole.call();
+
+    assertThat(consoleOutputStream.toString(UTF_8)).isEqualTo("ATS session result: []\n");
   }
 }
