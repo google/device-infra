@@ -28,18 +28,20 @@ import org.junit.runners.JUnit4;
 public class OlcServerBinarySizeTest {
 
   private static final long MAX_BASE_SERVER_BINARY_SIZE_BYTE = 21_000_000L;
-
   private static final long MAX_ANDROID_SERVER_BINARY_SIZE_BYTE = 26_000_000L;
+  private static final long MAX_ATS_SERVER_BINARY_SIZE_BYTE = 26_000_000L;
 
   private static final String BASE_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "javatests/com/google/devtools/mobileharness"
               + "/infra/client/longrunningservice/OlcServerForTesting_deploy.jar");
-
   private static final String ANDROID_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "javatests/com/google/devtools/mobileharness"
               + "/infra/client/longrunningservice/OlcServerWithAndroidDevice_deploy.jar");
+  private static final String ATS_SERVER_BINARY_FILE_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "java/com/google/devtools/atsconsole/controller/olcserver/AtsOlcServer_deploy.jar");
 
   @Test
   public void checkBaseServerBinarySize() throws Exception {
@@ -55,6 +57,12 @@ public class OlcServerBinarySizeTest {
         "OmniLab client with Android device",
         MAX_ANDROID_SERVER_BINARY_SIZE_BYTE,
         ANDROID_SERVER_BINARY_FILE_PATH);
+  }
+
+  @Test
+  public void checkAtsServerBinarySize() throws Exception {
+    checkBinarySize(
+        "ATS OmniLab client", MAX_ATS_SERVER_BINARY_SIZE_BYTE, ATS_SERVER_BINARY_FILE_PATH);
   }
 
   private static void checkBinarySize(String name, long maxSizeByte, String filePath)

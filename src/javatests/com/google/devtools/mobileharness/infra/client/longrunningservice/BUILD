@@ -22,7 +22,7 @@ package(
 )
 
 java_library(
-    name = "server",
+    name = "longrunningservice",
     srcs = glob(
         ["*.java"],
         exclude = [
@@ -32,6 +32,7 @@ java_library(
     data = [
         ":OlcServerForTesting_deploy.jar",
         ":OlcServerWithAndroidDevice_deploy.jar",
+        "//src/java/com/google/devtools/atsconsole/controller/olcserver:AtsOlcServer_deploy.jar",
     ],
     deps = [
         ":session_plugin_for_testing_java_proto",
@@ -110,5 +111,5 @@ junit_test_suites(
         "small",
         "medium",
     ],
-    deps = [":server"],
+    deps = [":longrunningservice"],
 )
