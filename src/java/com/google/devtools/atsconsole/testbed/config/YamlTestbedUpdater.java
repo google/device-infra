@@ -31,6 +31,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
 import javax.annotation.Nullable;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 
@@ -50,7 +51,7 @@ public class YamlTestbedUpdater {
   private final LocalFileUtil localFileUtil;
 
   public YamlTestbedUpdater() {
-    this(new Yaml(new SafeConstructor()), new Gson(), new LocalFileUtil());
+    this(new Yaml(new SafeConstructor(new LoaderOptions())), new Gson(), new LocalFileUtil());
   }
 
   YamlTestbedUpdater(Yaml yaml, Gson gson, LocalFileUtil localFileUtil) {

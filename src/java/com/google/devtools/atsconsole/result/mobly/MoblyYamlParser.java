@@ -26,6 +26,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 import org.yaml.snakeyaml.constructor.SafeConstructor;
 
@@ -82,7 +83,7 @@ public class MoblyYamlParser {
    */
   private ImmutableList<MoblyYamlDocEntry> parse(InputStream input) throws MobileHarnessException {
     // Load yaml summary file
-    Yaml yaml = new Yaml(new SafeConstructor());
+    Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
     Iterable<Object> yamlDocuments = yaml.loadAll(input);
 
     ImmutableList.Builder<MoblyYamlDocEntry> results = new ImmutableList.Builder<>();
