@@ -146,6 +146,6 @@ public final class AtsConsoleTest {
 
     atsConsole.call();
 
-    assertThat(consoleOutputStream.toString(UTF_8)).isEqualTo("ATS session result: []\n");
+    assertThat(consoleOutputStream.toString(UTF_8)).isEqualTo("Unimplemented AtsSessionPlugin\n");
   }
 }

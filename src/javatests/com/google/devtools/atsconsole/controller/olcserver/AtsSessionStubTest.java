@@ -31,6 +31,7 @@ import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerSessionStub;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
@@ -129,6 +130,10 @@ public class AtsSessionStubTest {
         atsSessionStub.runSession("fake_session", AtsSessionPluginConfig.getDefaultInstance());
     AtsSessionPluginOutput atsSessionPluginOutput = outputFuture.get(1L, MINUTES);
 
-    assertThat(atsSessionPluginOutput).isEqualToDefaultInstance();
+    assertThat(atsSessionPluginOutput)
+        .isEqualTo(
+            AtsSessionPluginOutput.newBuilder()
+                .setFailure(Failure.newBuilder().setErrorMessage("Unimplemented AtsSessionPlugin"))
+                .build());
   }
 }

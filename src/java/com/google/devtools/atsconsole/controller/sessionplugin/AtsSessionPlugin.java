@@ -22,6 +22,7 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
@@ -53,13 +54,18 @@ public class AtsSessionPlugin {
             .getConfig()
             .unpack(AtsSessionPluginConfig.class);
     logger.atInfo().log("Config: %s", shortDebugString(config));
+
+    AtsSessionPluginOutput output =
+        AtsSessionPluginOutput.newBuilder()
+            .setFailure(Failure.newBuilder().setErrorMessage("Unimplemented AtsSessionPlugin"))
+            .build();
+    sessionInfo.setSessionPluginOutput(
+        oldOutput -> SessionPluginOutput.newBuilder().setOutput(Any.pack(output)).build());
+    logger.atInfo().log("Output: %s", shortDebugString(output));
   }
 
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event) {
-    AtsSessionPluginOutput output = AtsSessionPluginOutput.getDefaultInstance();
-    sessionInfo.setSessionPluginOutput(
-        oldOutput -> SessionPluginOutput.newBuilder().setOutput(Any.pack(output)).build());
-    logger.atInfo().log("Output: %s", shortDebugString(output));
+    // Does nothing.
   }
 }

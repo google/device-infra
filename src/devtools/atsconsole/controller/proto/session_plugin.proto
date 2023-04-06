@@ -27,7 +27,23 @@ message AtsSessionPluginConfig {
   }
 }
 
-message AtsSessionPluginOutput {}
+message AtsSessionPluginOutput {
+  oneof result {
+    Success success = 1;
+
+    Failure failure = 2;
+  }
+
+  message Success {
+    // Required.
+    string output_message = 1;
+  }
+
+  message Failure {
+    // Required.
+    string error_message = 1;
+  }
+}
 
 message RunCommand {
   // Required.

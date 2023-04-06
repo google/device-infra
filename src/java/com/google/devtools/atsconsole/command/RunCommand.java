@@ -289,7 +289,16 @@ final class RunCommand implements Callable<Integer> {
     AtsSessionPluginOutput output =
         MoreFutures.get(
             outputFuture, InfraErrorId.ATSC_RUN_COMMAND_ATS_SESSION_UNEXPECTED_EXCEPTION);
-    consoleUtil.printLine(String.format("ATS session result: [%s]", output));
+    switch (output.getResultCase()) {
+      case SUCCESS:
+        consoleUtil.printLine(output.getSuccess().getOutputMessage());
+        break;
+      case FAILURE:
+        consoleUtil.printLine(output.getFailure().getErrorMessage());
+        break;
+      default:
+        break;
+    }
 
     return 0;
   }
