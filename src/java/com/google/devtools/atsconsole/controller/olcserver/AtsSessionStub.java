@@ -164,13 +164,16 @@ public class AtsSessionStub {
                   .getSessionStatus();
           if (!newSessionStatus.equals(sessionStatus)) {
             sessionStatus = newSessionStatus;
-            logger.atInfo().log("Session status: [%s], session_id=[%s]", sessionStatus, sessionId);
+            logger.atInfo().log(
+                "Session status: [%s], session_id=[%s]",
+                sessionStatus, shortDebugString(sessionId));
           }
         } while (!sessionStatus.equals(SessionStatus.SESSION_FINISHED));
       } catch (GrpcExceptionWithErrorId e) {
         throw new MobileHarnessException(
             InfraErrorId.ATSC_SESSION_STUB_GET_SESSION_STATUS_ERROR,
-            String.format("Failed to get session status, session_id=[%s]", sessionId),
+            String.format(
+                "Failed to get session status, session_id=[%s]", shortDebugString(sessionId)),
             e);
       }
 
@@ -184,10 +187,11 @@ public class AtsSessionStub {
       } catch (GrpcExceptionWithErrorId e) {
         throw new MobileHarnessException(
             InfraErrorId.ATSC_SESSION_STUB_GET_SESSION_RESULT_ERROR,
-            String.format("Failed to get session result, session_id=[%s]", sessionId),
+            String.format(
+                "Failed to get session result, session_id=[%s]", shortDebugString(sessionId)),
             e);
       }
-      logger.atInfo().log("Session detail: [%s]", sessionDetail);
+      logger.atInfo().log("Session result: [%s]", shortDebugString(sessionDetail));
 
       // Gets session plugin output.
       return getSessionPluginOutput(sessionDetail);

@@ -20,6 +20,7 @@ package(
     default_visibility = [
         "//src/java/com/google/devtools/atsconsole:__subpackages__",
         "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
 )
 
@@ -27,6 +28,7 @@ olc_server_binary(
     name = "AtsOlcServer",
     extra_runtime_deps = [
         "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:ats_session_plugin",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:android_real_device",
     ],
 )
 
@@ -88,6 +90,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "@com_google_protobuf//:protobuf_java",
         "@io_grpc_grpc_java//core",

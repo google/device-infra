@@ -36,11 +36,14 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import io.grpc.Status.Code;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
@@ -54,6 +57,7 @@ public class ServerPreparer {
   private final CommandExecutor commandExecutor;
   private final Sleeper sleeper;
   private final SystemUtil systemUtil;
+  private final LocalFileUtil localFileUtil;
   private final VersionStub versionStub;
   private final Provider<Path> serverBinary;
   private final ImmutableList<String> deviceInfraServiceFlags;
@@ -63,12 +67,14 @@ public class ServerPreparer {
       CommandExecutor commandExecutor,
       Sleeper sleeper,
       SystemUtil systemUtil,
+      LocalFileUtil localFileUtil,
       @ServerVersionStub VersionStub versionStub,
       @ServerBinary Provider<Path> serverBinary,
       @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags) {
     this.commandExecutor = commandExecutor;
     this.sleeper = sleeper;
     this.systemUtil = systemUtil;
+    this.localFileUtil = localFileUtil;
     this.versionStub = versionStub;
     this.serverBinary = serverBinary;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
@@ -96,8 +102,11 @@ public class ServerPreparer {
     // Starts a new server if not exists.
     logger.atInfo().log("OLC server doesn't exist, starting a new one");
     String serverBinaryPath = serverBinary.get().toString();
+    localFileUtil.checkFile(serverBinaryPath);
+
     CommandProcess serverProcess = null;
     CountDownLatch serverStartedLatch = new CountDownLatch(1);
+    AtomicBoolean serverStartedSuccessfully = new AtomicBoolean();
     try {
       try {
         serverProcess =
@@ -109,7 +118,10 @@ public class ServerPreparer {
                                 serverBinaryPath,
                                 deviceInfraServiceFlags,
                                 /* nativeArguments= */ ImmutableList.of()))
-                    .onStderr(new ServerStderrLineCallback(serverStartedLatch))
+                    .onStderr(
+                        new ServerStderrLineCallback(serverStartedLatch, serverStartedSuccessfully))
+                    .onExit(result -> serverStartedLatch.countDown())
+                    .timeout(ChronoUnit.YEARS.getDuration())
                     .redirectStderr(false)
                     .needStdoutInResult(false)
                     .needStderrInResult(false));
@@ -122,10 +134,15 @@ public class ServerPreparer {
 
       // Waits until the server starts.
       logger.atInfo().log("Wait until OLC server starts, command=[%s]", serverProcess.command());
-      if (!serverStartedLatch.await(15L, SECONDS)) {
+      if (!serverStartedLatch.await(30L, SECONDS)) {
         throw new MobileHarnessException(
             InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_INITIALIZE_ERROR,
-            "OLC server initialization error");
+            "OLC server didn't start in 30 seconds");
+      }
+      if (!serverStartedSuccessfully.get()) {
+        throw new MobileHarnessException(
+            InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_ABNORMAL_EXIT_WHILE_INITIALIZATION,
+            "OLC server exited abnormally while initialization");
       }
       connectWithRetry();
       logger.atInfo().log(
@@ -165,9 +182,12 @@ public class ServerPreparer {
     private static final String SERVER_STARTED_SIGNAL = "OLC server started";
 
     private final CountDownLatch serverStartedLatch;
+    private final AtomicBoolean serverStartedSuccessfully;
 
-    private ServerStderrLineCallback(CountDownLatch serverStartedLatch) {
+    private ServerStderrLineCallback(
+        CountDownLatch serverStartedLatch, AtomicBoolean serverStartedSuccessfully) {
       this.serverStartedLatch = serverStartedLatch;
+      this.serverStartedSuccessfully = serverStartedSuccessfully;
     }
 
     @Override
@@ -175,6 +195,7 @@ public class ServerPreparer {
       logger.atInfo().log("olc_server_stderr: %s", stderrLine);
 
       if (stderrLine.contains(SERVER_STARTED_SIGNAL)) {
+        serverStartedSuccessfully.set(true);
         serverStartedLatch.countDown();
         return Response.stopReadingOutput();
       } else {
