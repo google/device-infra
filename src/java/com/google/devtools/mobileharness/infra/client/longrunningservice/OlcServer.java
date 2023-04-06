@@ -16,8 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
+import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.deviceinfra.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
@@ -32,6 +36,8 @@ import io.grpc.netty.NettyServerBuilder;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.logging.Level;
 import javax.inject.Inject;
 
 /** OLC server. */
@@ -50,6 +56,7 @@ public class OlcServer {
 
   private final SessionService sessionService;
   private final VersionService versionService;
+  private final ListeningScheduledExecutorService threadPool;
   private final LocalMode localMode;
   private final EventBus globalInternalEventBus;
 
@@ -57,10 +64,12 @@ public class OlcServer {
   OlcServer(
       SessionService sessionService,
       VersionService versionService,
+      ListeningScheduledExecutorService threadPool,
       LocalMode localMode,
       @GlobalInternalEventBus EventBus globalInternalEventBus) {
     this.sessionService = sessionService;
     this.versionService = versionService;
+    this.threadPool = threadPool;
     this.localMode = localMode;
     this.globalInternalEventBus = globalInternalEventBus;
   }
@@ -82,10 +91,23 @@ public class OlcServer {
 
     // Starts local device manager.
     logger.atInfo().log("Starting local device manager");
-    localMode.initialize(globalInternalEventBus);
+    logFailure(
+        threadPool.submit(
+            threadRenaming(new LocalModeInitializer(), () -> "local-mode-initializer")),
+        Level.SEVERE,
+        "Fatal error while initializing local mode");
 
     logger.atInfo().log("OLC server started, port=%s", port);
 
     server.awaitTermination();
+  }
+
+  private class LocalModeInitializer implements Callable<Void> {
+
+    @Override
+    public Void call() throws InterruptedException {
+      localMode.initialize(globalInternalEventBus);
+      return null;
+    }
   }
 }

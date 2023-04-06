@@ -148,7 +148,7 @@ public class OlcServerIntegrationTest {
 
       // Verifies the local device manager starts successfully.
       assertWithMessage("The local device manager has not started in 5 seconds")
-          .that(deviceFound.await(5L, SECONDS))
+          .that(deviceFound.await(15L, SECONDS))
           .isTrue();
 
       ManagedChannel channel = ChannelFactory.createLocalChannel(serverPort, directExecutor());
