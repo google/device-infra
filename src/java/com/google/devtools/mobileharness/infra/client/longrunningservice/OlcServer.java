@@ -92,6 +92,7 @@ public class OlcServer {
             .addService(sessionService)
             .addService(versionService)
             .build();
+    controlService.setServer(server);
     server.start();
 
     // Starts local device manager.
@@ -105,6 +106,8 @@ public class OlcServer {
     logger.atInfo().log("OLC server started, port=%s", port);
 
     server.awaitTermination();
+    logger.atInfo().log("Exiting...");
+    System.exit(0);
   }
 
   private class LocalModeInitializer implements Callable<Void> {

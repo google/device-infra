@@ -31,6 +31,6 @@ message KillServerRequest {}
 message KillServerResponse {
   // Required.
   //
-  // True if no running/pending session and the server will exit after 1 sec.
+  // True if no running/pending session and the server will exit.
   bool successful = 1;
 }

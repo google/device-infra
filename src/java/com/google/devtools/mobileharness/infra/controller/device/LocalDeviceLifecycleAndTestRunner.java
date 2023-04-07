@@ -55,6 +55,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -271,7 +272,9 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
                 + "because the device is interrupted when running test");
         needReboot = true;
       } else {
-        logger.atInfo().withCause(e).log("Device interrupted. No test running at the moment.");
+        // Does not print stack trace of InterruptedException since we don't want to print error
+        // when normally exiting a server.
+        logger.atInfo().log("Device interrupted. No test running at the moment.");
       }
     } catch (Throwable e) {
       logger.atSevere().withCause(e).log("FATAL ERROR");
@@ -309,12 +312,18 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
           } catch (Exception e) {
             // Catches all exceptions to make sure we will decrease the runnerCount.
             logger.atWarning().withCause(e).log("Failed to reboot device");
+            if (e instanceof InterruptedException) {
+              Thread.currentThread().interrupt();
+            }
           }
         }
       } catch (Exception e) {
         postDeviceErrorEvent(e);
         // Catches all exceptions to make sure we will decrease the runnerCount.
         logger.atWarning().withCause(e).log("Failed to stop device");
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
       }
       tearingDown = false;
       runnerCount.decrementAndGet();
@@ -713,7 +722,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         "Update device %s last IDLE time: %s", device.getDeviceId(), now);
     getDevice()
         .setProperty(
-            DeviceProperty.Name.BECOME_IDLE_EPOCH_MS.name().toLowerCase(),
+            DeviceProperty.Name.BECOME_IDLE_EPOCH_MS.name().toLowerCase(Locale.ROOT),
             String.valueOf(now.toEpochMilli()));
   }
 }
