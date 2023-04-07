@@ -81,7 +81,9 @@ public class AtsSessionStub {
                       .findFieldByNumber(SessionDetail.SESSION_STATUS_FIELD_NUMBER)
                       .getName()))
           .build();
-  private static final Duration GET_SESSION_STATUS_INTERVAL = Duration.ofSeconds(5L);
+  private static final Duration GET_SESSION_STATUS_SHORT_INTERVAL = Duration.ofMillis(800L);
+  private static final Duration GET_SESSION_STATUS_MEDIUM_INTERVAL = Duration.ofSeconds(5L);
+  private static final Duration GET_SESSION_STATUS_LONG_INTERVAL = Duration.ofSeconds(30L);
 
   private final SessionStub sessionStub;
   private final ListeningScheduledExecutorService threadPool;
@@ -149,8 +151,10 @@ public class AtsSessionStub {
     public AtsSessionPluginOutput call() throws MobileHarnessException, InterruptedException {
       SessionStatus sessionStatus = SessionStatus.SESSION_STATUS_UNSPECIFIED;
       try {
+        int count = 0;
         do {
-          sleeper.sleep(GET_SESSION_STATUS_INTERVAL);
+          count++;
+          sleeper.sleep(calculateGetSessionStatusInterval(count));
           SessionStatus newSessionStatus =
               sessionStub
                   .getSession(
@@ -196,7 +200,17 @@ public class AtsSessionStub {
     }
   }
 
-  private AtsSessionPluginOutput getSessionPluginOutput(SessionDetail sessionDetail)
+  private static Duration calculateGetSessionStatusInterval(int count) {
+    if (count <= 50) {
+      return GET_SESSION_STATUS_SHORT_INTERVAL;
+    } else if (count <= 250) {
+      return GET_SESSION_STATUS_MEDIUM_INTERVAL;
+    } else {
+      return GET_SESSION_STATUS_LONG_INTERVAL;
+    }
+  }
+
+  private static AtsSessionPluginOutput getSessionPluginOutput(SessionDetail sessionDetail)
       throws MobileHarnessException {
     SessionPluginOutput sessionPluginOutput =
         sessionDetail
@@ -224,7 +238,7 @@ public class AtsSessionStub {
    * <p>Priority: exceptions from AtsSessionPlugin -> exception from session runner -> exception
    * from other session plugins.
    */
-  private MobileHarnessException getSessionError(SessionDetail sessionDetail) {
+  private static MobileHarnessException getSessionError(SessionDetail sessionDetail) {
     Optional<MobileHarnessException> sessionRunnerError =
         sessionDetail.hasSessionRunnerError()
             ? Optional.of(
