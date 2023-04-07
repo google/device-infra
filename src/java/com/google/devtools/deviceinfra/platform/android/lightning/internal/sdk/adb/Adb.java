@@ -25,6 +25,7 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Annotations.AdbParamSupplier;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.initializer.AdbInitializer;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.sdktool.proto.Adb.AdbParam;
@@ -64,7 +65,13 @@ public class Adb {
   @VisibleForTesting static final int DEFAULT_ADB_SUCCESS_EXIT_CODE = 0;
 
   /** Default max attempt times if requiring retry. */
-  @VisibleForTesting static final int DEFAULT_RETRY_ATTEMPTS = 2;
+  @VisibleForTesting
+  static final int DEFAULT_RETRY_ATTEMPTS = Flags.instance().adbCommandRetryAttempts.getNonNull();
+
+  @VisibleForTesting
+  static final Duration RETRY_INTERVAL = Flags.instance().adbCommandRetryInterval.getNonNull();
+
+  @VisibleForTesting final Sleeper sleeper = Sleeper.defaultSleeper();
 
   private final Supplier<AdbParam> adbParamSupplier;
 
@@ -288,6 +295,7 @@ public class Adb {
       } catch (MobileHarnessException e) {
         error = e;
       }
+      sleeper.sleep(RETRY_INTERVAL);
     }
     throw new MobileHarnessException(
         AndroidErrorId.ANDROID_ADB_CMD_RETRY_ERROR,
@@ -355,6 +363,7 @@ public class Adb {
       } catch (MobileHarnessException e) {
         error = e;
       }
+      sleeper.sleep(RETRY_INTERVAL);
     }
     throw new MobileHarnessException(
         AndroidErrorId.ANDROID_ADB_CMD_RETRY_ERROR,
@@ -615,6 +624,7 @@ public class Adb {
       } catch (MobileHarnessException e) {
         error = e;
       }
+      sleeper.sleep(RETRY_INTERVAL);
     }
     throw new MobileHarnessException(
         AndroidErrorId.ANDROID_ADB_CMD_RETRY_ERROR,

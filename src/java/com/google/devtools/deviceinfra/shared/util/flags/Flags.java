@@ -38,6 +38,24 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> aaptPath = aaptPathDefault;
 
+  private static final Flag<Integer> adbCommandRetryAttemptsDefault = Flag.value(2);
+
+  @com.beust.jcommander.Parameter(
+      names = "--adb_command_retry_attempts",
+      description = "The max retry attempts for executing adb command. Default is 2.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> adbCommandRetryAttempts = adbCommandRetryAttemptsDefault;
+
+  private static final Flag<Duration> adbCommandRetryIntervalDefault =
+      DurationFlag.value(Duration.ZERO);
+
+  @com.beust.jcommander.Parameter(
+      names = "--adb_command_retry_interval",
+      description =
+          "The wait interval betwenn retry attempts for executing adb command. Default is 0.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> adbCommandRetryInterval = adbCommandRetryIntervalDefault;
+
   private static final Flag<String> adbPathFromUserDefault = Flag.value("");
 
   @com.beust.jcommander.Parameter(
