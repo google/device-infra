@@ -163,6 +163,12 @@ public class SessionManager {
     }
   }
 
+  public boolean hasUnarchivedSessions() {
+    synchronized (lock) {
+      return !sessionRunners.isEmpty() || !sessionQueue.isEmpty();
+    }
+  }
+
   /** Tries to poll as many as sessions from the session queue and starts them. */
   @GuardedBy("lock")
   private void startSessions() {

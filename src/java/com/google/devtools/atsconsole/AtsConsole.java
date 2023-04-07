@@ -26,6 +26,7 @@ import static java.util.Arrays.stream;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.Annotations.ConsoleLineReader;
@@ -48,6 +49,7 @@ import java.util.logging.Formatter;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -259,7 +261,11 @@ public class AtsConsole implements Callable<Void> {
 
     @Override
     public String format(LogRecord record) {
-      return String.format("%s\n", record.getMessage());
+      return String.format("%s\n%s", record.getMessage(), printThrowable(record.getThrown()));
+    }
+
+    private static String printThrowable(@Nullable Throwable e) {
+      return e == null ? "" : Throwables.getStackTraceAsString(e);
     }
   }
 }

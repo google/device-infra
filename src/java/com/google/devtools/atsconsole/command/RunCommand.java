@@ -19,12 +19,15 @@ package com.google.devtools.atsconsole.command;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.util.concurrent.Futures.addCallback;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static java.util.Objects.requireNonNull;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.controller.olcserver.AtsSessionStub;
@@ -37,14 +40,12 @@ import com.google.devtools.atsconsole.result.xml.XmlResultFormatter;
 import com.google.devtools.atsconsole.result.xml.XmlResultUtil;
 import com.google.devtools.atsconsole.testbed.config.YamlTestbedUpdater;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
-import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -274,7 +275,8 @@ final class RunCommand implements Callable<Integer> {
                 .collect(toImmutableList())
             : ImmutableList.of();
 
-    ListenableFuture<AtsSessionPluginOutput> outputFuture =
+    // Asynchronously runs the session.
+    addCallback(
         atsSessionStub.runSession(
             "run_command",
             AtsSessionPluginConfig.newBuilder()
@@ -283,24 +285,32 @@ final class RunCommand implements Callable<Integer> {
                         .setTestPlan(config)
                         .addAllDeviceSerial(deviceSerials)
                         .addAllModules(modules))
-                .build());
+                .build()),
+        new RunSessionFutureCallback(),
+        directExecutor());
+    logger.atInfo().log("Command submitted.");
+    return 0;
+  }
 
-    logger.atInfo().log("Waiting for ATS session result");
-    AtsSessionPluginOutput output =
-        MoreFutures.get(
-            outputFuture, InfraErrorId.ATSC_RUN_COMMAND_ATS_SESSION_UNEXPECTED_EXCEPTION);
-    switch (output.getResultCase()) {
-      case SUCCESS:
-        consoleUtil.printLine(output.getSuccess().getOutputMessage());
-        break;
-      case FAILURE:
-        consoleUtil.printLine(output.getFailure().getErrorMessage());
-        break;
-      default:
-        break;
+  private class RunSessionFutureCallback implements FutureCallback<AtsSessionPluginOutput> {
+
+    @Override
+    public void onSuccess(AtsSessionPluginOutput output) {
+      switch (requireNonNull(output).getResultCase()) {
+        case SUCCESS:
+          consoleUtil.printLine(output.getSuccess().getOutputMessage());
+          break;
+        case FAILURE:
+          consoleUtil.printLine("Error: " + output.getFailure().getErrorMessage());
+          break;
+        default:
+      }
     }
 
-    return 0;
+    @Override
+    public void onFailure(Throwable error) {
+      logger.atWarning().withCause(error).log("Failed to run command");
+    }
   }
 
   private void validateConfig() {

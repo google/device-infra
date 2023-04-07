@@ -26,6 +26,7 @@ import com.google.devtools.deviceinfra.infra.client.api.Annotations.GlobalIntern
 import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
 import com.google.inject.Guice;
@@ -56,6 +57,7 @@ public class OlcServer {
 
   private final SessionService sessionService;
   private final VersionService versionService;
+  private final ControlService controlService;
   private final ListeningScheduledExecutorService threadPool;
   private final LocalMode localMode;
   private final EventBus globalInternalEventBus;
@@ -64,11 +66,13 @@ public class OlcServer {
   OlcServer(
       SessionService sessionService,
       VersionService versionService,
+      ControlService controlService,
       ListeningScheduledExecutorService threadPool,
       LocalMode localMode,
       @GlobalInternalEventBus EventBus globalInternalEventBus) {
     this.sessionService = sessionService;
     this.versionService = versionService;
+    this.controlService = controlService;
     this.threadPool = threadPool;
     this.localMode = localMode;
     this.globalInternalEventBus = globalInternalEventBus;
@@ -84,6 +88,7 @@ public class OlcServer {
     int port = Flags.instance().olcServerPort.getNonNull();
     Server server =
         NettyServerBuilder.forPort(port)
+            .addService(controlService)
             .addService(sessionService)
             .addService(versionService)
             .build();

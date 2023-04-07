@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
@@ -27,6 +28,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.port.PortProber;
 import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
@@ -45,6 +47,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ChannelFactory;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -191,6 +194,12 @@ public class OlcServerIntegrationTest {
       CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
       SessionId sessionId = createSessionResponse.getSessionId();
 
+      // Verifies the server cannot be killed.
+      ControlStub controlStub = new ControlStub(channel);
+      KillServerResponse killServerResponse = controlStub.killServer();
+      assertThat(killServerResponse)
+          .isEqualTo(KillServerResponse.newBuilder().setSuccessful(false).build());
+
       // Waits until the session finishes.
       GetSessionResponse getSessionResponse;
       do {
@@ -229,6 +238,14 @@ public class OlcServerIntegrationTest {
                                                       .build()))
                                           .build())))
                   .build());
+
+      // Verifies the server is killed.
+      assertThat(serverProcess.isAlive()).isTrue();
+      killServerResponse = controlStub.killServer();
+      assertThat(killServerResponse)
+          .isEqualTo(KillServerResponse.newBuilder().setSuccessful(true).build());
+      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(3L));
+      assertThat(serverProcess.isAlive()).isFalse();
     } catch (
         @SuppressWarnings("InterruptedExceptionSwallowed")
         Throwable e) {

@@ -28,11 +28,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.port.PortProber;
 import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.file.Path;
+import java.time.Duration;
 import javax.inject.Inject;
 import org.jline.reader.History;
 import org.jline.reader.LineReader;
@@ -146,6 +148,9 @@ public final class AtsConsoleTest {
 
     atsConsole.call();
 
-    assertThat(consoleOutputStream.toString(UTF_8)).isEqualTo("Unimplemented AtsSessionPlugin\n");
+    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(15L));
+
+    assertThat(consoleOutputStream.toString(UTF_8))
+        .isEqualTo("Error: Unimplemented AtsSessionPlugin\n");
   }
 }

@@ -67,6 +67,7 @@ java_library(
         ":annotations",
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:channel_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",
         "@io_grpc_grpc_java//core",
@@ -81,6 +82,7 @@ java_library(
     srcs = ["ServerPreparer.java"],
     deps = [
         ":annotations",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",
         "//src/java/com/google/devtools/atsconsole:annotations",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
@@ -88,6 +90,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",

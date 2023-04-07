@@ -29,11 +29,15 @@ public class Annotations {
 
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
-  @interface ServerVersionStub {}
+  @interface ServerControlStub {}
 
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   @interface ServerSessionStub {}
+
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  @interface ServerVersionStub {}
 
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)

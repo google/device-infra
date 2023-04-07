@@ -34,6 +34,8 @@ public class FlagsTest {
 
   @Test
   public void parse() throws Exception {
+    Flags.parse(new String[] {"--whatever_flag=hoo"});
+
     assertThat(Flags.instance().supplementalResDir.getNonNull()).isEmpty();
     assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull()).isEqualTo(Duration.ZERO);
 
@@ -51,9 +53,7 @@ public class FlagsTest {
 
     Flags.resetToDefault();
 
-    // deviceinfra:oss-insert-begin(external)
-    // assertThat(Flags.instance().supplementalResDir.getNonNull()).isEmpty();
-    // assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull()).isEqualTo(Duration.ZERO);
-    // deviceinfra:oss-insert-end
+    assertThat(Flags.instance().supplementalResDir.getNonNull()).isEmpty();
+    assertThat(Flags.instance().extraAdbCommandTimeout.getNonNull()).isEqualTo(Duration.ZERO);
   }
 }

@@ -119,7 +119,7 @@ public class AtsSessionStub {
                                     .setExplicitLabel(
                                         SessionPluginLabel.newBuilder().setLabel(SESSION_LABEL)))))
             .build();
-    logger.atInfo().log(
+    logger.atFine().log(
         "Creating session, plugin_config=[%s], request=[%s]",
         shortDebugString(config), shortDebugString(createSessionRequest));
     CreateSessionResponse createSessionResponse;
@@ -128,7 +128,7 @@ public class AtsSessionStub {
     } catch (GrpcExceptionWithErrorId e) {
       return immediateFailedFuture(e);
     }
-    logger.atInfo().log("Session created, response=[%s]", shortDebugString(createSessionResponse));
+    logger.atFine().log("Session created, response=[%s]", shortDebugString(createSessionResponse));
     SessionId sessionId = createSessionResponse.getSessionId();
 
     // Asynchronously gets the session result.
@@ -147,8 +147,6 @@ public class AtsSessionStub {
 
     @Override
     public AtsSessionPluginOutput call() throws MobileHarnessException, InterruptedException {
-      logger.atInfo().log(
-          "Waiting until session finishes, session_id=[%s]", shortDebugString(sessionId));
       SessionStatus sessionStatus = SessionStatus.SESSION_STATUS_UNSPECIFIED;
       try {
         do {
@@ -164,7 +162,7 @@ public class AtsSessionStub {
                   .getSessionStatus();
           if (!newSessionStatus.equals(sessionStatus)) {
             sessionStatus = newSessionStatus;
-            logger.atInfo().log(
+            logger.atFine().log(
                 "Session status: [%s], session_id=[%s]",
                 sessionStatus, shortDebugString(sessionId));
           }
@@ -191,7 +189,7 @@ public class AtsSessionStub {
                 "Failed to get session result, session_id=[%s]", shortDebugString(sessionId)),
             e);
       }
-      logger.atInfo().log("Session result: [%s]", shortDebugString(sessionDetail));
+      logger.atFine().log("Session result: [%s]", shortDebugString(sessionDetail));
 
       // Gets session plugin output.
       return getSessionPluginOutput(sessionDetail);

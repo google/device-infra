@@ -31,6 +31,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole:ats_console_module",
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/deviceinfra/shared/util/port:portprober",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_guava_guava",

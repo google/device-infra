@@ -32,6 +32,19 @@ java_library(
 )
 
 java_library(
+    name = "control_stub",
+    srcs = ["ControlStub.java"],
+    deps = [
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_grpc",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "@io_grpc_grpc_java//core",
+    ],
+)
+
+java_library(
     name = "session_stub",
     srcs = ["SessionStub.java"],
     deps = [

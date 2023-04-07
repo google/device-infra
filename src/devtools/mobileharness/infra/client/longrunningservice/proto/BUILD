@@ -26,6 +26,22 @@ package(
 )
 
 proto_library(
+    name = "control_service_proto",
+    srcs = ["control_service.proto"],
+)
+
+java_proto_library(
+    name = "control_service_java_proto",
+    deps = [":control_service_proto"],
+)
+
+java_grpc_library(
+    name = "control_service_java_grpc",
+    srcs = [":control_service_proto"],
+    deps = [":control_service_java_proto"],
+)
+
+proto_library(
     name = "session_proto",
     srcs = ["session.proto"],
     deps = [

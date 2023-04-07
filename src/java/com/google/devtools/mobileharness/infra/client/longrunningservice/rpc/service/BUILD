@@ -20,6 +20,23 @@ package(
 )
 
 java_library(
+    name = "control_service",
+    srcs = ["ControlService.java"],
+    deps = [
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_grpc",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:callables",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:session_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:future",
+        "@io_grpc_grpc_java//stub",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "session_service",
     srcs = ["SessionService.java"],
     deps = [

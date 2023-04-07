@@ -30,6 +30,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:control_service",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:session_service",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:version_service",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:future",

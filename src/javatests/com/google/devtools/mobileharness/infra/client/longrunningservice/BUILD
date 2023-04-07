@@ -36,6 +36,7 @@ java_library(
     ],
     deps = [
         ":session_plugin_for_testing_java_proto",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",
@@ -43,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/port:portprober",
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:channel_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",

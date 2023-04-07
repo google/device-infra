@@ -82,6 +82,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDaemon = enableDaemonDefault;
 
+  private static final Flag<Boolean> atsConsoleAlwaysRestartOlcServerDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_console_always_restart_olc_server",
+      description =
+          "Whether to always restart OLC server (if possible) when starting ATS console instead of"
+              + " reusing an existing one. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> atsConsoleAlwaysRestartOlcServer = atsConsoleAlwaysRestartOlcServerDefault;
+
   private static final Flag<String> atsConsoleOlcServerPathDefault = Flag.value(null);
 
   @com.beust.jcommander.Parameter(
@@ -490,7 +500,9 @@ public class Flags {
 
   /** It is necessary to call this method in main() in OSS. */
   public static void parse(String[] args) {
-    new com.beust.jcommander.JCommander(instance()).parse(args);
+    com.beust.jcommander.JCommander commander = new com.beust.jcommander.JCommander(instance());
+    commander.setAcceptUnknownOptions(true);
+    commander.parse(args);
   }
 
   /**
