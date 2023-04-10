@@ -23,6 +23,7 @@ import com.google.devtools.atsconsole.result.proto.ReportProto.Module;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Result;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Test;
 import com.google.devtools.atsconsole.result.proto.ReportProto.TestCase;
+import com.google.security.annotations.SuppressBanSerializableCompletedSecurityReview;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -90,6 +91,7 @@ public class CompatibilityReportChecksumHelper {
    * @throws ChecksumValidationException if get errors in deserializing the checksum file
    */
   @VisibleForTesting
+  @SuppressBanSerializableCompletedSecurityReview
   CompatibilityReportChecksumHelper(File directory, String buildFingerprint)
       throws ChecksumValidationException {
     this.buildFingerprint = buildFingerprint;

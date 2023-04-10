@@ -20,6 +20,7 @@ java_library(
         "//src/javatests/com/google/devtools/atsconsole/result/checksum:__pkg__",
     ],
     deps = [
+        "//java/com/google/security/annotations:suppress_ban_serializable_completed_security_review",
         "//src/devtools/atsconsole/result/proto:report_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
