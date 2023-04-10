@@ -342,10 +342,21 @@ public class Fastboot {
       //  usb:1-9
       // 0A241JECB02904         fastboot
       //  usb:3-1
-      List<String> lines = Splitters.LINE_SPLITTER.splitToList(output);
-      for (int i = 0; i < lines.size(); i++) {
-        if (lines.get(i).startsWith(serial + " ")) {
-          String usb = lines.get(i + 1).trim();
+      //
+      // Since fastboot version 33.0.3, the usb locations are merged into the same line:
+      // 29271FDH300LFX         fastboot usb:1-14.4.4.2
+      List<String> words =
+          Splitters.LINE_OR_WHITESPACE_SPLITTER
+              .trimResults()
+              .omitEmptyStrings()
+              .splitToList(output);
+      if (words.size() % 3 != 0) {
+        logger.atSevere().log("Invalid fastboot -l format %s", output);
+        return "";
+      }
+      for (int i = 0; i < words.size() - 2; i += 3) {
+        if (words.get(i).contentEquals(serial)) {
+          String usb = words.get(i + 2).trim();
           if (usb.startsWith("usb:")) {
             return usb.substring("usb:".length());
           }

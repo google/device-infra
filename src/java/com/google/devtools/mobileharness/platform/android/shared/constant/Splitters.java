@@ -28,5 +28,7 @@ public final class Splitters {
   /** New line splitter. */
   public static final Splitter LINE_SPLITTER = Splitter.onPattern("\r\n|\n|\r");
 
+  public static final Splitter LINE_OR_WHITESPACE_SPLITTER = Splitter.onPattern("\r\n|\n|\r|\\s+");
+
   private Splitters() {}
 }
