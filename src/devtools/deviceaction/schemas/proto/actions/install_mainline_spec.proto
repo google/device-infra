@@ -32,4 +32,5 @@ message InstallMainlineSpec {
   }
   repeated string package_file_path = 1;
   optional string train_folder_path = 2;
+  optional bool enable_rollback = 3;
 }
