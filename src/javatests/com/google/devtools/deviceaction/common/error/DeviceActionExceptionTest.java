@@ -17,9 +17,10 @@
 package com.google.devtools.deviceaction.common.error;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.devtools.mobileharness.api.model.error.BasicErrorId.SYSTEM_INVALID_PROCESS_ID;
 
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
-import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -58,8 +59,19 @@ public final class DeviceActionExceptionTest {
 
   @Test
   public void construct_convertMobileHarness() {
-    MobileHarnessException cause =
-        new MobileHarnessException(BasicErrorId.SYSTEM_INVALID_PROCESS_ID, "message");
+    MobileHarnessException cause = new MobileHarnessException(SYSTEM_INVALID_PROCESS_ID, "message");
+
+    DeviceActionException e = new DeviceActionException(cause, "format %s %d.", "arg1", 2);
+
+    assertThat(e)
+        .hasMessageThat()
+        .isEqualTo("[DA|UNDETERMINED|SYSTEM_INVALID_PROCESS_ID|31655] format arg1 2.");
+    assertThat(e).hasCauseThat().isEqualTo(cause);
+  }
+
+  @Test
+  public void construct_convertDeviceInfraHarness() {
+    DeviceInfraException cause = new DeviceInfraException(SYSTEM_INVALID_PROCESS_ID, "message");
 
     DeviceActionException e = new DeviceActionException(cause, "format %s %d.", "arg1", 2);
 

@@ -29,6 +29,7 @@ java_library(
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
+        "//src/java/com/google/devtools/deviceinfra/api/error:exception",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:junit_junit",
