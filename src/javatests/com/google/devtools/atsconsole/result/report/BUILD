@@ -25,18 +25,38 @@ filegroup(
 java_library(
     name = "report",
     testonly = 1,
-    srcs = glob(["*.java"]),
+    srcs = glob(
+        ["*.java"],
+        exclude = ["TestModule.java"],
+    ),
     data = [
         ":testdata",
     ],
     deps = [
+        ":test_module",
         "//src/devtools/atsconsole/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_merger",
         "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_parser",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/atsconsole/util:test_runfiles_util",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
+    ],
+)
+
+java_library(
+    name = "test_module",
+    srcs = ["TestModule.java"],
+    deps = [
+        "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_module",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:thread_factory_util",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 

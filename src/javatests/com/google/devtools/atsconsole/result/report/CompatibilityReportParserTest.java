@@ -80,20 +80,37 @@ public final class CompatibilityReportParserTest {
             Attribute.newBuilder()
                 .setKey("command_line_args")
                 .setValue("cts -s 12241FDD4002Z6")
-                .build());
+                .build(),
+            Attribute.newBuilder().setKey("devices").setValue("12241FDD4002Z6").build())
+        .inOrder();
 
+    assertThat(result.getBuild().getBuildFingerprint())
+        .isEqualTo(
+            "google/bramble/bramble:UpsideDownCake/UP1A.220722.002/8859461:userdebug/dev-keys");
     assertThat(result.getBuild().getAttributeList())
         .containsExactly(
-            Attribute.newBuilder().setKey("invocation-id").setValue("1").build(),
+            Attribute.newBuilder()
+                .setKey("adb_version")
+                .setValue("1.0.41 install path: /usr/bin/adb")
+                .build(),
             Attribute.newBuilder()
                 .setKey("command_line_args")
                 .setValue("cts -s 12241FDD4002Z6")
                 .build(),
             Attribute.newBuilder()
-                .setKey("adb_version")
-                .setValue("1.0.41 install path: /usr/bin/adb")
+                .setKey("device_kernel_info")
+                .setValue(
+                    "Linux localhost 5.10.149-android13-4-693040-g6422af733678-ab9739629 #1 SMP"
+                        + " PREEMPT Fri Mar 10 01:44:38 UTC 2023 aarch64 Toybox")
                 .build(),
-            Attribute.newBuilder().setKey("java_version").setValue("19.0.2").build());
+            Attribute.newBuilder().setKey("invocation-id").setValue("1").build(),
+            Attribute.newBuilder().setKey("java_version").setValue("19.0.2").build(),
+            Attribute.newBuilder()
+                .setKey("build_fingerprint")
+                .setValue(
+                    "google/bramble/bramble:UpsideDownCake/UP1A.220722.002/8859461:userdebug/dev-keys")
+                .build())
+        .inOrder();
 
     assertThat(result.getRunHistory().getRunCount()).isEqualTo(2);
     assertThat(result.getRunHistory().getRun(0))

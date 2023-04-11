@@ -27,6 +27,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -34,4 +35,31 @@ java_library(
     name = "context",
     srcs = ["Context.java"],
     deps = ["//src/devtools/atsconsole/result/proto:report_java_proto"],
+)
+
+java_library(
+    name = "compatibility_report_merger",
+    srcs = ["CompatibilityReportMerger.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/atsconsole/result/report:__pkg__",
+    ],
+    deps = [
+        ":compatibility_report_parser",
+        "//src/devtools/atsconsole/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/atsconsole/result/xml:xml_constants",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "compatibility_report_module",
+    srcs = ["CompatibilityReportModule.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/atsconsole/result/report:__pkg__",
+    ],
+    deps = ["@maven//:com_google_inject_guice"],
 )

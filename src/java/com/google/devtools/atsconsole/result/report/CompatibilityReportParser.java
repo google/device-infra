@@ -18,8 +18,10 @@ package com.google.devtools.atsconsole.result.report;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Map.Entry.comparingByKey;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Attribute;
 import com.google.devtools.atsconsole.result.proto.ReportProto.BuildInfo;
@@ -49,6 +51,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Optional;
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
@@ -69,7 +72,8 @@ public class CompatibilityReportParser {
   private final LocalFileUtil localFileUtil;
   private final XMLInputFactory xmlInputFactory;
 
-  public CompatibilityReportParser(XMLInputFactory xmlInputFactory) {
+  @Inject
+  CompatibilityReportParser(XMLInputFactory xmlInputFactory) {
     this(xmlInputFactory, new LocalFileUtil());
   }
 
@@ -250,24 +254,82 @@ public class CompatibilityReportParser {
 
   private static void handleResult(StartElement result, Context context) {
     Map<String, String> attributeMap = getAttributeMap(result);
-    context.resultBuilder.addAllAttribute(
-        attributeMap.entrySet().stream()
-            .map(
-                attr ->
-                    Attribute.newBuilder().setKey(attr.getKey()).setValue(attr.getValue()).build())
-            .collect(toImmutableList()));
+    ImmutableList.Builder<Attribute> attributes = ImmutableList.builder();
+    // Ensures attributes start, end, start_display, end_display are showed at the beginning.
+    if (attributeMap.containsKey(XmlConstants.START_TIME_ATTR)) {
+      attributes.add(
+          Attribute.newBuilder()
+              .setKey(XmlConstants.START_TIME_ATTR)
+              .setValue(attributeMap.get(XmlConstants.START_TIME_ATTR).trim())
+              .build());
+      attributeMap.remove(XmlConstants.START_TIME_ATTR);
+    }
+    if (attributeMap.containsKey(XmlConstants.END_TIME_ATTR)) {
+      attributes.add(
+          Attribute.newBuilder()
+              .setKey(XmlConstants.END_TIME_ATTR)
+              .setValue(attributeMap.get(XmlConstants.END_TIME_ATTR).trim())
+              .build());
+      attributeMap.remove(XmlConstants.END_TIME_ATTR);
+    }
+    if (attributeMap.containsKey(XmlConstants.START_DISPLAY_TIME_ATTR)) {
+      attributes.add(
+          Attribute.newBuilder()
+              .setKey(XmlConstants.START_DISPLAY_TIME_ATTR)
+              .setValue(attributeMap.get(XmlConstants.START_DISPLAY_TIME_ATTR).trim())
+              .build());
+      attributeMap.remove(XmlConstants.START_DISPLAY_TIME_ATTR);
+    }
+    if (attributeMap.containsKey(XmlConstants.END_DISPLAY_TIME_ATTR)) {
+      attributes.add(
+          Attribute.newBuilder()
+              .setKey(XmlConstants.END_DISPLAY_TIME_ATTR)
+              .setValue(attributeMap.get(XmlConstants.END_DISPLAY_TIME_ATTR).trim())
+              .build());
+      attributeMap.remove(XmlConstants.END_DISPLAY_TIME_ATTR);
+    }
+
+    // Appends the rest of attributes
+    attributeMap.entrySet().stream()
+        .sorted(comparingByKey())
+        .map(
+            attr ->
+                Attribute.newBuilder()
+                    .setKey(attr.getKey())
+                    .setValue(attr.getValue().trim())
+                    .build())
+        .forEach(attributes::add);
+
+    context.resultBuilder.addAllAttribute(attributes.build());
   }
 
   private static void handleBuildInfo(StartElement buildInfo, Context context) {
     // <Build> is a self-closing tag, update the parent when entering this tag.
     BuildInfo.Builder build = BuildInfo.newBuilder();
     Map<String, String> attributeMap = getAttributeMap(buildInfo);
-    build.addAllAttribute(
+    if (attributeMap.containsKey(XmlConstants.BUILD_FINGERPRINT_ATTR)) {
+      build.setBuildFingerprint(attributeMap.get(XmlConstants.BUILD_FINGERPRINT_ATTR).trim());
+    }
+
+    ImmutableList<Attribute> buildAttributes =
         attributeMap.entrySet().stream()
+            .filter(e -> e.getKey().startsWith("build_"))
+            .sorted(comparingByKey())
             .map(
                 attr ->
                     Attribute.newBuilder().setKey(attr.getKey()).setValue(attr.getValue()).build())
-            .collect(toImmutableList()));
+            .collect(toImmutableList());
+
+    ImmutableList<Attribute> nonBuildAttributes =
+        attributeMap.entrySet().stream()
+            .filter(e -> !e.getKey().startsWith("build_"))
+            .sorted(comparingByKey())
+            .map(
+                attr ->
+                    Attribute.newBuilder().setKey(attr.getKey()).setValue(attr.getValue()).build())
+            .collect(toImmutableList());
+
+    build.addAllAttribute(nonBuildAttributes).addAllAttribute(buildAttributes);
     context.resultBuilder.setBuild(build.build());
   }
 

@@ -37,8 +37,9 @@ message Result {
 
 // Stores info for the <Build> element in the compatibility report.
 message BuildInfo {
+  string build_fingerprint = 1;
   // Attributes in the <Build> element.
-  repeated Attribute attribute = 1;
+  repeated Attribute attribute = 2;
 }
 
 // Stores info for the <RunHistory> element in the <Result> element
