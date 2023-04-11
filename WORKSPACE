@@ -109,6 +109,7 @@ maven_install(
         "net.sf.kxml:kxml2:2.3.0",
         "org.apache.commons:commons-lang3:3.6",
         "org.jline:jline:3.13.3",
+        "org.json:json:20230227",
         "org.mockito:mockito-core:4.3.1",
         "org.reflections:reflections:0.9.10",
         "org.yaml:snakeyaml:1.32",

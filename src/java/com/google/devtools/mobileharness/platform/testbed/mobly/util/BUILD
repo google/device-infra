@@ -31,3 +31,32 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "subdevice_type",
+    srcs = [
+        "MoblySubdeviceType.java",
+    ],
+)
+
+java_library(
+    name = "config_generator",
+    srcs = [
+        "MoblyConfigGenerator.java",
+    ],
+    visibility = [
+        "//java/com/google/wireless/qa/mobileharness/shared:__subpackages__",
+        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+    ],
+    deps = [
+        ":subdevice_type",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:org_json_json",
+    ],
+)
