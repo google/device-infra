@@ -46,7 +46,13 @@ java_library(
     ],
     visibility = [
         "//java/com/google/wireless/qa/mobileharness/shared:__subpackages__",
-        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:__subpackages__",
+    ],
+    runtime_deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:android_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:misc_testbed_subdevice",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:simple_composite_device",
     ],
     deps = [
         ":subdevice_type",

@@ -28,32 +28,6 @@ public enum MoblySubdeviceType {
       /* jsonTypeName= */ "AndroidDevice",
       /* jsonIdKey= */ "serial",
       /* mhClassName= */ "AndroidDevice"),
-  ANDROID_FASTBOOT_DEVICE(
-      /* jsonTypeName= */ "AndroidDevice",
-      /* jsonIdKey= */ "serial",
-      /* mhClassName= */ "AndroidFastbootdModeDevice"),
-  EVB_BOARD_DEVICE(
-      /* jsonTypeName= */ "EvbBoardDevice",
-      /* jsonIdKey= */ "id",
-      /* mhClassName= */ "EvbBoardDevice"),
-  FITBIT_DEVICE(
-      /* jsonTypeName= */ "FitbitDevice",
-      /* jsonIdKey= */ "serial",
-      /* mhClassName= */ "FitbitDevice"),
-  FUCHSIA_DEVICE(
-      /* jsonTypeName= */ "FuchsiaDevice",
-      /* jsonIdKey= */ "name",
-      /* mhClassName= */ "FuchsiaDevice"),
-  IOS_DEVICE(
-      /* jsonTypeName= */ "IosDevice", /* jsonIdKey= */ "udid", /* mhClassName= */ "IosDevice"),
-  JLINK_DEVICE(
-      /* jsonTypeName= */ "JlinkDevice",
-      /* jsonIdKey= */ "serial",
-      /* mhClassName= */ "JlinkDevice"),
-  NEST_NDM_DEVICE(
-      // Based on the agreement with smorgens@, use "NestDevice" instead of "NestNdmDevice".
-      /* jsonTypeName= */ "NestDevice", /* jsonIdKey= */ "id", /* mhClassName= */ "NestNdmDevice"),
-  ROKU_DEVICE(/* jsonTypeName= */ "Roku", /* jsonIdKey= */ "id", /* mhClassName= */ "Roku"),
   // Mobly users can declare arbitrary controllers for things
   // MobileHarness has no notion of or support for (e.g. a Cellular call box, RF attenuators, giant
   // mech suit). Specifically, this generic testbed config:
@@ -101,31 +75,7 @@ public enum MoblySubdeviceType {
       /* mhClassName= */ "MiscTestbedSubDevice"),
   // Used for testing
   NO_OP_DEVICE(
-      /* jsonTypeName= */ "MiscDevice", /* jsonIdKey= */ "id", /* mhClassName= */ "NoOpDevice"),
-  PIXEL_BUDS_DEVICE(
-      /* jsonTypeName= */ "PixelBudsDevice",
-      /* jsonIdKey= */ "id",
-      /* mhClassName= */ "PixelBudsDevice"),
-  // This allows MoblyTest to be allocated to disconnected devices. Users may use this functionality
-  // to recover disconnected devices.
-  DISCONNECTED_DEVICE(
-      /* jsonTypeName= */ "DisconnectedDevice",
-      /* jsonIdKey= */ "id",
-      /* mhClassName= */ "DisconnectedDevice"),
-  USB_DEVICE(
-      /* jsonTypeName= */ "UsbDevice", /* jsonIdKey= */ "id", /* mhClassName= */ "UsbDevice"),
-  EMBEDDED_LINUX_DEVICE(
-      /* jsonTypeName= */ "EmbeddedLinuxDevice",
-      /* jsonIdKey= */ "id",
-      /* mhClassName= */ "EmbeddedLinuxDevice"),
-  LINUX_DEVICE(
-      /* jsonTypeName= */ "LinuxDevice", /* jsonIdKey= */ "id", /* mhClassName= */ "LinuxDevice"),
-  OPEN_WRT_DEVICE(
-      /* jsonTypeName= */ "OpenWrt", /* jsonIdKey= */ "id", /* mhClassName= */ "OpenWrtDevice"),
-  CROS_DEVICE(
-      /* jsonTypeName= */ "CrosDevice",
-      /* jsonIdKey= */ "hostname",
-      /* mhClassName= */ "CrosDevice");
+      /* jsonTypeName= */ "MiscDevice", /* jsonIdKey= */ "id", /* mhClassName= */ "NoOpDevice");
 
   private final String jsonTypeName;
   private final String jsonIdKey;

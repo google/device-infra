@@ -79,6 +79,27 @@ java_library(
 )
 
 java_library(
+    name = "device_cache",
+    srcs = ["DeviceCache.java"],
+    deps = ["//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache"],
+)
+
+java_library(
+    name = "composite_device_util",
+    srcs = ["CompositeDeviceUtil.java"],
+    visibility = [
+        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+    ],
+    deps = [
+        ":api",
+        ":device_cache",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
     name = "validator_factory",
     srcs = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:ValidatorFactory.java"],
     visibility = [
@@ -244,6 +265,29 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:no_op_decorator_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:no_op_driver_spec_java_proto",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+################################################################################
+# Misc
+################################################################################
+
+java_library(
+    name = "misc_device",
+    srcs = ["device/MiscDevice.java"],
+    deps = [
+        ":base_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+    ],
+)
+
+java_library(
+    name = "misc_testbed_subdevice",
+    srcs = [
+        "device/MiscTestbedSubDevice.java",
+    ],
+    deps = [
+        ":misc_device",
     ],
 )
 
