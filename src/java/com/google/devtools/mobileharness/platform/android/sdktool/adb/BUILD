@@ -38,7 +38,9 @@ java_library(
     ],
     visibility = DEFAULT_VISIBILITY + [
         "//src/java/com/google/devtools/atsconsole:__subpackages__",
+        "//src/java/com/google/devtools/deviceaction:__subpackages__",
         "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
+        "//src/javatests/com/google/devtools/deviceaction:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
