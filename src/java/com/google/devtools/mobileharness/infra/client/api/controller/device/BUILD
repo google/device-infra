@@ -31,9 +31,8 @@ java_library(
     srcs = ["DeviceQuerier.java"],
     visibility =
         DEFAULT_VISIBILITY + [
-            "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
-            # Contact: westinghouse-engprod@, jieplum@
             "//src/java/com/google/devtools/deviceinfra/infra/client/controller:__subpackages__",
+            "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
             "//src/javatests/com/google/devtools/deviceinfra/infra/client/controller:__subpackages__",
         ],
     deps = [
