@@ -36,7 +36,7 @@ java_library(
         "Flag.java",
     ],
     deps = [
-        "@maven//:com_beust_jcommander",
+        "@maven//:com_beust_jcommander:jcommander_updated",
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
@@ -46,7 +46,7 @@ java_library(
     srcs = ["DurationFlag.java"],
     deps = [
         ":flag",
-        "@maven//:com_beust_jcommander",
+        "@maven//:com_beust_jcommander:jcommander_updated",
         "@maven//:com_google_guava_guava",
     ],
 )
