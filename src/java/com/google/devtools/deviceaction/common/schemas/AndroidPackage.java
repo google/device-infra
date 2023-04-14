@@ -22,18 +22,22 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Package
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.File;
 import java.util.Collection;
+import java.util.Optional;
 
 /** Data structure for an Android package. */
 @AutoValue
 public abstract class AndroidPackage {
   public abstract PackageInfo info();
 
+  /** The archived apks file for installation. */
+  public abstract Optional<File> apksFile();
+
   public abstract ImmutableList<File> files();
 
   public abstract boolean isSplit();
 
   public static Builder builder() {
-    return new AutoValue_AndroidPackage.Builder().setIsSplit(false);
+    return new AutoValue_AndroidPackage.Builder().setIsSplit(false).setFiles(ImmutableList.of());
   }
 
   /** Builder for {@link AndroidPackage}. */
@@ -42,6 +46,8 @@ public abstract class AndroidPackage {
     abstract ImmutableList.Builder<File> filesBuilder();
 
     public abstract Builder setInfo(PackageInfo value);
+
+    public abstract Builder setApksFile(File value);
 
     public abstract Builder setFiles(ImmutableList<File> value);
 
