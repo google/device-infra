@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.model.job;
 
+import com.google.common.base.Joiner;
+import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ListMultimap;
@@ -549,6 +551,10 @@ public class JobInfo extends JobScheduleUnit {
     buf.append(String.format("USER&RUN_AS:\t%s\n", jobUser().getRunAs()));
     buf.append(String.format("ACTUAL_USER:\t%s\n", jobUser().getActualUser()));
     buf.append(String.format("TYPE:\t%s\n", JobTypeUtil.toString(type())));
+    if (!dimensions().isEmpty()) {
+      MapJoiner mapJoiner = Joiner.on("\n- ").withKeyValueSeparator("=");
+      buf.append(String.format("\nDIMENSIONS:\n- %s\n", mapJoiner.join(dimensions().getAll())));
+    }
 
     JobSetting jobSetting = setting();
     buf.append(
@@ -569,6 +575,7 @@ public class JobInfo extends JobScheduleUnit {
     buf.append(String.format("TEST_ATTEMPTS:\t%d\n", jobSetting.getRetry().getTestAttempts()));
     buf.append(String.format("RETRY_LEVEL:\t%s\n", jobSetting.getRetry().getRetryLevel()));
     buf.append(String.format("PRIORITY:\t%s\n", jobSetting.getPriority().name()));
+
     String genFileDir = "Unknown";
     try {
       genFileDir = setting().getGenFileDir();
