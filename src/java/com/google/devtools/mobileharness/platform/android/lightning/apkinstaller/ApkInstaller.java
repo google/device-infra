@@ -299,6 +299,7 @@ public class ApkInstaller {
     boolean skipIfVersionMatch = installArgs.skipIfVersionMatch().orElse(false);
     boolean forceNoStreaming = installArgs.forceNoStreaming().orElse(DeviceUtil.inSharedLab());
     boolean forceQueryable = installArgs.forceQueryable().orElse(false);
+    boolean bypassLowTargetSdkBlock = installArgs.bypassLowTargetSdkBlock().orElse(false);
     List<String> extraArgs = new ArrayList<>();
 
     String deviceId = device.getDeviceId();
@@ -383,6 +384,10 @@ public class ApkInstaller {
           userId);
       if (forceQueryable) {
         extraArgs.add("--force-queryable");
+      }
+      if (bypassLowTargetSdkBlock
+          && deviceSdkVersion > AndroidVersion.ANDROID_13.getEndSdkVersion()) {
+        extraArgs.add("--bypass-low-target-sdk-block");
       }
       // If the package name is gms, ignore the grant runtime permissions switch.
       installApkHelper(
