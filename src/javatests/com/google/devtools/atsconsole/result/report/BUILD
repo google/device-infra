@@ -35,6 +35,7 @@ java_library(
     deps = [
         ":test_module",
         "//src/devtools/atsconsole/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_creator",
         "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_merger",
         "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_parser",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
@@ -63,6 +64,7 @@ java_library(
 junit_test_suites(
     name = "tests",
     sizes = [
+        "small",
         "medium",
     ],
     deps = [":report"],

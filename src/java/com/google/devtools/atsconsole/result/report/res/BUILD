@@ -13,16 +13,16 @@
 # limitations under the License.
 #
 
-java_library(
-    name = "compatibility_report_checksum_helper",
-    srcs = ["CompatibilityReportChecksumHelper.java"],
+package(default_applicable_licenses = ["//:license"])
+
+filegroup(
+    name = "compatibility_res",
+    srcs = [
+        "compatibility_result.css",
+        "compatibility_result.xsl",
+        "logo.png",
+    ],
     visibility = [
         "//src/java/com/google/devtools/atsconsole/result/report:__pkg__",
-        "//src/javatests/com/google/devtools/atsconsole/result/checksum:__pkg__",
-    ],
-    deps = [
-        "//src/devtools/atsconsole/result/proto:report_java_proto",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
     ],
 )

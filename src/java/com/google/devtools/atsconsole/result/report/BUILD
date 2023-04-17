@@ -63,3 +63,35 @@ java_library(
     ],
     deps = ["@maven//:com_google_inject_guice"],
 )
+
+java_library(
+    name = "compatibility_report_creator",
+    srcs = ["CompatibilityReportCreator.java"],
+    resources = [
+        "//src/java/com/google/devtools/atsconsole/result/report/res:compatibility_res",
+    ],
+    visibility = [
+        "//src/javatests/com/google/devtools/atsconsole/result/report:__pkg__",
+    ],
+    runtime_deps = [
+        "@maven//:net_sf_kxml_kxml2",
+    ],
+    deps = [
+        ":zip_util",
+        "//src/devtools/atsconsole/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/atsconsole/result/checksum:compatibility_report_checksum_helper",
+        "//src/java/com/google/devtools/atsconsole/result/xml:xml_constants",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+        "@maven//:xmlpull_xmlpull",
+    ],
+)
+
+java_library(
+    name = "zip_util",
+    srcs = ["ZipUtil.java"],
+)
