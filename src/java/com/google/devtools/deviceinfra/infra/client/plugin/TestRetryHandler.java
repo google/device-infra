@@ -397,10 +397,10 @@ public class TestRetryHandler {
         .flatMap(testId -> Optional.ofNullable(testInfo.jobInfo().tests().getById(testId)));
   }
 
-  // We want to make retry after container/sandbox/UTP failure user-invisible. Therefore, we only
-  // consider tests which are not potentially container/UTP error as valid attempts.
+  // We want to make retry after container/sandbox failure user-invisible. Therefore, we only
+  // consider tests which are not potentially container error as valid attempts.
   private static boolean isValidAttempt(TestInfo testInfo) {
-    return !isPotentialContainerError(testInfo) && !isPotentialUtpError(testInfo);
+    return !isPotentialContainerError(testInfo);
   }
 
   /**
