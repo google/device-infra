@@ -103,7 +103,6 @@ java_library(
     name = "validator_factory",
     srcs = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:ValidatorFactory.java"],
     visibility = [
-        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
     ],
     deps = [
         ":api",
@@ -318,9 +317,7 @@ java_library(
 java_library(
     name = "android_device",
     srcs = ["device/AndroidDevice.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = [
         ":api",
         ":base_device",
