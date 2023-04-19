@@ -21,6 +21,15 @@ package(
 )
 
 java_library(
+    name = "field_mask_utils",
+    srcs = ["FieldMaskUtils.java"],
+    deps = [
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf_protobuf_java",
+    ],
+)
+
+java_library(
     name = "str_pair",
     srcs = ["StrPairUtil.java"],
     deps = [
