@@ -134,3 +134,8 @@ message Binary {
   optional Operand second = 2;
   extensions 1000 to max;
 }
+
+// A wrapper for repeated fields.
+message StringArray {
+  repeated string value = 1;
+}

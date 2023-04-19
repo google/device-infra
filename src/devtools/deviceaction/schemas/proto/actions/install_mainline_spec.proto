@@ -30,7 +30,16 @@ message InstallMainlineSpec {
   extend DeviceConfig {
     optional InstallMainlineSpec install_mainline_spec = 516738036;
   }
-  repeated string package_file_path = 1;
-  optional string train_folder_path = 2;
-  optional bool enable_rollback = 3;
+  // Chooses one of the following ways to provide mainline modules.
+  oneof module_oneof {
+    // Each path is for one module.
+    StringArray package_file_paths = 1;
+    // A folder contains all modules for one train.
+    string train_folder_path = 2;
+    // A folder contains zip files for trains.
+    string zip_folder_path = 3;
+  }
+  optional bool enable_rollback = 4;
+  optional bool clean_up_sessions = 5;
+  optional bool dev_key_signed = 6;
 }
