@@ -13,7 +13,8 @@
 # limitations under the License.
 #
 
-load("@rules_android_sdk//android:rules.bzl", "android_binary", "android_library")
+load("@rules_android_sdk//android:rules.bzl", "android_binary")
+load("@io_bazel_rules_kotlin//kotlin:android.bzl", "kt_android_library")
 
 licenses(["notice"])
 
@@ -32,9 +33,16 @@ android_binary(
     deps = [":WifiUtilLib"],
 )
 
-android_library(
+kt_android_library(
     name = "WifiUtilLib",
     srcs = glob(["*.java"]),
     custom_package = "com.google.devtools.mobileharness.platform.android.app.binary.wifiutil",
+    disable_lint_checks = [
+        "WifiManagerLeak",
+        "WifiManagerPotentialLeak",
+        "UnspecifiedImmutableFlag",
+        "HardwareIds",
+        "DefaultLocale",
+    ],
     manifest = "AndroidManifest.xml",
 )

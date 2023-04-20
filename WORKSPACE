@@ -53,6 +53,35 @@ http_archive(
     ],
 )
 
+# Kotlin toolchains
+
+rules_kotlin_version = "1.7.1"
+
+rules_kotlin_sha = "fd92a98bd8a8f0e1cdcb490b93f5acef1f1727ed992571232d33de42395ca9b3"
+
+KOTLIN_VERSION = "1.7.22"
+
+KOTLINC_RELEASE_SHA = "9db4b467743c1aea8a21c08e1c286bc2aeb93f14c7ba2037dbd8f48adc357d83"
+
+http_archive(
+    name = "io_bazel_rules_kotlin",
+    sha256 = rules_kotlin_sha,
+    urls = ["https://github.com/bazelbuild/rules_kotlin/releases/download/v%s/rules_kotlin_release.tgz" % rules_kotlin_version],
+)
+
+load("@io_bazel_rules_kotlin//kotlin:repositories.bzl", "kotlin_repositories", "kotlinc_version")
+
+kotlin_repositories(
+    compiler_release = kotlinc_version(
+        release = KOTLIN_VERSION,
+        sha256 = KOTLINC_RELEASE_SHA,
+    ),
+)
+
+load("@io_bazel_rules_kotlin//kotlin:core.bzl", "kt_register_toolchains")
+
+kt_register_toolchains()
+
 # Android Bazel rules
 http_archive(
     name = "rules_android_sdk",
