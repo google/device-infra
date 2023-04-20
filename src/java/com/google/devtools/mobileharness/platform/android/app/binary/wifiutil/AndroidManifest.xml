@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.google.devtools.mobileharness.platform.android.app.binary.wifiutil">
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <uses-sdk android:minSdkVersion="14"
+              android:targetSdkVersion="31" />
+
+    <application android:usesCleartextTraffic="true">
+        <uses-library android:name="android.test.runner" />
+        <service android:name=".WifiMonitorService"
+                 android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.devtools.mobileharness.platform.android.app.binary.wifiutil.RECONNECT" />
+            </intent-filter>
+        </service>
+    </application>
+
+    <instrumentation android:name="WifiUtil"
+              android:targetPackage="com.google.devtools.mobileharness.platform.android.app.binary.wifiutil"
+              android:label="Wifi shim util">
+    </instrumentation>
+
+</manifest>
