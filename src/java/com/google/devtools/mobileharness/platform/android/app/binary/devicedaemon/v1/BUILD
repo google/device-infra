@@ -16,3 +16,32 @@
 # Description:
 #   MobileHarness Android device daemon version 1 for unlocking device screen
 #   and keeping device awake. Target on devices with API level 27 and below.
+
+load("@rules_android_sdk//android:rules.bzl", "android_binary", "android_library")
+
+android_library(
+    name = "resources",
+    manifest = "AndroidManifest.xml",
+    resource_files = ["//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/shared:resource_files"],
+)
+
+android_library(
+    name = "daemon_lib",
+    srcs = [":resources"] + glob(["*.java"]),
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/shared:daemon_base_activity",
+        "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/shared:res_id",
+        "@maven//:androidx_core_core",
+    ],
+)
+
+android_binary(
+    name = "daemon",
+    manifest = "AndroidManifest.xml",
+    multidex = "legacy",
+    resource_files = ["//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/shared:resource_files"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/app/devicedaemon/impl:__pkg__",
+    ],
+    deps = [":daemon_lib"],
+)

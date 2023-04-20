@@ -53,6 +53,34 @@ http_archive(
     ],
 )
 
+# Android Bazel rules
+http_archive(
+    name = "rules_android_sdk",
+    sha256 = "cd06d15dd8bb59926e4d65f9003bfc20f9da4b2519985c27e190cddc8b7a7806",
+    strip_prefix = "rules_android-0.1.1",
+    urls = ["https://github.com/bazelbuild/rules_android/archive/v0.1.1.zip"],
+)
+
+load("@rules_android_sdk//android:rules.bzl", "android_sdk_repository")
+
+android_sdk_repository(
+    name = "androidsdk",
+    build_tools_version = "30.0.3",
+)
+
+http_archive(
+    name = "rules_android_ndk",
+    sha256 = "3fa4a58f4df356bca277219763f91c64f33dcc59e10843e9762fc5e7947644f9",
+    strip_prefix = "rules_android_ndk-63fa7637902fb1d7db1bf86182e939ed3fe98477",
+    url = "https://github.com/bazelbuild/rules_android_ndk/archive/63fa7637902fb1d7db1bf86182e939ed3fe98477.zip",
+)
+
+load("@rules_android_ndk//:rules.bzl", "android_ndk_repository")
+
+android_ndk_repository(
+    name = "androidndk",
+)
+
 # gRPC
 http_archive(
     name = "io_grpc_grpc_java",
@@ -85,6 +113,8 @@ load("@rules_jvm_external//:defs.bzl", "maven_install")
 
 maven_install(
     artifacts = [
+        "androidx.annotation:annotation:1.2.0",
+        "androidx.core:core:1.6.0",
         "com.beust:jcommander:1.82",
         "com.google.auto.value:auto-value:1.9",
         "com.google.auto.value:auto-value-annotations:1.9",

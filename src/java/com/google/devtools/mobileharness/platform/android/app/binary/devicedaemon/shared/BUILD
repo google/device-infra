@@ -15,3 +15,44 @@
 
 # Description:
 #   Resource and Utils for MobileHarness Android device daemon app.
+
+load("@rules_android_sdk//android:rules.bzl", "android_library")
+
+package(
+    default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/app/binary:__subpackages__",
+    ],
+)
+
+filegroup(
+    name = "resource_files",
+    srcs = glob(["res/**"]),
+)
+
+android_library(
+    name = "daemon_util",
+    srcs = [
+        "DaemonUtil.java",
+    ],
+    deps = [
+        "@maven//:androidx_annotation_annotation",
+    ],
+)
+
+android_library(
+    name = "res_id",
+    srcs = [
+        "ResId.java",
+    ],
+)
+
+android_library(
+    name = "daemon_base_activity",
+    srcs = [
+        "DaemonBaseActivity.java",
+    ],
+    deps = [
+        ":daemon_util",
+        ":res_id",
+    ],
+)
