@@ -20,8 +20,8 @@ java_library(
         "DeviceDaemonApkInfoImplV2.java",
     ],
     resources = [
-        "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/prebuilt/v1:daemon",
-        "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/prebuilt/v2:daemon",
+        "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/v1:daemon.apk",
+        "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/v2:daemon.apk",
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/platform/android/app/devicedaemon:__subpackages__",
