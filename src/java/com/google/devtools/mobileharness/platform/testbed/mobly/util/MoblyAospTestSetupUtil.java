@@ -29,17 +29,16 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
 
-/** Utility for executing Mobly tests packaged as zip source distributions (e.g. from AOSP). */
+/** Utility for running Mobly tests packaged in AOSP and distributed via the Android Build. */
 public class MoblyAospTestSetupUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public static final String TEST_SELECTOR_ALL = "all";
-  public static final String DEFAULT_TEST_PATH = "suite_main.py";
+  public static final String REQUIREMENTS_TXT = "requirements.txt";
 
   private final LocalFileUtil localFileUtil;
   private final CommandExecutor executor;
@@ -57,8 +56,8 @@ public class MoblyAospTestSetupUtil {
   /**
    * Sets up the host for Mobly and generates an executable test command.
    *
-   * @param moblyZip The {@link Path} to the zipped Mobly test package. See go/mobly-mh-aosp-codelab
-   *     for details regarding its format.
+   * @param moblyPkg The {@link Path} to the Mobly test package. See go/mobly-mh-aosp-codelab for
+   *     details regarding its format.
    * @param moblyUnzipDir The destination {@link Path} to unzip the Mobly package to.
    * @param venvPath The {@link Path} at which a venv should be generated.
    * @param configFile The {@link Path} to the Mobly test config.
@@ -67,7 +66,7 @@ public class MoblyAospTestSetupUtil {
    * @param pythonVersion Desired Python version.
    */
   public String[] setupEnvAndGenerateTestCommand(
-      Path moblyZip,
+      Path moblyPkg,
       Path moblyUnzipDir,
       Path venvPath,
       Path configFile,
@@ -77,7 +76,7 @@ public class MoblyAospTestSetupUtil {
       throws MobileHarnessException, InterruptedException {
     Path sysPythonBin = getPythonPath(pythonVersion);
     Path venvPythonBin = createVenv(sysPythonBin, venvPath);
-    Path moblyTestBin = resolveMoblyTestBin(moblyZip, moblyUnzipDir, testPath);
+    Path moblyTestBin = resolveMoblyTestBin(moblyPkg, moblyUnzipDir, testPath);
     installMoblyTestPackage(venvPythonBin, moblyUnzipDir);
 
     return getTestCommand(venvPythonBin, moblyTestBin, configFile, testCaseSelector);
@@ -126,16 +125,19 @@ public class MoblyAospTestSetupUtil {
                   + " Executables found: %s.",
               pythonVersion, possiblePythons));
     }
-    return Paths.get(result.stdout().trim());
+    return Path.of(result.stdout().trim());
   }
 
-  /** Unzips the test package and resolves the test binary path. */
+  /**
+   * Unzips the test package and resolves the test binary path. If testPath is not specified, assume
+   * that the test package itself is executable, and return its path instead.
+   */
   @VisibleForTesting
-  Path resolveMoblyTestBin(Path moblyZip, Path moblyUnzipDir, @Nullable String testPath)
+  Path resolveMoblyTestBin(Path moblyPkg, Path moblyUnzipDir, @Nullable String testPath)
       throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Unzipping Mobly test package to %s", moblyUnzipDir);
     try {
-      localFileUtil.unzipFile(moblyZip, moblyUnzipDir);
+      localFileUtil.unzipFile(moblyPkg, moblyUnzipDir);
       localFileUtil.grantFileOrDirFullAccessRecursively(moblyUnzipDir);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
@@ -144,18 +146,18 @@ public class MoblyAospTestSetupUtil {
           e);
     }
     if (testPath == null) {
-      logger.atInfo().log(
-          "No test path specified by user. Using %s as default.", DEFAULT_TEST_PATH);
-      testPath = DEFAULT_TEST_PATH;
+      logger.atInfo().log("No test path specified by user. Run the test package directly.");
+      return moblyPkg;
+    } else {
+      Path moblyTestBin = moblyUnzipDir.resolve(testPath);
+      if (!localFileUtil.isFileExist(moblyTestBin)) {
+        throw new MobileHarnessException(
+            ExtErrorId.MOBLY_AOSP_RESOLVE_TEST_PATH_ERROR,
+            String.format(
+                "The specified test file %s does not exist in the given test package.", testPath));
+      }
+      return moblyTestBin;
     }
-    Path moblyTestBin = moblyUnzipDir.resolve(testPath);
-    if (!localFileUtil.isFileExist(moblyTestBin)) {
-      throw new MobileHarnessException(
-          ExtErrorId.MOBLY_AOSP_RESOLVE_TEST_PATH_ERROR,
-          String.format(
-              "The specified test file %s does not exist in the given test package.", testPath));
-    }
-    return moblyTestBin;
   }
 
   /** Installs the Mobly test package. */
@@ -167,7 +169,13 @@ public class MoblyAospTestSetupUtil {
     pipCmd.add("-m");
     pipCmd.add("pip");
     pipCmd.add("install");
-    pipCmd.add(moblyUnzipDir.toString());
+    String requirementsFile = moblyUnzipDir.resolve(REQUIREMENTS_TXT).toString();
+    if (localFileUtil.isFileExist(requirementsFile)) {
+      pipCmd.add("-r");
+      pipCmd.add(requirementsFile);
+    } else {
+      pipCmd.add(moblyUnzipDir.toString());
+    }
     logger.atInfo().log(
         "Installing Mobly test package with command: %s.",
         new StringBuilder(Joiner.on(" ").join(pipCmd)));
@@ -177,7 +185,8 @@ public class MoblyAospTestSetupUtil {
       throw new MobileHarnessException(
           ExtErrorId.MOBLY_AOSP_PIP_INSTALL_ERROR,
           "Failed to install the test package via pip. Please check the error logs. Make sure "
-              + "that the test package contains a valid 'setup.cfg' or 'pyproject.toml' file.",
+              + "that the test package contains a valid "
+              + "'requirements.txt'/'setup.cfg'/'pyproject.toml' file.",
           e);
     }
   }
