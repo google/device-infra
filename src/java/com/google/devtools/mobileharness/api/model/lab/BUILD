@@ -41,7 +41,8 @@ java_library(
         "DeviceLocator.java",
         "LabLocator.java",
     ],
-    visibility = DEFAULT_VISIBILITY,
+    visibility = DEFAULT_VISIBILITY + [
+    ],
     exports = [
         "//src/java/com/google/devtools/mobileharness/api/model/lab/in:ports",
     ],
