@@ -67,6 +67,12 @@ import org.reflections.util.ConfigurationBuilder;
  * load all classes with {@link Plugin} annotation and the default plugin type {@link
  * PluginType#UNSPECIFIED} instead.
  *
+ * <p>If forceLoadFromJarClassRegex is specified, we force loading of classes with names matching
+ * the supplied regex from our plugin {@link classLoader}, rather than its parent {@link
+ * ClassLoader}. This can be used to resolve problems arising from a plugin's unintended use of
+ * classes from Mobile Harness, rather than its own classes (since parent classes are always used,
+ * if they are present).
+ *
  * <p>{@code moduleClassNames} follows the same pattern, however uses {@link PluginModule} instead.
  */
 @NotThreadSafe
@@ -79,6 +85,13 @@ public class PluginLoader implements AutoCloseable {
   @Nullable private final String className;
   /** If specified, only loads the given classes as plugin modules. */
   @Nullable private final ImmutableList<String> moduleClassNames;
+  /**
+   * If specified, force loading of classes with names matching the supplied regex from our plugin
+   * {@link classLoader}, rather than its parent {@link ClassLoader}. This can be used to resolve
+   * problems arising from a plugin's unintended use of classes from Mobile Harness, rather than its
+   * own classes (since parent classes are always used, if they are present).
+   */
+  @Nullable private final String forceLoadFromJarClassRegex;
 
   @Nullable private final LogCollector<?> log;
 
@@ -119,6 +132,7 @@ public class PluginLoader implements AutoCloseable {
       Iterable<URI> jarUris,
       @Nullable String className,
       @Nullable Collection<String> moduleClassNames,
+      @Nullable String forceLoadFromJarClassRegex,
       PluginType pluginType,
       @Nullable LogCollector<?> log,
       Module... systemModules) {
@@ -133,6 +147,7 @@ public class PluginLoader implements AutoCloseable {
     } else {
       this.moduleClassNames = null;
     }
+    this.forceLoadFromJarClassRegex = forceLoadFromJarClassRegex;
     this.pluginType = pluginType;
     this.log = log;
     this.systemModules = ImmutableList.copyOf(systemModules);
@@ -154,6 +169,7 @@ public class PluginLoader implements AutoCloseable {
       Collection<String> jarPaths,
       @Nullable String className,
       @Nullable Collection<String> moduleClassNames,
+      @Nullable String forceLoadFromJarClassRegex,
       PluginType pluginType,
       @Nullable LogCollector<?> log,
       Module... systemModules) {
@@ -161,6 +177,7 @@ public class PluginLoader implements AutoCloseable {
         jarPaths.stream().map(File::new).map(File::toURI).collect(Collectors.toList()),
         className,
         moduleClassNames,
+        forceLoadFromJarClassRegex,
         pluginType,
         log,
         systemModules);
@@ -191,7 +208,7 @@ public class PluginLoader implements AutoCloseable {
         }
       }
       logger.atInfo().log("Loading plugins from jars %s", jarUrls);
-      classLoader = new URLClassLoader(jarUrls.toArray(new URL[0]));
+      classLoader = new PluginClassLoader(jarUrls);
 
       // Finds plugin module classes.
       Set<Class<? extends Module>> moduleClasses;
@@ -368,11 +385,57 @@ public class PluginLoader implements AutoCloseable {
         Collection<String> jarPaths,
         @Nullable String className,
         @Nullable Collection<String> moduleClassNames,
+        @Nullable String forceLoadFromJarClassRegex,
         PluginType pluginType,
         @Nullable LogCollector<?> log,
         Module... systemModules) {
       return new PluginLoader(
-          jarPaths, className, moduleClassNames, pluginType, log, systemModules);
+          jarPaths,
+          className,
+          moduleClassNames,
+          forceLoadFromJarClassRegex,
+          pluginType,
+          log,
+          systemModules);
+    }
+  }
+
+  /**
+   * Operates exactly as a {@link URLClassLoader}, with the exception that any classes with names
+   * matching the optional {@link #forceLoadFromJarClassRegex} will not be loaded from the parent
+   * {@link ClassLoader}.
+   *
+   * <p>This gives plugin authors a mechanism to force the system to load certain classes from their
+   * plugin library, rather than from Mobile Harness, in situations where an unintended mixing of
+   * classes from the parent (Mobile Harness) classloader results in problems.
+   */
+  private final class PluginClassLoader extends URLClassLoader {
+
+    private PluginClassLoader(List<URL> jarUrls) {
+      super(jarUrls.toArray(new URL[0]));
+    }
+
+    @Override
+    protected Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+      synchronized (getClassLoadingLock(name)) {
+        // First, check if the class has already been loaded
+        Class<?> c = findLoadedClass(name);
+        if (c == null) {
+          if (forceLoadFromJarClassRegex != null && name.matches(forceLoadFromJarClassRegex)) {
+            logger.atInfo().log(
+                "Class %s forced to load from plugin library only, by"
+                    + " *_force_load_from_jar_class_regex = %s",
+                name, forceLoadFromJarClassRegex);
+            c = findClass(name);
+            if (resolve) {
+              resolveClass(c);
+            }
+          } else {
+            c = super.loadClass(name, resolve);
+          }
+        }
+        return c;
+      }
     }
   }
 }
