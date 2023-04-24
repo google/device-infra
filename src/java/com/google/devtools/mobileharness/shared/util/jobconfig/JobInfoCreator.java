@@ -278,12 +278,12 @@ public final class JobInfoCreator {
     List<String> apksUnderTest = new ArrayList<>();
     for (FileConfig fileConfig : jobConfig.getFiles().getContentList()) {
       String tag = fileConfig.getTag();
-      if (TAG_DEVICE_SPEC.equals(tag)) {
+      if (tag.equals(TAG_DEVICE_SPEC)) {
         continue;
       }
       if (!overridingFiles.containsKey(tag)) {
         List<String> files = new ArrayList<>(fileConfig.getPathList());
-        if (TAG_BUILD_APK.equals(tag)) {
+        if (tag.equals(TAG_BUILD_APK)) {
           apksUnderTest = putApksUnderTestInFront(files);
         }
         for (String file : files) {
