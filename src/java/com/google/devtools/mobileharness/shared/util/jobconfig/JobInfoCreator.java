@@ -310,12 +310,7 @@ public final class JobInfoCreator {
                       "Failed to copy file from %s to %s.", fileOrDirPath, fileValue);
                 }
               } else {
-                try {
-                  jobInfo.files().add(tag, fileOrDirPath);
-                } catch (MobileHarnessException e) {
-                  logger.atWarning().withCause(e).log(
-                      "Failed to add file %s as tag %s.", fileOrDirPath, tag);
-                }
+                jobInfo.files().add(tag, fileOrDirPath);
               }
             }
           } else {
