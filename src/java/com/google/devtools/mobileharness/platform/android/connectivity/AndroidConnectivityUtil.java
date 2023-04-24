@@ -81,15 +81,15 @@ public class AndroidConnectivityUtil {
   @VisibleForTesting
   static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITHOUT_PASSWORD =
       "am instrument -e method connectToNetwork -e ssid %s "
-          + "-w com.android.tradefed.utils.wifi/.WifiUtil";
+          + "-w com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
 
   /**
    * ADB shell template for connecting to wifi with password. Should fill with: wifi ssid, password.
    */
   @VisibleForTesting
   static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_PASSWORD =
-      "am instrument -e method connectToNetwork -e ssid %s "
-          + "-e psk %s -w com.android.tradefed.utils.wifi/.WifiUtil";
+      "am instrument -e method connectToNetwork -e ssid %s -e psk %s -w"
+          + " com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
 
   /**
    * ADB shell template for connecting to wifi with password and scan_ssid. Should fill with: wifi
@@ -97,8 +97,8 @@ public class AndroidConnectivityUtil {
    */
   @VisibleForTesting
   static final String ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_PASSWORD_AND_SCAN_SSID =
-      "am instrument -e method connectToNetwork -e ssid %s "
-          + "-e psk %s -e scan_ssid %s -w com.android.tradefed.utils.wifi/.WifiUtil";
+      "am instrument -e method connectToNetwork -e ssid %s -e psk %s -e scan_ssid %s -w"
+          + " com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
 
   /** ADB shell template for dumpsys. Should fill with: type. */
   @VisibleForTesting static final String ADB_SHELL_TEMPLATE_DUMP_SYS = "dumpsys %s";
@@ -114,9 +114,12 @@ public class AndroidConnectivityUtil {
 
   @VisibleForTesting
   static final String WIFI_UTIL_ADB_SHELL_SET_WIFI_TEMPLATE =
-      "am instrument -e method %s -w com.android.tradefed.utils.wifi/.WifiUtil";
+      "am instrument -e method %s -w"
+          + " com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
 
-  @VisibleForTesting static final String WIFI_UTIL_PACKAGE_NAME = "com.android.tradefed.utils.wifi";
+  @VisibleForTesting
+  static final String WIFI_UTIL_PACKAGE_NAME =
+      "com.google.devtools.mobileharness.platform.android.app.binary.wifiutil";
 
   private static final String WIFI_UTIL_SET_WIFI_SUCCESSFULLY = "result=true";
 
@@ -196,7 +199,7 @@ public class AndroidConnectivityUtil {
   @VisibleForTesting
   static final String ADB_SHELL_TEMPLATE_PING_URL =
       "am instrument -e method checkConnectivity -e urlToCheck %s -w"
-          + " com.android.tradefed.utils.wifi/.WifiUtil";
+          + " com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
   /** The target host if the device is not in China. */
   @VisibleForTesting static final String HOST_FOR_NOT_IN_CHINA = "http://www.google.com";
   /** The target host if the device is in China. */

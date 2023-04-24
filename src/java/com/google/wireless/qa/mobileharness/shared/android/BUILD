@@ -77,7 +77,7 @@ java_library(
     name = "wifi_util",
     srcs = ["WifiUtil.java"],
     resources = [
-        "//src/devtools/mobileharness/platform/android/app/binary/wifiutil",
+        "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/wifiutil:WifiUtil.apk",
     ],
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",

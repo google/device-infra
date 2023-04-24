@@ -42,7 +42,7 @@ public class WifiUtil {
 
     /** Resource path of the WifiUtil.apk. */
     private static final String WIFI_UTIL_APK_RES_PATH =
-        "/devtools/mobileharness/platform/android/app/binary/wifiutil/WifiUtil.apk";
+        "/com/google/devtools/mobileharness/platform/android/app/binary/wifiutil/WifiUtil.apk";
 
     private static final String WIFI_UTIL_APK_PACKAGE_NAME;
 
