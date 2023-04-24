@@ -56,6 +56,9 @@ message GetSessionRequest {
   // only contains SessionStatus.
   //
   // If not present, the response contains all fields.
+  //
+  // Note that a repeated field is allowed ONLY IF it is the LAST item in a
+  // path.
   google.protobuf.FieldMask field_mask = 2;
 }
 

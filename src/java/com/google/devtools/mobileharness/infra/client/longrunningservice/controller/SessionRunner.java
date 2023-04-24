@@ -24,7 +24,9 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.inject.assistedinject.Assisted;
+import com.google.protobuf.FieldMask;
 import java.util.concurrent.Callable;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** Session runner for running a session. */
@@ -86,7 +88,14 @@ public class SessionRunner implements Callable<Void> {
     return null;
   }
 
-  public SessionDetail getSession() {
-    return sessionDetailHolder.buildSessionDetail();
+  /**
+   * Gets {@link SessionDetail} of the session.
+   *
+   * @param fieldMask a field mask relative to SessionDetail. {@code null} means all fields are
+   *     required. It is acceptable that the implementation outputs more fields than the field mask
+   *     requires.
+   */
+  public SessionDetail getSession(@Nullable FieldMask fieldMask) {
+    return sessionDetailHolder.buildSessionDetail(fieldMask);
   }
 }

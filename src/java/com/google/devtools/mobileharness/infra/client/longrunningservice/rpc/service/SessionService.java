@@ -25,6 +25,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
+import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
+import com.google.protobuf.FieldMask;
 import com.google.protobuf.util.FieldMaskUtil;
 import io.grpc.stub.StreamObserver;
 import javax.inject.Inject;
@@ -68,7 +70,21 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
   }
 
   private GetSessionResponse doGetSession(GetSessionRequest request) throws MobileHarnessException {
-    SessionDetail sessionDetail = sessionManager.getSession(request.getSessionId().getId());
+    // Calculates sub field mask for SessionDetail.
+    FieldMask sessionDetailSubMask;
+    if (request.hasFieldMask()) {
+      sessionDetailSubMask =
+          FieldMaskUtils.subFieldMask(
+                  request.getFieldMask(),
+                  GetSessionResponse.getDescriptor()
+                      .findFieldByNumber(GetSessionResponse.SESSION_DETAIL_FIELD_NUMBER))
+              .orElse(null);
+    } else {
+      sessionDetailSubMask = null;
+    }
+
+    SessionDetail sessionDetail =
+        sessionManager.getSession(request.getSessionId().getId(), sessionDetailSubMask);
     GetSessionResponse result =
         GetSessionResponse.newBuilder().setSessionDetail(sessionDetail).build();
 

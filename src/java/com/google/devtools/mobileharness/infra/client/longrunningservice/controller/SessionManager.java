@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
+import com.google.protobuf.FieldMask;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -123,10 +124,14 @@ public class SessionManager {
   /**
    * Gets {@link SessionDetail} of a session by its ID.
    *
+   * @param fieldMask a field mask relative to SessionDetail. {@code null} means all fields are
+   *     required. It is acceptable that the implementation outputs more fields than the field mask
+   *     requires, e.g., for an archived session.
    * @throws MobileHarnessException if the session is not found (un-submitted or has been removed
    *     from archived sessions)
    */
-  public SessionDetail getSession(String sessionId) throws MobileHarnessException {
+  public SessionDetail getSession(String sessionId, @Nullable FieldMask fieldMask)
+      throws MobileHarnessException {
     SessionDetail sessionDetail;
     // Checks the session from 3 places.
     synchronized (lock) {
@@ -134,7 +139,7 @@ public class SessionManager {
       if (sessionDetail == null) {
         SessionRunner sessionRunner = sessionRunners.get(sessionId);
         if (sessionRunner != null) {
-          sessionDetail = sessionRunner.getSession();
+          sessionDetail = sessionRunner.getSession(fieldMask);
         }
       }
       if (sessionDetail == null) {
@@ -152,12 +157,17 @@ public class SessionManager {
   /**
    * Gets {@link SessionDetail} of all sessions which have been submitted and have not been removed
    * from archived sessions.
+   *
+   * @param fieldMask a field mask relative to SessionDetail. {@code null} means all fields are
+   *     required. It is acceptable that the implementation outputs more fields than the field mask
+   *     requires, e.g., for an archived session.
    */
-  public List<SessionDetail> getAllSessions() {
+  public List<SessionDetail> getAllSessions(@Nullable FieldMask fieldMask) {
     synchronized (lock) {
       return Streams.concat(
               sessionQueue.values().stream(),
-              sessionRunners.values().stream().map(SessionRunner::getSession),
+              sessionRunners.values().stream()
+                  .map(sessionRunner -> sessionRunner.getSession(fieldMask)),
               archivedSessions.values().stream())
           .collect(toImmutableList());
     }
@@ -186,8 +196,9 @@ public class SessionManager {
 
     // Starts session runners.
     for (SessionRunner sessionRunner : newSessionRunners) {
-      logger.atInfo().log("Start session: %s", shortDebugString(sessionRunner.getSession()));
-      String sessionId = sessionRunner.getSession().getSessionId().getId();
+      SessionDetail sessionDetail = sessionRunner.getSession(/* fieldMask= */ null);
+      logger.atInfo().log("Start session: %s", shortDebugString(sessionDetail));
+      String sessionId = sessionDetail.getSessionId().getId();
       sessionRunners.put(sessionId, sessionRunner);
       addCallback(
           threadPool.submit(threadRenaming(sessionRunner, () -> "session-runner-" + sessionId)),
@@ -235,7 +246,7 @@ public class SessionManager {
     }
 
     private void afterSession(@Nullable Throwable error) {
-      SessionDetail sessionDetail = sessionRunner.getSession();
+      SessionDetail sessionDetail = sessionRunner.getSession(/* fieldMask= */ null);
       SessionDetail.Builder sessionDetailBuilder = sessionDetail.toBuilder();
       sessionDetailBuilder.setSessionStatus(SessionStatus.SESSION_FINISHED);
 
