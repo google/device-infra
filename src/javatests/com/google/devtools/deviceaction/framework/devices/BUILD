@@ -37,6 +37,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
+        "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:install_cmd_args",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/autovalue:util_args",

@@ -16,7 +16,9 @@
 
 package com.google.devtools.deviceaction.framework.devices;
 
+import static com.google.devtools.deviceaction.common.utils.Constants.APEX_SUFFIX;
 import static com.google.devtools.deviceaction.common.utils.TimeUtils.fromProtoDuration;
+import static org.apache.commons.lang3.ArrayUtils.nullToEmpty;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -25,36 +27,51 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimap;
+import com.google.common.collect.Multimaps;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.annotations.Annotations.Configurable;
 import com.google.devtools.deviceaction.common.annotations.Annotations.SpecValue;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.utils.BundletoolUtil;
 import com.google.devtools.deviceaction.common.utils.LazyCached;
+import com.google.devtools.deviceaction.common.utils.TimeUtils;
 import com.google.devtools.deviceaction.framework.proto.AndroidPhoneSpec;
 import com.google.devtools.deviceaction.framework.proto.DeviceType;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
+import com.google.devtools.mobileharness.platform.android.packagemanager.InstallCmdArgs;
 import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.systemsetting.PostSetDmVerityDeviceOp;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.ExecutionException;
+import javax.annotation.Nullable;
+import org.apache.commons.lang3.ArrayUtils;
 
 /** A {@link Device} class for Android phones. */
 @Configurable(specType = AndroidPhoneSpec.class)
 public class AndroidPhone implements Device {
 
+  private static final String STAGED = "--staged";
+  private static final String UPDATE_ONLY = "--update-only";
+  private static final String STAGED_READY_TIMEOUT = "--staged-ready-timeout";
+  private static final String TIMEOUT_MILLIS_FLAG = "--timeout-millis=";
+  private static final String REBOOT_SIGN = "INFO: Please reboot device to complete installation.";
+  private static final String SUCCESS_SIGN = "Success";
   private static final String GOOGLE = "google";
   private static final String DEV_KEYS = "dev-keys";
 
@@ -196,31 +213,82 @@ public class AndroidPhone implements Device {
     }
   }
 
-  // TODO: b/279367659 Implement in a separate cl.
   /** Installs apk or apex packages. Returns {@code true} if reboot is needed. */
   public boolean installPackages(Multimap<String, File> packageFiles, String... extraArgs)
       throws DeviceActionException, InterruptedException {
-    return false;
+    Multimap<String, String> packageMap =
+        Multimaps.transformValues(packageFiles, File::getAbsolutePath);
+    ImmutableList.Builder<String> extraArgsBuilder = ImmutableList.builder();
+    extraArgsBuilder.add(extraArgs);
+    boolean reboot = containsApex(packageMap.values());
+    if (reboot) {
+      extraArgsBuilder.add(STAGED);
+    }
+    Duration stagedReady = stageReadyTimeout();
+    if (TimeUtils.isPositive(stagedReady)) {
+      extraArgsBuilder.add(STAGED_READY_TIMEOUT, String.valueOf(stagedReady.toMillis()));
+    }
+    InstallCmdArgs installCmdArgs =
+        InstallCmdArgs.builder().setExtraArgs(extraArgsBuilder.build()).build();
+
+    try {
+      androidPackageManagerUtil.installMultiPackage(
+          UtilArgs.builder().setSerial(uuid).setSdkVersion(getSdkVersion()).build(),
+          installCmdArgs,
+          packageMap,
+          positiveOrElse(extraWaitForStaging(), /* elseValue= */ null),
+          /* installTimeout= */ null);
+    } catch (MobileHarnessException e) {
+      throw new DeviceActionException(e, "Failed to install packages %s.", packageMap);
+    }
+    return reboot;
   }
 
-  // TODO: b/279367659 Implement in a separate cl.
   /** Installs packages from apks. Returns {@code true} if reboot is needed. */
   public boolean installBundledPackages(List<File> apksList, String... extraArgs)
       throws DeviceActionException, InterruptedException {
-    return false;
+    extraArgs = addArgsForInstallMultiApks(extraArgs);
+    return needReboot(bundletoolUtil.installMultiApks(uuid, apksList, extraArgs));
   }
 
-  // TODO: b/279367659 Implement in a separate cl.
+  /** Installs zipped train. Returns {@code true} if reboot is needed. */
   public boolean installZippedTrain(File train, String... extraArgs)
       throws DeviceActionException, InterruptedException {
-    return false;
+    extraArgs = addArgsForInstallMultiApks(extraArgs);
+    return needReboot(bundletoolUtil.installApksZip(uuid, train, extraArgs));
   }
 
-  // TODO: b/279367659 Implement in a separate cl.
-  public void reboot() throws DeviceActionException, InterruptedException {}
+  public void reboot() throws DeviceActionException, InterruptedException {
+    try {
+      androidSystemStateUtil.reboot(uuid);
+    } catch (MobileHarnessException e) {
+      throw new DeviceActionException(e, "Failed to reboot.");
+    }
+    // Wait for the device to be disconnected after reboot command.
+    sleeper.sleep(positiveOrElse(rebootAwait(), Duration.ofSeconds(30)));
+    try {
+      androidSystemStateUtil.waitUntilReady(
+          uuid, positiveOrElse(rebootTimeout(), DEFAULT_DEVICE_READY_TIMEOUT));
+    } catch (MobileHarnessException e) {
+      throw new DeviceActionException(e, "Missing device %s", uuid);
+    }
+  }
 
-  // TODO: b/279367659 Implement in a separate cl.
-  public void enableTestharness() throws DeviceActionException, InterruptedException {}
+  public void enableTestharness() throws DeviceActionException, InterruptedException {
+    try {
+      Duration awaitTime = positiveOrElse(testharnessBootAwait(), /* elseValue= */ null);
+      androidSystemStateUtil.factoryResetViaTestHarness(uuid, awaitTime);
+    } catch (MobileHarnessException e) {
+      throw new DeviceActionException(e, "Failed to enable testharness.");
+    }
+    Duration deviceReadyTimeout =
+        positiveOrElse(testharnessBootTimeout(), DEFAULT_DEVICE_READY_TIMEOUT);
+    try {
+      androidSystemStateUtil.waitUntilReady(uuid, deviceReadyTimeout);
+    } catch (MobileHarnessException e) {
+      throw new DeviceActionException(e, "Missing device %s", uuid);
+    }
+  }
 
   public void becomeRoot() throws DeviceActionException, InterruptedException {
     try {
@@ -249,14 +317,26 @@ public class AndroidPhone implements Device {
     }
   }
 
-  // TODO: b/279367659 Implement in a separate cl.
-  public void disableVerity() throws DeviceActionException, InterruptedException {}
+  /** Disables verity and reboots if needed. */
+  public void disableVerity() throws DeviceActionException, InterruptedException {
+    PostSetDmVerityDeviceOp operation;
+    try {
+      operation = androidSystemSettingUtil.setDmVerityChecking(uuid, false);
+    } catch (MobileHarnessException e) {
+      throw new DeviceActionException(e, "Failed to disable verity.");
+    }
+    if (operation.equals(PostSetDmVerityDeviceOp.REBOOT)) {
+      reboot();
+    }
+  }
 
-  // TODO: b/279367659 Implement in a separate cl.
   /** Extracts installation files for the device from an apks file. */
   public ImmutableList<File> extractFilesFromApks(File packageFile)
       throws DeviceActionException, InterruptedException {
-    return ImmutableList.of();
+    Path deviceSpecFilePath = getDeviceSpecFilePath();
+    File extractDir = bundletoolUtil.extractApks(packageFile, deviceSpecFilePath).toFile();
+    File[] extracted = nullToEmpty(extractDir.listFiles(), File[].class);
+    return ImmutableList.copyOf(extracted);
   }
 
   public boolean devKeySigned() throws DeviceActionException {
@@ -312,5 +392,33 @@ public class AndroidPhone implements Device {
   @SpecValue(field = "reload_by_factory_reset")
   public boolean reloadByFactoryReset() {
     return spec.getReloadByFactoryReset();
+  }
+
+  @Nullable
+  private static Duration positiveOrElse(Duration duration, @Nullable Duration elseValue) {
+    return Optional.of(duration).filter(TimeUtils::isPositive).orElse(elseValue);
+  }
+
+  private static boolean containsApex(Collection<String> values) {
+    return values.stream().anyMatch(f -> f.endsWith(APEX_SUFFIX));
+  }
+
+  private String[] addArgsForInstallMultiApks(String[] extraArgs) throws DeviceActionException {
+    extraArgs = ArrayUtils.insert(extraArgs.length, extraArgs, STAGED, UPDATE_ONLY);
+    // Flag --timeout-millis applies to Android 12+
+    if (TimeUtils.isPositive(stageReadyTimeout())
+        && getSdkVersion() >= AndroidVersion.ANDROID_12.getStartSdkVersion()) {
+      extraArgs =
+          ArrayUtils.insert(
+              extraArgs.length, extraArgs, TIMEOUT_MILLIS_FLAG + stageReadyTimeout().toMillis());
+    }
+    return extraArgs;
+  }
+
+  private static boolean needReboot(String output) throws DeviceActionException {
+    if (!output.contains(SUCCESS_SIGN)) {
+      throw new DeviceActionException("INSTALLATION_ERROR", ErrorType.UNCLASSIFIED, output);
+    }
+    return output.contains(REBOOT_SIGN);
   }
 }

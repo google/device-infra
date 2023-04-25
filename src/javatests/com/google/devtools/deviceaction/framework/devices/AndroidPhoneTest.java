@@ -17,15 +17,22 @@
 package com.google.devtools.deviceaction.framework.devices;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
+import static com.google.devtools.deviceaction.framework.devices.AndroidPhone.DEFAULT_DEVICE_READY_TIMEOUT;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
@@ -37,19 +44,23 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
+import com.google.devtools.mobileharness.platform.android.packagemanager.InstallCmdArgs;
 import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
+import com.google.devtools.mobileharness.platform.android.systemsetting.PostSetDmVerityDeviceOp;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.protobuf.util.Durations;
 import com.google.testing.junit.testparameterinjector.TestParameter;
 import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import com.google.testing.junit.testparameterinjector.TestParameters;
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import org.junit.Before;
@@ -66,6 +77,7 @@ import org.mockito.junit.MockitoRule;
 public class AndroidPhoneTest {
   private static final long VERSION_CODE = 123L;
   private static final String PACKAGE_NAME = "fake.package";
+  private static final String APEX_PACKAGE_NAME = "fake.apex.package";
   private static final String SOURCE_DIR = "/data/app/fake";
   private static final String FAKE_MODULE = "fake module";
   private static final String SDK_VERSION = "31";
@@ -296,6 +308,306 @@ public class AndroidPhoneTest {
   }
 
   @Test
+  @TestParameters("{containApex: false, expectedMapSize: 2}")
+  @TestParameters("{containApex: true, expectedMapSize: 3}")
+  public void installPackages_installPackages_succeeds(boolean containApex, int expectedMapSize)
+      throws Exception {
+    ImmutableMultimap.Builder<String, File> builder = ImmutableMultimap.builder();
+    File file1 = new File("base.apk");
+    File file2 = new File("aux.apk");
+    builder.putAll(PACKAGE_NAME, file1, file2);
+    File file3 = new File("fake.apex");
+    if (containApex) {
+      builder.put(APEX_PACKAGE_NAME, file3);
+    }
+    ImmutableMultimap<String, File> packageFiles = builder.build();
+
+    boolean reboot = device.installPackages(packageFiles, "--enable-rollback");
+
+    assertThat(reboot).isEqualTo(containApex);
+    ArgumentCaptor<UtilArgs> utilArgsCaptor = ArgumentCaptor.forClass(UtilArgs.class);
+    ArgumentCaptor<InstallCmdArgs> installCmdArgsCaptor =
+        ArgumentCaptor.forClass(InstallCmdArgs.class);
+    ArgumentCaptor<Duration> durationArgumentCaptor = ArgumentCaptor.forClass(Duration.class);
+    verify(mockPackageManagerUtil)
+        .installMultiPackage(
+            utilArgsCaptor.capture(),
+            installCmdArgsCaptor.capture(),
+            multimapArgumentCaptor.capture(),
+            durationArgumentCaptor.capture(),
+            isNull());
+    UtilArgs utilArgs = utilArgsCaptor.getValue();
+    InstallCmdArgs installCmdArgs = installCmdArgsCaptor.getValue();
+    assertThat(utilArgs.sdkVersion()).hasValue(31);
+    assertThat(utilArgs.serial()).isEqualTo(UUID);
+    assertThat(installCmdArgs.extraArgs()).contains("--enable-rollback");
+    if (spec.hasStagedReadyTimeout()) {
+      assertThat(installCmdArgs.extraArgs()).containsAtLeast("--staged-ready-timeout", "120000");
+    }
+    if (containApex) {
+      assertThat(installCmdArgs.extraArgs()).contains("--staged");
+    }
+    Multimap<String, String> multimap = multimapArgumentCaptor.getValue();
+    assertThat(multimap).hasSize(expectedMapSize);
+    assertThat(multimap)
+        .valuesForKey(PACKAGE_NAME)
+        .containsExactly(file1.getAbsolutePath(), file2.getAbsolutePath());
+    if (containApex) {
+      assertThat(multimap).valuesForKey(APEX_PACKAGE_NAME).containsExactly(file3.getAbsolutePath());
+    }
+    if (spec.hasExtraWaitForStaging()) {
+      assertThat(durationArgumentCaptor.getValue())
+          .isEqualTo(Duration.ofSeconds(spec.getExtraWaitForStaging().getSeconds()));
+    } else {
+      assertNull(durationArgumentCaptor.getValue());
+    }
+  }
+
+  @Test
+  public void installPackages_catchMobileHarnessException_throwsException() throws Exception {
+    ImmutableMultimap<String, File> packageFiles =
+        ImmutableMultimap.of(
+            PACKAGE_NAME,
+            new File("base.apk"),
+            PACKAGE_NAME,
+            new File("aux.apk"),
+            APEX_PACKAGE_NAME,
+            new File("fake.apex"));
+    doThrow(fakeMobileHarnessException())
+        .when(mockPackageManagerUtil)
+        .installMultiPackage(any(), any(), multimapArgumentCaptor.capture(), any(), any());
+
+    assertThrows(
+        DeviceActionException.class,
+        () -> device.installPackages(packageFiles, "--enable-rollback"));
+  }
+
+  @Test
+  public void installBundledPackages_successAndReboot() throws Exception {
+    ImmutableList<File> packages =
+        ImmutableList.of(new File("package1.apks"), new File("package2.apks"));
+    String cmdOutput =
+        "The APKs have been extracted in the directory: /tmp/16784512761210886430\n"
+            + "INFO: Output:\n"
+            + "Created parent session ID 463525912.\n"
+            + "Created parent session ID 485684688.\n"
+            + "Created child session ID 1348219772.\n"
+            + "Success. Reboot device to apply staged session\n"
+            + "Apr 11, 2023 11:07:34 PM"
+            + " com.android.tools.build.bundletool.commands.InstallMultiApksCommand execute\n"
+            + "INFO: Please reboot device to complete installation.";
+    when(mockBundletoolUtil.installMultiApks(eq(UUID), eq(packages), any())).thenReturn(cmdOutput);
+
+    assertTrue(device.installBundledPackages(packages, "--enable-rollback"));
+
+    ArgumentCaptor<String> stringCaptor = ArgumentCaptor.forClass(String.class);
+    verify(mockBundletoolUtil).installMultiApks(eq(UUID), eq(packages), stringCaptor.capture());
+    assertThat(stringCaptor.getAllValues())
+        .containsAtLeast("--enable-rollback", "--staged", "--update-only");
+    if (spec.hasStagedReadyTimeout()) {
+      assertThat(stringCaptor.getAllValues()).contains("--timeout-millis=120000");
+    }
+  }
+
+  @Test
+  public void installBundledPackages_successAndNoReboot() throws Exception {
+    ImmutableList<File> packages =
+        ImmutableList.of(new File("package1.apks"), new File("package2.apks"));
+    String cmdOutput =
+        "The APKs have been extracted in the directory: /tmp/5955812264849426382\n"
+            + "INFO: Output:\n"
+            + "Created parent session ID 388181659.\n"
+            + "Created parent session ID 485684688.\n"
+            + "Created child session ID 581317030.\n"
+            + "Success\n"
+            + "Apr 11, 2023 11:15:27 PM"
+            + " com.android.tools.build.bundletool.commands.InstallMultiApksCommand execute";
+    when(mockBundletoolUtil.installMultiApks(eq(UUID), eq(packages), any())).thenReturn(cmdOutput);
+
+    assertFalse(device.installBundledPackages(packages, "--enable-rollback"));
+
+    ArgumentCaptor<String> stringCaptor = ArgumentCaptor.forClass(String.class);
+    verify(mockBundletoolUtil).installMultiApks(eq(UUID), eq(packages), stringCaptor.capture());
+    assertThat(stringCaptor.getAllValues())
+        .containsAtLeast("--enable-rollback", "--staged", "--update-only");
+    if (spec.hasStagedReadyTimeout()) {
+      assertThat(stringCaptor.getAllValues()).contains("--timeout-millis=120000");
+    }
+  }
+
+  @Test
+  public void installBundledPackages_installFail_throwsException() throws Exception {
+    ImmutableList<File> packages =
+        ImmutableList.of(new File("package1.apks"), new File("package2.apks"));
+    String cmdOutput =
+        "The APKs have been extracted in the directory: /tmp/17269205391452023453\n"
+            + "11:17:23 E/SplitApkInstallerBase: Failed to commit install session 2017987441 with"
+            + " command cmd package install-commit 2017987441. Error:"
+            + " INSTALL_FAILED_DUPLICATE_PACKAGE: Scanning Failed.: com.google.android.art is an"
+            + " APEX package and can't be installed as an APK.\n"
+            + "[BT:1.8.0] Error: Installation of the app failed.\n"
+            + "com.android.tools.build.bundletool.model.exceptions.CommandExecutionException:"
+            + " Installation of the app failed.\n"
+            + "\tat com.android.tools.build.bundletool.model.exceptions.InternalExceptionBuilder.build(InternalExceptionBuilder.java:57)\n"
+            + "\t... 6 more";
+    when(mockBundletoolUtil.installMultiApks(eq(UUID), eq(packages), any())).thenReturn(cmdOutput);
+
+    DeviceActionException t =
+        assertThrows(
+            DeviceActionException.class,
+            () -> device.installBundledPackages(packages, "--enable-rollback"));
+
+    assertThat(t).hasMessageThat().contains(cmdOutput);
+  }
+
+  @Test
+  public void installZippedTrain_successAndReboot() throws Exception {
+    File train = new File("mainline_s.zip");
+    String cmdOutput =
+        "The APKs have been extracted in the directory: /tmp/6059426715083540522\n"
+            + "The APKs have been extracted in the directory: /tmp/10747964627635931626\n"
+            + "Apr 12, 2023 8:15:09 PM"
+            + " com.android.tools.build.bundletool.commands.InstallMultiApksCommand"
+            + " extractApkListFromApks\n"
+            + "INFO: Extracting package 'com.google.android.os.statsd'\n"
+            + "The APKs have been extracted in the directory:"
+            + " /tmp/14831784731443690324/com.google.android.os.statsd\n"
+            + "Apr 12, 2023 8:15:09 PM"
+            + " com.android.tools.build.bundletool.commands.InstallMultiApksCommand"
+            + " extractApkListFromApks\n"
+            + "INFO: Extracting package 'com.google.mainline.telemetry'\n"
+            + "The APKs have been extracted in the directory:"
+            + " /tmp/14831784731443690324/com.google.mainline.telemetry\n"
+            + "Apr 12, 2023 8:15:09 PM"
+            + " com.android.tools.build.bundletool.androidtools.AdbCommand$DefaultAdbCommand"
+            + " installMultiPackage\n"
+            + "INFO: Executing:"
+            + " /usr/local/google/mobileharness/mh_res_files/devtools/mobileharness/platform/android/sdktool/binary/platform-tools/adb"
+            + " install-multi-package --enable-rollback"
+            + " /tmp/14831784731443690324/com.google.android.os.statsd/standalone-armeabi_v7a.arm64_v8a.apex"
+            + " /tmp/14831784731443690324/com.google.mainline.telemetry/base-master.apk\n"
+            + "Apr 12, 2023 8:15:10 PM"
+            + " com.android.tools.build.bundletool.commands.InstallMultiApksCommand execute\n"
+            + "INFO: Output:\n"
+            + "Created parent session ID 60961047.\n"
+            + "Created child session ID 1796838565.\n"
+            + "Created child session ID 1077735626.\n"
+            + "Success. Reboot device to apply staged session\n"
+            + "Apr 12, 2023 8:15:10 PM"
+            + " com.android.tools.build.bundletool.commands.InstallMultiApksCommand execute\n"
+            + "INFO: Please reboot device to complete installation.";
+    when(mockBundletoolUtil.installApksZip(eq(UUID), eq(train), any())).thenReturn(cmdOutput);
+
+    assertTrue(device.installZippedTrain(train, "--enable-rollback"));
+
+    ArgumentCaptor<String> stringCaptor = ArgumentCaptor.forClass(String.class);
+    verify(mockBundletoolUtil).installApksZip(eq(UUID), eq(train), stringCaptor.capture());
+    assertThat(stringCaptor.getAllValues())
+        .containsAtLeast("--enable-rollback", "--staged", "--update-only");
+    if (spec.hasStagedReadyTimeout()) {
+      assertThat(stringCaptor.getAllValues()).contains("--timeout-millis=120000");
+    }
+  }
+
+  @Test
+  public void installZippedTrain_installFail_throwsException() throws Exception {
+    File train = new File("mainline_s.zip");
+    String cmdOutput =
+        "The APKs have been extracted in the directory: /tmp/10525201165219864343\n"
+            + "Apr 04, 2023 3:37:35 PM"
+            + " com.android.tools.build.bundletool.commands.InstallMultiApksCommand"
+            + " extractApkListFromApks\n"
+            + "INFO: Extracting package 'com.google.android.media'\n"
+            + "The APKs have been extracted in the directory:"
+            + " /tmp/3874078813899838452/com.google.android.media\n"
+            + "Apr 04, 2023 3:37:35 PM"
+            + " com.android.tools.build.bundletool.androidtools.AdbCommand$DefaultAdbCommand"
+            + " installMultiPackage\n"
+            + "INFO: Executing:"
+            + " /usr/local/google/mobileharness/mh_res_files/devtools/mobileharness/platform/android/sdktool/binary/platform-tools/adb"
+            + " install-multi-package --staged"
+            + " /tmp/3874078813899838452/com.google.android.media/standalone-armeabi_v7a.arm64_v8a.apex\n"
+            + "adb: failed to finalize session\n"
+            + "Error [-22] [apexd verification failed : Cannot verify ApexVerity of compressed"
+            + " APEX]\n"
+            + "Attempting to abandon session ID ...\n"
+            + "[BT:1.8.0] Error: Command"
+            + " '[/usr/local/google/mobileharness/mh_res_files/devtools/mobileharness/platform/android/sdktool/binary/platform-tools/adb,"
+            + " install-multi-package, --staged,"
+            + " /tmp/3874078813899838452/com.google.android.media/standalone-armeabi_v7a.arm64_v8a.apex]'"
+            + " didn't terminate successfully (exit code: 1). Check the logs.\n"
+            + "com.android.tools.build.bundletool.model.exceptions.CommandExecutionException:"
+            + " Command"
+            + " '[/usr/local/google/mobileharness/mh_res_files/devtools/mobileharness/platform/android/sdktool/binary/platform-tools/adb,"
+            + " install-multi-package, --staged,"
+            + " /tmp/3874078813899838452/com.google.android.media/standalone-armeabi_v7a.arm64_v8a.apex]'"
+            + " didn't terminate successfully (exit code: 1). Check the logs.\n"
+            + "\tat com.android.tools.build.bundletool.model.exceptions.InternalExceptionBuilder.build(InternalExceptionBuilder.java:57)\n"
+            + "\t...";
+    when(mockBundletoolUtil.installApksZip(eq(UUID), eq(train), any())).thenReturn(cmdOutput);
+
+    DeviceActionException t =
+        assertThrows(
+            DeviceActionException.class,
+            () -> device.installZippedTrain(train, "--enable-rollback"));
+
+    assertThat(t).hasMessageThat().contains(cmdOutput);
+  }
+
+  @Test
+  public void reboot_rebootAndWait() throws Exception {
+    device.reboot();
+
+    ArgumentCaptor<Duration> durationArgumentCaptor = ArgumentCaptor.forClass(Duration.class);
+    verify(mockSystemStateUtil).reboot(UUID);
+    verify(mockSystemStateUtil).waitUntilReady(eq(UUID), durationArgumentCaptor.capture());
+    if (spec.hasRebootTimeout()) {
+      assertThat(durationArgumentCaptor.getValue())
+          .isEqualTo(Duration.ofSeconds(spec.getRebootTimeout().getSeconds()));
+    } else {
+      assertThat(durationArgumentCaptor.getValue()).isEqualTo(DEFAULT_DEVICE_READY_TIMEOUT);
+    }
+  }
+
+  @Test
+  public void reboot_catchMobileHarnessException_throwsException() throws Exception {
+    doThrow(fakeMobileHarnessException()).when(mockSystemStateUtil).reboot(UUID);
+
+    assertThrows(DeviceActionException.class, () -> device.reboot());
+  }
+
+  @Test
+  public void enableTestharness_factoryResetAndWait() throws Exception {
+    device.enableTestharness();
+
+    ArgumentCaptor<Duration> captor1 = ArgumentCaptor.forClass(Duration.class);
+    ArgumentCaptor<Duration> captor2 = ArgumentCaptor.forClass(Duration.class);
+    verify(mockSystemStateUtil).factoryResetViaTestHarness(eq(UUID), captor1.capture());
+    if (spec.hasTestharnessBootAwait()) {
+      assertThat(captor1.getValue())
+          .isEqualTo(Duration.ofSeconds(spec.getTestharnessBootAwait().getSeconds()));
+    } else {
+      assertNull(captor1.getValue());
+    }
+    verify(mockSystemStateUtil).waitUntilReady(eq(UUID), captor2.capture());
+    if (spec.hasTestharnessBootTimeout()) {
+      assertThat(captor2.getValue())
+          .isEqualTo(Duration.ofSeconds(spec.getTestharnessBootTimeout().getSeconds()));
+    } else {
+      assertThat(captor2.getValue()).isEqualTo(DEFAULT_DEVICE_READY_TIMEOUT);
+    }
+  }
+
+  @Test
+  public void enableTestharness_catchMobileHarnessException_throwsException() throws Exception {
+    doThrow(fakeMobileHarnessException())
+        .when(mockSystemStateUtil)
+        .factoryResetViaTestHarness(eq(UUID), any());
+
+    assertThrows(DeviceActionException.class, () -> device.enableTestharness());
+  }
+
+  @Test
   public void becomeRoot_callSystemStateUtil() throws Exception {
     device.becomeRoot();
 
@@ -343,6 +655,25 @@ public class AndroidPhoneTest {
     doThrow(fakeMobileHarnessException()).when(mockFileUtil).remount(UUID, true);
 
     assertThrows(DeviceActionException.class, () -> device.remount());
+  }
+
+  @Test
+  public void disableVerity_successAndReboot() throws Exception {
+    when(mockSystemSettingUtil.setDmVerityChecking(UUID, false))
+        .thenReturn(PostSetDmVerityDeviceOp.REBOOT);
+
+    device.disableVerity();
+
+    verify(mockSystemSettingUtil).setDmVerityChecking(UUID, false);
+    verify(mockSystemStateUtil).reboot(UUID);
+  }
+
+  @Test
+  public void disableVerity_catchMobileHarnessException_throwsException() throws Exception {
+    when(mockSystemSettingUtil.setDmVerityChecking(UUID, false))
+        .thenThrow(fakeMobileHarnessException());
+
+    assertThrows(DeviceActionException.class, () -> device.disableVerity());
   }
 
   @Test
