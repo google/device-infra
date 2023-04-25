@@ -20,11 +20,9 @@ java_library(
     srcs = ["AndroidSystemSpecUtil.java"],
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/api/devicemanager:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/process:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/file:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/process:__pkg__",
