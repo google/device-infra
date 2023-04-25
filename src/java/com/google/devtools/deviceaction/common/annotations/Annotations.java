@@ -40,4 +40,11 @@ public final class Annotations {
   public @interface SpecValue {
     String field();
   }
+
+  /** Annotation for methods to return files. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.METHOD)
+  public @interface FilePath {
+    String tag();
+  }
 }
