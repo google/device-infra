@@ -24,8 +24,8 @@ package(
 )
 
 java_library(
-    name = "device_config_provider",
-    srcs = ["DeviceConfigProvider.java"],
+    name = "deviceconfigs",
+    srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",

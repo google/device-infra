@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceaction.framework.deviceconfigprovider;
+package com.google.devtools.deviceaction.framework.deviceconfigs;
 
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.framework.proto.DeviceConfig;
 
-/** An interface that provides {@link DeviceConfig}. */
-public interface DeviceConfigProvider {
+/** Generic DAO interface. This allows us to have different DAO implementations. */
+public interface DeviceConfigDAO {
 
-  /** Returns a {@link DeviceConfig}. */
-  DeviceConfig get(String deviceKey, String cmd) throws DeviceActionException;
+  DeviceConfig getDeviceConfig(String deviceKey, String cmd) throws DeviceActionException;
 }
