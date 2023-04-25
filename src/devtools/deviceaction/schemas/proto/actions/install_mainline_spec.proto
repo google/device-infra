@@ -30,15 +30,11 @@ message InstallMainlineSpec {
   extend DeviceConfig {
     optional InstallMainlineSpec install_mainline_spec = 516738036;
   }
-  // Chooses one of the following ways to provide mainline modules.
-  oneof module_oneof {
-    // Each path is for one module.
-    StringArray package_file_paths = 1;
-    // A folder contains all modules for one train.
-    string train_folder_path = 2;
-    // A folder contains zip files for trains.
-    string zip_folder_path = 3;
-  }
+  // Chooses one of the tags to supply modules.
+  // "mainline_modules" for multiple module packages.
+  // "train_folder" for a folder containing module packages.
+  // "apks_zips" for multiple zipped trains.
+  repeated FileSpec files = 1;
   optional bool enable_rollback = 4;
   optional bool clean_up_sessions = 5;
   optional bool dev_key_signed = 6;

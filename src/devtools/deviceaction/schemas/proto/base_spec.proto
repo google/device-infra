@@ -139,3 +139,17 @@ message Binary {
 message StringArray {
   repeated string value = 1;
 }
+
+// Specs for files.
+message FileSpec {
+  optional string tag = 1;
+  oneof file_oneof {
+    string local_path = 4;
+    GCSFile gcs_file = 5;
+  }
+}
+
+message GCSFile {
+  optional string project = 1;
+  optional string gs_uri = 2;
+}
