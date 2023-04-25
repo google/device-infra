@@ -599,10 +599,6 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("ManekiAndroidWebdriverPortForwardDecorator");
     device.addSupportedDecorator("MaskImageDecorator");
 
-    // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some
-    // settings may not be supported for emulators.
-    device.addSupportedDecorator("AndroidDeviceSettingsDecorator");
-
     // This will replace `AndroidChromeWebViewInstallerDecorator` when it's ready. DO NOT USE YET!
     device.addSupportedDecorator("AndroidChromeInstallerDecorator");
   }
@@ -636,6 +632,10 @@ public abstract class AndroidDeviceDelegate {
 
   /** List of decorators/drivers that should be supported by rooted devices. */
   private void rootedAndroidDeviceConfiguration(String deviceId) throws InterruptedException {
+
+    // Advanced device settings. This decorator is only full tested on AndroidRealDevice. Some
+    // settings may not be supported for emulators.
+    device.addSupportedDecorator("AndroidDeviceSettingsDecorator");
 
     device.addSupportedDecorator("AndroidDisableAutoUpdatesDecorator");
     device.addSupportedDecorator("AndroidHermeticServerCertPusherDecorator");
