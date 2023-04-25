@@ -255,6 +255,9 @@ public interface PropertyName {
      */
     NO_OP_DEVICE_POST_RUN_TEST_CALLED,
 
+    /** The epoch time when the test execution is completed and the device is released. */
+    DEVICE_DONE_EPOCH_MS,
+
     /**
      * id of MH HaTS survey shown in sponge starting with '_' so sponge can make it invisible
      * http://b/169158354

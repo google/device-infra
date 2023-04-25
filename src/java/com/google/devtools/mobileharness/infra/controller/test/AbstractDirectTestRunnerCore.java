@@ -71,6 +71,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceInfoUtil;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -443,6 +444,11 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
               .log(
                   "Start post-run test %s on device(s) %s",
                   testInfo.locator().getName(), allocation.getAllDeviceLocators());
+          testInfo
+              .properties()
+              .add(
+                  PropertyName.Test.DEVICE_DONE_EPOCH_MS,
+                  String.valueOf(Clock.systemUTC().millis()));
           try (MobileHarnessAutoCloseable postRunTestSpan = getPostRunTestSpan()) {
             // Makes sure we finalize the test result.
             if (testInfo.result().get() == TestResult.UNKNOWN) {
