@@ -34,7 +34,7 @@ import java.util.Set;
  */
 public class AdhocTestbedConfig extends BaseTestbedConfig {
 
-  // NOTE: TestbedConfigs (and AdhocTestbedConfigs) in particular must preserve the order of
+  // NOTE - in particular must preserve the order of
   // subdevices, so implementation and API should always err on the side of order preserving data
   // types (e.g., Lists, Guava's Immutable*, etc.).
 

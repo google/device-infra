@@ -16,12 +16,15 @@
 
 package com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
@@ -1045,14 +1048,20 @@ public abstract class AndroidRealDeviceDelegate {
       }
 
       // Reboot the device if system build changed.
-      List<String> builds = device.getDimension(Ascii.toLowerCase(AndroidProperty.BUILD.name()));
+      ImmutableSet<String> builds =
+          device.getDimension(Ascii.toLowerCase(AndroidProperty.BUILD.name())).stream()
+              .map(Ascii::toLowerCase)
+              .collect(toImmutableSet());
       if (builds.size() == 1) {
         if (!Ascii.equalsIgnoreCase(
-            builds.get(0), androidAdbUtil.getProperty(deviceId, AndroidProperty.BUILD))) {
+            builds.stream().findFirst().get(),
+            androidAdbUtil.getProperty(deviceId, AndroidProperty.BUILD))) {
           logger.atInfo().log("Reboot device %s since the system build changed.", deviceId);
           AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
           return PostTestDeviceOp.REBOOT;
         }
+      } else {
+        logger.atWarning().log("Found different build info for device %s: %s", deviceId, builds);
       }
 
       try {

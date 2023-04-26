@@ -96,8 +96,8 @@ public interface LoggingApi<API extends LoggingApi<API>> {
   /**
    * Logs a message.
    *
-   * <p>NOTE: Use {@link #withCause(Throwable)} rather than containing the error in the message. For
-   * example: <code>logCollector.atWarning().withCause(e).log("Failed to read file");</code>
+   * <p>NOTE -} rather than containing the error in the message. For example: <code>
+   * logCollector.atWarning().withCause(e).log("Failed to read file");</code>
    *
    * <p>This method should be the last operation on the API.
    */
@@ -106,8 +106,8 @@ public interface LoggingApi<API extends LoggingApi<API>> {
   /**
    * Logs a message with arguments.
    *
-   * <p>NOTE: Use {@link #withCause(Throwable)} rather than containing the error in the message. For
-   * example: <code>logCollector.atWarning().withCause(e).log("Failed to read file %s", fileName);
+   * <p>NOTE -} rather than containing the error in the message. For example: <code>
+   * logCollector.atWarning().withCause(e).log("Failed to read file %s", fileName);
    * </code>
    *
    * <p>This method should be the last operation on the API.
