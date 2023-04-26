@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestStatus;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.InlineMe;
 import java.util.Objects;
@@ -48,7 +49,7 @@ public class Result {
 
   static final String PARAM_ALLOW_OVERRIDE_PASS_TO_ERROR = "allow_override_pass_to_error";
 
-  /** Job param to print stack trace when setting the result as PASS. False by default. */
+  /** Job param to print stack trace when setting the result as PASS. True by default. */
   static final String PARAM_PRINT_STACK_TRACE_FOR_PASS_TEST = "print_stack_trace_for_pass_test";
 
   /** Job/test result. Any result doesn't mean finished, while {@link TestStatus#DONE} does. */
@@ -93,9 +94,9 @@ public class Result {
         return this;
       }
 
-      // By default, it doesn't prints the stack trace if this param isn't set.
-      if (params.getBool(PARAM_PRINT_STACK_TRACE_FOR_PASS_TEST, false)) {
-        logger.atInfo().withStackTrace(StackSize.MEDIUM).log("Result %s -> PASS", this);
+      if (params.getBool(PARAM_PRINT_STACK_TRACE_FOR_PASS_TEST, true)) {
+        logger.atInfo().log(
+            "Result %s -> PASS, caller=%s", this, MoreThrowables.shortDebugCurrentStackTrace(4));
       } else {
         logger.atInfo().log("Result %s -> PASS", this);
       }
@@ -206,7 +207,7 @@ public class Result {
      */
     private static ResultTypeWithCause create(
         TestResult type, @Nullable ExceptionProto.ExceptionDetail cause) {
-      return createInternal(type, true /* useProtoBackend */, cause, null /* exceptionBackend */);
+      return createInternal(type, /* useProtoBackend= */ true, cause, /* exceptionBackend= */ null);
     }
 
     /**
@@ -222,7 +223,7 @@ public class Result {
         TestResult type, @Nullable MobileHarnessException cause) {
       Preconditions.checkNotNull(type);
       Preconditions.checkArgument(type != TestResult.UNKNOWN);
-      return createInternal(type, false /* useProtoBackend */, null /* protoBackend */, cause);
+      return createInternal(type, /* useProtoBackend= */ false, /* protoBackend= */ null, cause);
     }
 
     /** Gets the current result type. */

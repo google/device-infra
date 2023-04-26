@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.shared.util.error;
 
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
+
 /** More utilities for {@link Throwable}. */
 public class MoreThrowables {
 
@@ -52,6 +55,32 @@ public class MoreThrowables {
       result.append(", cause: ");
     }
     return result.toString();
+  }
+
+  /**
+   * Returns a short debug string representing the current stack trace. For example, if {@code
+   * foo()} calls {@code goo()} and {@code goo()} calls this method, then the method will return a
+   * string like:
+   *
+   * <pre>
+   * {@code "[com.google.Goo.goo(Goo.java:10)  <-- com.google.Foo.foo(Foo.java:20)]"}
+   * </pre>
+   *
+   * <p>Note that the purpose of this method is "printing a stack trace but making the result string
+   * NOT be like an exception", for the cases in which you don't want the "\tat
+   * xxx.xxx.Xxx(Xxx.java:xxx)" in log confuse users that here is the root cause. The result string
+   * of this method may have bad readability. In most cases, you should use {@code
+   * logger.atInfo().withStackTrace().log()} instead.
+   *
+   * @param maxLength the max length of the stack trace. For example, 2 means printing the first two
+   *     layers of the stack trace. 0 or negative for "no max length" (print the full stack trace)
+   */
+  public static String shortDebugCurrentStackTrace(long maxLength) {
+    return stream(Thread.currentThread().getStackTrace())
+        .skip(2L) // Removes the first two layers that Thread#getStackTrace() creates.
+        .limit(maxLength <= 0 ? Long.MAX_VALUE : maxLength)
+        .map(StackTraceElement::toString)
+        .collect(joining("  <--  ", "[", "]"));
   }
 
   private MoreThrowables() {}
