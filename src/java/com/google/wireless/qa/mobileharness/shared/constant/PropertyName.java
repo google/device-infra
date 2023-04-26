@@ -93,6 +93,12 @@ public interface PropertyName {
   /** Mobile Harness test property name constants. */
   enum Test implements PropertyName {
     /**
+     * The deep-dive classification of allocation failure. The value is the name of the allocation
+     * failure error ids.
+     */
+    ALLOCATION_FAILURE_CLASSIFICATION,
+
+    /**
      * Only available in Remote Mode. This is the epoch time when a test successfully allocated a
      * device. For b/71722259.
      */

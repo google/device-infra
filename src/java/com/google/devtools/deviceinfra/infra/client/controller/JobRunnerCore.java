@@ -1239,6 +1239,7 @@ public class JobRunnerCore implements Runnable {
                   .toNewResult()
                   .setNonPassing(
                       Test.TestResult.ERROR, new MobileHarnessException(errorId, errMsg, cause));
+              logAllocUserConfigErrorCauseToProperty(testInfo, errorId, cause);
             }
           } else if (failFastError.isPresent()) {
             hasAllocFailTests = true;
@@ -1590,6 +1591,19 @@ public class JobRunnerCore implements Runnable {
       }
     }
     return false;
+  }
+
+  private void logAllocUserConfigErrorCauseToProperty(
+      TestInfo testInfo, ErrorId errorId, @Nullable MobileHarnessException cause) {
+    if (!errorId.equals(InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR)) {
+      return;
+    }
+    if (cause == null) {
+      return;
+    }
+    testInfo
+        .properties()
+        .add(PropertyName.Test.ALLOCATION_FAILURE_CLASSIFICATION, cause.getErrorId().name());
   }
 
   /** Checks whether there's potential suitable devices for the job. */
