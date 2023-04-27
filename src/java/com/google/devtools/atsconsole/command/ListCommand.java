@@ -16,25 +16,26 @@
 
 package com.google.devtools.atsconsole.command;
 
+import java.util.concurrent.Callable;
+import javax.inject.Inject;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.HelpCommand;
 
-/** Empty root command. Business logics are delegated to the subcommands. */
+/** Command for "list" commands. */
 @Command(
-    name = "", // Set it as empty, so it won't show on the "--help" usage
+    name = "list",
+    aliases = {"l"},
+    sortOptions = false,
     mixinStandardHelpOptions = true,
-    synopsisHeading = "%n ",
-    header = "Console to run commands.",
-    customSynopsis = {
-      "Usage: [COMMAND]",
-    },
-    optionListHeading = "%nOptions:%n",
-    commandListHeading = "%n[COMMAND]s:%n",
-    subcommands = {
-      ExitCommand.class,
-      HelpCommand.class,
-      ListCommand.class,
-      RunCommand.class,
-      SetCommand.class,
-    })
-public final class RootCommand {}
+    descriptionHeading = "%n",
+    description = "List invocations, devices, etc.",
+    synopsisHeading = "Usage:%n ")
+final class ListCommand implements Callable<Integer> {
+
+  @Inject
+  ListCommand() {}
+
+  @Override
+  public Integer call() {
+    return 0;
+  }
+}

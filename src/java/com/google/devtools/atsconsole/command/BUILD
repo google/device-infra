@@ -19,6 +19,7 @@ java_library(
     name = "command",
     srcs = [
         "ExitCommand.java",
+        "ListCommand.java",
         "RootCommand.java",
         "RunCommand.java",
         "SetCommand.java",

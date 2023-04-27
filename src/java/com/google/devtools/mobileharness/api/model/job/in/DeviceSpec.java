@@ -25,7 +25,8 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in
  * The requirement of one device for every allocation. Note the job can specify multiple {@link
  * DeviceRequirement} to request multiple devices for a single allocation.
  *
- * <p>TODO - to support params/files for decorators stored in scoped in Decorator namespaces.
+ * <p>TODO: Use ScopedSpecs scopedSpecs() to support params/files for decorators stored in scoped in
+ * Decorator namespaces.
  */
 @AutoValue
 public abstract class DeviceSpec {
