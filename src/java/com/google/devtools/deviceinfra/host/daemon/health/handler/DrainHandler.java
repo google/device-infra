@@ -32,4 +32,9 @@ public interface DrainHandler {
   default boolean hasExpired() {
     return false;
   }
+
+  /** Cleanup for the forcibly drain. Normally it is triggered by the drain operation is expired. */
+  default void forceCleanUp() {
+    return;
+  }
 }
