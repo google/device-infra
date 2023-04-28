@@ -35,7 +35,6 @@ java_library(
     srcs = ["NoOpTestFlowConverter.java"],
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
     ],
     deps = [
         ":test_flow_converter",
