@@ -110,10 +110,15 @@ public interface PropertyName {
      */
     ALLOCATION_REQUESTED_EPOCH_MS,
 
-    /** The test allocation time in milliseconds. */
+    /**
+     * Recording the duration between the test starting and the test getting allocation in
+     * milliseconds.
+     */
     ALLOCATION_TIME_MS,
 
-    /** Name of the test property that contains the test allocation time in seconds. */
+    /**
+     * Recording the duration between the test starting and the test getting allocation in seconds.
+     */
     ALLOCATION_TIME_SEC,
 
     /** Android instrumentation test method repeat times. */
