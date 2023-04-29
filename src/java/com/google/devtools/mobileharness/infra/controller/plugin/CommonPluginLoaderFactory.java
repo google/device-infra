@@ -39,6 +39,7 @@ public class CommonPluginLoaderFactory extends PluginLoader.Factory {
       Collection<String> jarPaths,
       @Nullable String className,
       @Nullable Collection<String> moduleClassNames,
+      @Nullable String forceLoadFromJarClassRegex,
       PluginType pluginType,
       @Nullable LogCollector<?> log,
       Module... systemModules) {
@@ -46,6 +47,7 @@ public class CommonPluginLoaderFactory extends PluginLoader.Factory {
         jarPaths,
         className,
         moduleClassNames,
+        forceLoadFromJarClassRegex,
         pluginType,
         log,
         ArrayUtils.add(systemModules, new CommonSetupModule()));

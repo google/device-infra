@@ -847,6 +847,7 @@ public class JobRunnerCore implements Runnable {
               jobInfo.files().get(JobInfo.TAG_CLIENT_PLUGIN),
               jobInfo.params().get(JobInfo.PARAM_CLIENT_PLUGIN),
               jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN_MODULES, null),
+              jobInfo.params().get(JobInfo.PARAM_CLIENT_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX),
               PluginType.CLIENT,
               jobInfo.log(),
               new AbstractModule() {
