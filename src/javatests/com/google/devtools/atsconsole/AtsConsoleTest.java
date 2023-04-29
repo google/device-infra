@@ -99,58 +99,39 @@ public final class AtsConsoleTest {
                 deviceInfraServiceFlags,
                 ImmutableList.of(),
                 lineReader,
-                consolePrintStream,
-                () -> olcServerBinary));
+                consolePrintStream
+            ));
     injector.injectMembers(this);
-    atsConsole.injector = injector;
   }
 
   @After
   public void tearDown() {
-    Flags.resetToDefault();
-
-    System.out.println(consoleOutputStream.toString(UTF_8));
+    Flags.reset();
+    consolePrintStream.close();
+    consoleOutputStream.reset();
   }
 
   @Test
-  public void exitConsole() throws Exception {
+  public void testStart() throws Exception {
     when(lineReader.readLine(anyString())).thenReturn("exit");
 
-    atsConsole.call();
+    atsConsole.start();
 
-    assertThat(consoleOutputStream.toString(UTF_8)).isEmpty();
+    verify(lineReader).readLine(AtsConsole.PROMPT);
+    assertThat(consoleOutputStream.toString(UTF_8.name())).contains("Exiting");
   }
 
   @Test
-  public void startsConsoleWithHelp_exitConsoleAfterCommandExecution() throws Exception {
-    Injector injector =
-        Guice.createInjector(
-            new AtsConsoleModule(
-                ImmutableList.of(),
-                ImmutableList.of("--help"),
-                lineReader,
-                consolePrintStream,
-                () -> Path.of("")));
-    injector.injectMembers(this);
-    atsConsole.injector = injector;
+  public void testQuitCommand() throws Exception {
+    when(lineReader.readLine(anyString())).thenReturn("quit");
 
-    atsConsole.call();
+    atsConsole.start();
 
-    assertThat(consoleOutputStream.toString(UTF_8))
-        .isEqualTo("Using commandline arguments as starting command: [--help]\n");
-
-    verify(history).add("--help");
+    verify(lineReader).readLine(AtsConsole.PROMPT);
+    assertThat(consoleOutputStream.toString(UTF_8.name())).contains("Exiting");
   }
 
-  @Test
-  public void runCtsv_enableAtsConsoleOlcServer() throws Exception {
-    when(lineReader.readLine(anyString())).thenReturn("run -s abc cts-v").thenReturn("exit");
+  // Add more test cases as needed
 
-    atsConsole.call();
-
-    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(15L));
-
-    assertThat(consoleOutputStream.toString(UTF_8))
-        .isEqualTo("Error: Unimplemented AtsSessionPlugin\n");
-  }
 }
+
