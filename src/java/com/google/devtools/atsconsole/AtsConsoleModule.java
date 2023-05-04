@@ -16,6 +16,8 @@
 
 package com.google.devtools.atsconsole;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -29,6 +31,7 @@ import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.io.PrintStream;
+import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.Executors;
@@ -37,24 +40,28 @@ import javax.inject.Singleton;
 import org.jline.reader.LineReader;
 
 /** Guice Module for ATS console. */
+@SuppressWarnings("CloseableProvides")
 final class AtsConsoleModule extends AbstractModule {
 
   private final ImmutableList<String> deviceInfraServiceFlags;
   private final ImmutableList<String> mainArgs;
   private final LineReader consoleLineReader;
-  private final PrintStream consoleOutput;
+  private final PrintStream consoleOutputOut;
+  private final PrintStream consoleOutputErr;
   private final Provider<Path> olcServerBinary;
 
   AtsConsoleModule(
       List<String> deviceInfraServiceFlags,
       List<String> mainArgs,
       LineReader consoleLineReader,
-      PrintStream consoleOutput,
+      PrintStream consoleOutputOut,
+      PrintStream consoleOutputErr,
       Provider<Path> olcServerBinary) {
     this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
     this.mainArgs = ImmutableList.copyOf(mainArgs);
     this.consoleLineReader = consoleLineReader;
-    this.consoleOutput = consoleOutput;
+    this.consoleOutputOut = consoleOutputOut;
+    this.consoleOutputErr = consoleOutputErr;
     this.olcServerBinary = olcServerBinary;
   }
 
@@ -87,11 +94,34 @@ final class AtsConsoleModule extends AbstractModule {
     return consoleLineReader;
   }
 
-  @SuppressWarnings("CloseableProvides")
   @Provides
-  @ConsoleOutput
-  PrintStream provideConsoleOutput() {
-    return consoleOutput;
+  @Singleton
+  @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM)
+  PrintStream provideConsoleOutputOutStream() {
+    return consoleOutputOut;
+  }
+
+  @Provides
+  @Singleton
+  @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM)
+  PrintStream provideConsoleOutputErrStream() {
+    return consoleOutputErr;
+  }
+
+  @Provides
+  @Singleton
+  @ConsoleOutput(ConsoleOutput.Type.OUT_WRITER)
+  PrintWriter provideConsoleOutputOutWriter(
+      @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM) PrintStream outStream) {
+    return new PrintWriter(outStream, /* autoFlush= */ true, UTF_8);
+  }
+
+  @Provides
+  @Singleton
+  @ConsoleOutput(ConsoleOutput.Type.ERR_WRITER)
+  PrintWriter provideConsoleOutputErrWriter(
+      @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM) PrintStream errStream) {
+    return new PrintWriter(errStream, /* autoFlush= */ true, UTF_8);
   }
 
   @Provides

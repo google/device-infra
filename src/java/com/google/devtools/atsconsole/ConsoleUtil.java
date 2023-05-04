@@ -29,11 +29,15 @@ import org.apache.commons.io.FilenameUtils;
 @Singleton
 public class ConsoleUtil {
 
-  private final PrintStream consoleOutput;
+  private final PrintStream consoleOutputOut;
+  private final PrintStream consoleOutputErr;
 
   @Inject
-  ConsoleUtil(@ConsoleOutput PrintStream consoleOutput) {
-    this.consoleOutput = consoleOutput;
+  ConsoleUtil(
+      @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM) PrintStream consoleOutputOut,
+      @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM) PrintStream consoleOutputErr) {
+    this.consoleOutputOut = consoleOutputOut;
+    this.consoleOutputErr = consoleOutputErr;
   }
 
   /** Expands path prefixed with "~/" with user home expanded path. */
@@ -41,25 +45,39 @@ public class ConsoleUtil {
     if (path.startsWith("~" + File.separator)) {
       return System.getProperty("user.home") + path.substring(1);
     }
-    if ("~".equals(path)) {
+    if (path.equals("~")) {
       return System.getProperty("user.home");
     }
     return path;
   }
 
   /**
-   * Displays a line of text on console.
+   * Displays a text line (command output or user-requested help) on the console.
    *
-   * @param output which is displayed on the console
+   * @param output which is displayed on the console (stdout)
    */
   public void printLine(String output) {
-    consoleOutput.println(output);
+    consoleOutputOut.println(output);
+  }
+
+  /**
+   * Displays a text line (error messages or log) on the console.
+   *
+   * @param error which is displayed on the console (stderr)
+   */
+  public void printErrorLine(String error) {
+    consoleOutputErr.println(error);
+  }
+
+  public void flushConsoleOutput() {
+    consoleOutputOut.flush();
+    consoleOutputErr.flush();
   }
 
   /** Checks if the given file is a zip file. */
   public boolean isZipFile(File file) {
     String fileExt = FilenameUtils.getExtension(file.getPath());
-    if (!fileExt.isEmpty() && !"zip".equals(fileExt)) {
+    if (!fileExt.isEmpty() && !fileExt.equals("zip")) {
       return false;
     }
     try (ZipFile ignored = new ZipFile(file)) {

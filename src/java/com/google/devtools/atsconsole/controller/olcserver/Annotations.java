@@ -29,15 +29,17 @@ public class Annotations {
 
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
-  @interface ServerControlStub {}
+  @interface ServerStub {
 
-  @Qualifier
-  @Retention(RetentionPolicy.RUNTIME)
-  @interface ServerSessionStub {}
+    /** Type of {@link ServerStub}. */
+    enum Type {
+      CONTROL_SERVICE,
+      SESSION_SERVICE,
+      VERSION_SERVICE,
+    }
 
-  @Qualifier
-  @Retention(RetentionPolicy.RUNTIME)
-  @interface ServerVersionStub {}
+    Type value();
+  }
 
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)

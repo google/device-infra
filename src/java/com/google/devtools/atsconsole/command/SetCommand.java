@@ -22,16 +22,15 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.Option;
 
 /** Command to set console configurations. */
 @Command(
     name = "set",
+    aliases = {"s"},
     sortOptions = false,
-    mixinStandardHelpOptions = true,
-    descriptionHeading = "%n",
-    description = "Set console configurations.",
-    synopsisHeading = "Usage:%n ")
+    description = "Set console configurations.")
 final class SetCommand implements Callable<Integer> {
 
   @Option(
@@ -57,7 +56,7 @@ final class SetCommand implements Callable<Integer> {
   @Override
   public Integer call() {
     boolean allSuccess = setMoblyTestCasesDir() & setResultsDir();
-    return allSuccess ? 0 : 1;
+    return allSuccess ? ExitCode.OK : ExitCode.SOFTWARE;
   }
 
   private boolean setMoblyTestCasesDir() {
@@ -66,7 +65,7 @@ final class SetCommand implements Callable<Integer> {
       if (!moblyTestCasesDir.isEmpty() && localFileUtil.isDirExist(moblyTestCasesDir)) {
         consoleInfo.setMoblyTestCasesDir(moblyTestCasesDir);
       } else {
-        consoleUtil.printLine(
+        consoleUtil.printErrorLine(
             String.format(
                 "Directory '%s' doesn't exist, please confirm and retry.", moblyTestCasesDir));
         return false;
@@ -81,7 +80,7 @@ final class SetCommand implements Callable<Integer> {
       if (!resultsDir.isEmpty() && localFileUtil.isDirExist(resultsDir)) {
         consoleInfo.setResultsDirectory(resultsDir);
       } else {
-        consoleUtil.printLine(
+        consoleUtil.printErrorLine(
             String.format("Directory '%s' doesn't exist, please confirm and retry.", resultsDir));
         return false;
       }

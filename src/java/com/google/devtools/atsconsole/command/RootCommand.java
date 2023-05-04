@@ -22,14 +22,6 @@ import picocli.CommandLine.HelpCommand;
 /** Empty root command. Business logics are delegated to the subcommands. */
 @Command(
     name = "", // Set it as empty, so it won't show on the "--help" usage
-    mixinStandardHelpOptions = true,
-    synopsisHeading = "%n ",
-    header = "Console to run commands.",
-    customSynopsis = {
-      "Usage: [COMMAND]",
-    },
-    optionListHeading = "%nOptions:%n",
-    commandListHeading = "%n[COMMAND]s:%n",
     subcommands = {
       ExitCommand.class,
       HelpCommand.class,

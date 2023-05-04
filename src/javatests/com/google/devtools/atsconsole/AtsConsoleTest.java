@@ -58,8 +58,10 @@ public final class AtsConsoleTest {
   @Mock private LineReader lineReader;
   @Mock private History history;
 
-  private ByteArrayOutputStream consoleOutputStream;
-  private PrintStream consolePrintStream;
+  private ByteArrayOutputStream consoleOutOutputStream;
+  private PrintStream consoleOutPrintStream;
+  private ByteArrayOutputStream consoleErrOutputStream;
+  private PrintStream consoleErrPrintStream;
 
   @Inject private AtsConsole atsConsole;
 
@@ -89,8 +91,12 @@ public final class AtsConsoleTest {
             RunfilesUtil.getRunfilesLocation(
                 "java/com/google/devtools/atsconsole/controller/olcserver/AtsOlcServer_deploy.jar"));
 
-    consoleOutputStream = new ByteArrayOutputStream();
-    consolePrintStream = new PrintStream(consoleOutputStream, false, UTF_8);
+    consoleOutOutputStream = new ByteArrayOutputStream();
+    consoleOutPrintStream = new PrintStream(consoleOutOutputStream, false, UTF_8);
+
+    consoleErrOutputStream = new ByteArrayOutputStream();
+    consoleErrPrintStream = new PrintStream(consoleErrOutputStream, false, UTF_8);
+
     when(lineReader.getHistory()).thenReturn(history);
 
     Injector injector =
@@ -99,7 +105,8 @@ public final class AtsConsoleTest {
                 deviceInfraServiceFlags,
                 ImmutableList.of(),
                 lineReader,
-                consolePrintStream,
+                consoleOutPrintStream,
+                consoleErrPrintStream,
                 () -> olcServerBinary));
     injector.injectMembers(this);
     atsConsole.injector = injector;
@@ -109,7 +116,10 @@ public final class AtsConsoleTest {
   public void tearDown() {
     Flags.resetToDefault();
 
-    System.out.println(consoleOutputStream.toString(UTF_8));
+    System.out.println("STDOUT:");
+    System.out.println(consoleOutOutputStream.toString(UTF_8));
+    System.out.println("STDERR:");
+    System.out.println(consoleErrOutputStream.toString(UTF_8));
   }
 
   @Test
@@ -118,7 +128,7 @@ public final class AtsConsoleTest {
 
     atsConsole.call();
 
-    assertThat(consoleOutputStream.toString(UTF_8)).isEmpty();
+    assertThat(consoleOutOutputStream.toString(UTF_8)).isEmpty();
   }
 
   @Test
@@ -127,19 +137,20 @@ public final class AtsConsoleTest {
         Guice.createInjector(
             new AtsConsoleModule(
                 ImmutableList.of(),
-                ImmutableList.of("--help"),
+                ImmutableList.of("help"),
                 lineReader,
-                consolePrintStream,
+                consoleOutPrintStream,
+                consoleErrPrintStream,
                 () -> Path.of("")));
     injector.injectMembers(this);
     atsConsole.injector = injector;
 
     atsConsole.call();
 
-    assertThat(consoleOutputStream.toString(UTF_8))
-        .isEqualTo("Using commandline arguments as starting command: [--help]\n");
+    assertThat(consoleOutOutputStream.toString(UTF_8))
+        .startsWith("Using commandline arguments as starting command: [help]\n");
 
-    verify(history).add("--help");
+    verify(history).add("help");
   }
 
   @Test
@@ -150,7 +161,7 @@ public final class AtsConsoleTest {
 
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(15L));
 
-    assertThat(consoleOutputStream.toString(UTF_8))
+    assertThat(consoleErrOutputStream.toString(UTF_8))
         .isEqualTo("Error: Unimplemented AtsSessionPlugin\n");
   }
 }

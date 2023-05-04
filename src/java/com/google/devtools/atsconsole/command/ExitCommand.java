@@ -20,25 +20,25 @@ import com.google.devtools.atsconsole.ConsoleInfo;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ExitCode;
 
 /** Command to exit the ATS console. */
 @Command(
     name = "exit",
     aliases = {"quit", "q"},
-    mixinStandardHelpOptions = true,
     description = "Exit the console.")
 final class ExitCommand implements Callable<Integer> {
 
   private final ConsoleInfo consoleInfo;
 
-  @Override
-  public Integer call() {
-    consoleInfo.setShouldExitConsole(true);
-    return 0;
-  }
-
   @Inject
   ExitCommand(ConsoleInfo consoleInfo) {
     this.consoleInfo = consoleInfo;
+  }
+
+  @Override
+  public Integer call() {
+    consoleInfo.setShouldExitConsole(true);
+    return ExitCode.OK;
   }
 }

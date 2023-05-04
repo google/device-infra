@@ -84,6 +84,13 @@ public final class SetCommandTest {
             })
         .when(consoleUtil)
         .printLine(anyString());
+    doAnswer(
+            invocation -> {
+              System.err.println(invocation.getArgument(0, String.class));
+              return null;
+            })
+        .when(consoleUtil)
+        .printErrorLine(anyString());
     when(consoleUtil.completeHomeDirectory(anyString())).thenCallRealMethod();
   }
 
@@ -120,7 +127,7 @@ public final class SetCommandTest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getMoblyTestCasesDir().orElse("")).isEqualTo(MOBLY_TESTCASES_DIR);
-    assertThat(out.toString(UTF_8.name())).contains("doesn't exist");
+    assertThat(err.toString(UTF_8.name())).contains("doesn't exist");
   }
 
   @Test
@@ -131,7 +138,7 @@ public final class SetCommandTest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getMoblyTestCasesDir().orElse("")).isEqualTo(MOBLY_TESTCASES_DIR);
-    assertThat(out.toString(UTF_8.name())).contains("doesn't exist");
+    assertThat(err.toString(UTF_8.name())).contains("doesn't exist");
   }
 
   @Test
@@ -154,7 +161,7 @@ public final class SetCommandTest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getResultsDirectory().orElse("")).isEqualTo(TEST_RESULTS_DIR);
-    assertThat(out.toString(UTF_8.name())).contains("doesn't exist");
+    assertThat(err.toString(UTF_8.name())).contains("doesn't exist");
   }
 
   @Test
@@ -165,7 +172,7 @@ public final class SetCommandTest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getResultsDirectory().orElse("")).isEqualTo(TEST_RESULTS_DIR);
-    assertThat(out.toString(UTF_8.name())).contains("doesn't exist");
+    assertThat(err.toString(UTF_8.name())).contains("doesn't exist");
   }
 
   @Test

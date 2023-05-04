@@ -23,8 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerBinary;
-import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerControlStub;
-import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerVersionStub;
+import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerStub;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
@@ -74,8 +73,8 @@ public class ServerPreparer {
       Sleeper sleeper,
       SystemUtil systemUtil,
       LocalFileUtil localFileUtil,
-      @ServerControlStub ControlStub controlStub,
-      @ServerVersionStub VersionStub versionStub,
+      @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlStub controlStub,
+      @ServerStub(ServerStub.Type.VERSION_SERVICE) VersionStub versionStub,
       @ServerBinary Provider<Path> serverBinary,
       @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags) {
     this.commandExecutor = commandExecutor;

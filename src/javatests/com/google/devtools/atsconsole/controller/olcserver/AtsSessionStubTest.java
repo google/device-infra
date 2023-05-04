@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
-import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerSessionStub;
+import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerStub;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
@@ -65,7 +65,11 @@ public class AtsSessionStubTest {
   @Bind @DeviceInfraServiceFlags private ImmutableList<String> deviceInfraServiceFlags;
 
   @Inject private ServerPreparer serverPreparer;
-  @Inject @ServerSessionStub private SessionStub sessionStub;
+
+  @Inject
+  @ServerStub(ServerStub.Type.SESSION_SERVICE)
+  private SessionStub sessionStub;
+
   @Inject private AtsSessionStub atsSessionStub;
 
   @Before

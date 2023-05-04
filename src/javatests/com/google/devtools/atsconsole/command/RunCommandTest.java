@@ -118,6 +118,13 @@ public final class RunCommandTest {
             })
         .when(consoleUtil)
         .printLine(anyString());
+    doAnswer(
+            invocation -> {
+              System.err.println(invocation.getArgument(0, String.class));
+              return null;
+            })
+        .when(consoleUtil)
+        .printErrorLine(anyString());
     doCallRealMethod().when(consoleUtil).completeHomeDirectory(anyString());
     when(localFileUtil.isDirExist(MOBLY_TESTCASES_DIR)).thenReturn(true);
     when(localFileUtil.isFileExist(MOBLY_TEST_ZIP_SUITE_MAIN_FILE)).thenReturn(true);
@@ -169,7 +176,7 @@ public final class RunCommandTest {
     int exitCode = commandLine.execute("run", "cts-v");
 
     assertThat(exitCode).isEqualTo(1);
-    assertThat(out.toString(UTF_8.name())).contains("Mobly test cases dir is not set");
+    assertThat(err.toString(UTF_8.name())).contains("Mobly test cases dir is not set");
   }
 
   @Test
@@ -184,7 +191,7 @@ public final class RunCommandTest {
     int exitCode = commandLine.execute("run", "cts-v");
 
     assertThat(exitCode).isEqualTo(1);
-    assertThat(out.toString(UTF_8.name())).contains("\"suite_main.py\" file is required");
+    assertThat(err.toString(UTF_8.name())).contains("\"suite_main.py\" file is required");
   }
 
   @Test
@@ -240,7 +247,7 @@ public final class RunCommandTest {
 
     commandLine.execute("run", "cts-v");
 
-    assertThat(out.toString(UTF_8.name())).contains("Found no match");
+    assertThat(err.toString(UTF_8.name())).contains("Found no match");
     verify(commandExecutor, never()).exec(any(Command.class));
   }
 

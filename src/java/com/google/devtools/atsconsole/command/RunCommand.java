@@ -66,6 +66,7 @@ import javax.inject.Inject;
 import org.apache.commons.io.FilenameUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParameterException;
@@ -75,11 +76,9 @@ import picocli.CommandLine.Spec;
 /** Command to run CTS and CTS-V tests. */
 @Command(
     name = "run",
+    aliases = {"r"},
     sortOptions = false,
-    mixinStandardHelpOptions = true,
-    descriptionHeading = "%n",
     description = "Run CTS and CTS-V tests.",
-    synopsisHeading = "Usage:%n ",
     footer = {
       "%nAlternatively you can enter @|fg(yellow) <config>|@ right after \"run\" command which"
           + " will achieve same result.%n",
@@ -187,7 +186,7 @@ final class RunCommand implements Callable<Integer> {
   private int runInM0() throws MobileHarnessException, InterruptedException, IOException {
     if (Objects.equals(config, CTSV_CONFIG)) {
       if (!checkCtsvPreparation()) {
-        return 1;
+        return ExitCode.SOFTWARE;
       }
       ImmutableMap<String, ModuleTestOptionsGroup> moduleTestOptionsGroupMap =
           getModuleTestOptionsGroupMap();
@@ -205,18 +204,18 @@ final class RunCommand implements Callable<Integer> {
       }
 
       if (moblyTestRunEntries.isEmpty()) {
-        consoleUtil.printLine(
+        consoleUtil.printErrorLine(
             String.format(
                 "Found no match Mobly test zip(s) under directory [%s], skip running.",
                 consoleInfo.getMoblyTestCasesDir().orElse(null)));
-        return 0;
+        return ExitCode.OK;
       }
 
       ImmutableList<String> serials = getDeviceSerialsBeforeTest();
       if (serials.isEmpty()) {
         logger.atWarning().log(
             "Found no matched and connected Android devices on the host, skip running.");
-        return 0;
+        return ExitCode.OK;
       }
 
       String moblyConfigFile =
@@ -256,7 +255,7 @@ final class RunCommand implements Callable<Integer> {
         logger.atWarning().log("Found no Mobly test summary yaml files after the test run.");
       }
     }
-    return 0;
+    return ExitCode.OK;
   }
 
   private int runInM1() throws InterruptedException, MobileHarnessException {
@@ -288,8 +287,8 @@ final class RunCommand implements Callable<Integer> {
                 .build()),
         new RunSessionFutureCallback(),
         directExecutor());
-    logger.atInfo().log("Command submitted.");
-    return 0;
+    consoleUtil.printLine("Command submitted.");
+    return ExitCode.OK;
   }
 
   private class RunSessionFutureCallback implements FutureCallback<AtsSessionPluginOutput> {
@@ -301,7 +300,7 @@ final class RunCommand implements Callable<Integer> {
           consoleUtil.printLine(output.getSuccess().getOutputMessage());
           break;
         case FAILURE:
-          consoleUtil.printLine("Error: " + output.getFailure().getErrorMessage());
+          consoleUtil.printErrorLine("Error: " + output.getFailure().getErrorMessage());
           break;
         default:
       }
@@ -327,7 +326,7 @@ final class RunCommand implements Callable<Integer> {
 
   private boolean checkCtsvPreparation() {
     if (consoleInfo.getMoblyTestCasesDir().isEmpty()) {
-      consoleUtil.printLine(
+      consoleUtil.printErrorLine(
           String.format(
               "Mobly test cases dir is not set, please use 'set' command to set it first. All Mobly"
                   + " test zips should be put in the Mobly test cases dir.%nCurrent Mobly test"
@@ -336,12 +335,12 @@ final class RunCommand implements Callable<Integer> {
       return false;
     }
     if (consoleInfo.getMoblyTestZipSuiteMainFile().isEmpty()) {
-      consoleUtil.printLine(
+      consoleUtil.printErrorLine(
           "\"suite_main.py\" file is required when running CTS-V test, please pass its local path"
               + " to JAVA system property \"MOBLY_TEST_ZIP_SUITE_MAIN_FILE\" and retry.");
       return false;
     } else if (!localFileUtil.isFileExist(getMoblyTestZipSuiteMainFilePath())) {
-      consoleUtil.printLine(
+      consoleUtil.printErrorLine(
           String.format(
               "The given Moby suite main file \"%s\" doesn't exist, please check and retry.",
               getMoblyTestZipSuiteMainFilePath()));
@@ -421,15 +420,15 @@ final class RunCommand implements Callable<Integer> {
           com.google.devtools.mobileharness.shared.util.command.Command.of(commandArray)
               .workDir(moblyTestZipPath.getParent())
               .redirectStderr(true)
-              .onStdout(LineCallback.does(consoleUtil::printLine));
+              .onStdout(LineCallback.does(consoleUtil::printErrorLine));
 
       commandExecutor.setBaseEnvironment(
           ImmutableMap.of("MOBLY_LOGPATH", curMoblyLogDir.get().toString()));
-      consoleUtil.printLine(
+      consoleUtil.printErrorLine(
           String.format("===== Running Mobly test zip [%s] =====", moblyTestRunEntry.name()));
-      consoleUtil.printLine(String.format("Executing command \"%s\"", cmd));
+      consoleUtil.printErrorLine(String.format("Executing command \"%s\"", cmd));
       commandExecutor.exec(cmd);
-      consoleUtil.printLine(
+      consoleUtil.printErrorLine(
           String.format("===== Done running Mobly test zip [%s] =====", moblyTestRunEntry.name()));
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(

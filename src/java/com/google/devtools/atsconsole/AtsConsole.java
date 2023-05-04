@@ -30,6 +30,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.Annotations.ConsoleLineReader;
+import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import com.google.devtools.atsconsole.Annotations.MainArgs;
 import com.google.devtools.atsconsole.command.RootCommand;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
@@ -39,6 +40,7 @@ import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -65,7 +67,7 @@ public class AtsConsole implements Callable<Void> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String APPNAME = "AtsConsole";
-  private static final String HELP_PATTERN = "-(h|-help)";
+  private static final String HELP_PATTERN = "h|help";
 
   private static final String MOBLY_TESTCASES_DIR = System.getProperty("MOBLY_TESTCASES_DIR");
   private static final String TEST_RESULTS_DIR = System.getProperty("TEST_RESULTS_DIR");
@@ -93,6 +95,7 @@ public class AtsConsole implements Callable<Void> {
                 asList(args),
                 lineReader,
                 System.out,
+                System.err,
                 AtsConsole::getOlcServerBinary));
 
     // Creates ATS console.
@@ -109,6 +112,8 @@ public class AtsConsole implements Callable<Void> {
 
   private final ImmutableList<String> mainArgs;
   private final LineReader lineReader;
+  private final PrintWriter outWriter;
+  private final PrintWriter errWriter;
   private final Sleeper sleeper;
   private final ConsoleUtil consoleUtil;
   private final ConsoleInfo consoleInfo;
@@ -120,11 +125,15 @@ public class AtsConsole implements Callable<Void> {
   AtsConsole(
       @MainArgs ImmutableList<String> mainArgs,
       @ConsoleLineReader LineReader lineReader,
+      @ConsoleOutput(ConsoleOutput.Type.OUT_WRITER) PrintWriter outWriter,
+      @ConsoleOutput(ConsoleOutput.Type.ERR_WRITER) PrintWriter errWriter,
       Sleeper sleeper,
       ConsoleUtil consoleUtil,
       ConsoleInfo consoleInfo) {
     this.mainArgs = mainArgs;
     this.lineReader = lineReader;
+    this.outWriter = outWriter;
+    this.errWriter = errWriter;
     this.sleeper = sleeper;
     this.consoleUtil = consoleUtil;
     this.consoleInfo = consoleInfo;
@@ -132,7 +141,11 @@ public class AtsConsole implements Callable<Void> {
 
   @Override
   public Void call() throws InterruptedException {
-    CommandLine commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
+    CommandLine commandLine =
+        new CommandLine(RootCommand.class, new GuiceFactory(injector))
+            .setOut(outWriter)
+            .setErr(errWriter);
+
     initializeConsoleInfo();
 
     ImmutableList<String> args = mainArgs;
@@ -143,30 +156,25 @@ public class AtsConsole implements Callable<Void> {
       do {
         if (args.isEmpty()) {
           input = getConsoleInput().orElse(null);
-
           if (input == null) {
-            consoleUtil.printLine("Input interrupted; quitting...");
+            consoleUtil.printErrorLine("Input interrupted; quitting...");
             consoleInfo.setShouldExitConsole(true);
             break;
           }
 
           tokens = new ArrayList<>();
-
           try {
             tokenize(tokens, input);
           } catch (TokenizationException e) {
-            consoleUtil.printLine(String.format("Invalid input: %s.", input));
+            consoleUtil.printErrorLine("Invalid input: " + input);
             continue;
           }
-
           if (tokens.isEmpty()) {
             continue;
           }
         } else {
-          consoleUtil.printLine(
-              String.format("Using commandline arguments as starting command: %s", args));
-          String cmd = Joiner.on(" ").join(args);
-          lineReader.getHistory().add(cmd);
+          consoleUtil.printLine("Using commandline arguments as starting command: " + args);
+          lineReader.getHistory().add(Joiner.on(" ").join(args));
           tokens = args;
           if (args.get(0).matches(HELP_PATTERN)) {
             // If starts from command line with args "--help", "-h", returns to shell.
@@ -183,8 +191,7 @@ public class AtsConsole implements Callable<Void> {
       return null;
     } finally {
       // Makes sure that we don't quit with messages still in the buffers.
-      System.err.flush();
-      System.out.flush();
+      consoleUtil.flushConsoleOutput();
     }
   }
 
@@ -199,9 +206,9 @@ public class AtsConsole implements Callable<Void> {
     try {
       return Optional.of(lineReader.readLine("ats-console > "));
     } catch (UserInterruptException e) {
-      consoleUtil.printLine("\nInterrupted by the user.");
+      consoleUtil.printErrorLine("\nInterrupted by the user.");
     } catch (EndOfFileException e) {
-      consoleUtil.printLine("\nReceived EOF.");
+      consoleUtil.printErrorLine("\nReceived EOF.");
     }
     return Optional.empty();
   }

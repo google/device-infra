@@ -19,9 +19,7 @@ package com.google.devtools.atsconsole.controller.olcserver;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerBinary;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerChannel;
-import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerControlStub;
-import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerSessionStub;
-import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerVersionStub;
+import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerStub;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ChannelFactory;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
@@ -58,21 +56,21 @@ public class OlcServerModule extends AbstractModule {
 
   @Provides
   @Singleton
-  @ServerControlStub
+  @ServerStub(ServerStub.Type.CONTROL_SERVICE)
   ControlStub provideServerControlStub(@ServerChannel ManagedChannel serverChannel) {
     return new ControlStub(serverChannel);
   }
 
   @Provides
   @Singleton
-  @ServerSessionStub
+  @ServerStub(ServerStub.Type.SESSION_SERVICE)
   SessionStub provideServerSessionStub(@ServerChannel ManagedChannel serverChannel) {
     return new SessionStub(serverChannel);
   }
 
   @Provides
   @Singleton
-  @ServerVersionStub
+  @ServerStub(ServerStub.Type.VERSION_SERVICE)
   VersionStub provideServerVersionStub(@ServerChannel ManagedChannel serverChannel) {
     return new VersionStub(serverChannel);
   }

@@ -37,7 +37,18 @@ public class Annotations {
 
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface ConsoleOutput {}
+  public @interface ConsoleOutput {
+
+    /** Type of {@link ConsoleOutput}. */
+    enum Type {
+      OUT_STREAM,
+      ERR_STREAM,
+      OUT_WRITER,
+      ERR_WRITER,
+    }
+
+    Type value();
+  }
 
   private Annotations() {}
 }
