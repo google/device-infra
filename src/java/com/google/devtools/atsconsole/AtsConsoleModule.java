@@ -41,7 +41,7 @@ import org.jline.reader.LineReader;
 
 /** Guice Module for ATS console. */
 @SuppressWarnings("CloseableProvides")
-final class AtsConsoleModule extends AbstractModule {
+public class AtsConsoleModule extends AbstractModule {
 
   private final ImmutableList<String> deviceInfraServiceFlags;
   private final ImmutableList<String> mainArgs;
@@ -50,7 +50,7 @@ final class AtsConsoleModule extends AbstractModule {
   private final PrintStream consoleOutputErr;
   private final Provider<Path> olcServerBinary;
 
-  AtsConsoleModule(
+  public AtsConsoleModule(
       List<String> deviceInfraServiceFlags,
       List<String> mainArgs,
       LineReader consoleLineReader,

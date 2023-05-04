@@ -21,6 +21,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.zip.ZipFile;
+import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.commons.io.FilenameUtils;
@@ -29,7 +30,12 @@ import org.apache.commons.io.FilenameUtils;
 @Singleton
 public class ConsoleUtil {
 
+  private final Object consoleOutputLock = new Object();
+
+  @GuardedBy("consoleOutputLock")
   private final PrintStream consoleOutputOut;
+
+  @GuardedBy("consoleOutputLock")
   private final PrintStream consoleOutputErr;
 
   @Inject
@@ -54,24 +60,34 @@ public class ConsoleUtil {
   /**
    * Displays a text line (command output or user-requested help) on the console.
    *
+   * <p>The method is thread safe.
+   *
    * @param output which is displayed on the console (stdout)
    */
   public void printLine(String output) {
-    consoleOutputOut.println(output);
+    synchronized (consoleOutputLock) {
+      consoleOutputOut.println(output);
+    }
   }
 
   /**
    * Displays a text line (error messages or log) on the console.
    *
+   * <p>The method is thread safe.
+   *
    * @param error which is displayed on the console (stderr)
    */
   public void printErrorLine(String error) {
-    consoleOutputErr.println(error);
+    synchronized (consoleOutputLock) {
+      consoleOutputErr.println(error);
+    }
   }
 
   public void flushConsoleOutput() {
-    consoleOutputOut.flush();
-    consoleOutputErr.flush();
+    synchronized (consoleOutputLock) {
+      consoleOutputOut.flush();
+      consoleOutputErr.flush();
+    }
   }
 
   /** Checks if the given file is a zip file. */

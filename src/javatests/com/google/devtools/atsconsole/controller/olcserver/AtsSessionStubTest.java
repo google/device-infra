@@ -137,7 +137,7 @@ public class AtsSessionStubTest {
     assertThat(atsSessionPluginOutput)
         .isEqualTo(
             AtsSessionPluginOutput.newBuilder()
-                .setFailure(Failure.newBuilder().setErrorMessage("Unimplemented AtsSessionPlugin"))
+                .setFailure(Failure.newBuilder().setErrorMessage("Unimplemented"))
                 .build());
   }
 }

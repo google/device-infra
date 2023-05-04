@@ -21,8 +21,10 @@ import static com.google.protobuf.TextFormat.shortDebugString;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig.CommandCase;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListCommand;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
@@ -37,13 +39,15 @@ public class AtsSessionPlugin {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final SessionInfo sessionInfo;
+  private final ListDevicesCommandHandler listDevicesCommandHandler;
 
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
 
   @Inject
-  AtsSessionPlugin(SessionInfo sessionInfo) {
+  AtsSessionPlugin(SessionInfo sessionInfo, ListDevicesCommandHandler listDevicesCommandHandler) {
     this.sessionInfo = sessionInfo;
+    this.listDevicesCommandHandler = listDevicesCommandHandler;
   }
 
   @Subscribe
@@ -55,17 +59,33 @@ public class AtsSessionPlugin {
             .unpack(AtsSessionPluginConfig.class);
     logger.atInfo().log("Config: %s", shortDebugString(config));
 
-    AtsSessionPluginOutput output =
+    onSessionStarting();
+  }
+
+  private void onSessionStarting() {
+    if (config.getCommandCase().equals(CommandCase.LIST_COMMAND)) {
+      ListCommand listCommand = config.getListCommand();
+      if (listCommand.getCommandCase().equals(ListCommand.CommandCase.LIST_DEVICES_COMMAND)) {
+        AtsSessionPluginOutput output =
+            listDevicesCommandHandler.handle(listCommand.getListDevicesCommand());
+        setOutput(output);
+        return;
+      }
+    }
+    setOutput(
         AtsSessionPluginOutput.newBuilder()
-            .setFailure(Failure.newBuilder().setErrorMessage("Unimplemented AtsSessionPlugin"))
-            .build();
-    sessionInfo.setSessionPluginOutput(
-        oldOutput -> SessionPluginOutput.newBuilder().setOutput(Any.pack(output)).build());
-    logger.atInfo().log("Output: %s", shortDebugString(output));
+            .setFailure(Failure.newBuilder().setErrorMessage("Unimplemented"))
+            .build());
   }
 
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event) {
     // Does nothing.
+  }
+
+  private void setOutput(AtsSessionPluginOutput output) {
+    sessionInfo.setSessionPluginOutput(
+        oldOutput -> SessionPluginOutput.newBuilder().setOutput(Any.pack(output)).build());
+    logger.atInfo().log("Output: %s", shortDebugString(output));
   }
 }

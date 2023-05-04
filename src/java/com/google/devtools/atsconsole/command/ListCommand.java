@@ -16,11 +16,26 @@
 
 package com.google.devtools.atsconsole.command;
 
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.atsconsole.ConsoleUtil;
+import com.google.devtools.atsconsole.controller.olcserver.AtsSessionStub;
+import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListDevicesCommand;
+import com.google.devtools.atsconsole.controller.sessionplugin.PluginOutputPrinter;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
+import picocli.CommandLine.Model.CommandSpec;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.ParameterException;
+import picocli.CommandLine.Spec;
 
 /** Command for "list" commands. */
 @Command(
@@ -30,11 +45,23 @@ import picocli.CommandLine.ExitCode;
     description = "List invocations, devices, modules, etc.")
 public class ListCommand implements Callable<Integer> {
 
+  @Spec private CommandSpec spec;
+
   private final ConsoleUtil consoleUtil;
+  private final ServerPreparer serverPreparer;
+  private final AtsSessionStub atsSessionStub;
 
   @Inject
-  ListCommand(ConsoleUtil consoleUtil) {
+  ListCommand(
+      ConsoleUtil consoleUtil, ServerPreparer serverPreparer, AtsSessionStub atsSessionStub) {
     this.consoleUtil = consoleUtil;
+    this.serverPreparer = serverPreparer;
+    this.atsSessionStub = atsSessionStub;
+  }
+
+  @Override
+  public Integer call() {
+    throw new ParameterException(spec.commandLine(), "Missing required subcommand");
   }
 
   @Command(
@@ -55,10 +82,24 @@ public class ListCommand implements Callable<Integer> {
   @Command(
       name = "devices",
       aliases = {"d"},
-      description = "List all detected or known devices")
-  public int devices() {
-    consoleUtil.printErrorLine("Unimplemented");
-    return ExitCode.SOFTWARE;
+      description =
+          "List all detected or known devices. Use \"list devices all\" to list all devices"
+              + " including placeholders.")
+  public int devices(@Option(names = "all") boolean listAllDevices)
+      throws MobileHarnessException, InterruptedException {
+    serverPreparer.prepareOlcServer();
+    ListenableFuture<AtsSessionPluginOutput> future =
+        atsSessionStub.runSession(
+            "list_devices_command",
+            AtsSessionPluginConfig.newBuilder()
+                .setListCommand(
+                    SessionPluginProto.ListCommand.newBuilder()
+                        .setListDevicesCommand(
+                            ListDevicesCommand.newBuilder().setListAllDevices(listAllDevices)))
+                .build());
+    AtsSessionPluginOutput output =
+        MoreFutures.get(future, InfraErrorId.ATSC_LIST_DEVICES_COMMAND_EXECUTION_ERROR);
+    return PluginOutputPrinter.printOutput(output, consoleUtil);
   }
 
   @Command(
@@ -95,11 +136,5 @@ public class ListCommand implements Callable<Integer> {
   public int results() {
     consoleUtil.printErrorLine("Unimplemented");
     return ExitCode.SOFTWARE;
-  }
-
-  @Override
-  public Integer call() {
-    consoleUtil.printErrorLine("Unable to handle command 'list'.  Enter 'help' for help.");
-    return ExitCode.USAGE;
   }
 }

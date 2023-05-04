@@ -20,6 +20,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole/controller:__subpackages__",
     ],
     deps = [
+        ":list_devices_command_handler",
         "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
@@ -29,5 +30,25 @@ java_library(
         "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "list_devices_command_handler",
+    srcs = ["ListDevicesCommandHandler.java"],
+    deps = ["//src/devtools/atsconsole/controller/proto:session_plugin_java_proto"],
+)
+
+java_library(
+    name = "plugin_output_printer",
+    srcs = ["PluginOutputPrinter.java"],
+    visibility = ["//src/java/com/google/devtools/atsconsole/command:__pkg__"],
+    deps = [
+        "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
+        "//src/java/com/google/devtools/atsconsole:console_util",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+        "@maven//:info_picocli_picocli",
     ],
 )

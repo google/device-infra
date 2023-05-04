@@ -21,20 +21,18 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-import static java.util.Objects.requireNonNull;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.FutureCallback;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.controller.olcserver.AtsSessionStub;
 import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
-import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.atsconsole.controller.sessionplugin.PluginOutputPrinter.PrintPluginOutputFutureCallback;
 import com.google.devtools.atsconsole.result.xml.MoblyResultInfo;
 import com.google.devtools.atsconsole.result.xml.XmlResultFormatter;
 import com.google.devtools.atsconsole.result.xml.XmlResultUtil;
@@ -285,31 +283,10 @@ final class RunCommand implements Callable<Integer> {
                         .addAllDeviceSerial(deviceSerials)
                         .addAllModules(modules))
                 .build()),
-        new RunSessionFutureCallback(),
+        new PrintPluginOutputFutureCallback(consoleUtil),
         directExecutor());
     consoleUtil.printLine("Command submitted.");
     return ExitCode.OK;
-  }
-
-  private class RunSessionFutureCallback implements FutureCallback<AtsSessionPluginOutput> {
-
-    @Override
-    public void onSuccess(AtsSessionPluginOutput output) {
-      switch (requireNonNull(output).getResultCase()) {
-        case SUCCESS:
-          consoleUtil.printLine(output.getSuccess().getOutputMessage());
-          break;
-        case FAILURE:
-          consoleUtil.printErrorLine("Error: " + output.getFailure().getErrorMessage());
-          break;
-        default:
-      }
-    }
-
-    @Override
-    public void onFailure(Throwable error) {
-      logger.atWarning().withCause(error).log("Failed to run command");
-    }
   }
 
   private void validateConfig() {

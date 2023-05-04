@@ -90,6 +90,7 @@ java_library(
     deps = [
         ":annotations",
         ":apache_commons_io",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

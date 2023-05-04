@@ -119,7 +119,7 @@ public class AtsConsole implements Callable<Void> {
   private final ConsoleInfo consoleInfo;
 
   /** Set before {@link #call}; */
-  @VisibleForTesting volatile Injector injector;
+  @VisibleForTesting public volatile Injector injector;
 
   @Inject
   AtsConsole(

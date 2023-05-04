@@ -24,6 +24,7 @@ option java_outer_classname = "SessionPluginProto";
 message AtsSessionPluginConfig {
   oneof command {
     RunCommand run_command = 1;
+    ListCommand list_command = 2;
   }
 }
 
@@ -56,4 +57,15 @@ message RunCommand {
 
   // Optional.
   repeated string modules = 3;
+}
+
+message ListCommand {
+  oneof command {
+    ListDevicesCommand list_devices_command = 1;
+  }
+}
+
+message ListDevicesCommand {
+  // Whether to list all devices including placeholders.
+  bool list_all_devices = 1;
 }
