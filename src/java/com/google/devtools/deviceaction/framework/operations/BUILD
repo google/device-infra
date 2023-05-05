@@ -27,12 +27,18 @@ java_library(
     name = "operations",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
         "//src/java/com/google/devtools/deviceaction/common/schemas",
         "//src/java/com/google/devtools/deviceaction/common/utils",
         "//src/java/com/google/devtools/deviceaction/framework/devices",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "@maven//:com_google_guava_guava",
     ],
 )

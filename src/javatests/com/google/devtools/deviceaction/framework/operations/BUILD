@@ -27,14 +27,19 @@ java_library(
         ["*Test.java"],
     ),
     deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
         "//src/java/com/google/devtools/deviceaction/common/schemas",
+        "//src/java/com/google/devtools/deviceaction/common/utils",
         "//src/java/com/google/devtools/deviceaction/framework/devices",
         "//src/java/com/google/devtools/deviceaction/framework/operations",
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],
@@ -44,6 +49,7 @@ junit_test_suites(
     name = "gen_tests",
     sizes = [
         "small",
+        "medium",
     ],
     deps = [
         ":tests",

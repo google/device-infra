@@ -153,3 +153,11 @@ message GCSFile {
   optional string project = 1;
   optional string gs_uri = 2;
 }
+
+// A wrapper for resource paths.
+message ResourcePath {
+  optional string path = 1;
+  // Need to store the info because it is expensive to get it if the resource is
+  // remote or on device.
+  optional bool is_directory = 2;
+}
