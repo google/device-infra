@@ -18,6 +18,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "command",
     srcs = [
+        "DumpCommand.java",
         "ExitCommand.java",
         "ListCommand.java",
         "RootCommand.java",

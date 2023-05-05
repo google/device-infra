@@ -23,6 +23,7 @@ import picocli.CommandLine.HelpCommand;
 @Command(
     name = "", // Set it as empty, so it won't show on the "--help" usage
     subcommands = {
+      DumpCommand.class,
       ExitCommand.class,
       HelpCommand.class,
       ListCommand.class,
