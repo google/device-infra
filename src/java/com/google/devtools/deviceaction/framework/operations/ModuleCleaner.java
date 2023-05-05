@@ -21,7 +21,7 @@ import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
 
 /** An {@link Operation} to clean up staged sessions. */
-public final class ModuleCleaner implements Operation {
+public class ModuleCleaner implements Operation {
   private static final ImmutableList<String> SESSION_DIRS =
       ImmutableList.of("/data/apex/active/", "/data/app-staging/", "/data/apex/sessions/");
 

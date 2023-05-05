@@ -38,7 +38,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 
 /** An {@link Operation} to install mainline modules to the device. */
-public final class ModuleInstaller implements Operation {
+public class ModuleInstaller implements Operation {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final String ENABLE_ROLLBACK = "--enable-rollback";
