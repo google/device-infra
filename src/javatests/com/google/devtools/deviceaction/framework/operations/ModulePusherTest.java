@@ -30,6 +30,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.truth.Correspondence;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.AndroidPackage;
@@ -134,9 +135,11 @@ public final class ModulePusherTest {
         "com.android.FAKE.SPLIT.APK.PACKAGE.NAME/com.android.FAKE.SPLIT.APK.PACKAGE.NAME");
     assertThat(targets.get(2).toString()).isEqualTo(DATA_APP_SPLIT_APK_FOLDER);
     File[] splitFiles = sources.get(2).toFile().listFiles();
-    assertThat(splitFiles).hasLength(2);
-    assertThat(splitFiles[0].getName()).isEqualTo("base-arm64.apk");
-    assertThat(splitFiles[1].getName()).isEqualTo("hdpi-arm64.apk");
+    assertThat(splitFiles)
+        .asList()
+        .comparingElementsUsing(
+            Correspondence.<File, String>transforming(File::getName, "has a name of"))
+        .containsExactly("base-arm64.apk", "hdpi-arm64.apk");
   }
 
   @Test
