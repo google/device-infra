@@ -54,6 +54,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local",
         "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:thread_factory_util",
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:controller_module",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
         "@maven//:com_google_guava_guava",

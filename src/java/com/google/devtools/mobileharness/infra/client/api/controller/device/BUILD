@@ -31,9 +31,13 @@ java_library(
     srcs = ["DeviceQuerier.java"],
     visibility =
         DEFAULT_VISIBILITY + [
+            "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:__subpackages__",
             "//src/java/com/google/devtools/deviceinfra/infra/client/controller:__subpackages__",
             "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
+            "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+            "//src/javatests/com/google/devtools/atsconsole/controller/sessionplugin:__subpackages__",
             "//src/javatests/com/google/devtools/deviceinfra/infra/client/controller:__subpackages__",
+            "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         ],
     deps = [
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",

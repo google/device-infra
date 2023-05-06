@@ -65,8 +65,11 @@ message SessionPluginConfigs {
 // session events like SessionStartingEvent and SessionEndedEvent, and OmniLab
 // job / test events.
 //
-// A session plugin can have an @Inject constructor. SessionInfo will be bound
-// automatically.
+// A session plugin can have an @Inject constructor. These types will be bound
+// automatically:
+//
+// 1. SessionInfo.
+// 2. DeviceQuerier.
 message SessionPluginConfig {
   // Required.
   SessionPluginLoadingConfig loading_config = 1;

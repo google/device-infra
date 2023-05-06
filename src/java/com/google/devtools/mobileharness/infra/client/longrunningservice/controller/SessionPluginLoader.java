@@ -24,6 +24,7 @@ import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
 import com.google.devtools.deviceinfra.shared.util.reflection.ReflectionUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
@@ -35,7 +36,6 @@ import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subsc
 import com.google.inject.AbstractModule;
 import com.google.inject.CreationException;
 import com.google.inject.Guice;
-import com.google.inject.Provides;
 import com.google.inject.ProvisionException;
 import java.util.HashSet;
 import java.util.Set;
@@ -48,11 +48,14 @@ public class SessionPluginLoader {
 
   private final ReflectionUtil reflectionUtil;
   private final EventBusBackend eventBusBackend;
+  private final DeviceQuerier deviceQuerier;
 
   @Inject
-  SessionPluginLoader(ReflectionUtil reflectionUtil, EventBusBackend eventBusBackend) {
+  SessionPluginLoader(
+      ReflectionUtil reflectionUtil, EventBusBackend eventBusBackend, DeviceQuerier deviceQuerier) {
     this.reflectionUtil = reflectionUtil;
     this.eventBusBackend = eventBusBackend;
+    this.deviceQuerier = deviceQuerier;
   }
 
   public ImmutableList<SessionPlugin> loadSessionPlugins(SessionDetailHolder sessionDetailHolder)
@@ -137,7 +140,7 @@ public class SessionPluginLoader {
   private Object createSessionPlugin(Class<?> sessionPluginClass, SessionInfo sessionInfo)
       throws MobileHarnessException {
     try {
-      return Guice.createInjector(new SessionPluginModule(sessionInfo))
+      return Guice.createInjector(new SessionPluginModule(sessionInfo, deviceQuerier))
           .getInstance(sessionPluginClass);
     } catch (CreationException | ProvisionException e) {
       throw new MobileHarnessException(
@@ -150,14 +153,17 @@ public class SessionPluginLoader {
   private static class SessionPluginModule extends AbstractModule {
 
     private final SessionInfo sessionInfo;
+    private final DeviceQuerier deviceQuerier;
 
-    private SessionPluginModule(SessionInfo sessionInfo) {
+    private SessionPluginModule(SessionInfo sessionInfo, DeviceQuerier deviceQuerier) {
       this.sessionInfo = sessionInfo;
+      this.deviceQuerier = deviceQuerier;
     }
 
-    @Provides
-    SessionInfo provideSessionInfo() {
-      return sessionInfo;
+    @Override
+    protected void configure() {
+      bind(SessionInfo.class).toInstance(sessionInfo);
+      bind(DeviceQuerier.class).toInstance(deviceQuerier);
     }
   }
 }

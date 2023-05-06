@@ -25,6 +25,7 @@ import com.google.devtools.deviceinfra.infra.client.api.ClientApiModule;
 import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.inject.AbstractModule;
@@ -48,6 +49,12 @@ public class ServerModule extends AbstractModule {
   @Singleton
   LocalMode provideLocalMode() {
     return new LocalMode();
+  }
+
+  @Provides
+  @Singleton
+  DeviceQuerier provideDeviceQuerier(LocalMode localMode) {
+    return localMode.createDeviceQuerier();
   }
 
   @Provides
