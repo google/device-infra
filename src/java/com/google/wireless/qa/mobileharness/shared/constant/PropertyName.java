@@ -173,6 +173,17 @@ public interface PropertyName {
     NONPASSING_BEFORE_RETRY_PASS,
 
     /**
+     * The name of the test property which indicates that one of the Oxygen devices we leased is
+     * prewarmed.
+     */
+    OXYGEN_DEVICE_IS_PREWARMED,
+
+    /**
+     * The name of the test property which indicates the virtualization type of this Oxygen test.
+     */
+    OXYGEN_VIRTUALIZATION_TYPE,
+
+    /**
      * The name of the test property which indicates that the current test is pass after a
      * non-passing attempt. Values of this test property: true or null.
      */
