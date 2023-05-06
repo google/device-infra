@@ -16,7 +16,7 @@
 java_library(
     name = "configuration_util",
     srcs = ["ConfigurationUtil.java"],
-    visibility = ["//src/javatests/com/google/devtools/xts/config:__pkg__"],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/platform/android/xts/config:__pkg__"],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

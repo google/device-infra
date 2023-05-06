@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.xts.config;
+package com.google.devtools.mobileharness.platform.android.xts.config;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Arrays.stream;
