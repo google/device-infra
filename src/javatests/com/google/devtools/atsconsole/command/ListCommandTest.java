@@ -121,11 +121,17 @@ public class ListCommandTest {
 
   @Test
   public void devices() throws Exception {
-    when(lineReader.readLine(anyString())).thenReturn("list devices").thenReturn("exit");
+    when(lineReader.readLine(anyString()))
+        .thenReturn("list devices")
+        .thenReturn("list devices all")
+        .thenReturn("exit");
 
     atsConsole.call();
 
-    assertThat(consoleErrOutputStream.toString(UTF_8))
-        .isEqualTo("Error: Unimplemented list devices command\n");
+    assertThat(consoleOutOutputStream.toString(UTF_8))
+        .isEqualTo(
+            "Serial\tState\tAllocation\tProduct\tVariant\tBuild\tBattery\n"
+                + "Serial\tState\tAllocation\tProduct\tVariant\tBuild\tBattery\tclass"
+                + "\tTestDeviceState\n");
   }
 }

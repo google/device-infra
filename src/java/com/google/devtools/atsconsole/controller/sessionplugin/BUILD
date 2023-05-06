@@ -36,7 +36,12 @@ java_library(
 java_library(
     name = "list_devices_command_handler",
     srcs = ["ListDevicesCommandHandler.java"],
-    deps = ["//src/devtools/atsconsole/controller/proto:session_plugin_java_proto"],
+    visibility = ["//src/javatests/com/google/devtools/atsconsole/controller/sessionplugin:__pkg__"],
+    deps = [
+        "//src/devtools/atsconsole/controller/proto:device_descriptor_java_proto",
+        "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(

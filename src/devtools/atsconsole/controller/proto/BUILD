@@ -22,6 +22,16 @@ package(
 )
 
 proto_library(
+    name = "device_descriptor_proto",
+    srcs = ["device_descriptor.proto"],
+)
+
+java_proto_library(
+    name = "device_descriptor_java_proto",
+    deps = [":device_descriptor_proto"],
+)
+
+proto_library(
     name = "session_plugin_proto",
     srcs = ["session_plugin.proto"],
 )

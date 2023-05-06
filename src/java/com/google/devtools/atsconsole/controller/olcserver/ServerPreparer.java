@@ -151,7 +151,7 @@ public class ServerPreparer {
 
       // Waits until the server starts.
       logger.atFine().log("Wait until OLC server starts, command=[%s]", serverProcess.command());
-      if (!serverStartedLatch.await(30L, SECONDS)) {
+      if (!serverStartedLatch.await(40L, SECONDS)) {
         throw new MobileHarnessException(
             InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_INITIALIZE_ERROR,
             "OLC server didn't start in 30 seconds");
