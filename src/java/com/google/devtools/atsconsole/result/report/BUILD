@@ -95,3 +95,25 @@ java_library(
     name = "zip_util",
     srcs = ["ZipUtil.java"],
 )
+
+java_library(
+    name = "mobly_report_parser",
+    srcs = ["MoblyReportParser.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/atsconsole/result/report:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/atsconsole/result/proto:report_java_proto",
+        "//src/devtools/atsconsole/result/proto:result_java_proto",
+        "//src/java/com/google/devtools/atsconsole/result/mobly:mobly_doc_entry",
+        "//src/java/com/google/devtools/atsconsole/result/mobly:parser",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

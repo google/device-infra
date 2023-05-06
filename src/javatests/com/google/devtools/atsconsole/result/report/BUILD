@@ -38,6 +38,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_creator",
         "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_merger",
         "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_parser",
+        "//src/java/com/google/devtools/atsconsole/result/report:mobly_report_parser",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/atsconsole/util:test_runfiles_util",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",

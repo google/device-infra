@@ -104,6 +104,9 @@ public enum ExtErrorId implements ErrorId {
   // CompatibilityReportCreator: 87_001 ~ 87_050
   REPORT_CREATOR_WRITE_REPORT_TO_XML_ERROR(87_001, ErrorType.INFRA_ISSUE),
 
+  // MoblyReportParser: 87_051 ~ 87_100
+  MOBLY_REPORT_PARSER_PARSE_SUMMARY_FILE_ERROR(87_051, ErrorType.INFRA_ISSUE),
+
   EXT_PLACE_HOLDER_TO_BE_RENAMED(100_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = InfraErrorId.MAX_CODE + 1;
