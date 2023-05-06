@@ -38,6 +38,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:no_op_device",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:schedule_unit",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",

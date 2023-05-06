@@ -23,6 +23,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.deviceinfra.infra.core.devicemanager.DispatcherManager;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
@@ -65,6 +66,10 @@ public class LocalMode implements ExecMode {
   /** LocalDeviceManager is singleton and shared by all LocalMode jobs in the same machine. */
   private static volatile LocalDeviceManager localDeviceManager;
 
+  /** Future which is set when the device manager is initialized. */
+  private static final SettableFuture<LocalDeviceManager> localDeviceManagerFuture =
+      SettableFuture.create();
+
   /** Scheduler is singleton and shared by all LocalMode jobs in the same machine. */
   private static volatile Scheduler localScheduler;
 
@@ -91,6 +96,7 @@ public class LocalMode implements ExecMode {
                   globalInternalBus,
                   new NoopExternalDeviceManager());
           localDeviceManager.initialize();
+          localDeviceManagerFuture.set(localDeviceManager);
 
           // Prepares the global scheduler.
           localScheduler = new SimpleScheduler(localEnvThreadPool);
@@ -118,7 +124,7 @@ public class LocalMode implements ExecMode {
 
   @Override
   public DeviceQuerier createDeviceQuerier() {
-    return new LocalDeviceQuerier(localDeviceManager);
+    return new LocalDeviceQuerier(localDeviceManagerFuture);
   }
 
   @Override

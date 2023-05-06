@@ -21,9 +21,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
+import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.devtools.mobileharness.shared.util.network.localhost.LocalHost;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -51,16 +53,17 @@ class LocalDeviceQuerier implements DeviceQuerier {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final LocalDeviceManager deviceManager;
+  private final ListenableFuture<LocalDeviceManager> deviceManagerFuture;
 
   /** Creates a device querier to retrieve the local device information. */
-  public LocalDeviceQuerier(LocalDeviceManager deviceManager) {
-    this.deviceManager = deviceManager;
+  public LocalDeviceQuerier(ListenableFuture<LocalDeviceManager> deviceManagerFuture) {
+    this.deviceManagerFuture = deviceManagerFuture;
   }
 
   @Override
   public List<LabInfo> getDeviceInfos(@Nullable DeviceFilter deviceFilter)
       throws MobileHarnessException, InterruptedException {
+    LocalDeviceManager deviceManager = getDeviceManager();
     LabInfo labInfo = new LabInfo(LabLocator.LOCALHOST);
     for (Entry<Device, DeviceStatusInfo> entry :
         deviceManager.getAllDeviceStatus(false /* realtimeDetect */).entrySet()) {
@@ -84,6 +87,7 @@ class LocalDeviceQuerier implements DeviceQuerier {
   @Override
   public DeviceQueryResult queryDevice(DeviceQueryFilter deviceQueryFilter)
       throws MobileHarnessException, InterruptedException {
+    LocalDeviceManager deviceManager = getDeviceManager();
     return DeviceQueryResult.newBuilder()
         .addAllDeviceInfo(
             deviceManager.getAllDeviceStatus(false /* realtimeDetect */).entrySet().stream()
@@ -219,5 +223,11 @@ class LocalDeviceQuerier implements DeviceQuerier {
   private boolean matchAttribute(String attributeRegex, Stream<String> attributes) {
     Pattern attributePattern = Pattern.compile(attributeRegex);
     return attributes.anyMatch(attribute -> attributePattern.matcher(attribute).matches());
+  }
+
+  private LocalDeviceManager getDeviceManager()
+      throws MobileHarnessException, InterruptedException {
+    return MoreFutures.get(
+        deviceManagerFuture, InfraErrorId.DM_LOCAL_DEVICE_QUERIER_DEVICE_MANAGER_INIT_ERROR);
   }
 }
