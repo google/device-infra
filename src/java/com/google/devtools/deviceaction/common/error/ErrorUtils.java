@@ -19,26 +19,27 @@ package com.google.devtools.deviceaction.common.error;
 import com.google.api.client.http.HttpResponseException;
 import java.util.Optional;
 
-/** A utility class to check errors. */
-public class ErrorChecker {
+/** A utility class for errors. */
+public class ErrorUtils {
 
-  /** Recursively checks if any cause has the status code. */
-  public static boolean checkStatusCodeRecursively(Throwable t, int code) {
-    Optional<HttpResponseException> exceptionOptional = getHttpResponseException(t);
-    return exceptionOptional.isPresent() && exceptionOptional.get().getStatusCode() == code;
+  /** Recursively checks if any cause has the http status code. */
+  public static boolean hasStatusCode(Throwable t, int code) {
+    Optional<HttpResponseException> httpExceptionOptional =
+        findCause(t, HttpResponseException.class);
+    return httpExceptionOptional.isPresent() && httpExceptionOptional.get().getStatusCode() == code;
   }
 
-  /** Gets the possible {@code HttpResponseException} in the cause. */
-  public static Optional<HttpResponseException> getHttpResponseException(Throwable throwable) {
+  /** Finds a possible cause of a particular type {@code clazz} in the exception stack. */
+  public static <T extends Throwable> Optional<T> findCause(Throwable throwable, Class<T> clazz) {
     Throwable cause = throwable;
     while (cause != null) {
-      if (cause instanceof HttpResponseException) {
-        return Optional.of((HttpResponseException) cause);
+      if (clazz.isInstance(cause)) {
+        return Optional.of(clazz.cast(cause));
       }
       cause = cause.getCause();
     }
     return Optional.empty();
   }
 
-  private ErrorChecker() {}
+  private ErrorUtils() {}
 }
