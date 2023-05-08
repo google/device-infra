@@ -38,6 +38,7 @@ import com.google.devtools.atsconsole.result.proto.ReportProto.Result;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Run;
 import com.google.devtools.atsconsole.result.proto.ReportProto.RunHistory;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Summary;
+import com.google.devtools.atsconsole.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.atsconsole.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -67,12 +68,16 @@ public class CompatibilityReportMerger {
 
   private final ListeningScheduledExecutorService threadPool;
   private final CompatibilityReportParser reportParser;
+  private final MoblyReportParser moblyReportParser;
 
   @Inject
   CompatibilityReportMerger(
-      ListeningScheduledExecutorService threadPool, CompatibilityReportParser reportParser) {
+      ListeningScheduledExecutorService threadPool,
+      CompatibilityReportParser reportParser,
+      MoblyReportParser moblyReportParser) {
     this.threadPool = threadPool;
     this.reportParser = reportParser;
+    this.moblyReportParser = moblyReportParser;
   }
 
   /**
@@ -83,7 +88,81 @@ public class CompatibilityReportMerger {
    */
   public Optional<Result> mergeXmlReports(List<Path> reportXmlFiles)
       throws MobileHarnessException, InterruptedException {
-    return mergeReports(parseXmlReports(reportXmlFiles));
+    return mergeParsedReports(parseXmlReports(reportXmlFiles));
+  }
+
+  /**
+   * Parses a list of Mobly report files and merges them to a single report.
+   *
+   * <p>Note: the Mobly report files must have the same device build fingerprint info, otherwise the
+   * merge won't proceed.
+   */
+  public Optional<Result> mergeMoblyReports(List<MoblyReportInfo> moblyReports)
+      throws MobileHarnessException, InterruptedException {
+    return mergeParsedReports(parseMoblyReports(moblyReports));
+  }
+
+  /**
+   * Parses a list of reports and merges them to a single report.
+   *
+   * @param validateReports whether to validate reports before the merge
+   */
+  public Optional<Result> mergeReports(List<Result> reports, boolean validateReports) {
+    ImmutableList<Result> usableReports =
+        reports.stream()
+            .filter(
+                report -> report.hasBuild() && !report.getBuild().getBuildFingerprint().isEmpty())
+            .collect(toImmutableList());
+    logger.atInfo().log(
+        "Given reports number: %d, usable reports number: %d",
+        reports.size(), usableReports.size());
+    if (validateReports && !validateReportsWithSameBuildFingerprint(usableReports)) {
+      return Optional.empty();
+    }
+
+    if (usableReports.size() == 1) {
+      // No need to merge
+      return Optional.of(usableReports.get(0));
+    }
+
+    ImmutableList.Builder<Run> runs = ImmutableList.builder();
+    ImmutableList.Builder<Module> modules = ImmutableList.builder();
+
+    long passedInSummary = 0L;
+    long failedInSummary = 0L;
+    int modulesDoneInSummary = 0;
+    int modulesTotalInSummary = 0;
+    for (Result report : usableReports) {
+      List<Run> runsInReport =
+          report.hasRunHistory() ? report.getRunHistory().getRunList() : ImmutableList.of();
+      runs.addAll(runsInReport);
+      modules.addAll(report.getModuleInfoList());
+      // Accumulates counts in Summary
+      passedInSummary += report.getSummary().getPassed();
+      failedInSummary += report.getSummary().getFailed();
+      modulesDoneInSummary += report.getSummary().getModulesDone();
+      modulesTotalInSummary += report.getSummary().getModulesTotal();
+    }
+
+    Summary summary =
+        Summary.newBuilder()
+            .setPassed(passedInSummary)
+            .setFailed(failedInSummary)
+            .setModulesDone(modulesDoneInSummary)
+            .setModulesTotal(modulesTotalInSummary)
+            .build();
+
+    Result.Builder res = Result.newBuilder();
+    res.setBuild(getNewBuildInfo(usableReports))
+        .setSummary(summary)
+        .addAllModuleInfo(modules.build())
+        .addAllAttribute(getNewResultAttrs(usableReports));
+
+    if (!runs.build().isEmpty()) {
+      res.setRunHistory(RunHistory.newBuilder().addAllRun(runs.build()));
+    }
+
+    return Optional.of(res.build());
   }
 
   /**
@@ -92,7 +171,7 @@ public class CompatibilityReportMerger {
    * <p>Note: the report in the {@link ParseResult} must have the same device build fingerprint
    * info, otherwise the merge won't proceed.
    */
-  public Optional<Result> mergeReports(List<ParseResult> reportParseResults) {
+  private Optional<Result> mergeParsedReports(List<ParseResult> reportParseResults) {
     // Filters parse results that have report and its build info has device build fingerprint
     ImmutableList<ParseResult> parseResults =
         reportParseResults.stream()
@@ -105,57 +184,17 @@ public class CompatibilityReportMerger {
     logger.atInfo().log(
         "Given reports number: %d, usable parsed results number: %d",
         reportParseResults.size(), parseResults.size());
-    if (!validateReportsWithSameBuildFingerprint(parseResults)) {
+    if (!validateParsedReportsWithSameBuildFingerprint(parseResults)) {
       return Optional.empty();
     }
-    if (parseResults.size() == 1) {
-      // No need to merge
-      return parseResults.get(0).report();
-    }
 
-    ImmutableList.Builder<Run> runs = ImmutableList.builder();
-    ImmutableList.Builder<Module> modules = ImmutableList.builder();
-
-    long passedInSummary = 0L;
-    long failedInSummary = 0L;
-    int modulesDoneInSummary = 0;
-    int modulesTotalInSummary = 0;
-    for (ParseResult pr : parseResults) {
-      Result result = pr.report().get();
-      List<Run> runsInReport =
-          result.hasRunHistory() ? result.getRunHistory().getRunList() : ImmutableList.of();
-      runs.addAll(runsInReport);
-      modules.addAll(result.getModuleInfoList());
-      // Accumulates counts in Summary
-      passedInSummary += result.getSummary().getPassed();
-      failedInSummary += result.getSummary().getFailed();
-      modulesDoneInSummary += result.getSummary().getModulesDone();
-      modulesTotalInSummary += result.getSummary().getModulesTotal();
-    }
-
-    Summary summary =
-        Summary.newBuilder()
-            .setPassed(passedInSummary)
-            .setFailed(failedInSummary)
-            .setModulesDone(modulesDoneInSummary)
-            .setModulesTotal(modulesTotalInSummary)
-            .build();
-
-    Result.Builder res = Result.newBuilder();
-    res.setBuild(getNewBuildInfo(parseResults))
-        .setSummary(summary)
-        .addAllModuleInfo(modules.build())
-        .addAllAttribute(getNewResultAttrs(parseResults));
-
-    if (!runs.build().isEmpty()) {
-      res.setRunHistory(RunHistory.newBuilder().addAllRun(runs.build()));
-    }
-
-    return Optional.of(res.build());
+    return mergeReports(
+        parseResults.stream().map(pr -> pr.report().get()).collect(toImmutableList()),
+        /* validateReports= */ false);
   }
 
   /** Gets the attributes showed in the <Result> element in the merged report. */
-  private static ImmutableList<Attribute> getNewResultAttrs(List<ParseResult> parseResults) {
+  private static ImmutableList<Attribute> getNewResultAttrs(List<Result> reports) {
     AtomicReference<Long> startTime = new AtomicReference<>(null);
     AtomicReference<Long> endTime = new AtomicReference<>(null);
     AtomicReference<String> startTimeDisplay = new AtomicReference<>("");
@@ -163,43 +202,40 @@ public class CompatibilityReportMerger {
     List<String> deviceSerials = new ArrayList<>();
     LinkedHashMap<String, String> newAttrs =
         new LinkedHashMap<>(); // Use LinkedHashMap to keep entry order
-    parseResults.stream()
-        .map(pr -> pr.report().get())
-        .forEach(
-            result -> {
-              List<Attribute> resultAttrsList = result.getAttributeList();
-              LinkedHashMap<String, String> attrsMap =
-                  resultAttrsList.stream()
-                      .collect(
-                          toMap(
-                              Attribute::getKey,
-                              Attribute::getValue,
-                              (e1, e2) -> e1,
-                              LinkedHashMap::new));
+    reports.forEach(
+        report -> {
+          List<Attribute> resultAttrsList = report.getAttributeList();
+          LinkedHashMap<String, String> attrsMap =
+              resultAttrsList.stream()
+                  .collect(
+                      toMap(
+                          Attribute::getKey,
+                          Attribute::getValue,
+                          (e1, e2) -> e1,
+                          LinkedHashMap::new));
 
-              for (Attribute attr : resultAttrsList) {
-                newAttrs.putIfAbsent(attr.getKey(), attr.getValue());
-                if (Objects.equals(attr.getKey(), XmlConstants.START_TIME_ATTR)) {
-                  Long currentStartTime = Longs.tryParse(attr.getValue().trim());
-                  if ((startTime.get() == null && currentStartTime != null)
-                      || (currentStartTime != null && currentStartTime < startTime.get())) {
-                    startTime.set(currentStartTime);
-                    startTimeDisplay.set(
-                        attrsMap.getOrDefault(XmlConstants.START_DISPLAY_TIME_ATTR, ""));
-                  }
-                } else if (Objects.equals(attr.getKey(), XmlConstants.END_TIME_ATTR)) {
-                  Long currentEndTime = Longs.tryParse(attr.getValue().trim());
-                  if ((endTime.get() == null && currentEndTime != null)
-                      || (currentEndTime != null && currentEndTime > endTime.get())) {
-                    endTime.set(currentEndTime);
-                    endTimeDisplay.set(
-                        attrsMap.getOrDefault(XmlConstants.END_DISPLAY_TIME_ATTR, ""));
-                  }
-                } else if (Objects.equals(attr.getKey(), XmlConstants.DEVICES_ATTR)) {
-                  deviceSerials.add(attr.getValue().trim());
-                }
+          for (Attribute attr : resultAttrsList) {
+            newAttrs.putIfAbsent(attr.getKey(), attr.getValue());
+            if (Objects.equals(attr.getKey(), XmlConstants.START_TIME_ATTR)) {
+              Long currentStartTime = Longs.tryParse(attr.getValue().trim());
+              if ((startTime.get() == null && currentStartTime != null)
+                  || (currentStartTime != null && currentStartTime < startTime.get())) {
+                startTime.set(currentStartTime);
+                startTimeDisplay.set(
+                    attrsMap.getOrDefault(XmlConstants.START_DISPLAY_TIME_ATTR, ""));
               }
-            });
+            } else if (Objects.equals(attr.getKey(), XmlConstants.END_TIME_ATTR)) {
+              Long currentEndTime = Longs.tryParse(attr.getValue().trim());
+              if ((endTime.get() == null && currentEndTime != null)
+                  || (currentEndTime != null && currentEndTime > endTime.get())) {
+                endTime.set(currentEndTime);
+                endTimeDisplay.set(attrsMap.getOrDefault(XmlConstants.END_DISPLAY_TIME_ATTR, ""));
+              }
+            } else if (Objects.equals(attr.getKey(), XmlConstants.DEVICES_ATTR)) {
+              deviceSerials.add(attr.getValue().trim());
+            }
+          }
+        });
     // Now update values for attributes start, end, start_display, end_display, command_line_args,
     // and devices.
     newAttrs.put(
@@ -217,8 +253,8 @@ public class CompatibilityReportMerger {
         .collect(toImmutableList());
   }
 
-  private static BuildInfo getNewBuildInfo(List<ParseResult> parseResults) {
-    BuildInfo buildInfo = parseResults.stream().findFirst().get().report().get().getBuild();
+  private static BuildInfo getNewBuildInfo(List<Result> report) {
+    BuildInfo buildInfo = report.stream().findFirst().get().getBuild();
     ImmutableList<Attribute> attrs =
         buildInfo.getAttributeList().stream()
             .filter(
@@ -231,7 +267,8 @@ public class CompatibilityReportMerger {
   }
 
   // Ensures all parsed results have same device build fingerprint so the merge will be valid.
-  private static boolean validateReportsWithSameBuildFingerprint(List<ParseResult> parseResults) {
+  private static boolean validateParsedReportsWithSameBuildFingerprint(
+      List<ParseResult> parseResults) {
     if (parseResults.isEmpty()) {
       return false;
     }
@@ -258,10 +295,39 @@ public class CompatibilityReportMerger {
           .getBuildFingerprint()
           .equals(baseBuildFingerprint)) {
         logger.atInfo().log(
-            "The report [%s] doesn't have build_fingerprint [%s]:\n%s",
+            "The report generated based on [%s] doesn't have build_fingerprint [%s]:\n%s",
             parseResult.originalReportFile(),
             baseBuildFingerprint,
             parseResult.report().get().getBuild());
+        reportsAreValid = false;
+      }
+    }
+    return reportsAreValid;
+  }
+
+  // Ensures all reports have same device build fingerprint so the merge will be valid.
+  private static boolean validateReportsWithSameBuildFingerprint(List<Result> reports) {
+    if (reports.isEmpty()) {
+      return false;
+    }
+    Result firstReport =
+        reports.stream()
+            .filter(
+                report -> report.hasBuild() && !report.getBuild().getBuildFingerprint().isEmpty())
+            .findFirst()
+            .orElse(null);
+    if (firstReport == null) {
+      logger.atInfo().log("Not found any report with info about device build_fingerprint");
+      return false;
+    }
+    String baseBuildFingerprint = firstReport.getBuild().getBuildFingerprint();
+    boolean reportsAreValid = true;
+    for (Result report : reports) {
+      if (!report.getBuild().getBuildFingerprint().equals(baseBuildFingerprint)) {
+        logger.atInfo().log(
+            "Expected build fingerprint [%s] but found a report with different build fingerprint:\n"
+                + "%s",
+            baseBuildFingerprint, report.getBuild());
         reportsAreValid = false;
       }
     }
@@ -310,6 +376,56 @@ public class CompatibilityReportMerger {
 
   private ParseResult parseXmlReport(Path reportXmlFile) throws MobileHarnessException {
     return ParseResult.of(reportXmlFile, reportParser.parse(reportXmlFile));
+  }
+
+  /** Parses multiple Mobly reports syncly. */
+  @VisibleForTesting
+  List<ParseResult> parseMoblyReports(List<MoblyReportInfo> moblyReports)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      return parseMoblyReportsAsync(moblyReports).get(PARSE_TIMEOUT_IN_HOUR, HOURS);
+    } catch (TimeoutException e) {
+      throw new MobileHarnessException(
+          ExtErrorId.REPORT_MERGER_PARSE_MOBLY_REPORTS_TIMEOUT_ERROR,
+          "Timeout while parsing Mobly reports",
+          e);
+    } catch (ExecutionException e) {
+      if (e.getCause() instanceof MobileHarnessException) {
+        throw (MobileHarnessException) e.getCause();
+      } else {
+        throw new MobileHarnessException(
+            ExtErrorId.REPORT_MERGER_PARSE_MOBLY_REPORTS_GENERIC_ERROR,
+            "Failed to parse Mobly reports",
+            e);
+      }
+    }
+  }
+
+  /** Parses multiple Mobly reports asyncly. */
+  private ListenableFuture<List<ParseResult>> parseMoblyReportsAsync(
+      List<MoblyReportInfo> moblyReports) {
+    List<ListenableFuture<ParseResult>> parseMoblyReportFutures = new ArrayList<>();
+    logger.atInfo().log(
+        "Start to parse Mobly report files:\n - %s",
+        moblyReports.stream()
+            .map(mr -> mr.moblySummaryFile().toString())
+            .collect(joining(",\n - ")));
+    for (MoblyReportInfo moblyReportInfo : moblyReports) {
+      parseMoblyReportFutures.add(parseMoblyReportAsync(moblyReportInfo));
+    }
+    return Futures.allAsList(parseMoblyReportFutures);
+  }
+
+  /** Parses one Mobly report asyncly. */
+  private ListenableFuture<ParseResult> parseMoblyReportAsync(MoblyReportInfo moblyReportInfo) {
+    return threadPool.submit(() -> parseMoblyReport(moblyReportInfo));
+  }
+
+  private ParseResult parseMoblyReport(MoblyReportInfo moblyReportInfo)
+      throws MobileHarnessException {
+    return ParseResult.of(
+        moblyReportInfo.moblySummaryFile(),
+        moblyReportParser.parseMoblyTestResult(moblyReportInfo));
   }
 
   /** Data class for the xTS report parse result. */

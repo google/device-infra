@@ -25,6 +25,7 @@ import com.google.devtools.atsconsole.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Result;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Summary;
 import com.google.devtools.atsconsole.result.report.CompatibilityReportMerger.ParseResult;
+import com.google.devtools.atsconsole.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.atsconsole.util.TestRunfilesUtil;
 import com.google.inject.Guice;
 import java.nio.file.Paths;
@@ -40,10 +41,35 @@ import org.junit.runners.JUnit4;
 public final class CompatibilityReportMergerTest {
 
   private static final String CTS_TEST_RESULT_XML =
-      TestRunfilesUtil.getRunfilesLocation("result/report/testdata/cts_test_result.xml");
+      TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_result.xml");
 
   private static final String CTS_TEST_RESULT_XML_2 =
-      TestRunfilesUtil.getRunfilesLocation("result/report/testdata/cts_test_result_2.xml");
+      TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_result_2.xml");
+
+  private static final String MOBLY_TEST_SUMMARY_FILE_1 =
+      TestRunfilesUtil.getRunfilesLocation("result/report/testdata/mobly/pass/test_summary.yaml");
+
+  private static final String MOBLY_RESULT_ATTR_FILE_1 =
+      TestRunfilesUtil.getRunfilesLocation(
+          "result/report/testdata/mobly/pass/result_attrs.textproto");
+
+  private static final String MOBLY_BUILD_ATTR_FILE_1 =
+      TestRunfilesUtil.getRunfilesLocation(
+          "result/report/testdata/mobly/pass/build_attrs.textproto");
+
+  private static final String MOBLY_TEST_SUMMARY_FILE_2 =
+      TestRunfilesUtil.getRunfilesLocation("result/report/testdata/mobly/fail/test_summary.yaml");
+
+  private static final String MOBLY_RESULT_ATTR_FILE_2 =
+      TestRunfilesUtil.getRunfilesLocation(
+          "result/report/testdata/mobly/fail/result_attrs.textproto");
+
+  private static final String MOBLY_BUILD_ATTR_FILE_2 =
+      TestRunfilesUtil.getRunfilesLocation(
+          "result/report/testdata/mobly/fail/build_attrs.textproto");
+
+  private static final String DEVICE_BUILD_FINGERPRINT =
+      "google/bramble/bramble:UpsideDownCake/UP1A.220722.002/8859461:userdebug/dev-keys";
 
   @Inject private CompatibilityReportMerger reportMerger;
 
@@ -53,7 +79,7 @@ public final class CompatibilityReportMergerTest {
   }
 
   @Test
-  public void parseReports() throws Exception {
+  public void parseXmlReports() throws Exception {
     List<ParseResult> res =
         reportMerger.parseXmlReports(
             ImmutableList.of(Paths.get(CTS_TEST_RESULT_XML), Paths.get(CTS_TEST_RESULT_XML_2)));
@@ -64,7 +90,7 @@ public final class CompatibilityReportMergerTest {
   }
 
   @Test
-  public void mergeReports() throws Exception {
+  public void mergeXmlReports() throws Exception {
     Optional<Result> res =
         reportMerger.mergeXmlReports(
             ImmutableList.of(Paths.get(CTS_TEST_RESULT_XML_2), Paths.get(CTS_TEST_RESULT_XML)));
@@ -115,5 +141,84 @@ public final class CompatibilityReportMergerTest {
                 .setModulesTotal(5)
                 .build());
     assertThat(result.getModuleInfoCount()).isEqualTo(5);
+  }
+
+  @Test
+  public void parseMoblyReports() throws Exception {
+    List<ParseResult> res =
+        reportMerger.parseMoblyReports(
+            ImmutableList.of(
+                MoblyReportInfo.of(
+                    "mobly-package-1",
+                    Paths.get(MOBLY_TEST_SUMMARY_FILE_1),
+                    Paths.get(MOBLY_RESULT_ATTR_FILE_1),
+                    DEVICE_BUILD_FINGERPRINT,
+                    Paths.get(MOBLY_BUILD_ATTR_FILE_1)),
+                MoblyReportInfo.of(
+                    "mobly-package-2",
+                    Paths.get(MOBLY_TEST_SUMMARY_FILE_2),
+                    Paths.get(MOBLY_RESULT_ATTR_FILE_2),
+                    DEVICE_BUILD_FINGERPRINT,
+                    Paths.get(MOBLY_BUILD_ATTR_FILE_2))));
+
+    assertThat(res).hasSize(2);
+    assertThat(res.get(0).report().get().getModuleInfoList()).hasSize(1);
+    assertThat(res.get(1).report().get().getModuleInfoList()).hasSize(1);
+  }
+
+  @Test
+  public void mergeMoblyReports() throws Exception {
+    Optional<Result> res =
+        reportMerger.mergeMoblyReports(
+            ImmutableList.of(
+                MoblyReportInfo.of(
+                    "mobly-package-1",
+                    Paths.get(MOBLY_TEST_SUMMARY_FILE_1),
+                    Paths.get(MOBLY_RESULT_ATTR_FILE_1),
+                    DEVICE_BUILD_FINGERPRINT,
+                    Paths.get(MOBLY_BUILD_ATTR_FILE_1)),
+                MoblyReportInfo.of(
+                    "mobly-package-2",
+                    Paths.get(MOBLY_TEST_SUMMARY_FILE_2),
+                    Paths.get(MOBLY_RESULT_ATTR_FILE_2),
+                    DEVICE_BUILD_FINGERPRINT,
+                    Paths.get(MOBLY_BUILD_ATTR_FILE_2))));
+
+    assertThat(res).isPresent();
+    Result result = res.get();
+
+    assertThat(result.getAttributeList())
+        .containsExactly(
+            Attribute.newBuilder()
+                .setKey("result_attr1_key")
+                .setValue("result_attr1_value")
+                .build(),
+            Attribute.newBuilder()
+                .setKey("result_attr2_key")
+                .setValue("result_attr2_value")
+                .build(),
+            Attribute.newBuilder().setKey("start").setValue("").build(),
+            Attribute.newBuilder().setKey("end").setValue("").build(),
+            Attribute.newBuilder().setKey("start_display").setValue("").build(),
+            Attribute.newBuilder().setKey("end_display").setValue("").build(),
+            Attribute.newBuilder().setKey("devices").setValue("").build());
+    assertThat(result.getBuild())
+        .isEqualTo(
+            BuildInfo.newBuilder()
+                .setBuildFingerprint(DEVICE_BUILD_FINGERPRINT)
+                .addAttribute(
+                    Attribute.newBuilder().setKey("build_attr1_key").setValue("build_attr1_value"))
+                .addAttribute(
+                    Attribute.newBuilder().setKey("build_attr2_key").setValue("build_attr2_value"))
+                .build());
+    assertThat(result.getSummary())
+        .isEqualTo(
+            Summary.newBuilder()
+                .setPassed(1)
+                .setFailed(2)
+                .setModulesDone(2)
+                .setModulesTotal(2)
+                .build());
+    assertThat(result.getModuleInfoCount()).isEqualTo(2);
   }
 }

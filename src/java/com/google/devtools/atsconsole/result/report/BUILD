@@ -45,6 +45,7 @@ java_library(
     ],
     deps = [
         ":compatibility_report_parser",
+        ":mobly_report_parser",
         "//src/devtools/atsconsole/result/proto:report_java_proto",
         "//src/java/com/google/devtools/atsconsole/result/xml:xml_constants",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",

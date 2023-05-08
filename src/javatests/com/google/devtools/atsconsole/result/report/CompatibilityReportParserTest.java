@@ -49,7 +49,7 @@ import org.mockito.junit.MockitoRule;
 public final class CompatibilityReportParserTest {
 
   private static final String CTS_TEST_RESULT_XML =
-      TestRunfilesUtil.getRunfilesLocation("result/report/testdata/cts_test_result.xml");
+      TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_result.xml");
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Mock private LocalFileUtil localFileUtil;

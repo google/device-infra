@@ -1,0 +1,27 @@
+---
+Requested Tests:
+- test_hello_world
+Type: TestNameList
+---
+Begin Time: 1663584280794
+Details: null
+End Time: 1663584283819
+Extra Errors: {}
+Extras: null
+Result: FAIL
+Retry Parent: null
+Signature: test_hello_world-1663584280794
+Stacktrace: null
+Termination Signal Type: null
+Test Class: HelloWorldTest3
+Test Name: test_hello_world
+Type: Record
+UID: null
+---
+Error: 0
+Executed: 1
+Failed: 1
+Passed: 0
+Requested: 1
+Skipped: 0
+Type: Summary

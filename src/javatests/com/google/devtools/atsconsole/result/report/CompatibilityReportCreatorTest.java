@@ -41,7 +41,7 @@ public final class CompatibilityReportCreatorTest {
 
   private static final String CTS_TEST_RESULT_XML =
       TestRunfilesUtil.getRunfilesLocation(
-          "result/report/testdata/report_creator_cts_test_result.xml");
+          "result/report/testdata/xml/report_creator_cts_test_result.xml");
 
   private static final Splitter LINE_SPLITTER = Splitter.onPattern("\r\n|\n|\r");
 
