@@ -92,8 +92,6 @@ public class ServerPreparer {
       return;
     }
 
-    logger.atInfo().log("Preparing OLC server...");
-
     // Tries to get server version.
     GetVersionResponse version = null;
     try {

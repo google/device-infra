@@ -63,6 +63,9 @@ public final class AtsConsoleTest {
   private ByteArrayOutputStream consoleErrOutputStream;
   private PrintStream consoleErrPrintStream;
 
+  private ImmutableList<String> deviceInfraServiceFlags;
+  private Path olcServerBinary;
+
   @Inject private AtsConsole atsConsole;
 
   @Before
@@ -80,13 +83,13 @@ public final class AtsConsoleTest {
             "false",
             "enable_ats_console_olc_server",
             "true");
-    ImmutableList<String> deviceInfraServiceFlags =
+    deviceInfraServiceFlags =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
             .collect(toImmutableList());
     Flags.parse(deviceInfraServiceFlags.toArray(new String[0]));
 
-    Path olcServerBinary =
+    olcServerBinary =
         Path.of(
             RunfilesUtil.getRunfilesLocation(
                 "java/com/google/devtools/atsconsole/controller/olcserver/AtsOlcServer_deploy.jar"));
@@ -136,12 +139,12 @@ public final class AtsConsoleTest {
     Injector injector =
         Guice.createInjector(
             new AtsConsoleModule(
-                ImmutableList.of(),
+                deviceInfraServiceFlags,
                 ImmutableList.of("help"),
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
-                () -> Path.of("")));
+                () -> olcServerBinary));
     injector.injectMembers(this);
     atsConsole.injector = injector;
 
