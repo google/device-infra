@@ -17,46 +17,61 @@
 package com.google.devtools.atsconsole.controller.sessionplugin;
 
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableList;
-import com.google.devtools.atsconsole.controller.proto.DeviceDescriptorProto.DeviceDescriptor;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListDevicesCommand;
+import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.inject.Guice;
+import com.google.inject.testing.fieldbinder.Bind;
+import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import javax.inject.Inject;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public class ListDevicesCommandHandlerTest {
+
+  @Rule public MockitoRule mockito = MockitoJUnit.rule();
+
+  @Bind @Mock private DeviceQuerier deviceQuerier;
 
   @Inject private ListDevicesCommandHandler listDevicesCommandHandler;
 
   @Before
   public void setUp() {
-    Guice.createInjector().injectMembers(this);
+    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     listDevicesCommandHandler = spy(listDevicesCommandHandler);
   }
 
   @Test
   public void handle() throws Exception {
-    when(listDevicesCommandHandler.listDevices())
+    when(deviceQuerier.queryDevice(any()))
         .thenReturn(
-            ImmutableList.of(
-                DeviceDescriptor.newBuilder()
-                    .setSerial("abc")
-                    .setDeviceState("ONLINE")
-                    .setAllocationState("Available")
-                    .setProduct("bullhead")
-                    .setProductVariant("bullhead")
-                    .setBuildId("MTC20K")
-                    .setBatteryLevel("100")
-                    .build()));
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("abc")
+                        .setStatus("idle")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder()
+                                .setName(Name.BATTERY_LEVEL.lowerCaseName())
+                                .setValue("100")))
+                .build());
 
     assertThat(listDevicesCommandHandler.handle(ListDevicesCommand.getDefaultInstance()))
         .isEqualTo(
@@ -65,7 +80,7 @@ public class ListDevicesCommandHandlerTest {
                     Success.newBuilder()
                         .setOutputMessage(
                             "Serial\tState\tAllocation\tProduct\tVariant\tBuild\tBattery\n"
-                                + "abc\tONLINE\tAvailable\tbullhead\tbullhead\tMTC20K\t100"))
+                                + "abc\tONLINE\tAvailable\tn/a\tn/a\tn/a\t100"))
                 .build());
   }
 }

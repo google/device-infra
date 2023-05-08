@@ -81,7 +81,7 @@ public class AtsSessionStub {
                       .findFieldByNumber(SessionDetail.SESSION_STATUS_FIELD_NUMBER)
                       .getName()))
           .build();
-  private static final Duration GET_SESSION_STATUS_SHORT_INTERVAL = Duration.ofMillis(800L);
+  private static final Duration GET_SESSION_STATUS_SHORT_INTERVAL = Duration.ofMillis(400L);
   private static final Duration GET_SESSION_STATUS_MEDIUM_INTERVAL = Duration.ofSeconds(5L);
   private static final Duration GET_SESSION_STATUS_LONG_INTERVAL = Duration.ofSeconds(30L);
 
@@ -201,9 +201,9 @@ public class AtsSessionStub {
   }
 
   private static Duration calculateGetSessionStatusInterval(int count) {
-    if (count <= 50) {
+    if (count <= 100) {
       return GET_SESSION_STATUS_SHORT_INTERVAL;
-    } else if (count <= 250) {
+    } else if (count <= 300) {
       return GET_SESSION_STATUS_MEDIUM_INTERVAL;
     } else {
       return GET_SESSION_STATUS_LONG_INTERVAL;

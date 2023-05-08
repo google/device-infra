@@ -25,6 +25,7 @@ import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSes
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListCommand;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
@@ -51,7 +52,8 @@ public class AtsSessionPlugin {
   }
 
   @Subscribe
-  public void onSessionStarting(SessionStartingEvent event) throws InvalidProtocolBufferException {
+  public void onSessionStarting(SessionStartingEvent event)
+      throws MobileHarnessException, InvalidProtocolBufferException, InterruptedException {
     config =
         sessionInfo
             .getSessionPluginExecutionConfig()
@@ -62,7 +64,7 @@ public class AtsSessionPlugin {
     onSessionStarting();
   }
 
-  private void onSessionStarting() {
+  private void onSessionStarting() throws MobileHarnessException, InterruptedException {
     if (config.getCommandCase().equals(CommandCase.LIST_COMMAND)) {
       ListCommand listCommand = config.getListCommand();
       if (listCommand.getCommandCase().equals(ListCommand.CommandCase.LIST_DEVICES_COMMAND)) {

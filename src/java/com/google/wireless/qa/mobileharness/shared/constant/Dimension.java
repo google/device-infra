@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.constant;
 
+import com.google.common.base.Ascii;
+
 /** Mobile Harness device dimension constants. */
 public final class Dimension {
   /** Dimension names. */
@@ -251,7 +253,11 @@ public final class Dimension {
     /** Pool name used by shared lab. */
     POOL_NAME,
     /** The ATE cluster name */
-    CLUSTER,
+    CLUSTER;
+
+    public String lowerCaseName() {
+      return Ascii.toLowerCase(name());
+    }
   }
 
   /** Values for COMMUNICATION_TYPE */

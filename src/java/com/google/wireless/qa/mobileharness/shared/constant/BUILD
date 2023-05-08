@@ -43,6 +43,9 @@ java_library(
 java_library(
     name = "dimension",
     srcs = ["Dimension.java"],
+    deps = [
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(

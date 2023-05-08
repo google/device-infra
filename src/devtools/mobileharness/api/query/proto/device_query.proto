@@ -92,6 +92,7 @@ message DeviceInfo {
   // Device id.
   string id = 1;
   // Device status.
+  // com.google.devtools.mobileharness.api.model.proto.DeviceStatus.name().toLowerCase().
   string status = 2;
   // The list of device owners.
   repeated string owner = 3;
