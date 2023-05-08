@@ -63,6 +63,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
@@ -99,6 +100,9 @@ import javax.annotation.Nullable;
  */
 public class LocalFileUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  public static final FileAttribute<Set<PosixFilePermission>> FULL_ACCESS =
+      PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
 
   /** Size of the buffer when reading input streams or writing output streams. */
   private static final int BUFFER_SIZE = 1024;
@@ -350,7 +354,7 @@ public class LocalFileUtil {
   public String createTempDir(String parentDirPath) throws MobileHarnessException {
     String tempDirectoryPath = PathUtil.join(parentDirPath, UUID.randomUUID().toString());
     try {
-      prepareDir(tempDirectoryPath);
+      prepareDir(tempDirectoryPath, FULL_ACCESS);
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_DIR_CREATE_TMP_ERROR,
@@ -1259,22 +1263,26 @@ public class LocalFileUtil {
   }
 
   /**
-   * Makes sure the directory exists. If not, will create the directory.
+   * Makes sure the directory exists. If not, will create the directory (and all nonexistent parent
+   * directories).
    *
+   * @param attrs file attributes to set when creating the new directories
    * @throws MobileHarnessException if unable to create or confirm directory
    */
-  public void prepareDir(String dir) throws MobileHarnessException {
-    prepareDir(Paths.get(dir));
+  public void prepareDir(String dir, FileAttribute<?>... attrs) throws MobileHarnessException {
+    prepareDir(Paths.get(dir), attrs);
   }
 
   /**
-   * Makes sure the directory exists. If not, will create the directory.
+   * Makes sure the directory exists. If not, will create the directory (and all nonexistent parent
+   * directories).
    *
+   * @param attrs file attributes to set when creating the new directories
    * @throws MobileHarnessException if unable to create or confirm directory
    */
-  public void prepareDir(Path dir) throws MobileHarnessException {
+  public void prepareDir(Path dir, FileAttribute<?>... attrs) throws MobileHarnessException {
     try {
-      Files.createDirectories(dir);
+      Files.createDirectories(dir, attrs);
     } catch (IOException e) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_DIR_CREATE_ERROR, "Failed to create directory " + dir, e);
@@ -1282,24 +1290,30 @@ public class LocalFileUtil {
   }
 
   /**
-   * Makes sure the parent directory exists. If not, will create the directory.
+   * Makes sure the parent directory exists. If not, will create the directory (and all nonexistent
+   * parent directories).
    *
+   * @param attrs file attributes to set when creating the new directories
    * @throws MobileHarnessException if unable to create or confirm directory
    */
-  public void prepareParentDir(String fileOrDir) throws MobileHarnessException {
+  public void prepareParentDir(String fileOrDir, FileAttribute<?>... attrs)
+      throws MobileHarnessException {
     String parentDir = new File(fileOrDir).getParent();
     if (parentDir != null) {
-      prepareDir(parentDir);
+      prepareDir(parentDir, attrs);
     }
   }
 
   /**
-   * Makes sure the parent directory exists. If not, will create the directory.
+   * Makes sure the parent directory exists. If not, will create the directory (and all nonexistent
+   * parent directories).
    *
+   * @param attrs file attributes to set when creating the new directories
    * @throws MobileHarnessException if unable to create or confirm directory
    */
-  public void prepareParentDir(Path fileOrDir) throws MobileHarnessException {
-    prepareParentDir(fileOrDir.toString());
+  public void prepareParentDir(Path fileOrDir, FileAttribute<?>... attrs)
+      throws MobileHarnessException {
+    prepareParentDir(fileOrDir.toString(), attrs);
   }
 
   /**
