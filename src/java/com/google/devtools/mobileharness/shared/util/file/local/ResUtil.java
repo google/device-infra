@@ -147,7 +147,7 @@ public class ResUtil {
               BasicErrorId.JAR_RES_NOT_FOUND, "Can not find resource " + resPathInJar);
         }
         filePath = PathUtil.join(resDir, resPathInJar);
-        fileUtil.prepareDir(fileUtil.getParentDirPath(filePath));
+        fileUtil.prepareDir(fileUtil.getParentDirPath(filePath), LocalFileUtil.FULL_ACCESS);
         fileUtil.writeToFile(filePath, inputStream);
         fileUtil.grantFileOrDirFullAccess(resDir);
         fileUtil.grantFileOrDirFullAccess(filePath);
