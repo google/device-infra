@@ -20,7 +20,10 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_xml_parser",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",

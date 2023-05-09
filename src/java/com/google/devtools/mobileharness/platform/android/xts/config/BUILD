@@ -13,15 +13,28 @@
 # limitations under the License.
 #
 
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = ["//src/javatests/com/google/devtools/mobileharness/platform/android/xts/config:__pkg__"],
+)
+
 java_library(
     name = "configuration_util",
     srcs = ["ConfigurationUtil.java"],
-    visibility = ["//src/javatests/com/google/devtools/mobileharness/platform/android/xts/config:__pkg__"],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "configuration_xml_parser",
+    srcs = ["ConfigurationXmlParser.java"],
+    deps = [
+        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
 )
