@@ -36,7 +36,6 @@ import com.google.devtools.mobileharness.infra.controller.device.external.Extern
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceDownEvent;
-import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceUpEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.stat.DeviceStat;
 import com.google.wireless.qa.mobileharness.shared.controller.stat.LabStat;
@@ -76,7 +75,7 @@ public class LocalDeviceDispatch {
   /** Thread pool for all the device runner threads. */
   private final ExecutorService threadPool;
 
-  /** EventBus for {@link LocalDeviceEvent}s. */
+  /** EventBus for {@code LocalDeviceEvent}s. */
   private final EventBus globalInternalBus;
 
   /** The device manager who knows the devices of old detectors. */

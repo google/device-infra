@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.AtsConsole;
 import com.google.devtools.atsconsole.AtsConsoleModule;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
@@ -32,8 +33,11 @@ import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.stream.Stream;
 import javax.inject.Inject;
 import org.jline.reader.LineReader;
 import org.junit.After;
@@ -50,15 +54,17 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public class ListCommandTest {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Mock private LineReader lineReader;
 
+  private String publicDirPath;
+
   private ByteArrayOutputStream consoleOutOutputStream;
-  private PrintStream consoleOutPrintStream;
   private ByteArrayOutputStream consoleErrOutputStream;
-  private PrintStream consoleErrPrintStream;
 
   @Inject private AtsConsole atsConsole;
 
@@ -66,7 +72,7 @@ public class ListCommandTest {
   public void setUp() throws Exception {
     // Prepares environment.
     int olcServerPort = PortProber.pickUnusedPort();
-    String publicDirPath = tmpFolder.newFolder("public_dir").toString();
+    publicDirPath = tmpFolder.newFolder("public_dir").toString();
     Path olcServerBinary =
         Path.of(
             RunfilesUtil.getRunfilesLocation(
@@ -82,7 +88,9 @@ public class ListCommandTest {
             "detect_adb_device",
             "false",
             "enable_ats_console_olc_server",
-            "true");
+            "true",
+            "no_op_device_num",
+            "1");
     ImmutableList<String> deviceInfraServiceFlags =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
@@ -91,9 +99,9 @@ public class ListCommandTest {
 
     // Sets console stdout/stderr.
     consoleOutOutputStream = new ByteArrayOutputStream();
-    consoleOutPrintStream = new PrintStream(consoleOutOutputStream, false, UTF_8);
+    PrintStream consoleOutPrintStream = new PrintStream(consoleOutOutputStream, false, UTF_8);
     consoleErrOutputStream = new ByteArrayOutputStream();
-    consoleErrPrintStream = new PrintStream(consoleErrOutputStream, false, UTF_8);
+    PrintStream consoleErrPrintStream = new PrintStream(consoleErrOutputStream, false, UTF_8);
 
     // Creates ATS console.
     Injector injector =
@@ -110,13 +118,30 @@ public class ListCommandTest {
   }
 
   @After
-  public void tearDown() {
+  public void tearDown() throws Exception {
     Flags.resetToDefault();
 
     System.out.println("ATS console stdout:");
     System.out.println(consoleOutOutputStream.toString(UTF_8));
     System.out.println("ATS console stderr:");
     System.out.println(consoleErrOutputStream.toString(UTF_8));
+
+    try (Stream<Path> files = Files.list(Path.of(publicDirPath, "olc_server_log"))) {
+      files.forEach(
+          path -> {
+            try {
+              String fileContent = Files.readString(path);
+              logger.atInfo().log(
+                  "OLC server log file [%s]:\n"
+                      + "**BEGIN******************\n"
+                      + "%s\n"
+                      + "**END******************\n",
+                  path, fileContent);
+            } catch (IOException e) {
+              logger.atWarning().withCause(e).log("Failed to read %s", path);
+            }
+          });
+    }
   }
 
   @Test
@@ -128,10 +153,12 @@ public class ListCommandTest {
 
     atsConsole.call();
 
-    assertThat(consoleOutOutputStream.toString(UTF_8))
-        .isEqualTo(
-            "Serial\tState\tAllocation\tProduct\tVariant\tBuild\tBattery\n"
-                + "Serial\tState\tAllocation\tProduct\tVariant\tBuild\tBattery\tclass"
+    String stdout = consoleOutOutputStream.toString(UTF_8);
+    assertThat(stdout).contains("Serial\tState\tAllocation\tProduct\tVariant\tBuild\tBattery\n");
+    assertThat(stdout)
+        .contains(
+            "Serial\tState\tAllocation\tProduct\tVariant\tBuild\tBattery\tclass"
                 + "\tTestDeviceState\n");
+    assertThat(stdout).contains("NoOpDevice-0");
   }
 }

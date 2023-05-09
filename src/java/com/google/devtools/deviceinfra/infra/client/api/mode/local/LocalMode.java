@@ -17,15 +17,20 @@
 package com.google.devtools.deviceinfra.infra.client.api.mode.local;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
+import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.deviceinfra.infra.core.devicemanager.DispatcherManager;
+import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.NoOpDeviceDetector;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.AndroidRealDeviceDispatcher;
@@ -47,15 +52,18 @@ import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDev
 import com.google.devtools.mobileharness.infra.controller.test.local.LocalDirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.NoOpTestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto;
-import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException.ErrorType;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
+import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceUpEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 
@@ -70,6 +78,12 @@ public class LocalMode implements ExecMode {
   private static final SettableFuture<LocalDeviceManager> localDeviceManagerFuture =
       SettableFuture.create();
 
+  /**
+   * Count down when the first device has been dispatched or the device manager detector&dispatcher
+   * have started for a while.
+   */
+  private static final CountDownLatch firstDeviceLatch = new CountDownLatch(1);
+
   /** Scheduler is singleton and shared by all LocalMode jobs in the same machine. */
   private static volatile Scheduler localScheduler;
 
@@ -82,8 +96,13 @@ public class LocalMode implements ExecMode {
       synchronized (LOCAL_ENV_LOCK) {
         if (localDeviceManager == null) {
           final ListeningExecutorService localEnvThreadPool =
-              MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+              MoreExecutors.listeningDecorator(
+                  Executors.newCachedThreadPool(
+                      ThreadFactoryUtil.createThreadFactory("local-mode-thread-pool")));
           Runtime.getRuntime().addShutdownHook(new Thread(localEnvThreadPool::shutdownNow));
+
+          // Subscribes LocalDeviceUpEvent.
+          globalInternalBus.register(this);
 
           // For the iOS device testing, it always needs DeviceStat. The IosRealDeviceDetector needs
           // check the device last reboot time.
@@ -105,11 +124,23 @@ public class LocalMode implements ExecMode {
           globalInternalBus.register(
               new LocalDeviceManagerSchedulerSyncer(localDeviceManager, localScheduler));
 
-          MoreFutures.logFailure(
-              localEnvThreadPool.submit(localDeviceManager),
+          // Starts local device manager and scheduler.
+          logFailure(
+              localEnvThreadPool.submit(
+                  threadRenaming(localDeviceManager, () -> "local-device-manager")),
               Level.SEVERE,
               "Fatal error in local device manager");
           localScheduler.start();
+          logFailure(
+              localEnvThreadPool.submit(
+                  (Callable<Void>)
+                      () -> {
+                        Sleeper.defaultSleeper().sleep(Duration.ofSeconds(10L));
+                        firstDeviceLatch.countDown();
+                        return null;
+                      }),
+              Level.INFO,
+              "Error when waiting device manager started");
         }
       }
     }
@@ -124,7 +155,7 @@ public class LocalMode implements ExecMode {
 
   @Override
   public DeviceQuerier createDeviceQuerier() {
-    return new LocalDeviceQuerier(localDeviceManagerFuture);
+    return new LocalDeviceQuerier(localDeviceManagerFuture, firstDeviceLatch);
   }
 
   @Override
@@ -149,11 +180,11 @@ public class LocalMode implements ExecMode {
       deviceRunners.add(deviceRunner);
     }
     LocalDeviceTestRunner primaryDeviceRunner = deviceRunners.get(0);
-    List<LocalDeviceTestRunner> secondaryDeviceRunners =
+    ImmutableList<LocalDeviceTestRunner> secondaryDeviceRunners =
         deviceRunners.stream().skip(1L).collect(toImmutableList());
     TestRunnerLauncher<TestRunner> launcher =
         new LocalDeviceTestRunnerLauncher(primaryDeviceRunner, secondaryDeviceRunners);
-    List<Device> devices =
+    ImmutableList<Device> devices =
         deviceRunners.stream().map(LocalDeviceTestRunner::getDevice).collect(toImmutableList());
     return doCreateTestRunner(launcher, setting, devices, testThreadPool);
   }
@@ -215,5 +246,10 @@ public class LocalMode implements ExecMode {
     DispatcherManager dispatcherManager = DispatcherManager.getInstance();
     addDeviceDispatchers(dispatcherManager);
     return dispatcherManager.getAllDispatchersInOrder();
+  }
+
+  @Subscribe
+  private void onLocalDeviceUp(LocalDeviceUpEvent unused) {
+    firstDeviceLatch.countDown();
   }
 }

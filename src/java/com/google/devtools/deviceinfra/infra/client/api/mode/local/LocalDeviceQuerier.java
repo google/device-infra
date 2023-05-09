@@ -16,10 +16,12 @@
 
 package com.google.devtools.deviceinfra.infra.client.api.mode.local;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
@@ -43,8 +45,8 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimen
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map.Entry;
+import java.util.concurrent.CountDownLatch;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
@@ -54,10 +56,13 @@ class LocalDeviceQuerier implements DeviceQuerier {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final ListenableFuture<LocalDeviceManager> deviceManagerFuture;
+  private final CountDownLatch firstDeviceLatch;
 
   /** Creates a device querier to retrieve the local device information. */
-  public LocalDeviceQuerier(ListenableFuture<LocalDeviceManager> deviceManagerFuture) {
+  public LocalDeviceQuerier(
+      ListenableFuture<LocalDeviceManager> deviceManagerFuture, CountDownLatch firstDeviceLatch) {
     this.deviceManagerFuture = deviceManagerFuture;
+    this.firstDeviceLatch = firstDeviceLatch;
   }
 
   @Override
@@ -88,9 +93,10 @@ class LocalDeviceQuerier implements DeviceQuerier {
   public DeviceQueryResult queryDevice(DeviceQueryFilter deviceQueryFilter)
       throws MobileHarnessException, InterruptedException {
     LocalDeviceManager deviceManager = getDeviceManager();
+    firstDeviceLatch.await();
     return DeviceQueryResult.newBuilder()
         .addAllDeviceInfo(
-            deviceManager.getAllDeviceStatus(false /* realtimeDetect */).entrySet().stream()
+            deviceManager.getAllDeviceStatus(/* realtimeDispatch= */ false).entrySet().stream()
                 .map(
                     deviceEntry -> {
                       DeviceQuery.DeviceInfo.Builder builder =
@@ -119,7 +125,7 @@ class LocalDeviceQuerier implements DeviceQuerier {
                                                   .setValue(dimension.getValue())
                                                   .setRequired(false)
                                                   .build())
-                                      .collect(Collectors.toList()))
+                                      .collect(toImmutableList()))
                               .addAllDimension(
                                   StrPairUtil.convertCollectionToMultimap(
                                           deviceEntry.getKey().getRequiredDimensions())
@@ -132,7 +138,7 @@ class LocalDeviceQuerier implements DeviceQuerier {
                                                   .setValue(dimension.getValue())
                                                   .setRequired(true)
                                                   .build())
-                                      .collect(Collectors.toList()))
+                                      .collect(toImmutableList()))
                               .addDimension(
                                   Dimension.newBuilder()
                                       .setName(Ascii.toLowerCase(Name.HOST_NAME.name()))
@@ -192,7 +198,7 @@ class LocalDeviceQuerier implements DeviceQuerier {
                                                             .getName()
                                                             .equals(dimensionFilter.getName()))
                                                 .map(Dimension::getValue))))
-                .collect(Collectors.toList()))
+                .collect(toImmutableList()))
         .build();
     // TODO: Supports job/test info.
     // For consistency, each device API should only be invoked once. So if we use stream.flatMap()
@@ -217,7 +223,7 @@ class LocalDeviceQuerier implements DeviceQuerier {
   @Override
   public ListenableFuture<DeviceQueryResult> queryDeviceAsync(DeviceQueryFilter deviceQueryFilter)
       throws MobileHarnessException, InterruptedException {
-    return Futures.immediateFuture(queryDevice(deviceQueryFilter));
+    return immediateFuture(queryDevice(deviceQueryFilter));
   }
 
   private boolean matchAttribute(String attributeRegex, Stream<String> attributes) {

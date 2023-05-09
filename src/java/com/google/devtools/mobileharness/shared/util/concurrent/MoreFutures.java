@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.shared.util.concurrent;
 
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.joining;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
@@ -38,6 +40,7 @@ public class MoreFutures {
   private MoreFutures() {}
 
   /** Adds a callback to a future that will log a message if the future fails. */
+  @SuppressWarnings({"Convert2Diamond", "FloggerWithoutCause"})
   @FormatMethod
   @CanIgnoreReturnValue
   public static <V> ListenableFuture<V> logFailure(
@@ -50,7 +53,16 @@ public class MoreFutures {
 
           @Override
           public void onFailure(Throwable t) {
-            logger.at(level).withCause(t).logVarargs(message, params);
+            boolean interrupted = t instanceof InterruptedException;
+            logger.at(level).withCause(interrupted ? null : t).logVarargs(message, params);
+            if (interrupted) {
+              logger.at(level).log(
+                  "%s, stack_trace=[%s]",
+                  t,
+                  stream(t.getStackTrace())
+                      .map(StackTraceElement::toString)
+                      .collect(joining("  <--  ")));
+            }
           }
         },
         directExecutor());
