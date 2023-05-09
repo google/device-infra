@@ -17,8 +17,7 @@
 package com.google.devtools.deviceaction.common.utils;
 
 /** A utility class to share constants. */
-public class Constants {
-  private Constants() {}
+public final class Constants {
 
   public static final String APEX_SUFFIX = ".apex";
 
@@ -29,4 +28,10 @@ public class Constants {
   public static final String CAPEX_SUFFIX = ".capex";
 
   public static final String ZIP_SUFFIX = ".zip";
+
+  static final String GS_PREFIX = "gs://";
+
+  static final String GS_DELIMITER = "/";
+
+  private Constants() {}
 }
