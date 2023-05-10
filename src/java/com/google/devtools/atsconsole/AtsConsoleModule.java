@@ -129,7 +129,7 @@ public class AtsConsoleModule extends AbstractModule {
   ListeningScheduledExecutorService provideThreadPool() {
     return MoreExecutors.listeningDecorator(
         Executors.newScheduledThreadPool(
-            /* corePoolSize= */ 5,
+            /* corePoolSize= */ 30,
             ThreadFactoryUtil.createThreadFactory("ats-console-thread-pool", /* daemon= */ true)));
   }
 

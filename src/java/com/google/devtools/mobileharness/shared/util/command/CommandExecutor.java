@@ -633,7 +633,7 @@ public class CommandExecutor {
         decorateWithLocalTraceSpan(
             MoreExecutors.listeningDecorator(
                 Executors.newScheduledThreadPool(
-                    /* corePoolSize= */ 3,
+                    /* corePoolSize= */ 30,
                     getThreadFactory(/* threadName= */ "default-mh-command-executor-timer"))),
             ListeningScheduledExecutorService.class);
 

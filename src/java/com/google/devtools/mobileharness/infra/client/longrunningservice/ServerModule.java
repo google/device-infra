@@ -62,7 +62,7 @@ public class ServerModule extends AbstractModule {
   ListeningScheduledExecutorService provideListeningScheduledExecutorService() {
     return MoreExecutors.listeningDecorator(
         Executors.newScheduledThreadPool(
-            /* corePoolSize= */ 5, ThreadFactoryUtil.createThreadFactory("main-thread")));
+            /* corePoolSize= */ 30, ThreadFactoryUtil.createThreadFactory("main-thread")));
   }
 
   @Provides
