@@ -49,7 +49,7 @@ public final class BundletoolUtilTest {
 
   private static final String SERIAL = "id";
 
-  @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
   @Mock private CommandExecutor mockExecutor;
