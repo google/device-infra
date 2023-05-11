@@ -29,7 +29,7 @@ import org.junit.runners.JUnit4;
 public final class CommandTest {
 
   @Test
-  public void behaviorBeingTested_expectedResult() throws Exception {
+  public void of_getExpectedResult() throws Exception {
     assertThat(Command.of("install_mainline")).isEqualTo(INSTALL_MAINLINE);
     assertThrows(DeviceActionException.class, () -> Command.of("invalid"));
   }
