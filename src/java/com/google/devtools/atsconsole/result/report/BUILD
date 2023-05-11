@@ -118,3 +118,23 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "mobly_report_helper",
+    srcs = ["MoblyReportHelper.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/atsconsole/result/report:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/atsconsole/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/atsconsole/result/xml:xml_constants",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
