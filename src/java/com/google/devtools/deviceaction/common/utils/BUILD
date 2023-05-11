@@ -23,24 +23,34 @@ package(
     default_visibility = DEFAULT_VISIBILITY,
 )
 
+LIB_SRCS = glob(
+    ["*.java"],
+    exclude = ["*Main.java"],
+)
+
 java_library(
     name = "utils",
-    srcs = glob(
-        ["*.java"],
-    ),
+    srcs = LIB_SRCS,
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "@com_google_protobuf//:protobuf_java_util",
         "@com_google_protobuf_protobuf_java",
+        "@maven//:com_google_api_client_google_api_client",
+        "@maven//:com_google_apis_google_api_services_storage",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_http_client_google_http_client",
+        "@maven//:com_google_http_client_google_http_client_gson",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
