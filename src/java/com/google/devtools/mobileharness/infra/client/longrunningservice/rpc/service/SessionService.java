@@ -65,7 +65,8 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
 
   private CreateSessionResponse doCreateSession(CreateSessionRequest request)
       throws MobileHarnessException {
-    SessionDetail sessionDetail = sessionManager.addSession(request.getSessionConfig());
+    SessionDetail sessionDetail =
+        sessionManager.addSession(request.getSessionConfig()).sessionDetail();
     return CreateSessionResponse.newBuilder().setSessionId(sessionDetail.getSessionId()).build();
   }
 

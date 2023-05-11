@@ -23,11 +23,14 @@ import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.t
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.min;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -70,11 +73,12 @@ public class SessionManager {
 
   /** Submitted and non-started sessions. */
   @GuardedBy("lock")
-  private final LinkedHashMap<String, SessionDetail> sessionQueue = new LinkedHashMap<>();
+  private final LinkedHashMap<String, SessionDetailAndFinalResultFuture> sessionQueue =
+      new LinkedHashMap<>();
 
   /** Running sessions. */
   @GuardedBy("lock")
-  private final Map<String, SessionRunner> sessionRunners = new HashMap<>();
+  private final Map<String, SessionRunnerAndFinalResultFuture> sessionRunners = new HashMap<>();
 
   /** Archived sessions. */
   @SuppressWarnings("Convert2Diamond")
@@ -102,9 +106,11 @@ public class SessionManager {
    *
    * @throws MobileHarnessException if the queue is full
    */
-  public SessionDetail addSession(SessionConfig sessionConfig) throws MobileHarnessException {
+  public SessionAddingResult addSession(SessionConfig sessionConfig) throws MobileHarnessException {
     SessionDetail sessionDetail = sessionDetailCreator.create(sessionConfig);
     logger.atInfo().log("Create session: %s", shortDebugString(sessionDetail));
+    SessionDetailAndFinalResultFuture sessionDetailAndFinalResultFuture =
+        SessionDetailAndFinalResultFuture.of(sessionDetail, SettableFuture.create());
     synchronized (lock) {
       MobileHarnessExceptions.check(
           sessionQueue.size() <= SESSION_QUEUE_CAPACITY,
@@ -113,12 +119,12 @@ public class SessionManager {
               String.format(
                   "Session queue is full(%s), failed to add session [%s]",
                   SESSION_QUEUE_CAPACITY, shortDebugString(sessionDetail)));
-      sessionQueue.put(sessionDetail.getSessionId().getId(), sessionDetail);
+      sessionQueue.put(sessionDetail.getSessionId().getId(), sessionDetailAndFinalResultFuture);
 
       // Tries to start new sessions.
       startSessions();
     }
-    return sessionDetail;
+    return SessionAddingResult.of(sessionDetailAndFinalResultFuture);
   }
 
   /**
@@ -137,13 +143,16 @@ public class SessionManager {
     synchronized (lock) {
       sessionDetail = archivedSessions.get(sessionId);
       if (sessionDetail == null) {
-        SessionRunner sessionRunner = sessionRunners.get(sessionId);
-        if (sessionRunner != null) {
-          sessionDetail = sessionRunner.getSession(fieldMask);
+        SessionRunnerAndFinalResultFuture runningSession = sessionRunners.get(sessionId);
+        if (runningSession != null) {
+          sessionDetail = runningSession.sessionRunner().getSession(fieldMask);
         }
       }
       if (sessionDetail == null) {
-        sessionDetail = sessionQueue.get(sessionId);
+        SessionDetailAndFinalResultFuture pendingSession = sessionQueue.get(sessionId);
+        if (pendingSession != null) {
+          sessionDetail = pendingSession.sessionDetail();
+        }
       }
     }
     MobileHarnessExceptions.check(
@@ -165,9 +174,9 @@ public class SessionManager {
   public List<SessionDetail> getAllSessions(@Nullable FieldMask fieldMask) {
     synchronized (lock) {
       return Streams.concat(
-              sessionQueue.values().stream(),
+              sessionQueue.values().stream().map(SessionDetailAndFinalResultFuture::sessionDetail),
               sessionRunners.values().stream()
-                  .map(sessionRunner -> sessionRunner.getSession(fieldMask)),
+                  .map(sessionRunner -> sessionRunner.sessionRunner().getSession(fieldMask)),
               archivedSessions.values().stream())
           .collect(toImmutableList());
     }
@@ -183,25 +192,30 @@ public class SessionManager {
   @GuardedBy("lock")
   private void startSessions() {
     // Poll sessions from the session queue.
-    ImmutableList<SessionDetail> newSessions = pollSessions();
+    ImmutableList<SessionDetailAndFinalResultFuture> newSessions = pollSessions();
 
     // Creates session runners.
-    ImmutableList<SessionRunner> newSessionRunners =
+    ImmutableList<SessionRunnerAndFinalResultFuture> newSessionRunners =
         newSessions.stream()
             .map(
                 session ->
-                    session.toBuilder().setSessionStatus(SessionStatus.SESSION_RUNNING).build())
-            .map(sessionRunnerFactory::create)
+                    SessionRunnerAndFinalResultFuture.of(
+                        sessionRunnerFactory.create(
+                            session.sessionDetail().toBuilder()
+                                .setSessionStatus(SessionStatus.SESSION_RUNNING)
+                                .build()),
+                        session.finalResultFuture()))
             .collect(toImmutableList());
 
     // Starts session runners.
-    for (SessionRunner sessionRunner : newSessionRunners) {
-      SessionDetail sessionDetail = sessionRunner.getSession(/* fieldMask= */ null);
+    for (SessionRunnerAndFinalResultFuture sessionRunner : newSessionRunners) {
+      SessionDetail sessionDetail = sessionRunner.sessionRunner().getSession(/* fieldMask= */ null);
       logger.atInfo().log("Start session: %s", shortDebugString(sessionDetail));
       String sessionId = sessionDetail.getSessionId().getId();
       sessionRunners.put(sessionId, sessionRunner);
       addCallback(
-          threadPool.submit(threadRenaming(sessionRunner, () -> "session-runner-" + sessionId)),
+          threadPool.submit(
+              threadRenaming(sessionRunner.sessionRunner(), () -> "session-runner-" + sessionId)),
           new SessionRunnerCallback(sessionRunner),
           directExecutor());
     }
@@ -209,7 +223,7 @@ public class SessionManager {
 
   /** Polls as many as sessions from the session queue. */
   @GuardedBy("lock")
-  private ImmutableList<SessionDetail> pollSessions() {
+  private ImmutableList<SessionDetailAndFinalResultFuture> pollSessions() {
     int count = sessionQueue.size();
     if (count > 0) {
       count = min(count, RUNNING_SESSION_CAPACITY - sessionRunners.size());
@@ -217,8 +231,9 @@ public class SessionManager {
     if (count <= 0) {
       return ImmutableList.of();
     }
-    ImmutableList.Builder<SessionDetail> result = ImmutableList.builderWithExpectedSize(count);
-    Iterator<SessionDetail> iterator = sessionQueue.values().iterator();
+    ImmutableList.Builder<SessionDetailAndFinalResultFuture> result =
+        ImmutableList.builderWithExpectedSize(count);
+    Iterator<SessionDetailAndFinalResultFuture> iterator = sessionQueue.values().iterator();
     for (int i = 0; i < count; i++) {
       result.add(iterator.next());
       iterator.remove();
@@ -229,9 +244,9 @@ public class SessionManager {
   /** Callback for {@link SessionRunner#call()}. */
   private class SessionRunnerCallback implements FutureCallback<Void> {
 
-    private final SessionRunner sessionRunner;
+    private final SessionRunnerAndFinalResultFuture sessionRunner;
 
-    private SessionRunnerCallback(SessionRunner sessionRunner) {
+    private SessionRunnerCallback(SessionRunnerAndFinalResultFuture sessionRunner) {
       this.sessionRunner = sessionRunner;
     }
 
@@ -246,7 +261,7 @@ public class SessionManager {
     }
 
     private void afterSession(@Nullable Throwable error) {
-      SessionDetail sessionDetail = sessionRunner.getSession(/* fieldMask= */ null);
+      SessionDetail sessionDetail = sessionRunner.sessionRunner().getSession(/* fieldMask= */ null);
       SessionDetail.Builder sessionDetailBuilder = sessionDetail.toBuilder();
       sessionDetailBuilder.setSessionStatus(SessionStatus.SESSION_FINISHED);
 
@@ -256,17 +271,68 @@ public class SessionManager {
       if (error != null) {
         sessionDetailBuilder.setSessionRunnerError(ErrorModelConverter.toExceptionDetail(error));
       }
-      sessionDetail = sessionDetailBuilder.build();
+      SessionDetail finalSessionDetail = sessionDetailBuilder.build();
 
       // Archives the session.
-      String sessionId = sessionDetail.getSessionId().getId();
+      String sessionId = finalSessionDetail.getSessionId().getId();
       synchronized (lock) {
         sessionRunners.remove(sessionId);
-        archivedSessions.put(sessionId, sessionDetail);
+        archivedSessions.put(sessionId, finalSessionDetail);
 
         // Tries to start new sessions if any.
         startSessions();
       }
+
+      // Completes the final result future.
+      sessionRunner.finalResultFuture().set(finalSessionDetail);
+    }
+  }
+
+  /** {@link SessionDetail} and the future of the final result of the session. */
+  @AutoValue
+  public abstract static class SessionAddingResult {
+    /** The initial {@link SessionDetail}. */
+    public abstract SessionDetail sessionDetail();
+
+    /**
+     * The final {@link SessionDetail} when the session runner finishes.
+     *
+     * <p>Note that if the session runner throws an exception, a {@link SessionDetail} will be
+     * returned and the exception will be added to {@link SessionDetail#getSessionRunnerError()}.
+     */
+    public abstract ListenableFuture<SessionDetail> finalResultFuture();
+
+    private static SessionAddingResult of(
+        SessionDetailAndFinalResultFuture sessionDetailAndFinalResultFuture) {
+      return new AutoValue_SessionManager_SessionAddingResult(
+          sessionDetailAndFinalResultFuture.sessionDetail(),
+          sessionDetailAndFinalResultFuture.finalResultFuture());
+    }
+  }
+
+  @AutoValue
+  abstract static class SessionDetailAndFinalResultFuture {
+    abstract SessionDetail sessionDetail();
+
+    abstract SettableFuture<SessionDetail> finalResultFuture();
+
+    private static SessionDetailAndFinalResultFuture of(
+        SessionDetail sessionDetail, SettableFuture<SessionDetail> finalResultFuture) {
+      return new AutoValue_SessionManager_SessionDetailAndFinalResultFuture(
+          sessionDetail, finalResultFuture);
+    }
+  }
+
+  @AutoValue
+  abstract static class SessionRunnerAndFinalResultFuture {
+    abstract SessionRunner sessionRunner();
+
+    abstract SettableFuture<SessionDetail> finalResultFuture();
+
+    private static SessionRunnerAndFinalResultFuture of(
+        SessionRunner sessionRunner, SettableFuture<SessionDetail> finalResultFuture) {
+      return new AutoValue_SessionManager_SessionRunnerAndFinalResultFuture(
+          sessionRunner, finalResultFuture);
     }
   }
 }
