@@ -29,5 +29,6 @@ java_library(
     deps = [
         "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
+        "//src/java/com/google/devtools/deviceaction/common/schemas",
     ],
 )

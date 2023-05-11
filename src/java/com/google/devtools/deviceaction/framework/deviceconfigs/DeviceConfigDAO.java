@@ -17,10 +17,12 @@
 package com.google.devtools.deviceaction.framework.deviceconfigs;
 
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
+import com.google.devtools.deviceaction.common.schemas.Command;
 import com.google.devtools.deviceaction.framework.proto.DeviceConfig;
 
 /** Generic DAO interface. This allows us to have different DAO implementations. */
 public interface DeviceConfigDAO {
 
-  DeviceConfig getDeviceConfig(String deviceKey, String cmd) throws DeviceActionException;
+  /** Gets device config by querying the device key and command. */
+  DeviceConfig getDeviceConfig(String deviceKey, Command cmd) throws DeviceActionException;
 }
