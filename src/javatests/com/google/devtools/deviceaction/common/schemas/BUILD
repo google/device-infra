@@ -13,28 +13,33 @@
 # limitations under the License.
 #
 
-DEFAULT_VISIBILITY = [
-    "//src/java/com/google/devtools/deviceaction:deviceaction_java_pkg",
-    "//src/javatests/com/google/devtools/deviceaction:deviceaction_javatests_pkg",
-]
+load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
+    default_visibility = ["//src/javatests/com/google/devtools/deviceaction:deviceaction_javatests_pkg"],
 )
 
 java_library(
-    name = "schemas",
+    name = "tests",
+    testonly = 1,
     srcs = glob(
-        ["*.java"],
+        ["*Test.java"],
     ),
     deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
-        "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
-        "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
+        "//src/java/com/google/devtools/deviceaction/common/schemas",
+        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "@maven//:junit_junit",
+    ],
+)
+
+junit_test_suites(
+    name = "gen_tests",
+    sizes = [
+        "small",
+    ],
+    deps = [
+        ":tests",
     ],
 )

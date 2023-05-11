@@ -25,7 +25,7 @@ import java.util.Optional;
 @AutoValue
 public abstract class ActionConfig {
 
-  public abstract String cmd();
+  public abstract Command cmd();
 
   public abstract ActionSpec actionSpec();
 
@@ -42,7 +42,7 @@ public abstract class ActionConfig {
   /** Builder for {@link ActionConfig}. */
   @AutoValue.Builder
   public abstract static class Builder {
-    public abstract Builder setCmd(String cmd);
+    public abstract Builder setCmd(Command cmd);
 
     public abstract Builder setActionSpec(ActionSpec actionSpec);
 
