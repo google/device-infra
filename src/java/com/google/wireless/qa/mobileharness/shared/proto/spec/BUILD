@@ -112,3 +112,19 @@ java_proto_library(
     name = "xts_tradefed_test_spec_java_proto",
     deps = [":xts_tradefed_test_spec_proto"],
 )
+
+proto_library(
+    name = "pixel_buds_flash_decorator_spec_proto",
+    srcs = ["decorator/pixel_buds_flash_decorator_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+cc_proto_library(
+    name = "pixel_buds_flash_decorator_spec_cc_proto",
+    deps = [":pixel_buds_flash_decorator_spec_proto"],
+)
+
+java_proto_library(
+    name = "pixel_buds_flash_decorator_spec_java_proto",
+    deps = [":pixel_buds_flash_decorator_spec_proto"],
+)

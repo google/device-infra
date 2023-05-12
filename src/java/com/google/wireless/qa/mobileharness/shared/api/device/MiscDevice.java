@@ -33,5 +33,7 @@ public class MiscDevice extends BaseDevice {
     super.setUp();
     addSupportedDeviceType(this.getClass().getSimpleName());
     addSupportedDriver("NoOpDriver");
+    // TODO: Move this to PixelBudsDevice when it is ready.
+    addSupportedDecorator("PixelBudsFlashDecorator");
   }
 }
