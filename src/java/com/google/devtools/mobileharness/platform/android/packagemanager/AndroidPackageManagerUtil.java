@@ -973,8 +973,8 @@ public class AndroidPackageManagerUtil {
               + apkPath
               + " due to no matching abis: "
               + output
-              + "\nMaybe use --android_cpu argument in the command"
-              + "\nSample: --android_cpu=armeabi-v7a");
+              + "\n"
+              + " See go/omnilab-faqs#how-to-fix-android-pkg-mngr-util-installation-abi-incompatible-error");
     }
 
     // Will be marked as FAIL (instead of ERROR) for this ErrorCode
