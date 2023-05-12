@@ -52,6 +52,15 @@ message SessionConfig {
 
   // Optional.
   SessionPluginConfigs session_plugin_configs = 3;
+
+  // Optional.
+  //
+  // Whether to remove the session from the server after the session finishes.
+  // False by default.
+  //
+  // If true, the final result of the session only appears in the response of
+  // the RunSession method.
+  bool remove_after_finish = 4;
 }
 
 // Configuration of session plugins.

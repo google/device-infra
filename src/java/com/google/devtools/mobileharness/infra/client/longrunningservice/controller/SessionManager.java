@@ -277,7 +277,9 @@ public class SessionManager {
       String sessionId = finalSessionDetail.getSessionId().getId();
       synchronized (lock) {
         sessionRunners.remove(sessionId);
-        archivedSessions.put(sessionId, finalSessionDetail);
+        if (!finalSessionDetail.getSessionConfig().getRemoveAfterFinish()) {
+          archivedSessions.put(sessionId, finalSessionDetail);
+        }
 
         // Tries to start new sessions if any.
         startSessions();
