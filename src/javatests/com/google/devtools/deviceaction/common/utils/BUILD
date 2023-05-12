@@ -27,7 +27,10 @@ java_library(
         ["*Test.java"],
     ),
     deps = [
+        "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
+        "//src/devtools/deviceaction/schemas/proto/actions:install_mainline_spec_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
+        "//src/java/com/google/devtools/deviceaction/common/schemas",
         "//src/java/com/google/devtools/deviceaction/common/utils",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
@@ -41,6 +44,7 @@ java_library(
 junit_test_suites(
     name = "gen_tests",
     sizes = [
+        "small",
         "medium",
     ],
     deps = [
