@@ -27,6 +27,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.AndroidPackage;
+import com.google.devtools.deviceaction.common.utils.Conditions;
 import com.google.devtools.deviceaction.common.utils.LazyCached;
 import com.google.devtools.deviceaction.common.utils.ResourceHelper;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
@@ -150,7 +151,10 @@ public class ModulePusher implements Operation {
   @VisibleForTesting
   ResourcePath getTargetOnDevice(AndroidPackage onDevice)
       throws DeviceActionException, InterruptedException {
-    // TODO: b/281011375 Check condition onDevice.files() not empty.
+    Conditions.checkArgument(
+        !onDevice.files().isEmpty(),
+        ErrorType.INFRA_ISSUE,
+        String.format("The package %s doesn't have files!", onDevice));
     String packageName = onDevice.info().packageName();
     if (onDevice.info().isApex()) {
       if (onDevice.files().size() == 1
