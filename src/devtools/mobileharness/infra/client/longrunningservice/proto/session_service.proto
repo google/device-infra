@@ -27,8 +27,11 @@ option java_outer_classname = "SessionServiceProto";
 // Session service for submitting and running sessions. A session contains
 // multiple OmniLab jobs.
 service SessionService {
-  // Creates a session.
+  // Creates a session and returns immediately.
   rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse);
+
+  // Creates a session and returns when the session finishes.
+  rpc RunSession(RunSessionRequest) returns (RunSessionResponse);
 
   // Gets information of a session.
   rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
@@ -42,6 +45,16 @@ message CreateSessionRequest {
 message CreateSessionResponse {
   // Required.
   SessionId session_id = 1;
+}
+
+message RunSessionRequest {
+  // Required.
+  SessionConfig session_config = 1;
+}
+
+message RunSessionResponse {
+  // Required.
+  SessionDetail session_detail = 1;
 }
 
 message GetSessionRequest {

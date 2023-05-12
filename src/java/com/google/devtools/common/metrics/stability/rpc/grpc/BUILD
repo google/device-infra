@@ -63,5 +63,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
     ],
 )

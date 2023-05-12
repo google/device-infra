@@ -16,6 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service;
 
+import static com.google.common.util.concurrent.Futures.transform;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionManager;
@@ -25,6 +29,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
 import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
 import com.google.protobuf.FieldMask;
 import com.google.protobuf.util.FieldMaskUtil;
@@ -53,6 +59,18 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
   }
 
   @Override
+  public void runSession(
+      RunSessionRequest request, StreamObserver<RunSessionResponse> responseObserver) {
+    GrpcServiceUtil.invokeAsync(
+        request,
+        responseObserver,
+        this::doRunSession,
+        directExecutor(),
+        SessionServiceGrpc.getServiceDescriptor(),
+        SessionServiceGrpc.getRunSessionMethod());
+  }
+
+  @Override
   public void getSession(
       GetSessionRequest request, StreamObserver<GetSessionResponse> responseObserver) {
     GrpcServiceUtil.invoke(
@@ -68,6 +86,13 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
     SessionDetail sessionDetail =
         sessionManager.addSession(request.getSessionConfig()).sessionDetail();
     return CreateSessionResponse.newBuilder().setSessionId(sessionDetail.getSessionId()).build();
+  }
+
+  private ListenableFuture<RunSessionResponse> doRunSession(RunSessionRequest request)
+      throws MobileHarnessException {
+    ListenableFuture<SessionDetail> finalResultFuture =
+        sessionManager.addSession(request.getSessionConfig()).finalResultFuture();
+    return transform(finalResultFuture, SessionService::createRunSessionResponse, directExecutor());
   }
 
   private GetSessionResponse doGetSession(GetSessionRequest request) throws MobileHarnessException {
@@ -94,5 +119,9 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
       result = FieldMaskUtil.trim(request.getFieldMask(), result);
     }
     return result;
+  }
+
+  private static RunSessionResponse createRunSessionResponse(SessionDetail finalResult) {
+    return RunSessionResponse.newBuilder().setSessionDetail(finalResult).build();
   }
 }

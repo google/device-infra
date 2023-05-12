@@ -16,7 +16,6 @@
 
 package com.google.devtools.atsconsole.command;
 
-import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.controller.olcserver.AtsSessionStub;
 import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
@@ -25,9 +24,7 @@ import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSes
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListDevicesCommand;
 import com.google.devtools.atsconsole.controller.sessionplugin.PluginOutputPrinter;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -88,8 +85,8 @@ public class ListCommand implements Callable<Integer> {
   public int devices(@Option(names = "all") boolean listAllDevices)
       throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
-    ListenableFuture<AtsSessionPluginOutput> future =
-        atsSessionStub.runSession(
+    AtsSessionPluginOutput output =
+        atsSessionStub.runShortSession(
             "list_devices_command",
             AtsSessionPluginConfig.newBuilder()
                 .setListCommand(
@@ -97,8 +94,6 @@ public class ListCommand implements Callable<Integer> {
                         .setListDevicesCommand(
                             ListDevicesCommand.newBuilder().setListAllDevices(listAllDevices)))
                 .build());
-    AtsSessionPluginOutput output =
-        MoreFutures.get(future, InfraErrorId.ATSC_LIST_DEVICES_COMMAND_EXECUTION_ERROR);
     return PluginOutputPrinter.printOutput(output, consoleUtil);
   }
 

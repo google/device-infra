@@ -50,6 +50,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.protobuf.Any;
 import com.google.protobuf.FieldMask;
@@ -66,7 +68,7 @@ public class AtsSessionStub {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String SESSION_LABEL = "AtsSessionPlugin";
+  private static final String SESSION_PLUGIN_LABEL = "AtsSessionPlugin";
   private static final String SESSION_PLUGIN_CLASS_NAME =
       "com.google.devtools.atsconsole.controller.sessionplugin.AtsSessionPlugin";
   private static final FieldMask GET_SESSION_STATUS_FIELD_MASK =
@@ -105,21 +107,7 @@ public class AtsSessionStub {
     // Creates a session.
     CreateSessionRequest createSessionRequest =
         CreateSessionRequest.newBuilder()
-            .setSessionConfig(
-                SessionConfig.newBuilder()
-                    .setSessionName(sessionName)
-                    .setSessionPluginConfigs(
-                        SessionPluginConfigs.newBuilder()
-                            .addSessionPluginConfig(
-                                SessionPluginConfig.newBuilder()
-                                    .setLoadingConfig(
-                                        SessionPluginLoadingConfig.newBuilder()
-                                            .setPluginClassName(SESSION_PLUGIN_CLASS_NAME))
-                                    .setExecutionConfig(
-                                        SessionPluginExecutionConfig.newBuilder()
-                                            .setConfig(Any.pack(config)))
-                                    .setExplicitLabel(
-                                        SessionPluginLabel.newBuilder().setLabel(SESSION_LABEL)))))
+            .setSessionConfig(createSessionConfig(sessionName, config))
             .build();
     logger.atFine().log(
         "Creating session, plugin_config=[%s], request=[%s]",
@@ -128,7 +116,12 @@ public class AtsSessionStub {
     try {
       createSessionResponse = sessionStub.createSession(createSessionRequest);
     } catch (GrpcExceptionWithErrorId e) {
-      return immediateFailedFuture(e);
+      return immediateFailedFuture(
+          new MobileHarnessException(
+              InfraErrorId.ATSC_SESSION_STUB_CREATE_SESSION_ERROR,
+              String.format(
+                  "Failed to create session, request=[%s]", shortDebugString(createSessionRequest)),
+              e));
     }
     logger.atFine().log("Session created, response=[%s]", shortDebugString(createSessionResponse));
     SessionId sessionId = createSessionResponse.getSessionId();
@@ -137,6 +130,29 @@ public class AtsSessionStub {
     return threadPool.submit(
         threadRenaming(
             new GetAtsSessionTask(sessionId), () -> "get-ats-session-task-" + sessionId.getId()));
+  }
+
+  /** Runs a short session in OmniLab long-running client and returns when the session finished. */
+  public AtsSessionPluginOutput runShortSession(String sessionName, AtsSessionPluginConfig config)
+      throws MobileHarnessException {
+    RunSessionRequest runSessionRequest =
+        RunSessionRequest.newBuilder()
+            .setSessionConfig(createSessionConfig(sessionName, config))
+            .build();
+    logger.atFine().log(
+        "Running session, plugin_config=[%s], request=[%s]",
+        shortDebugString(config), shortDebugString(runSessionRequest));
+    RunSessionResponse runSessionResponse;
+    try {
+      runSessionResponse = sessionStub.runSession(runSessionRequest);
+    } catch (GrpcExceptionWithErrorId e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_SESSION_STUB_RUN_SESSION_ERROR,
+          String.format("Failed to run session, request=[%s]", shortDebugString(runSessionRequest)),
+          e);
+    }
+    logger.atFine().log("Session finished, response=[%s]", shortDebugString(runSessionResponse));
+    return getSessionPluginOutput(runSessionResponse.getSessionDetail());
   }
 
   private class GetAtsSessionTask implements Callable<AtsSessionPluginOutput> {
@@ -200,6 +216,24 @@ public class AtsSessionStub {
     }
   }
 
+  private static SessionConfig createSessionConfig(
+      String sessionName, AtsSessionPluginConfig config) {
+    return SessionConfig.newBuilder()
+        .setSessionName(sessionName)
+        .setSessionPluginConfigs(
+            SessionPluginConfigs.newBuilder()
+                .addSessionPluginConfig(
+                    SessionPluginConfig.newBuilder()
+                        .setLoadingConfig(
+                            SessionPluginLoadingConfig.newBuilder()
+                                .setPluginClassName(SESSION_PLUGIN_CLASS_NAME))
+                        .setExecutionConfig(
+                            SessionPluginExecutionConfig.newBuilder().setConfig(Any.pack(config)))
+                        .setExplicitLabel(
+                            SessionPluginLabel.newBuilder().setLabel(SESSION_PLUGIN_LABEL))))
+        .build();
+  }
+
   private static Duration calculateGetSessionStatusInterval(int count) {
     if (count <= 100) {
       return GET_SESSION_STATUS_SHORT_INTERVAL;
@@ -216,7 +250,7 @@ public class AtsSessionStub {
         sessionDetail
             .getSessionOutput()
             .getSessionPluginOutputMap()
-            .getOrDefault(SESSION_LABEL, SessionPluginOutput.getDefaultInstance());
+            .getOrDefault(SESSION_PLUGIN_LABEL, SessionPluginOutput.getDefaultInstance());
     if (sessionPluginOutput.hasOutput()) {
       try {
         return sessionPluginOutput.getOutput().unpack(AtsSessionPluginOutput.class);
@@ -255,7 +289,8 @@ public class AtsSessionStub {
     Map<Boolean, List<SessionPluginError>> sessionPluginErrorsPartitionedByLabel =
         sessionPluginErrors.stream()
             .collect(
-                partitioningBy(error -> error.getPluginLabel().getLabel().equals(SESSION_LABEL)));
+                partitioningBy(
+                    error -> error.getPluginLabel().getLabel().equals(SESSION_PLUGIN_LABEL)));
     ImmutableList<MobileHarnessException> atsSessionPluginErrors =
         sessionPluginErrorsPartitionedByLabel.get(true).stream()
             .map(
