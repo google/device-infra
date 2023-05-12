@@ -154,6 +154,8 @@ public class LocalTestFlow {
     String labPluginClasses = jobInfo.params().get(JobInfo.PARAM_LAB_PLUGIN);
     List<String> labPluginModuleClasses =
         jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN_MODULES, null);
+    String labPluginForceLoadFromJarClassRegex =
+        jobInfo.params().get(JobInfo.PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX);
 
     // Always create a new ClassLoader for the lab plugin of a new test, and close it when test
     // ends.
@@ -162,9 +164,7 @@ public class LocalTestFlow {
             labPluginPaths,
             labPluginClasses,
             labPluginModuleClasses,
-            // TODO: Add a PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX, similar to
-            //   PARAM_CLIENT_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX
-            /* forceLoadFromJarClassRegex= */ null,
+            /* forceLoadFromJarClassRegex= */ labPluginForceLoadFromJarClassRegex,
             PluginType.LAB,
             testInfo.log());
     if (loader.load()) {

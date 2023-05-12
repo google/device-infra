@@ -111,6 +111,17 @@ public class JobInfo extends JobScheduleUnit {
   /** Param name of the canonical class names of the client plugin module. */
   public static final String PARAM_LAB_PLUGIN_MODULES = "lab_plugin_module_classes";
 
+  /**
+   * Param name of the regex of class names that we force to be loaded from the lab plugin's
+   * classloader.
+   *
+   * <p>If specified, this can be used to resolve problems arising from a plugin's unintended use of
+   * classes from Mobile Harness, rather than its own classes (since parent classes are always used,
+   * if they are present).
+   */
+  public static final String PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX =
+      "lab_plugin_force_load_from_jar_class_regex";
+
   @ParamAnnotation(
       required = false,
       help =
