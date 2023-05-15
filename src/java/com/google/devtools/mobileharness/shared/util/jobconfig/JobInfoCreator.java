@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.io.Files;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -105,6 +106,9 @@ public final class JobInfoCreator {
           "IosMonsoonDecorator", "IosPowerMonitorMonsoonDecorator", "IosPerformanceDecorator");
 
   private static final String SYSLOG_DECORATOR_SUFFIX = "SysLogDecorator";
+
+  private static final ImmutableSet<String> LINKABLE_FILE_SUFFIX =
+      ImmutableSet.of("apk", "gz", "img", "jar", "par", "tar", "zip");
 
   /** Creates JobInfo from MH's JobConfig. */
   public static JobInfo createJobInfo(
@@ -301,7 +305,12 @@ public final class JobInfoCreator {
                         jobSetting.getRunFileDir(), fileOrDirPath.replace(tmpRunDirPath, ""));
                 try {
                   localFileUtil.prepareDir(PathUtil.dirname(fileValue));
-                  localFileUtil.copyFileOrDir(fileOrDirPath, fileValue);
+                  if (LINKABLE_FILE_SUFFIX.contains(
+                      Ascii.toLowerCase(Files.getFileExtension(fileValue)))) {
+                    localFileUtil.linkFileOrDir(fileOrDirPath, fileValue);
+                  } else {
+                    localFileUtil.copyFileOrDir(fileOrDirPath, fileValue);
+                  }
                   jobInfo.files().add(tag, fileValue);
                 } catch (MobileHarnessException e) {
                   // It's acceptable to ignore failed run file copy which is not necessary for
@@ -557,7 +566,7 @@ public final class JobInfoCreator {
           if (decorator.hasParam()) {
             try {
               Map.Entry<String, JsonObject> scopedSpec =
-                  getNamespaceAndScopedSpecs(decorator, /* isDecorator */ true);
+                  getNamespaceAndScopedSpecs(decorator, /* isDecorator= */ true);
               decoratorSpecs.put(scopedSpec.getKey(), scopedSpec.getValue());
             } catch (MobileHarnessException e) {
               throw new MobileHarnessException(
