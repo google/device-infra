@@ -18,11 +18,13 @@ package com.google.devtools.atsconsole.result.report;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Attribute;
 import com.google.devtools.atsconsole.result.proto.ReportProto.AttributeList;
+import com.google.devtools.atsconsole.result.xml.XmlConstants;
 import com.google.devtools.atsconsole.util.TestRunfilesUtil;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -31,6 +33,7 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.TextFormat;
 import java.io.File;
+import java.time.Instant;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -50,9 +53,58 @@ public final class MoblyReportHelperTest {
 
   private static final String DEVICE_ID = "11191FDD4002M4";
 
+  private static final String HOST_NAME = "test_host.bej.company.com";
+
   private static final String DEVICE_KERNEL_INFO =
       "Linux localhost 4.19.160-g85b17737b5f2-ab7508408 #1 SMP PREEMPT Wed Jun 30 08:01:04 UTC 2021"
           + " aarch64";
+
+  private static final ImmutableList<Attribute> EXPECTED_RESULT_ATTRIBUTES =
+      ImmutableList.of(
+          Attribute.newBuilder().setKey(XmlConstants.START_TIME_ATTR).setValue("0").build(),
+          Attribute.newBuilder().setKey(XmlConstants.END_TIME_ATTR).setValue("1000").build(),
+          Attribute.newBuilder()
+              .setKey(XmlConstants.START_DISPLAY_TIME_ATTR)
+              .setValue("Thu Jan 01 00:00:00 UTC 1970")
+              .build(),
+          Attribute.newBuilder()
+              .setKey(XmlConstants.END_DISPLAY_TIME_ATTR)
+              .setValue("Thu Jan 01 00:00:01 UTC 1970")
+              .build(),
+          Attribute.newBuilder().setKey(XmlConstants.SUITE_NAME_ATTR).setValue("CTS").build(),
+          Attribute.newBuilder().setKey(XmlConstants.SUITE_VARIANT_ATTR).setValue("CTS").build(),
+          Attribute.newBuilder()
+              .setKey(XmlConstants.SUITE_VERSION_ATTR)
+              .setValue(CertificationSuiteInfoFactory.CTS_SUITE_VERSION_HEAD)
+              .build(),
+          Attribute.newBuilder().setKey(XmlConstants.SUITE_PLAN_ATTR).setValue("cts").build(),
+          Attribute.newBuilder().setKey(XmlConstants.SUITE_BUILD_ATTR).setValue("0").build(),
+          Attribute.newBuilder()
+              .setKey(XmlConstants.SUITE_REPORT_VERSION_ATTR)
+              .setValue(CertificationSuiteInfoFactory.SUITE_REPORT_VERSION)
+              .build(),
+          Attribute.newBuilder().setKey(XmlConstants.DEVICES_ATTR).setValue(DEVICE_ID).build(),
+          Attribute.newBuilder().setKey(XmlConstants.HOST_NAME_ATTR).setValue(HOST_NAME).build(),
+          Attribute.newBuilder()
+              .setKey(XmlConstants.OS_NAME_ATTR)
+              .setValue("os_name_value")
+              .build(),
+          Attribute.newBuilder()
+              .setKey(XmlConstants.OS_VERSION_ATTR)
+              .setValue("os_version_value")
+              .build(),
+          Attribute.newBuilder()
+              .setKey(XmlConstants.OS_ARCH_ATTR)
+              .setValue("os_arch_value")
+              .build(),
+          Attribute.newBuilder()
+              .setKey(XmlConstants.JAVA_VENDOR_ATTR)
+              .setValue("java_vendor_value")
+              .build(),
+          Attribute.newBuilder()
+              .setKey(XmlConstants.JAVA_VERSION_ATTR)
+              .setValue("java_version_value")
+              .build());
 
   private static final ImmutableList<Attribute> EXPECTED_BUILD_ATTRIBUTES =
       ImmutableList.of(
@@ -117,6 +169,60 @@ public final class MoblyReportHelperTest {
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     localFileUtil = new LocalFileUtil();
+  }
+
+  @Test
+  public void generateResultAttributes() throws Exception {
+    moblyReportHelper = spy(new MoblyReportHelper(adb, localFileUtil));
+    when(moblyReportHelper.getHostName()).thenReturn(HOST_NAME);
+    when(moblyReportHelper.getSystemProperty("os.name")).thenReturn("os_name_value");
+    when(moblyReportHelper.getSystemProperty("os.version")).thenReturn("os_version_value");
+    when(moblyReportHelper.getSystemProperty("os.arch")).thenReturn("os_arch_value");
+    when(moblyReportHelper.getSystemProperty("java.vendor")).thenReturn("java_vendor_value");
+    when(moblyReportHelper.getSystemProperty("java.version")).thenReturn("java_version_value");
+
+    assertThat(
+            moblyReportHelper.generateResultAttributes(
+                Instant.EPOCH,
+                Instant.ofEpochSecond(1),
+                ImmutableList.of(DEVICE_ID),
+                new CertificationSuiteInfoFactory()
+                    .createSuiteInfo(CertificationSuiteInfoFactory.SuiteType.CTS, "cts")))
+        .containsExactlyEntriesIn(
+            EXPECTED_RESULT_ATTRIBUTES.stream()
+                .collect(toImmutableMap(Attribute::getKey, Attribute::getValue)));
+  }
+
+  @Test
+  public void generateResultAttributesFile() throws Exception {
+    File tempDir = temporaryFolder.newFolder("temp");
+
+    moblyReportHelper = spy(new MoblyReportHelper(adb, localFileUtil));
+    when(moblyReportHelper.getHostName()).thenReturn(HOST_NAME);
+    when(moblyReportHelper.getSystemProperty("os.name")).thenReturn("os_name_value");
+    when(moblyReportHelper.getSystemProperty("os.version")).thenReturn("os_version_value");
+    when(moblyReportHelper.getSystemProperty("os.arch")).thenReturn("os_arch_value");
+    when(moblyReportHelper.getSystemProperty("java.vendor")).thenReturn("java_vendor_value");
+    when(moblyReportHelper.getSystemProperty("java.version")).thenReturn("java_version_value");
+
+    moblyReportHelper.generateResultAttributesFile(
+        Instant.EPOCH,
+        Instant.ofEpochSecond(1),
+        ImmutableList.of(DEVICE_ID),
+        new CertificationSuiteInfoFactory()
+            .createSuiteInfo(CertificationSuiteInfoFactory.SuiteType.CTS, "cts"),
+        tempDir.toPath());
+
+    AttributeList attributes =
+        TextFormat.parse(
+            localFileUtil.readFile(
+                tempDir
+                    .toPath()
+                    .resolve(MoblyReportHelper.MOBLY_REPORT_RESULT_ATTR_TEXTPROTO_FILE_NAME)),
+            AttributeList.class);
+    assertThat(attributes.getAttributeList())
+        .containsExactlyElementsIn(EXPECTED_RESULT_ATTRIBUTES)
+        .inOrder();
   }
 
   @Test

@@ -19,6 +19,7 @@ package com.google.devtools.atsconsole.result.report;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -33,11 +34,18 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.protobuf.TextFormat;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.file.Path;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** Util to help generating a Mobly report. */
@@ -96,6 +104,9 @@ public class MoblyReportHelper {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  public static final String MOBLY_REPORT_RESULT_ATTR_TEXTPROTO_FILE_NAME =
+      "mobly_run_result_attributes.textproto";
+
   public static final String MOBLY_REPORT_BUILD_ATTR_TEXTPROTO_FILE_NAME =
       "mobly_run_build_attributes.textproto";
 
@@ -109,6 +120,107 @@ public class MoblyReportHelper {
   MoblyReportHelper(Adb adb, LocalFileUtil localFileUtil) {
     this.adb = adb;
     this.localFileUtil = localFileUtil;
+  }
+
+  /**
+   * Collects the info for the Mobly run, which are added in the <Result> element in the report.
+   *
+   * <p>The info will be stored in a text proto file (based on proto message {@link AttributeList})
+   * with file name {@link #MOBLY_REPORT_RESULT_ATTR_TEXTPROTO_FILE_NAME} in the directory {@code
+   * outputDir}.
+   */
+  public void generateResultAttributesFile(
+      Instant startTime,
+      Instant endTime,
+      ImmutableList<String> devices,
+      CertificationSuiteInfo suiteInfo,
+      Path outputDir)
+      throws MobileHarnessException, InterruptedException {
+    ImmutableList<Attribute> attributes =
+        generateResultAttributes(startTime, endTime, devices, suiteInfo).entrySet().stream()
+            .map(e -> Attribute.newBuilder().setKey(e.getKey()).setValue(e.getValue()).build())
+            .collect(toImmutableList());
+
+    localFileUtil.writeToFile(
+        outputDir.resolve(MOBLY_REPORT_RESULT_ATTR_TEXTPROTO_FILE_NAME).toAbsolutePath().toString(),
+        TextFormat.printer()
+            .printToString(AttributeList.newBuilder().addAllAttribute(attributes).build()));
+  }
+
+  @VisibleForTesting
+  ImmutableMap<String, String> generateResultAttributes(
+      Instant startTime,
+      Instant endTime,
+      ImmutableList<String> devices,
+      CertificationSuiteInfo suiteInfo) {
+    ImmutableMap.Builder<String, String> attrs = ImmutableMap.builder();
+
+    attrs.put(XmlConstants.START_TIME_ATTR, Long.toString(startTime.toEpochMilli()));
+    attrs.put(XmlConstants.END_TIME_ATTR, Long.toString(endTime.toEpochMilli()));
+    attrs.put(XmlConstants.START_DISPLAY_TIME_ATTR, toReadableDateString(startTime));
+    attrs.put(XmlConstants.END_DISPLAY_TIME_ATTR, toReadableDateString(endTime));
+
+    attrs.putAll(getSuiteAttributes(suiteInfo));
+
+    // Device Info
+    String deviceList = "";
+    if (!devices.isEmpty()) {
+      deviceList = Joiner.on(",").join(devices);
+    }
+    attrs.put(XmlConstants.DEVICES_ATTR, deviceList);
+
+    // Host Info
+    attrs.put(XmlConstants.HOST_NAME_ATTR, getHostName());
+    attrs.put(XmlConstants.OS_NAME_ATTR, getSystemProperty("os.name"));
+    attrs.put(XmlConstants.OS_VERSION_ATTR, getSystemProperty("os.version"));
+    attrs.put(XmlConstants.OS_ARCH_ATTR, getSystemProperty("os.arch"));
+    attrs.put(XmlConstants.JAVA_VENDOR_ATTR, getSystemProperty("java.vendor"));
+    attrs.put(XmlConstants.JAVA_VERSION_ATTR, getSystemProperty("java.version"));
+
+    return attrs.buildOrThrow();
+  }
+
+  private static ImmutableMap<String, String> getSuiteAttributes(CertificationSuiteInfo suiteInfo) {
+    ImmutableMap.Builder<String, String> attrs = ImmutableMap.builder();
+    attrs.put(XmlConstants.SUITE_NAME_ATTR, suiteInfo.suiteName());
+    attrs.put(XmlConstants.SUITE_VARIANT_ATTR, suiteInfo.suiteVariant());
+    attrs.put(XmlConstants.SUITE_VERSION_ATTR, suiteInfo.suiteVersion());
+    attrs.put(XmlConstants.SUITE_PLAN_ATTR, suiteInfo.suitePlan());
+    attrs.put(XmlConstants.SUITE_BUILD_ATTR, suiteInfo.suiteBuild());
+    attrs.put(XmlConstants.SUITE_REPORT_VERSION_ATTR, suiteInfo.suiteReportVersion());
+    return attrs.buildOrThrow();
+  }
+
+  /**
+   * Return the given time as a {@link String} suitable for displaying.
+   *
+   * <p>Example: Fri Aug 20 21:21:56 PDT 2022
+   *
+   * @param time the epoch time in ms since midnight Jan 1, 1970
+   */
+  private static String toReadableDateString(Instant time) {
+    return new SimpleDateFormat("EEE MMM dd HH:mm:ss zzz yyyy", Locale.getDefault())
+        .format(new Timestamp(time.toEpochMilli()));
+  }
+
+  @VisibleForTesting
+  String getHostName() {
+    String hostName = "";
+    try {
+      hostName = InetAddress.getLocalHost().getHostName();
+    } catch (UnknownHostException ignored) {
+      // ignored
+    }
+    return hostName;
+  }
+
+  @VisibleForTesting
+  String getSystemProperty(String key) {
+    @Nullable String propValue = System.getProperty(key);
+    if (propValue == null) {
+      return "";
+    }
+    return propValue;
   }
 
   /**

@@ -126,6 +126,7 @@ java_library(
         "//src/javatests/com/google/devtools/atsconsole/result/report:__pkg__",
     ],
     deps = [
+        ":certification_suite_info",
         "//src/devtools/atsconsole/result/proto:report_java_proto",
         "//src/java/com/google/devtools/atsconsole/result/xml:xml_constants",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
@@ -134,7 +135,26 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
+)
+
+java_library(
+    name = "certification_suite_info",
+    srcs = ["CertificationSuiteInfo.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/atsconsole/result/report:__pkg__",
+    ],
+    deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value"],
+)
+
+java_library(
+    name = "certification_suite_info_factory",
+    srcs = ["CertificationSuiteInfoFactory.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/atsconsole/result/report:__pkg__",
+    ],
+    deps = [":certification_suite_info"],
 )

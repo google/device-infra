@@ -35,11 +35,13 @@ java_library(
     deps = [
         ":test_module",
         "//src/devtools/atsconsole/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/atsconsole/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_creator",
         "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_merger",
         "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_parser",
         "//src/java/com/google/devtools/atsconsole/result/report:mobly_report_helper",
         "//src/java/com/google/devtools/atsconsole/result/report:mobly_report_parser",
+        "//src/java/com/google/devtools/atsconsole/result/xml:xml_constants",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/atsconsole/util:test_runfiles_util",

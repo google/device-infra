@@ -31,9 +31,11 @@ public final class XmlConstants {
   public static final String JAVA_VENDOR_ATTR = "java_vendor";
   public static final String JAVA_VERSION_ATTR = "java_version";
   public static final String SUITE_NAME_ATTR = "suite_name";
+  public static final String SUITE_VARIANT_ATTR = "suite_variant";
   public static final String SUITE_VERSION_ATTR = "suite_version";
   public static final String SUITE_PLAN_ATTR = "suite_plan";
   public static final String SUITE_BUILD_ATTR = "suite_build_number";
+  public static final String SUITE_REPORT_VERSION_ATTR = "report_version";
   public static final String SUITE_CTS_VERIFIER_MODE_ATTR = "suite_cts_verifier_mode";
   public static final String SUITE_NAME_CTS_VERIFIER_VALUE = "CTS_VERIFIER";
   public static final String SUITE_CTS_VERIFIER_AUTOMATED_MODE_VALUE = "automated";
