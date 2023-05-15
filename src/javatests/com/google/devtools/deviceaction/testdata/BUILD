@@ -14,7 +14,6 @@
 #
 
 DEFAULT_VISIBILITY = [
-    "//src/java/com/google/devtools/deviceaction:deviceaction_java_pkg",
     "//src/javatests/com/google/devtools/deviceaction:deviceaction_javatests_pkg",
 ]
 
@@ -23,21 +22,9 @@ package(
     default_visibility = DEFAULT_VISIBILITY,
 )
 
-SRCS = glob(["*.java"])
-
-java_library(
-    name = "deviceconfigs",
-    srcs = SRCS,
-    resources = [
-        "//src/devtools/deviceaction/deviceconfigs:configs",
-    ],
-    deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
-        "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
-        "//src/devtools/deviceaction/schemas/proto/actions:install_mainline_spec_java_proto",
-        "//src/java/com/google/devtools/deviceaction/common/error",
-        "//src/java/com/google/devtools/deviceaction/common/schemas",
-        "@com_google_protobuf//:protobuf_java",
-        "@maven//:com_google_guava_guava",
-    ],
+filegroup(
+    name = "testdata",
+    srcs = glob([
+        "*.textproto",
+    ]),
 )

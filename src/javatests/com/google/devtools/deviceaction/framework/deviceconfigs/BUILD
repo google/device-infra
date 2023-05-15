@@ -13,31 +13,41 @@
 # limitations under the License.
 #
 
-DEFAULT_VISIBILITY = [
-    "//src/java/com/google/devtools/deviceaction:deviceaction_java_pkg",
-    "//src/javatests/com/google/devtools/deviceaction:deviceaction_javatests_pkg",
-]
+load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
+    default_visibility = ["//src/javatests/com/google/devtools/deviceaction:deviceaction_javatests_pkg"],
 )
 
-SRCS = glob(["*.java"])
-
 java_library(
-    name = "deviceconfigs",
-    srcs = SRCS,
-    resources = [
-        "//src/devtools/deviceaction/deviceconfigs:configs",
-    ],
+    name = "tests",
+    testonly = 1,
+    srcs = glob(
+        ["*Test.java"],
+    ),
+    data = ["//src/javatests/com/google/devtools/deviceaction/testdata"],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
         "//src/devtools/deviceaction/schemas/proto/actions:install_mainline_spec_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
         "//src/java/com/google/devtools/deviceaction/common/schemas",
-        "@com_google_protobuf//:protobuf_java",
-        "@maven//:com_google_guava_guava",
+        "//src/java/com/google/devtools/deviceaction/framework/deviceconfigs",
+        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
+        "@maven//:com_google_truth_extensions_truth_proto_extension",
+        "@maven//:junit_junit",
+    ],
+)
+
+junit_test_suites(
+    name = "gen_tests",
+    sizes = [
+        "small",
+        "medium",
+    ],
+    deps = [
+        ":tests",
     ],
 )
