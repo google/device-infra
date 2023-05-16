@@ -499,6 +499,12 @@ public class AndroidSystemSpecUtil {
     return AndroidEmulatorIds.isAndroidEmulator(deviceId);
   }
 
+  /** Check whether the given device ID is of type Cuttlefish. */
+  public boolean isCuttlefishEmulator(String serial)
+      throws MobileHarnessException, InterruptedException {
+    return adbUtil.getProperty(serial, AndroidProperty.MODEL).startsWith("Cuttlefish");
+  }
+
   /**
    * Checks whether a device is an Android TV device.
    *
