@@ -400,12 +400,13 @@ public abstract class BaseDevice implements Device {
             Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
             CommunicationTypeValue.SSH.name());
       } else if (communication.hasAdbOverUsb()) {
-        addDimension(
-            Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
-            CommunicationTypeValue.ADB.name());
+        // TODO: OmniLab doesn't support duplicated dimension keys.
         addDimension(
             Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
             CommunicationTypeValue.USB.name());
+        addDimension(
+            Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
+            CommunicationTypeValue.ADB.name());
       } else if (communication.hasVideo()) {
         addDimension(
             Ascii.toLowerCase(Dimension.Name.COMMUNICATION_TYPE.name()),
