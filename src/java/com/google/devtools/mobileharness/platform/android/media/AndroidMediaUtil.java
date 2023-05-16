@@ -500,7 +500,19 @@ public class AndroidMediaUtil {
     } catch (MobileHarnessException e) {
       exception = e;
     }
-    if (exception != null || !Strings.isNullOrEmpty(output)) {
+    // for fold device, the output is:
+    // "
+    // [Warning] Multiple displays were found, but no display id was specified! Defaulting to the
+    // first display found, however this default is not guaranteed to be consistent across captures.
+    // A display id should be specified.
+    // A display ID can be specified with the [-d display-id] option.
+    // See "dumpsys SurfaceFlinger --display-id" for valid display IDs.
+    // "
+    // The screenshot is still stored in outputFilePathOnDevice, for this case, we should not
+    // throw exception for such cases. (b/277879807)
+    if (exception != null
+        || (!Strings.isNullOrEmpty(output)
+            && !output.contains("Defaulting to the first display found"))) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_MEDIA_UTIL_TAKE_SCREEN_SHOT_ERROR,
           String.format(

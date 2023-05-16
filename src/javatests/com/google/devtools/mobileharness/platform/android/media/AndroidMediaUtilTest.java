@@ -377,4 +377,24 @@ public final class AndroidMediaUtilTest {
                 .getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_MEDIA_UTIL_TAKE_SCREEN_SHOT_ERROR);
   }
+
+  @Test
+  public void takeScreenshot_foldDevice() throws Exception {
+    Timestamp timestamp = new Timestamp(Clock.systemUTC().millis());
+    String outputFileOnDevice = "/data/local/tmp/" + timestamp + ".png";
+    String args =
+        String.format(AndroidMediaUtil.ADB_SHELL_TEMPLATE_SCREEN_SHOT, outputFileOnDevice);
+
+    String outputForFoldDevice =
+        "[Warning] Multiple displays were found, but no display id was specified! Defaulting to the"
+            + " first display found, however this default is not guaranteed to be consistent across"
+            + " captures. A display id should be specified. A display ID can be specified with the"
+            + " [-d display-id] option. See \"dumpsys SurfaceFlinger --display-id\" for valid"
+            + " display IDs.";
+    when(adb.runShellWithRetry(SERIAL, args)).thenReturn(outputForFoldDevice);
+
+    androidMediaUtil.takeScreenshot(SERIAL, outputFileOnDevice);
+    verify(adb).runShellWithRetry(SERIAL, args);
+    // No exceptions are thrown.
+  }
 }
