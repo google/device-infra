@@ -35,6 +35,9 @@ service SessionService {
 
   // Gets information of a session.
   rpc GetSession(GetSessionRequest) returns (GetSessionResponse);
+
+  // Gets information of all pending/running/archived sessions.
+  rpc GetAllSessions(GetAllSessionsRequest) returns (GetAllSessionsResponse);
 }
 
 message CreateSessionRequest {
@@ -78,4 +81,24 @@ message GetSessionRequest {
 message GetSessionResponse {
   // Required.
   SessionDetail session_detail = 1;
+}
+
+message GetAllSessionsRequest {
+  // Optional.
+  //
+  // Field mask of SessionDetail.
+  //
+  // For example, a mask ["session_status"] makes all SessionDetail in the
+  // response only contain SessionStatus.
+  //
+  // If not present, SessionDetail in the response contains all fields.
+  //
+  // Note that a repeated field is allowed ONLY IF it is the LAST item in a
+  // path.
+  google.protobuf.FieldMask session_detail_field_mask = 1;
+}
+
+message GetAllSessionsResponse {
+  // Required.
+  repeated SessionDetail session_detail = 1;
 }

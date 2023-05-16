@@ -42,7 +42,6 @@ import com.google.protobuf.FieldMask;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import javax.annotation.Nullable;
@@ -171,7 +170,7 @@ public class SessionManager {
    *     required. It is acceptable that the implementation outputs more fields than the field mask
    *     requires, e.g., for an archived session.
    */
-  public List<SessionDetail> getAllSessions(@Nullable FieldMask fieldMask) {
+  public ImmutableList<SessionDetail> getAllSessions(@Nullable FieldMask fieldMask) {
     synchronized (lock) {
       return Streams.concat(
               sessionQueue.values().stream().map(SessionDetailAndFinalResultFuture::sessionDetail),

@@ -23,6 +23,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceGrpc.SessionServiceBlockingStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
@@ -61,5 +63,14 @@ public class SessionStub {
         request,
         InfraErrorId.OLCS_STUB_GET_SESSION_ERROR,
         "Failed to get session");
+  }
+
+  public GetAllSessionsResponse getAllSessions(GetAllSessionsRequest request)
+      throws GrpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        sessionServiceStub::getAllSessions,
+        request,
+        InfraErrorId.OLCS_STUB_GET_ALL_SESSIONS_ERROR,
+        "Failed to get all sessions");
   }
 }

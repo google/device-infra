@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
@@ -59,6 +60,7 @@ import com.google.protobuf.Any;
 import com.google.protobuf.FieldMask;
 import io.grpc.ManagedChannel;
 import java.time.Duration;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.After;
@@ -238,6 +240,12 @@ public class OlcServerIntegrationTest {
                                                       .build()))
                                           .build())))
                   .build());
+
+      List<SessionDetail> allSessions =
+          sessionStub
+              .getAllSessions(GetAllSessionsRequest.getDefaultInstance())
+              .getSessionDetailList();
+      assertThat(allSessions).containsExactly(getSessionResponse.getSessionDetail());
 
       // Verifies the server is killed.
       assertThat(serverProcess.isAlive()).isTrue();

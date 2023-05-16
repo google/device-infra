@@ -16,9 +16,11 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.transform;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -27,6 +29,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceGrpc;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
@@ -81,6 +85,17 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
         SessionServiceGrpc.getGetSessionMethod());
   }
 
+  @Override
+  public void getAllSessions(
+      GetAllSessionsRequest request, StreamObserver<GetAllSessionsResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        this::doGetAllSessions,
+        SessionServiceGrpc.getServiceDescriptor(),
+        SessionServiceGrpc.getGetAllSessionsMethod());
+  }
+
   private CreateSessionResponse doCreateSession(CreateSessionRequest request)
       throws MobileHarnessException {
     SessionDetail sessionDetail =
@@ -109,6 +124,7 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
       sessionDetailSubMask = null;
     }
 
+    // Gets the session.
     SessionDetail sessionDetail =
         sessionManager.getSession(request.getSessionId().getId(), sessionDetailSubMask);
     GetSessionResponse result =
@@ -119,6 +135,23 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
       result = FieldMaskUtil.trim(request.getFieldMask(), result);
     }
     return result;
+  }
+
+  private GetAllSessionsResponse doGetAllSessions(GetAllSessionsRequest request) {
+    // Gets all sessions.
+    ImmutableList<SessionDetail> sessions =
+        sessionManager.getAllSessions(
+            request.hasSessionDetailFieldMask() ? request.getSessionDetailFieldMask() : null);
+
+    // Applies the field mask if any.
+    if (request.hasSessionDetailFieldMask()) {
+      FieldMask sessionDetailFieldMask = request.getSessionDetailFieldMask();
+      sessions =
+          sessions.stream()
+              .map(session -> FieldMaskUtil.trim(sessionDetailFieldMask, session))
+              .collect(toImmutableList());
+    }
+    return GetAllSessionsResponse.newBuilder().addAllSessionDetail(sessions).build();
   }
 
   private static RunSessionResponse createRunSessionResponse(SessionDetail finalResult) {
