@@ -23,7 +23,31 @@ option java_outer_classname = "ConfigurationProto";
 
 message ConfigurationMetadata {}
 
+message Option {
+  string name = 1;
+  string key = 2;
+  string value = 3;
+}
+
+message TargetPreparer {
+  string clazz = 1;
+  repeated Option options = 2;
+}
+
+message Device {
+  string name = 1;
+  repeated TargetPreparer target_preparers = 2;
+}
+
+message Test {
+  string clazz = 1;
+  repeated Option options = 2;
+}
+
 message Configuration {
   ConfigurationMetadata metadata = 1;
   string description = 2;
+  repeated Option options = 3;
+  repeated Device devices = 4;
+  Test test = 5;
 }

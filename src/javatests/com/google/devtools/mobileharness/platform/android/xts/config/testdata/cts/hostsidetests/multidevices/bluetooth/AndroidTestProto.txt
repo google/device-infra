@@ -1,0 +1,78 @@
+description: "Config for CTS Bluetooth multi devices test cases"
+options {
+  name: "test-suite-tag"
+  value: "cts"
+}
+options {
+  name: "config-descriptor:metadata"
+  key: "component"
+  value: "bluetooth"
+}
+options {
+  name: "config-descriptor:metadata"
+  key: "parameter"
+  value: "not_instant_app"
+}
+options {
+  name: "config-descriptor:metadata"
+  key: "parameter"
+  value: "not_multi_abi"
+}
+options {
+  name: "config-descriptor:metadata"
+  key: "parameter"
+  value: "secondary_user"
+}
+devices {
+  name: "device1"
+  target_preparers {
+    clazz: "com.android.tradefed.targetprep.suite.SuiteApkInstaller"
+    options {
+      name: "test-file-name"
+      value: "bluetooth_multi_devices_snippet.apk"
+    }
+  }
+  target_preparers {
+    clazz: "com.android.tradefed.targetprep.RunCommandTargetPreparer"
+    options {
+      name: "run-command"
+      value: "input keyevent KEYCODE_WAKEUP"
+    }
+    options {
+      name: "run-command"
+      value: "wm dismiss-keyguard"
+    }
+  }
+}
+devices {
+  name: "device2"
+  target_preparers {
+    clazz: "com.android.tradefed.targetprep.suite.SuiteApkInstaller"
+    options {
+      name: "test-file-name"
+      value: "bluetooth_multi_devices_snippet.apk"
+    }
+  }
+  target_preparers {
+    clazz: "com.android.tradefed.targetprep.RunCommandTargetPreparer"
+    options {
+      name: "run-command"
+      value: "input keyevent KEYCODE_WAKEUP"
+    }
+    options {
+      name: "run-command"
+      value: "wm dismiss-keyguard"
+    }
+  }
+}
+test {
+  clazz: "com.android.tradefed.testtype.mobly.MoblyBinaryHostTest"
+  options {
+    name: "mobly-par-file-name"
+    value: "CtsBluetoothMultiDevicesTestCases"
+  }
+  options {
+    name: "mobly-test-timeout"
+    value: "180000"
+  }
+}

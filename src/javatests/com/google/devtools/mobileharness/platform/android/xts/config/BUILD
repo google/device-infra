@@ -15,10 +15,18 @@
 
 load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/**/*"]),
+)
+
 java_library(
     name = "config",
     testonly = 1,
     srcs = glob(["*.java"]),
+    data = [
+        ":testdata",
+    ],
     deps = [
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -26,7 +34,10 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_xml_parser",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
+        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
     ],
 )

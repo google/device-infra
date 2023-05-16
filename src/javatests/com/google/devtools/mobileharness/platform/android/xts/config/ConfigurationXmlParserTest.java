@@ -16,12 +16,15 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.config;
 
-import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.protobuf.TextFormat;
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.junit.Before;
@@ -41,14 +44,10 @@ public class ConfigurationXmlParserTest {
 
   private LocalFileUtil localFileUtil;
 
-  private static final String CONFIG_FILE_DESCRIPTION =
-      "Config for CTS Bluetooth multi devices test cases";
-  private static final String CONFIG_FILE_CONTENT =
-      "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-          + "<configuration description=\""
-          + CONFIG_FILE_DESCRIPTION
-          + "\">\n"
-          + "</configuration>\n";
+  private static final String DEVICE_PROPERTIES_FILE_PATH =
+      "javatests/com/google/devtools/mobileharness/platform/android/xts/config/testdata/cts/hostsidetests/multidevices/bluetooth/AndroidTest.xml";
+  private static final String DEVICE_PROPERTIES_PROTO_PATH =
+      "javatests/com/google/devtools/mobileharness/platform/android/xts/config/testdata/cts/hostsidetests/multidevices/bluetooth/AndroidTestProto.txt";
 
   @Before
   public void setUp() throws Exception {
@@ -62,13 +61,15 @@ public class ConfigurationXmlParserTest {
 
   @Test
   public void parse_normalConfigurationXml_returnsConfiguration() throws Exception {
-    Path testcasesDir = Paths.get(temporaryDirectroryPath.toString(), "testcases");
-    Path file = testcasesDir.resolve("config_file.xml");
-    localFileUtil.writeToFile(file.toString(), CONFIG_FILE_CONTENT);
+    String filePath = RunfilesUtil.getRunfilesLocation(DEVICE_PROPERTIES_FILE_PATH);
+    String protoPath = RunfilesUtil.getRunfilesLocation(DEVICE_PROPERTIES_PROTO_PATH);
+    File file = new File(filePath);
+    Configuration expectedConfiguration =
+        TextFormat.parse(localFileUtil.readFile(protoPath), Configuration.class);
 
-    Configuration configuration = ConfigurationXmlParser.parse(file.toFile());
+    Configuration configuration = ConfigurationXmlParser.parse(file);
 
-    assertThat(configuration.getDescription()).isEqualTo(CONFIG_FILE_DESCRIPTION);
+    assertThat(configuration).isEqualTo(expectedConfiguration);
   }
 
   @Test
