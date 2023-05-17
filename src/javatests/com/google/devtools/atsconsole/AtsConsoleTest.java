@@ -164,6 +164,6 @@ public final class AtsConsoleTest {
 
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(15L));
 
-    assertThat(consoleErrOutputStream.toString(UTF_8)).isEqualTo("Error: Unimplemented\n");
+    assertThat(consoleErrOutputStream.toString(UTF_8)).startsWith("Error: Unimplemented");
   }
 }

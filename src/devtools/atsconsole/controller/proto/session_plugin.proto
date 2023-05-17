@@ -25,6 +25,7 @@ message AtsSessionPluginConfig {
   oneof command {
     RunCommand run_command = 1;
     ListCommand list_command = 2;
+    DumpCommand dump_command = 3;
   }
 }
 
@@ -69,3 +70,11 @@ message ListDevicesCommand {
   // Whether to list all devices including placeholders.
   bool list_all_devices = 1;
 }
+
+message DumpCommand {
+  oneof command {
+    DumpStackCommand dump_stack_command = 1;
+  }
+}
+
+message DumpStackCommand {}

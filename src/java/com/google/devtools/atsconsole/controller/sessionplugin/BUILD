@@ -20,6 +20,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole/controller:__subpackages__",
     ],
     deps = [
+        ":dump_stack_command_handler",
         ":list_devices_command_handler",
         "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
@@ -31,6 +32,14 @@ java_library(
         "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "dump_stack_command_handler",
+    srcs = ["DumpStackCommandHandler.java"],
+    deps = [
+        "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
     ],
 )
 

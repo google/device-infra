@@ -24,6 +24,7 @@ import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSes
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig.CommandCase;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.DumpCommand;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListCommand;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
@@ -40,14 +41,19 @@ public class AtsSessionPlugin {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final SessionInfo sessionInfo;
+  private final DumpStackCommandHandler dumpStackCommandHandler;
   private final ListDevicesCommandHandler listDevicesCommandHandler;
 
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
 
   @Inject
-  AtsSessionPlugin(SessionInfo sessionInfo, ListDevicesCommandHandler listDevicesCommandHandler) {
+  AtsSessionPlugin(
+      SessionInfo sessionInfo,
+      DumpStackCommandHandler dumpStackCommandHandler,
+      ListDevicesCommandHandler listDevicesCommandHandler) {
     this.sessionInfo = sessionInfo;
+    this.dumpStackCommandHandler = dumpStackCommandHandler;
     this.listDevicesCommandHandler = listDevicesCommandHandler;
   }
 
@@ -73,10 +79,20 @@ public class AtsSessionPlugin {
         setOutput(output);
         return;
       }
+    } else if (config.getCommandCase().equals(CommandCase.DUMP_COMMAND)) {
+      DumpCommand dumpCommand = config.getDumpCommand();
+      if (dumpCommand.getCommandCase().equals(DumpCommand.CommandCase.DUMP_STACK_COMMAND)) {
+        AtsSessionPluginOutput output =
+            dumpStackCommandHandler.handle(dumpCommand.getDumpStackCommand());
+        setOutput(output);
+        return;
+      }
     }
     setOutput(
         AtsSessionPluginOutput.newBuilder()
-            .setFailure(Failure.newBuilder().setErrorMessage("Unimplemented"))
+            .setFailure(
+                Failure.newBuilder()
+                    .setErrorMessage(String.format("Unimplemented [%s]", shortDebugString(config))))
             .build());
   }
 

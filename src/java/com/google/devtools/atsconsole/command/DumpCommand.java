@@ -17,6 +17,14 @@
 package com.google.devtools.atsconsole.command;
 
 import com.google.devtools.atsconsole.ConsoleUtil;
+import com.google.devtools.atsconsole.controller.olcserver.AtsSessionStub;
+import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.DumpStackCommand;
+import com.google.devtools.atsconsole.controller.sessionplugin.PluginOutputPrinter;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -36,10 +44,15 @@ public class DumpCommand implements Callable<Integer> {
   @Spec private CommandSpec spec;
 
   private final ConsoleUtil consoleUtil;
+  private final ServerPreparer serverPreparer;
+  private final AtsSessionStub atsSessionStub;
 
   @Inject
-  DumpCommand(ConsoleUtil consoleUtil) {
+  DumpCommand(
+      ConsoleUtil consoleUtil, ServerPreparer serverPreparer, AtsSessionStub atsSessionStub) {
     this.consoleUtil = consoleUtil;
+    this.serverPreparer = serverPreparer;
+    this.atsSessionStub = atsSessionStub;
   }
 
   @Override
@@ -101,9 +114,17 @@ public class DumpCommand implements Callable<Integer> {
       name = "stack",
       aliases = {"s"},
       description = "Dump the stack traces of all threads")
-  public int stack() {
-    consoleUtil.printErrorLine("Unimplemented");
-    return ExitCode.SOFTWARE;
+  public int stack() throws MobileHarnessException, InterruptedException {
+    serverPreparer.prepareOlcServer();
+    AtsSessionPluginOutput output =
+        atsSessionStub.runShortSession(
+            "dump_stack_command",
+            AtsSessionPluginConfig.newBuilder()
+                .setDumpCommand(
+                    SessionPluginProto.DumpCommand.newBuilder()
+                        .setDumpStackCommand(DumpStackCommand.getDefaultInstance()))
+                .build());
+    return PluginOutputPrinter.printOutput(output, consoleUtil);
   }
 
   @Command(
