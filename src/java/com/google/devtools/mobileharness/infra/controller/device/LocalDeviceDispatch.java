@@ -183,7 +183,7 @@ public class LocalDeviceDispatch {
     // of disconnection.
     DispatchResults realtimeDispatchResults = realtimeDispatch(detectionResults);
 
-    // The merged ids which occur in both the current realtime dispatch and the previous realtime
+    // The merged ids which occur in both the current real time dispatch and the previous real time
     // dispatch.
     DispatchResults mergedResults = previousResults;
     previousResults = realtimeDispatchResults;
@@ -339,9 +339,11 @@ public class LocalDeviceDispatch {
         // Found the device.
         LocalDeviceRunner runner = device.getKey();
         if (runner.isAlive()) {
-          if (realtimeDispatch(detectionResults)
-              .getDeviceControlIds(DispatchType.LIVE, DispatchType.CACHE)
-              .contains(deviceControlId)) {
+          DispatchResult dispatchResult = realtimeDispatch(detectionResults).get(deviceControlId);
+          if (dispatchResult != null
+              && (dispatchResult.dispatchType().equals(DispatchType.LIVE)
+                  || dispatchResult.dispatchType().equals(DispatchType.CACHE))
+              && runner.getDevice().getClass().equals(dispatchResult.deviceType())) {
             return true;
           } else {
             logger.atInfo().log(
