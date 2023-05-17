@@ -19,12 +19,16 @@ package com.google.devtools.atsconsole.command;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.truth.Correspondence;
+import com.google.common.truth.Correspondence.BinaryPredicate;
 import com.google.devtools.atsconsole.AtsConsole;
 import com.google.devtools.atsconsole.AtsConsoleModule;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
@@ -154,11 +158,15 @@ public class ListCommandTest {
     atsConsole.call();
 
     String stdout = consoleOutOutputStream.toString(UTF_8);
-    assertThat(stdout).contains("Serial\tState\tAllocation\tProduct\tVariant\tBuild\tBattery\n");
-    assertThat(stdout)
-        .contains(
-            "Serial\tState\tAllocation\tProduct\tVariant\tBuild\tBattery\tclass"
-                + "\tTestDeviceState\n");
-    assertThat(stdout).contains("NoOpDevice-0");
+    assertThat(stdout).contains("TestDeviceState");
+    assertThat(Splitter.on('\n').splitToList(stdout))
+        .comparingElementsUsing(
+            Correspondence.from(
+                (BinaryPredicate<String, String>)
+                    (actual, expected) ->
+                        requireNonNull(actual).startsWith(requireNonNull(expected)),
+                "starts with"))
+        .containsExactly("Serial", "NoOpDevice-0", "Serial", "NoOpDevice-0", "")
+        .inOrder();
   }
 }

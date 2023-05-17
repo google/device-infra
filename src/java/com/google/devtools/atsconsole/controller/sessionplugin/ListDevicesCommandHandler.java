@@ -18,7 +18,6 @@ package com.google.devtools.atsconsole.controller.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
-import static java.util.stream.Collectors.joining;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.CaseFormat;
@@ -34,6 +33,7 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
@@ -84,7 +84,7 @@ class ListDevicesCommandHandler {
                     .map(device -> formatDeviceDescriptor(device, listAllDevices))
                     .flatMap(Optional::stream))
             .collect(toImmutableList());
-    String result = formatTable(table);
+    String result = TableFormatter.displayTable(table);
     return AtsSessionPluginOutput.newBuilder()
         .setSuccess(Success.newBuilder().setOutputMessage(result))
         .build();
@@ -224,9 +224,5 @@ class ListDevicesCommandHandler {
       result.add(deviceDescriptor.getDeviceClass(), deviceDescriptor.getTestDeviceState());
     }
     return Optional.of(result.build());
-  }
-
-  private static String formatTable(ImmutableList<ImmutableList<String>> table) {
-    return table.stream().map(row -> String.join("\t", row)).collect(joining("\n"));
   }
 }

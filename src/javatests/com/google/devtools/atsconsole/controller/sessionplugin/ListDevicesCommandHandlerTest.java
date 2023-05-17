@@ -79,8 +79,8 @@ public class ListDevicesCommandHandlerTest {
                 .setSuccess(
                     Success.newBuilder()
                         .setOutputMessage(
-                            "Serial\tState\tAllocation\tProduct\tVariant\tBuild\tBattery\n"
-                                + "abc\tONLINE\tAvailable\tn/a\tn/a\tn/a\t100"))
+                            "Serial  State   Allocation  Product  Variant  Build  Battery\n"
+                                + "abc     ONLINE  Available   n/a      n/a      n/a    100"))
                 .build());
   }
 }

@@ -13,40 +13,28 @@
 # limitations under the License.
 #
 
+load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
+
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//:deviceinfra_pkg",
-    ],
+    default_testonly = 1,
 )
 
 java_library(
     name = "base",
-    srcs = [
-        "StrUtil.java",
-    ],
+    srcs = glob(["*.java"]),
     deps = [
-        "@maven//:com_google_code_findbugs_jsr305",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
+        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
     ],
 )
 
-java_library(
-    name = "supplier",
-    srcs = [
-        "MoreSuppliers.java",
-        "ThrowingSupplier.java",
+junit_test_suites(
+    name = "gen_tests",
+    sizes = [
+        "small",
     ],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "table_formatter",
-    srcs = ["TableFormatter.java"],
-    deps = [
-        "@maven//:com_google_guava_guava",
-    ],
+    deps = [":base"],
 )
