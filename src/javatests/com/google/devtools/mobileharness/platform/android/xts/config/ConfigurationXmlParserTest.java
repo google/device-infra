@@ -45,9 +45,9 @@ public class ConfigurationXmlParserTest {
   private LocalFileUtil localFileUtil;
 
   private static final String DEVICE_PROPERTIES_FILE_PATH =
-      "javatests/com/google/devtools/mobileharness/platform/android/xts/config/testdata/cts/hostsidetests/multidevices/bluetooth/AndroidTest.xml";
+      "javatests/com/google/devtools/mobileharness/platform/android/xts/config/testdata/cts/testcases/CtsBluetoothMultiDevicesTestCases/CtsBluetoothMultiDevicesTestCases.config";
   private static final String DEVICE_PROPERTIES_PROTO_PATH =
-      "javatests/com/google/devtools/mobileharness/platform/android/xts/config/testdata/cts/hostsidetests/multidevices/bluetooth/AndroidTestProto.txt";
+      "javatests/com/google/devtools/mobileharness/platform/android/xts/config/testdata/cts/testcases/CtsBluetoothMultiDevicesTestCases/CtsBluetoothMultiDevicesTestCasesProto.txt";
 
   @Before
   public void setUp() throws Exception {
