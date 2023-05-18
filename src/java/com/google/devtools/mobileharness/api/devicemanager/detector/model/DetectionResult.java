@@ -67,5 +67,6 @@ public abstract class DetectionResult {
     TTB,
     LIBUSB,
     VIDEO,
+    WINDOWS,
   }
 }
