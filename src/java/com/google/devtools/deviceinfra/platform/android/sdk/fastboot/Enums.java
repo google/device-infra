@@ -53,6 +53,7 @@ public final class Enums {
     HARDWARE,
     CURRENT_SLOT,
     IS_USERSPACE,
+    SERIALNO,
   }
 
   /**

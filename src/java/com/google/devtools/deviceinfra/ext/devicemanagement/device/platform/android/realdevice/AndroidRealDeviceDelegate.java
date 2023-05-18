@@ -290,6 +290,18 @@ public abstract class AndroidRealDeviceDelegate {
       if (!Strings.isNullOrEmpty(unlocked)) {
         device.updateDimension(Dimension.Name.OEM_UNLOCK, unlocked);
       }
+
+      try {
+        String serialno = fastboot.getVar(deviceId, FastbootProperty.SERIALNO);
+        if (!Strings.isNullOrEmpty(serialno)) {
+          device.updateDimension(Ascii.toLowerCase(AndroidProperty.SERIAL.name()), serialno);
+        }
+      } catch (MobileHarnessException e) {
+        logger.atInfo().log(
+            "Failed to get serialno for fastboot device %s: %s",
+            deviceId, MoreThrowables.shortDebugString(e, 0));
+      }
+
       device.addSupportedDecorator("AndroidFlashDeviceDecorator");
       device.addSupportedDecorator("AndroidFlashstationDecorator");
       device.addSupportedDecorator("AndroidAutomotiveFlashDecorator");
