@@ -83,6 +83,12 @@ public class Result {
   /** Sets the test result to PASS, and cleans up the cause exception if any. */
   @CanIgnoreReturnValue
   public Result setPass() {
+    return setPass(/* logChangedResult= */ true);
+  }
+
+  /** Sets the test result to PASS, and cleans up the cause exception if any. */
+  @CanIgnoreReturnValue
+  public Result setPass(boolean logChangedResult) {
     synchronized (lock) {
       if (this.result == TestResult.PASS) {
         return this;
@@ -94,11 +100,13 @@ public class Result {
         return this;
       }
 
-      if (params.getBool(PARAM_PRINT_STACK_TRACE_FOR_PASS_TEST, true)) {
-        logger.atInfo().log(
-            "Result %s -> PASS, caller=%s", this, MoreThrowables.shortDebugCurrentStackTrace(4));
-      } else {
-        logger.atInfo().log("Result %s -> PASS", this);
+      if (logChangedResult) {
+        if (params.getBool(PARAM_PRINT_STACK_TRACE_FOR_PASS_TEST, true)) {
+          logger.atInfo().log(
+              "Result %s -> PASS, caller=%s", this, MoreThrowables.shortDebugCurrentStackTrace(4));
+        } else {
+          logger.atInfo().log("Result %s -> PASS", this);
+        }
       }
 
       this.result = TestResult.PASS;
