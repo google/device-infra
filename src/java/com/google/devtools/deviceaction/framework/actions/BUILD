@@ -37,10 +37,12 @@ java_library(
         "//src/java/com/google/devtools/deviceaction/framework/devices",
         "//src/java/com/google/devtools/deviceaction/framework/operations",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
