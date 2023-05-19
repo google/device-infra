@@ -218,7 +218,14 @@ public final class JobInfoCreator {
     jobInfo.params().add("tags", String.join(", ", jobConfig.getTags().getContentList()));
 
     // Finalizes sub-devices and their dimensions.
-    finalizeSubDeviceSpecs(jobConfig, jobInfo);
+    if (jobConfig.hasDevice()) {
+      finalizeSubDeviceSpecs(
+          jobConfig.getDevice().getSubDeviceSpecList(),
+          jobConfig.hasSharedDimensionNames()
+              ? jobConfig.getSharedDimensionNames().getContentList()
+              : ImmutableList.of(),
+          jobInfo);
+    }
 
     // Sets overriding dimensions.
     jobInfo.subDeviceSpecs().getAllSubDevices().stream()
@@ -540,83 +547,79 @@ public final class JobInfoCreator {
     return jobConfig;
   }
 
-  /** Finalizes {@code SubDeviceSpecs} in {@code jobInfo}. */
+  /** Finalizes {@code SubDeviceSpecs} in {@code JobInfo}. */
   @VisibleForTesting
   static void finalizeSubDeviceSpecs(
-      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig, JobInfo jobInfo)
+      List<SubDeviceSpec> subDeviceSpecConfigs, List<String> sharedDimensionNames, JobInfo jobInfo)
       throws MobileHarnessException {
     SubDeviceSpecs subDeviceSpecs = jobInfo.subDeviceSpecs();
-    if (jobConfig.hasDevice()) {
-      for (int i = 0; i < jobConfig.getDevice().getSubDeviceSpecCount(); i++) {
-        SubDeviceSpec deviceSpec = jobConfig.getDevice().getSubDeviceSpecList().get(i);
-        /**
-         * Note that JobConfig.SubDeviceSpec is not the same class as contained in
-         * JobInfo.subDeviceSpecs(), so the following maps the proto's device type and dimensions to
-         * the JobInfo object.
-         */
-        List<String> deviceDecorators = new ArrayList<>();
-        Map<String, JsonObject> decoratorSpecs = new HashMap<>();
-        boolean needsSysLocDecorator = needSysLogDecorator(jobInfo.type());
-        for (Driver decorator : deviceSpec.getDecorators().getContentList()) {
-          // Skip adding SysLogDecorator here and add it later to make it the last in the list.
-          if (needsSysLocDecorator && decorator.getName().contains(SYSLOG_DECORATOR_SUFFIX)) {
-            continue;
-          }
-          deviceDecorators.add(decorator.getName());
-          if (decorator.hasParam()) {
-            try {
-              Map.Entry<String, JsonObject> scopedSpec =
-                  getNamespaceAndScopedSpecs(decorator, /* isDecorator= */ true);
-              decoratorSpecs.put(scopedSpec.getKey(), scopedSpec.getValue());
-            } catch (MobileHarnessException e) {
-              throw new MobileHarnessException(
-                  BasicErrorId.JOB_SPEC_INVALID_JOB_TYPE_ERROR,
-                  String.format(
-                      "Failed to get namespace and scopedspecs for decorator [%s] with params: %s\n"
-                          + " Error: %s",
-                      decorator.getName(), decorator.getParam(), e.getMessage()));
-            }
+    for (int i = 0; i < subDeviceSpecConfigs.size(); i++) {
+      SubDeviceSpec deviceSpec = subDeviceSpecConfigs.get(i);
+      /*
+       * Note that JobConfig.SubDeviceSpec is not the same class as contained in
+       * JobInfo.subDeviceSpecs(), so the following maps the proto's device type and dimensions to
+       * the JobInfo object.
+       */
+      List<String> deviceDecorators = new ArrayList<>();
+      Map<String, JsonObject> decoratorSpecs = new HashMap<>();
+      boolean needsSysLocDecorator = needSysLogDecorator(jobInfo.type());
+      for (Driver decorator : deviceSpec.getDecorators().getContentList()) {
+        // Skip adding SysLogDecorator here and add it later to make it the last in the list.
+        if (needsSysLocDecorator && decorator.getName().contains(SYSLOG_DECORATOR_SUFFIX)) {
+          continue;
+        }
+        deviceDecorators.add(decorator.getName());
+        if (decorator.hasParam()) {
+          try {
+            Map.Entry<String, JsonObject> scopedSpec =
+                getNamespaceAndScopedSpecs(decorator, /* isDecorator= */ true);
+            decoratorSpecs.put(scopedSpec.getKey(), scopedSpec.getValue());
+          } catch (MobileHarnessException e) {
+            throw new MobileHarnessException(
+                BasicErrorId.JOB_SPEC_INVALID_JOB_TYPE_ERROR,
+                String.format(
+                    "Failed to get namespace and scopedspecs for decorator [%s] with params: %s\n"
+                        + " Error: %s",
+                    decorator.getName(), decorator.getParam(), e.getMessage()));
           }
         }
-        com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec subDeviceSpec;
-        if (i == 0) {
-          subDeviceSpec = subDeviceSpecs.get(0);
-          MobileHarnessExceptions.check(
-              subDeviceSpec.type().equals(deviceSpec.getType()),
-              BasicErrorId.JOB_SPEC_INVALID_JOB_TYPE_ERROR,
-              () ->
-                  String.format(
-                      "Device type in job type is [%s] however device type of the first"
-                          + " device is [%s]",
-                      subDeviceSpec.type(), deviceSpec.getType()));
-          // Updates decorators. see {@link #mayAppendDecorator}.
-          List<String> subDeviceSpecDecorators = subDeviceSpec.decorators().getAll();
-          if (deviceDecorators.size() == subDeviceSpecDecorators.size() - 1) {
-            if (PERFORMANCE_LOCK_DECORATOR.equals(subDeviceSpecDecorators.get(0))) {
-              deviceDecorators.add(0, PERFORMANCE_LOCK_DECORATOR);
-            } else if (Iterables.getLast(subDeviceSpecDecorators)
-                .contains(SYSLOG_DECORATOR_SUFFIX)) {
-              deviceDecorators.add(Iterables.getLast(subDeviceSpecDecorators));
-            }
-          }
-          MobileHarnessExceptions.check(
-              subDeviceSpecDecorators.equals(deviceDecorators),
-              BasicErrorId.JOB_SPEC_INVALID_JOB_TYPE_ERROR,
-              () ->
-                  String.format(
-                      "Device decorators in job type are %s however device decorators of the first"
-                          + " device are %s",
-                      subDeviceSpec.decorators().getAll(), deviceDecorators));
-        } else {
-          subDeviceSpec =
-              subDeviceSpecs.addSubDevice(
-                  deviceSpec.getType(), ImmutableMap.of(), deviceDecorators);
-        }
-        subDeviceSpec.dimensions().addAll(deviceSpec.getDimensions().getContentMap());
-        subDeviceSpec.scopedSpecs().addAll(decoratorSpecs);
       }
-      subDeviceSpecs.addSharedDimensionNames(jobConfig.getSharedDimensionNames().getContentList());
+      com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec subDeviceSpec;
+      if (i == 0) {
+        subDeviceSpec = subDeviceSpecs.getSubDevice(0);
+        MobileHarnessExceptions.check(
+            subDeviceSpec.type().equals(deviceSpec.getType()),
+            BasicErrorId.JOB_SPEC_INVALID_JOB_TYPE_ERROR,
+            () ->
+                String.format(
+                    "Device type in job type is [%s] however device type of the first"
+                        + " device is [%s]",
+                    subDeviceSpec.type(), deviceSpec.getType()));
+        // Updates decorators. see {@link #mayAppendDecorator}.
+        List<String> subDeviceSpecDecorators = subDeviceSpec.decorators().getAll();
+        if (deviceDecorators.size() == subDeviceSpecDecorators.size() - 1) {
+          if (subDeviceSpecDecorators.get(0).equals(PERFORMANCE_LOCK_DECORATOR)) {
+            deviceDecorators.add(0, PERFORMANCE_LOCK_DECORATOR);
+          } else if (Iterables.getLast(subDeviceSpecDecorators).contains(SYSLOG_DECORATOR_SUFFIX)) {
+            deviceDecorators.add(Iterables.getLast(subDeviceSpecDecorators));
+          }
+        }
+        MobileHarnessExceptions.check(
+            subDeviceSpecDecorators.equals(deviceDecorators),
+            BasicErrorId.JOB_SPEC_INVALID_JOB_TYPE_ERROR,
+            () ->
+                String.format(
+                    "Device decorators in job type are %s however device decorators of the first"
+                        + " device are %s",
+                    subDeviceSpec.decorators().getAll(), deviceDecorators));
+      } else {
+        subDeviceSpec =
+            subDeviceSpecs.addSubDevice(deviceSpec.getType(), ImmutableMap.of(), deviceDecorators);
+      }
+      subDeviceSpec.dimensions().addAll(deviceSpec.getDimensions().getContentMap());
+      subDeviceSpec.scopedSpecs().addAll(decoratorSpecs);
     }
+    subDeviceSpecs.addSharedDimensionNames(sharedDimensionNames);
   }
 
   /** Takes a {@code Driver} with non-null params, and returns the namespace and scoped specs. */
