@@ -17,12 +17,14 @@
 package com.google.devtools.mobileharness.shared.util.time;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 
 /** Utility class for common date/time operations. */
 public final class TimeUtil {
+
   private static final DateTimeFormatter DATE_FORMAT =
       DateTimeFormatter.ofPattern("yy/MM/dd HH:mm:ss:SSS z");
 
@@ -47,6 +49,33 @@ public final class TimeUtil {
   /** Gets the readable local data time string of the current time. */
   public static String currentShortLocalDate() {
     return toShortLocalDate(Clock.systemUTC().instant());
+  }
+
+  /** Formats a (positive) duration to a string like "1h 23m 45s". */
+  public static String readableDuration(Duration duration) {
+    if (duration.compareTo(Duration.ofSeconds(1L)) < 0) {
+      return String.format("%d ms", duration.toMillis());
+    }
+
+    StringBuilder result = new StringBuilder();
+
+    @SuppressWarnings("TimeUnitMismatch")
+    long secondsPart = duration.toSecondsPart();
+    long minutesPart = duration.toMinutesPart();
+    long hours = duration.toHours();
+
+    if (hours > 0) {
+      result.append(hours);
+      result.append("h ");
+    }
+    if (minutesPart > 0) {
+      result.append(minutesPart);
+      result.append("m ");
+    }
+    result.append(secondsPart);
+    result.append("s");
+
+    return result.toString();
   }
 
   private TimeUtil() {}

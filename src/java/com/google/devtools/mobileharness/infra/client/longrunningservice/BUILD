@@ -16,6 +16,19 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
+    name = "annotations",
+    srcs = ["Annotations.java"],
+    visibility = [
+        "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__subpackages__",
+    ],
+    deps = [
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "olc_server",
     srcs = ["OlcServer.java"],
     visibility = [
@@ -48,6 +61,7 @@ java_library(
     name = "server_module",
     srcs = ["ServerModule.java"],
     deps = [
+        ":annotations",
         "//src/java/com/google/devtools/deviceinfra/infra/client/api",
         "//src/java/com/google/devtools/deviceinfra/infra/client/api:annotations",
         "//src/java/com/google/devtools/deviceinfra/infra/client/api:module",

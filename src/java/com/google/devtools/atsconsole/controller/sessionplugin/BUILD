@@ -20,7 +20,9 @@ java_library(
         "//src/java/com/google/devtools/atsconsole/controller:__subpackages__",
     ],
     deps = [
-        ":dump_stack_command_handler",
+        ":dump_env_var_command_handler",
+        ":dump_stack_trace_command_handler",
+        ":dump_uptime_command_handler",
         ":list_devices_command_handler",
         "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
@@ -36,10 +38,29 @@ java_library(
 )
 
 java_library(
-    name = "dump_stack_command_handler",
-    srcs = ["DumpStackCommandHandler.java"],
+    name = "dump_env_var_command_handler",
+    srcs = ["DumpEnvVarCommandHandler.java"],
     deps = [
         "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
+    ],
+)
+
+java_library(
+    name = "dump_stack_trace_command_handler",
+    srcs = ["DumpStackTraceCommandHandler.java"],
+    deps = [
+        "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
+    ],
+)
+
+java_library(
+    name = "dump_uptime_command_handler",
+    srcs = ["DumpUptimeCommandHandler.java"],
+    deps = [
+        "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_util",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 

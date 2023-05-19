@@ -41,7 +41,9 @@ public class AtsSessionPlugin {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final SessionInfo sessionInfo;
-  private final DumpStackCommandHandler dumpStackCommandHandler;
+  private final DumpEnvVarCommandHandler dumpEnvVarCommandHandler;
+  private final DumpStackTraceCommandHandler dumpStackCommandHandler;
+  private final DumpUptimeCommandHandler dumpUptimeCommandHandler;
   private final ListDevicesCommandHandler listDevicesCommandHandler;
 
   /** Set in {@link #onSessionStarting}. */
@@ -50,10 +52,14 @@ public class AtsSessionPlugin {
   @Inject
   AtsSessionPlugin(
       SessionInfo sessionInfo,
-      DumpStackCommandHandler dumpStackCommandHandler,
+      DumpEnvVarCommandHandler dumpEnvVarCommandHandler,
+      DumpStackTraceCommandHandler dumpStackCommandHandler,
+      DumpUptimeCommandHandler dumpUptimeCommandHandler,
       ListDevicesCommandHandler listDevicesCommandHandler) {
     this.sessionInfo = sessionInfo;
+    this.dumpEnvVarCommandHandler = dumpEnvVarCommandHandler;
     this.dumpStackCommandHandler = dumpStackCommandHandler;
+    this.dumpUptimeCommandHandler = dumpUptimeCommandHandler;
     this.listDevicesCommandHandler = listDevicesCommandHandler;
   }
 
@@ -81,9 +87,21 @@ public class AtsSessionPlugin {
       }
     } else if (config.getCommandCase().equals(CommandCase.DUMP_COMMAND)) {
       DumpCommand dumpCommand = config.getDumpCommand();
-      if (dumpCommand.getCommandCase().equals(DumpCommand.CommandCase.DUMP_STACK_COMMAND)) {
+      if (dumpCommand.getCommandCase().equals(DumpCommand.CommandCase.DUMP_STACK_TRACE_COMMAND)) {
         AtsSessionPluginOutput output =
-            dumpStackCommandHandler.handle(dumpCommand.getDumpStackCommand());
+            dumpStackCommandHandler.handle(dumpCommand.getDumpStackTraceCommand());
+        setOutput(output);
+        return;
+      } else if (dumpCommand
+          .getCommandCase()
+          .equals(DumpCommand.CommandCase.DUMP_ENV_VAR_COMMAND)) {
+        AtsSessionPluginOutput output =
+            dumpEnvVarCommandHandler.handle(dumpCommand.getDumpEnvVarCommand());
+        setOutput(output);
+        return;
+      } else if (dumpCommand.getCommandCase().equals(DumpCommand.CommandCase.DUMP_UPTIME_COMMAND)) {
+        AtsSessionPluginOutput output =
+            dumpUptimeCommandHandler.handle(dumpCommand.getDumpUptimeCommand());
         setOutput(output);
         return;
       }

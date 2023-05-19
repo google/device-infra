@@ -25,6 +25,7 @@ import com.google.devtools.deviceinfra.shared.util.reflection.ReflectionUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
@@ -37,6 +38,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.CreationException;
 import com.google.inject.Guice;
 import com.google.inject.ProvisionException;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import javax.inject.Inject;
@@ -49,13 +51,18 @@ public class SessionPluginLoader {
   private final ReflectionUtil reflectionUtil;
   private final EventBusBackend eventBusBackend;
   private final DeviceQuerier deviceQuerier;
+  private final Instant serverStartTime;
 
   @Inject
   SessionPluginLoader(
-      ReflectionUtil reflectionUtil, EventBusBackend eventBusBackend, DeviceQuerier deviceQuerier) {
+      ReflectionUtil reflectionUtil,
+      EventBusBackend eventBusBackend,
+      DeviceQuerier deviceQuerier,
+      @ServerStartTime Instant serverStartTime) {
     this.reflectionUtil = reflectionUtil;
     this.eventBusBackend = eventBusBackend;
     this.deviceQuerier = deviceQuerier;
+    this.serverStartTime = serverStartTime;
   }
 
   public ImmutableList<SessionPlugin> loadSessionPlugins(SessionDetailHolder sessionDetailHolder)
@@ -140,7 +147,8 @@ public class SessionPluginLoader {
   private Object createSessionPlugin(Class<?> sessionPluginClass, SessionInfo sessionInfo)
       throws MobileHarnessException {
     try {
-      return Guice.createInjector(new SessionPluginModule(sessionInfo, deviceQuerier))
+      return Guice.createInjector(
+              new SessionPluginModule(sessionInfo, deviceQuerier, serverStartTime))
           .getInstance(sessionPluginClass);
     } catch (CreationException | ProvisionException e) {
       throw new MobileHarnessException(
@@ -154,16 +162,20 @@ public class SessionPluginLoader {
 
     private final SessionInfo sessionInfo;
     private final DeviceQuerier deviceQuerier;
+    private final Instant serverStartTime;
 
-    private SessionPluginModule(SessionInfo sessionInfo, DeviceQuerier deviceQuerier) {
+    private SessionPluginModule(
+        SessionInfo sessionInfo, DeviceQuerier deviceQuerier, Instant serverStartTime) {
       this.sessionInfo = sessionInfo;
       this.deviceQuerier = deviceQuerier;
+      this.serverStartTime = serverStartTime;
     }
 
     @Override
     protected void configure() {
       bind(SessionInfo.class).toInstance(sessionInfo);
       bind(DeviceQuerier.class).toInstance(deviceQuerier);
+      bind(Instant.class).annotatedWith(ServerStartTime.class).toInstance(serverStartTime);
     }
   }
 }

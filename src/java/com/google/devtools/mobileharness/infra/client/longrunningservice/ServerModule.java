@@ -26,16 +26,24 @@ import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import java.time.Instant;
 import java.util.concurrent.Executors;
 import javax.inject.Singleton;
 
 /** Module for OLC server. */
-public class ServerModule extends AbstractModule {
+class ServerModule extends AbstractModule {
+
+  private final Instant serverStartTime;
+
+  ServerModule(Instant serverStartTime) {
+    this.serverStartTime = serverStartTime;
+  }
 
   @Override
   protected void configure() {
@@ -43,6 +51,12 @@ public class ServerModule extends AbstractModule {
     install(new ClientApiModule());
 
     bind(ClientApi.class).in(Scopes.SINGLETON);
+  }
+
+  @Provides
+  @ServerStartTime
+  Instant provideServerStartTime() {
+    return serverStartTime;
   }
 
   @Provides

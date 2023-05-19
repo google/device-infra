@@ -21,13 +21,14 @@ import static java.util.stream.Collectors.joining;
 
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
-import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.DumpStackCommand;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.DumpStackTraceCommand;
 import java.util.Map.Entry;
 
 /** Handler for "dump stack" commands. */
-class DumpStackCommandHandler {
+class DumpStackTraceCommandHandler {
 
-  AtsSessionPluginOutput handle(@SuppressWarnings("unused") DumpStackCommand dumpStackCommand) {
+  AtsSessionPluginOutput handle(
+      @SuppressWarnings("unused") DumpStackTraceCommand dumpStackTraceCommand) {
     String result = formatStackTraces();
     return AtsSessionPluginOutput.newBuilder()
         .setSuccess(Success.newBuilder().setOutputMessage(result))
@@ -39,7 +40,7 @@ class DumpStackCommandHandler {
     return Thread.getAllStackTraces().entrySet().stream()
         .filter(threadEntry -> !threadEntry.getKey().equals(currentThread))
         .sorted(comparing(threadEntry -> threadEntry.getKey().getName()))
-        .map(DumpStackCommandHandler::formatThread)
+        .map(DumpStackTraceCommandHandler::formatThread)
         .collect(joining("\n\n"));
   }
 

@@ -22,7 +22,9 @@ import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
-import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.DumpStackCommand;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.DumpEnvVarCommand;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.DumpStackTraceCommand;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.DumpUptimeCommand;
 import com.google.devtools.atsconsole.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.util.concurrent.Callable;
@@ -69,7 +71,7 @@ public class DumpCommand implements Callable<Integer> {
     return ExitCode.SOFTWARE;
   }
 
-  @Command(name = "commandQueue", description = "Dump the contents of the commmand execution queue")
+  @Command(name = "commandQueue", description = "Dump the contents of the command execution queue")
   public int commandQueue() {
     consoleUtil.printErrorLine("Unimplemented");
     return ExitCode.SOFTWARE;
@@ -96,9 +98,12 @@ public class DumpCommand implements Callable<Integer> {
       name = "env",
       aliases = {"e"},
       description = "Dump the environment variables available to test harness process")
-  public int env() {
-    consoleUtil.printErrorLine("Unimplemented");
-    return ExitCode.SOFTWARE;
+  public int env() throws MobileHarnessException, InterruptedException {
+    return runDumpCommandSession(
+        "dump_env_var_command",
+        SessionPluginProto.DumpCommand.newBuilder()
+            .setDumpEnvVarCommand(DumpEnvVarCommand.getDefaultInstance())
+            .build());
   }
 
   @Command(
@@ -115,24 +120,31 @@ public class DumpCommand implements Callable<Integer> {
       aliases = {"s"},
       description = "Dump the stack traces of all threads")
   public int stack() throws MobileHarnessException, InterruptedException {
-    serverPreparer.prepareOlcServer();
-    AtsSessionPluginOutput output =
-        atsSessionStub.runShortSession(
-            "dump_stack_command",
-            AtsSessionPluginConfig.newBuilder()
-                .setDumpCommand(
-                    SessionPluginProto.DumpCommand.newBuilder()
-                        .setDumpStackCommand(DumpStackCommand.getDefaultInstance()))
-                .build());
-    return PluginOutputPrinter.printOutput(output, consoleUtil);
+    return runDumpCommandSession(
+        "dump_stack_trace_command",
+        SessionPluginProto.DumpCommand.newBuilder()
+            .setDumpStackTraceCommand(DumpStackTraceCommand.getDefaultInstance())
+            .build());
   }
 
   @Command(
       name = "uptime",
       aliases = {"u"},
       description = "Dump how long the process has been running")
-  public int uptime() {
-    consoleUtil.printErrorLine("Unimplemented");
-    return ExitCode.SOFTWARE;
+  public int uptime() throws MobileHarnessException, InterruptedException {
+    return runDumpCommandSession(
+        "dump_uptime_command",
+        SessionPluginProto.DumpCommand.newBuilder()
+            .setDumpUptimeCommand(DumpUptimeCommand.getDefaultInstance())
+            .build());
+  }
+
+  private int runDumpCommandSession(String sessionName, SessionPluginProto.DumpCommand dumpCommand)
+      throws MobileHarnessException, InterruptedException {
+    serverPreparer.prepareOlcServer();
+    AtsSessionPluginOutput output =
+        atsSessionStub.runShortSession(
+            sessionName, AtsSessionPluginConfig.newBuilder().setDumpCommand(dumpCommand).build());
+    return PluginOutputPrinter.printOutput(output, consoleUtil);
   }
 }

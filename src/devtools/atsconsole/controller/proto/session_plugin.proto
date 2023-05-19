@@ -73,8 +73,14 @@ message ListDevicesCommand {
 
 message DumpCommand {
   oneof command {
-    DumpStackCommand dump_stack_command = 1;
+    DumpStackTraceCommand dump_stack_trace_command = 1;
+    DumpEnvVarCommand dump_env_var_command = 2;
+    DumpUptimeCommand dump_uptime_command = 3;
   }
 }
 
-message DumpStackCommand {}
+message DumpStackTraceCommand {}
+
+message DumpEnvVarCommand {}
+
+message DumpUptimeCommand {}

@@ -35,6 +35,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import io.grpc.Server;
 import io.grpc.netty.NettyServerBuilder;
 import java.io.IOException;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -51,7 +52,9 @@ public class OlcServer {
     Flags.parse(args);
 
     // Creates and runs the server.
-    OlcServer server = Guice.createInjector(new ServerModule()).getInstance(OlcServer.class);
+    Instant serverStartTime = Instant.now();
+    OlcServer server =
+        Guice.createInjector(new ServerModule(serverStartTime)).getInstance(OlcServer.class);
     server.run(Arrays.asList(args));
   }
 
