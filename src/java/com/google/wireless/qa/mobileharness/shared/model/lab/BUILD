@@ -38,9 +38,7 @@ java_library(
 java_library(
     name = "lab",
     srcs = glob(["*.java"]),
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     exports = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab/in",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab/out",
