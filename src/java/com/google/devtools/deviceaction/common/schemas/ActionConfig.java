@@ -33,10 +33,8 @@ public abstract class ActionConfig {
 
   public abstract Optional<DeviceSpec> secondSpec();
 
-  public abstract boolean readyToPerform();
-
   public static Builder builder() {
-    return new AutoValue_ActionConfig.Builder().setReadyToPerform(false);
+    return new AutoValue_ActionConfig.Builder();
   }
 
   /** Builder for {@link ActionConfig}. */
@@ -49,8 +47,6 @@ public abstract class ActionConfig {
     public abstract Builder setFirstSpec(DeviceSpec firstSpec);
 
     public abstract Builder setSecondSpec(DeviceSpec secondSpec);
-
-    public abstract Builder setReadyToPerform(boolean readyToPerform);
 
     public abstract ActionConfig build();
   }

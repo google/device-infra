@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/deviceaction/common/error",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
