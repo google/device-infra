@@ -20,10 +20,15 @@ import com.google.auto.value.AutoValue;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Multimap;
+import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
+import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Collections;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Optional;
 import javax.annotation.Nullable;
 
 /**
@@ -37,6 +42,8 @@ public abstract class ActionOptions {
   /** A value class for various options. */
   @AutoValue
   public abstract static class Options {
+    private static final String ERROR_NAME = "INVALID_OPTION";
+
     /** True valued bool options. */
     public abstract ImmutableList<String> trueBoolOptions();
 
@@ -55,6 +62,26 @@ public abstract class ActionOptions {
           .setFalseBoolOptions(ImmutableList.of())
           .setKeyValues(ImmutableMultimap.of())
           .setFileOptions(ImmutableMultimap.of());
+    }
+
+    /**
+     * Returns the possible single value for the key.
+     *
+     * @throws DeviceActionException if there are multiple values.
+     */
+    public Optional<String> getOnlyValue(String key) throws DeviceActionException {
+      try {
+        return Optional.of(Iterables.getOnlyElement(keyValues().get(key)));
+      } catch (NoSuchElementException e) {
+        return Optional.empty();
+      } catch (IllegalArgumentException e) {
+        throw new DeviceActionException(
+            ERROR_NAME,
+            ErrorType.CUSTOMER_ISSUE,
+            String.format(
+                "The options %s should not have multiple values for key %s", keyValues(), key),
+            e);
+      }
     }
 
     /** Builder for {@link Options}. */
@@ -78,14 +105,27 @@ public abstract class ActionOptions {
 
       abstract Options autoBuild();
 
-      public final Options build() {
+      /**
+       * Builds the value.
+       *
+       * @throws DeviceActionException if some bool option is set to be true and false at the same
+       *     time.
+       */
+      public final Options build() throws DeviceActionException {
         Options options = autoBuild();
-        Preconditions.checkState(
-            Collections.disjoint(options.trueBoolOptions(), options.falseBoolOptions()),
-            "A bool option can't be set to be true and false at the same time. Please double"
-                + " check true options %s and false options %s",
-            options.trueBoolOptions(),
-            options.falseBoolOptions());
+        try {
+          Preconditions.checkState(
+              Collections.disjoint(options.trueBoolOptions(), options.falseBoolOptions()));
+        } catch (IllegalStateException e) {
+          throw new DeviceActionException(
+              ERROR_NAME,
+              ErrorType.CUSTOMER_ISSUE,
+              String.format(
+                  "A bool option can't be set to be true and false at the same time. Please double"
+                      + " check true options %s and false options %s",
+                  options.trueBoolOptions(), options.falseBoolOptions()),
+              e);
+        }
         return options;
       }
 
