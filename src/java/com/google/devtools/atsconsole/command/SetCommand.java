@@ -65,9 +65,8 @@ final class SetCommand implements Callable<Integer> {
       if (!moblyTestCasesDir.isEmpty() && localFileUtil.isDirExist(moblyTestCasesDir)) {
         consoleInfo.setMoblyTestCasesDir(moblyTestCasesDir);
       } else {
-        consoleUtil.printErrorLine(
-            String.format(
-                "Directory '%s' doesn't exist, please confirm and retry.", moblyTestCasesDir));
+        consoleUtil.printlnStderr(
+            "Directory '%s' doesn't exist, please confirm and retry.", moblyTestCasesDir);
         return false;
       }
     }
@@ -80,8 +79,8 @@ final class SetCommand implements Callable<Integer> {
       if (!resultsDir.isEmpty() && localFileUtil.isDirExist(resultsDir)) {
         consoleInfo.setResultsDirectory(resultsDir);
       } else {
-        consoleUtil.printErrorLine(
-            String.format("Directory '%s' doesn't exist, please confirm and retry.", resultsDir));
+        consoleUtil.printlnStderr(
+            "Directory '%s' doesn't exist, please confirm and retry.", resultsDir);
         return false;
       }
     }

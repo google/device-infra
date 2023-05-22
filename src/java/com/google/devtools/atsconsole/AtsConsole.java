@@ -22,11 +22,9 @@ import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.t
 import static com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.tokenize;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.Arrays.asList;
-import static java.util.Arrays.stream;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.Annotations.ConsoleLineReader;
@@ -41,6 +39,7 @@ import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
@@ -49,11 +48,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
-import java.util.logging.Formatter;
 import java.util.logging.Level;
-import java.util.logging.LogRecord;
-import java.util.logging.Logger;
-import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -78,10 +73,8 @@ public class AtsConsole implements Callable<Void> {
   private static final String DEVICE_INFRA_SERVICE_FLAGS =
       System.getProperty("DEVICE_INFRA_SERVICE_FLAGS");
 
-  private static final Logger rootLogger = Logger.getLogger("");
-
   public static void main(String[] args) throws IOException {
-    initializeLogger();
+    MobileHarnessLogger.init();
 
     // Parses flags.
     ImmutableList<String> deviceInfraServiceFlags = parseFlags();
@@ -168,7 +161,7 @@ public class AtsConsole implements Callable<Void> {
         if (args.isEmpty()) {
           input = getConsoleInput().orElse(null);
           if (input == null) {
-            consoleUtil.printErrorLine("Input interrupted; quitting...");
+            consoleUtil.printlnStderr("Input interrupted; quitting...");
             consoleInfo.setShouldExitConsole(true);
             break;
           }
@@ -177,14 +170,14 @@ public class AtsConsole implements Callable<Void> {
           try {
             tokenize(tokens, input);
           } catch (TokenizationException e) {
-            consoleUtil.printErrorLine("Invalid input: " + input);
+            consoleUtil.printlnStderr("Invalid input: %s", input);
             continue;
           }
           if (tokens.isEmpty()) {
             continue;
           }
         } else {
-          consoleUtil.printLine("Using commandline arguments as starting command: " + args);
+          consoleUtil.printlnStdout("Using commandline arguments as starting command: %s", args);
           lineReader.getHistory().add(Joiner.on(" ").join(args));
           tokens = args;
           if (args.get(0).matches(HELP_PATTERN)) {
@@ -217,9 +210,9 @@ public class AtsConsole implements Callable<Void> {
     try {
       return Optional.of(lineReader.readLine("ats-console > "));
     } catch (UserInterruptException e) {
-      consoleUtil.printErrorLine("\nInterrupted by the user.");
+      consoleUtil.printlnStderr("\nInterrupted by the user.");
     } catch (EndOfFileException e) {
-      consoleUtil.printErrorLine("\nReceived EOF.");
+      consoleUtil.printlnStderr("\nReceived EOF.");
     }
     return Optional.empty();
   }
@@ -268,22 +261,5 @@ public class AtsConsole implements Callable<Void> {
         .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
         .history(new DefaultHistory())
         .build();
-  }
-
-  private static void initializeLogger() {
-    Formatter formatter = new SimpleFormatter();
-    stream(rootLogger.getHandlers()).forEach(handler -> handler.setFormatter(formatter));
-  }
-
-  private static class SimpleFormatter extends Formatter {
-
-    @Override
-    public String format(LogRecord record) {
-      return String.format("%s\n%s", record.getMessage(), printThrowable(record.getThrown()));
-    }
-
-    private static String printThrowable(@Nullable Throwable e) {
-      return e == null ? "" : Throwables.getStackTraceAsString(e);
-    }
   }
 }

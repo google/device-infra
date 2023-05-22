@@ -66,13 +66,13 @@ public class ListCommand implements Callable<Integer> {
       aliases = {"c"},
       description = "List all commands currently waiting to be executed")
   public int commands() {
-    consoleUtil.printErrorLine("Unimplemented");
+    consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
 
   @Command(name = "configs", description = "List all known configurations")
   public int configs() {
-    consoleUtil.printErrorLine("Unimplemented");
+    consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
 
@@ -102,7 +102,7 @@ public class ListCommand implements Callable<Integer> {
       aliases = {"i"},
       description = "List all invocation threads")
   public int invocations() {
-    consoleUtil.printErrorLine("Unimplemented");
+    consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
 
@@ -111,7 +111,7 @@ public class ListCommand implements Callable<Integer> {
       aliases = {"m"},
       description = "List all modules available")
   public int modules() {
-    consoleUtil.printErrorLine("Unimplemented");
+    consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
 
@@ -120,7 +120,7 @@ public class ListCommand implements Callable<Integer> {
       aliases = {"p"},
       description = "List all plans available")
   public int plans() {
-    consoleUtil.printErrorLine("Unimplemented");
+    consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
 
@@ -129,7 +129,7 @@ public class ListCommand implements Callable<Integer> {
       aliases = {"r"},
       description = "List all results")
   public int results() {
-    consoleUtil.printErrorLine("Unimplemented");
+    consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
 }

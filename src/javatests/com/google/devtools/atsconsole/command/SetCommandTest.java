@@ -18,11 +18,14 @@ package com.google.devtools.atsconsole.command;
 
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doCallRealMethod;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.GuiceFactory;
@@ -58,14 +61,35 @@ public final class SetCommandTest {
   private final ByteArrayOutputStream out = new ByteArrayOutputStream();
   private final ByteArrayOutputStream err = new ByteArrayOutputStream();
 
-  @Mock @Bind private ConsoleUtil consoleUtil;
   @Mock @Bind private LocalFileUtil localFileUtil;
+
+  @Bind private ConsoleUtil consoleUtil;
 
   private CommandLine commandLine;
   private ConsoleInfo consoleInfo;
 
+  private static class PrintStreams {
+    @Bind
+    @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM)
+    private PrintStream outPrintStream;
+
+    @Bind
+    @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM)
+    private PrintStream errPrintStream;
+  }
+
   @Before
   public void setUp() {
+    out.reset();
+    err.reset();
+    PrintStreams printStreams = new PrintStreams();
+    printStreams.outPrintStream = new PrintStream(out);
+    printStreams.errPrintStream = new PrintStream(err);
+    System.setOut(printStreams.outPrintStream);
+    System.setErr(printStreams.errPrintStream);
+    consoleUtil =
+        spy(Guice.createInjector(BoundFieldModule.of(printStreams)).getInstance(ConsoleUtil.class));
+
     consoleInfo = TestUtil.getNewConsoleInfoInstance();
     consoleInfo.setMoblyTestCasesDir(MOBLY_TESTCASES_DIR);
     consoleInfo.setResultsDirectory(TEST_RESULTS_DIR);
@@ -73,24 +97,9 @@ public final class SetCommandTest {
         Guice.createInjector(BoundFieldModule.of(this), new ConsoleCommandTestModule(consoleInfo));
     injector.injectMembers(this);
     commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
-    out.reset();
-    err.reset();
-    System.setOut(new PrintStream(out));
-    System.setErr(new PrintStream(err));
-    doAnswer(
-            invocation -> {
-              System.out.println(invocation.getArgument(0, String.class));
-              return null;
-            })
-        .when(consoleUtil)
-        .printLine(anyString());
-    doAnswer(
-            invocation -> {
-              System.err.println(invocation.getArgument(0, String.class));
-              return null;
-            })
-        .when(consoleUtil)
-        .printErrorLine(anyString());
+
+    doCallRealMethod().when(consoleUtil).printlnStdout(anyString(), any());
+    doCallRealMethod().when(consoleUtil).printlnStderr(anyString(), any());
     when(consoleUtil.completeHomeDirectory(anyString())).thenCallRealMethod();
   }
 
@@ -127,7 +136,7 @@ public final class SetCommandTest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getMoblyTestCasesDir().orElse("")).isEqualTo(MOBLY_TESTCASES_DIR);
-    assertThat(err.toString(UTF_8.name())).contains("doesn't exist");
+    assertThat(err.toString(UTF_8)).contains("doesn't exist");
   }
 
   @Test
@@ -138,7 +147,7 @@ public final class SetCommandTest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getMoblyTestCasesDir().orElse("")).isEqualTo(MOBLY_TESTCASES_DIR);
-    assertThat(err.toString(UTF_8.name())).contains("doesn't exist");
+    assertThat(err.toString(UTF_8)).contains("doesn't exist");
   }
 
   @Test
@@ -161,7 +170,7 @@ public final class SetCommandTest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getResultsDirectory().orElse("")).isEqualTo(TEST_RESULTS_DIR);
-    assertThat(err.toString(UTF_8.name())).contains("doesn't exist");
+    assertThat(err.toString(UTF_8)).contains("doesn't exist");
   }
 
   @Test
@@ -172,7 +181,7 @@ public final class SetCommandTest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getResultsDirectory().orElse("")).isEqualTo(TEST_RESULTS_DIR);
-    assertThat(err.toString(UTF_8.name())).contains("doesn't exist");
+    assertThat(err.toString(UTF_8)).contains("doesn't exist");
   }
 
   @Test

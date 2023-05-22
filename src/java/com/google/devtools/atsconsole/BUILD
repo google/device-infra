@@ -53,7 +53,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:future",
-        "@maven//:com_google_code_findbugs_jsr305",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:log",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:info_picocli_picocli",
@@ -93,6 +93,7 @@ java_library(
         ":annotations",
         ":apache_commons_io",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

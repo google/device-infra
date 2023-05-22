@@ -67,13 +67,13 @@ public class DumpCommand implements Callable<Integer> {
       aliases = {"b"},
       description = "Dump a bugreport for the running instance")
   public int bugreport() {
-    consoleUtil.printErrorLine("Unimplemented");
+    consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
 
   @Command(name = "commandQueue", description = "Dump the contents of the command execution queue")
   public int commandQueue() {
-    consoleUtil.printErrorLine("Unimplemented");
+    consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
 
@@ -81,7 +81,7 @@ public class DumpCommand implements Callable<Integer> {
       name = "commands",
       description = "Dump all the config XML for the commands waiting to be executed")
   public int commands() {
-    consoleUtil.printErrorLine("Unimplemented");
+    consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
 
@@ -90,7 +90,7 @@ public class DumpCommand implements Callable<Integer> {
       aliases = {"c"},
       description = "Dump the content of the specified config")
   public int config() {
-    consoleUtil.printErrorLine("Unimplemented");
+    consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
 
@@ -111,7 +111,7 @@ public class DumpCommand implements Callable<Integer> {
       aliases = {"l"},
       description = "Dump the logs of all invocations to files")
   public int logs() {
-    consoleUtil.printErrorLine("Unimplemented");
+    consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
 

@@ -29,6 +29,7 @@ java_library(
     ],
     deps = [
         ":console_command_test_module",
+        "//src/java/com/google/devtools/atsconsole:annotations",
         "//src/java/com/google/devtools/atsconsole:ats_console_lib",
         "//src/java/com/google/devtools/atsconsole:ats_console_module",
         "//src/java/com/google/devtools/atsconsole:console_info",

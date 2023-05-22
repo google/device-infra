@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerStub;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
@@ -44,6 +45,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stu
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import java.io.PrintStream;
 import java.nio.file.Path;
 import java.util.concurrent.Executors;
 import javax.inject.Inject;
@@ -63,6 +65,14 @@ public class AtsSessionStubTest {
   @Bind private ListeningScheduledExecutorService threadPool;
   @Bind private Sleeper sleeper;
   @Bind @DeviceInfraServiceFlags private ImmutableList<String> deviceInfraServiceFlags;
+
+  @Bind
+  @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM)
+  private PrintStream outPrintStream;
+
+  @Bind
+  @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM)
+  private PrintStream errPrintStream;
 
   @Inject private ServerPreparer serverPreparer;
 
@@ -96,6 +106,9 @@ public class AtsSessionStubTest {
         MoreExecutors.listeningDecorator(
             Executors.newScheduledThreadPool(
                 /* corePoolSize= */ 5, ThreadFactoryUtil.createThreadFactory("main-thread")));
+
+    outPrintStream = System.out;
+    errPrintStream = System.err;
 
     Path serverBinary =
         Path.of(

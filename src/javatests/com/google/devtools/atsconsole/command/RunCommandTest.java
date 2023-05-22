@@ -21,15 +21,16 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.GuiceFactory;
@@ -87,7 +88,6 @@ public final class RunCommandTest {
   private final ByteArrayOutputStream err = new ByteArrayOutputStream();
 
   @Mock @Bind private CommandExecutor commandExecutor;
-  @Mock @Bind private ConsoleUtil consoleUtil;
   @Mock @Bind private AndroidAdbInternalUtil androidAdbInternalUtil;
   @Mock @Bind private LocalFileUtil localFileUtil;
   @Mock @Bind private YamlTestbedUpdater yamlTestbedUpdater;
@@ -95,11 +95,33 @@ public final class RunCommandTest {
   @Mock @Bind private XmlResultUtil xmlResultUtil;
   @Mock @Bind private MoblyAospTestSetupUtil moblyAospTestSetupUtil;
 
+  @Bind private ConsoleUtil consoleUtil;
+
   private CommandLine commandLine;
   private ConsoleInfo consoleInfo;
 
+  private static class PrintStreams {
+    @Bind
+    @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM)
+    private PrintStream outPrintStream;
+
+    @Bind
+    @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM)
+    private PrintStream errPrintStream;
+  }
+
   @Before
   public void setUp() throws Exception {
+    out.reset();
+    err.reset();
+    PrintStreams printStreams = new PrintStreams();
+    printStreams.outPrintStream = new PrintStream(out);
+    printStreams.errPrintStream = new PrintStream(err);
+    System.setOut(printStreams.outPrintStream);
+    System.setErr(printStreams.errPrintStream);
+    consoleUtil =
+        spy(Guice.createInjector(BoundFieldModule.of(printStreams)).getInstance(ConsoleUtil.class));
+
     consoleInfo = TestUtil.getNewConsoleInfoInstance();
     consoleInfo.setMoblyTestCasesDir(MOBLY_TESTCASES_DIR);
     consoleInfo.setMoblyTestZipSuiteMainFile(MOBLY_TEST_ZIP_SUITE_MAIN_FILE);
@@ -107,24 +129,9 @@ public final class RunCommandTest {
         Guice.createInjector(BoundFieldModule.of(this), new ConsoleCommandTestModule(consoleInfo));
     injector.injectMembers(this);
     commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
-    out.reset();
-    err.reset();
-    System.setOut(new PrintStream(out));
-    System.setErr(new PrintStream(err));
-    doAnswer(
-            invocation -> {
-              System.out.println(invocation.getArgument(0, String.class));
-              return null;
-            })
-        .when(consoleUtil)
-        .printLine(anyString());
-    doAnswer(
-            invocation -> {
-              System.err.println(invocation.getArgument(0, String.class));
-              return null;
-            })
-        .when(consoleUtil)
-        .printErrorLine(anyString());
+
+    doCallRealMethod().when(consoleUtil).printlnStdout(anyString(), any());
+    doCallRealMethod().when(consoleUtil).printlnStderr(anyString(), any());
     doCallRealMethod().when(consoleUtil).completeHomeDirectory(anyString());
     when(localFileUtil.isDirExist(MOBLY_TESTCASES_DIR)).thenReturn(true);
     when(localFileUtil.isFileExist(MOBLY_TEST_ZIP_SUITE_MAIN_FILE)).thenReturn(true);
@@ -176,7 +183,7 @@ public final class RunCommandTest {
     int exitCode = commandLine.execute("run", "cts-v");
 
     assertThat(exitCode).isEqualTo(1);
-    assertThat(err.toString(UTF_8.name())).contains("Mobly test cases dir is not set");
+    assertThat(err.toString(UTF_8)).contains("Mobly test cases dir is not set");
   }
 
   @Test
@@ -191,7 +198,7 @@ public final class RunCommandTest {
     int exitCode = commandLine.execute("run", "cts-v");
 
     assertThat(exitCode).isEqualTo(1);
-    assertThat(err.toString(UTF_8.name())).contains("\"suite_main.py\" file is required");
+    assertThat(err.toString(UTF_8)).contains("\"suite_main.py\" file is required");
   }
 
   @Test
@@ -247,7 +254,7 @@ public final class RunCommandTest {
 
     commandLine.execute("run", "cts-v");
 
-    assertThat(err.toString(UTF_8.name())).contains("Found no match");
+    assertThat(err.toString(UTF_8)).contains("Found no match");
     verify(commandExecutor, never()).exec(any(Command.class));
   }
 

@@ -17,6 +17,7 @@
 package com.google.devtools.atsconsole;
 
 import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
+import com.google.errorprone.annotations.FormatMethod;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -58,28 +59,28 @@ public class ConsoleUtil {
   }
 
   /**
-   * Displays a text line (command output or user-requested help) on the console.
+   * Displays a text line (command output or user-requested help) on the console (stdout).
    *
    * <p>The method is thread safe.
-   *
-   * @param output which is displayed on the console (stdout)
    */
-  public void printLine(String output) {
+  @FormatMethod
+  public void printlnStdout(String format, Object... args) {
     synchronized (consoleOutputLock) {
-      consoleOutputOut.println(output);
+      consoleOutputOut.printf(format, args);
+      consoleOutputOut.println();
     }
   }
 
   /**
-   * Displays a text line (error messages or log) on the console.
+   * Displays a text line (error messages or log) on the console (stderr).
    *
    * <p>The method is thread safe.
-   *
-   * @param error which is displayed on the console (stderr)
    */
-  public void printErrorLine(String error) {
+  @FormatMethod
+  public void printlnStderr(String format, Object... args) {
     synchronized (consoleOutputLock) {
-      consoleOutputErr.println(error);
+      consoleOutputErr.printf(format, args);
+      consoleOutputErr.println();
     }
   }
 
