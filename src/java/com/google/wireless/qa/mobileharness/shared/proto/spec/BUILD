@@ -15,6 +15,8 @@
 
 # Mobile Harness shared spec proto files.
 
+load("//third_party/bazel_rules/rules_python/python:proto.bzl", "py_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:public"],
