@@ -25,7 +25,7 @@ import static org.junit.Assert.assertThrows;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
@@ -62,7 +62,7 @@ public class AtsSessionStubTest {
 
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
 
-  @Bind private ListeningScheduledExecutorService threadPool;
+  @Bind private ListeningExecutorService threadPool;
   @Bind private Sleeper sleeper;
   @Bind @DeviceInfraServiceFlags private ImmutableList<String> deviceInfraServiceFlags;
 
@@ -104,8 +104,7 @@ public class AtsSessionStubTest {
     sleeper = Sleeper.defaultSleeper();
     threadPool =
         MoreExecutors.listeningDecorator(
-            Executors.newScheduledThreadPool(
-                /* corePoolSize= */ 5, ThreadFactoryUtil.createThreadFactory("main-thread")));
+            Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory("main-thread")));
 
     outPrintStream = System.out;
     errPrintStream = System.err;

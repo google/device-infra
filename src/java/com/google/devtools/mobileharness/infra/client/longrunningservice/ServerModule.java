@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
 import com.google.common.eventbus.EventBus;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.deviceinfra.infra.client.api.Annotations.GlobalInternalEventBus;
@@ -76,10 +77,17 @@ class ServerModule extends AbstractModule {
 
   @Provides
   @Singleton
-  ListeningScheduledExecutorService provideListeningScheduledExecutorService() {
+  ListeningExecutorService provideThreadPool() {
+    return MoreExecutors.listeningDecorator(
+        Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory("main-thread")));
+  }
+
+  @Provides
+  @Singleton
+  ListeningScheduledExecutorService provideScheduledThreadPool() {
     return MoreExecutors.listeningDecorator(
         Executors.newScheduledThreadPool(
-            /* corePoolSize= */ 30, ThreadFactoryUtil.createThreadFactory("main-thread")));
+            /* corePoolSize= */ 10, ThreadFactoryUtil.createThreadFactory("main-thread")));
   }
 
   @Provides

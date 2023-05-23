@@ -19,7 +19,7 @@ package com.google.devtools.atsconsole;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.atsconsole.Annotations.ConsoleLineReader;
 import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
@@ -126,10 +126,9 @@ public class AtsConsoleModule extends AbstractModule {
 
   @Provides
   @Singleton
-  ListeningScheduledExecutorService provideThreadPool() {
+  ListeningExecutorService provideThreadPool() {
     return MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(
-            /* corePoolSize= */ 30,
+        Executors.newCachedThreadPool(
             ThreadFactoryUtil.createThreadFactory("ats-console-thread-pool", /* daemon= */ true)));
   }
 

@@ -16,7 +16,7 @@
 
 package com.google.devtools.atsconsole.result.report;
 
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
@@ -34,10 +34,9 @@ final class TestModule extends AbstractModule {
 
   @Provides
   @Singleton
-  ListeningScheduledExecutorService provideThreadPool() {
+  ListeningExecutorService provideThreadPool() {
     return MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(
-            /* corePoolSize= */ 5,
+        Executors.newCachedThreadPool(
             ThreadFactoryUtil.createThreadFactory("test-thread-pool", /* daemon= */ true)));
   }
 }

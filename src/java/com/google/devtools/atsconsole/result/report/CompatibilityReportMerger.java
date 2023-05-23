@@ -30,7 +30,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Attribute;
 import com.google.devtools.atsconsole.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Module;
@@ -66,13 +66,13 @@ public class CompatibilityReportMerger {
           XmlConstants.SYSTEM_IMG_INFO_ATTR,
           XmlConstants.VENDOR_IMG_INFO_ATTR);
 
-  private final ListeningScheduledExecutorService threadPool;
+  private final ListeningExecutorService threadPool;
   private final CompatibilityReportParser reportParser;
   private final MoblyReportParser moblyReportParser;
 
   @Inject
   CompatibilityReportMerger(
-      ListeningScheduledExecutorService threadPool,
+      ListeningExecutorService threadPool,
       CompatibilityReportParser reportParser,
       MoblyReportParser moblyReportParser) {
     this.threadPool = threadPool;

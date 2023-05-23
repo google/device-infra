@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import java.util.HashSet;
@@ -64,7 +64,7 @@ public class LogManager<D> {
 
   private final Handler logHandler = new LogHandler();
 
-  private final ListeningScheduledExecutorService threadPool;
+  private final ListeningExecutorService threadPool;
 
   private final LogRecordsCollector<D> downstreamCollector;
 
@@ -87,8 +87,7 @@ public class LogManager<D> {
   private int recordsSize = 0;
 
   @Inject
-  LogManager(
-      ListeningScheduledExecutorService threadPool, LogRecordsCollector<D> downstreamCollector) {
+  LogManager(ListeningExecutorService threadPool, LogRecordsCollector<D> downstreamCollector) {
     this.threadPool = threadPool;
     this.downstreamCollector = downstreamCollector;
   }

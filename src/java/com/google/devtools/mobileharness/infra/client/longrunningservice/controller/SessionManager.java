@@ -29,7 +29,7 @@ import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -66,7 +66,7 @@ public class SessionManager {
 
   private final SessionDetailCreator sessionDetailCreator;
   private final SessionRunner.Factory sessionRunnerFactory;
-  private final ListeningScheduledExecutorService threadPool;
+  private final ListeningExecutorService threadPool;
 
   private final Object lock = new Object();
 
@@ -94,7 +94,7 @@ public class SessionManager {
   SessionManager(
       SessionDetailCreator sessionDetailCreator,
       SessionRunner.Factory sessionRunnerFactory,
-      ListeningScheduledExecutorService threadPool) {
+      ListeningExecutorService threadPool) {
     this.sessionDetailCreator = sessionDetailCreator;
     this.sessionRunnerFactory = sessionRunnerFactory;
     this.threadPool = threadPool;

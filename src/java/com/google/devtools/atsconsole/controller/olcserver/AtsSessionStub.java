@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerStub;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
@@ -88,13 +88,13 @@ public class AtsSessionStub {
   private static final Duration GET_SESSION_STATUS_LONG_INTERVAL = Duration.ofSeconds(30L);
 
   private final SessionStub sessionStub;
-  private final ListeningScheduledExecutorService threadPool;
+  private final ListeningExecutorService threadPool;
   private final Sleeper sleeper;
 
   @Inject
   AtsSessionStub(
       @ServerStub(ServerStub.Type.SESSION_SERVICE) SessionStub sessionStub,
-      ListeningScheduledExecutorService threadPool,
+      ListeningExecutorService threadPool,
       Sleeper sleeper) {
     this.sessionStub = sessionStub;
     this.threadPool = threadPool;

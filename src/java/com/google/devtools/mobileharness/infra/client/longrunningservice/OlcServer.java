@@ -22,7 +22,7 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutur
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.deviceinfra.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
@@ -64,7 +64,7 @@ public class OlcServer {
   private final SessionService sessionService;
   private final VersionService versionService;
   private final ControlService controlService;
-  private final ListeningScheduledExecutorService threadPool;
+  private final ListeningExecutorService threadPool;
   private final LocalMode localMode;
   private final EventBus globalInternalEventBus;
   private final LogManager<GetLogResponse> logManager;
@@ -74,7 +74,7 @@ public class OlcServer {
       SessionService sessionService,
       VersionService versionService,
       ControlService controlService,
-      ListeningScheduledExecutorService threadPool,
+      ListeningExecutorService threadPool,
       LocalMode localMode,
       @GlobalInternalEventBus EventBus globalInternalEventBus,
       LogManager<GetLogResponse> logManager) {

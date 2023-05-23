@@ -16,7 +16,7 @@
 
 package com.google.devtools.atsconsole.controller.olcserver;
 
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerBinary;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerChannel;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerStub;
@@ -49,7 +49,7 @@ public class OlcServerModule extends AbstractModule {
   @Provides
   @Singleton
   @ServerChannel
-  ManagedChannel provideServerChannel(ListeningScheduledExecutorService threadPool) {
+  ManagedChannel provideServerChannel(ListeningExecutorService threadPool) {
     int serverPort = Flags.instance().olcServerPort.getNonNull();
     return ChannelFactory.createLocalChannel(serverPort, threadPool);
   }

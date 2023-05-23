@@ -17,7 +17,7 @@
 package com.google.devtools.atsconsole.command;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.atsconsole.ConsoleInfo;
@@ -55,10 +55,9 @@ public class ConsoleCommandTestModule extends AbstractModule {
   }
 
   @Provides
-  ListeningScheduledExecutorService provideThreadPool() {
+  ListeningExecutorService provideThreadPool() {
     return MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(
-            /* corePoolSize= */ 5, ThreadFactoryUtil.createThreadFactory("main-thread")));
+        Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory("main-thread")));
   }
 
   @Provides
