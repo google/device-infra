@@ -45,6 +45,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
+        "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
         "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_api_client_google_api_client",

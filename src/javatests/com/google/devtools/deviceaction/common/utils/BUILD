@@ -26,6 +26,7 @@ java_library(
     srcs = glob(
         ["*Test.java"],
     ),
+    data = ["//src/javatests/com/google/devtools/deviceaction/testdata"],
     deps = [
         "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
         "//src/devtools/deviceaction/schemas/proto/actions:install_mainline_spec_java_proto",
@@ -35,8 +36,10 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_apis_google_api_services_storage",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],

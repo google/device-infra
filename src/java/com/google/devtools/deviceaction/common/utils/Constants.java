@@ -29,6 +29,16 @@ public final class Constants {
 
   public static final String ZIP_SUFFIX = ".zip";
 
+  public static final String DEVICE_CONFIG_KEY = "device_config";
+
+  public static final String SERIAL_KEY = "serial";
+
+  /** Prefix indicating a GCS file. */
+  public static final String GCS_PREFIX = "gcs:";
+
+  /** Separators for properties in flags. */
+  public static final char SEPARATOR = '#';
+
   static final String GS_PREFIX = "gs://";
 
   static final String GS_DELIMITER = "/";

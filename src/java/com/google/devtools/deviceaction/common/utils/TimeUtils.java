@@ -38,6 +38,11 @@ public class TimeUtils {
     return Duration.ofSeconds(protoDuration.getSeconds(), protoDuration.getNanos());
   }
 
+  /** Converts java duration to proto duration. */
+  public static com.google.protobuf.Duration toProtoDuration(Duration duration) {
+    return normalizedDuration(duration.getSeconds(), duration.getNano());
+  }
+
   private static com.google.protobuf.Duration normalizedDuration(long seconds, int nanos) {
     if (nanos <= -NANOS_PER_SECOND || nanos >= NANOS_PER_SECOND) {
       seconds = checkedAdd(seconds, nanos / NANOS_PER_SECOND);

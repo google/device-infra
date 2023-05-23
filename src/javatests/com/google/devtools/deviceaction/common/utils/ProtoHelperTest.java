@@ -16,10 +16,15 @@
 
 package com.google.devtools.deviceaction.common.utils;
 
-import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
+import static com.google.devtools.deviceaction.common.utils.TimeUtils.toProtoDuration;
+import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import com.google.devtools.deviceaction.common.error.DeviceActionException;
+import com.google.devtools.deviceaction.common.schemas.ActionOptions;
+import com.google.devtools.deviceaction.common.schemas.ActionOptions.Options;
 import com.google.devtools.deviceaction.common.schemas.Command;
 import com.google.devtools.deviceaction.framework.proto.ActionSpec;
 import com.google.devtools.deviceaction.framework.proto.AndroidPhoneSpec;
@@ -33,12 +38,20 @@ import com.google.devtools.deviceaction.framework.proto.Nullary;
 import com.google.devtools.deviceaction.framework.proto.Operand;
 import com.google.devtools.deviceaction.framework.proto.Unary;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
+import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.time.Duration;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public final class ProtoHelperTest {
+
+  private static final String TEST_FILE_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "javatests/com/google/devtools/deviceaction/testdata/google_pixel-7_s_userdebug.textproto");
 
   private static final String ID_1 = "id1";
   private static final String ID_2 = "id2";
@@ -58,8 +71,10 @@ public final class ProtoHelperTest {
           .setGcsFile(
               GCSFile.newBuilder().setProject("fake project").setGsUri("gs://bucket/d1/o1").build())
           .build();
-  private static final FileSpec LOCAL_FILE =
+  private static final FileSpec LOCAL_FILE_1 =
       FileSpec.newBuilder().setTag("mainline_modules").setLocalPath("/local/path/f1").build();
+  private static final FileSpec LOCAL_FILE_2 =
+      FileSpec.newBuilder().setTag("mainline_modules").setLocalPath("/local/path/f2").build();
   private static final InstallMainlineSpec FROM_DEVICE_CONFIG =
       InstallMainlineSpec.newBuilder()
           .setCleanUpSessions(false)
@@ -69,13 +84,35 @@ public final class ProtoHelperTest {
   private static final InstallMainlineSpec FROM_CMD =
       InstallMainlineSpec.newBuilder()
           .setCleanUpSessions(true)
-          .addFiles(LOCAL_FILE)
+          .addFiles(LOCAL_FILE_1)
           .setDevKeySigned(true)
+          .build();
+  private static final InstallMainlineSpec COMPLETE_SPEC =
+      InstallMainlineSpec.newBuilder()
+          .setEnableRollback(true)
+          .setCleanUpSessions(false)
+          .addFiles(LOCAL_FILE_1)
+          .addFiles(LOCAL_FILE_2)
+          .addFiles(GCS_FILE)
           .build();
   private static final DeviceConfig DEVICE_CONFIG =
       DeviceConfig.newBuilder()
           .setDeviceSpec(DeviceSpec.newBuilder().setAndroidPhoneSpec(GOOGLE_SPEC))
           .setExtension(InstallMainlineSpec.installMainlineSpec, FROM_DEVICE_CONFIG)
+          .build();
+  private static final DeviceConfig DEVICE_CONFIG_FROM_FILE =
+      DeviceConfig.newBuilder()
+          .setDeviceSpec(
+              DeviceSpec.newBuilder()
+                  .setAndroidPhoneSpec(
+                      AndroidPhoneSpec.newBuilder()
+                          .setBrand("Google")
+                          .setNeedDisablePackageCache(false)
+                          .build())
+                  .build())
+          .setExtension(
+              InstallMainlineSpec.installMainlineSpec,
+              InstallMainlineSpec.newBuilder().setCleanUpSessions(true).build())
           .build();
   private static final Unary INSTALL_MAINLINE =
       Unary.newBuilder().setFirst(DEVICE_1).setExtension(InstallMainlineSpec.ext, FROM_CMD).build();
@@ -113,6 +150,84 @@ public final class ProtoHelperTest {
     assertTrue(spec.getCleanUpSessions());
     assertTrue(spec.getDevKeySigned());
     assertTrue(spec.getEnableRollback());
-    assertThat(spec.getFilesList()).containsExactly(LOCAL_FILE, GCS_FILE);
+    assertThat(spec.getFilesList()).containsExactly(LOCAL_FILE_1, GCS_FILE);
+  }
+
+  @Test
+  public void buildProtoByOptions_workForInstallMainlineSpec() throws Exception {
+    InstallMainlineSpec spec =
+        ProtoHelper.buildProtoByOptions(getOptionsForInstallMainline(), InstallMainlineSpec.class);
+
+    assertThat(spec).ignoringRepeatedFieldOrder().isEqualTo(COMPLETE_SPEC);
+  }
+
+  @Test
+  public void buildProtoByOptions_workForAndroidPhoneSpec() throws Exception {
+    Options options =
+        Options.builder()
+            .addKeyValues("brand", "google")
+            .addKeyValues("reboot_await", "PT15M")
+            .addKeyValues("testharness_boot_timeout", "PT20S")
+            .addTrueBoolOptions("wifi_24_only")
+            .build();
+
+    AndroidPhoneSpec spec = ProtoHelper.buildProtoByOptions(options, AndroidPhoneSpec.class);
+
+    assertThat(spec)
+        .isEqualTo(
+            AndroidPhoneSpec.newBuilder()
+                .setBrand("google")
+                .setRebootAwait(toProtoDuration(Duration.ofMinutes(15)))
+                .setTestharnessBootTimeout(toProtoDuration(Duration.ofSeconds(20)))
+                .setWifi24Only(true)
+                .build());
+  }
+
+  @Test
+  public void getDeviceConfigFromTextProto_getExpectedResult() throws Exception {
+    String textproto = Files.readString(Paths.get(TEST_FILE_PATH));
+
+    DeviceConfig deviceConfig =
+        ProtoHelper.getDeviceConfigFromTextproto(textproto, Command.INSTALL_MAINLINE);
+
+    assertThat(deviceConfig).isEqualTo(DEVICE_CONFIG_FROM_FILE);
+  }
+
+  @Test
+  public void getActionSpec_workForInstallMainlineSpec() throws Exception {
+    ActionOptions actionOptions =
+        ActionOptions.builder()
+            .setCommand(Command.INSTALL_MAINLINE)
+            .setAction(getOptionsForInstallMainline())
+            .setFirstDevice(Options.builder().addKeyValues("serial", ID_1).build())
+            .build();
+
+    ActionSpec spec = ProtoHelper.getActionSpec(actionOptions);
+
+    assertThat(spec.getUnary().getExtension(InstallMainlineSpec.ext))
+        .ignoringRepeatedFieldOrder()
+        .isEqualTo(COMPLETE_SPEC);
+    assertThat(spec.getUnary().getFirst()).isEqualTo(DEVICE_1);
+  }
+
+  @Test
+  public void getActionSpec_missingId_throwException() throws Exception {
+    ActionOptions actionOptions =
+        ActionOptions.builder()
+            .setCommand(Command.INSTALL_MAINLINE)
+            .setAction(getOptionsForInstallMainline())
+            .build();
+
+    assertThrows(DeviceActionException.class, () -> ProtoHelper.getActionSpec(actionOptions));
+  }
+
+  private static Options getOptionsForInstallMainline() throws Exception {
+    return Options.builder()
+        .addTrueBoolOptions("enable_rollback")
+        .addFalseBoolOptions("clean_up_sessions")
+        .addKeyValues("not exist", "not used")
+        .addFileOptions("mainline_modules", "/local/path/f1", "/local/path/f2")
+        .addFileOptions("train_folder", "gcs:fake project#gs://bucket/d1/o1")
+        .build();
   }
 }
