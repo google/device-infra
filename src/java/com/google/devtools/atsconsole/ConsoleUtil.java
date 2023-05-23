@@ -59,6 +59,19 @@ public class ConsoleUtil {
   }
 
   /**
+   * Displays a text (command output or user-requested help) (without trailing "\n") on the console
+   * (stdout).
+   *
+   * <p>The method is thread safe.
+   */
+  @FormatMethod
+  public void printStdout(String format, Object... args) {
+    synchronized (consoleOutputLock) {
+      consoleOutputOut.printf(format, args);
+    }
+  }
+
+  /**
    * Displays a text line (command output or user-requested help) on the console (stdout).
    *
    * <p>The method is thread safe.
@@ -68,6 +81,18 @@ public class ConsoleUtil {
     synchronized (consoleOutputLock) {
       consoleOutputOut.printf(format, args);
       consoleOutputOut.println();
+    }
+  }
+
+  /**
+   * Displays a text (error messages or log) (without trailing "\n") on the console (stderr).
+   *
+   * <p>The method is thread safe.
+   */
+  @FormatMethod
+  public void printStderr(String format, Object... args) {
+    synchronized (consoleOutputLock) {
+      consoleOutputErr.printf(format, args);
     }
   }
 

@@ -27,6 +27,7 @@ import picocli.CommandLine.HelpCommand;
       ExitCommand.class,
       HelpCommand.class,
       ListCommand.class,
+      LogCommand.class,
       RunCommand.class,
       SetCommand.class,
     })

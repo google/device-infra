@@ -78,6 +78,24 @@ java_library(
 )
 
 java_library(
+    name = "server_log_printer",
+    srcs = ["ServerLogPrinter.java"],
+    deps = [
+        ":annotations",
+        ":server_preparer",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
+        "//src/java/com/google/devtools/atsconsole:console_util",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
+        "@io_grpc_grpc_java//stub",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "server_preparer",
     srcs = ["ServerPreparer.java"],
     deps = [
