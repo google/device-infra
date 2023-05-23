@@ -28,6 +28,9 @@ import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -89,5 +92,19 @@ class ServerModule extends AbstractModule {
   @GlobalInternalEventBus
   EventBus provideGlobalInternalEventBus() {
     return new EventBus(new SubscriberExceptionLoggingHandler());
+  }
+
+  @Provides
+  LogRecordsCollector<GetLogResponse> provideLogRecordsCollector() {
+    return new GetLogResponseLogRecordsCollector();
+  }
+
+  private static class GetLogResponseLogRecordsCollector
+      implements LogRecordsCollector<GetLogResponse> {
+
+    @Override
+    public GetLogResponse collectLogRecords(LogRecords.Builder logRecords) {
+      return GetLogResponse.newBuilder().setLogRecords(logRecords).build();
+    }
   }
 }

@@ -29,6 +29,9 @@ package(
 proto_library(
     name = "control_service_proto",
     srcs = ["control_service.proto"],
+    deps = [
+        ":log_proto",
+    ],
 )
 
 java_proto_library(
@@ -40,6 +43,16 @@ java_grpc_library(
     name = "control_service_java_grpc",
     srcs = [":control_service_proto"],
     deps = [":control_service_java_proto"],
+)
+
+proto_library(
+    name = "log_proto",
+    srcs = ["log.proto"],
+)
+
+java_proto_library(
+    name = "log_java_proto",
+    deps = [":log_proto"],
 )
 
 proto_library(

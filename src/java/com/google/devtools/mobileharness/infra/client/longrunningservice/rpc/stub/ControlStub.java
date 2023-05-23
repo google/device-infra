@@ -21,24 +21,34 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceGrpc;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceGrpc.ControlServiceBlockingStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceGrpc.ControlServiceStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
 import io.grpc.Channel;
+import io.grpc.stub.StreamObserver;
 
 /** Stub of {@link ControlServiceGrpc}. */
 public class ControlStub {
 
-  private final ControlServiceBlockingStub controlServiceStub;
+  private final ControlServiceBlockingStub controlServiceBlockingStub;
+  private final ControlServiceStub controlServiceStub;
 
   public ControlStub(Channel channel) {
-    this.controlServiceStub = ControlServiceGrpc.newBlockingStub(channel);
+    this.controlServiceBlockingStub = ControlServiceGrpc.newBlockingStub(channel);
+    this.controlServiceStub = ControlServiceGrpc.newStub(channel);
   }
 
   public KillServerResponse killServer() throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        controlServiceStub::killServer,
+        controlServiceBlockingStub::killServer,
         KillServerRequest.getDefaultInstance(),
         InfraErrorId.OLCS_STUB_KILL_SERVER_ERROR,
         "Failed to kill server");
+  }
+
+  public StreamObserver<GetLogRequest> getLog(StreamObserver<GetLogResponse> responseObserver) {
+    return controlServiceStub.getLog(responseObserver);
   }
 }

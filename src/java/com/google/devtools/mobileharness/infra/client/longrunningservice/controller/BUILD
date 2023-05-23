@@ -31,6 +31,19 @@ java_library(
 )
 
 java_library(
+    name = "log_manager",
+    srcs = ["LogManager.java"],
+    deps = [
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:callables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:future",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "session_detail_creator",
     srcs = ["SessionDetailCreator.java"],
     deps = [

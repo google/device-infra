@@ -37,6 +37,7 @@ java_library(
     deps = [
         ":session_plugin_for_testing_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",
@@ -55,6 +56,7 @@ java_library(
         "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
         "@com_google_protobuf_protobuf_java",
         "@io_grpc_grpc_java//core",
+        "@io_grpc_grpc_java//stub",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",

@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice;
 import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
@@ -26,6 +27,8 @@ import com.google.devtools.deviceinfra.infra.client.api.Annotations.GlobalIntern
 import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
@@ -64,6 +67,7 @@ public class OlcServer {
   private final ListeningScheduledExecutorService threadPool;
   private final LocalMode localMode;
   private final EventBus globalInternalEventBus;
+  private final LogManager<GetLogResponse> logManager;
 
   @Inject
   OlcServer(
@@ -72,20 +76,27 @@ public class OlcServer {
       ControlService controlService,
       ListeningScheduledExecutorService threadPool,
       LocalMode localMode,
-      @GlobalInternalEventBus EventBus globalInternalEventBus) {
+      @GlobalInternalEventBus EventBus globalInternalEventBus,
+      LogManager<GetLogResponse> logManager) {
     this.sessionService = sessionService;
     this.versionService = versionService;
     this.controlService = controlService;
     this.threadPool = threadPool;
     this.localMode = localMode;
     this.globalInternalEventBus = globalInternalEventBus;
+    this.logManager = logManager;
   }
 
   private void run(List<String> args) throws IOException, InterruptedException {
     // Initializes logger.
-    MobileHarnessLogger.init(PathUtil.join(DirCommon.getPublicDirRoot(), "olc_server_log"));
+    MobileHarnessLogger.init(
+        PathUtil.join(DirCommon.getPublicDirRoot(), "olc_server_log"),
+        ImmutableList.of(logManager.getLogHandler()));
 
     logger.atInfo().log("Arguments: %s", args);
+
+    // Starts log manager.
+    logManager.start();
 
     // Starts RPC server.
     int port = Flags.instance().olcServerPort.getNonNull();
@@ -94,6 +105,7 @@ public class OlcServer {
             .addService(controlService)
             .addService(sessionService)
             .addService(versionService)
+            .executor(threadPool)
             .build();
     controlService.setServer(server);
     server.start();

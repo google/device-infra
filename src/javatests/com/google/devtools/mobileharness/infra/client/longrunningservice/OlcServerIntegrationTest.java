@@ -28,7 +28,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.port.PortProber;
 import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
@@ -59,6 +62,7 @@ import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.protobuf.Any;
 import com.google.protobuf.FieldMask;
 import io.grpc.ManagedChannel;
+import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -98,6 +102,7 @@ public class OlcServerIntegrationTest {
 
     StringBuilder serverStdoutBuilder = new StringBuilder();
     StringBuilder serverStderrBuilder = new StringBuilder();
+    StringBuilder serverLogBuilder = new StringBuilder();
 
     CountDownLatch serverStartedLatch = new CountDownLatch(1);
     AtomicBoolean serverStartedSuccessfully = new AtomicBoolean();
@@ -166,9 +171,33 @@ public class OlcServerIntegrationTest {
                   .setLabVersion(Version.LAB_VERSION.toString())
                   .build());
 
-      SessionStub sessionStub = new SessionStub(channel);
+      // Gets the server log.
+      ControlStub controlStub = new ControlStub(channel);
+      @SuppressWarnings("Convert2Diamond")
+      StreamObserver<GetLogRequest> requestObserver =
+          controlStub.getLog(
+              new StreamObserver<GetLogResponse>() {
+                @Override
+                public void onNext(GetLogResponse response) {
+                  response.getLogRecords().getLogRecordList().stream()
+                      .map(LogRecord::getFormattedLogRecord)
+                      .forEach(serverLogBuilder::append);
+                }
+
+                @Override
+                public void onError(Throwable e) {
+                  logger.atWarning().withCause(e).log("Failed to get log from server");
+                }
+
+                @Override
+                public void onCompleted() {
+                  logger.atInfo().log("Completed to get log from server");
+                }
+              });
+      requestObserver.onNext(GetLogRequest.newBuilder().setEnable(true).build());
 
       // Creates a session.
+      SessionStub sessionStub = new SessionStub(channel);
       String pluginClassName =
           "com.google.devtools.mobileharness.infra.client.longrunningservice"
               + ".SessionPluginForTesting";
@@ -197,7 +226,6 @@ public class OlcServerIntegrationTest {
       SessionId sessionId = createSessionResponse.getSessionId();
 
       // Verifies the server cannot be killed.
-      ControlStub controlStub = new ControlStub(channel);
       KillServerResponse killServerResponse = controlStub.killServer();
       assertThat(killServerResponse)
           .isEqualTo(KillServerResponse.newBuilder().setSuccessful(false).build());
@@ -252,7 +280,7 @@ public class OlcServerIntegrationTest {
       killServerResponse = controlStub.killServer();
       assertThat(killServerResponse)
           .isEqualTo(KillServerResponse.newBuilder().setSuccessful(true).build());
-      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(3L));
+      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
       assertThat(serverProcess.isAlive()).isFalse();
     } catch (
         @SuppressWarnings("InterruptedExceptionSwallowed")
@@ -268,14 +296,18 @@ public class OlcServerIntegrationTest {
     String serverStderr = serverStderrBuilder.toString();
 
     // Verifies the driver has run.
-    assertWithMessage("server log").that(serverStderr).contains("Sleep for 2 seconds");
+    assertWithMessage("server stderr").that(serverStderr).contains("Sleep for 2 seconds");
 
     // Checks warnings in log.
     assertWithMessage(
             "A successful test run should not print exception stack traces, which will confuse"
                 + " users and affect debuggability when debugging a failed one.\n"
-                + "server log")
+                + "server stderr")
         .that(serverStderr)
         .doesNotContain("\tat ");
+
+    // Checks the server log.
+    String serverLog = serverLogBuilder.toString();
+    assertWithMessage("server log").that(serverLog).contains("Sleep for 2 seconds");
   }
 }

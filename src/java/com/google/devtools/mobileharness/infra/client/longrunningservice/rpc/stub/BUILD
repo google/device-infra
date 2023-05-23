@@ -34,6 +34,12 @@ java_library(
 java_library(
     name = "control_stub",
     srcs = ["ControlStub.java"],
+    visibility = [
+        "//src/java/com/google/devtools/atsconsole/command:__pkg__",
+        "//src/java/com/google/devtools/atsconsole/controller:__subpackages__",
+        "//src/javatests/com/google/devtools/atsconsole/controller:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+    ],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_grpc",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
@@ -41,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@io_grpc_grpc_java//core",
+        "@io_grpc_grpc_java//stub",
     ],
 )
 

@@ -18,34 +18,14 @@ syntax = "proto3";
 
 package mobileharness.infra.client.longrunningservice;
 
-import "src/devtools/mobileharness/infra/client/longrunningservice/proto/log.proto";
-
 option java_package = "com.google.devtools.mobileharness.infra.client.longrunningservice.proto";
-option java_outer_classname = "ControlServiceProto";
+option java_outer_classname = "LogProto";
 
-service ControlService {
-  // Kills the server if no running/pending session in the server.
-  rpc KillServer(KillServerRequest) returns (KillServerResponse);
-
-  // Gets logs of the server.
-  rpc GetLog(stream GetLogRequest) returns (stream GetLogResponse);
+message LogRecords {
+  repeated LogRecord log_record = 1;
 }
 
-message KillServerRequest {}
-
-message KillServerResponse {
+message LogRecord {
   // Required.
-  //
-  // True if no running/pending session and the server will exit.
-  bool successful = 1;
-}
-
-message GetLogRequest {
-  // Required.
-  bool enable = 1;
-}
-
-message GetLogResponse {
-  // Required.
-  LogRecords log_records = 1;
+  string formatted_log_record = 1;
 }
