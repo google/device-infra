@@ -231,7 +231,7 @@ public class ProtoHelper {
         break;
       default:
         throw new DeviceActionException(
-            "UNSUPPORTED_CMD",
+            INVALID_CMD,
             ErrorType.CUSTOMER_ISSUE,
             String.format("The cmd %s is not supported.", cmd));
     }

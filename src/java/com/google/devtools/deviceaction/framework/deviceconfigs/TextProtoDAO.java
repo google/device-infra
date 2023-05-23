@@ -16,14 +16,10 @@
 
 package com.google.devtools.deviceaction.framework.deviceconfigs;
 
-import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.Command;
+import com.google.devtools.deviceaction.common.utils.ProtoHelper;
 import com.google.devtools.deviceaction.framework.proto.DeviceConfig;
-import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
-import com.google.protobuf.ExtensionRegistry;
-import com.google.protobuf.TextFormat;
-import com.google.protobuf.TextFormat.ParseException;
 
 /** An abstract DAO to get device configs from textproto files. */
 public abstract class TextProtoDAO implements DeviceConfigDAO {
@@ -31,24 +27,7 @@ public abstract class TextProtoDAO implements DeviceConfigDAO {
   /** See {@link DeviceConfigDAO#getDeviceConfig(String, Command)}. */
   @Override
   public DeviceConfig getDeviceConfig(String deviceKey, Command cmd) throws DeviceActionException {
-    ExtensionRegistry registry = ExtensionRegistry.newInstance();
-    switch (cmd) {
-      case INSTALL_MAINLINE:
-        registry.add(InstallMainlineSpec.installMainlineSpec);
-        break;
-      default:
-        throw new DeviceActionException(
-            "UNSUPPORTED_CMD",
-            ErrorType.CUSTOMER_ISSUE,
-            String.format("The cmd %s is not supported.", cmd));
-    }
-    String config = readTextProto(deviceKey);
-    try {
-      return TextFormat.parse(config, registry, DeviceConfig.class);
-    } catch (ParseException e) {
-      throw new DeviceActionException(
-          "PROTO_ERROR", ErrorType.DEPENDENCY_ISSUE, "Failed to parse textproto file " + config, e);
-    }
+    return ProtoHelper.getDeviceConfigFromTextproto(readTextProto(deviceKey), cmd);
   }
 
   /** Read text proto file associated to the key. */

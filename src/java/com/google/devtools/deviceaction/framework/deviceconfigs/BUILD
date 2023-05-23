@@ -34,10 +34,9 @@ java_library(
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
-        "//src/devtools/deviceaction/schemas/proto/actions:install_mainline_spec_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
         "//src/java/com/google/devtools/deviceaction/common/schemas",
-        "@com_google_protobuf//:protobuf_java",
+        "//src/java/com/google/devtools/deviceaction/common/utils",
         "@maven//:com_google_guava_guava",
     ],
 )
