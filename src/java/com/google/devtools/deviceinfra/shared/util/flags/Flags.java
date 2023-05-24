@@ -134,6 +134,30 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> clearAndroidDeviceMultiUsers = clearAndroidDeviceMultiUsersDefault;
 
+  private static final Flag<String> daBundletoolDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--da_bundletool",
+      description = "Path of bundletool jar for device action",
+      converter = Flag.StringConverter.class)
+  public Flag<String> daBundletool = daBundletoolDefault;
+
+  private static final Flag<String> daCredFileDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--da_cred_file",
+      description = "Path to credential json file for use in device action.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> daCredFile = daCredFileDefault;
+
+  private static final Flag<String> daGenFileDirDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--da_gen_file_dir",
+      description = "Path to device action gen file dir.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> daGenFileDir = daGenFileDirDefault;
+
   private static final Flag<Boolean> detectAdbDeviceDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
