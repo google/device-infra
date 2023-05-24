@@ -510,7 +510,7 @@ public class CommandExecutor {
           .getExitCallback()
           .ifPresent(callback -> callback.accept(commandResult));
     } catch (InterruptedException e) {
-      Thread.interrupted();
+      Thread.currentThread().interrupt();
     }
   }
 
