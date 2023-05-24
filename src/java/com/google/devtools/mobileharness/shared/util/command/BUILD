@@ -25,7 +25,7 @@ java_library(
         ],
     ),
     visibility = [
-        "//:deviceinfra_pkg",
+        "//:deviceinfra_all_pkg",
     ],
     exports = [
         ":command_result",

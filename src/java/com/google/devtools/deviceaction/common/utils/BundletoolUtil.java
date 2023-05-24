@@ -24,10 +24,10 @@ import static java.util.Collections.addAll;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
-import com.google.devtools.deviceinfra.shared.util.command.Command;
-import com.google.devtools.deviceinfra.shared.util.command.CommandException;
-import com.google.devtools.deviceinfra.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandException;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.File;
@@ -39,7 +39,7 @@ import java.util.Optional;
 import java.util.StringJoiner;
 import javax.inject.Inject;
 
-/** An util class to execute bundletool cmds. */
+/** A util class to execute bundletool cmds. */
 public class BundletoolUtil {
 
   /** Command {@code get-device-spec}. */

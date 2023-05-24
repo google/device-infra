@@ -26,8 +26,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
-import com.google.devtools.deviceinfra.shared.util.command.Command;
-import com.google.devtools.deviceinfra.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.File;
 import java.nio.file.Path;
@@ -62,7 +62,7 @@ public final class BundletoolUtilTest {
   private BundletoolUtil bundletoolUtil;
   private BundletoolUtil bundletoolUtilWithoutAdbAapt;
   private String workingDir;
-  ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
+  private final ArgumentCaptor<Command> commandCaptor = ArgumentCaptor.forClass(Command.class);
 
   @Before
   public void setUp() throws Exception {

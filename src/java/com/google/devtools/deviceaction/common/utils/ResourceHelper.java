@@ -18,7 +18,7 @@ package com.google.devtools.deviceaction.common.utils;
 
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
-import com.google.devtools.deviceinfra.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import java.nio.file.Path;
 import java.util.Optional;

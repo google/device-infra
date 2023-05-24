@@ -17,11 +17,10 @@
 package com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.initializer;
 
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceinfra.shared.util.command.Command;
-import com.google.devtools.deviceinfra.shared.util.command.CommandException;
-import com.google.devtools.deviceinfra.shared.util.command.CommandExecutor;
-import com.google.devtools.deviceinfra.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
@@ -51,7 +50,7 @@ public final class AdbInitializerHelper {
       if (!adbProcessIdsAfterKill.isEmpty()) {
         adbKillServerCommandFailed = true;
       }
-    } catch (MobileHarnessException | CommandException e) {
+    } catch (MobileHarnessException e) {
       adbKillServerCommandFailed = true;
       logger.atWarning().log("%s", e.getMessage());
     } catch (InterruptedException e) {
