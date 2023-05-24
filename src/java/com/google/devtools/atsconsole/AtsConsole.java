@@ -31,6 +31,7 @@ import com.google.devtools.atsconsole.Annotations.ConsoleLineReader;
 import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import com.google.devtools.atsconsole.Annotations.MainArgs;
 import com.google.devtools.atsconsole.command.RootCommand;
+import com.google.devtools.atsconsole.controller.olcserver.ServerLogPrinter;
 import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.shell.ShellUtils;
@@ -113,6 +114,7 @@ public class AtsConsole implements Callable<Void> {
   private final ConsoleUtil consoleUtil;
   private final ConsoleInfo consoleInfo;
   private final ServerPreparer serverPreparer;
+  private final ServerLogPrinter serverLogPrinter;
 
   /** Set before {@link #call}; */
   @VisibleForTesting public volatile Injector injector;
@@ -126,7 +128,8 @@ public class AtsConsole implements Callable<Void> {
       Sleeper sleeper,
       ConsoleUtil consoleUtil,
       ConsoleInfo consoleInfo,
-      ServerPreparer serverPreparer) {
+      ServerPreparer serverPreparer,
+      ServerLogPrinter serverLogPrinter) {
     this.mainArgs = mainArgs;
     this.lineReader = lineReader;
     this.outWriter = outWriter;
@@ -135,6 +138,7 @@ public class AtsConsole implements Callable<Void> {
     this.consoleUtil = consoleUtil;
     this.consoleInfo = consoleInfo;
     this.serverPreparer = serverPreparer;
+    this.serverLogPrinter = serverLogPrinter;
   }
 
   @Override
@@ -149,6 +153,11 @@ public class AtsConsole implements Callable<Void> {
     // Prepares OLC server.
     if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
       serverPreparer.prepareOlcServer();
+    }
+
+    // Prints OLC server streaming log.
+    if (Flags.instance().enableAtsConsoleOlcServerLog.getNonNull()) {
+      serverLogPrinter.enable(true);
     }
 
     // Starts to read input from console.
