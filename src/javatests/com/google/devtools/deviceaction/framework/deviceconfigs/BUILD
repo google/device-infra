@@ -28,15 +28,11 @@ java_library(
     ),
     data = ["//src/javatests/com/google/devtools/deviceaction/testdata"],
     deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
-        "//src/devtools/deviceaction/schemas/proto/actions:install_mainline_spec_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
         "//src/java/com/google/devtools/deviceaction/common/schemas",
         "//src/java/com/google/devtools/deviceaction/framework/deviceconfigs",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
-        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
-        "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
     ],
 )
@@ -44,7 +40,6 @@ java_library(
 junit_test_suites(
     name = "gen_tests",
     sizes = [
-        "small",
         "medium",
     ],
     deps = [

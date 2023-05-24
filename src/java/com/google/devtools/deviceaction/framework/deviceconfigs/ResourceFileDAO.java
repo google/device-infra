@@ -22,19 +22,27 @@ import com.google.common.base.Ascii;
 import com.google.common.io.Resources;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
+import com.google.devtools.deviceaction.common.schemas.Command;
+import com.google.devtools.deviceaction.common.utils.ProtoHelper;
+import com.google.devtools.deviceaction.framework.proto.DeviceConfig;
 import java.io.IOException;
 import java.nio.file.Paths;
 
 /** A DAO to get device configs from jar resources. */
-public class ResourceFileDAO extends TextProtoDAO {
+public class ResourceFileDAO implements DeviceConfigDAO {
 
   private static final String CONFIGS_DIR = "/devtools/deviceaction/deviceconfigs/configs/";
 
   public ResourceFileDAO() {}
 
-  /** Reads device config text proto from jar resources. */
+  /** See {@link DeviceConfigDAO#getDeviceConfig(String, Command)}. */
   @Override
-  protected String readTextProto(String key) throws DeviceActionException {
+  public DeviceConfig getDeviceConfig(String deviceKey, Command cmd) throws DeviceActionException {
+    return ProtoHelper.getDeviceConfigFromTextproto(readTextProto(deviceKey), cmd);
+  }
+
+  /** Reads device config text proto from jar resources. */
+  private String readTextProto(String key) throws DeviceActionException {
     try {
       return Resources.toString(
           Resources.getResource(
