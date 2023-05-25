@@ -27,7 +27,9 @@ java_library(
         ],
     ),
     visibility = [
-        "//:deviceinfra_api_users",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/command:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
+        "//src/javatests/com/google/devtools/deviceinfra/shared/util/command:__subpackages__",
     ],
     exports = [
         ":command_result",
