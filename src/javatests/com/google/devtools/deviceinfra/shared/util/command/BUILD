@@ -13,34 +13,9 @@
 # limitations under the License.
 #
 
-load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
-
 package(
     default_applicable_licenses = ["//:license"],
     default_testonly = 1,
-)
-
-java_library(
-    name = "command",
-    srcs = glob(
-        ["*.java"],
-        exclude = ["StdoutStderrPrinter.java"],
-    ),
-    data = [
-        ":stdout_stderr_printer",
-        "//src/javatests/com/google/devtools/deviceinfra/shared/util/command/testdata",
-    ],
-    deps = [
-        "//src/java/com/google/devtools/deviceinfra/api/error/id/defined",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/command",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
-        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
-        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
-        "@maven//:com_google_guava_guava",
-        "@maven//:junit_junit",
-        "@maven//:org_mockito_mockito_core",
-    ],
 )
 
 java_binary(
@@ -48,16 +23,5 @@ java_binary(
     srcs = ["StdoutStderrPrinter.java"],
     main_class = "com.google.devtools.deviceinfra.shared.util.command.StdoutStderrPrinter",
     visibility = [
-    ],
-)
-
-junit_test_suites(
-    name = "gen_tests",
-    sizes = [
-        "small",
-        "medium",
-    ],
-    deps = [
-        ":command",
     ],
 )
