@@ -20,7 +20,7 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     visibility = [
-        "//:deviceinfra_pkg",
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
