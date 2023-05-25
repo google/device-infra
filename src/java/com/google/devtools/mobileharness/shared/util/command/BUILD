@@ -33,9 +33,7 @@ java_library(
     deps = [
         ":command_results",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/command",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command:command_process_impl",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/command:command_process_impls",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/backend",
         "//src/java/com/google/devtools/deviceinfra/shared/util/command/io",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
@@ -57,9 +55,7 @@ java_library(
         "CommandResult.java",
     ],
     visibility = ["//visibility:private"],
-    deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/command",
-    ],
+    deps = ["@maven//:com_google_guava_guava"],
 )
 
 java_library(

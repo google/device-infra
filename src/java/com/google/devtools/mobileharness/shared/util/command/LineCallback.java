@@ -106,29 +106,6 @@ public interface LineCallback {
     return line -> Response.stop(stopPredicate.test(line));
   }
 
-  static LineCallback fromNewLineCallback(
-      com.google.devtools.deviceinfra.shared.util.command.LineCallback newLineCallback) {
-    return line -> {
-      try {
-        com.google.devtools.deviceinfra.shared.util.command.LineCallback.Response response =
-            newLineCallback.onLine(line);
-        return Response.of(
-            response.getStop(), response.getAnswer().orElse(null), response.getStopReadingOutput());
-      } catch (com.google.devtools.deviceinfra.shared.util.command.LineCallbackException e) {
-        throw new LineCallbackException(
-            e.getMessage(), e, e.getKillCommand(), e.getStopReadingOutput());
-      }
-    };
-  }
-
-  default com.google.devtools.deviceinfra.shared.util.command.LineCallback toNewLineCallback() {
-    return line -> {
-      Response response = this.onLine(line);
-      return com.google.devtools.deviceinfra.shared.util.command.LineCallback.Response.of(
-          response.getStop(), response.getAnswer().orElse(null), response.getStopReadingOutput());
-    };
-  }
-
   /** Response of a line callback. */
   @AutoValue
   abstract class Response {

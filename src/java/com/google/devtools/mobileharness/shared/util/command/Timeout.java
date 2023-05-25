@@ -61,14 +61,6 @@ public abstract class Timeout {
     return of(fixedTimeout, new FixedDeadline(deadline));
   }
 
-  public static Timeout fromNewTimeout(
-      com.google.devtools.deviceinfra.shared.util.command.Timeout newTimeout) {
-    Builder result = builder();
-    newTimeout.getPeriod().ifPresent(result::period);
-    newTimeout.getDeadline().map(FixedDeadline::new).ifPresent(result::deadline);
-    return result.build();
-  }
-
   /**
    * Returns a timeout that behaves equivalently to this timeout, but with the specified fixed
    * duration in place of the current fixed duration.
@@ -111,18 +103,6 @@ public abstract class Timeout {
       remainingTime = period.get();
     }
     return remainingTime;
-  }
-
-  public com.google.devtools.deviceinfra.shared.util.command.Timeout toNewTimeout()
-      throws MobileHarnessException {
-    Instant deadline = getDeadline().isPresent() ? getDeadline().get().expireTime() : null;
-    return deadline == null
-        ? com.google.devtools.deviceinfra.shared.util.command.Timeout.fixed(
-            getPeriod().orElseThrow())
-        : (getPeriod().isPresent()
-            ? com.google.devtools.deviceinfra.shared.util.command.Timeout.of(
-                getPeriod().get(), deadline)
-            : com.google.devtools.deviceinfra.shared.util.command.Timeout.deadline(deadline));
   }
 
   public abstract Optional<Duration> getPeriod();

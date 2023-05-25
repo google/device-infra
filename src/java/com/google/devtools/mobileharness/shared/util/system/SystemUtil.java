@@ -19,11 +19,13 @@ package com.google.devtools.mobileharness.shared.util.system;
 import static com.google.common.base.StandardSystemProperty.JAVA_HOME;
 import static com.google.common.base.StandardSystemProperty.OS_VERSION;
 import static com.google.common.base.StandardSystemProperty.USER_NAME;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.graph.Traverser;
@@ -52,7 +54,6 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** Utility class for system operations. */
@@ -330,7 +331,7 @@ public class SystemUtil {
    * environment and the Java launcher path.
    */
   public JavaCommandCreator getJavaCommandCreator() {
-    return JavaCommandCreator.of(true /* useStandardInvocationForm */, getJavaBin());
+    return JavaCommandCreator.of(/* useStandardInvocationForm= */ true, getJavaBin());
   }
 
   /**
@@ -574,7 +575,7 @@ public class SystemUtil {
     killDescendantAndZombieProcesses(
         parentProcessId,
         killSignal,
-        /*ancestorsOfParentProcess */ new HashSet<>(),
+        /* ancestorsOfParentProcess= */ new HashSet<>(),
         /* killZombie= */ true);
   }
 
@@ -794,11 +795,11 @@ public class SystemUtil {
 
   /**
    * Adds {@code user} to udev group 'plugdev', which is the default group for accessing all usb
-   * devices (such as phones). It needs run as root. Only works on Linux.
+   * devices (such as phones). It needs to run as root. Only works on Linux.
    */
   public void addUserToUdevGroup(String user) throws MobileHarnessException, InterruptedException {
     try {
-      executor.exec(Command.of("adduser", user, "plugdev")).stdoutWithoutTrailingLineTerminator();
+      executor.exec(Command.of("adduser", user, "plugdev"));
     } catch (CommandException e) {
       throw new MobileHarnessException(
           BasicErrorId.SYSTEM_ADD_USER_TO_GROUP_ERROR,
@@ -850,7 +851,7 @@ public class SystemUtil {
    * Sigkills the services which contain the serviceTargetName by launchctl on Mac. Returns true if
    * the sigkill runs successfully. Returns false if the service is not existed or it is not on Mac.
    */
-  @SuppressWarnings("StringSplitter")
+  @SuppressWarnings({"StringSplitter", "FloggerWithoutCause"})
   public boolean sigkillServiceOnMac(String serviceTargetName, String serviceType)
       throws InterruptedException, MobileHarnessException {
     if (isOnMac()) {
@@ -1225,16 +1226,16 @@ public class SystemUtil {
 
   /** Reads the lines of the proc mem info file. */
   @VisibleForTesting
-  List<String> getProcMemInfoLines() throws MobileHarnessException {
+  ImmutableList<String> getProcMemInfoLines() throws MobileHarnessException {
     try (BufferedReader reader = Files.newBufferedReader(Paths.get("/proc/meminfo"))) {
-      return reader.lines().collect(Collectors.toList());
+      return reader.lines().collect(toImmutableList());
     } catch (IOException e) {
       throw new MobileHarnessException(
           BasicErrorId.SYSTEM_ACCESS_PROC_MEMINFO_ERROR, "Could not access /proc/meminfo", e);
     }
   }
 
-  /** A simple data structure for tree traversal in {@code #killDescendantAndZombieProcesses(). */
+  /** A simple data structure for tree traversal in {@link #killDescendantAndZombieProcesses}. */
   private static class ProcessInfo {
     public final String user;
     public final int pid;

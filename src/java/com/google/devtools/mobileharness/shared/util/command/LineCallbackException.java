@@ -21,8 +21,10 @@ package com.google.devtools.mobileharness.shared.util.command;
  *
  * @see LineCallback
  */
-public class LineCallbackException
-    extends com.google.devtools.deviceinfra.shared.util.command.LineCallbackException {
+public class LineCallbackException extends RuntimeException {
+
+  private final boolean killCommand;
+  private final boolean stopReadingOutput;
 
   /**
    * Constructor.
@@ -32,6 +34,18 @@ public class LineCallbackException
    */
   public LineCallbackException(
       String message, Throwable cause, boolean killCommand, boolean stopReadingOutput) {
-    super(message, cause, killCommand, stopReadingOutput);
+    super(message, cause);
+    this.killCommand = killCommand;
+    this.stopReadingOutput = stopReadingOutput;
+  }
+
+  /** Returns whether to kill the command */
+  public boolean getKillCommand() {
+    return killCommand;
+  }
+
+  /** Returns whether to stop reading the following output from stdout/stderr */
+  public boolean getStopReadingOutput() {
+    return stopReadingOutput;
   }
 }

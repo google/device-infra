@@ -17,11 +17,6 @@
 package com.google.devtools.mobileharness.shared.util.command;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.devtools.deviceinfra.shared.util.command.Command.DEFAULT_NEED_STDERR_IN_RESULT;
-import static com.google.devtools.deviceinfra.shared.util.command.Command.DEFAULT_NEED_STDOUT_IN_RESULT;
-import static com.google.devtools.deviceinfra.shared.util.command.Command.DEFAULT_SHOW_FULL_RESULT_IN_EXCEPTION;
-import static com.google.devtools.deviceinfra.shared.util.command.Command.DEFAULT_SUCCESS_EXIT_CODE;
-import static com.google.devtools.deviceinfra.shared.util.command.Command.DEFAULT_SUCCESS_START_CONDITION;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
@@ -29,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.time.CountDownTimer;
 import com.google.errorprone.annotations.CheckReturnValue;
 import java.nio.file.Path;
@@ -246,6 +240,16 @@ import java.util.stream.Collectors;
 @AutoValue
 public abstract class Command {
 
+  public static final int DEFAULT_SUCCESS_EXIT_CODE = 0;
+
+  public static final Predicate<String> DEFAULT_SUCCESS_START_CONDITION = line -> true;
+
+  public static final boolean DEFAULT_NEED_STDOUT_IN_RESULT = true;
+
+  public static final boolean DEFAULT_NEED_STDERR_IN_RESULT = true;
+
+  public static final boolean DEFAULT_SHOW_FULL_RESULT_IN_EXCEPTION = false;
+
   /**
    * Constructs a command. The first element is the executable and the rest are the arguments.
    *
@@ -270,38 +274,6 @@ public abstract class Command {
         .executable(command.get(/* index= */ 0))
         .arguments(command.subList(/* fromIndex= */ 1, command.size()))
         .build();
-  }
-
-  public static Command fromNewCommand(
-      com.google.devtools.deviceinfra.shared.util.command.Command newCommand) {
-    Builder result =
-        newBuilder()
-            .executable(newCommand.getExecutable())
-            .arguments(newCommand.getArguments())
-            .successStartCondition(newCommand.getSuccessStartCondition())
-            .successExitCodes(newCommand.getSuccessExitCodes())
-            .extraEnvironment(newCommand.getExtraEnvironment())
-            .needStdoutInResult(newCommand.getNeedStdoutInResult())
-            .needStderrInResult(newCommand.getNeedStderrInResult())
-            .showFullResultInException(newCommand.getShowFullResultInException());
-    newCommand.getTimeout().map(Timeout::fromNewTimeout).ifPresent(result::timeout);
-    newCommand.getStartTimeout().map(Timeout::fromNewTimeout).ifPresent(result::startTimeout);
-    newCommand.getTimeoutCallback().ifPresent(result::timeoutCallback);
-    newCommand
-        .getStdoutLineCallback()
-        .map(LineCallback::fromNewLineCallback)
-        .ifPresent(result::stdoutLineCallback);
-    newCommand
-        .getStderrLineCallback()
-        .map(LineCallback::fromNewLineCallback)
-        .ifPresent(result::stderrLineCallback);
-    newCommand
-        .getExitCallback()
-        .ifPresent(exitCallback -> result.exitCallback(exitCallback::accept));
-    newCommand.getInput().ifPresent(result::input);
-    newCommand.getWorkDirectory().ifPresent(result::workDirectory);
-    newCommand.getRedirectStderr().ifPresent(result::redirectStderr);
-    return result.build();
   }
 
   /**
@@ -596,8 +568,7 @@ public abstract class Command {
    *
    * <p>It is only meaningful when {@linkplain #startTimeout(Timeout) start timeout} is specified.
    *
-   * <p>Be default, it is {@link
-   * com.google.devtools.deviceinfra.shared.util.command.Command#DEFAULT_SUCCESS_START_CONDITION}.
+   * <p>Be default, it is {@link Command#DEFAULT_SUCCESS_START_CONDITION}.
    *
    * <p>Example:
    *
@@ -737,8 +708,7 @@ public abstract class Command {
    * command.successExitCodes(0, 1, 2, 10);
    * </code></pre>
    *
-   * <p>By default, it is {@linkplain
-   * com.google.devtools.deviceinfra.shared.util.command.Command#DEFAULT_SUCCESS_EXIT_CODE 0}.
+   * <p>By default, it is {@linkplain Command#DEFAULT_SUCCESS_EXIT_CODE 0}.
    *
    * @see <a href="#success-exit-codes">Command Success Exit Codes</a>
    */
@@ -761,8 +731,7 @@ public abstract class Command {
    * command.successExitCodes(ImmutableSet.of(0, 1, 2, 10));
    * </code></pre>
    *
-   * <p>By default, it is {@linkplain
-   * com.google.devtools.deviceinfra.shared.util.command.Command#DEFAULT_SUCCESS_EXIT_CODE 0}.
+   * <p>By default, it is {@linkplain Command#DEFAULT_SUCCESS_EXIT_CODE 0}.
    *
    * @see <a href="#success-exit-codes">Command Success Exit Codes</a>
    */
@@ -905,9 +874,7 @@ public abstract class Command {
    * <p>If it is {@code false}, {@link CommandResult#stdout()} of this command will always be empty.
    * It is useful when you don't need stdout in the result and its size may be extremely large.
    *
-   * <p>By default, it is {@linkplain
-   * com.google.devtools.deviceinfra.shared.util.command.Command#DEFAULT_NEED_STDOUT_IN_RESULT
-   * true}.
+   * <p>By default, it is {@linkplain Command#DEFAULT_NEED_STDOUT_IN_RESULT true}.
    *
    * @see <a href="#memory">Command Execution Memory Usage</a>
    */
@@ -923,9 +890,7 @@ public abstract class Command {
    * <p>If it is {@code false}, {@link CommandResult#stderr()} of this command will always be empty.
    * It is useful when you don't need stderr in the result and its size may be extremely large.
    *
-   * <p>By default, it is {@linkplain
-   * com.google.devtools.deviceinfra.shared.util.command.Command#DEFAULT_NEED_STDERR_IN_RESULT
-   * true}.
+   * <p>By default, it is {@linkplain Command#DEFAULT_NEED_STDERR_IN_RESULT true}.
    *
    * @see <a href="#memory">Command Execution Memory Usage</a>
    */
@@ -943,9 +908,7 @@ public abstract class Command {
    * contain full command result. Otherwise, it will only contain a truncated command result
    * summary.
    *
-   * <p>By default, it is {@linkplain
-   * com.google.devtools.deviceinfra.shared.util.command.Command#DEFAULT_SHOW_FULL_RESULT_IN_EXCEPTION
-   * false}.
+   * <p>By default, it is {@linkplain Command#DEFAULT_SHOW_FULL_RESULT_IN_EXCEPTION false}.
    *
    * <p>Note that you still need to ensure {@link #needStdoutInResult(boolean)} and {@link
    * #needStderrInResult(boolean)} are {@code true} (by default they are {@code true}) if you need
@@ -1008,44 +971,6 @@ public abstract class Command {
 
   /** See {@link #showFullResultInException(boolean)}. */
   public abstract boolean getShowFullResultInException();
-
-  @Memoized
-  public com.google.devtools.deviceinfra.shared.util.command.Command toNewCommand()
-      throws MobileHarnessException {
-    com.google.devtools.deviceinfra.shared.util.command.Command.Builder result =
-        com.google.devtools.deviceinfra.shared.util.command.Command.newBuilder()
-            .executable(getExecutable())
-            .arguments(getArguments())
-            .successStartCondition(getSuccessStartCondition())
-            .successExitCodes(getSuccessExitCodes())
-            .extraEnvironment(getExtraEnvironment())
-            .needStdoutInResult(getNeedStdoutInResult())
-            .needStderrInResult(getNeedStderrInResult())
-            .showFullResultInException(getShowFullResultInException());
-    if (getTimeout().isPresent()) {
-      result.timeout(getTimeout().get().toNewTimeout());
-    }
-    if (getStartTimeout().isPresent()) {
-      result.startTimeout(getStartTimeout().get().toNewTimeout());
-    }
-    getTimeoutCallback().ifPresent(result::timeoutCallback);
-    getStdoutLineCallback()
-        .map(LineCallback::toNewLineCallback)
-        .ifPresent(result::stdoutLineCallback);
-    getStderrLineCallback()
-        .map(LineCallback::toNewLineCallback)
-        .ifPresent(result::stderrLineCallback);
-    getExitCallback()
-        .ifPresent(
-            exitCallback ->
-                result.exitCallback(
-                    commandResult ->
-                        exitCallback.accept(CommandResult.fromNewCommandResult(commandResult))));
-    getInput().ifPresent(result::input);
-    getWorkDirectory().ifPresent(result::workDirectory);
-    getRedirectStderr().ifPresent(result::redirectStderr);
-    return result.build();
-  }
 
   /** Returns the command including its executable and arguments. */
   @Memoized

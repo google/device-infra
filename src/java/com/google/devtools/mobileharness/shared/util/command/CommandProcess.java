@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.shared.util.command;
 
 import com.google.common.annotations.Beta;
 import com.google.devtools.deviceinfra.shared.util.command.CommandProcessImpl;
-import com.google.devtools.deviceinfra.shared.util.command.CommandProcessImpls;
 import com.google.devtools.deviceinfra.shared.util.command.io.LineCollector;
 import java.io.OutputStream;
 import java.io.Writer;
@@ -43,13 +42,6 @@ import javax.annotation.Nullable;
 public class CommandProcess {
 
   private static final CommandExecutor EXECUTOR = new CommandExecutor();
-
-  public static CommandProcess fromNewCommandProcess(
-      com.google.devtools.deviceinfra.shared.util.command.CommandProcess newCommandProcess) {
-    return new CommandProcess(
-        Command.fromNewCommand(newCommandProcess.command()),
-        CommandProcessImpls.getImplementation(newCommandProcess));
-  }
 
   private final Command command;
   private final CommandProcessImpl impl;
