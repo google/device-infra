@@ -26,24 +26,35 @@ import java.util.Optional;
 /** A helper class to provide resources. */
 public interface ResourceHelper {
 
-  /** Gets a directory for all temporary files. */
+  /**
+   * Gets a directory for all temporary files.
+   *
+   * @throws DeviceActionException if the dir doesn't exist.
+   */
   Path getTmpFileDir() throws DeviceActionException;
 
-  /** Gets a directory for all generated files. */
+  /**
+   * Gets a directory for all generated files.
+   *
+   * @throws DeviceActionException if the dir doesn't exist.
+   */
   Path getGenFileDir() throws DeviceActionException;
 
   /** Gets the java binary path. */
-  Path getJavaBin() throws DeviceActionException;
+  Path getJavaBin();
 
   /** Gets an {@link Aapt} if possible. */
-  Optional<Aapt> getAapt() throws DeviceActionException;
+  Optional<Aapt> getAapt();
 
   /** Gets an {@link Adb} if possible. */
-  Optional<Adb> getAdb() throws DeviceActionException;
+  Optional<Adb> getAdb();
 
   /** Gets the path to bundletool jar. */
-  Optional<Path> getBundletoolJar() throws DeviceActionException;
+  Optional<Path> getBundletoolJar();
+
+  /** Gets a credential file. */
+  Optional<Path> getCredFile();
 
   /** Gets a {@link CommandExecutor}. */
-  CommandExecutor getCommandExecutor() throws DeviceActionException;
+  CommandExecutor getCommandExecutor();
 }

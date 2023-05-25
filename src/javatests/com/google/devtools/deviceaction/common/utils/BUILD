@@ -33,6 +33,7 @@ java_library(
         "//src/java/com/google/devtools/deviceaction/common/error",
         "//src/java/com/google/devtools/deviceaction/common/schemas",
         "//src/java/com/google/devtools/deviceaction/common/utils",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
