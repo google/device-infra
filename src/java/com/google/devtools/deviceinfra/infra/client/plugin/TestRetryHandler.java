@@ -26,6 +26,7 @@ import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto.Err
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
@@ -53,7 +54,8 @@ public class TestRetryHandler {
   private static final String PROPERTY_REPEAT_INDEX = Ascii.toLowerCase(Test.REPEAT_INDEX.name());
 
   private static final ImmutableSet<String> INHERITED_TEST_PROPERTIES =
-      ImmutableSet.of(PROPERTY_REPEAT_INDEX);
+      ImmutableSet.of(
+          Ascii.toLowerCase(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS.name()), PROPERTY_REPEAT_INDEX);
 
   /** Blocklist for disabling the extra retry for infra errors. */
   private static final ImmutableSet<String> DRIVER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY =
@@ -70,6 +72,8 @@ public class TestRetryHandler {
    * infra errors.
    */
   private static final Duration MAX_TEST_DURATION_FOR_INFRA_ERROR_EXTRA_RETRY = Duration.ofHours(2);
+
+  private static final long MAX_RETRY_ATTEMPTS_FOR_DRAIN_TIMEOUT = 5;
 
   private final DeviceAllocator deviceAllocator;
 
@@ -199,6 +203,8 @@ public class TestRetryHandler {
           retryReason = "POTENTIAL_CONTAINER_ISSUE";
         } else if (isPotentialUtpError(currentTestInfo)) {
           retryReason = "POTENTIAL_" + currentUtpMode.get().name() + "_ISSUE";
+        } else if (isRetryableForDrainTimeout(currentTestInfo)) {
+          retryReason = "DRAIN_TIMEOUT_ERROR";
         } else if ((retryLevel == Retry.Level.ERROR
                 && testResult != TestResult.PASS
                 && testResult != TestResult.FAIL
@@ -279,6 +285,11 @@ public class TestRetryHandler {
                 AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_NO_VALID_UID_ASSIGNED
                     .name())) {
           newTest.properties().add(Test.RETRY_AFTER_NO_VALID_UID_ASSIGNED, "true");
+        }
+
+        // Update left retry times for drain timeout.
+        if (isRetryableForDrainTimeout(currentTestInfo)) {
+          long unused = newTest.properties().plusLong(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS, 1L);
         }
 
         String message =
@@ -400,7 +411,9 @@ public class TestRetryHandler {
   // We want to make retry after container/sandbox/UTP failure user-invisible. Therefore, we only
   // consider tests which are not potentially container/UTP error as valid attempts.
   private static boolean isValidAttempt(TestInfo testInfo) {
-    return !isPotentialContainerError(testInfo) && !isPotentialUtpError(testInfo);
+    return !isPotentialContainerError(testInfo)
+        && !isPotentialUtpError(testInfo)
+        && !isRetryableForDrainTimeout(testInfo);
   }
 
   /**
@@ -440,6 +453,21 @@ public class TestRetryHandler {
         && currentUtpMode.isPresent()
         && currentTestResult != TestResult.PASS
         && currentTestResult != TestResult.SKIP;
+  }
+
+  /** Check if the test is retryable for drain timeout. */
+  private static boolean isRetryableForDrainTimeout(TestInfo testInfo) {
+    Optional<ExceptionDetail> cause = testInfo.resultWithCause().get().causeProto();
+    return cause
+            .map(ErrorModelConverter::getCriticalErrorId)
+            .map(
+                errorId ->
+                    Ascii.equalsIgnoreCase(
+                        errorId.getName(),
+                        InfraErrorId.TR_TEST_DRAIN_TIMEOUT_AND_FORCE_CLEAN_UP.name()))
+            .orElse(false)
+        && testInfo.properties().getLong(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS).orElse(0L)
+            < MAX_RETRY_ATTEMPTS_FOR_DRAIN_TIMEOUT;
   }
 
   /** Retrieves the UtpMode type from the test property if the given test is running in UTP Mode. */

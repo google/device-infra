@@ -296,7 +296,13 @@ public interface PropertyName {
     _IS_RUN_IN_DM,
 
     /** Locator of test engine stub. */
-    _TEST_ENGINE_LOCATOR;
+    _TEST_ENGINE_LOCATOR,
+
+    /**
+     * Count of drain timeout retry attempts in this job shown in sponge starting with '_' so sponge
+     * can make it invisible http://b/169158354.
+     */
+    _DRAIN_TIMEOUT_RETRY_ATTEMPTS;
 
     /**
      * Name prefix of the test property that contains the decorator run time in milliseconds.
