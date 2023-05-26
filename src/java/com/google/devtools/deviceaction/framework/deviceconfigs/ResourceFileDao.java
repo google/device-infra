@@ -29,13 +29,13 @@ import java.io.IOException;
 import java.nio.file.Paths;
 
 /** A DAO to get device configs from jar resources. */
-public class ResourceFileDAO implements DeviceConfigDAO {
+public class ResourceFileDao implements DeviceConfigDao {
 
   private static final String CONFIGS_DIR = "/devtools/deviceaction/deviceconfigs/configs/";
 
-  public ResourceFileDAO() {}
+  public ResourceFileDao() {}
 
-  /** See {@link DeviceConfigDAO#getDeviceConfig(String, Command)}. */
+  /** See {@link DeviceConfigDao#getDeviceConfig(String, Command)}. */
   @Override
   public DeviceConfig getDeviceConfig(String deviceKey, Command cmd) throws DeviceActionException {
     return ProtoHelper.getDeviceConfigFromTextproto(readTextProto(deviceKey), cmd);
@@ -46,7 +46,7 @@ public class ResourceFileDAO implements DeviceConfigDAO {
     try {
       return Resources.toString(
           Resources.getResource(
-              ResourceFileDAO.class,
+              ResourceFileDao.class,
               Paths.get(CONFIGS_DIR, Ascii.toLowerCase(key) + ".textproto").toString()),
           UTF_8);
     } catch (IOException | IllegalArgumentException e) {

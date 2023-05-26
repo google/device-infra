@@ -16,33 +16,13 @@
 
 package com.google.devtools.deviceaction.framework.deviceconfigs;
 
-import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertThrows;
-
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.Command;
 import com.google.devtools.deviceaction.framework.proto.DeviceConfig;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
-@RunWith(JUnit4.class)
-public final class ResourceFileDAOTest {
+/** Generic DAO interface. This allows us to have different DAO implementations. */
+public interface DeviceConfigDao {
 
-  private final ResourceFileDAO dao = new ResourceFileDAO();
-
-  @Test
-  public void getDeviceConfig_verifyFileExistence() throws Exception {
-    DeviceConfig deviceConfig =
-        dao.getDeviceConfig("oppo_cph2359_t_userdebug", Command.INSTALL_MAINLINE);
-
-    assertThat(deviceConfig.getDeviceSpec().getAndroidPhoneSpec().getBrand()).isEqualTo("OPPO");
-  }
-
-  @Test
-  public void readTextProto_fileNotExit_throwException() {
-    assertThrows(
-        DeviceActionException.class,
-        () -> dao.getDeviceConfig("not_exist", Command.INSTALL_MAINLINE));
-  }
+  /** Gets device config by querying the device key and command. */
+  DeviceConfig getDeviceConfig(String deviceKey, Command cmd) throws DeviceActionException;
 }
