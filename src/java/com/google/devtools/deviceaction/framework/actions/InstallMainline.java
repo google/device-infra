@@ -61,7 +61,7 @@ public class InstallMainline implements Action {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String ACTIVATED_APEX_SOURCEDIR_PREFIX = "data";
+  private static final String ACTIVATED_APEX_SOURCEDIR_PREFIX = "/data";
 
   private static final ImmutableSet<String> PACKAGES_WITH_INVALID_DUMP_INFO =
       ImmutableSet.of("com.google.mainline.primary.libs");

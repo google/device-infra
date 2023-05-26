@@ -73,8 +73,8 @@ public final class InstallMainlineTest {
   private static final int VERSION_CODE = 33;
 
   private static final String SYSTEM_APEX_FAKE_APEX_PACKAGE_APEX =
-      "system/apex/fake.apex.package.apex";
-  private static final String DATA_APP_FAKE_APK_PACKAGE = "data/app/fake.apk.package";
+      "/system/apex/fake.apex.package.apex";
+  private static final String DATA_APP_FAKE_APK_PACKAGE = "/data/app/fake.apk.package";
   private static final PackageInfo PRELOAD_APEX_INFO =
       PackageInfo.builder()
           .setIsApex(true)
@@ -94,7 +94,7 @@ public final class InstallMainlineTest {
       PackageInfo.builder()
           .setIsApex(true)
           .setPackageName(APEX_PACKAGE)
-          .setSourceDir("data/app/fake.apex.package.apex")
+          .setSourceDir("/data/app/fake.apex.package.apex")
           .setVersionCode(VERSION_CODE)
           .build();
 
