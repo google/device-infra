@@ -18,6 +18,7 @@ package com.google.devtools.deviceaction.framework.actions;
 
 import com.google.common.collect.ImmutableMultimap;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
+import com.google.devtools.deviceaction.common.annotations.GuiceAnnotations.FileResolver;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionConfig;
 import com.google.devtools.deviceaction.common.utils.AaptUtil;
@@ -33,6 +34,7 @@ import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.File;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** A utility class for {@code Action}. */
 public class Actions {
@@ -46,12 +48,13 @@ public class Actions {
 
   @Inject
   @SuppressWarnings("UnnecessarilyVisible")
+  @Singleton
   public Actions(
       Devices devices,
       AaptUtil aaptUtil,
       ResourceHelper resourceHelper,
       LocalFileUtil localFileUtil,
-      Resolver resolver,
+      @FileResolver Resolver resolver,
       Sleeper sleeper) {
     this.devices = devices;
     this.aaptUtil = aaptUtil;

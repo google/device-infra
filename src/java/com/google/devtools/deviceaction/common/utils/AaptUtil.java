@@ -24,11 +24,14 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageInfo;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import java.io.File;
+import javax.inject.Inject;
 
 /** An utility class to use aapt. */
 public class AaptUtil {
   private final Aapt aapt;
 
+  @Inject
+  @SuppressWarnings("UnnecessarilyVisible")
   public AaptUtil(ResourceHelper resourceHelper) throws DeviceActionException {
     this(
         resourceHelper

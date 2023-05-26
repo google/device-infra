@@ -16,8 +16,39 @@
 
 package com.google.devtools.deviceaction.common.annotations;
 
-/** Annotations for Guice binding. */
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
+
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
+import javax.inject.Qualifier;
+
+/**
+ * Annotations for Guice binding.
+ *
+ * <p>Sort all annotations in alphabetic order.
+ */
 public final class GuiceAnnotations {
+
+  /** Annotation for the file resolver. */
+  @Qualifier
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface FileResolver {}
+
+  /** Annotation for GCS credential. */
+  @Qualifier
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface GCSCredential {}
+
+  /** Annotation for the root of gen file dir. */
+  @Qualifier
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface GenFileDirRoot {}
 
   private GuiceAnnotations() {}
 }

@@ -23,6 +23,8 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
+import com.google.devtools.deviceaction.common.annotations.GuiceAnnotations.GCSCredential;
+import com.google.devtools.deviceaction.common.annotations.GuiceAnnotations.GenFileDirRoot;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.utils.GCSUtil.ListResult;
 import com.google.devtools.deviceaction.framework.proto.FileSpec;
@@ -50,7 +52,10 @@ public class GCSResolver extends SimpleResolver {
 
   @Inject
   @SuppressWarnings("UnnecessarilyVisible")
-  public GCSResolver(LocalFileUtil localFileUtil, File serviceAccountKey, File rootDir) {
+  public GCSResolver(
+      LocalFileUtil localFileUtil,
+      @GCSCredential File serviceAccountKey,
+      @GenFileDirRoot File rootDir) {
     this(
         localFileUtil,
         serviceAccountKey,

@@ -28,5 +28,8 @@ java_library(
     srcs = glob(
         ["*.java"],
     ),
-    deps = ["@com_google_protobuf//:protobuf_java"],
+    deps = [
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:javax_inject_jsr330_api",
+    ],
 )
