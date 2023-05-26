@@ -502,7 +502,6 @@ public final class StrUtil {
    * @param line line to format
    * @param width the fixed width (in characters)
    */
-  // devicienfra:google3-only(branch from com.google.common.base.StringUtil)
   private static String formatLineToFixedWidth(String line, int width) {
     if (line.length() <= width) {
       return line;
