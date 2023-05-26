@@ -17,7 +17,7 @@
 package com.google.devtools.deviceaction.common.utils;
 
 import static com.google.devtools.deviceaction.common.utils.Constants.GCS_PREFIX;
-import static com.google.devtools.deviceaction.common.utils.Constants.SEPARATOR;
+import static com.google.devtools.deviceaction.common.utils.Constants.PROPERTY_SEPARATOR;
 import static com.google.devtools.deviceaction.common.utils.Constants.SERIAL_KEY;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -239,9 +239,10 @@ public class ProtoHelper {
   }
 
   private static FileSpec parseFileSpec(String tag, String value) {
-    boolean isGCS = value.startsWith("gcs:");
+    boolean isGCS = value.startsWith(GCS_PREFIX);
     if (isGCS) {
-      List<String> split = Splitter.on(SEPARATOR).splitToList(value.substring(GCS_PREFIX.length()));
+      List<String> split =
+          Splitter.on(PROPERTY_SEPARATOR).splitToList(value.substring(GCS_PREFIX.length()));
       return FileSpec.newBuilder()
           .setTag(tag)
           .setGcsFile(GCSFile.newBuilder().setProject(split.get(0)).setGsUri(split.get(1)).build())

@@ -166,7 +166,7 @@ public final class MergingDeviceConfigurerTest {
           .addFalseBoolOptions("clean_up_sessions")
           .addKeyValues("not exist", "not used")
           .addFileOptions("mainline_modules", "/local/path/f1", "/local/path/f2")
-          .addFileOptions("train_folder", "gcs:fake project#gs://bucket/d1/o1")
+          .addFileOptions("train_folder", "gcs:fake project&gs://bucket/d1/o1")
           .build();
     } catch (Exception e) {
       throw new RuntimeException("This never happens!", e);

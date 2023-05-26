@@ -37,7 +37,7 @@ public final class Constants {
   public static final String GCS_PREFIX = "gcs:";
 
   /** Separators for properties in flags. */
-  public static final char SEPARATOR = '#';
+  public static final char PROPERTY_SEPARATOR = '&';
 
   static final String GS_PREFIX = "gs://";
 
