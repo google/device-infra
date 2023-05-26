@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.shared.util.command;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
@@ -26,12 +25,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.mobileharness.infra.controller.test.TestContext.TestContextRunnable;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback.Response;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecord;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecorder;
 import com.google.devtools.mobileharness.shared.util.command.io.LineCollector;
 import com.google.devtools.mobileharness.shared.util.command.io.LineReader;
+import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -43,13 +44,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.logging.Level;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -147,9 +146,13 @@ public class CommandExecutor {
   private static final boolean DEFAULT_REDIRECT_STDERR = true;
 
   private final ListeningExecutorService threadPool;
+
+  /** The scheduled thread pool should only be used to submit tasks to the thread pool. */
   private final ListeningScheduledExecutorService timer;
+
   private final com.google.devtools.mobileharness.shared.util.command.backend.CommandExecutor
       backend;
+
   private final CommandBugChecker bugChecker = new CommandBugChecker();
 
   private final Lock baseEnvironmentLock = new ReentrantLock();
@@ -325,10 +328,16 @@ public class CommandExecutor {
 
     // Schedules timeout tasks.
     Runnable timeoutTask = new TestContextRunnable(new TimeoutTask(commandProcess));
-    Function<Duration, Future<?>> timeoutTaskScheduler =
-        timeout -> timer.schedule(timeoutTask, timeout.toMillis(), MILLISECONDS);
-    Future<?> timeoutTaskFuture = timeoutTaskScheduler.apply(remainingTime);
-    Optional<Future<?>> startTimeoutTaskFuture = startRemainingTime.map(timeoutTaskScheduler);
+    ListenableFuture<?> timeoutTaskFuture =
+        logFailure(
+            timer.schedule(timeoutTask, remainingTime), "scheduling command timeout", command);
+    Optional<ListenableFuture<?>> startTimeoutTaskFuture =
+        startRemainingTime.map(
+            time ->
+                logFailure(
+                    timer.schedule(timeoutTask, time),
+                    "scheduling command start timeout",
+                    command));
 
     // Writes initial input.
     writeToStdin(commandProcess, command.getInput().orElse(null));
@@ -346,26 +355,34 @@ public class CommandExecutor {
             startTimeoutTaskFuture.orElse(null)));
 
     // Starts reading outputs.
-    threadPool.execute(
-        new TestContextRunnable(
-            () -> readOutput(stdoutReader, stdoutCollector, commandProcess.command())));
-    threadPool.execute(
-        new TestContextRunnable(
-            () ->
-                readOutput(
-                    stderrReader,
-                    redirectStderr ? stdoutCollector : stderrCollector,
-                    commandProcess.command())));
+    logFailure(
+        threadPool.submit(
+            new TestContextRunnable(() -> readOutput(stdoutReader, stdoutCollector, command))),
+        "reading command stdout",
+        command);
+    logFailure(
+        threadPool.submit(
+            new TestContextRunnable(
+                () ->
+                    readOutput(
+                        stderrReader,
+                        redirectStderr ? stdoutCollector : stderrCollector,
+                        command))),
+        "reading command stderr",
+        command);
 
     // Schedules post run task.
-    threadPool.execute(
-        new TestContextRunnable(
-            () ->
-                postRun(
-                    commandProcess,
-                    timeoutTaskFuture,
-                    startTimeoutTaskFuture.orElse(null),
-                    commandRecord)));
+    logFailure(
+        threadPool.submit(
+            new TestContextRunnable(
+                () ->
+                    postRun(
+                        commandProcess,
+                        timeoutTaskFuture,
+                        startTimeoutTaskFuture.orElse(null),
+                        commandRecord))),
+        "handling command result",
+        command);
 
     return commandProcess;
   }
@@ -433,9 +450,6 @@ public class CommandExecutor {
     return defaultRedirectStderr;
   }
 
-  // This lambda implements @Immutable interface 'SuccessCondition', but the declaration of type
-  // 'com.google.devtools.mobileharness.shared.util.command.Command' is not annotated with
-  // @com.google.errorprone.annotations.Immutable
   @SuppressWarnings("Immutable")
   private com.google.devtools.mobileharness.shared.util.command.backend.Command getBackendCommand(
       Command command, ByteSink stdoutSink, ByteSink stderrSink) {
@@ -465,6 +479,7 @@ public class CommandExecutor {
     }
   }
 
+  @SuppressWarnings("resource")
   private static void writeToStdin(CommandProcess commandProcess, @Nullable String input) {
     if (input != null) {
       try {
@@ -490,8 +505,8 @@ public class CommandExecutor {
 
   private static void postRun(
       CommandProcess commandProcess,
-      Future<?> timeoutTaskFuture,
-      @Nullable Future<?> startTimeoutTaskFuture,
+      ListenableFuture<?> timeoutTaskFuture,
+      @Nullable ListenableFuture<?> startTimeoutTaskFuture,
       CommandRecord commandRecord) {
     try {
       CommandResult result;
@@ -539,7 +554,10 @@ public class CommandExecutor {
     @Override
     public void run() {
       if (!isStarted.getAndSet(true)) {
-        threadPool.execute(this::onTimeout);
+        logFailure(
+            threadPool.submit(this::onTimeout),
+            "handling command timeout",
+            commandProcess.command());
       }
     }
 
@@ -556,17 +574,18 @@ public class CommandExecutor {
 
     private final CommandProcess commandProcess;
     @Nullable private LineCallback lineCallback;
-    @Nullable private Future<?> startTimeoutTaskFuture;
+    @Nullable private ListenableFuture<?> startTimeoutTaskFuture;
 
     private LineConsumer(
         CommandProcess commandProcess,
         @Nullable LineCallback lineCallback,
-        @Nullable Future<?> startTimeoutTaskFuture) {
+        @Nullable ListenableFuture<?> startTimeoutTaskFuture) {
       this.commandProcess = commandProcess;
       this.lineCallback = lineCallback;
       this.startTimeoutTaskFuture = startTimeoutTaskFuture;
     }
 
+    @SuppressWarnings("RedundantIfStatement")
     @Override
     public boolean test(String line) {
       if (startTimeoutTaskFuture != null
@@ -620,12 +639,23 @@ public class CommandExecutor {
     }
   }
 
+  @CanIgnoreReturnValue
+  private static <V> ListenableFuture<V> logFailure(
+      ListenableFuture<V> future, String doing, Command command) {
+    return MoreFutures.logFailure(
+        future,
+        Level.WARNING,
+        "Error occurred while command executor is %s, command=[%s]",
+        doing,
+        command);
+  }
+
   private static class LazyLoader {
 
     private static final ListeningExecutorService DEFAULT_NON_PROPAGATING_THREAD_POOL =
         MoreExecutors.listeningDecorator(
             Executors.newCachedThreadPool(
-                getThreadFactory(/* threadName= */ "default-mh-command-executor")));
+                ThreadFactoryUtil.createThreadFactory("mh-command-executor", true)));
 
     private static final ListeningExecutorService DEFAULT_THREAD_POOL =
         decorateWithLocalTraceSpan(
@@ -635,20 +665,9 @@ public class CommandExecutor {
         decorateWithLocalTraceSpan(
             MoreExecutors.listeningDecorator(
                 Executors.newScheduledThreadPool(
-                    /* corePoolSize= */ 30,
-                    getThreadFactory(/* threadName= */ "default-mh-command-executor-timer"))),
+                    /* corePoolSize= */ 1,
+                    ThreadFactoryUtil.createThreadFactory("mh-command-executor-timer", true))),
             ListeningScheduledExecutorService.class);
-
-    private static ThreadFactory getThreadFactory(String threadName) {
-      return runnable -> {
-        Thread thread = new Thread(runnable, threadName);
-        thread.setDaemon(true);
-        thread.setUncaughtExceptionHandler(
-            (t, e) ->
-                logger.atWarning().withCause(e).log("Uncaught error of thread %s", threadName));
-        return thread;
-      };
-    }
   }
 
   @SuppressWarnings("unused")
