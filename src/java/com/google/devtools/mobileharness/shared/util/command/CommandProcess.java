@@ -17,8 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.command;
 
 import com.google.common.annotations.Beta;
-import com.google.devtools.deviceinfra.shared.util.command.CommandProcessImpl;
-import com.google.devtools.deviceinfra.shared.util.command.io.LineCollector;
+import com.google.devtools.mobileharness.shared.util.command.io.LineCollector;
 import java.io.OutputStream;
 import java.io.Writer;
 import java.time.Clock;
@@ -26,6 +25,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.OptionalInt;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 import javax.annotation.Nullable;
 
 /**
@@ -44,29 +44,36 @@ public class CommandProcess {
   private static final CommandExecutor EXECUTOR = new CommandExecutor();
 
   private final Command command;
-  private final CommandProcessImpl impl;
+
+  private final com.google.devtools.mobileharness.shared.util.command.backend.CommandProcess
+      backendProcess;
+  private final LineCollector stdoutCollector;
+  private final LineCollector stderrCollector;
+  private final Duration finalizedTimeout;
+  @Nullable private final Duration finalizedStartTimeout;
+
+  private final OutputStream stdinStream;
+  private final Writer stdinWriter;
+
+  private final AtomicBoolean isTimeout = new AtomicBoolean();
+  private final AtomicBoolean isStopped = new AtomicBoolean();
 
   /** Do NOT make it public. */
   CommandProcess(
       Command command,
-      com.google.devtools.deviceinfra.shared.util.command.backend.CommandProcess backendProcess,
+      com.google.devtools.mobileharness.shared.util.command.backend.CommandProcess backendProcess,
       LineCollector stdoutCollector,
       LineCollector stderrCollector,
       Duration finalizedTimeout,
       @Nullable Duration finalizedStartTimeout) {
-    this(
-        command,
-        new CommandProcessImpl(
-            backendProcess,
-            stdoutCollector,
-            stderrCollector,
-            finalizedTimeout,
-            finalizedStartTimeout));
-  }
-
-  private CommandProcess(Command command, CommandProcessImpl impl) {
     this.command = command;
-    this.impl = impl;
+    this.backendProcess = backendProcess;
+    this.stdoutCollector = stdoutCollector;
+    this.stderrCollector = stderrCollector;
+    this.finalizedTimeout = finalizedTimeout;
+    this.finalizedStartTimeout = finalizedStartTimeout;
+    this.stdinStream = backendProcess.stdinStream();
+    this.stdinWriter = backendProcess.stdinWriterUtf8();
   }
 
   /**
@@ -85,15 +92,15 @@ public class CommandProcess {
   public CommandResult await()
       throws CommandFailureException, InterruptedException, CommandTimeoutException {
     try {
-      int exitCode = impl.backendProcess().await().exitCode();
-      String stdout = impl.stdoutCollector().waitForAllLines();
-      String stderr = impl.stderrCollector().waitForAllLines();
+      int exitCode = backendProcess.await().exitCode();
+      String stdout = stdoutCollector.waitForAllLines();
+      String stderr = stderrCollector.waitForAllLines();
       return getResult(stdout, stderr, exitCode, /* backendFailureException= */ null);
     } catch (
-        com.google.devtools.deviceinfra.shared.util.command.backend.CommandFailureException e) {
+        com.google.devtools.mobileharness.shared.util.command.backend.CommandFailureException e) {
       int exitCode = e.result().exitCode();
-      String stdout = impl.stdoutCollector().waitForAllLines();
-      String stderr = impl.stderrCollector().waitForAllLines();
+      String stdout = stdoutCollector.waitForAllLines();
+      String stderr = stderrCollector.waitForAllLines();
       return getResult(stdout, stderr, exitCode, e);
     }
   }
@@ -121,25 +128,19 @@ public class CommandProcess {
     Instant deadline = Clock.systemUTC().instant().plus(timeout);
     try {
       int exitCode =
-          impl.backendProcess()
-              .await(Duration.between(Clock.systemUTC().instant(), deadline))
-              .exitCode();
+          backendProcess.await(Duration.between(Clock.systemUTC().instant(), deadline)).exitCode();
       String stdout =
-          impl.stdoutCollector()
-              .waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
+          stdoutCollector.waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
       String stderr =
-          impl.stderrCollector()
-              .waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
+          stderrCollector.waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
       return getResult(stdout, stderr, exitCode, /* backendFailureException= */ null);
     } catch (
-        com.google.devtools.deviceinfra.shared.util.command.backend.CommandFailureException e) {
+        com.google.devtools.mobileharness.shared.util.command.backend.CommandFailureException e) {
       int exitCode = e.result().exitCode();
       String stdout =
-          impl.stdoutCollector()
-              .waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
+          stdoutCollector.waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
       String stderr =
-          impl.stderrCollector()
-              .waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
+          stderrCollector.waitForAllLines(Duration.between(Clock.systemUTC().instant(), deadline));
       return getResult(stdout, stderr, exitCode, e);
     }
   }
@@ -152,13 +153,13 @@ public class CommandProcess {
    * CommandFailureException} no matter if the command successes.
    */
   public void stop() {
-    impl.isStopped().set(true);
+    isStopped.set(true);
     kill();
   }
 
   /** Kills the command. Killing a process that has already exited has no effect. */
   public void kill() {
-    impl.backendProcess().kill();
+    backendProcess.kill();
   }
 
   /**
@@ -167,7 +168,7 @@ public class CommandProcess {
    * <p><b>NOTE</b>: If the feature is not supported, it will invoke {@link #kill()} instead.
    */
   public void killForcibly() {
-    impl.backendProcess().killForcibly();
+    backendProcess.killForcibly();
   }
 
   /**
@@ -193,9 +194,9 @@ public class CommandProcess {
 
   /** Returns whether the command process is alive or handling stdout/stderr. */
   public boolean isAlive() {
-    return impl.backendProcess().isAlive()
-        || impl.stdoutCollector().notAllSourceClosed()
-        || impl.stderrCollector().notAllSourceClosed();
+    return backendProcess.isAlive()
+        || stdoutCollector.notAllSourceClosed()
+        || stderrCollector.notAllSourceClosed();
   }
 
   /**
@@ -203,7 +204,7 @@ public class CommandProcess {
    * process has exited, writing to it is a noop.
    */
   public OutputStream stdinStream() {
-    return impl.stdinStream();
+    return stdinStream;
   }
 
   /**
@@ -211,7 +212,7 @@ public class CommandProcess {
    * encoding. If the process has exited, writing to it is a noop.
    */
   public Writer stdinWriter() {
-    return impl.stdinWriter();
+    return stdinWriter;
   }
 
   /** Returns the command of the command process */
@@ -226,7 +227,7 @@ public class CommandProcess {
    * CommandTimeoutException} no matter whether the command successes.
    */
   void timeout() {
-    impl.isTimeout().set(true);
+    isTimeout.set(true);
   }
 
   private CommandResult getResult(
@@ -234,14 +235,13 @@ public class CommandProcess {
       String stderr,
       int exitCode,
       @Nullable
-          com.google.devtools.deviceinfra.shared.util.command.backend.CommandFailureException
+          com.google.devtools.mobileharness.shared.util.command.backend.CommandFailureException
               backendFailureException)
       throws CommandFailureException, CommandTimeoutException {
     CommandResult result =
-        CommandResults.of(stdout, stderr, exitCode, impl.isTimeout().get(), impl.isStopped().get());
+        CommandResults.of(stdout, stderr, exitCode, isTimeout.get(), isStopped.get());
     if (result.isTimeout()) {
-      throw new CommandTimeoutException(
-          command(), impl.finalizedTimeout(), impl.finalizedStartTimeout().orElse(null), result);
+      throw new CommandTimeoutException(command(), finalizedTimeout, finalizedStartTimeout, result);
     } else if (result.isStopped() || backendFailureException == null) {
       return result;
     } else {
@@ -251,7 +251,7 @@ public class CommandProcess {
 
   public int getUnixPid() throws ReflectiveOperationException {
     try {
-      return (int) impl.backendProcess().processId();
+      return (int) backendProcess.processId();
     } catch (UnsupportedOperationException e) {
       throw new ReflectiveOperationException(e);
     }

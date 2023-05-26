@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.command;
 
 import com.google.common.io.ByteSink;
+import com.google.devtools.mobileharness.shared.util.command.backend.Command;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -37,16 +38,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Command output sink for receiving stdout/stderr of a command.
  *
- * <p>It can be passed to {@link
- * com.google.devtools.deviceinfra.shared.util.command.backend.Command#withStdoutTo(ByteSink)} and
- * {@link
- * com.google.devtools.deviceinfra.shared.util.command.backend.Command#withStderrTo(ByteSink)} as
- * replacements of {@code OutputSink#toProcessOut()} and {@code OutputSink#toProcessErr()}, which
- * keep the whole output of stdout/stderr in memory and are not fit for long-lasting commands.
+ * <p>It can be passed to {@link Command#withStdoutTo(ByteSink)} and {@link
+ * Command#withStderrTo(ByteSink)} as replacements of {@code OutputSink#toProcessOut()} and {@code
+ * OutputSink#toProcessErr()}, which keep the whole output of stdout/stderr in memory and are not
+ * fit for long-lasting commands.
  *
  * <p>Use {@link #getBufferedReader()} to read real-time data and use {@link #awaitResult()} to get
  * the whole result after {@link OutputStream#close()} on {@link #openStream()} and {@link
- * #closePipe()} (if need real-time data) have been invoked.
+ * #closePipe()} (if it needs real-time data) have been invoked.
  */
 class CommandOutputSink extends ByteSink {
 
@@ -109,9 +108,7 @@ class CommandOutputSink extends ByteSink {
     }
   }
 
-  /**
-   * @return whether following {@link #awaitResult()} will block
-   */
+  /** Returns whether following {@link #awaitResult()} will block. */
   boolean isClosed() {
     return compositeOutputStream.closePipeLatch.getCount() == 0L
         && compositeOutputStream.stringOutputStream.isClosed();

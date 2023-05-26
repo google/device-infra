@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.util.command;
 import static com.google.common.base.StandardSystemProperty.USER_NAME;
 
 import com.google.common.flogger.FluentLogger;
+import java.util.Objects;
 
 /** Command bug checker for checking potential bugs before starting a command. */
 class CommandBugChecker {
@@ -35,7 +36,6 @@ class CommandBugChecker {
     }
   }
 
-  // LINT.IfChange
   private boolean isRunAsRoot() {
     // Try system env "USER" first unless it is not set, fall back to "user.name" instead.
 
@@ -65,8 +65,6 @@ class CommandBugChecker {
       return userName.equals("root");
     }
 
-    return USER_NAME.value().equals("root");
+    return Objects.equals(USER_NAME.value(), "root");
   }
-  // LINT.ThenChange(//depot/google3/third_party/deviceinfra/src/java/com/google/devtools/\
-  //                 mobileharness/shared/util/system/SystemUtil.java:getUser)
 }

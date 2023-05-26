@@ -20,6 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.CommandResults;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -74,6 +75,7 @@ public class CommandHistory {
    *
    * @return the command record
    */
+  @CanIgnoreReturnValue
   CommandRecord addCommand(List<String> command) {
     CommandRecord record = CommandRecord.create(command);
     recordLock.lock();

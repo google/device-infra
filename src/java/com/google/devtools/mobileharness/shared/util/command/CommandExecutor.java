@@ -26,12 +26,12 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.devtools.deviceinfra.shared.util.command.io.LineCollector;
-import com.google.devtools.deviceinfra.shared.util.command.io.LineReader;
 import com.google.devtools.mobileharness.infra.controller.test.TestContext.TestContextRunnable;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback.Response;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecord;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecorder;
+import com.google.devtools.mobileharness.shared.util.command.io.LineCollector;
+import com.google.devtools.mobileharness.shared.util.command.io.LineReader;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -69,7 +69,7 @@ public class CommandExecutor {
 
     private ListeningExecutorService threadPool;
     private ListeningScheduledExecutorService timer;
-    private com.google.devtools.deviceinfra.shared.util.command.backend.CommandExecutor backend;
+    private com.google.devtools.mobileharness.shared.util.command.backend.CommandExecutor backend;
 
     /**
      * Sets the thread pool used by the command executor. By default, it is a shared thread pool for
@@ -102,11 +102,11 @@ public class CommandExecutor {
 
     /**
      * Sets the command execution backend used by the command executor. By default, it is {@link
-     * com.google.devtools.deviceinfra.shared.util.command.backend.Command#NATIVE_EXECUTOR}.
+     * com.google.devtools.mobileharness.shared.util.command.backend.Command#NATIVE_EXECUTOR}.
      */
     @CanIgnoreReturnValue
     public Builder setBackend(
-        com.google.devtools.deviceinfra.shared.util.command.backend.CommandExecutor backend) {
+        com.google.devtools.mobileharness.shared.util.command.backend.CommandExecutor backend) {
       this.backend = backend;
       return this;
     }
@@ -120,7 +120,7 @@ public class CommandExecutor {
       setThreadPool(LazyLoader.DEFAULT_THREAD_POOL);
       setTimer(LazyLoader.DEFAULT_TIMER);
       setBackend(
-          com.google.devtools.deviceinfra.shared.util.command.backend.Command.NATIVE_EXECUTOR);
+          com.google.devtools.mobileharness.shared.util.command.backend.Command.NATIVE_EXECUTOR);
     }
   }
 
@@ -148,7 +148,8 @@ public class CommandExecutor {
 
   private final ListeningExecutorService threadPool;
   private final ListeningScheduledExecutorService timer;
-  private final com.google.devtools.deviceinfra.shared.util.command.backend.CommandExecutor backend;
+  private final com.google.devtools.mobileharness.shared.util.command.backend.CommandExecutor
+      backend;
   private final CommandBugChecker bugChecker = new CommandBugChecker();
 
   private final Lock baseEnvironmentLock = new ReentrantLock();
@@ -170,13 +171,13 @@ public class CommandExecutor {
     this(
         LazyLoader.DEFAULT_THREAD_POOL,
         LazyLoader.DEFAULT_TIMER,
-        com.google.devtools.deviceinfra.shared.util.command.backend.Command.NATIVE_EXECUTOR);
+        com.google.devtools.mobileharness.shared.util.command.backend.Command.NATIVE_EXECUTOR);
   }
 
   private CommandExecutor(
       ListeningExecutorService threadPool,
       ListeningScheduledExecutorService timer,
-      com.google.devtools.deviceinfra.shared.util.command.backend.CommandExecutor backend) {
+      com.google.devtools.mobileharness.shared.util.command.backend.CommandExecutor backend) {
     this.threadPool = threadPool;
     this.timer = timer;
     this.backend = backend;
@@ -295,19 +296,20 @@ public class CommandExecutor {
     LineReader stdoutReader = new LineReader();
     LineReader stderrReader = new LineReader();
     LineCollector stdoutCollector =
-        new LineCollector(redirectStderr ? 2 : 1 /* numSource */, command.getNeedStdoutInResult());
+        new LineCollector(/* numSource= */ redirectStderr ? 2 : 1, command.getNeedStdoutInResult());
     LineCollector stderrCollector =
-        new LineCollector(redirectStderr ? 0 : 1 /* numSource */, command.getNeedStderrInResult());
+        new LineCollector(/* numSource= */ redirectStderr ? 0 : 1, command.getNeedStderrInResult());
 
     // Creates backend command.
-    com.google.devtools.deviceinfra.shared.util.command.backend.Command backendCommand =
+    com.google.devtools.mobileharness.shared.util.command.backend.Command backendCommand =
         getBackendCommand(command, stdoutReader, stderrReader);
 
     // Starts backend process.
-    com.google.devtools.deviceinfra.shared.util.command.backend.CommandProcess backendProcess;
+    com.google.devtools.mobileharness.shared.util.command.backend.CommandProcess backendProcess;
     try {
       backendProcess = backend.start(backendCommand);
-    } catch (com.google.devtools.deviceinfra.shared.util.command.backend.CommandStartException e) {
+    } catch (
+        com.google.devtools.mobileharness.shared.util.command.backend.CommandStartException e) {
       throw new CommandStartException("Failed to start command", e, command);
     }
 
@@ -435,9 +437,9 @@ public class CommandExecutor {
   // 'com.google.devtools.mobileharness.shared.util.command.Command' is not annotated with
   // @com.google.errorprone.annotations.Immutable
   @SuppressWarnings("Immutable")
-  private com.google.devtools.deviceinfra.shared.util.command.backend.Command getBackendCommand(
+  private com.google.devtools.mobileharness.shared.util.command.backend.Command getBackendCommand(
       Command command, ByteSink stdoutSink, ByteSink stderrSink) {
-    return com.google.devtools.deviceinfra.shared.util.command.backend.Command.command(
+    return com.google.devtools.mobileharness.shared.util.command.backend.Command.command(
             command.getExecutable(), command.getArguments().toArray(new String[0]))
         .withSuccessCondition(result -> command.getSuccessExitCodes().contains(result.exitCode()))
         .withEnvironment(SYSTEM_ENVIRONMENT)

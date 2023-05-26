@@ -33,14 +33,13 @@ java_library(
     deps = [
         ":command_results",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/command:command_process_impl",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/command/backend",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/command/io",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_context",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command/backend",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history:recorder",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command/io",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -55,7 +54,9 @@ java_library(
         "CommandResult.java",
     ],
     visibility = ["//visibility:private"],
-    deps = ["@maven//:com_google_guava_guava"],
+    deps = [
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(
@@ -71,5 +72,7 @@ java_library(
     exports = [
         ":command_result",
     ],
-    deps = [":command_result"],
+    deps = [
+        ":command_result",
+    ],
 )

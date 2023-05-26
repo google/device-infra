@@ -19,8 +19,9 @@ package com.google.devtools.mobileharness.shared.util.command;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 
 /**
- * Checked exception thrown when a command completes but its exit code is not in it success exit
- * codes ({@code 0} by default or specified by {@link Command#successExitCodes(int, int...)}).
+ * Checked exception thrown when a command completes but its exit code is not in it
+ * success-exit-codes ({@code 0} by default or specified by {@link Command#successExitCodes(int,
+ * int...)}).
  *
  * @see Command
  * @see Command#successExitCodes(int, int...)
@@ -28,7 +29,7 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 public class CommandFailureException extends CommandExecutionException {
 
   CommandFailureException(
-      com.google.devtools.deviceinfra.shared.util.command.backend.CommandFailureException
+      com.google.devtools.mobileharness.shared.util.command.backend.CommandFailureException
           backendFailureException,
       Command command,
       CommandResult commandResult) {

@@ -22,7 +22,7 @@ import javax.annotation.Nullable;
 
 /**
  * Checked exception thrown when a command completes and if it timeouts/start-timeouts no matter if
- * it successes.
+ * it succeeds.
  *
  * @see Command
  * @see Command#timeout
