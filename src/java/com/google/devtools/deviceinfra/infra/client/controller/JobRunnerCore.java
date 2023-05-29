@@ -1187,6 +1187,7 @@ public class JobRunnerCore implements Runnable {
     boolean hasNotStartedTests = false;
     int skipTestCount = 0;
     int testCount = 0;
+    String testIdForDisplayMhfeLink = "";
     for (TestInfo testInfo : jobInfo.tests().getFinalized().values()) {
       testCount++;
       switch (testInfo.status().get()) {
@@ -1289,18 +1290,22 @@ public class JobRunnerCore implements Runnable {
               break;
             case FAIL:
               hasFailTests = true;
+              testIdForDisplayMhfeLink = testInfo.locator().getId();
               break;
             case INFRA_ERROR:
               hasInfraErrorTests = true;
+              testIdForDisplayMhfeLink = testInfo.locator().getId();
               break;
             case ALLOC_FAIL:
               // UMTS does allocation as part of test
               hasAllocFailTests = true;
+              testIdForDisplayMhfeLink = testInfo.locator().getId();
               break;
             case ERROR:
             case TIMEOUT:
             case UNKNOWN:
               hasErrorTests = true;
+              testIdForDisplayMhfeLink = testInfo.locator().getId();
               break;
             default:
               throw new MobileHarnessException(
@@ -1365,7 +1370,7 @@ public class JobRunnerCore implements Runnable {
               Test.TestResult.ERROR,
               new MobileHarnessException(
                   InfraErrorId.CLIENT_JR_JOB_HAS_ALLOC_ERROR_TEST,
-                  "Job has >=1 ALLOC ERROR test(s).  You can get the detailed ALLOC ERROR info in"
+                  "Job has >=1 ALLOC ERROR test(s). You can get the detailed ALLOC ERROR info in"
                       + " the test level."));
     } else if (hasAllocFailTests) {
       jobInfo
