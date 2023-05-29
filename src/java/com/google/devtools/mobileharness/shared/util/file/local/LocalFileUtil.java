@@ -1851,6 +1851,15 @@ public class LocalFileUtil {
       Command command = Command.of(cmd).workDir(targetDirPath /*for b/28160125 */);
       return cmdExecutor.run(command);
     } catch (MobileHarnessException e) {
+      if (e.getErrorId() == BasicErrorId.COMMAND_EXEC_FAIL
+          && e.getMessage().contains("filename not matched")) {
+        throw new MobileHarnessException(
+            BasicErrorId.LOCAL_FILE_UNZIP_FILENAME_NOT_MATCHED,
+            String.format(
+                "Failed to unzip file %s from %s because the filename %s is not matched",
+                fileNamesToUnzip, zipFilePath, fileNamesToUnzip),
+            e);
+      }
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_UNZIP_PARTICULAR_FILES_ERROR,
           String.format(
