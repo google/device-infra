@@ -41,3 +41,18 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "device_action_module",
+    srcs = ["DeviceActionModule.java"],
+    deps = [
+        ":framework",
+        "//src/java/com/google/devtools/deviceaction/common/annotations",
+        "//src/java/com/google/devtools/deviceaction/common/error",
+        "//src/java/com/google/devtools/deviceaction/common/utils",
+        "//src/java/com/google/devtools/deviceaction/framework/deviceconfigs",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
