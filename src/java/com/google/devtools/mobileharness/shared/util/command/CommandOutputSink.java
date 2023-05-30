@@ -16,10 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.util.command;
 
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-
 import com.google.common.io.ByteSink;
+import com.google.devtools.mobileharness.shared.util.command.backend.Command;
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,10 +25,12 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * Command output sink for receiving stdout/stderr of a command.
  *
- * <p>It can be passed to {@code Command#withStdoutTo(ByteSink)} and {@code
+ * <p>It can be passed to {@link Command#withStdoutTo(ByteSink)} and {@link
  * Command#withStderrTo(ByteSink)} as replacements of {@code OutputSink#toProcessOut()} and {@code
  * OutputSink#toProcessErr()}, which keep the whole output of stdout/stderr in memory and are not
  * fit for long-lasting commands.
@@ -71,7 +71,8 @@ class CommandOutputSink extends ByteSink {
       bufferedReader =
           new BufferedReader(
               new InputStreamReader(
-                  new PipedInputStream(compositeOutputStream.pipedOutputStream), UTF_8));
+                  new PipedInputStream(compositeOutputStream.pipedOutputStream),
+                  StandardCharsets.UTF_8));
       if (!needReader) {
         compositeOutputStream.pipedOutputStream.close();
       }
@@ -130,7 +131,7 @@ class CommandOutputSink extends ByteSink {
    */
   String awaitResult(Duration timeout) throws InterruptedException, TimeoutException {
     Instant deadline = Clock.systemUTC().instant().plus(timeout);
-    if (!compositeOutputStream.closePipeLatch.await(timeout.toMillis(), MILLISECONDS)) {
+    if (!compositeOutputStream.closePipeLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
       throw new TimeoutException("Command process is still handling stdout/stderr");
     }
     return compositeOutputStream.stringOutputStream.await(
@@ -215,7 +216,7 @@ class CommandOutputSink extends ByteSink {
     }
 
     private String await(Duration timeout) throws InterruptedException, TimeoutException {
-      if (!closeLatch.await(timeout.toMillis(), MILLISECONDS)) {
+      if (!closeLatch.await(timeout.toMillis(), TimeUnit.MILLISECONDS)) {
         throw new TimeoutException("Command process stdout/stderr stream is still open");
       }
       return getString();
@@ -225,7 +226,7 @@ class CommandOutputSink extends ByteSink {
       if (string == null) {
         synchronized (lock) {
           if (string == null) {
-            string = new String(buf, 0, count, UTF_8);
+            string = new String(buf, 0, count, StandardCharsets.UTF_8);
           }
         }
       }

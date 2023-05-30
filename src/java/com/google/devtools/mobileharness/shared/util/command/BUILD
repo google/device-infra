@@ -33,7 +33,6 @@ java_library(
     deps = [
         ":command_results",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:thread_factory_util",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_context",
@@ -41,7 +40,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history:recorder",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/io",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:future",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "@maven//:com_google_code_findbugs_jsr305",
