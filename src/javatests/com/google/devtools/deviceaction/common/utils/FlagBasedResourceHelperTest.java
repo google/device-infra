@@ -18,9 +18,11 @@ package com.google.devtools.deviceaction.common.utils;
 
 import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import org.junit.Before;
@@ -71,5 +73,18 @@ public final class FlagBasedResourceHelperTest {
   public void checkedValue_expectedResults() {
     assertThat(FlagBasedResourceHelper.checkedValue(exist)).hasValue(exist);
     assertThat(FlagBasedResourceHelper.checkedValue(nonExist)).isEmpty();
+  }
+
+  @Test
+  public void createRandomDir_expectedResults() throws Exception {
+    File folder1 = tmpFolder.newFolder("folder1");
+    File folder2 = tmpFolder.newFolder("folder2");
+
+    Path random1 = FlagBasedResourceHelper.createRandomDir(folder1.toPath());
+    Path random2 = FlagBasedResourceHelper.createRandomDir(folder2.toPath());
+
+    assertTrue(random1.toFile().isDirectory());
+    assertTrue(random2.toFile().isDirectory());
+    assertThat(random1.getFileName()).isEqualTo(random2.getFileName());
   }
 }

@@ -24,12 +24,22 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.SecureRandom;
 import java.util.Optional;
 import java.util.function.Supplier;
 
 /** A {@link ResourceHelper} class based on command line flags. */
 public final class FlagBasedResourceHelper implements ResourceHelper {
+
+  private static final SecureRandom random = new SecureRandom();
+
+  private static final long NEXT_LONG = random.nextLong();
+
+  private static final String SESSION_NAME = "da_" + Long.toUnsignedString(NEXT_LONG);
 
   private static final FlagBasedResourceHelper INSTANCE = new FlagBasedResourceHelper();
 
@@ -42,11 +52,17 @@ public final class FlagBasedResourceHelper implements ResourceHelper {
   private static final Path JAVA_BIN =
       Path.of(Flags.instance().javaCommandPath.getNonNull()).normalize();
 
-  private static final Path TMP_FILE_DIR =
+  private static final Path TMP_FILE_ROOT =
       Path.of(Flags.instance().tmpDirRoot.getNonNull()).normalize();
 
-  private static final Path GEN_FILE_DIR =
+  private static final Supplier<Path> TMP_FILE_DIR_SUPPLIER =
+      Suppliers.memoize(() -> createRandomDir(TMP_FILE_ROOT));
+
+  private static final Path GEN_FILE_ROOT =
       Path.of(Flags.instance().daGenFileDir.getNonNull()).normalize();
+
+  private static final Supplier<Path> GEN_FILE_DIR_SUPPLIER =
+      Suppliers.memoize(() -> createRandomDir(GEN_FILE_ROOT));
 
   private static final Path BUNDLETOOL_JAR =
       Path.of(Flags.instance().daBundletool.getNonNull()).normalize();
@@ -60,57 +76,41 @@ public final class FlagBasedResourceHelper implements ResourceHelper {
     return INSTANCE;
   }
 
-  /**
-   * Gets a directory for all temporary files.
-   *
-   * <p>See {@link ResourceHelper#getTmpFileDir()}.
-   */
   @Override
   public Path getTmpFileDir() throws DeviceActionException {
-    return getExistingDir(TMP_FILE_DIR);
+    return getExistingDir(TMP_FILE_DIR_SUPPLIER.get());
   }
 
-  /**
-   * Gets a directory for all generated files.
-   *
-   * <p>See {@link ResourceHelper#getGenFileDir()}.
-   */
   @Override
   public Path getGenFileDir() throws DeviceActionException {
-    return getExistingDir(GEN_FILE_DIR);
+    return getExistingDir(GEN_FILE_DIR_SUPPLIER.get());
   }
 
-  /** Gets the java binary path. */
   @Override
   public Path getJavaBin() {
     return JAVA_BIN;
   }
 
-  /** Gets an {@link Aapt} if possible. */
   @Override
   public Optional<Aapt> getAapt() {
     return Optional.of(AAPT_SUPPLIER.get());
   }
 
-  /** Gets an {@link Adb} if possible. */
   @Override
   public Optional<Adb> getAdb() {
     return Optional.of(ADB_SUPPLIER.get());
   }
 
-  /** Gets the path to bundletool jar. */
   @Override
   public Optional<Path> getBundletoolJar() {
     return checkedValue(BUNDLETOOL_JAR);
   }
 
-  /** Gets a credential file. */
   @Override
   public Optional<Path> getCredFile() {
     return checkedValue(CRED_FILE);
   }
 
-  /** Gets a {@link CommandExecutor}. */
   @Override
   public CommandExecutor getCommandExecutor() {
     return executor;
@@ -128,6 +128,17 @@ public final class FlagBasedResourceHelper implements ResourceHelper {
   @VisibleForTesting
   static Optional<Path> checkedValue(Path path) {
     return Optional.ofNullable(path).filter(p -> p.toFile().exists());
+  }
+
+  @VisibleForTesting
+  static Path createRandomDir(Path parent) {
+    Path toCreate = parent.resolve(SESSION_NAME);
+    try {
+      Files.createDirectories(toCreate);
+      return toCreate;
+    } catch (IOException e) {
+      throw new UncheckedIOException("Failed to create the dir " + toCreate, e);
+    }
   }
 
   private static DeviceActionException dirNotFoundException(Path dirPath) {
