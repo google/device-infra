@@ -23,8 +23,10 @@ java_library(
         "CommandRecorderListener.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/deviceaction/common/utils:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
+        "//src/javatests/com/google/devtools/deviceaction/common/utils:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
@@ -43,6 +45,7 @@ java_library(
     visibility = [
         # Do not add other packages here. Please use CommandExecutor instead.
         "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
+        "//src/java/com/google/devtools/deviceaction/framework/actions:__pkg__",
     ],
     deps = [
         ":history",

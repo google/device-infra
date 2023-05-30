@@ -22,6 +22,7 @@ import com.google.devtools.deviceaction.common.annotations.GuiceAnnotations.File
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionConfig;
 import com.google.devtools.deviceaction.common.utils.AaptUtil;
+import com.google.devtools.deviceaction.common.utils.CommandHistoryWriter;
 import com.google.devtools.deviceaction.common.utils.Resolver;
 import com.google.devtools.deviceaction.common.utils.ResourceHelper;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
@@ -31,6 +32,7 @@ import com.google.devtools.deviceaction.framework.operations.ModuleInstaller;
 import com.google.devtools.deviceaction.framework.operations.ModulePusher;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.shared.util.command.history.CommandRecorder;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.File;
 import javax.inject.Inject;
@@ -45,6 +47,7 @@ public class Actions {
   private final LocalFileUtil localFileUtil;
   private final Resolver resolver;
   private final Sleeper sleeper;
+  private final CommandHistoryWriter writer;
 
   @Inject
   @SuppressWarnings("UnnecessarilyVisible")
@@ -55,13 +58,15 @@ public class Actions {
       ResourceHelper resourceHelper,
       LocalFileUtil localFileUtil,
       @FileResolver Resolver resolver,
-      Sleeper sleeper) {
+      Sleeper sleeper,
+      CommandHistoryWriter writer) {
     this.devices = devices;
     this.aaptUtil = aaptUtil;
     this.resourceHelper = resourceHelper;
     this.localFileUtil = localFileUtil;
     this.resolver = resolver;
     this.sleeper = sleeper;
+    this.writer = writer;
   }
 
   /** Creates an {@code Action} from a config. */
@@ -76,6 +81,11 @@ public class Actions {
             ErrorType.CUSTOMER_ISSUE,
             "The command " + actionConfig.cmd() + " is not recognized");
     }
+  }
+
+  /** Performs all tasks before an action. */
+  public void preAction() {
+    CommandRecorder.getInstance().addListener(writer);
   }
 
   private InstallMainline createInstallMainline(ActionConfig actionConfig)
