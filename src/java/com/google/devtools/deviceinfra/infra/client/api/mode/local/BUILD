@@ -19,9 +19,9 @@ java_library(
     name = "local",
     srcs = glob(["*.java"]),
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",

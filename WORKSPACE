@@ -83,9 +83,9 @@ android_ndk_repository(
 # gRPC
 http_archive(
     name = "io_grpc_grpc_java",
-    sha256 = "b6cfc524647cc680e66989ab22a10b66dc5de8c6d8499f91a7e633634c594c61",
-    strip_prefix = "grpc-java-1.51.1",
-    url = "https://github.com/grpc/grpc-java/archive/v1.51.1.tar.gz",
+    sha256 = "b1d2db800d3cce5a219ce75433eff3f195245902fd67b15a59e35f459c2ee90a",
+    strip_prefix = "grpc-java-1.55.1",
+    url = "https://github.com/grpc/grpc-java/archive/v1.55.1.zip",
 )
 
 load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS", "grpc_java_repositories")

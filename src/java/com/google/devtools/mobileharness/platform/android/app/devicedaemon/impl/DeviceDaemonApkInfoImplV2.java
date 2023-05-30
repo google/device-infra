@@ -54,7 +54,7 @@ public final class DeviceDaemonApkInfoImplV2 implements DeviceDaemonApkInfo {
 
     /** Resource path of the daemon v2 apk. */
     private static final String DEVICE_DAEMON_APK_RES_PATH =
-        "/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/prebuilt/v2/daemon.apk";
+        "/com/google/devtools/mobileharness/platform/android/app/binary/devicedaemon/v2/daemon.apk";
 
     @Nullable private static final String DEVICE_DAEMON_APK_PATH;
 

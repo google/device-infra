@@ -27,6 +27,7 @@ java_library(
         "//java/com/google/devtools/mobileharness/infra/client/bin/pesto:__pkg__",
         "//java/com/google/wireless/qa/mobileharness/client/bin:__pkg__",
         "//javatests/com/google/wireless/qa/mobileharness/client/bin:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/rbe:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",

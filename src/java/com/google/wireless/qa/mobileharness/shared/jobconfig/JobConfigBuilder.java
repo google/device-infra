@@ -43,7 +43,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.FileConfigList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfigOuterClass;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -356,15 +355,6 @@ public final class JobConfigBuilder {
 
   /** Validates content of protobuf. Throws MobileHarnessException if it is invalid. */
   public void validate() throws MobileHarnessException {
-    for (FieldDescriptor field : JobConfig.getDescriptor().getFields()) {
-      if (field.getOptions().getExtension(JobConfigOuterClass.missingAllowed)) {
-        continue;
-      }
-      if (!config.hasField(field)) {
-        throw new MobileHarnessException(
-            ErrorCode.JOB_CONFIG_ERROR, field.getName() + " is not initialized.");
-      }
-    }
     validateDevices();
     validateFiles();
   }

@@ -33,8 +33,8 @@ java_library(
         DEFAULT_VISIBILITY + [
             "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:__subpackages__",
             "//src/java/com/google/devtools/deviceinfra/infra/client/controller:__subpackages__",
+            "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
             "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
-            "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
             "//src/javatests/com/google/devtools/atsconsole/controller/sessionplugin:__subpackages__",
             "//src/javatests/com/google/devtools/deviceinfra/infra/client/controller:__subpackages__",
             "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",

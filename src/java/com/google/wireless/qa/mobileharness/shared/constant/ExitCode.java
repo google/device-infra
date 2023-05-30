@@ -16,7 +16,6 @@
 
 package com.google.wireless.qa.mobileharness.shared.constant;
 
-// LINT.IfChange
 /** Mobile Harness exit codes. */
 public interface ExitCode {
   /** Exit codes which are shared by different components. The code should be between 0 ~ 29. */
@@ -199,4 +198,3 @@ public interface ExitCode {
    */
   com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode toNewExitCode();
 }
-// LINT.ThenChange(//depot/google3/third_party/deviceinfra/src/java/com/google/devtools/deviceinfra/shared/util/system/constant/ExitCode.java)

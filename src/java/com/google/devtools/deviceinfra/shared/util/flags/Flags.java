@@ -239,6 +239,17 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDeviceAirplaneMode = enableDeviceAirplaneModeDefault;
 
+  private static final Flag<Boolean> enableEmulatorDetectionDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_emulator_detection",
+      description =
+          "Whether this lab server is enabled for emulator detection. When emulator detection is"
+              + " disabled, the emulator device will be considered as the real device. Do NOT set"
+              + " it to false in remote labs. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableEmulatorDetection = enableEmulatorDetectionDefault;
+
   private static final Flag<Boolean> createFailedDeviceDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

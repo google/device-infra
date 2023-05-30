@@ -16,12 +16,16 @@
 
 package com.google.devtools.mobileharness.platform.android.shared.emulator;
 
+import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 
 /** Utility about Android emulator IDs. */
 public class AndroidEmulatorIds {
 
   /** Checks whether the given device ID belongs to an emulator. */
   public static boolean isAndroidEmulator(String deviceId) {
+    if (!Flags.instance().enableEmulatorDetection.get()) {
+      return false;
+    }
     return deviceId.startsWith("emulator")
         || deviceId.startsWith("localhost")
         || deviceId.startsWith("127.0.0.1");
