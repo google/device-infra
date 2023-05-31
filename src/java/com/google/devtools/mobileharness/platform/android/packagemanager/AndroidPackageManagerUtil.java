@@ -238,22 +238,11 @@ public class AndroidPackageManagerUtil {
 
   /** An auxiliary class to process lines in stdout. */
   abstract static class LineProcessor {
-    private MobileHarnessException exception;
     private final ArrayList<Boolean> successes = new ArrayList<>();
 
     /** Returns true if there are results and all results are successes. */
     boolean success() {
       return successes.stream().reduce(Boolean::logicalAnd).orElse(false);
-    }
-
-    /** Sets possible exception. */
-    void setException(MobileHarnessException e) {
-      exception = e;
-    }
-
-    /** Gets additional exception if available. */
-    Optional<MobileHarnessException> getAdditionalException() {
-      return Optional.ofNullable(exception);
     }
 
     /** Processes a line. */
@@ -1621,18 +1610,15 @@ public class AndroidPackageManagerUtil {
           }
         };
     String[] adbCommand = new String[] {"-s", serial, "shell", ADB_SHELL_GET_MODULEINFO, "--all"};
-    processAdbResult(adbCommand, processor);
+    Optional<MobileHarnessException> exceptionOp = processAdbResult(adbCommand, processor);
 
     if (processor.success()) {
       return modules;
     }
-    throw processor
-        .getAdditionalException()
-        .orElseGet(
-            () ->
-                new MobileHarnessException(
-                    AndroidErrorId.ANDROID_PKG_MNGR_UTIL_LIST_MODULES_ERROR,
-                    "List moduleinfo not success."));
+    throw exceptionOp.orElse(
+        new MobileHarnessException(
+            AndroidErrorId.ANDROID_PKG_MNGR_UTIL_LIST_MODULES_ERROR,
+            "List moduleinfo not success."));
   }
 
   /**
@@ -1773,15 +1759,19 @@ public class AndroidPackageManagerUtil {
   /**
    * Processes adb results line by line in spite of possible execution failure.
    *
-   * <p>An execution failure is saved instead of throwing. It allows user to determine if the
+   * <p>An execution failure is returned instead of throwing. It allows users to determine if the
    * processing successes.
+   *
+   * @return possible execution exception during adb run.
    */
-  private void processAdbResult(String[] command, LineProcessor processor)
+  private Optional<MobileHarnessException> processAdbResult(
+      String[] command, LineProcessor processor)
       throws InterruptedException, MobileHarnessException {
     try {
       Command cmd = adb.getAdbCommand().args(command).onStdout(does(processor::process));
       // The command result is processed by the processor.
       CommandResult unused = adb.run(cmd);
+      return Optional.empty();
     } catch (MobileHarnessException e) {
       MobileHarnessException toThrow =
           new MobileHarnessException(
@@ -1790,7 +1780,7 @@ public class AndroidPackageManagerUtil {
         logger.atWarning().log(
             "Ignore the execution failure to process the output: %s",
             MoreThrowables.shortDebugString(e, /* maxLength= */ 0));
-        processor.setException(toThrow);
+        return Optional.of(toThrow);
       } else {
         throw toThrow;
       }
