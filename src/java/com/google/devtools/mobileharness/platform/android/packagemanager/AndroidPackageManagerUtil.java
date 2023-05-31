@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.packagemanager;
 
+import static com.google.devtools.mobileharness.shared.util.command.LineCallback.does;
 import static java.util.stream.Collectors.toCollection;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -42,7 +43,10 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysTyp
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
+import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
@@ -50,6 +54,8 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.SortedSet;
@@ -230,6 +236,35 @@ public class AndroidPackageManagerUtil {
 
   private final Sleeper sleeper;
 
+  /** An auxiliary class to process lines in stdout. */
+  abstract static class LineProcessor {
+    private MobileHarnessException exception;
+    private final ArrayList<Boolean> successes = new ArrayList<>();
+
+    /** Returns true if there are results and all results are successes. */
+    boolean success() {
+      return successes.stream().reduce(Boolean::logicalAnd).orElse(false);
+    }
+
+    /** Sets possible exception. */
+    void setException(MobileHarnessException e) {
+      exception = e;
+    }
+
+    /** Gets additional exception if available. */
+    Optional<MobileHarnessException> getAdditionalException() {
+      return Optional.ofNullable(exception);
+    }
+
+    /** Processes a line. */
+    void process(String line) {
+      successes.add(processSuccess(line));
+    }
+
+    /** Processes a line and returns if it is successful. */
+    abstract boolean processSuccess(String line);
+  }
+
   /** Creates a util for Android device operations. */
   public AndroidPackageManagerUtil() {
     this(
@@ -389,7 +424,7 @@ public class AndroidPackageManagerUtil {
                 AndroidSettings.NameSpace.GLOBAL,
                 ADB_SHELL_SETTINGS_PACKAGE_VERIFIER_INCLUDE_ADB);
         String value = adbUtil.settings(utilArgs, querySpec);
-        if ("1".equals(value) || Ascii.equalsIgnoreCase("null", value)) {
+        if (Objects.equals(value, "1") || Ascii.equalsIgnoreCase("null", value)) {
           AndroidSettings.Spec putSpec =
               AndroidSettings.Spec.create(
                   AndroidSettings.Command.PUT,
@@ -398,7 +433,7 @@ public class AndroidPackageManagerUtil {
           logger.atInfo().log("Disable package verifier option");
           adbUtil.settings(utilArgs, putSpec);
           logger.atInfo().log("Package verifier is disabled");
-        } else if ("0".equals(value)) {
+        } else if (Objects.equals(value, "0")) {
           logger.atInfo().log("Package verifier option disabled, skipped");
         } else {
           logger.atWarning().log("Failed to find package verifier option, aborted");
@@ -1556,7 +1591,7 @@ public class AndroidPackageManagerUtil {
   }
 
   /**
-   * List all module infos.
+   * Lists all module infos.
    *
    * <p>This method only works for SDK version >= Q.
    *
@@ -1566,32 +1601,38 @@ public class AndroidPackageManagerUtil {
   public SortedSet<ModuleInfo> listModuleInfos(String serial)
       throws MobileHarnessException, InterruptedException {
     SortedSet<ModuleInfo> modules = new TreeSet<>();
+    LineProcessor processor =
+        new LineProcessor() {
+          @Override
+          boolean processSuccess(String line) {
+            line = line.trim();
+            Matcher matcher;
+            if ((matcher = MODULEINFO_REGEX.matcher(line)).matches()) {
+              modules.add(
+                  ModuleInfo.builder()
+                      .setName(matcher.group("name"))
+                      .setPackageName(matcher.group("pkgName"))
+                      .build());
+              return true;
+            } else {
+              logger.atWarning().log("The line [%s] doesn't match the module info pattern", line);
+              return false;
+            }
+          }
+        };
+    String[] adbCommand = new String[] {"-s", serial, "shell", ADB_SHELL_GET_MODULEINFO, "--all"};
+    processAdbResult(adbCommand, processor);
 
-    String[] adbCommand = new String[] {ADB_SHELL_GET_MODULEINFO, "--all"};
-
-    String output;
-    try {
-      output = adb.runShellWithRetry(serial, Joiner.on(' ').skipNulls().join(adbCommand));
-      logger.atInfo().log("List modules\n%s", output);
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_PKG_MNGR_UTIL_LIST_MODULES_ERROR, e.getMessage(), e);
+    if (processor.success()) {
+      return modules;
     }
-
-    for (String line : Splitters.LINE_SPLITTER.trimResults().split(output)) {
-      Matcher matcher;
-      if ((matcher = MODULEINFO_REGEX.matcher(line)).matches()) {
-        modules.add(
-            ModuleInfo.builder()
-                .setName(matcher.group("name"))
-                .setPackageName(matcher.group("pkgName"))
-                .build());
-      } else {
-        logger.atWarning().log("The line %s doesn't match the module info pattern", line);
-      }
-    }
-
-    return modules;
+    throw processor
+        .getAdditionalException()
+        .orElseGet(
+            () ->
+                new MobileHarnessException(
+                    AndroidErrorId.ANDROID_PKG_MNGR_UTIL_LIST_MODULES_ERROR,
+                    "List moduleinfo not success."));
   }
 
   /**
@@ -1617,7 +1658,7 @@ public class AndroidPackageManagerUtil {
    */
   public void uninstallApk(UtilArgs utilArgs, String packageName)
       throws MobileHarnessException, InterruptedException {
-    if (PackageConstants.PACKAGE_NAME_GMS.equals(packageName)
+    if (Objects.equals(packageName, PackageConstants.PACKAGE_NAME_GMS)
         && getInstalledPath(utilArgs, packageName).contains("/product/priv-app")) {
       logger.atInfo().log(
           "Skip uninstalling system base GmsCore as it will cause uninstall failure.");
@@ -1726,6 +1767,33 @@ public class AndroidPackageManagerUtil {
     } else {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_ERROR_IN_SATELLITE_LAB, message, cause);
+    }
+  }
+
+  /**
+   * Processes adb results line by line in spite of possible execution failure.
+   *
+   * <p>An execution failure is saved instead of throwing. It allows user to determine if the
+   * processing successes.
+   */
+  private void processAdbResult(String[] command, LineProcessor processor)
+      throws InterruptedException, MobileHarnessException {
+    try {
+      Command cmd = adb.getAdbCommand().args(command).onStdout(does(processor::process));
+      // The command result is processed by the processor.
+      CommandResult unused = adb.run(cmd);
+    } catch (MobileHarnessException e) {
+      MobileHarnessException toThrow =
+          new MobileHarnessException(
+              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_LIST_MODULES_ERROR, e.getMessage(), e);
+      if (e.getErrorId() == AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE) {
+        logger.atWarning().log(
+            "Ignore the execution failure to process the output: %s",
+            MoreThrowables.shortDebugString(e, /* maxLength= */ 0));
+        processor.setException(toThrow);
+      } else {
+        throw toThrow;
+      }
     }
   }
 }
