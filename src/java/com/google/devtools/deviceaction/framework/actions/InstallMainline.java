@@ -23,10 +23,14 @@ import static com.google.devtools.deviceaction.common.utils.Constants.APEX_SUFFI
 import static com.google.devtools.deviceaction.common.utils.Constants.APKS_SUFFIX;
 import static com.google.devtools.deviceaction.common.utils.Constants.APK_SUFFIX;
 import static com.google.devtools.deviceaction.common.utils.Constants.ZIP_SUFFIX;
+import static java.util.Arrays.asList;
+import static java.util.Objects.isNull;
+import static java.util.Objects.requireNonNullElse;
 import static java.util.stream.Stream.concat;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -158,9 +162,9 @@ public class InstallMainline implements Action {
     ImmutableMap<String, PackageInfo> installedPackageMap = getInstalledPackageMap();
     ImmutableSet<String> installedModulePackageNames =
         device.listModules().stream().map(ModuleInfo::packageName).collect(toImmutableSet());
-
-    ImmutableMap.Builder<String, AndroidPackage> sourceBuilder = ImmutableMap.builder();
-    ImmutableMap.Builder<String, AndroidPackage> onDeviceBuilder = ImmutableMap.builder();
+    // In case of split apk, there might be multiple apk files for the same package name.
+    ImmutableListMultimap.Builder<String, AndroidPackage> sourceMultiBuilder =
+        ImmutableListMultimap.builder();
     ImmutableSet<File> sourceFiles = getPackageFiles();
     logger.atInfo().log("Get all source files %s", sourceFiles);
     validateFiles(sourceFiles);
@@ -169,17 +173,37 @@ public class InstallMainline implements Action {
       String packageName = sourcePackage.info().packageName();
       if (installedPackageMap.containsKey(packageName)
           && installedModulePackageNames.contains(packageName)) {
-        sourceBuilder.put(packageName, sourcePackage);
-        onDeviceBuilder.put(packageName, getPackageOnDevice(installedPackageMap.get(packageName)));
+        sourceMultiBuilder.put(packageName, sourcePackage);
       }
     }
-    mapToSourcePackages = sourceBuilder.buildOrThrow();
-    mapToOnDevicePackages = onDeviceBuilder.buildOrThrow();
+    mapToSourcePackages = mergeMultimap(sourceMultiBuilder.build());
+    ImmutableMap.Builder<String, AndroidPackage> onDeviceBuilder = ImmutableMap.builder();
     for (String packageName : mapToSourcePackages.keySet()) {
+      AndroidPackage onDevicePackage = getPackageOnDevice(installedPackageMap.get(packageName));
+      onDeviceBuilder.put(packageName, onDevicePackage);
       logger.atInfo().log(
           "To update the module package from %s to %s",
-          mapToOnDevicePackages.get(packageName), mapToSourcePackages.get(packageName));
+          onDevicePackage, mapToSourcePackages.get(packageName));
     }
+    mapToOnDevicePackages = onDeviceBuilder.buildOrThrow();
+  }
+
+  /**
+   * Merges all {@link AndroidPackage}s with the same package name into one {@link AndroidPackage}.
+   */
+  private static ImmutableMap<String, AndroidPackage> mergeMultimap(
+      ImmutableListMultimap<String, AndroidPackage> listMultimap) {
+    ImmutableMap.Builder<String, AndroidPackage> builder = ImmutableMap.builder();
+    for (String packageName : listMultimap.keySet()) {
+      listMultimap.get(packageName).stream()
+          .reduce(InstallMainline::mergePackages)
+          .ifPresent(v -> builder.put(packageName, v));
+    }
+    return builder.buildOrThrow();
+  }
+
+  private static AndroidPackage mergePackages(AndroidPackage first, AndroidPackage second) {
+    return first.toBuilder().addFiles(second.files()).build();
   }
 
   private ImmutableSet<File> getPackageFiles() throws DeviceActionException {
@@ -189,17 +213,25 @@ public class InstallMainline implements Action {
     } else {
       Optional<File> trainFolderOp = trainFolder();
       if (trainFolderOp.isPresent()) {
-        builder.addAll(getAllFiles(trainFolderOp.get(), APKS_SUFFIX));
+        builder.addAll(
+            getAllFiles(
+                trainFolderOp.get(),
+                filterBySuffixes(asList(APKS_SUFFIX, APEX_SUFFIX, APK_SUFFIX))));
       }
     }
     return builder.build();
   }
 
   private void validateFiles(Collection<File> toValidate) throws DeviceActionException {
-    if (allMatchFormats(toValidate, APKS_SUFFIX)) {
+    if (toValidate.isEmpty()) {
+      logger.atInfo().log("No test files.");
+      return;
+    }
+    if (allMatchFormats(toValidate, ImmutableList.of(APKS_SUFFIX))) {
       logger.atInfo().log("Test files contain only apks files.");
       return;
-    } else if (allMatchFormats(toValidate, APK_SUFFIX, APEX_SUFFIX)) {
+    }
+    if (allMatchFormats(toValidate, asList(APK_SUFFIX, APEX_SUFFIX))) {
       logger.atInfo().log("Test files contain only apk or apex files.");
       return;
     }
@@ -236,10 +268,11 @@ public class InstallMainline implements Action {
     return builder.build();
   }
 
-  private List<File> getAllFiles(File dirFile, String suffix) throws DeviceActionException {
+  private List<File> getAllFiles(File dirFile, Predicate<File> filter)
+      throws DeviceActionException {
     try {
       return localFileUtil.listFiles(
-          dirFile.getAbsolutePath(), /* recursively= */ true, f -> f.getName().endsWith(suffix));
+          dirFile.getAbsolutePath(), /* recursively= */ true, filter::test);
     } catch (MobileHarnessException e) {
       throw new DeviceActionException(
           e, "Failed to list files under %s", dirFile.getAbsolutePath());
@@ -317,12 +350,20 @@ public class InstallMainline implements Action {
     return spec.getDevKeySigned();
   }
 
-  private static boolean allMatchFormats(
-      Collection<File> files, String suffix, String... suffixes) {
-    Predicate<File> predicate = f -> f.getName().endsWith(suffix);
-    for (String otherSuffix : suffixes) {
-      predicate = predicate.or(f -> f.getName().endsWith(otherSuffix));
-    }
+  private static boolean allMatchFormats(Collection<File> files, Collection<String> suffixes) {
+    Predicate<File> predicate = filterBySuffixes(suffixes);
     return files.stream().allMatch(predicate);
+  }
+
+  private static Predicate<File> filterBySuffixes(Collection<String> suffixes) {
+    Predicate<File> predicate = null;
+    for (String suffix : suffixes) {
+      if (isNull(predicate)) {
+        predicate = f -> f.getName().endsWith(suffix);
+      } else {
+        predicate = predicate.or(f -> f.getName().endsWith(suffix));
+      }
+    }
+    return requireNonNullElse(predicate, f -> true);
   }
 }

@@ -40,6 +40,8 @@ public abstract class AndroidPackage {
     return new AutoValue_AndroidPackage.Builder().setIsSplit(false).setFiles(ImmutableList.of());
   }
 
+  public abstract Builder toBuilder();
+
   /** Builder for {@link AndroidPackage}. */
   @AutoValue.Builder
   public abstract static class Builder {

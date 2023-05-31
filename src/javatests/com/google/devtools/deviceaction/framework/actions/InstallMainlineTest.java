@@ -136,6 +136,7 @@ public final class InstallMainlineTest {
   private File apexApksFile;
   private File apexExtractFile;
   private File apkApksFile;
+  private File splitFolder;
   private File apkExtractFile1;
   private File apkExtractFile2;
   private File trainZip1;
@@ -147,7 +148,8 @@ public final class InstallMainlineTest {
     EMPTY,
     ZIP,
     APKS,
-    PACKAGE_FILE
+    PACKAGE_FILE,
+    SPLIT_FOLDER
   }
 
   @Before
@@ -159,14 +161,15 @@ public final class InstallMainlineTest {
     apexApksFile =
         tmpFolder.newFile(
             Path.of(APKS_DIR, APEX_PACKAGE).resolve(APEX_PACKAGE + ".apks").toString());
-    tmpFolder.newFolder(APEX_PACKAGE + "-Splits");
-    apexExtractFile = tmpFolder.newFile(APEX_PACKAGE + "-Splits/extract.apex");
+    splitFolder = tmpFolder.newFolder("Splits");
+    tmpFolder.newFolder("Splits/" + APEX_PACKAGE + "-Splits");
+    apexExtractFile = tmpFolder.newFile("Splits/" + APEX_PACKAGE + "-Splits/extract.apex");
     tmpFolder.newFolder(APKS_DIR, APK_PACKAGE);
     apkApksFile =
         tmpFolder.newFile(Path.of(APKS_DIR, APK_PACKAGE).resolve(APK_PACKAGE + ".apks").toString());
-    tmpFolder.newFolder(APK_PACKAGE + "-Splits");
-    apkExtractFile1 = tmpFolder.newFile(APK_PACKAGE + "-Splits/extract-base.apk");
-    apkExtractFile2 = tmpFolder.newFile(APK_PACKAGE + "-Splits/extract-aux.apk");
+    tmpFolder.newFolder("Splits/" + APK_PACKAGE + "-Splits/");
+    apkExtractFile1 = tmpFolder.newFile("Splits/" + APK_PACKAGE + "-Splits/extract-base.apk");
+    apkExtractFile2 = tmpFolder.newFile("Splits/" + APK_PACKAGE + "-Splits/extract-aux.apk");
     tmpFolder.newFolder("train-dir");
     trainZip1 = tmpFolder.newFile("train-dir/train1.zip");
     trainZip2 = tmpFolder.newFile("train-dir/train2.zip");
@@ -188,6 +191,7 @@ public final class InstallMainlineTest {
     setUpAapt(apexExtractFile);
     setUpAapt(apkFile);
     setUpAapt(apkExtractFile1);
+    setUpAapt(apkExtractFile2);
   }
 
   @Test
@@ -263,7 +267,7 @@ public final class InstallMainlineTest {
 
   @Test
   public void perform_installPackages_success(
-      @TestParameter({"APKS", "PACKAGE_FILE"}) ModuleType type,
+      @TestParameter({"APKS", "PACKAGE_FILE", "SPLIT_FOLDER"}) ModuleType type,
       @TestParameter boolean devKey,
       @TestParameter boolean cleanup,
       @TestParameter boolean enableRollback)
@@ -300,15 +304,22 @@ public final class InstallMainlineTest {
     assertThat(booleanArgumentCaptor.getValue()).isEqualTo(enableRollback);
     List<AndroidPackage> androidPackages = new ArrayList<>(collectionArgumentCaptor.getValue());
     assertThat(androidPackages).hasSize(2);
-    if (type == ModuleType.PACKAGE_FILE) {
-      assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
-          .containsExactly(apexFile, apkFile);
-    } else {
-      assertThat(androidPackages)
-          .comparingElementsUsing(
-              Correspondence.<AndroidPackage, File>transforming(
-                  ap -> ap.apksFile().orElseThrow(), "has apks file"))
-          .containsExactly(apexApksFile, apkApksFile);
+    switch (type) {
+      case PACKAGE_FILE:
+        assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
+            .containsExactly(apexFile, apkFile);
+        break;
+      case SPLIT_FOLDER:
+        assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
+            .containsExactly(apexExtractFile, apkExtractFile1, apkExtractFile2);
+        break;
+      default:
+        assertThat(androidPackages)
+            .comparingElementsUsing(
+                Correspondence.<AndroidPackage, File>transforming(
+                    ap -> ap.apksFile().orElseThrow(), "has apks file"))
+            .containsExactly(apexApksFile, apkApksFile);
+        break;
     }
     if (devKey) {
       verify(mockPusher).pushModules(sourceMapCaptor.capture(), targetMapCaptor.capture());
@@ -335,7 +346,7 @@ public final class InstallMainlineTest {
 
   @Test
   public void perform_installPackages_fail(
-      @TestParameter({"APKS", "PACKAGE_FILE"}) ModuleType type,
+      @TestParameter({"APKS", "PACKAGE_FILE", "SPLIT_FOLDER"}) ModuleType type,
       @TestParameter boolean cleanup,
       @TestParameter boolean enableRollback)
       throws Exception {
@@ -356,7 +367,7 @@ public final class InstallMainlineTest {
 
   @Test
   public void perform_installPackages_throwException(
-      @TestParameter({"APKS", "PACKAGE_FILE"}) ModuleType type,
+      @TestParameter({"APKS", "PACKAGE_FILE", "SPLIT_FOLDER"}) ModuleType type,
       @TestParameter boolean devKey,
       @TestParameter boolean cleanup,
       @TestParameter boolean enableRollback)
@@ -426,6 +437,9 @@ public final class InstallMainlineTest {
         break;
       case PACKAGE_FILE:
         filesBuilder.putAll("mainline_modules", apexFile, apkFile);
+        break;
+      case SPLIT_FOLDER:
+        filesBuilder.putAll("train_folder", splitFolder);
         break;
       default:
         break;
