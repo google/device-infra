@@ -41,7 +41,6 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileFilter;
@@ -57,6 +56,7 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
@@ -1262,6 +1262,20 @@ public class LocalFileUtil {
     }
   }
 
+  /** See {@link Files#newBufferedWriter(Path, OpenOption...)}. */
+  public BufferedWriter newBufferedWriter(Path filePath, OpenOption... options)
+      throws MobileHarnessException {
+    prepareParentDir(filePath);
+    try {
+      return Files.newBufferedWriter(filePath, options);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_FILE_NEW_BUFFERED_WRITER_ERROR,
+          String.format("Failed to create new buffered writer on file %s", filePath),
+          e);
+    }
+  }
+
   /**
    * Makes sure the directory exists. If not, will create the directory (and all nonexistent parent
    * directories).
@@ -1691,7 +1705,7 @@ public class LocalFileUtil {
     // Writes the content to the file.
     try (BufferedWriter out =
         Files.newBufferedWriter(
-            Paths.get(filePath),
+            Path.of(filePath),
             UTF_8,
             append
                 ? new StandardOpenOption[] {CREATE, APPEND}
@@ -1710,18 +1724,19 @@ public class LocalFileUtil {
    * Writes the given bytes into the given file. If the parent folder or the file does not exist,
    * will create them.
    *
-   * @param append boolean if <code>true</code>, then data will be written to the end of the file
-   *     rather than the beginning
-   * @throws MobileHarnessException if the named file exists but is a directory rather than a
-   *     regular file, does not exist but cannot be created, or cannot be opened for any other
-   *     reason, or an I/O error occurs while writing or closing
+   * @param append if <code>true</code>, then data will be written to the end of the file rather
+   *     than the beginning
+   * @return the length of the given bytes
+   * @throws MobileHarnessException if the file exists but is a directory rather than a regular
+   *     file, or does not exist but cannot be created, or cannot be opened for any other reasons,
+   *     or an I/O error occurs while writing or closing
    */
-  public long writeToFile(String filePath, byte[] input, boolean append)
+  public long writeToFile(Path filePath, byte[] input, boolean append)
       throws MobileHarnessException {
     prepareParentDir(filePath);
     try {
       Files.write(
-          Paths.get(filePath),
+          filePath,
           input,
           append
               ? new StandardOpenOption[] {CREATE, APPEND}
@@ -1736,15 +1751,45 @@ public class LocalFileUtil {
   }
 
   /**
-   * Writes the byte array to the given file. If the file does not exist, will create the file.
+   * Writes the given bytes into the given file. If the parent folder or the file does not exist,
+   * will create them.
    *
-   * @return the size of the file
-   * @throws MobileHarnessException if the named file exists but is a directory rather than a
-   *     regular file, does not exist but cannot be created, or cannot be opened for any other
-   *     reason, or an I/O error occurs while writing or closing
+   * @param append if <code>true</code>, then data will be written to the end of the file rather
+   *     than the beginning
+   * @return the length of the given bytes
+   * @throws MobileHarnessException if the file exists but is a directory rather than a regular
+   *     file, or does not exist but cannot be created, or cannot be opened for any other reasons,
+   *     or an I/O error occurs while writing or closing
+   */
+  public long writeToFile(String filePath, byte[] input, boolean append)
+      throws MobileHarnessException {
+    return writeToFile(Path.of(filePath), input, append);
+  }
+
+  /**
+   * Writes the given bytes into the given file. If the parent folder or the file does not exist,
+   * will create them.
+   *
+   * @return the length of the given bytes
+   * @throws MobileHarnessException if the file exists but is a directory rather than a regular
+   *     file, or does not exist but cannot be created, or cannot be opened for any other reasons,
+   *     or an I/O error occurs while writing or closing
+   */
+  public long writeToFile(Path filePath, byte[] input) throws MobileHarnessException {
+    return writeToFile(filePath, input, /* append= */ false);
+  }
+
+  /**
+   * Writes the given bytes into the given file. If the parent folder or the file does not exist,
+   * will create them.
+   *
+   * @return the length of the given bytes
+   * @throws MobileHarnessException if the file exists but is a directory rather than a regular
+   *     file, or does not exist but cannot be created, or cannot be opened for any other reasons,
+   *     or an I/O error occurs while writing or closing
    */
   public long writeToFile(String filePath, byte[] input) throws MobileHarnessException {
-    return writeToFile(filePath, new ByteArrayInputStream(input));
+    return writeToFile(Path.of(filePath), input);
   }
 
   /**
