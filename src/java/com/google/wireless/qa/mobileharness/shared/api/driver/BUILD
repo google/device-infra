@@ -33,6 +33,7 @@ java_library(
         "XtsTradefedTest.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/atsconsole/controller/olcserver:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
@@ -50,6 +51,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:base",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:composite_device_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",

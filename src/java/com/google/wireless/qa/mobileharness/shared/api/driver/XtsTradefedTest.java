@@ -46,6 +46,7 @@ import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -118,6 +119,7 @@ public class XtsTradefedTest extends BaseDriver
     XtsTradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
     XtsType xtsType = XtsType.valueOf(Ascii.toUpperCase(spec.getXtsType()));
 
+    CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     Path tmpXtsRootDir = null;
     try {
       tmpXtsRootDir = prepareXtsWorkDir(xtsType);
@@ -137,6 +139,7 @@ public class XtsTradefedTest extends BaseDriver
         testInfo.resultWithCause().setPass();
       }
     } finally {
+      CompositeDeviceUtil.uncacheTestbed(getDevice());
       postTest(tmpXtsRootDir, testInfo, xtsType);
     }
   }
