@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
@@ -1775,6 +1776,7 @@ public class LocalFileUtil {
    *     file, or does not exist but cannot be created, or cannot be opened for any other reasons,
    *     or an I/O error occurs while writing or closing
    */
+  @CanIgnoreReturnValue
   public long writeToFile(Path filePath, byte[] input) throws MobileHarnessException {
     return writeToFile(filePath, input, /* append= */ false);
   }
