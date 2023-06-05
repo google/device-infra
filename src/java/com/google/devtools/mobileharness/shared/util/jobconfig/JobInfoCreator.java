@@ -540,6 +540,8 @@ public final class JobInfoCreator {
                             ? subDeviceSpec.getDimensions()
                             : getDeviceDimensions(deviceSpecFromFile)));
           }
+          logger.atInfo().log(
+              "Device list update from target_device as: %s", deviceListBuilder.build());
           return jobConfig.toBuilder().setDevice(deviceListBuilder).build();
         }
       }
