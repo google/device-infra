@@ -17,6 +17,9 @@
 package com.google.devtools.mobileharness.infra.controller.test.manager;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.flogger.LazyArgs.lazy;
+import static java.util.Arrays.stream;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
@@ -42,7 +45,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -292,15 +294,19 @@ public class TestManager<T extends TestRunner> implements Runnable {
 
   @VisibleForTesting
   void logAllStackTraces() {
+    logger.atWarning().atMostEvery(5, MINUTES).log("%s", lazy(TestManager::formatAllStackTraces));
+  }
+
+  private static String formatAllStackTraces() {
     StringBuilder content = new StringBuilder("Current stack traces:\n");
     for (Map.Entry<Thread, StackTraceElement[]> threadAndStack :
         Thread.getAllStackTraces().entrySet()) {
-      content.append("Thread: " + threadAndStack.getKey() + "\n");
-      Arrays.stream(threadAndStack.getValue())
+      content.append("Thread: ").append(threadAndStack.getKey()).append("\n");
+      stream(threadAndStack.getValue())
           .forEach(
               stackTraceElement -> content.append("\tat ").append(stackTraceElement).append('\n'));
     }
-    logger.atWarning().log("%s", content);
+    return content.toString();
   }
 
   private int killTimeoutTestRunner(TestRunner runner) throws InterruptedException {
