@@ -172,9 +172,7 @@ public class AndroidSystemSettingUtil {
   private static final String ANDROID_CONTENT_PROVIDER_SETTING_SECURE = "content://settings/secure";
 
   /** Database file path for gservices on device. */
-  @VisibleForTesting
-  static final String ANDROID_GSERVICE_DB_PATH =
-      "/data/data/com.google.android.gsf/databases/gservices.db";
+  @VisibleForTesting static final String ANDROID_GSERVICE_DB_PATH = "/data/*/*/*/gservices.db";
 
   /** Database file path for locksettings on device. */
   @VisibleForTesting
