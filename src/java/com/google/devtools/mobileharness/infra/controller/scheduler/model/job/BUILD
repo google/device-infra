@@ -17,6 +17,7 @@
 #   Job/Test data models for Mobile Harness scheduler.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_pkg",
     ],

@@ -17,6 +17,7 @@
 #   Job/Test result utility.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra:__subpackages__",
     ],

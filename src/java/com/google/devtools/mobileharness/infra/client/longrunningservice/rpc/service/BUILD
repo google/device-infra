@@ -14,6 +14,7 @@
 #
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],

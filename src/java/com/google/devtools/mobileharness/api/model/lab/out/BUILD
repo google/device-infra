@@ -16,6 +16,7 @@
 # Description:
 #   Output data models for Mobile Harness labs and devices.
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/api/model:__subpackages__",
     ],

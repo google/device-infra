@@ -18,6 +18,7 @@
 #   balance the device resource between different jobs.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
     ],

@@ -19,6 +19,7 @@
 load("@rules_android_sdk//android:rules.bzl", "android_library")
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/platform/android/app/binary:__subpackages__",
     ],

@@ -17,6 +17,7 @@
 #   Allocation controllers for Mobile Harness Client API.
 
 package(
+    default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
