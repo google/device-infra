@@ -38,5 +38,7 @@ java_library(
         "//src/java/com/google/devtools/deviceaction/common/schemas",
         "//src/java/com/google/devtools/deviceaction/common/utils",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )

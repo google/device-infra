@@ -22,7 +22,7 @@ import com.google.devtools.deviceaction.framework.proto.FileSpec;
 import java.io.File;
 
 /** A trivial {@link SimpleResolver} for local files. */
-public final class LocalFileResolver extends SimpleResolver {
+final class LocalFileResolver extends SimpleResolver {
   private static final LocalFileResolver INSTANCE = new LocalFileResolver();
 
   private LocalFileResolver() {}

@@ -31,8 +31,6 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidPro
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /** A utility class for {@link Device}. */
 public class Devices {
@@ -48,9 +46,6 @@ public class Devices {
   private final BundletoolUtil bundletoolUtil;
   private final Sleeper sleeper;
 
-  @Inject
-  @SuppressWarnings("UnnecessarilyVisible")
-  @Singleton
   public Devices(
       AndroidAdbUtil androidAdbUtil,
       AndroidFileUtil androidFileUtil,

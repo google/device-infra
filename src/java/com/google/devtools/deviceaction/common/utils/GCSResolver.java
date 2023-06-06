@@ -40,7 +40,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** A {@link SimpleResolver} to resolve GCS objects. */
-public class GCSResolver extends SimpleResolver {
+class GCSResolver extends SimpleResolver {
 
   private static final int MAX_RESULTS_UNLIMITED = -1;
 

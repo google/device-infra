@@ -33,7 +33,7 @@ import java.util.Optional;
 import java.util.function.Supplier;
 
 /** A {@link ResourceHelper} class based on command line flags. */
-public final class FlagBasedResourceHelper implements ResourceHelper {
+final class FlagBasedResourceHelper implements ResourceHelper {
 
   private static final SecureRandom random = new SecureRandom();
 

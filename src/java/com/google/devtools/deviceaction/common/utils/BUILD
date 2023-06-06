@@ -23,10 +23,25 @@ package(
     default_visibility = DEFAULT_VISIBILITY,
 )
 
-LIB_SRCS = glob(
-    ["*.java"],
-    exclude = ["*Main.java"],
-)
+LIB_SRCS = [
+    "AaptUtil.java",
+    "BundletoolUtil.java",
+    "CommandHistoryWriter.java",
+    "CompositeResolver.java",
+    "Conditions.java",
+    "Constants.java",
+    "FlagBasedResourceHelper.java",
+    "FlagParser.java",
+    "GCSResolver.java",
+    "GCSUtil.java",
+    "LazyCached.java",
+    "LocalFileResolver.java",
+    "ProtoHelper.java",
+    "Resolver.java",
+    "ResourceHelper.java",
+    "SimpleResolver.java",
+    "TimeUtils.java",
+]
 
 java_library(
     name = "utils",
@@ -58,6 +73,19 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_http_client_google_http_client",
         "@maven//:com_google_http_client_google_http_client_gson",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "module",
+    srcs = ["ResourceModule.java"],
+    deps = [
+        ":utils",
+        "//src/java/com/google/devtools/deviceaction/common/annotations",
+        "//src/java/com/google/devtools/deviceaction/common/error",
+        "//src/java/com/google/devtools/deviceaction/common/schemas",
+        "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

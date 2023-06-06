@@ -35,8 +35,6 @@ import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecorder;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.File;
-import javax.inject.Inject;
-import javax.inject.Singleton;
 
 /** A utility class for {@code Action}. */
 public class Actions {
@@ -49,9 +47,6 @@ public class Actions {
   private final Sleeper sleeper;
   private final CommandHistoryWriter writer;
 
-  @Inject
-  @SuppressWarnings("UnnecessarilyVisible")
-  @Singleton
   public Actions(
       Devices devices,
       AaptUtil aaptUtil,

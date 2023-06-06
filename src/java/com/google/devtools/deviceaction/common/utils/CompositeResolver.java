@@ -31,7 +31,7 @@ import java.util.List;
 import java.util.Optional;
 
 /** A {@link Resolver} that applies different {@code SimpleResolver}s to resolve different files. */
-public class CompositeResolver implements Resolver {
+class CompositeResolver implements Resolver {
 
   private final ImmutableList<SimpleResolver> resolvers;
 

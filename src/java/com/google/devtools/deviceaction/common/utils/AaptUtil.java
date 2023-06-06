@@ -31,8 +31,7 @@ public class AaptUtil {
   private final Aapt aapt;
 
   @Inject
-  @SuppressWarnings("UnnecessarilyVisible")
-  public AaptUtil(ResourceHelper resourceHelper) throws DeviceActionException {
+  AaptUtil(ResourceHelper resourceHelper) throws DeviceActionException {
     this(
         resourceHelper
             .getAapt()

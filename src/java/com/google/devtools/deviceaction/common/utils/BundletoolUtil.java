@@ -86,9 +86,8 @@ public class BundletoolUtil {
   private final CommandExecutor executor;
   private final LocalFileUtil localFileUtil;
 
-  @SuppressWarnings("UnnecessarilyVisible")
   @Inject
-  public BundletoolUtil(ResourceHelper resourceHelper, LocalFileUtil localFileUtil)
+  BundletoolUtil(ResourceHelper resourceHelper, LocalFileUtil localFileUtil)
       throws DeviceActionException {
     this(
         resourceHelper.getBundletoolJar(),

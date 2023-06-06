@@ -54,7 +54,7 @@ import javax.annotation.Nullable;
  *
  * <p>TODO: b/281809849 - Add unit tests for the class.
  */
-public class GCSUtil {
+class GCSUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final ImmutableSet<String> SCOPES =

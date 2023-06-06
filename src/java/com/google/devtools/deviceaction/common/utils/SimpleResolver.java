@@ -23,7 +23,7 @@ import java.io.File;
 import java.util.List;
 
 /** A {@link Resolver} that only applies to a particular type of file spec. */
-public abstract class SimpleResolver implements Resolver {
+abstract class SimpleResolver implements Resolver {
 
   /** Checks if the resolver applies to the file spec. */
   abstract boolean appliesTo(FileSpec fileSpec);

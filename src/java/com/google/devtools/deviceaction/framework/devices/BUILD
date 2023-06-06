@@ -45,7 +45,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
         "@maven//:org_apache_commons_commons_lang3",
     ],
 )

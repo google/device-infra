@@ -44,6 +44,5 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history:recorder",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
     ],
 )
