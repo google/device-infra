@@ -88,6 +88,8 @@ public class ModulePusher implements Operation {
   public void pushModules(
       Map<String, AndroidPackage> source, Map<String, AndroidPackage> packagesOnDevice)
       throws DeviceActionException, InterruptedException {
+    Conditions.checkState(
+        device.isUserdebug(), ErrorType.CUSTOMER_ISSUE, "The device should be of userdebug type.");
     setupDevice();
 
     Path tmpDirOnHost = createRenameDir(resourceHelper.getTmpFileDir());

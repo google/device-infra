@@ -41,7 +41,8 @@ public final class ModuleCleanerTest {
   private ModuleCleaner moduleCleaner;
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
+    when(mockDevice.isUserdebug()).thenReturn(true);
     moduleCleaner = new ModuleCleaner(mockDevice);
   }
 

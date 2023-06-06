@@ -17,7 +17,9 @@
 package com.google.devtools.deviceaction.framework.operations;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
+import com.google.devtools.deviceaction.common.utils.Conditions;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
 
 /** An {@link Operation} to clean up staged sessions. */
@@ -33,6 +35,8 @@ public class ModuleCleaner implements Operation {
 
   /** Cleans up all staged or activated sessions. */
   public void cleanUpSessions() throws DeviceActionException, InterruptedException {
+    Conditions.checkState(
+        device.isUserdebug(), ErrorType.CUSTOMER_ISSUE, "The device should be userdebug!");
     boolean reboot = false;
     for (String dir : SESSION_DIRS) {
       if (!device.listFiles(dir).isEmpty()) {

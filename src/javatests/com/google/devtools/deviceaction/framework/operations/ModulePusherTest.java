@@ -102,6 +102,7 @@ public final class ModulePusherTest {
     fakeHdpiApk = tmpFolder.newFile("bundletool/split/hdpi-arm64.apk");
     File fakeApks = tmpFolder.newFile("bundletool/arm64.apks");
     when(mockHelper.getTmpFileDir()).thenReturn(tmpDir.toPath());
+    when(mockDevice.isUserdebug()).thenReturn(true);
     modulePusher = new ModulePusher(mockDevice, new LocalFileUtil(), mockHelper);
     sourceMap = getPackageMap(fakeApex, fakeApk, fakeApks, fakeBaseApk, fakeHdpiApk);
     onDeviceMap =

@@ -74,6 +74,8 @@ public class AndroidPhone implements Device {
   private static final String SUCCESS_SIGN = "Success";
   private static final String GOOGLE = "google";
   private static final String DEV_KEYS = "dev-keys";
+  private static final String EXECUTION_ERROR = "EXECUTION_ERROR";
+  private static final String USERDEBUG = "userdebug";
 
   @VisibleForTesting static final Duration DEFAULT_DEVICE_READY_TIMEOUT = Duration.ofMinutes(5);
   private final AndroidAdbUtil androidAdbUtil;
@@ -174,12 +176,11 @@ public class AndroidPhone implements Device {
   }
 
   public int getSdkVersion() throws DeviceActionException {
-    try {
-      return Integer.parseInt(propertyCache.get(AndroidProperty.SDK_VERSION));
-    } catch (ExecutionException e) {
-      throw new DeviceActionException(
-          "EXECUTION_ERROR", ErrorType.INFRA_ISSUE, "Failed to get cache property.", e);
-    }
+    return Integer.parseInt(getProperty(AndroidProperty.SDK_VERSION));
+  }
+
+  public boolean isUserdebug() throws DeviceActionException {
+    return Ascii.equalsIgnoreCase(getProperty(AndroidProperty.BUILD_TYPE), USERDEBUG);
   }
 
   /**
@@ -340,13 +341,8 @@ public class AndroidPhone implements Device {
   }
 
   public boolean devKeySigned() throws DeviceActionException {
-    try {
-      return Ascii.equalsIgnoreCase(brand(), GOOGLE)
-          && Ascii.equalsIgnoreCase(propertyCache.get(AndroidProperty.SIGN), DEV_KEYS);
-    } catch (ExecutionException e) {
-      throw new DeviceActionException(
-          "EXECUTION_ERROR", ErrorType.INFRA_ISSUE, "Failed to get cache property.", e);
-    }
+    return Ascii.equalsIgnoreCase(brand(), GOOGLE)
+        && Ascii.equalsIgnoreCase(getProperty(AndroidProperty.SIGN), DEV_KEYS);
   }
 
   @SpecValue(field = "brand")
@@ -420,5 +416,14 @@ public class AndroidPhone implements Device {
       throw new DeviceActionException("INSTALLATION_ERROR", ErrorType.UNCLASSIFIED, output);
     }
     return output.contains(REBOOT_SIGN);
+  }
+
+  private String getProperty(AndroidProperty property) throws DeviceActionException {
+    try {
+      return propertyCache.get(property);
+    } catch (ExecutionException e) {
+      throw new DeviceActionException(
+          EXECUTION_ERROR, ErrorType.INFRA_ISSUE, "Failed to get cache property.", e);
+    }
   }
 }

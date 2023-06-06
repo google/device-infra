@@ -247,6 +247,28 @@ public class AndroidPhoneTest {
   }
 
   @Test
+  public void isUserdebug_returnFalse() throws Exception {
+    when(mockAdbUtil.getProperty(UUID, AndroidProperty.BUILD_TYPE)).thenReturn("user");
+
+    assertFalse(device.isUserdebug());
+  }
+
+  @Test
+  public void isUserdebug_returnTrue() throws Exception {
+    when(mockAdbUtil.getProperty(UUID, AndroidProperty.BUILD_TYPE)).thenReturn("userdebug");
+
+    assertTrue(device.isUserdebug());
+  }
+
+  @Test
+  public void isUserdebug_catchMobileHarnessException_throwException() throws Exception {
+    when(mockAdbUtil.getProperty(UUID, AndroidProperty.BUILD_TYPE))
+        .thenThrow(fakeMobileHarnessException());
+
+    assertThrows(DeviceActionException.class, () -> device.isUserdebug());
+  }
+
+  @Test
   public void removeFiles_success() throws Exception {
     device.removeFiles("/data/system/package_cache/");
 
