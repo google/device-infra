@@ -21,7 +21,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
-import com.google.devtools.mobileharness.api.model.proto.Lab.HostDimensions;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.protobuf.Any;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
@@ -132,7 +132,7 @@ public class DummyApiConfig extends Observable implements ApiConfig {
   }
 
   @Override
-  public HostDimensions getHostDimensions() {
-    return HostDimensions.getDefaultInstance();
+  public HostProperties getHostProperties() {
+    return HostProperties.getDefaultInstance();
   }
 }
