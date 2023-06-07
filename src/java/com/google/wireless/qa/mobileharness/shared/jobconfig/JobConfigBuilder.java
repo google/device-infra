@@ -194,7 +194,7 @@ public final class JobConfigBuilder {
         }
         configJson.add("device", createDeviceList(deviceType, dimensionsObject, decoratorsArray));
         json = configJson.toString();
-      } else if (deviceObject == null && hasDecorators(decoratorsArray)) {
+      } else if (deviceObject == null) {
         if (hasDimensions(dimensionsObject)) {
           throw new MobileHarnessException(
               ErrorCode.JOB_CONFIG_ERROR,
