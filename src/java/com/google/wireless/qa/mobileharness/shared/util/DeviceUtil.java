@@ -23,7 +23,6 @@ import com.google.common.net.HostAndPort;
 import com.google.common.net.InetAddresses;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
-import com.google.errorprone.annotations.InlineMe;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceScheduleUnit;
 import java.util.Collection;
@@ -32,23 +31,6 @@ import java.util.Map.Entry;
 
 /** Utilities related to devices. */
 public final class DeviceUtil {
-
-  /**
-   * Returns whether the lab server should actively manage and recover devices from bad state, or
-   * just let a test fail. True for traditional deployments, false for labs where some other
-   * component manages and recovers the devices, e.g. http://go/m&mlabs.
-   *
-   * <p>In Shared Lab, this method returns false. In Satellite Lab, this method returns true.
-   *
-   * @deprecated Use "{@code !}{@link #inSharedLab()}" instead (don't forget to negate the value).
-   */
-  @Deprecated
-  @InlineMe(
-      replacement = "!DeviceUtil.inSharedLab()",
-      imports = {"com.google.wireless.qa.mobileharness.shared.util.DeviceUtil"})
-  public static boolean shouldManageDevices() {
-    return !inSharedLab();
-  }
 
   /**
    * Returns whether the lab server is in Shared Lab.
