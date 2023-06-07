@@ -26,12 +26,17 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.controller.olcserver.AtsSessionStub;
+import com.google.devtools.atsconsole.controller.olcserver.ServerLogPrinter;
 import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.sessionplugin.PluginOutputPrinter.PrintPluginOutputFutureCallback;
 import com.google.devtools.atsconsole.result.xml.MoblyResultInfo;
 import com.google.devtools.atsconsole.result.xml.XmlResultFormatter;
@@ -107,7 +112,7 @@ final class RunCommand implements Callable<Integer> {
       names = {"-s", "--serial"},
       paramLabel = "deviceID",
       description = "Run test on the specific device.")
-  private String serialOpt;
+  private List<String> serialOpt;
 
   @Option(
       names = {"--serials"},
@@ -120,6 +125,16 @@ final class RunCommand implements Callable<Integer> {
               + " them to the test infra.")
   @SuppressWarnings("PreferredInterfaceType")
   private List<String> androidDeviceSerialList;
+
+  @Option(
+      names = {"--shard-count"},
+      description =
+          "Shard a CTS run into given number of independent chunks, to run on multiple devices in"
+              + " parallel.")
+  private int shardCount;
+
+  @Parameters(index = "1..*", description = "Extra run command args.")
+  private List<String> extraRunCmdArgs;
 
   @Spec private CommandSpec spec;
 
@@ -138,6 +153,8 @@ final class RunCommand implements Callable<Integer> {
   private final MoblyAospTestSetupUtil moblyAospTestSetupUtil;
 
   private final ServerPreparer serverPreparer;
+  private final ServerLogPrinter serverLogPrinter;
+  private final ListeningExecutorService executorService;
   private final AtsSessionStub atsSessionStub;
 
   @Inject
@@ -152,6 +169,8 @@ final class RunCommand implements Callable<Integer> {
       XmlResultUtil xmlResultUtil,
       MoblyAospTestSetupUtil moblyAospTestSetupUtil,
       ServerPreparer serverPreparer,
+      ServerLogPrinter serverLogPrinter,
+      ListeningExecutorService executorService,
       AtsSessionStub atsSessionStub) {
     this.consoleInfo = consoleInfo;
     this.commandExecutor = commandExecutor;
@@ -163,17 +182,18 @@ final class RunCommand implements Callable<Integer> {
     this.xmlResultUtil = xmlResultUtil;
     this.moblyAospTestSetupUtil = moblyAospTestSetupUtil;
     this.serverPreparer = serverPreparer;
+    this.serverLogPrinter = serverLogPrinter;
+    this.executorService = executorService;
     this.atsSessionStub = atsSessionStub;
   }
 
   @Override
   public Integer call() throws MobileHarnessException, InterruptedException, IOException {
     try {
-      validateConfig();
-
       if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
         return runInM1();
       } else {
+        validateConfig();
         return runInM0();
       }
     } finally {
@@ -259,11 +279,8 @@ final class RunCommand implements Callable<Integer> {
     serverPreparer.prepareOlcServer();
 
     ImmutableList<String> deviceSerials =
-        serialOpt != null
-            ? ImmutableList.of(serialOpt)
-            : (androidDeviceSerialList != null
-                ? ImmutableList.copyOf(androidDeviceSerialList)
-                : ImmutableList.of());
+        serialOpt != null ? ImmutableList.copyOf(serialOpt) : ImmutableList.of();
+
     ImmutableList<String> modules =
         moduleTestOptionsGroups != null
             ? moduleTestOptionsGroups.stream()
@@ -271,19 +288,31 @@ final class RunCommand implements Callable<Integer> {
                 .collect(toImmutableList())
             : ImmutableList.of();
 
+    ImmutableList<String> extraArgs =
+        extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
+
     // Asynchronously runs the session.
-    addCallback(
+    SessionPluginProto.RunCommand.Builder runCommand =
+        SessionPluginProto.RunCommand.newBuilder()
+            .setTestPlan(config)
+            .setXtsRootDir(consoleInfo.getXtsRootDirectory().orElse(""))
+            .addAllDeviceSerial(deviceSerials)
+            .addAllModuleName(modules)
+            .addAllExtraArg(extraArgs);
+    if (shardCount > 0) {
+      runCommand.setShardCount(shardCount);
+    }
+
+    serverLogPrinter.enable(true);
+    ListenableFuture<AtsSessionPluginOutput> atsRunSessionFuture =
         atsSessionStub.runSession(
-            "run_command",
-            AtsSessionPluginConfig.newBuilder()
-                .setRunCommand(
-                    SessionPluginProto.RunCommand.newBuilder()
-                        .setTestPlan(config)
-                        .addAllDeviceSerial(deviceSerials)
-                        .addAllModules(modules))
-                .build()),
-        new PrintPluginOutputFutureCallback(consoleUtil),
-        directExecutor());
+            "run_command", AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build());
+    addCallback(
+        atsRunSessionFuture, new PrintPluginOutputFutureCallback(consoleUtil), directExecutor());
+    addCallback(
+        atsRunSessionFuture,
+        new DisableServerLogPrinterFutureCallback(serverLogPrinter),
+        executorService);
     consoleUtil.printlnStdout("Command submitted.");
     return ExitCode.OK;
   }
@@ -478,9 +507,9 @@ final class RunCommand implements Callable<Integer> {
         return ImmutableList.of();
       }
 
-      if (serialOpt != null && devices.contains(serialOpt)) {
-        return ImmutableList.of(serialOpt);
-      } else if (serialOpt != null && !devices.contains(serialOpt)) {
+      if (serialOpt != null && !serialOpt.isEmpty() && devices.contains(serialOpt.get(0))) {
+        return ImmutableList.copyOf(serialOpt);
+      } else if (serialOpt != null && !serialOpt.isEmpty() && !devices.contains(serialOpt.get(0))) {
         return ImmutableList.of();
       }
 
@@ -535,6 +564,38 @@ final class RunCommand implements Callable<Integer> {
       abstract Builder setMoblyTestZipPath(String moblyTestZipPath);
 
       abstract MoblyTestRunEntry build();
+    }
+  }
+
+  /** Future callback which disables server log printer. */
+  public static class DisableServerLogPrinterFutureCallback
+      implements FutureCallback<AtsSessionPluginOutput> {
+
+    private final ServerLogPrinter serverLogPrinter;
+
+    public DisableServerLogPrinterFutureCallback(ServerLogPrinter serverLogPrinter) {
+      this.serverLogPrinter = serverLogPrinter;
+    }
+
+    @Override
+    public void onSuccess(AtsSessionPluginOutput unused) {
+      disableServerLogPrinter();
+    }
+
+    @Override
+    public void onFailure(Throwable unused) {
+      disableServerLogPrinter();
+    }
+
+    private void disableServerLogPrinter() {
+      try {
+        serverLogPrinter.enable(false);
+      } catch (MobileHarnessException | InterruptedException e) {
+        logger.atWarning().withCause(e).log("Failed to disable server log printer");
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
+      }
     }
   }
 }

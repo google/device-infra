@@ -53,11 +53,20 @@ message RunCommand {
   // Example: "cts".
   string test_plan = 1;
 
-  // Optional.
-  repeated string device_serial = 2;
+  // Required.
+  string xts_root_dir = 2;
 
   // Optional.
-  repeated string modules = 3;
+  repeated string device_serial = 3;
+
+  // Optional.
+  repeated string module_name = 4;
+
+  // Optional.
+  optional int32 shard_count = 5;
+
+  // Optional.
+  repeated string extra_arg = 6;
 }
 
 message ListCommand {

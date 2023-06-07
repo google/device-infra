@@ -583,6 +583,9 @@ public abstract class AndroidRealDeviceDelegate {
     // Add support for Platform Tradefed tests execution through the ATE library
     device.addSupportedDriver("AndroidTradefedTest");
 
+    // Add support for running xTS tradefed test.
+    device.addSupportedDriver("XtsTradefedTest");
+
     // *************** More decorators ***************
 
     // Disable auto-updates in Play Store before running any tests

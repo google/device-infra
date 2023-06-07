@@ -69,6 +69,7 @@ public class AtsConsole implements Callable<Void> {
 
   private static final String MOBLY_TESTCASES_DIR = System.getProperty("MOBLY_TESTCASES_DIR");
   private static final String TEST_RESULTS_DIR = System.getProperty("TEST_RESULTS_DIR");
+  private static final String XTS_ROOT_DIR = System.getProperty("XTS_ROOT");
   private static final String MOBLY_TEST_ZIP_SUITE_MAIN_FILE =
       System.getProperty("MOBLY_TEST_ZIP_SUITE_MAIN_FILE");
   private static final String DEVICE_INFRA_SERVICE_FLAGS =
@@ -147,6 +148,7 @@ public class AtsConsole implements Callable<Void> {
         new CommandLine(RootCommand.class, new GuiceFactory(injector))
             .setOut(outWriter)
             .setErr(errWriter);
+    commandLine.setUnmatchedOptionsArePositionalParams(true);
 
     initializeConsoleInfo();
 
@@ -235,6 +237,9 @@ public class AtsConsole implements Callable<Void> {
     }
     if (MOBLY_TEST_ZIP_SUITE_MAIN_FILE != null) {
       consoleInfo.setMoblyTestZipSuiteMainFile(MOBLY_TEST_ZIP_SUITE_MAIN_FILE);
+    }
+    if (XTS_ROOT_DIR != null) {
+      consoleInfo.setXtsRootDirectory(XTS_ROOT_DIR);
     }
   }
 

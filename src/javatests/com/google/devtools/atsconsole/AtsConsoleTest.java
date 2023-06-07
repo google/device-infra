@@ -164,6 +164,7 @@ public final class AtsConsoleTest {
 
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(15L));
 
-    assertThat(consoleErrOutputStream.toString(UTF_8)).contains("Error: Unimplemented");
+    assertThat(consoleErrOutputStream.toString(UTF_8))
+        .contains("Not able to create a job info per the run command");
   }
 }

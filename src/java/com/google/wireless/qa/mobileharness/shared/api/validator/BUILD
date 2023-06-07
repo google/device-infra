@@ -34,6 +34,7 @@ java_library(
         "XtsTradefedTestValidator.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/atsconsole/controller/olcserver:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
     ],
     deps = [

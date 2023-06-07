@@ -28,6 +28,7 @@ public final class ConsoleInfo {
   private final AtomicReference<String> moblyTestCasesDir = new AtomicReference<>();
   private final AtomicReference<String> resultsDirectory = new AtomicReference<>();
   private final AtomicReference<String> moblyTestZipSuiteMainFile = new AtomicReference<>();
+  private final AtomicReference<String> xtsRootDirectory = new AtomicReference<>();
 
   private static class SingletonHolder {
     private static final ConsoleInfo INSTANCE;
@@ -82,5 +83,15 @@ public final class ConsoleInfo {
   /** Gets the suite main file used along with the Mobly Test Zip. */
   public Optional<String> getMoblyTestZipSuiteMainFile() {
     return Optional.ofNullable(moblyTestZipSuiteMainFile.get());
+  }
+
+  /** Sets the xTS root directory. */
+  public void setXtsRootDirectory(String xtsRootDirectory) {
+    this.xtsRootDirectory.set(xtsRootDirectory);
+  }
+
+  /** Gets the xTS root directory. */
+  public Optional<String> getXtsRootDirectory() {
+    return Optional.ofNullable(xtsRootDirectory.get());
   }
 }
