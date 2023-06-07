@@ -18,7 +18,9 @@ package com.google.devtools.deviceinfra.infra.client.api.mode.local;
 
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AbstractDeviceAllocator;
@@ -26,6 +28,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
 import com.google.devtools.mobileharness.infra.controller.scheduler.Scheduler;
+import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
@@ -46,7 +49,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
   private final LocalDeviceManager deviceManager;
 
   /** Universal scheduler for scheduling local devices for local tests. */
-  private final Scheduler scheduler;
+  private final ListenableFuture<Scheduler> schedulerFuture;
 
   /** Allocations returned by scheduler, & haven't been retrieved by {@link #pollAllocations()}. */
   private final ConcurrentLinkedQueue<Allocation> allocations;
@@ -55,10 +58,12 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
   private final Object allocationEventHandler;
 
   public LocalDeviceAllocator(
-      final JobInfo jobInfo, LocalDeviceManager deviceManager, Scheduler scheduler) {
+      final JobInfo jobInfo,
+      LocalDeviceManager deviceManager,
+      ListenableFuture<Scheduler> schedulerFuture) {
     super(jobInfo);
     this.deviceManager = deviceManager;
-    this.scheduler = scheduler;
+    this.schedulerFuture = schedulerFuture;
 
     allocations = new ConcurrentLinkedQueue<>();
     allocationEventHandler =
@@ -81,6 +86,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
   public synchronized Optional<ExceptionDetail> setUp()
       throws MobileHarnessException, InterruptedException {
     super.setUp();
+    Scheduler scheduler = getScheduler();
     scheduler.registerEventHandler(allocationEventHandler);
     scheduler.addJob(jobInfo);
     for (TestInfo test : jobInfo.tests().getAll().values()) {
@@ -94,6 +100,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
       throws MobileHarnessException, InterruptedException {
     List<AllocationWithStats> results = new ArrayList<>();
     Allocation allocation = null;
+    Scheduler scheduler = getScheduler();
     while ((allocation = allocations.poll()) != null) {
       // Finds the TestInfo in the current job.
       TestInfo test = jobInfo.tests().getById(allocation.getTest().id());
@@ -119,7 +126,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
             .errors()
             .addAndLog(
                 ErrorCode.DEVICE_ALLOCATOR_ERROR,
-                String.format("Unexpected allocation to test with status " + test.status().get()),
+                "Unexpected allocation to test with status " + test.status().get(),
                 logger);
         scheduler.unallocate(
             allocation,
@@ -163,6 +170,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
   @Override
   public void extraAllocation(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
+    Scheduler scheduler = getScheduler();
     scheduler.addTest(testInfo);
   }
 
@@ -172,6 +180,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
     DeviceLocator deviceLocator = allocation.getDevice();
     String deviceSerial = deviceLocator.id();
     LocalDeviceRunner deviceRunner = deviceManager.getLocalDeviceRunner(deviceSerial);
+    Scheduler scheduler = getScheduler();
     try {
       if (deviceRunner == null) {
         logger.atInfo().log(
@@ -195,9 +204,15 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
   }
 
   @Override
-  public synchronized void tearDown() throws InterruptedException {
+  public synchronized void tearDown() throws MobileHarnessException, InterruptedException {
+    Scheduler scheduler = getScheduler();
     // Closes the job and changes the device back to IDLE.
     scheduler.removeJob(jobInfo.locator().getId(), false);
     scheduler.unregisterEventHandler(allocationEventHandler);
+  }
+
+  private Scheduler getScheduler() throws MobileHarnessException, InterruptedException {
+    return MoreFutures.get(
+        schedulerFuture, InfraErrorId.SCHEDULER_LOCAL_DEVICE_ALLOCATOR_SCHEDULER_INIT_ERROR);
   }
 }

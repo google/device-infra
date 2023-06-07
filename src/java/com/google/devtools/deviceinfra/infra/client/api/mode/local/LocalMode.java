@@ -87,6 +87,9 @@ public class LocalMode implements ExecMode {
   /** Scheduler is singleton and shared by all LocalMode jobs in the same machine. */
   private static volatile Scheduler localScheduler;
 
+  /** Future which is set when the local scheduler is initialized. */
+  private static final SettableFuture<Scheduler> localSchedulerFuture = SettableFuture.create();
+
   /** Synchronization lock for {@link #localDeviceManager} and {@link #localScheduler}. */
   private static final Object LOCAL_ENV_LOCK = new Object();
 
@@ -119,6 +122,7 @@ public class LocalMode implements ExecMode {
 
           // Prepares the global scheduler.
           localScheduler = new SimpleScheduler(localEnvThreadPool);
+          localSchedulerFuture.set(localScheduler);
 
           // Notifies scheduler about device/test change.
           globalInternalBus.register(
@@ -150,7 +154,7 @@ public class LocalMode implements ExecMode {
   public DeviceAllocator createDeviceAllocator(JobInfo jobInfo, EventBus globalInternalBus)
       throws InterruptedException {
     initialize(globalInternalBus);
-    return new LocalDeviceAllocator(jobInfo, localDeviceManager, localScheduler);
+    return new LocalDeviceAllocator(jobInfo, localDeviceManager, localSchedulerFuture);
   }
 
   @Override
