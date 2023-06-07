@@ -18,7 +18,6 @@ package com.google.wireless.qa.mobileharness.shared.model.job.in;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.errorprone.annotations.InlineMe;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonArray;
@@ -119,33 +118,11 @@ public class SubDeviceSpecs {
     return device;
   }
 
-  /**
-   * Adds a list of subDeviceSpecs to the spec.
-   *
-   * @deprecated use {@link SubDeviceSpecs#addAllSubDevices(List)} instead.
-   */
-  @InlineMe(replacement = "this.addAllSubDevices(deviceList)")
-  @Deprecated
-  public final void addAll(List<SubDeviceSpec> deviceList) {
-    addAllSubDevices(deviceList);
-  }
-
   /** Adds a list of subDeviceSpecs to the spec. */
   public void addAllSubDevices(List<SubDeviceSpec> deviceList) {
     for (SubDeviceSpec device : deviceList) {
       addSubDevice(device);
     }
-  }
-
-  /**
-   * Gets a list of {@link SubDeviceSpec}s. \
-   *
-   * @deprecated use {@link SubDeviceSpecs#getAllSubDevices()} instead.
-   */
-  @InlineMe(replacement = "this.getAllSubDevices()")
-  @Deprecated
-  public final List<SubDeviceSpec> getAll() {
-    return getAllSubDevices();
   }
 
   /** Gets a list of {@link SubDeviceSpec}s. */
