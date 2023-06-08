@@ -37,6 +37,7 @@ import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.XtsType;
 import com.google.devtools.atsconsole.controller.sessionplugin.PluginOutputPrinter.PrintPluginOutputFutureCallback;
 import com.google.devtools.atsconsole.result.xml.MoblyResultInfo;
 import com.google.devtools.atsconsole.result.xml.XmlResultFormatter;
@@ -296,6 +297,7 @@ final class RunCommand implements Callable<Integer> {
         SessionPluginProto.RunCommand.newBuilder()
             .setTestPlan(config)
             .setXtsRootDir(consoleInfo.getXtsRootDirectory().orElse(""))
+            .setXtsType(XtsType.CTS)
             .addAllDeviceSerial(deviceSerials)
             .addAllModuleName(modules)
             .addAllExtraArg(extraArgs);

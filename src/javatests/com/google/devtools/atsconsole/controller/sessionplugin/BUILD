@@ -20,19 +20,35 @@ package(
     default_testonly = 1,
 )
 
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/**/*"]),
+)
+
 java_library(
     name = "sessionplugin",
     srcs = glob(["*.java"]),
+    data = [
+        ":testdata",
+    ],
     deps = [
         "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:list_devices_command_handler",
         "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:run_command_handler",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out:timing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",

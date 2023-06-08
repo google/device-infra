@@ -23,21 +23,39 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.RunCommand;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.XtsType;
+import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
@@ -48,8 +66,17 @@ import org.mockito.junit.MockitoRule;
 public final class RunCommandHandlerTest {
 
   private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
+  private static final String XTS_ROOT_DIR_NAME = "xts_root_dir";
+
+  private static final LocalFileUtil realLocalFileUtil = new LocalFileUtil();
+
+  private static final Path JOB_1_GEN_DIR =
+      Paths.get(
+          RunfilesUtil.getRunfilesLocation(
+              "javatests/com/google/devtools/atsconsole/controller/sessionplugin/testdata/runcommand/resultprocessing/job-1_gen/"));
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public TemporaryFolder folder = new TemporaryFolder();
 
   @Bind @Mock private AndroidAdbInternalUtil adbInternalUtil;
 
@@ -229,5 +256,53 @@ public final class RunCommandHandlerTest {
             /* xtsType= */ "CTS");
 
     assertThat(jobConfigOpt).isEmpty();
+  }
+
+  @Test
+  public void handleResultProcessing_copyResultsAndLogsIntoXtsRootDir() throws Exception {
+    File xtsRootDir = folder.newFolder(XTS_ROOT_DIR_NAME);
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setXtsType(XtsType.CTS)
+            .setXtsRootDir(xtsRootDir.getAbsolutePath())
+            .build();
+
+    JobInfo jobInfo =
+        JobInfo.newBuilder()
+            .setLocator(new JobLocator("job_id", "job_name"))
+            .setType(
+                JobType.newBuilder()
+                    .setDevice("AndroidRealDevice")
+                    .setDriver("XtsTradefedTest")
+                    .build())
+            .setSetting(
+                JobSetting.newBuilder()
+                    .setGenFileDir(JOB_1_GEN_DIR.toAbsolutePath().toString())
+                    .build())
+            .setTiming(new Timing())
+            .build();
+    jobInfo.properties().add(RunCommandHandler.XTS_TF_JOB_PROP, "true");
+    jobInfo.tests().add("1", "test_name");
+
+    SessionInfo sessionInfo =
+        new SessionInfo(
+            new SessionDetailHolder(SessionDetail.getDefaultInstance()),
+            SessionPluginLabel.getDefaultInstance(),
+            SessionPluginExecutionConfig.getDefaultInstance());
+    sessionInfo.addJob(jobInfo);
+
+    runCommandHandler.handleResultProcessing(command, sessionInfo);
+
+    List<Path> newFilesInResultsDir =
+        realLocalFileUtil.listFilePaths(
+            xtsRootDir.toPath().resolve("android-cts/results"), /* recursively= */ true);
+    assertThat(newFilesInResultsDir.stream().map(f -> f.getFileName().toString()))
+        .containsExactly("test_result.xml", "2023.06.07_19.23.49.zip");
+
+    List<Path> newFilesInLogsDir =
+        realLocalFileUtil.listFilePaths(
+            xtsRootDir.toPath().resolve("android-cts/logs"), /* recursively= */ true);
+    assertThat(newFilesInLogsDir.stream().map(f -> f.getFileName().toString()))
+        .containsExactly("host_adb_log.txt", "xts_tf_output.log", "command_history.txt");
   }
 }

@@ -67,6 +67,9 @@ message RunCommand {
 
   // Optional.
   repeated string extra_arg = 6;
+
+  // Required for XtsTradefedTest
+  XtsType xts_type = 7;
 }
 
 message ListCommand {
@@ -93,3 +96,8 @@ message DumpStackTraceCommand {}
 message DumpEnvVarCommand {}
 
 message DumpUptimeCommand {}
+
+enum XtsType {
+  XTS_TYPE_UNSPECIFIED = 0;
+  CTS = 1;
+}

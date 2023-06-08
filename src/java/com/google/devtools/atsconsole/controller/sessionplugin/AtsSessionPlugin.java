@@ -128,13 +128,15 @@ public class AtsSessionPlugin {
   }
 
   @Subscribe
-  public void onSessionEnded(SessionEndedEvent event) {
+  public void onSessionEnded(SessionEndedEvent event)
+      throws MobileHarnessException, InterruptedException {
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
       if (runCommandSessionStartingOutput.isPresent()) {
         setOutput(runCommandSessionStartingOutput.get());
         return;
       }
-      // TODO: handle XtsTradefedTest result processing
+
+      runCommandHandler.handleResultProcessing(config.getRunCommand(), sessionInfo);
       setOutput(
           AtsSessionPluginOutput.newBuilder()
               .setSuccess(

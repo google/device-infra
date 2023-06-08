@@ -21,6 +21,7 @@ import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.min;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
@@ -28,13 +29,16 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.RunCommand;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.XtsType;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
@@ -42,9 +46,15 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -57,12 +67,15 @@ class RunCommandHandler {
 
   private static final String DEVICE_DEFAULT_OWNER = "mobileharness-device-default-owner";
   private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
+  @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
 
   private final AndroidAdbInternalUtil adbInternalUtil;
+  private final LocalFileUtil localFileUtil;
 
   @Inject
-  RunCommandHandler(AndroidAdbInternalUtil adbInternalUtil) {
+  RunCommandHandler(AndroidAdbInternalUtil adbInternalUtil, LocalFileUtil localFileUtil) {
     this.adbInternalUtil = adbInternalUtil;
+    this.localFileUtil = localFileUtil;
   }
 
   /**
@@ -72,7 +85,7 @@ class RunCommandHandler {
    */
   Optional<AtsSessionPluginOutput> handle(RunCommand command, SessionInfo sessionInfo)
       throws MobileHarnessException, InvalidProtocolBufferException, InterruptedException {
-    Optional<JobInfo> jobInfo = createXtsTradefedTestJob(command, "CTS");
+    Optional<JobInfo> jobInfo = createXtsTradefedTestJob(command, command.getXtsType().name());
     if (jobInfo.isEmpty()) {
       return Optional.of(
           AtsSessionPluginOutput.newBuilder()
@@ -85,6 +98,7 @@ class RunCommandHandler {
                               shortDebugString(command))))
               .build());
     }
+    jobInfo.get().properties().add(XTS_TF_JOB_PROP, "true");
     sessionInfo.addJob(jobInfo.get());
     logger.atInfo().log(
         "Added job[%s] to the session %s",
@@ -210,5 +224,103 @@ class RunCommandHandler {
       deviceSpecList.add(SubDeviceSpec.newBuilder().setType(ANDROID_REAL_DEVICE_TYPE).build());
     }
     return deviceSpecList.build();
+  }
+
+  /**
+   * Copies xTS tradefed generated logs/results into proper locations within the given xts root dir.
+   */
+  void handleResultProcessing(RunCommand command, SessionInfo sessionInfo)
+      throws MobileHarnessException, InterruptedException {
+    String xtsRootDir = command.getXtsRootDir();
+    if (!localFileUtil.isDirExist(xtsRootDir)) {
+      logger.atInfo().log("xTS root dir [%s] doens't exist, skip processing result.", xtsRootDir);
+      return;
+    }
+
+    Optional<JobInfo> job =
+        sessionInfo.getAllJobs().stream()
+            .filter(jobInfo -> jobInfo.properties().has(XTS_TF_JOB_PROP))
+            .findFirst();
+    if (job.isEmpty()) {
+      logger.atInfo().log("Found no job, skip processing result.");
+      return;
+    }
+    Optional<TestInfo> test = job.get().tests().getAll().values().stream().findFirst();
+    if (test.isEmpty()) {
+      logger.atInfo().log("Found no test, skip processing result.");
+      return;
+    }
+
+    String testGenFileDir = test.get().getGenFileDir();
+    List<Path> genFiles = localFileUtil.listFilesOrDirs(Paths.get(testGenFileDir), path -> true);
+    if (genFiles.isEmpty()) {
+      logger.atInfo().log("Found no gen files, skip processing result.");
+      return;
+    }
+
+    XtsType xtsType = command.getXtsType();
+    String timestampDirName = getTimestampDirName();
+    Path resultDir = getResultDir(Paths.get(xtsRootDir), xtsType, timestampDirName);
+    Path tfResultDir = resultDir.resolve("tradefed_result");
+    Path logDir = getLogDir(Paths.get(xtsRootDir), xtsType, timestampDirName);
+    Path tfLogDir = logDir.resolve("tradefed_log");
+    Path atsLogDir = logDir.resolve("ats_log");
+
+    for (Path genFile : genFiles) {
+      if (genFile.getFileName().toString().endsWith("gen-files")) {
+        Path logsDir = genFile.resolve("logs");
+        if (logsDir.toFile().exists()) {
+          localFileUtil.prepareDir(tfLogDir);
+          List<Path> logsSubDirs = localFileUtil.listDirs(logsDir);
+          for (Path logsSubDir : logsSubDirs) {
+            logger.atInfo().log("Copying dir [%s] into dir [%s]", logsSubDir, tfLogDir);
+            localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                logsSubDir, tfLogDir, ImmutableList.of("-rf"));
+          }
+        }
+        Path resultsDir = genFile.resolve("results");
+        if (resultsDir.toFile().exists()) {
+          localFileUtil.prepareDir(tfResultDir);
+          List<Path> resultsSubFilesOrDirs =
+              localFileUtil.listFilesOrDirs(
+                  resultsDir, filePath -> !filePath.getFileName().toString().equals("latest"));
+          for (Path resultsSubFileOrDir : resultsSubFilesOrDirs) {
+            logger.atInfo().log(
+                "Copying file/dir [%s] into dir [%s]", resultsSubFileOrDir, tfResultDir);
+            localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                resultsSubFileOrDir, tfResultDir, ImmutableList.of("-rf"));
+          }
+        }
+      } else {
+        if (!atsLogDir.toFile().exists()) {
+          localFileUtil.prepareDir(atsLogDir);
+        }
+        logger.atInfo().log("Copying file/dir [%s] into dir [%s]", genFile, atsLogDir);
+        localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+            genFile, atsLogDir, ImmutableList.of("-rf"));
+      }
+    }
+  }
+
+  private Path getResultDir(Path xtsRootDir, XtsType xtsType, String timestampDirName) {
+    return getXtsResultsDir(xtsRootDir, xtsType).resolve(timestampDirName);
+  }
+
+  private Path getLogDir(Path xtsRootDir, XtsType xtsType, String timestampDirName) {
+    return getXtsLogsDir(xtsRootDir, xtsType).resolve(timestampDirName);
+  }
+
+  private String getTimestampDirName() {
+    return new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss", Locale.getDefault())
+        .format(new Timestamp(Clock.systemUTC().millis()));
+  }
+
+  private Path getXtsResultsDir(Path xtsRootDir, XtsType xtsType) {
+    return xtsRootDir.resolve(
+        String.format("android-%s/results", Ascii.toLowerCase(xtsType.name())));
+  }
+
+  private Path getXtsLogsDir(Path xtsRootDir, XtsType xtsType) {
+    return xtsRootDir.resolve(String.format("android-%s/logs", Ascii.toLowerCase(xtsType.name())));
   }
 }
