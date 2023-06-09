@@ -158,7 +158,7 @@ public class SessionManager {
         sessionDetail != null,
         InfraErrorId.OLCS_GET_SESSION_SESSION_NOT_FOUND,
         () -> String.format("Session not found, id=[%s]", sessionId));
-    logger.atInfo().log("Get session: %s", shortDebugString(sessionDetail));
+    logger.atFine().log("Get session: %s", shortDebugString(sessionDetail));
     return sessionDetail;
   }
 
