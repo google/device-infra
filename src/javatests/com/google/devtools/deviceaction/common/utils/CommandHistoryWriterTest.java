@@ -58,6 +58,7 @@ public final class CommandHistoryWriterTest {
     genDir = tmpFolder.newFolder(GEN_FILE_DIR);
     cmdHistory = genDir.toPath().resolve("command_history.txt").toFile();
     writer = new CommandHistoryWriter(genDir.toPath(), new LocalFileUtil());
+    writer.init();
   }
 
   @Test

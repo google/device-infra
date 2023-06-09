@@ -79,7 +79,8 @@ public class Actions {
   }
 
   /** Performs all tasks before an action. */
-  public void preAction() {
+  public void preAction() throws DeviceActionException {
+    writer.init();
     CommandRecorder.getInstance().addListener(writer);
   }
 

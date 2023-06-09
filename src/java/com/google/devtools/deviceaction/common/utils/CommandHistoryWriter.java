@@ -57,6 +57,9 @@ public class CommandHistoryWriter implements CommandRecorderListener {
   CommandHistoryWriter(Path dir, LocalFileUtil localFileUtil) throws DeviceActionException {
     this.outputFile = dir.resolve(FILE_NAME);
     this.localFileUtil = localFileUtil;
+  }
+
+  public void init() throws DeviceActionException {
     try {
       this.localFileUtil.resetFile(outputFile.toString());
     } catch (MobileHarnessException e) {
