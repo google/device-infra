@@ -59,6 +59,7 @@ import java.util.Set;
 import javax.annotation.Nullable;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
+import org.reflections.util.ConfigurationBuilder;
 
 /** Helper for {@link JobSpec}. */
 public class JobSpecHelper {
@@ -69,8 +70,14 @@ public class JobSpecHelper {
   public static final String FILE_TAG_PREFIX = "--++**<<$$JOB_SPEC$$>>**++--";
 
   /** Valid extensible specs in {@code JobSpec}. */
-  private static final ImmutableList<Descriptor> EXTENSIBLE_SPEC =
-      ImmutableList.of(DriverSpec.getDescriptor(), DecoratorSpec.getDescriptor());
+  private static final ImmutableSet<Descriptor> EXTENSIBLE_SPEC =
+      ImmutableSet.of(DriverSpec.getDescriptor(), DecoratorSpec.getDescriptor());
+
+  /** Prefixes for packages to register the job spec extensions. */
+  private static final ImmutableList<String> DEFAULT_PACKAGE_PREFIXES =
+      ImmutableList.of(
+          "com.google.wireless.qa.mobileharness.shared.proto.spec",
+          "com.google.devtools.deviceaction.framework.proto.action");
 
   /**
    * Holder of lazy initialized {@link #defaultHelper}, which holds all specs defined in Mobile
@@ -81,8 +88,7 @@ public class JobSpecHelper {
     private static final JobSpecHelper defaultHelper = new JobSpecHelper();
 
     static {
-      defaultHelper.registerSpecUnderPackage(
-          "com.google.wireless.qa.mobileharness.shared.proto.spec");
+      defaultHelper.registerSpecUnderPackage(DEFAULT_PACKAGE_PREFIXES);
     }
   }
 
@@ -100,39 +106,41 @@ public class JobSpecHelper {
   }
 
   @SuppressWarnings({"unused", "unchecked"})
-  public void registerSpecUnderPackage(String packageName) {
-    Reflections reflections =
-        new Reflections(
-            packageName,
-            new SubTypesScanner(false),
-            new ClassLoader(JobSpecHelper.class.getClassLoader()) {
-              @Override
-              public Enumeration<URL> getResources(String name) throws IOException {
-                Enumeration<URL> original = getParent().getResources(name);
-                List<URL> finalized = new ArrayList<>();
-                while (original.hasMoreElements()) {
-                  URL url = original.nextElement();
-                  if (Ascii.equalsIgnoreCase("file", url.getProtocol())) {
-                    logger.atWarning().log("Skip loading specs from src path: %s", url);
-                  } else {
-                    finalized.add(url);
-                  }
-                }
-                return new Enumeration<URL>() {
-                  Iterator<URL> iter = finalized.iterator();
-
-                  @Override
-                  public boolean hasMoreElements() {
-                    return iter.hasNext();
-                  }
-
-                  @Override
-                  public URL nextElement() {
-                    return iter.next();
-                  }
-                };
+  public void registerSpecUnderPackage(List<String> packageNames) {
+    // Params for reflection configuration.
+    List<Object> params = new ArrayList<>(packageNames);
+    params.add(new SubTypesScanner(false));
+    params.add(
+        new ClassLoader(JobSpecHelper.class.getClassLoader()) {
+          @Override
+          public Enumeration<URL> getResources(String name) throws IOException {
+            Enumeration<URL> original = getParent().getResources(name);
+            List<URL> finalized = new ArrayList<>();
+            while (original.hasMoreElements()) {
+              URL url = original.nextElement();
+              if (Ascii.equalsIgnoreCase("file", url.getProtocol())) {
+                logger.atWarning().log("Skip loading specs from src path: %s", url);
+              } else {
+                finalized.add(url);
               }
-            });
+            }
+            return new Enumeration<URL>() {
+              Iterator<URL> iter = finalized.iterator();
+
+              @Override
+              public boolean hasMoreElements() {
+                return iter.hasNext();
+              }
+
+              @Override
+              public URL nextElement() {
+                return iter.next();
+              }
+            };
+          }
+        });
+    Reflections reflections =
+        new Reflections(ConfigurationBuilder.build(params.toArray(new Object[0])));
     for (Class<?> clazz : reflections.getSubTypesOf(Object.class)) {
       if (Message.class.isAssignableFrom(clazz)) {
         registerSpecExtension((Class<? extends Message>) clazz);
@@ -369,8 +377,8 @@ public class JobSpecHelper {
   }
 
   /**
-   * Calls {@code visitor} on each file field in {@jobSpec}. If returned value of {@code handler} is
-   * not null, the original value will be replaced with it.
+   * Calls {@code visitor} on each file field in {@code jobSpec}. If returned value of {@code
+   * handler} is not null, the original value will be replaced with it.
    *
    * @param jobSpec JobSpec to visit
    * @param visitor visitor of {@code jobSpec}
