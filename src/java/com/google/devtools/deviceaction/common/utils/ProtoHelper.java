@@ -153,8 +153,7 @@ public class ProtoHelper {
       throws DeviceActionException {
     T defaultInstance;
     try {
-      // T.getDefaultInstance() always returns T.
-      defaultInstance = (T) clazz.getMethod("getDefaultInstance").invoke(clazz);
+      defaultInstance = clazz.cast(clazz.getMethod("getDefaultInstance").invoke(null));
     } catch (InvocationTargetException e) {
       throw new DeviceActionException(
           REFLECTION_ERROR, ErrorType.CUSTOMER_ISSUE, "Invocation target", e);
@@ -239,8 +238,8 @@ public class ProtoHelper {
   }
 
   private static FileSpec parseFileSpec(String tag, String value) {
-    boolean isGCS = value.startsWith(GCS_PREFIX);
-    if (isGCS) {
+    boolean isGcs = value.startsWith(GCS_PREFIX);
+    if (isGcs) {
       List<String> split =
           Splitter.on(PROPERTY_SEPARATOR).splitToList(value.substring(GCS_PREFIX.length()));
       return FileSpec.newBuilder()
