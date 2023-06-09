@@ -23,8 +23,8 @@ import "google/protobuf/descriptor.proto";
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec";
 option java_multiple_files = true;
 
-// Specs of Mobile Harness driver. Any Mobile Harness driver, which extends from
-// {@code ConfiableBaseDriver}, should define a protobuf Spec extending from
+// Specs of Mobile Harness driver. Any Mobile Harness driver implementing
+// {@code SpecConfigurable} should define a protobuf Spec extending from
 // {@code mobileharness.proto.spec.DriverSpec}.
 // For example:
 // package_name := com.google.wireless.qa.mobileharness
@@ -46,8 +46,8 @@ option java_multiple_files = true;
 //      optional int32 mem_kb_to_dumpheap = 2;
 //      ...
 //    }
-// And define the driver extends from {@code ConfigableBaseDriver}:
-//    public class SomeDriver extends ConfigableBaseDriver<SomeDriverSpec> {
+// And define the driver to implement {@code SpecConfigable<SomeDriverSpec>}:
+//    public class SomeDriver implements SpecConfigable<SomeDriverSpec> {
 //      ...
 //    }
 //
@@ -81,12 +81,12 @@ message DriverSpec {
 //    message SomeDecoratorSpec {
 //      // It should extend from *DecoratorSpec* instead of *DriverSpec*.
 //      extension DecoratorSpec {
-//        optional SomeDecoratorSpec ext = <your_cl_number>;
+//        optional SomeDecoratorSpec ext = <field_number>;
 //      }
 //      ...
 //    }
-// and the decorator class should extend from {@code ConfigableBaseDecorator}
-// respectively.
+// and the decorator class should implement {@code
+// SpecConfigable<SomeDecoratorSpec>}.
 message DecoratorSpec {
   extensions 1000 to max;
 }

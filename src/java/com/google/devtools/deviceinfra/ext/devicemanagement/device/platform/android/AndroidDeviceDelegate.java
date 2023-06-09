@@ -612,6 +612,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidHermeticServerLauncherDecorator");
     device.addSupportedDecorator("AndroidHermeticWiredHttpProxyDecorator");
     device.addSupportedDecorator("AndroidLazyProxyDecorator");
+    device.addSupportedDecorator("AndroidInstallMainlineDecorator");
     device.addSupportedDecorator("AndroidInstallMainlineModulesDecorator");
 
     // *********************************************************************************************

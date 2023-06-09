@@ -23,6 +23,7 @@ proto_library(
     srcs = ["install_mainline_spec.proto"],
     deps = [
         "//src/devtools/deviceaction/schemas/proto:base_spec_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:base_spec_proto",
     ],
 )
 

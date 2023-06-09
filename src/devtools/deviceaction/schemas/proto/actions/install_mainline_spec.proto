@@ -19,6 +19,7 @@ syntax = "proto2";
 package devtools.deviceaction.schemas.proto.action;
 
 import "src/devtools/deviceaction/schemas/proto/base_spec.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
 
 option java_package = "com.google.devtools.deviceaction.framework.proto.action";
 option java_multiple_files = true;
@@ -29,6 +30,9 @@ message InstallMainlineSpec {
   }
   extend DeviceConfig {
     optional InstallMainlineSpec install_mainline_spec = 516738036;
+  }
+  extend mobileharness.shared.spec.DecoratorSpec {
+    optional InstallMainlineSpec decorator_ext = 1000;
   }
   // Chooses one of the tags to supply modules.
   // "mainline_modules" for multiple module packages.
