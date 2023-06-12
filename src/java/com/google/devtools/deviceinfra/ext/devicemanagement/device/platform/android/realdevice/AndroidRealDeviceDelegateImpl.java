@@ -301,4 +301,10 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
   protected boolean needExtraForceRootDevice() {
     return false;
   }
+
+  @Override
+  protected void validateDeviceOnceReady(String deviceId, String deviceClassName)
+      throws MobileHarnessException, InterruptedException {
+    // Do nothing by default
+  }
 }

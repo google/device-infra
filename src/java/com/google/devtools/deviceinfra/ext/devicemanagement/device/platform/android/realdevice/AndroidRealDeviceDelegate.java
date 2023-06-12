@@ -376,8 +376,13 @@ public abstract class AndroidRealDeviceDelegate {
     device.setCommunicationDimensionAndProperty(communicationList.build());
   }
 
+  /** Execute device validation during the device setup process once the device is ready. */
+  protected abstract void validateDeviceOnceReady(String deviceId, String deviceClassName)
+      throws MobileHarnessException, InterruptedException;
+
   private void setUpOnlineModeDevice() throws MobileHarnessException, InterruptedException {
     androidDeviceDelegate.ensureDeviceReady();
+    validateDeviceOnceReady(deviceId, device.getClass().getSimpleName());
     androidDeviceDelegate.setUp(isRooted(), extraDimensionsForSetUpDevice());
 
     // Indicates the device is online.
