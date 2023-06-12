@@ -70,7 +70,7 @@ java_library(
     name = "job_helper",
     srcs = ["JobHelper.java"],
     visibility = [
-        # Note: this tool is only for for MH infra, please don't add more visibilities.
+        # Note: this tool is only for MH infra, please don't add more visibilities.
     ],
     deps = [
         ":job",
