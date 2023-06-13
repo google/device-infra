@@ -47,6 +47,7 @@ public class AtsSessionPlugin {
   private final DumpStackTraceCommandHandler dumpStackCommandHandler;
   private final DumpUptimeCommandHandler dumpUptimeCommandHandler;
   private final ListDevicesCommandHandler listDevicesCommandHandler;
+  private final ListModulesCommandHandler listModulesCommandHandler;
   private final RunCommandHandler runCommandHandler;
 
   /** Set in {@link #onSessionStarting}. */
@@ -62,12 +63,14 @@ public class AtsSessionPlugin {
       DumpStackTraceCommandHandler dumpStackCommandHandler,
       DumpUptimeCommandHandler dumpUptimeCommandHandler,
       ListDevicesCommandHandler listDevicesCommandHandler,
+      ListModulesCommandHandler listModulesCommandHandler,
       RunCommandHandler runCommandHandler) {
     this.sessionInfo = sessionInfo;
     this.dumpEnvVarCommandHandler = dumpEnvVarCommandHandler;
     this.dumpStackCommandHandler = dumpStackCommandHandler;
     this.dumpUptimeCommandHandler = dumpUptimeCommandHandler;
     this.listDevicesCommandHandler = listDevicesCommandHandler;
+    this.listModulesCommandHandler = listModulesCommandHandler;
     this.runCommandHandler = runCommandHandler;
   }
 
@@ -95,6 +98,13 @@ public class AtsSessionPlugin {
       if (listCommand.getCommandCase().equals(ListCommand.CommandCase.LIST_DEVICES_COMMAND)) {
         AtsSessionPluginOutput output =
             listDevicesCommandHandler.handle(listCommand.getListDevicesCommand());
+        setOutput(output);
+        return;
+      } else if (listCommand
+          .getCommandCase()
+          .equals(ListCommand.CommandCase.LIST_MODULES_COMMAND)) {
+        AtsSessionPluginOutput output =
+            listModulesCommandHandler.handle(listCommand.getListModulesCommand());
         setOutput(output);
         return;
       }

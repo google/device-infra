@@ -15,7 +15,10 @@
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//src/javatests/com/google/devtools/mobileharness/platform/android/xts/config:__pkg__"],
+    default_visibility = [
+        "//src/java/com/google/devtools/atsconsole:__subpackages__",
+        "//src/javatests/com/google/devtools:__subpackages__",
+    ],
 )
 
 java_library(

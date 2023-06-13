@@ -60,6 +60,9 @@ public class ListCommandTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final ImmutableList<String> CTS_MODULE_LIST =
+      ImmutableList.of("CtsAbiOverrideHostTestCases", "CtsBluetoothMultiDevicesTestCases");
+
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
 
@@ -149,10 +152,11 @@ public class ListCommandTest {
   }
 
   @Test
-  public void devices() throws Exception {
+  public void listDevicesAndModules_expectedOutput() throws Exception {
     when(lineReader.readLine(anyString()))
         .thenReturn("list devices")
         .thenReturn("list devices all")
+        .thenReturn("list modules")
         .thenReturn("exit");
 
     atsConsole.call();
@@ -166,7 +170,8 @@ public class ListCommandTest {
                     (actual, expected) ->
                         requireNonNull(actual).startsWith(requireNonNull(expected)),
                 "starts with"))
-        .containsExactly("Serial", "NoOpDevice-0", "Serial", "NoOpDevice-0", "")
+        .containsAtLeast("Serial", "NoOpDevice-0", "Serial", "NoOpDevice-0", "")
         .inOrder();
+    assertThat(stdout).contains(String.join("\n", CTS_MODULE_LIST));
   }
 }

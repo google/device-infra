@@ -24,6 +24,7 @@ java_library(
         ":dump_stack_trace_command_handler",
         ":dump_uptime_command_handler",
         ":list_devices_command_handler",
+        ":list_modules_command_handler",
         ":run_command_handler",
         "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
@@ -80,6 +81,19 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "list_modules_command_handler",
+    srcs = ["ListModulesCommandHandler.java"],
+    visibility = ["//src/javatests/com/google/devtools/atsconsole/controller/sessionplugin:__pkg__"],
+    deps = [
+        "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
+        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

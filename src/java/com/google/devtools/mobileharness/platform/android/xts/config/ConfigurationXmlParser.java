@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.xts.config;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Option;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.TargetPreparer;
@@ -26,7 +27,6 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -50,38 +50,34 @@ public class ConfigurationXmlParser {
   public ConfigurationXmlParser() {}
 
   /**
-   * Parses the {@code xmlFile} and returns to the {@code Configuration} proto.
-   *
-   * @throws MobileHarnessException if fail to parse
-   */
-  public static Configuration parse(File xmlFile) throws MobileHarnessException {
-    try {
-      FileInputStream fileInputStream = new FileInputStream(xmlFile);
-      return parse(fileInputStream);
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.XTS_CONFIG_XML_PARSE_ERROR, "Failed to open configuration xml file", e);
-    }
-  }
-
-  /**
    * Parses the {@code xml} stream and saves the result to the {@code Configuration} proto.
    *
    * @throws MobileHarnessException if fail to parse
    */
-  public static Configuration parse(InputStream xml) throws MobileHarnessException {
+  public static Configuration parse(File xmlFile) throws MobileHarnessException {
+    FileInputStream fileInputStream;
+    try {
+      fileInputStream = new FileInputStream(xmlFile);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.XTS_CONFIG_XML_PARSE_ERROR, "Failed to open configuration xml file", e);
+    }
     DocumentBuilder documentBuilder;
     Document document;
     Configuration.Builder configuration = Configuration.newBuilder();
     try {
       documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-      document = documentBuilder.parse(xml);
+      document = documentBuilder.parse(fileInputStream);
     } catch (ParserConfigurationException | SAXException | IOException e) {
       throw new MobileHarnessException(
           InfraErrorId.XTS_CONFIG_XML_PARSE_ERROR, "Failed to parse configuration xml file", e);
     }
 
     Element root = document.getDocumentElement();
+    String fileName = xmlFile.getName();
+    String fileNameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.'));
+    configuration.setMetadata(
+        ConfigurationMetadata.newBuilder().setXtsModule(fileNameWithoutExtension));
     configuration.setDescription(root.getAttribute(DESCRIPTION));
 
     for (int i = 0; i < root.getChildNodes().getLength(); i++) {

@@ -21,7 +21,9 @@ package xts.config;
 option java_package = "com.google.devtools.mobileharness.platform.android.xts.config.proto";
 option java_outer_classname = "ConfigurationProto";
 
-message ConfigurationMetadata {}
+message ConfigurationMetadata {
+  string xts_module = 1;
+}
 
 message Option {
   string name = 1;

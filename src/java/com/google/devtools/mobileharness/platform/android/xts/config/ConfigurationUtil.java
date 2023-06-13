@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.xts.config;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Arrays.stream;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
@@ -34,7 +35,7 @@ import java.util.Map;
 import java.util.Set;
 
 /** Utility functions to handle configuration files. */
-final class ConfigurationUtil {
+public class ConfigurationUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -130,5 +131,15 @@ final class ConfigurationUtil {
       configNameToFileMap.putIfAbsent(file.getName(), file);
     }
     return new LinkedHashSet<>(configNameToFileMap.values());
+  }
+
+  /**
+   * Gets the directories that contain ATS2.0 configuration files. The path is available at the
+   * system property "XTS_ROOT".
+   *
+   * @return a list of directories that contains configurations
+   */
+  public static ImmutableList<File> getConfigDirs() {
+    return ImmutableList.of(new File(System.getProperty("XTS_ROOT", "")));
   }
 }

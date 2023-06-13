@@ -23,6 +23,7 @@ import com.google.devtools.atsconsole.controller.proto.SessionPluginProto;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListDevicesCommand;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListModulesCommand;
 import com.google.devtools.atsconsole.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.util.concurrent.Callable;
@@ -110,9 +111,17 @@ public class ListCommand implements Callable<Integer> {
       name = "modules",
       aliases = {"m"},
       description = "List all modules available")
-  public int modules() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
+  public int modules() throws MobileHarnessException, InterruptedException {
+    serverPreparer.prepareOlcServer();
+    AtsSessionPluginOutput output =
+        atsSessionStub.runShortSession(
+            "list_modules_command",
+            AtsSessionPluginConfig.newBuilder()
+                .setListCommand(
+                    SessionPluginProto.ListCommand.newBuilder()
+                        .setListModulesCommand(ListModulesCommand.getDefaultInstance()))
+                .build());
+    return PluginOutputPrinter.printOutput(output, consoleUtil);
   }
 
   @Command(

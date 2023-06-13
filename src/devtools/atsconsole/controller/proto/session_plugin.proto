@@ -75,6 +75,7 @@ message RunCommand {
 message ListCommand {
   oneof command {
     ListDevicesCommand list_devices_command = 1;
+    ListModulesCommand list_modules_command = 2;
   }
 }
 
@@ -82,6 +83,8 @@ message ListDevicesCommand {
   // Whether to list all devices including placeholders.
   bool list_all_devices = 1;
 }
+
+message ListModulesCommand {}
 
 message DumpCommand {
   oneof command {
