@@ -16,6 +16,8 @@
 
 package com.google.devtools.deviceaction.common.utils;
 
+import java.security.SecureRandom;
+
 /** A utility class to share constants. */
 public final class Constants {
 
@@ -42,6 +44,9 @@ public final class Constants {
   static final String GS_PREFIX = "gs://";
 
   static final String GS_DELIMITER = "/";
+
+  /** A unique session name. */
+  static final String SESSION_NAME = "da_" + Long.toUnsignedString(new SecureRandom().nextLong());
 
   private Constants() {}
 }

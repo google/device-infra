@@ -38,7 +38,9 @@ LIB_SRCS = [
     "LocalFileResolver.java",
     "ProtoHelper.java",
     "Resolver.java",
+    "StaticResourceHelper.java",
     "ResourceHelper.java",
+    "ResourceUtil.java",
     "SimpleResolver.java",
     "TimeUtils.java",
 ]
@@ -84,7 +86,6 @@ java_library(
         ":utils",
         "//src/java/com/google/devtools/deviceaction/common/annotations",
         "//src/java/com/google/devtools/deviceaction/common/error",
-        "//src/java/com/google/devtools/deviceaction/common/schemas",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],
