@@ -29,6 +29,9 @@ service ControlService {
 
   // Gets logs of the server.
   rpc GetLog(stream GetLogRequest) returns (stream GetLogResponse);
+
+  // Sets the log level of GetLog.
+  rpc SetLogLevel(SetLogLevelRequest) returns (SetLogLevelResponse);
 }
 
 message KillServerRequest {}
@@ -49,3 +52,12 @@ message GetLogResponse {
   // Required.
   LogRecords log_records = 1;
 }
+
+message SetLogLevelRequest {
+  // Required.
+  //
+  // Case will be ignored.
+  string level = 1;
+}
+
+message SetLogLevelResponse {}

@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
 import io.grpc.Channel;
 import io.grpc.stub.StreamObserver;
 
@@ -50,5 +51,13 @@ public class ControlStub {
 
   public StreamObserver<GetLogRequest> getLog(StreamObserver<GetLogResponse> responseObserver) {
     return controlServiceStub.getLog(responseObserver);
+  }
+
+  public void setLogLevel(SetLogLevelRequest request) throws GrpcExceptionWithErrorId {
+    GrpcStubUtil.invoke(
+        controlServiceBlockingStub::setLogLevel,
+        request,
+        InfraErrorId.OLCS_STUB_SET_LOG_LEVEL_ERROR,
+        "Failed to set log level");
   }
 }

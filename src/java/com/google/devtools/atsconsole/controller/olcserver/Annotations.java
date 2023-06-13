@@ -27,9 +27,10 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   @interface ServerChannel {}
 
+  /** OLC server stub for ATS console. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
-  @interface ServerStub {
+  public @interface ServerStub {
 
     /** Type of {@link ServerStub}. */
     enum Type {

@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.se
 import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
+import com.google.common.base.Ascii;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
@@ -30,6 +31,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelResponse;
 import io.grpc.Server;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
@@ -80,6 +83,17 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
     return new GetLogRequestStreamObserver(responseObserver);
   }
 
+  @Override
+  public void setLogLevel(
+      SetLogLevelRequest request, StreamObserver<SetLogLevelResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        this::doSetLogLevel,
+        ControlServiceGrpc.getServiceDescriptor(),
+        ControlServiceGrpc.getSetLogLevelMethod());
+  }
+
   private KillServerResponse doKillServer(KillServerRequest request) {
     if (sessionManager.hasUnarchivedSessions()) {
       return KillServerResponse.newBuilder().setSuccessful(false).build();
@@ -93,6 +107,11 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
           "Fatal error while shutting down server");
       return KillServerResponse.newBuilder().setSuccessful(true).build();
     }
+  }
+
+  private SetLogLevelResponse doSetLogLevel(SetLogLevelRequest request) {
+    logManager.getLogHandler().setLevel(Level.parse(Ascii.toUpperCase(request.getLevel())));
+    return SetLogLevelResponse.getDefaultInstance();
   }
 
   private class GetLogRequestStreamObserver implements StreamObserver<GetLogRequest> {

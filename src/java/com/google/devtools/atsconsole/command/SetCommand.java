@@ -16,8 +16,15 @@
 
 package com.google.devtools.atsconsole.command;
 
+import com.google.common.base.Ascii;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
+import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerStub;
+import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
+import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
@@ -31,7 +38,7 @@ import picocli.CommandLine.Option;
     aliases = {"s"},
     sortOptions = false,
     description = "Set console configurations.")
-final class SetCommand implements Callable<Integer> {
+public class SetCommand implements Callable<Integer> {
 
   @Option(
       names = "--mobly_testcases_dir",
@@ -44,19 +51,37 @@ final class SetCommand implements Callable<Integer> {
   private final ConsoleInfo consoleInfo;
   private final LocalFileUtil localFileUtil;
   private final ConsoleUtil consoleUtil;
+  private final ServerPreparer serverPreparer;
+  private final ControlStub controlStub;
 
   @Inject
-  SetCommand(ConsoleInfo consoleInfo, LocalFileUtil localFileUtil, ConsoleUtil consoleUtil) {
+  SetCommand(
+      ConsoleInfo consoleInfo,
+      LocalFileUtil localFileUtil,
+      ConsoleUtil consoleUtil,
+      ServerPreparer serverPreparer,
+      @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlStub controlStub) {
     this.consoleInfo = consoleInfo;
     this.localFileUtil = localFileUtil;
     this.consoleUtil = consoleUtil;
+    this.serverPreparer = serverPreparer;
+    this.controlStub = controlStub;
   }
 
-  @SuppressWarnings("ShortCircuitBoolean")
   @Override
   public Integer call() {
+    @SuppressWarnings("ShortCircuitBoolean")
     boolean allSuccess = setMoblyTestCasesDir() & setResultsDir();
     return allSuccess ? ExitCode.OK : ExitCode.SOFTWARE;
+  }
+
+  @Command(name = "log-level-display", description = "Sets the global display log level to <level>")
+  public int setLogLevelDisplay(String level)
+      throws MobileHarnessException, GrpcExceptionWithErrorId, InterruptedException {
+    serverPreparer.prepareOlcServer();
+    controlStub.setLogLevel(SetLogLevelRequest.newBuilder().setLevel(level).build());
+    consoleUtil.printlnStdout("Log level now set to '%s'.", Ascii.toUpperCase(level));
+    return ExitCode.OK;
   }
 
   private boolean setMoblyTestCasesDir() {
