@@ -17,7 +17,6 @@
 package com.google.devtools.deviceaction.framework;
 
 import com.google.devtools.deviceaction.common.annotations.GuiceAnnotations.FileResolver;
-import com.google.devtools.deviceaction.common.schemas.Env;
 import com.google.devtools.deviceaction.common.utils.AaptUtil;
 import com.google.devtools.deviceaction.common.utils.BundletoolUtil;
 import com.google.devtools.deviceaction.common.utils.CommandHistoryWriter;
@@ -41,11 +40,15 @@ import javax.inject.Singleton;
 /** Module that configures Device Action. */
 public final class DeviceActionModule extends AbstractModule {
 
-  public DeviceActionModule() {}
+  private final ResourceHelper resourceHelper;
+
+  public DeviceActionModule(ResourceHelper resourceHelper) {
+    this.resourceHelper = resourceHelper;
+  }
 
   @Override
   protected void configure() {
-    install(new ResourceModule(Env.BINARY));
+    install(new ResourceModule(resourceHelper));
     install(new DeviceConfigModule());
     bind(ActionConfigurer.class).to(MergingDeviceConfigurer.class).in(Singleton.class);
   }
