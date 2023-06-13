@@ -133,6 +133,8 @@ public final class JobConfigBuilder {
           dimensionsElement == null || dimensionsElement.isJsonNull()
               ? new JsonObject()
               : dimensionsElement.getAsJsonObject();
+      JsonElement driverObject = configJson.get("driver");
+      boolean driverSpecified = driverObject != null && !driverObject.isJsonNull();
       JsonElement decoratorsElement = configJson.remove("decorators");
       JsonArray decoratorsArray =
           decoratorsElement == null || decoratorsElement.isJsonNull()
@@ -194,7 +196,7 @@ public final class JobConfigBuilder {
         }
         configJson.add("device", createDeviceList(deviceType, dimensionsObject, decoratorsArray));
         json = configJson.toString();
-      } else if (deviceObject == null && hasDecorators(decoratorsArray)) {
+      } else if (deviceObject == null && driverSpecified) {
         if (hasDimensions(dimensionsObject)) {
           throw new MobileHarnessException(
               ErrorCode.JOB_CONFIG_ERROR,
