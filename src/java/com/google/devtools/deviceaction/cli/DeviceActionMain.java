@@ -20,6 +20,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionConfig;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions;
+import com.google.devtools.deviceaction.common.utils.FlagBasedResourceHelper;
 import com.google.devtools.deviceaction.common.utils.FlagParser;
 import com.google.devtools.deviceaction.framework.ActionConfigurer;
 import com.google.devtools.deviceaction.framework.DeviceActionModule;
@@ -47,7 +48,8 @@ public final class DeviceActionMain {
       throw e;
     }
 
-    Injector injector = Guice.createInjector(new DeviceActionModule());
+    Injector injector =
+        Guice.createInjector(new DeviceActionModule(FlagBasedResourceHelper.getInstance()));
 
     ActionConfig actionConfig =
         injector.getInstance(ActionConfigurer.class).createActionConfigure(actionOptions);

@@ -32,11 +32,18 @@ java_library(
         "//src/devtools/deviceaction/schemas/proto/actions:install_mainline_spec_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
         "//src/java/com/google/devtools/deviceaction/common/schemas",
+        "//src/java/com/google/devtools/deviceaction/common/utils",
         "//src/java/com/google/devtools/deviceaction/framework",
+        "//src/java/com/google/devtools/deviceaction/framework:device_action_module",
+        "//src/java/com/google/devtools/deviceaction/framework/actions",
         "//src/java/com/google/devtools/deviceaction/framework/deviceconfigs",
         "//src/java/com/google/devtools/deviceaction/framework/devices",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
+        "@maven//:com_google_inject_guice",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],
@@ -45,6 +52,7 @@ java_library(
 junit_test_suites(
     name = "gen_tests",
     sizes = [
+        "small",
         "medium",
     ],
     deps = [

@@ -48,7 +48,6 @@ java_library(
     deps = [
         ":framework",
         "//src/java/com/google/devtools/deviceaction/common/annotations",
-        "//src/java/com/google/devtools/deviceaction/common/schemas",
         "//src/java/com/google/devtools/deviceaction/common/utils",
         "//src/java/com/google/devtools/deviceaction/common/utils:module",
         "//src/java/com/google/devtools/deviceaction/framework/actions",

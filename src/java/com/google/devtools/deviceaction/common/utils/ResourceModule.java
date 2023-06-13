@@ -20,29 +20,18 @@ import com.google.devtools.deviceaction.common.annotations.GuiceAnnotations.File
 import com.google.devtools.deviceaction.common.annotations.GuiceAnnotations.GCSCredential;
 import com.google.devtools.deviceaction.common.annotations.GuiceAnnotations.GenFileDirRoot;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
-import com.google.devtools.deviceaction.common.schemas.Env;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.io.File;
-import javax.inject.Provider;
 import javax.inject.Singleton;
 
 /** Module binding all resources. */
 public final class ResourceModule extends AbstractModule {
 
-  private final Env env;
+  private final ResourceHelper resourceHelper;
 
-  private static class FlagBasedResourceHelperProvider
-      implements Provider<FlagBasedResourceHelper> {
-
-    @Override
-    public FlagBasedResourceHelper get() {
-      return FlagBasedResourceHelper.getInstance();
-    }
-  }
-
-  public ResourceModule(Env env) {
-    this.env = env;
+  public ResourceModule(ResourceHelper resourceHelper) {
+    this.resourceHelper = resourceHelper;
   }
 
   @Override
@@ -75,13 +64,7 @@ public final class ResourceModule extends AbstractModule {
 
   @Provides
   @Singleton
-  ResourceHelper provideResourceHelper(
-      FlagBasedResourceHelperProvider flagBasedResourceHelperProvider) {
-    switch (env) {
-      case BINARY:
-        return flagBasedResourceHelperProvider.get();
-      default:
-        throw new IllegalArgumentException(String.format("Environment %s is not supported", env));
-    }
+  ResourceHelper provideResourceHelper() {
+    return resourceHelper;
   }
 }
