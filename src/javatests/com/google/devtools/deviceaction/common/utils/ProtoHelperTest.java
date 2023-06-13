@@ -161,6 +161,13 @@ public final class ProtoHelperTest {
             DeviceWrapper.create(DEVICE_1, Optional.empty()),
             DevicePosition.SECOND,
             DeviceWrapper.create(DEVICE_2, Optional.of("file_path")));
+    DeviceActionException t =
+        assertThrows(
+            DeviceActionException.class,
+            () ->
+                ProtoHelper.getDeviceWrapperMap(
+                    ActionSpec.newBuilder().setNullary(NULLARY).build(), /* options= */ null));
+    assertThat(t.getErrorId().name()).isEqualTo("ILLEGAL_ARGUMENT");
   }
 
   @Test
