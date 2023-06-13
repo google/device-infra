@@ -247,6 +247,22 @@ func DoUpload(ctx context.Context, client *client.Client, mountPath string, zipP
 	return rootDigest, nil
 }
 
+// multiStringFlag is a slice of strings for parsing command flags into a string list.
+type multiStringFlag []string
+
+func (f *multiStringFlag) String() string {
+	return fmt.Sprintf("%v", *f)
+}
+
+func (f *multiStringFlag) Set(val string) error {
+	*f = append(*f, val)
+	return nil
+}
+
+func (f *multiStringFlag) Get() any {
+	return []string(*f)
+}
+
 var (
 	zipPath        = flag.String("zip-path", "", "zip path")
 	casInstance    = flag.String("cas-instance", "", "RBE instance")
@@ -254,9 +270,7 @@ var (
 	serviceAccount = flag.String("service-account-json", "", "Path to JSON file with service account credentials to use.")
 	useADC         = flag.Bool("use-adc", false, "True to use Application Default Credentials (ADC).")
 	dumpDigest     = flag.String("dump-digest", "", "Output the digest to file")
-	excludeFilters = flag.MultiString("exclude-filters", nil,
-		"Regular expression of paths to be excluded from uploading. The regex will implicitly "+
-			"append the root directory path to the beginning, so DO NOT use \"^\" in the regex.")
+	excludeFilters multiStringFlag
 )
 
 func checkFlags() error {
@@ -270,6 +284,9 @@ func checkFlags() error {
 }
 
 func main() {
+	flag.Var(&excludeFilters, "exclude-filters",
+		"Regular expression of paths to be excluded from uploading. The regex will implicitly "+
+			"append the root directory path to the beginning, so DO NOT use \"^\" in the regex.")
 	flag.Set("silent_init", "true")
 	flag.Set("logtostderr", "true")
 	flag.Set("stderrthreshold", "INFO")
@@ -321,7 +338,7 @@ func main() {
 		os.Exit(1)
 	}()
 
-	rootDigest, err := DoUpload(ctx, client, mountPath, *zipPath, *excludeFilters)
+	rootDigest, err := DoUpload(ctx, client, mountPath, *zipPath, excludeFilters)
 	if err != nil {
 		log.Exitf("Failed to upload the zip archive to CAS: %v", err)
 	}
