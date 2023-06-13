@@ -22,7 +22,7 @@ import com.google.devtools.deviceaction.common.schemas.ActionOptions;
 import com.google.devtools.deviceaction.common.schemas.Command;
 import com.google.devtools.deviceaction.framework.proto.ActionSpec;
 
-/** An interface to get {@link ActionConfig}. */
+/** An interface to create {@link ActionConfig}. */
 public interface ActionConfigurer {
 
   /**
