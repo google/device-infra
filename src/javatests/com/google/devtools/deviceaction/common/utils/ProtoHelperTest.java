@@ -16,8 +16,9 @@
 
 package com.google.devtools.deviceaction.common.utils;
 
-import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
+import static com.google.devtools.deviceaction.common.utils.Constants.DEVICE_CONFIG_KEY;
 import static com.google.devtools.deviceaction.common.utils.TimeUtils.toProtoDuration;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
@@ -26,6 +27,8 @@ import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions.Options;
 import com.google.devtools.deviceaction.common.schemas.Command;
+import com.google.devtools.deviceaction.common.schemas.DevicePosition;
+import com.google.devtools.deviceaction.common.schemas.DeviceWrapper;
 import com.google.devtools.deviceaction.framework.proto.ActionSpec;
 import com.google.devtools.deviceaction.framework.proto.AndroidPhoneSpec;
 import com.google.devtools.deviceaction.framework.proto.Binary;
@@ -42,6 +45,7 @@ import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.Optional;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -118,21 +122,45 @@ public final class ProtoHelperTest {
       Unary.newBuilder().setFirst(DEVICE_1).setExtension(InstallMainlineSpec.ext, FROM_CMD).build();
 
   @Test
-  public void getFirst_hasValueForUnaryAndBinary() {
-    assertThat(ProtoHelper.getFirst(ActionSpec.newBuilder().setNullary(NULLARY).build())).isEmpty();
-    assertThat(ProtoHelper.getFirst(ActionSpec.newBuilder().setUnary(UNARY).build()))
-        .hasValue(DEVICE_1);
-    assertThat(ProtoHelper.getFirst(ActionSpec.newBuilder().setBinary(BINARY).build()))
-        .hasValue(DEVICE_1);
+  public void getDeviceWrapperMap_noOptions() throws Exception {
+    assertThat(ProtoHelper.getDeviceWrapperMap(ActionSpec.newBuilder().setNullary(NULLARY).build()))
+        .isEmpty();
+    assertThat(
+            ProtoHelper.getDeviceWrapperMap(ActionSpec.newBuilder().setUnary(UNARY).build())
+                .keySet())
+        .containsExactly(DevicePosition.FIRST);
+    assertThat(
+            ProtoHelper.getDeviceWrapperMap(ActionSpec.newBuilder().setBinary(BINARY).build())
+                .keySet())
+        .containsExactly(DevicePosition.FIRST, DevicePosition.SECOND);
   }
 
   @Test
-  public void getSecond_hasValueForBinary() {
-    assertThat(ProtoHelper.getSecond(ActionSpec.newBuilder().setNullary(NULLARY).build()))
+  public void getDeviceWrapperMap_hasOptions() throws Exception {
+    ActionOptions actionOptions =
+        ActionOptions.builder()
+            .setCommand(Command.DEFAULT)
+            .setAction(Options.builder().build())
+            .setFirstDevice(Options.builder().addKeyValues("not exist", "not used").build())
+            .setSecondDevice(Options.builder().addKeyValues(DEVICE_CONFIG_KEY, "file_path").build())
+            .build();
+
+    assertThat(
+            ProtoHelper.getDeviceWrapperMap(
+                ActionSpec.newBuilder().setNullary(NULLARY).build(), actionOptions))
         .isEmpty();
-    assertThat(ProtoHelper.getSecond(ActionSpec.newBuilder().setUnary(UNARY).build())).isEmpty();
-    assertThat(ProtoHelper.getSecond(ActionSpec.newBuilder().setBinary(BINARY).build()))
-        .hasValue(DEVICE_2);
+    assertThat(
+            ProtoHelper.getDeviceWrapperMap(
+                ActionSpec.newBuilder().setUnary(UNARY).build(), actionOptions))
+        .containsExactly(DevicePosition.FIRST, DeviceWrapper.create(DEVICE_1, Optional.empty()));
+    assertThat(
+            ProtoHelper.getDeviceWrapperMap(
+                ActionSpec.newBuilder().setBinary(BINARY).build(), actionOptions))
+        .containsExactly(
+            DevicePosition.FIRST,
+            DeviceWrapper.create(DEVICE_1, Optional.empty()),
+            DevicePosition.SECOND,
+            DeviceWrapper.create(DEVICE_2, Optional.of("file_path")));
   }
 
   @Test

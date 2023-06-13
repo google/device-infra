@@ -50,7 +50,7 @@ public final class DeviceActionMain {
     Injector injector = Guice.createInjector(new DeviceActionModule());
 
     ActionConfig actionConfig =
-        injector.getInstance(ActionConfigurer.class).getConfigure(actionOptions);
+        injector.getInstance(ActionConfigurer.class).createActionConfigure(actionOptions);
     logger.atInfo().log("Get action config:\n%s", actionConfig);
 
     Actions actions = injector.getInstance(Actions.class);

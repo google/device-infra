@@ -19,16 +19,29 @@ package com.google.devtools.deviceaction.framework;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionConfig;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions;
+import com.google.devtools.deviceaction.common.schemas.Command;
+import com.google.devtools.deviceaction.framework.proto.ActionSpec;
 
 /** An interface to get {@link ActionConfig}. */
 public interface ActionConfigurer {
 
   /**
-   * Gets {@link ActionConfig} from options.
+   * Creates {@link ActionConfig} from {@link ActionOptions}.
    *
-   * @throws DeviceActionException if fails to get configure.
+   * @return final configure for the action.
+   * @throws DeviceActionException if fails to create configure.
    * @throws InterruptedException if interrupted.
    */
-  ActionConfig getConfigure(ActionOptions options)
+  ActionConfig createActionConfigure(ActionOptions options)
+      throws DeviceActionException, InterruptedException;
+
+  /**
+   * Creates {@link ActionConfig} from {@link Command} and initial {@link ActionSpec}.
+   *
+   * @return final configure for the action.
+   * @throws DeviceActionException if fails to create configure.
+   * @throws InterruptedException if interrupted.
+   */
+  ActionConfig createActionConfigure(Command cmd, ActionSpec spec)
       throws DeviceActionException, InterruptedException;
 }

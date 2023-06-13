@@ -16,14 +16,13 @@
 
 package com.google.devtools.deviceaction.framework;
 
-import static com.google.devtools.deviceaction.common.utils.Constants.DEVICE_CONFIG_KEY;
-
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionConfig;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions;
-import com.google.devtools.deviceaction.common.schemas.ActionOptions.Options;
 import com.google.devtools.deviceaction.common.schemas.Command;
+import com.google.devtools.deviceaction.common.schemas.DevicePosition;
+import com.google.devtools.deviceaction.common.schemas.DeviceWrapper;
 import com.google.devtools.deviceaction.common.utils.ProtoHelper;
 import com.google.devtools.deviceaction.framework.deviceconfigs.DeviceConfigDao;
 import com.google.devtools.deviceaction.framework.devices.Devices;
@@ -33,7 +32,7 @@ import com.google.devtools.deviceaction.framework.proto.Operand;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.Optional;
+import java.util.EnumMap;
 import javax.inject.Inject;
 
 /** An {@link ActionConfigurer} that merges configs from devices. */
@@ -49,55 +48,52 @@ public class MergingDeviceConfigurer implements ActionConfigurer {
   }
 
   @Override
-  public ActionConfig getConfigure(ActionOptions options)
+  public ActionConfig createActionConfigure(ActionOptions options)
       throws DeviceActionException, InterruptedException {
-    Command cmd = options.command();
-    ActionConfig.Builder actionConfigBuilder = ActionConfig.builder().setCmd(cmd);
-
     ActionSpec initialSpec = ProtoHelper.getActionSpec(options);
+    return createActionConfigure(
+        options.command(), initialSpec, ProtoHelper.getDeviceWrapperMap(initialSpec, options));
+  }
+
+  @Override
+  public ActionConfig createActionConfigure(Command cmd, ActionSpec initialSpec)
+      throws DeviceActionException, InterruptedException {
+    return createActionConfigure(cmd, initialSpec, ProtoHelper.getDeviceWrapperMap(initialSpec));
+  }
+
+  private ActionConfig createActionConfigure(
+      Command cmd, ActionSpec initialSpec, EnumMap<DevicePosition, DeviceWrapper> deviceWrapperMap)
+      throws DeviceActionException, InterruptedException {
+    ActionConfig.Builder actionConfigBuilder = ActionConfig.builder().setCmd(cmd);
     ActionSpec actionSpec = initialSpec;
-    Optional<Operand> firstOp = ProtoHelper.getFirst(initialSpec);
-    if (firstOp.isPresent()) {
-      DeviceConfig firstDeviceConfig = getDeviceConfig(firstOp.get(), options.firstDevice(), cmd);
-      actionConfigBuilder.setFirstSpec(firstDeviceConfig.getDeviceSpec());
-      actionSpec = ProtoHelper.mergeActionSpec(cmd, actionSpec, firstDeviceConfig);
-    }
-    Optional<Operand> secondOp = ProtoHelper.getSecond(initialSpec);
-    if (secondOp.isPresent()) {
-      DeviceConfig secondDeviceConfig =
-          getDeviceConfig(secondOp.get(), options.secondDevice(), cmd);
-      actionConfigBuilder.setSecondSpec(secondDeviceConfig.getDeviceSpec());
-      actionSpec = ProtoHelper.mergeActionSpec(cmd, actionSpec, secondDeviceConfig);
+    for (DevicePosition devicePosition : deviceWrapperMap.keySet()) {
+      DeviceConfig deviceConfig = getDeviceConfig(cmd, deviceWrapperMap.get(devicePosition));
+      actionConfigBuilder.setDeviceSpec(devicePosition, deviceConfig.getDeviceSpec());
+      actionSpec = ProtoHelper.mergeActionSpec(cmd, actionSpec, deviceConfig);
     }
     return actionConfigBuilder.setActionSpec(actionSpec).build();
   }
 
-  private DeviceConfig getDeviceConfig(Operand operand, Options options, Command cmd)
+  private DeviceConfig getDeviceConfig(Command cmd, DeviceWrapper deviceWrapper)
       throws DeviceActionException, InterruptedException {
-    Optional<DeviceConfig> deviceConfigOp = getDeviceConfigFromUser(options, cmd);
-    if (deviceConfigOp.isPresent()) {
-      return deviceConfigOp.get();
-    }
-    return getDeviceConfigFromDao(operand, cmd);
+    return deviceWrapper.deviceConfigFile().isPresent()
+        ? getDeviceConfigFromUser(cmd, deviceWrapper.deviceConfigFile().get())
+        : getDeviceConfigFromDao(cmd, deviceWrapper.operand());
   }
 
-  private static Optional<DeviceConfig> getDeviceConfigFromUser(Options options, Command cmd)
+  private static DeviceConfig getDeviceConfigFromUser(Command cmd, String deviceConfigFile)
       throws DeviceActionException {
-    Optional<String> deviceConfigOp = options.getOnlyValue(DEVICE_CONFIG_KEY);
-    if (deviceConfigOp.isPresent()) {
-      String textProto;
-      try {
-        textProto = Files.readString(Paths.get(deviceConfigOp.get()));
-      } catch (IOException e) {
-        throw new DeviceActionException(
-            "FILE_NOT_FOUND", ErrorType.DEPENDENCY_ISSUE, "file not found", e);
-      }
-      return Optional.of(ProtoHelper.getDeviceConfigFromTextproto(textProto, cmd));
+    String textProto;
+    try {
+      textProto = Files.readString(Paths.get(deviceConfigFile));
+    } catch (IOException e) {
+      throw new DeviceActionException(
+          "FILE_NOT_FOUND", ErrorType.DEPENDENCY_ISSUE, "file not found", e);
     }
-    return Optional.empty();
+    return ProtoHelper.getDeviceConfigFromTextproto(textProto, cmd);
   }
 
-  private DeviceConfig getDeviceConfigFromDao(Operand operand, Command cmd)
+  private DeviceConfig getDeviceConfigFromDao(Command cmd, Operand operand)
       throws DeviceActionException, InterruptedException {
     String deviceKey = devices.getDeviceKey(operand);
     return deviceConfigDao.getDeviceConfig(deviceKey, cmd);

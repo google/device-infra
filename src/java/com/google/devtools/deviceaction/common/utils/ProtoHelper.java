@@ -16,6 +16,7 @@
 
 package com.google.devtools.deviceaction.common.utils;
 
+import static com.google.devtools.deviceaction.common.utils.Constants.DEVICE_CONFIG_KEY;
 import static com.google.devtools.deviceaction.common.utils.Constants.GCS_PREFIX;
 import static com.google.devtools.deviceaction.common.utils.Constants.PROPERTY_SEPARATOR;
 import static com.google.devtools.deviceaction.common.utils.Constants.SERIAL_KEY;
@@ -27,6 +28,8 @@ import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions.Options;
 import com.google.devtools.deviceaction.common.schemas.Command;
+import com.google.devtools.deviceaction.common.schemas.DevicePosition;
+import com.google.devtools.deviceaction.common.schemas.DeviceWrapper;
 import com.google.devtools.deviceaction.framework.proto.ActionSpec;
 import com.google.devtools.deviceaction.framework.proto.DeviceConfig;
 import com.google.devtools.deviceaction.framework.proto.DeviceType;
@@ -43,9 +46,11 @@ import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import java.lang.reflect.InvocationTargetException;
 import java.time.Duration;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.Optional;
+import javax.annotation.Nullable;
 
 /** A helper class to handle protos. */
 public class ProtoHelper {
@@ -62,22 +67,33 @@ public class ProtoHelper {
     return builder.build();
   }
 
-  /** Gets the first device if possible. */
-  public static Optional<Operand> getFirst(ActionSpec actionSpec) {
-    if (actionSpec.hasUnary()) {
-      return Optional.of(actionSpec.getUnary().getFirst());
-    } else if (actionSpec.hasBinary()) {
-      return Optional.of(actionSpec.getBinary().getFirst());
-    }
-    return Optional.empty();
+  /**
+   * Gets a map associating {@link DeviceWrapper} to {@link DevicePosition} by parsing {@link
+   * ActionSpec}.
+   *
+   * @param actionSpec to extract the operand info.
+   * @return a map to get {@link DeviceWrapper} for each available position.
+   * @throws DeviceActionException if the input is invalid.
+   */
+  public static EnumMap<DevicePosition, DeviceWrapper> getDeviceWrapperMap(ActionSpec actionSpec)
+      throws DeviceActionException {
+    return getDeviceWrapperMapImp(actionSpec, null);
   }
 
-  /** Gets the second device if possible. */
-  public static Optional<Operand> getSecond(ActionSpec actionSpec) {
-    if (actionSpec.hasBinary()) {
-      return Optional.of(actionSpec.getBinary().getSecond());
-    }
-    return Optional.empty();
+  /**
+   * Gets a map associating {@link DeviceWrapper} to {@link DevicePosition} by parsing {@link
+   * ActionSpec} and {@link ActionOptions}.
+   *
+   * @param actionSpec to extract the operand info.
+   * @param options to extract the possible device config file.
+   * @return a map to get {@link DeviceWrapper} for each available position.
+   * @throws DeviceActionException if the inputs are invalid.
+   */
+  public static EnumMap<DevicePosition, DeviceWrapper> getDeviceWrapperMap(
+      ActionSpec actionSpec, ActionOptions options) throws DeviceActionException {
+    Conditions.checkArgument(
+        options != null, ErrorType.CUSTOMER_ISSUE, "Options should not be null!");
+    return getDeviceWrapperMapImp(actionSpec, options);
   }
 
   /** Gets {@code DeviceConfig} by parsing a text proto. */
@@ -109,17 +125,7 @@ public class ProtoHelper {
             "Need to set the first device in " + options);
         InstallMainlineSpec installMainlineSpec =
             buildProtoByOptions(options.action(), InstallMainlineSpec.class);
-        return ActionSpec.newBuilder()
-            .setUnary(
-                Unary.newBuilder()
-                    .setFirst(
-                        Operand.newBuilder()
-                            .setDeviceType(DeviceType.ANDROID_PHONE)
-                            .setUuid(getUuid(options.firstDevice()))
-                            .build())
-                    .setExtension(InstallMainlineSpec.ext, installMainlineSpec)
-                    .build())
-            .build();
+        return getActionSpecForInstallMainline(installMainlineSpec, getUuid(options.firstDevice()));
       default:
         throw new DeviceActionException(INVALID_CMD, ErrorType.CUSTOMER_ISSUE, "Not supported");
     }
@@ -145,6 +151,26 @@ public class ProtoHelper {
       default:
         throw new DeviceActionException(INVALID_CMD, ErrorType.CUSTOMER_ISSUE, "Not supported");
     }
+  }
+
+  /**
+   * Gets {@link ActionSpec} for install mainline action.
+   *
+   * @param installMainlineSpec the spec of install mainline action.
+   * @param uuid of the device.
+   */
+  public static ActionSpec getActionSpecForInstallMainline(
+      InstallMainlineSpec installMainlineSpec, String uuid) {
+    return ActionSpec.newBuilder()
+        .setUnary(
+            Unary.newBuilder()
+                .setFirst(
+                    Operand.newBuilder()
+                        .setDeviceType(DeviceType.ANDROID_PHONE)
+                        .setUuid(uuid)
+                        .build())
+                .setExtension(InstallMainlineSpec.ext, installMainlineSpec))
+        .build();
   }
 
   @VisibleForTesting
@@ -248,6 +274,34 @@ public class ProtoHelper {
           .build();
     }
     return FileSpec.newBuilder().setTag(tag).setLocalPath(value).build();
+  }
+
+  private static EnumMap<DevicePosition, DeviceWrapper> getDeviceWrapperMapImp(
+      ActionSpec actionSpec, @Nullable ActionOptions options) throws DeviceActionException {
+    EnumMap<DevicePosition, DeviceWrapper> map = new EnumMap<>(DevicePosition.class);
+    if (actionSpec.hasUnary()) {
+      Optional<String> firstOp =
+          (options != null)
+              ? options.firstDevice().getOnlyValue(DEVICE_CONFIG_KEY)
+              : Optional.empty();
+      DeviceWrapper firstWrapper = DeviceWrapper.create(actionSpec.getUnary().getFirst(), firstOp);
+      map.put(DevicePosition.FIRST, firstWrapper);
+    } else if (actionSpec.hasBinary()) {
+      Optional<String> firstOp =
+          (options != null)
+              ? options.firstDevice().getOnlyValue(DEVICE_CONFIG_KEY)
+              : Optional.empty();
+      map.put(
+          DevicePosition.FIRST, DeviceWrapper.create(actionSpec.getBinary().getFirst(), firstOp));
+      Optional<String> secondOp =
+          (options != null)
+              ? options.secondDevice().getOnlyValue(DEVICE_CONFIG_KEY)
+              : Optional.empty();
+      map.put(
+          DevicePosition.SECOND,
+          DeviceWrapper.create(actionSpec.getBinary().getSecond(), secondOp));
+    }
+    return map;
   }
 
   private ProtoHelper() {}

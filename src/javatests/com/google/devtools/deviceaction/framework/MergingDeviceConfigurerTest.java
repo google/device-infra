@@ -130,10 +130,19 @@ public final class MergingDeviceConfigurerTest {
   }
 
   @Test
+  public void getConfigure_useActionSpec() throws Exception {
+    ActionConfig actionConfig =
+        configurer.createActionConfigure(Command.INSTALL_MAINLINE, ACTION_SPEC);
+
+    assertThat(actionConfig).isEqualTo(ACTION_CONFIG);
+    verify(mockDao).getDeviceConfig(anyString(), eq(Command.INSTALL_MAINLINE));
+  }
+
+  @Test
   public void getConfigure_getDeviceConfigFromDao() throws Exception {
     ActionOptions actionOptions = buildActionOptions(/* useDao= */ true);
 
-    ActionConfig actionConfig = configurer.getConfigure(actionOptions);
+    ActionConfig actionConfig = configurer.createActionConfigure(actionOptions);
 
     assertThat(actionConfig).isEqualTo(ACTION_CONFIG);
     verify(mockDao).getDeviceConfig(anyString(), eq(Command.INSTALL_MAINLINE));
@@ -145,7 +154,8 @@ public final class MergingDeviceConfigurerTest {
     when(mockDao.getDeviceConfig(anyString(), eq(Command.INSTALL_MAINLINE)))
         .thenThrow(DeviceActionException.class);
 
-    assertThrows(DeviceActionException.class, () -> configurer.getConfigure(actionOptions));
+    assertThrows(
+        DeviceActionException.class, () -> configurer.createActionConfigure(actionOptions));
     verify(mockDao).getDeviceConfig(anyString(), eq(Command.INSTALL_MAINLINE));
   }
 
@@ -153,7 +163,7 @@ public final class MergingDeviceConfigurerTest {
   public void getConfigure_getDeviceConfigFromUser() throws Exception {
     ActionOptions actionOptions = buildActionOptions(/* useDao= */ false);
 
-    ActionConfig actionConfig = configurer.getConfigure(actionOptions);
+    ActionConfig actionConfig = configurer.createActionConfigure(actionOptions);
 
     assertThat(actionConfig).isEqualTo(ACTION_CONFIG);
     verify(mockDao, never()).getDeviceConfig(anyString(), eq(Command.INSTALL_MAINLINE));

@@ -19,6 +19,7 @@ package com.google.devtools.deviceaction.common.schemas;
 import com.google.auto.value.AutoValue;
 import com.google.devtools.deviceaction.framework.proto.ActionSpec;
 import com.google.devtools.deviceaction.framework.proto.DeviceSpec;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Optional;
 
 /** Data structure for device actions. */
@@ -47,6 +48,18 @@ public abstract class ActionConfig {
     public abstract Builder setFirstSpec(DeviceSpec firstSpec);
 
     public abstract Builder setSecondSpec(DeviceSpec secondSpec);
+
+    /** Sets the {@link DeviceSpec} at the position {@code devicePosition}. */
+    @CanIgnoreReturnValue
+    public Builder setDeviceSpec(DevicePosition devicePosition, DeviceSpec deviceSpec) {
+      switch (devicePosition) {
+        case FIRST:
+          return this.setFirstSpec(deviceSpec);
+        case SECOND:
+          return this.setSecondSpec(deviceSpec);
+      }
+      return this;
+    }
 
     public abstract ActionConfig build();
   }
