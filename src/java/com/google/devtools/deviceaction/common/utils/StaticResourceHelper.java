@@ -20,7 +20,6 @@ import static com.google.devtools.deviceaction.common.utils.ResourceUtil.createS
 import static com.google.devtools.deviceaction.common.utils.ResourceUtil.filterExistingFile;
 import static com.google.devtools.deviceaction.common.utils.ResourceUtil.getExistingDir;
 
-import com.google.auto.value.AutoValue;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -36,42 +35,79 @@ import java.util.Optional;
  * be obtained at a later stage when we call the {@link Factory#create(Path, Path, Path, Path)}
  * method.
  */
-@AutoValue
-public abstract class StaticResourceHelper implements ResourceHelper {
-  @Override
-  public abstract Path getTmpFileDir();
+public final class StaticResourceHelper implements ResourceHelper {
 
-  @Override
-  public abstract Path getGenFileDir();
+  private final Path tmpFileDir;
 
-  @Override
-  public abstract Path getJavaBin();
+  private final Path genFileDir;
 
-  @Override
-  public abstract Optional<Aapt> getAapt();
+  private final Path javaBin;
 
-  @Override
-  public abstract Optional<Adb> getAdb();
+  private final Aapt aapt;
 
-  @Override
-  public abstract Optional<Path> getBundletoolJar();
+  private final Adb adb;
 
-  @Override
-  public abstract Optional<Path> getCredFile();
+  private final Path bundletoolJar;
 
-  @Override
-  public abstract CommandExecutor getCommandExecutor();
+  private final Path credFile;
 
-  private static StaticResourceHelper create(
+  private final CommandExecutor commandExecutor = new CommandExecutor();
+
+  private StaticResourceHelper(
       Path tmpFileDir,
       Path genFileDir,
       Path javaBin,
-      Optional<Aapt> aapt,
-      Optional<Adb> adb,
-      Optional<Path> bundletoolJar,
-      Optional<Path> credFile) {
-    return new AutoValue_StaticResourceHelper(
-        tmpFileDir, genFileDir, javaBin, aapt, adb, bundletoolJar, credFile, new CommandExecutor());
+      Aapt aapt,
+      Adb adb,
+      Path bundletoolJar,
+      Path credFile) {
+    this.tmpFileDir = tmpFileDir;
+    this.genFileDir = genFileDir;
+    this.javaBin = javaBin;
+    this.aapt = aapt;
+    this.adb = adb;
+    this.bundletoolJar = bundletoolJar;
+    this.credFile = credFile;
+  }
+
+  @Override
+  public Path getTmpFileDir() throws DeviceActionException {
+    return getExistingDir(tmpFileDir);
+  }
+
+  @Override
+  public Path getGenFileDir() throws DeviceActionException {
+    return getExistingDir(genFileDir);
+  }
+
+  @Override
+  public Path getJavaBin() {
+    return javaBin;
+  }
+
+  @Override
+  public Optional<Aapt> getAapt() {
+    return Optional.of(aapt);
+  }
+
+  @Override
+  public Optional<Adb> getAdb() {
+    return Optional.of(adb);
+  }
+
+  @Override
+  public Optional<Path> getBundletoolJar() {
+    return filterExistingFile(bundletoolJar);
+  }
+
+  @Override
+  public Optional<Path> getCredFile() {
+    return filterExistingFile(credFile);
+  }
+
+  @Override
+  public CommandExecutor getCommandExecutor() {
+    return commandExecutor;
   }
 
   /** A factory class for {@link StaticResourceHelper}. */
@@ -89,16 +125,16 @@ public abstract class StaticResourceHelper implements ResourceHelper {
 
     /** Creates a {@link StaticResourceHelper} with local files. */
     public StaticResourceHelper create(
-        Path tmpFileDir, Path genFileDir, Path bundleToolJar, Path credFile)
+        Path tmpFileDir, Path genFileDir, Path bundletoolJar, Path credFile)
         throws DeviceActionException {
-      return StaticResourceHelper.create(
-          getExistingDir(createSessionDir(tmpFileDir)),
-          getExistingDir(createSessionDir(genFileDir)),
+      return new StaticResourceHelper(
+          createSessionDir(tmpFileDir),
+          createSessionDir(genFileDir),
           javaBin,
-          Optional.of(aapt),
-          Optional.of(adb),
-          filterExistingFile(bundleToolJar),
-          filterExistingFile(credFile));
+          aapt,
+          adb,
+          bundletoolJar,
+          credFile);
     }
   }
 }
