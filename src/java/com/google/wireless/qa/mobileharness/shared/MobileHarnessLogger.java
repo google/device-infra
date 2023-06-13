@@ -61,7 +61,13 @@ public class MobileHarnessLogger {
   /** Max size of a single log file. Here we set it to 10 MB. */
   private static final int LOG_FILE_SIZE_LIMIT = 10 * 1024 * 1024;
 
-  private static final Filter FILTER = logRecord -> true;
+  private static final Filter COMMON_FILTER =
+      logRecord -> !logRecord.getLoggerName().equals("io.grpc.netty.NettyServerHandler");
+
+  private static final Filter LAB_FILTER =
+      logRecord -> COMMON_FILTER.isLoggable(logRecord) && !(false);
+
+  private static final Filter FILTER = LAB_FILTER;
 
   private static final AtomicBoolean isInitialized = new AtomicBoolean();
 
@@ -99,6 +105,7 @@ public class MobileHarnessLogger {
       DEBUG_LOG_LEVELS.forEach((className, level) -> getLoggerByName(className).setLevel(level));
     }
     Logger rootLogger = getLoggerByName("");
+    rootLogger.setLevel(Level.ALL);
     try {
       createFileHandler(
               /* subDir= */ "",
@@ -113,6 +120,7 @@ public class MobileHarnessLogger {
     for (Handler handler : rootLogger.getHandlers()) {
       handler.setFormatter(MobileHarnessLogFormatter.getDefaultFormatter());
       handler.setFilter(FILTER);
+      handler.setLevel(Level.INFO);
     }
   }
 
