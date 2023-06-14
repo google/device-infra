@@ -36,6 +36,9 @@ import com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.Tokenization
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
@@ -88,6 +91,7 @@ public class XtsTradefedTest extends BaseDriver
   private final SystemUtil systemUtil;
   private final Adb adb;
   private final Fastboot fastboot;
+  private final LogRecorder logRecorder;
 
   public XtsTradefedTest(Device device, TestInfo testInfo) {
     this(
@@ -97,7 +101,8 @@ public class XtsTradefedTest extends BaseDriver
         new LocalFileUtil(),
         new SystemUtil(),
         new Adb(),
-        new Fastboot());
+        new Fastboot(),
+        LogRecorder.getInstance());
   }
 
   @VisibleForTesting
@@ -108,13 +113,15 @@ public class XtsTradefedTest extends BaseDriver
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
       Adb adb,
-      Fastboot fastboot) {
+      Fastboot fastboot,
+      LogRecorder logRecorder) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
     this.adb = adb;
     this.fastboot = fastboot;
+    this.logRecorder = logRecorder;
   }
 
   @Override
@@ -156,7 +163,7 @@ public class XtsTradefedTest extends BaseDriver
           "xTS Tradefed temp working dir is not initialized, skip post test processing.");
       return;
     }
-    // Copies xTS TF generated logs and results for this invocation in the test's gen file dir so
+    // Copies xTS TF generated logs and results for this invocation in the test's gen file dir, so
     // they will be transferred to the client side.
     try {
       Path xtsGenFileDir =
@@ -261,9 +268,8 @@ public class XtsTradefedTest extends BaseDriver
     }
     Joiner.on(' ').appendTo(cmdString, cmd);
     logger.atInfo().log("Running %s command:%n%s", xtsType.name(), cmdString);
-    try {
-      BufferedWriter writer =
-          Files.newBufferedWriter(Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG));
+    try (BufferedWriter writer =
+        Files.newBufferedWriter(Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG))) {
 
       return cmdExecutor.start(
           Command.of(cmd)
@@ -271,6 +277,11 @@ public class XtsTradefedTest extends BaseDriver
               .onStdout(
                   LineCallback.does(
                       line -> {
+                        logRecorder.addLogRecord(
+                            LogRecord.newBuilder()
+                                .setFormattedLogRecord(line)
+                                .setSourceType(SourceType.TF)
+                                .build());
                         try {
                           writer.write(line + "\n");
                         } catch (IOException e) {
@@ -344,7 +355,6 @@ public class XtsTradefedTest extends BaseDriver
               linkXtsToolsDirRealPath,
               /* recursively= */ false,
               path -> path.getFileName().toString().endsWith(".jar"))
-          .stream()
           .forEach(
               jar -> {
                 Path newJarPath = replacePathPrefix(jar, linkXtsToolsDirRealPath, linkXtsToolsDir);
@@ -359,7 +369,6 @@ public class XtsTradefedTest extends BaseDriver
               linkXtsTestcasesDirRealPath,
               /* recursively= */ true,
               path -> path.getFileName().toString().endsWith(".jar"))
-          .stream()
           .forEach(
               jar -> {
                 Path newJarPath =
@@ -596,6 +605,6 @@ public class XtsTradefedTest extends BaseDriver
 
   /** Type for xTS. */
   public enum XtsType {
-    CTS;
+    CTS
   }
 }
