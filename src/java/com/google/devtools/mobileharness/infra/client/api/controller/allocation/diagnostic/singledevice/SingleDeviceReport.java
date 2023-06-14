@@ -125,6 +125,17 @@ public class SingleDeviceReport implements Report {
     JobType jobType = job.type();
 
     if (overallAssessment == null) {
+      if (jobType.getDevice().equals("AndroidLocalEmulator")) {
+        return Result.create(
+            InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR,
+            "No "
+                + jobType.getDevice()
+                + " found"
+                + getDiagnosticCandidateFilterSuffix()
+                + " Please see go/omnilab-why-test-not-assigned#no-androidlocalemulator-found for"
+                + " solution.",
+            null);
+      }
       return Result.create(
           InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR,
           "No " + jobType.getDevice() + " found" + getDiagnosticCandidateFilterSuffix(),
