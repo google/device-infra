@@ -28,4 +28,15 @@ message LogRecords {
 message LogRecord {
   // Required.
   string formatted_log_record = 1;
+
+  // Required.
+  SourceType source_type = 2;
+
+  enum SourceType {
+    UNSPECIFIED_SOURCE_TYPE = 0;
+    // The log record is from logger of the process itself.
+    SELF = 1;
+    // The log record is from TF process.
+    TF = 2;
+  }
 }

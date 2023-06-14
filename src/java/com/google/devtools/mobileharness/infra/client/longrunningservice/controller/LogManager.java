@@ -21,6 +21,7 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutur
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import java.util.HashSet;
 import java.util.Set;
@@ -74,9 +75,11 @@ public class LogManager<D> {
   /**
    * A ring buffer of log records. When it is full and a new record is being added, the earliest
    * record will be discarded.
+   *
+   * <p>The record class type is {@link LogRecord} or {@link LogProto.LogRecord}.
    */
   @GuardedBy("itself")
-  private final LogRecord[] records = new LogRecord[CAPACITY];
+  private final Object[] records = new LogRecord[CAPACITY];
 
   /** Exclusive. Value range: [0, records.length - 1]. */
   @GuardedBy("records")
@@ -140,7 +143,7 @@ public class LogManager<D> {
 
         // Polls all records.
         do {
-          LogRecord logRecord = records[index];
+          Object logRecord = records[index];
           records[index] = null;
           logRecords.addLogRecord(generateLogRecord(logRecord));
           index++;
@@ -164,8 +167,16 @@ public class LogManager<D> {
     return null;
   }
 
-  // Add a log record to the ring buffer. Discards the earliest one if the buffer is full.
-  private void addLogRecord(LogRecord logRecord) {
+  void addExternalLogRecord(LogProto.LogRecord logRecord) {
+    addLogRecordToBuffer(logRecord);
+  }
+
+  /**
+   * Adds a log record to the ring buffer. Discards the earliest one if the buffer is full.
+   *
+   * <p>The record class type is {@link LogRecord} or {@link LogProto.LogRecord}.
+   */
+  private void addLogRecordToBuffer(Object logRecord) {
     synchronized (records) {
       records[recordsEndIndex] = logRecord;
       recordsEndIndex++;
@@ -184,7 +195,7 @@ public class LogManager<D> {
     @Override
     public void publish(LogRecord logRecord) {
       if (isLoggable(logRecord)) {
-        addLogRecord(logRecord);
+        addLogRecordToBuffer(logRecord);
       }
     }
 
@@ -199,8 +210,15 @@ public class LogManager<D> {
     }
   }
 
-  private LogProto.LogRecord generateLogRecord(LogRecord logRecord) {
-    String formattedLogRecord = logHandler.getFormatter().format(logRecord);
-    return LogProto.LogRecord.newBuilder().setFormattedLogRecord(formattedLogRecord).build();
+  private LogProto.LogRecord generateLogRecord(Object logRecord) {
+    if (logRecord instanceof LogRecord) {
+      String formattedLogRecord = logHandler.getFormatter().format((LogRecord) logRecord);
+      return LogProto.LogRecord.newBuilder()
+          .setFormattedLogRecord(formattedLogRecord)
+          .setSourceType(SourceType.SELF)
+          .build();
+    } else {
+      return (LogProto.LogRecord) logRecord;
+    }
   }
 }

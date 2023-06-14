@@ -45,6 +45,20 @@ java_library(
 )
 
 java_library(
+    name = "log_recorder",
+    srcs = ["LogRecorder.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+    ],
+    deps = [
+        ":log_manager",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
+    ],
+)
+
+java_library(
     name = "session_detail_creator",
     srcs = ["SessionDetailCreator.java"],
     deps = [

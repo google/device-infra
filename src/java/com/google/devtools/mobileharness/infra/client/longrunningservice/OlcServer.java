@@ -28,6 +28,7 @@ import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
@@ -97,6 +98,7 @@ public class OlcServer {
 
     // Starts log manager.
     logManager.start();
+    LogRecorder.getInstance().initialize(logManager);
 
     // Starts RPC server.
     int port = Flags.instance().olcServerPort.getNonNull();
