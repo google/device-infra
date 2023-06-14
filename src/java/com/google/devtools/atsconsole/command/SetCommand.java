@@ -30,6 +30,7 @@ import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
+import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.Option;
 
 /** Command to set console configurations. */
@@ -37,7 +38,12 @@ import picocli.CommandLine.Option;
     name = "set",
     aliases = {"s"},
     sortOptions = false,
-    description = "Set console configurations.")
+    description = "Set console configurations.",
+    subcommands = {
+      // Add HelpCommand as a subcommand of "set" command so users can do "set help <subcommand>"
+      // to get the usage help message for the <subcommand> in the "set" command.
+      HelpCommand.class,
+    })
 public class SetCommand implements Callable<Integer> {
 
   @Option(

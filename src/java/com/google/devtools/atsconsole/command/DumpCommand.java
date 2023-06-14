@@ -31,6 +31,7 @@ import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
+import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.Spec;
@@ -40,7 +41,12 @@ import picocli.CommandLine.Spec;
     name = "dump",
     aliases = {"d"},
     sortOptions = false,
-    description = "Dump logs, bugreport, config, etc.")
+    description = "Dump logs, bugreport, config, etc.",
+    subcommands = {
+      // Add HelpCommand as a subcommand of "dump" command so users can do "dump help <subcommand>"
+      // to get the usage help message for the <subcommand> in the "dump" command.
+      HelpCommand.class,
+    })
 public class DumpCommand implements Callable<Integer> {
 
   @Spec private CommandSpec spec;

@@ -30,6 +30,7 @@ import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
+import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParameterException;
@@ -40,7 +41,12 @@ import picocli.CommandLine.Spec;
     name = "list",
     aliases = {"l"},
     sortOptions = false,
-    description = "List invocations, devices, modules, etc.")
+    description = "List invocations, devices, modules, etc.",
+    subcommands = {
+      // Add HelpCommand as a subcommand of "list" command so users can do "list help <subcommand>"
+      // to get the usage help message for the <subcommand> in the "list" command.
+      HelpCommand.class,
+    })
 public class ListCommand implements Callable<Integer> {
 
   @Spec private CommandSpec spec;

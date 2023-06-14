@@ -261,7 +261,6 @@ class RunCommandHandler {
     XtsType xtsType = command.getXtsType();
     String timestampDirName = getTimestampDirName();
     Path resultDir = getResultDir(Paths.get(xtsRootDir), xtsType, timestampDirName);
-    Path tfResultDir = resultDir.resolve("tradefed_result");
     Path logDir = getLogDir(Paths.get(xtsRootDir), xtsType, timestampDirName);
     Path tfLogDir = logDir.resolve("tradefed_log");
     Path atsLogDir = logDir.resolve("ats_log");
@@ -278,17 +277,39 @@ class RunCommandHandler {
                 logsSubDir, tfLogDir, ImmutableList.of("-rf"));
           }
         }
-        Path resultsDir = genFile.resolve("results");
-        if (resultsDir.toFile().exists()) {
-          localFileUtil.prepareDir(tfResultDir);
+        Path genFileResultsDir = genFile.resolve("results");
+        if (genFileResultsDir.toFile().exists()) {
+          localFileUtil.prepareDir(resultDir);
           List<Path> resultsSubFilesOrDirs =
               localFileUtil.listFilesOrDirs(
-                  resultsDir, filePath -> !filePath.getFileName().toString().equals("latest"));
+                  genFileResultsDir,
+                  filePath -> !filePath.getFileName().toString().equals("latest"));
           for (Path resultsSubFileOrDir : resultsSubFilesOrDirs) {
-            logger.atInfo().log(
-                "Copying file/dir [%s] into dir [%s]", resultsSubFileOrDir, tfResultDir);
-            localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                resultsSubFileOrDir, tfResultDir, ImmutableList.of("-rf"));
+            if (resultsSubFileOrDir.toFile().isDirectory()) {
+              // If it's a dir, copy its content into the new result dir.
+              List<Path> resultFilesOrDirs =
+                  localFileUtil.listFilesOrDirs(resultsSubFileOrDir, path -> true);
+              for (Path resultFileOrDir : resultFilesOrDirs) {
+                logger.atInfo().log(
+                    "Copying file/dir [%s] into dir [%s]", resultFileOrDir, resultDir);
+                localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                    resultFileOrDir, resultDir, ImmutableList.of("-rf"));
+              }
+            } else if (resultsSubFileOrDir.getFileName().toString().endsWith(".zip")) {
+              // If it's a zip file, copy it as a sibling file as the new result dir and rename it
+              // as "<new_result_dir_name>.zip"
+              logger.atInfo().log(
+                  "Copying file/dir [%s] into dir [%s]", resultsSubFileOrDir, resultDir);
+              localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                  resultsSubFileOrDir,
+                  resultDir.resolveSibling(String.format("%s.zip", resultDir.getFileName())),
+                  ImmutableList.of("-rf"));
+            } else {
+              logger.atInfo().log(
+                  "Copying file/dir [%s] into dir [%s]", resultsSubFileOrDir, resultDir);
+              localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                  resultsSubFileOrDir, resultDir, ImmutableList.of("-rf"));
+            }
           }
         }
       } else {
@@ -310,7 +331,8 @@ class RunCommandHandler {
     return getXtsLogsDir(xtsRootDir, xtsType).resolve(timestampDirName);
   }
 
-  private String getTimestampDirName() {
+  @VisibleForTesting
+  String getTimestampDirName() {
     return new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss", Locale.getDefault())
         .format(new Timestamp(Clock.systemUTC().millis()));
   }

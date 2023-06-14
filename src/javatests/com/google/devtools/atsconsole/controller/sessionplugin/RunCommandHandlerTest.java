@@ -18,6 +18,7 @@ package com.google.devtools.atsconsole.controller.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -67,6 +68,7 @@ public final class RunCommandHandlerTest {
 
   private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
   private static final String XTS_ROOT_DIR_NAME = "xts_root_dir";
+  private static final String TIMESTAMP_DIR_NAME = "2023.06.13_06.27.28";
 
   private static final LocalFileUtil realLocalFileUtil = new LocalFileUtil();
 
@@ -86,6 +88,7 @@ public final class RunCommandHandlerTest {
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     runCommandHandler = spy(runCommandHandler);
+    doReturn(TIMESTAMP_DIR_NAME).when(runCommandHandler).getTimestampDirName();
   }
 
   @Test
@@ -293,11 +296,25 @@ public final class RunCommandHandlerTest {
 
     runCommandHandler.handleResultProcessing(command, sessionInfo);
 
+    assertThat(
+            xtsRootDir
+                .toPath()
+                .resolve(String.format("android-cts/results/%s", TIMESTAMP_DIR_NAME))
+                .toFile()
+                .isDirectory())
+        .isTrue();
+    assertThat(
+            xtsRootDir
+                .toPath()
+                .resolve(String.format("android-cts/results/%s.zip", TIMESTAMP_DIR_NAME))
+                .toFile()
+                .isFile())
+        .isTrue();
     List<Path> newFilesInResultsDir =
         realLocalFileUtil.listFilePaths(
             xtsRootDir.toPath().resolve("android-cts/results"), /* recursively= */ true);
     assertThat(newFilesInResultsDir.stream().map(f -> f.getFileName().toString()))
-        .containsExactly("test_result.xml", "2023.06.07_19.23.49.zip");
+        .containsExactly("test_result.xml", String.format("%s.zip", TIMESTAMP_DIR_NAME));
 
     List<Path> newFilesInLogsDir =
         realLocalFileUtil.listFilePaths(

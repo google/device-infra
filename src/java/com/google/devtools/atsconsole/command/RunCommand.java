@@ -23,6 +23,7 @@ import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
@@ -71,21 +72,28 @@ import org.apache.commons.io.FilenameUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
+import picocli.CommandLine.Help.Ansi;
+import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
-/** Command to run CTS and CTS-V tests. */
+/** Command to run CTS tests. */
 @Command(
     name = "run",
     aliases = {"r"},
     sortOptions = false,
-    description = "Run CTS and CTS-V tests.",
+    description = "Run CTS tests.",
     footer = {
       "%nAlternatively you can enter @|fg(yellow) <config>|@ right after \"run\" command which"
           + " will achieve same result.%n",
+    },
+    subcommands = {
+      // Add HelpCommand as a subcommand of "run" command so users can do "run help <subcommand>" to
+      // get the usage help message for the <subcommand> in the "run" command.
+      HelpCommand.class,
     })
 final class RunCommand implements Callable<Integer> {
 
@@ -93,9 +101,9 @@ final class RunCommand implements Callable<Integer> {
 
   @Parameters(
       index = "0",
-      arity = "1",
+      arity = "0..1",
       paramLabel = "<config>",
-      description = "CTS and CTS-V test config/plan.")
+      description = "CTS test config/plan.")
   private String config;
 
   @ArgGroup(exclusive = false, multiplicity = "0..*")
@@ -136,6 +144,11 @@ final class RunCommand implements Callable<Integer> {
 
   @Parameters(index = "1..*", description = "Extra run command args.")
   private List<String> extraRunCmdArgs;
+
+  private enum RetryType {
+    FAILED,
+    NOT_EXECUTED
+  };
 
   @Spec private CommandSpec spec;
 
@@ -192,13 +205,46 @@ final class RunCommand implements Callable<Integer> {
   public Integer call() throws MobileHarnessException, InterruptedException, IOException {
     try {
       if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
-        return runInM1();
-      } else {
         validateConfig();
+        return runInM1(/* isRunRetry= */ false, /* extraRunRetryCmdArgs= */ ImmutableList.of());
+      } else {
+        validateM0Config();
         return runInM0();
       }
     } finally {
       moduleTestOptionsGroups = null; // reset the group to clear the history
+    }
+  }
+
+  @Command(
+      name = "retry",
+      description =
+          "Retry all the tests that failed or weren't executed from the previous sessions.")
+  public int execRunRetry(
+      @Option(
+              names = "--retry",
+              required = true,
+              description =
+                  "Id for the retry session. Use @|bold list results|@ to get the session id.")
+          int sessionId,
+      @Option(names = "--retry-type", description = "Supported values: ${COMPLETION-CANDIDATES}")
+          RetryType retryType)
+      throws MobileHarnessException, InterruptedException {
+    ImmutableList.Builder<String> extraRunRetryCmdArgs = ImmutableList.builder();
+    extraRunRetryCmdArgs.addAll(ImmutableList.of("--retry", String.valueOf(sessionId)));
+    if (retryType != null) {
+      extraRunRetryCmdArgs.addAll(
+          ImmutableList.of("--retry-type", Ascii.toUpperCase(retryType.name())));
+    }
+    return runInM1(/* isRunRetry= */ true, extraRunRetryCmdArgs.build());
+  }
+
+  private void validateConfig() {
+    if (isNullOrEmpty(config)) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Param @|fg(yellow) <config>|@ right after 'run' command is required.\n"));
     }
   }
 
@@ -212,7 +258,7 @@ final class RunCommand implements Callable<Integer> {
 
       ImmutableList<MoblyTestRunEntry> moblyTestRunEntries = getMoblyTestRunEntries();
 
-      // Filter Mobly test zips per commandline options
+      // Filter Mobly test zips per command line options
       if (!moduleTestOptionsGroupMap.isEmpty()) {
         moblyTestRunEntries =
             moblyTestRunEntries.stream()
@@ -276,7 +322,8 @@ final class RunCommand implements Callable<Integer> {
     return ExitCode.OK;
   }
 
-  private int runInM1() throws InterruptedException, MobileHarnessException {
+  private int runInM1(boolean isRunRetry, ImmutableList<String> extraRunRetryCmdArgs)
+      throws InterruptedException, MobileHarnessException {
     serverPreparer.prepareOlcServer();
 
     ImmutableList<String> deviceSerials =
@@ -295,14 +342,17 @@ final class RunCommand implements Callable<Integer> {
     // Asynchronously runs the session.
     SessionPluginProto.RunCommand.Builder runCommand =
         SessionPluginProto.RunCommand.newBuilder()
-            .setTestPlan(config)
             .setXtsRootDir(consoleInfo.getXtsRootDirectory().orElse(""))
             .setXtsType(XtsType.CTS)
-            .addAllDeviceSerial(deviceSerials)
-            .addAllModuleName(modules)
-            .addAllExtraArg(extraArgs);
+            .addAllDeviceSerial(deviceSerials);
     if (shardCount > 0) {
       runCommand.setShardCount(shardCount);
+    }
+
+    if (isRunRetry) {
+      runCommand.setTestPlan("retry").addAllExtraArg(extraRunRetryCmdArgs);
+    } else {
+      runCommand.setTestPlan(config).addAllModuleName(modules).addAllExtraArg(extraArgs);
     }
 
     serverLogPrinter.enable(true);
@@ -319,7 +369,7 @@ final class RunCommand implements Callable<Integer> {
     return ExitCode.OK;
   }
 
-  private void validateConfig() {
+  private void validateM0Config() {
     if (isNullOrEmpty(config)) {
       throw new ParameterException(
           spec.commandLine(), "Missing param <config> after command \"run\".");

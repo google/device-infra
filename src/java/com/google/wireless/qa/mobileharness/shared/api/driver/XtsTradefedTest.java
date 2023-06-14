@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -25,6 +26,7 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
@@ -64,6 +66,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 /** Driver for running Tradefed based xTS test suites. */
@@ -77,6 +80,8 @@ public class XtsTradefedTest extends BaseDriver
       "com.android.compatibility.common.tradefed.command.CompatibilityConsole";
 
   private static final String XTS_TF_LOG = "xts_tf_output.log";
+
+  private volatile ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
 
   private final CommandExecutor cmdExecutor;
   private final LocalFileUtil localFileUtil;
@@ -118,12 +123,13 @@ public class XtsTradefedTest extends BaseDriver
           InterruptedException {
     XtsTradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
     XtsType xtsType = XtsType.valueOf(Ascii.toUpperCase(spec.getXtsType()));
+    boolean isRunRetry = Ascii.equalsIgnoreCase("retry", getXtsTestPlan(spec));
 
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     Path tmpXtsRootDir = null;
     try {
       tmpXtsRootDir = prepareXtsWorkDir(xtsType);
-      setUpXtsWorkDir(getXtsRootDir(spec), tmpXtsRootDir, xtsType);
+      setUpXtsWorkDir(getXtsRootDir(spec), tmpXtsRootDir, xtsType, isRunRetry);
       logger.atInfo().log("xTS Tradefed temp working root directory is %s", tmpXtsRootDir);
 
       boolean xtsRunCommandSuccess = runXtsCommand(testInfo, spec, tmpXtsRootDir, xtsType);
@@ -163,7 +169,20 @@ public class XtsTradefedTest extends BaseDriver
 
       Path tmpXtsResultsDir = getXtsResultsDir(tmpXtsRootDir, xtsType);
       if (localFileUtil.isDirExist(tmpXtsResultsDir)) {
-        localFileUtil.copyFileOrDir(tmpXtsResultsDir, xtsGenFileDir);
+        // For "run retry", needs to skip those previous generated results and only copy the result
+        // files belonging to this run.
+        List<Path> newGenResultFilesOrDirs =
+            localFileUtil.listFilesOrDirs(
+                tmpXtsResultsDir,
+                path ->
+                    !previousResultDirNames.contains(path.getFileName().toString())
+                        && !Objects.equals(path.getFileName().toString(), "latest"));
+        Path xtsGenResultsDir = xtsGenFileDir.resolve("results");
+        localFileUtil.prepareDir(xtsGenResultsDir);
+        localFileUtil.grantFileOrDirFullAccess(xtsGenResultsDir);
+        for (Path newGenResultFileOrDir : newGenResultFilesOrDirs) {
+          localFileUtil.copyFileOrDir(newGenResultFileOrDir, xtsGenResultsDir);
+        }
       }
       Path tmpXtsLogsDir = getXtsLogsDir(tmpXtsRootDir, xtsType);
       if (localFileUtil.isDirExist(tmpXtsLogsDir)) {
@@ -508,12 +527,14 @@ public class XtsTradefedTest extends BaseDriver
     }
   }
 
-  private void setUpXtsWorkDir(Path sourceXtsRootDir, Path tmpXtsWorkDir, XtsType xtsType)
+  private void setUpXtsWorkDir(
+      Path sourceXtsRootDir, Path tmpXtsWorkDir, XtsType xtsType, boolean isRunRetry)
       throws MobileHarnessException {
     Path sourceXtsBundledJdkDir = getXtsJdkDir(sourceXtsRootDir, xtsType);
     Path sourceXtsBundledTestcasesDir = getXtsTestcasesDir(sourceXtsRootDir, xtsType);
     Path sourceXtsBundledToolsDir = getXtsToolsDir(sourceXtsRootDir, xtsType);
     Path sourceXtsBundledLibDir = getXtsLibDir(sourceXtsRootDir, xtsType);
+    Path sourceXtsBundledResultsDir = getXtsResultsDir(sourceXtsRootDir, xtsType);
 
     Path linkJdkDir = getXtsJdkDir(tmpXtsWorkDir, xtsType);
     Path linkTestcasesDir = getXtsTestcasesDir(tmpXtsWorkDir, xtsType);
@@ -524,6 +545,32 @@ public class XtsTradefedTest extends BaseDriver
     createSymlink(linkTestcasesDir, sourceXtsBundledTestcasesDir);
     createSymlink(linkToolsDir, sourceXtsBundledToolsDir);
     createSymlink(linkLibDir, sourceXtsBundledLibDir);
+
+    if (isRunRetry && localFileUtil.isDirExist(sourceXtsBundledResultsDir)) {
+      // For "run retry", TF looks for the corresponding previous result dir per given session id.
+      // So it needs to "copy" previous result dirs and their content so TF can locate the needed
+      // files to start the retry.
+      Path resultsDirInTmpXtsWorkDir = getXtsResultsDir(tmpXtsWorkDir, xtsType);
+      localFileUtil.prepareDir(resultsDirInTmpXtsWorkDir);
+      localFileUtil.grantFileOrDirFullAccess(resultsDirInTmpXtsWorkDir);
+
+      List<Path> existingResultDirs = localFileUtil.listDirs(sourceXtsBundledResultsDir);
+      previousResultDirNames =
+          existingResultDirs.stream()
+              .map(existingResultDir -> existingResultDir.getFileName().toString())
+              .collect(toImmutableSet());
+      for (Path existingResultDir : existingResultDirs) {
+        Path resultDirInTmpXtsWorkDir =
+            resultsDirInTmpXtsWorkDir.resolve(existingResultDir.getFileName().toString());
+        localFileUtil.prepareDir(resultDirInTmpXtsWorkDir);
+        List<Path> filesOrDirsInOneResultDir =
+            localFileUtil.listFilesOrDirs(existingResultDir, p -> true);
+        for (Path fileOrDir : filesOrDirsInOneResultDir) {
+          createSymlink(
+              resultDirInTmpXtsWorkDir.resolve(fileOrDir.getFileName().toString()), fileOrDir);
+        }
+      }
+    }
   }
 
   @CanIgnoreReturnValue
