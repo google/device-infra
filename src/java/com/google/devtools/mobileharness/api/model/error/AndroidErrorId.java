@@ -401,6 +401,12 @@ public enum AndroidErrorId implements ErrorId {
   // Other Variant Android Platforms: 170_001 ~ 200_000
   // ***********************************************************************************************
 
+  /** Device Action: 174_101 ~ 174_200 */
+  DEVICE_ACTION_VALIDATION_FAILURE(174_101, ErrorType.CUSTOMER_ISSUE),
+  DEVICE_ACTION_RESOURCE_CREATE_ERROR(174_102, ErrorType.DEPENDENCY_ISSUE),
+  DEVICE_ACTION_CONFIG_CREATE_ERROR(174_103, ErrorType.DEPENDENCY_ISSUE),
+  DEVICE_ACTION_EXECUTION_ERROR(174_104, ErrorType.DEPENDENCY_ISSUE),
+
   ANDROID_ERROR_ID_PLACE_HOLDER_TO_BE_RENAMED(200_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = ExtErrorId.MAX_CODE + 1;
