@@ -256,6 +256,7 @@ public abstract class Command {
    * <p>The length of the array should be at least 1.
    */
   public static Command of(String... command) {
+    System.out.println("===================================");
     return of(command[0], Arrays.stream(command).skip(1L).collect(Collectors.toList()));
   }
 
