@@ -21,9 +21,18 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.resultstore.v2.TestComponent;
+import com.google.devtools.sponge.shared.parsers.TestComponentParser;
+import com.google.devtools.sponge.shared.parsers.TestComponentParserModule;
+import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.File;
 import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.Collection;
+import java.util.SortedMap;
+import java.util.TreeMap;
 
 /** Utils for test components (See go/sponge-test-components for details). */
 public class TestComponentsUtil {
@@ -40,13 +49,19 @@ public class TestComponentsUtil {
 
   private final LocalFileUtil fileUtil;
 
+  private final TestComponentParser testComponentParser;
+
   public TestComponentsUtil() {
-    this(new LocalFileUtil());
+    this(
+        new LocalFileUtil(),
+        Guice.createInjector(new TestComponentParserModule())
+            .getInstance(TestComponentParser.class));
   }
 
   @VisibleForTesting
-  TestComponentsUtil(LocalFileUtil fileUtil) {
+  TestComponentsUtil(LocalFileUtil fileUtil, TestComponentParser testComponentParser) {
     this.fileUtil = fileUtil;
+    this.testComponentParser = testComponentParser;
   }
 
   /**
@@ -87,5 +102,22 @@ public class TestComponentsUtil {
       logger.atWarning().withCause(e).log(
           "Fail to move test components dir from %s to %s", srcDir, destDir);
     }
+  }
+
+  public Collection<TestComponent> getTestComponents(TestInfo testInfo)
+      throws MobileHarnessException, IOException {
+    SortedMap<String, TestComponent> testComponents = new TreeMap<>();
+    String dir = prepareAndGetTestComponentsDir(testInfo);
+    for (File testComponentFile : fileUtil.listFiles(dir, true)) {
+      TestComponentParser.Result res =
+          testComponentParser.parse(new FileInputStream(testComponentFile));
+      for (TestComponent parsed : res.testComponents()) {
+        testComponents.merge(
+            parsed.getName(),
+            parsed,
+            (previous, current) -> previous.toBuilder().mergeFrom(current).build());
+      }
+    }
+    return testComponents.values();
   }
 }
