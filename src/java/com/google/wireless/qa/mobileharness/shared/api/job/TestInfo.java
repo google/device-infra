@@ -139,6 +139,7 @@ public class TestInfo implements Cloneable {
   public void log(@CompileTimeConstant String message, FluentLogger logger) {
     newTestInfo.log().append(message, logger);
   }
+
   /**
    * Maps the specified key to the specified value in test properties. Neither the key nor the value
    * can be null.

@@ -26,6 +26,7 @@ import javax.annotation.concurrent.GuardedBy;
 /** Device types of a device. */
 public class Types {
   private final Object lock = new Object();
+
   /** Supported types. */
   @GuardedBy("lock")
   private final Set<String> types = new HashSet<>();

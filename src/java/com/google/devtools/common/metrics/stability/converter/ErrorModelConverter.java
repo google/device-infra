@@ -211,6 +211,7 @@ public class ErrorModelConverter {
       ExceptionProto.ExceptionDetail detail) {
     return getUserFacingCriticalError(detail).getSummary().getErrorId();
   }
+
   /*
    * Returns the left-most INFRA_ISSUE or CUSTOMER_ISSUE error id, otherwise the right-most
    * non-(UNCLASSIFIED/UNDETERMINED) error id.
