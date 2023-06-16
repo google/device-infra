@@ -50,7 +50,8 @@ public class SkipTestException extends Exception {
   public enum DesiredTestResult {
     PASS(TestResult.PASS),
     SKIP(TestResult.SKIP),
-    FAIL(TestResult.FAIL);
+    FAIL(TestResult.FAIL),
+    ERROR(TestResult.ERROR);
 
     private final TestResult testResult;
 
