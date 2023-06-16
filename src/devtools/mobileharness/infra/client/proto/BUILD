@@ -17,10 +17,6 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//devtools/mobileharness/infra/client:__subpackages__",
-        "//java/com/google/devtools/mobileharness:__subpackages__",
-        "//java/com/google/wireless/qa/mobileharness:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness:__subpackages__",
-        "//javatests/com/google/wireless/qa/mobileharness:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/shared:__subpackages__",
     ],
 )
