@@ -41,7 +41,7 @@ public class CommandHistory {
     return INSTANCE;
   }
 
-  private static final int DEFAULT_CAPACITY = 10_000;
+  private static final int DEFAULT_CAPACITY = 100_000;
 
   private static final CommandHistory INSTANCE = new CommandHistory(DEFAULT_CAPACITY);
 
