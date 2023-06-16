@@ -38,5 +38,10 @@ proto_library(
 
 java_proto_library(
     name = "report_java_proto",
+    visibility = [
+        "//src/java/com/google/devtools/atsconsole/result:__subpackages__",
+        "//src/java/com/google/devtools/atsconsole/util/result:__pkg__",
+        "//src/javatests/com/google/devtools/atsconsole/result:__subpackages__",
+    ],
     deps = [":report_proto"],
 )

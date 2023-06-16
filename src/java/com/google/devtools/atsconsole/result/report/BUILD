@@ -17,6 +17,7 @@ java_library(
     name = "compatibility_report_parser",
     srcs = ["CompatibilityReportParser.java"],
     visibility = [
+        "//src/java/com/google/devtools/atsconsole/util/result:__pkg__",
         "//src/javatests/com/google/devtools/atsconsole/result/report:__pkg__",
     ],
     deps = [
@@ -60,6 +61,8 @@ java_library(
     name = "compatibility_report_module",
     srcs = ["CompatibilityReportModule.java"],
     visibility = [
+        "//src/java/com/google/devtools/atsconsole:__pkg__",
+        "//src/javatests/com/google/devtools/atsconsole/command:__pkg__",
         "//src/javatests/com/google/devtools/atsconsole/result/report:__pkg__",
     ],
     deps = ["@maven//:com_google_inject_guice"],

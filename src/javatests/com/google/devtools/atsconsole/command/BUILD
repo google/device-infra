@@ -69,6 +69,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole:annotations",
         "//src/java/com/google/devtools/atsconsole:console_info",
         "//src/java/com/google/devtools/atsconsole/controller/olcserver:module",
+        "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_module",
         "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:thread_factory_util",
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "@maven//:com_google_guava_guava",

@@ -26,6 +26,7 @@ import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.atsconsole.Annotations.MainArgs;
 import com.google.devtools.atsconsole.controller.olcserver.OlcServerModule;
+import com.google.devtools.atsconsole.result.report.CompatibilityReportModule;
 import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
@@ -68,6 +69,7 @@ public class AtsConsoleModule extends AbstractModule {
   @Override
   protected void configure() {
     install(new OlcServerModule(olcServerBinary));
+    install(new CompatibilityReportModule());
   }
 
   @Provides

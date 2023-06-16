@@ -22,6 +22,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.controller.olcserver.OlcServerModule;
+import com.google.devtools.atsconsole.result.report.CompatibilityReportModule;
 import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
@@ -41,6 +42,7 @@ public class ConsoleCommandTestModule extends AbstractModule {
   @Override
   protected void configure() {
     install(new OlcServerModule(() -> Path.of("")));
+    install(new CompatibilityReportModule());
   }
 
   @Provides

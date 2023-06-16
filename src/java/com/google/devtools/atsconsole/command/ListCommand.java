@@ -25,6 +25,7 @@ import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSes
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListDevicesCommand;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListModulesCommand;
 import com.google.devtools.atsconsole.controller.sessionplugin.PluginOutputPrinter;
+import com.google.devtools.atsconsole.util.result.ResultLister;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
@@ -54,13 +55,18 @@ public class ListCommand implements Callable<Integer> {
   private final ConsoleUtil consoleUtil;
   private final ServerPreparer serverPreparer;
   private final AtsSessionStub atsSessionStub;
+  private final ResultLister resultLister;
 
   @Inject
   ListCommand(
-      ConsoleUtil consoleUtil, ServerPreparer serverPreparer, AtsSessionStub atsSessionStub) {
+      ConsoleUtil consoleUtil,
+      ServerPreparer serverPreparer,
+      AtsSessionStub atsSessionStub,
+      ResultLister resultLister) {
     this.consoleUtil = consoleUtil;
     this.serverPreparer = serverPreparer;
     this.atsSessionStub = atsSessionStub;
+    this.resultLister = resultLister;
   }
 
   @Override
@@ -143,8 +149,8 @@ public class ListCommand implements Callable<Integer> {
       name = "results",
       aliases = {"r"},
       description = "List all results")
-  public int results() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
+  public int results() throws MobileHarnessException {
+    consoleUtil.printlnStdout("%s", resultLister.listResults());
+    return ExitCode.OK;
   }
 }

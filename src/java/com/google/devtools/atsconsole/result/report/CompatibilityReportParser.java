@@ -86,7 +86,7 @@ public class CompatibilityReportParser {
   }
 
   /**
-   * Parses the compatiblity report XML file and returns {@link Optional}<{@link Result}>.
+   * Parses the compatibility report XML file and returns {@link Optional}<{@link Result}>.
    *
    * <p>If the given file doesn't exist, returns an empty {@link Optional}.
    */
