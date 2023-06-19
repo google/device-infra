@@ -45,6 +45,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole/result/xml:xml_result_formatter",
         "//src/java/com/google/devtools/atsconsole/result/xml:xml_result_util",
         "//src/java/com/google/devtools/atsconsole/testbed/config:yaml_testbed_updater",
+        "//src/java/com/google/devtools/atsconsole/util/plan:plan_lister",
         "//src/java/com/google/devtools/atsconsole/util/result:result_lister",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",

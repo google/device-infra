@@ -25,6 +25,7 @@ import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSes
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListDevicesCommand;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.ListModulesCommand;
 import com.google.devtools.atsconsole.controller.sessionplugin.PluginOutputPrinter;
+import com.google.devtools.atsconsole.util.plan.PlanLister;
 import com.google.devtools.atsconsole.util.result.ResultLister;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.util.concurrent.Callable;
@@ -56,17 +57,20 @@ public class ListCommand implements Callable<Integer> {
   private final ServerPreparer serverPreparer;
   private final AtsSessionStub atsSessionStub;
   private final ResultLister resultLister;
+  private final PlanLister planLister;
 
   @Inject
   ListCommand(
       ConsoleUtil consoleUtil,
       ServerPreparer serverPreparer,
       AtsSessionStub atsSessionStub,
-      ResultLister resultLister) {
+      ResultLister resultLister,
+      PlanLister planLister) {
     this.consoleUtil = consoleUtil;
     this.serverPreparer = serverPreparer;
     this.atsSessionStub = atsSessionStub;
     this.resultLister = resultLister;
+    this.planLister = planLister;
   }
 
   @Override
@@ -79,12 +83,6 @@ public class ListCommand implements Callable<Integer> {
       aliases = {"c"},
       description = "List all commands currently waiting to be executed")
   public int commands() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
-  }
-
-  @Command(name = "configs", description = "List all known configurations")
-  public int configs() {
     consoleUtil.printlnStderr("Unimplemented");
     return ExitCode.SOFTWARE;
   }
@@ -138,11 +136,11 @@ public class ListCommand implements Callable<Integer> {
 
   @Command(
       name = "plans",
-      aliases = {"p"},
-      description = "List all plans available")
-  public int plans() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
+      aliases = {"p", "configs"},
+      description = "List all plans/configs available")
+  public int plans() throws MobileHarnessException {
+    consoleUtil.printlnStdout("%s", planLister.listPlans());
+    return ExitCode.OK;
   }
 
   @Command(
