@@ -19,12 +19,14 @@ package com.google.devtools.atsconsole;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.atsconsole.Annotations.ConsoleLineReader;
 import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import com.google.devtools.atsconsole.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.atsconsole.Annotations.MainArgs;
+import com.google.devtools.atsconsole.Annotations.SystemProperties;
 import com.google.devtools.atsconsole.controller.olcserver.OlcServerModule;
 import com.google.devtools.atsconsole.result.report.CompatibilityReportModule;
 import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
@@ -35,6 +37,7 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executors;
 import javax.inject.Provider;
 import javax.inject.Singleton;
@@ -46,6 +49,7 @@ public class AtsConsoleModule extends AbstractModule {
 
   private final ImmutableList<String> deviceInfraServiceFlags;
   private final ImmutableList<String> mainArgs;
+  private final ImmutableMap<String, String> systemProperties;
   private final LineReader consoleLineReader;
   private final PrintStream consoleOutputOut;
   private final PrintStream consoleOutputErr;
@@ -54,12 +58,14 @@ public class AtsConsoleModule extends AbstractModule {
   public AtsConsoleModule(
       List<String> deviceInfraServiceFlags,
       List<String> mainArgs,
+      Map<String, String> systemProperties,
       LineReader consoleLineReader,
       PrintStream consoleOutputOut,
       PrintStream consoleOutputErr,
       Provider<Path> olcServerBinary) {
     this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
     this.mainArgs = ImmutableList.copyOf(mainArgs);
+    this.systemProperties = ImmutableMap.copyOf(systemProperties);
     this.consoleLineReader = consoleLineReader;
     this.consoleOutputOut = consoleOutputOut;
     this.consoleOutputErr = consoleOutputErr;
@@ -73,12 +79,6 @@ public class AtsConsoleModule extends AbstractModule {
   }
 
   @Provides
-  @Singleton
-  ConsoleInfo provideConsoleInfo() {
-    return ConsoleInfo.getInstance();
-  }
-
-  @Provides
   @DeviceInfraServiceFlags
   ImmutableList<String> provideDeviceInfraServiceFlags() {
     return deviceInfraServiceFlags;
@@ -88,6 +88,12 @@ public class AtsConsoleModule extends AbstractModule {
   @MainArgs
   ImmutableList<String> provideMainArgs() {
     return mainArgs;
+  }
+
+  @Provides
+  @SystemProperties
+  ImmutableMap<String, String> provideSystemProperties() {
+    return systemProperties;
   }
 
   @Provides

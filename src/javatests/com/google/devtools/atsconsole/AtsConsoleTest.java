@@ -107,6 +107,7 @@ public final class AtsConsoleTest {
             new AtsConsoleModule(
                 deviceInfraServiceFlags,
                 ImmutableList.of(),
+                /* systemProperties= */ ImmutableMap.of(),
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
@@ -141,6 +142,7 @@ public final class AtsConsoleTest {
             new AtsConsoleModule(
                 deviceInfraServiceFlags,
                 ImmutableList.of("help"),
+                /* systemProperties= */ ImmutableMap.of(),
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,

@@ -116,6 +116,7 @@ public class ListCommandTest {
             new AtsConsoleModule(
                 deviceInfraServiceFlags,
                 /* mainArgs= */ ImmutableList.of(),
+                /* systemProperties= */ ImmutableMap.of(),
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,

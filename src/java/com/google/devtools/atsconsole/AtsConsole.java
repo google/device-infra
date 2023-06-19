@@ -17,6 +17,7 @@
 package com.google.devtools.atsconsole;
 
 import static com.google.common.base.Strings.isNullOrEmpty;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.tokenize;
@@ -26,6 +27,7 @@ import static java.util.Arrays.asList;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.Annotations.ConsoleLineReader;
 import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
@@ -47,6 +49,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
@@ -67,19 +70,19 @@ public class AtsConsole implements Callable<Void> {
   private static final String APPNAME = "AtsConsole";
   private static final String HELP_PATTERN = "h|help";
 
-  private static final String MOBLY_TESTCASES_DIR = System.getProperty("MOBLY_TESTCASES_DIR");
-  private static final String TEST_RESULTS_DIR = System.getProperty("TEST_RESULTS_DIR");
-  private static final String XTS_ROOT_DIR = System.getProperty("XTS_ROOT");
-  private static final String MOBLY_TEST_ZIP_SUITE_MAIN_FILE =
-      System.getProperty("MOBLY_TEST_ZIP_SUITE_MAIN_FILE");
-  private static final String DEVICE_INFRA_SERVICE_FLAGS =
-      System.getProperty("DEVICE_INFRA_SERVICE_FLAGS");
+  private static final String DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY =
+      "DEVICE_INFRA_SERVICE_FLAGS";
 
   public static void main(String[] args) throws IOException {
     MobileHarnessLogger.init();
 
+    // Gets system properties.
+    ImmutableMap<String, String> systemProperties =
+        System.getProperties().entrySet().stream()
+            .collect(toImmutableMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
+
     // Parses flags.
-    ImmutableList<String> deviceInfraServiceFlags = parseFlags();
+    ImmutableList<String> deviceInfraServiceFlags = parseFlags(systemProperties);
 
     // Creates line reader.
     LineReader lineReader = createLineReader();
@@ -90,6 +93,7 @@ public class AtsConsole implements Callable<Void> {
             new AtsConsoleModule(
                 deviceInfraServiceFlags,
                 asList(args),
+                systemProperties,
                 lineReader,
                 System.out,
                 System.err,
@@ -149,8 +153,6 @@ public class AtsConsole implements Callable<Void> {
             .setOut(outWriter)
             .setErr(errWriter);
     commandLine.setUnmatchedOptionsArePositionalParams(true);
-
-    initializeConsoleInfo();
 
     // Prepares OLC server.
     if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
@@ -228,33 +230,21 @@ public class AtsConsole implements Callable<Void> {
     return Optional.empty();
   }
 
-  private void initializeConsoleInfo() {
-    if (MOBLY_TESTCASES_DIR != null) {
-      consoleInfo.setMoblyTestCasesDir(MOBLY_TESTCASES_DIR);
-    }
-    if (TEST_RESULTS_DIR != null) {
-      consoleInfo.setResultsDirectory(TEST_RESULTS_DIR);
-    }
-    if (MOBLY_TEST_ZIP_SUITE_MAIN_FILE != null) {
-      consoleInfo.setMoblyTestZipSuiteMainFile(MOBLY_TEST_ZIP_SUITE_MAIN_FILE);
-    }
-    if (XTS_ROOT_DIR != null) {
-      consoleInfo.setXtsRootDirectory(XTS_ROOT_DIR);
-    }
-  }
-
   private static Path getOlcServerBinary() {
     return Path.of(Flags.instance().atsConsoleOlcServerPath.getNonNull());
   }
 
-  private static ImmutableList<String> parseFlags() {
+  private static ImmutableList<String> parseFlags(Map<String, String> systemProperties) {
     List<String> deviceInfraServiceFlags = new ArrayList<>();
-    if (!isNullOrEmpty(DEVICE_INFRA_SERVICE_FLAGS)) {
+    String deviceInfraServiceFlagsProperty =
+        systemProperties.get(DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY);
+    if (!isNullOrEmpty(deviceInfraServiceFlagsProperty)) {
       try {
-        ShellUtils.tokenize(deviceInfraServiceFlags, DEVICE_INFRA_SERVICE_FLAGS);
+        ShellUtils.tokenize(deviceInfraServiceFlags, deviceInfraServiceFlagsProperty);
       } catch (TokenizationException e) {
         logger.atSevere().withCause(e).log(
-            "Failed to parse flags for device infra service: [%s]", DEVICE_INFRA_SERVICE_FLAGS);
+            "Failed to parse flags for device infra service: [%s]",
+            deviceInfraServiceFlagsProperty);
       }
       if (!deviceInfraServiceFlags.isEmpty()) {
         logger.atInfo().log("Device infra service flags: %s", deviceInfraServiceFlags);

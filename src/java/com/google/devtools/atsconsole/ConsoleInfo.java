@@ -17,32 +17,36 @@
 package com.google.devtools.atsconsole;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
+import com.google.devtools.atsconsole.Annotations.SystemProperties;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** Class to store console info. */
-public final class ConsoleInfo {
+@Singleton
+public class ConsoleInfo {
+
+  private static final String MOBLY_TESTCASES_DIR_PROPERTY_KEY = "MOBLY_TESTCASES_DIR";
+  private static final String TEST_RESULTS_DIR_PROPERTY_KEY = "TEST_RESULTS_DIR";
+  private static final String XTS_ROOT_DIR_PROPERTY_KEY = "XTS_ROOT";
+  private static final String MOBLY_TEST_ZIP_SUITE_MAIN_FILE_PROPERTY_KEY =
+      "MOBLY_TEST_ZIP_SUITE_MAIN_FILE";
 
   private final AtomicBoolean shouldExitConsole = new AtomicBoolean(false);
   private final AtomicReference<String> moblyTestCasesDir = new AtomicReference<>();
   private final AtomicReference<String> resultsDirectory = new AtomicReference<>();
-  private final AtomicReference<String> moblyTestZipSuiteMainFile = new AtomicReference<>();
-  private final AtomicReference<String> xtsRootDirectory = new AtomicReference<>();
 
-  private static class SingletonHolder {
-    private static final ConsoleInfo INSTANCE;
+  private final ImmutableMap<String, String> systemProperties;
 
-    static {
-      INSTANCE = new ConsoleInfo();
-    }
-  }
-
+  @Inject
   @VisibleForTesting
-  ConsoleInfo() {}
-
-  public static ConsoleInfo getInstance() {
-    return SingletonHolder.INSTANCE;
+  public ConsoleInfo(@SystemProperties ImmutableMap<String, String> systemProperties) {
+    this.systemProperties = systemProperties;
+    setMoblyTestCasesDir(systemProperties.get(MOBLY_TESTCASES_DIR_PROPERTY_KEY));
+    setResultsDirectory(systemProperties.get(TEST_RESULTS_DIR_PROPERTY_KEY));
   }
 
   /** Sets whether exit the console. */
@@ -75,23 +79,13 @@ public final class ConsoleInfo {
     return Optional.ofNullable(resultsDirectory.get());
   }
 
-  /** Sets the suite main file used along with the Mobly Test Zip. */
-  public void setMoblyTestZipSuiteMainFile(String moblyTestZipSuiteMainFile) {
-    this.moblyTestZipSuiteMainFile.set(moblyTestZipSuiteMainFile);
-  }
-
   /** Gets the suite main file used along with the Mobly Test Zip. */
   public Optional<String> getMoblyTestZipSuiteMainFile() {
-    return Optional.ofNullable(moblyTestZipSuiteMainFile.get());
-  }
-
-  /** Sets the xTS root directory. */
-  public void setXtsRootDirectory(String xtsRootDirectory) {
-    this.xtsRootDirectory.set(xtsRootDirectory);
+    return Optional.ofNullable(systemProperties.get(MOBLY_TEST_ZIP_SUITE_MAIN_FILE_PROPERTY_KEY));
   }
 
   /** Gets the xTS root directory. */
   public Optional<String> getXtsRootDirectory() {
-    return Optional.ofNullable(xtsRootDirectory.get());
+    return Optional.ofNullable(systemProperties.get(XTS_ROOT_DIR_PROPERTY_KEY));
   }
 }

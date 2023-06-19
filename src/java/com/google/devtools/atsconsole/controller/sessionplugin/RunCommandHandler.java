@@ -24,19 +24,20 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.XtsType;
+import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
-import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
@@ -84,7 +85,7 @@ class RunCommandHandler {
    * <p>Jobs added to the session by the plugin will be started by the session job runner later.
    */
   Optional<AtsSessionPluginOutput> handle(RunCommand command, SessionInfo sessionInfo)
-      throws MobileHarnessException, InvalidProtocolBufferException, InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     Optional<JobInfo> jobInfo = createXtsTradefedTestJob(command, command.getXtsType().name());
     if (jobInfo.isEmpty()) {
       return Optional.of(
@@ -184,7 +185,12 @@ class RunCommandHandler {
   private ImmutableList<SubDeviceSpec> getSubDeviceSpecList(
       List<String> passedInDeviceSerials, int shardCount)
       throws MobileHarnessException, InterruptedException {
-    Set<String> allAndroidOnlineDevices = adbInternalUtil.getRealDeviceSerials(/* online= */ true);
+    Set<String> allAndroidOnlineDevices;
+    if (Flags.instance().detectAdbDevice.getNonNull()) {
+      allAndroidOnlineDevices = adbInternalUtil.getRealDeviceSerials(/* online= */ true);
+    } else {
+      allAndroidOnlineDevices = ImmutableSet.of();
+    }
     logger.atInfo().log("All online devices: %s", allAndroidOnlineDevices);
     if (passedInDeviceSerials.isEmpty()) {
       return pickAndroidOnlineDevices(allAndroidOnlineDevices, shardCount);
@@ -231,9 +237,9 @@ class RunCommandHandler {
    */
   void handleResultProcessing(RunCommand command, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
-    String xtsRootDir = command.getXtsRootDir();
+    Path xtsRootDir = Path.of(command.getXtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
-      logger.atInfo().log("xTS root dir [%s] doens't exist, skip processing result.", xtsRootDir);
+      logger.atInfo().log("xTS root dir [%s] doesn't exist, skip processing result.", xtsRootDir);
       return;
     }
 
@@ -260,8 +266,8 @@ class RunCommandHandler {
 
     XtsType xtsType = command.getXtsType();
     String timestampDirName = getTimestampDirName();
-    Path resultDir = getResultDir(Paths.get(xtsRootDir), xtsType, timestampDirName);
-    Path logDir = getLogDir(Paths.get(xtsRootDir), xtsType, timestampDirName);
+    Path resultDir = getResultDir(xtsRootDir, xtsType, timestampDirName);
+    Path logDir = getLogDir(xtsRootDir, xtsType, timestampDirName);
     Path tfLogDir = logDir.resolve("tradefed_log");
     Path atsLogDir = logDir.resolve("ats_log");
 

@@ -36,7 +36,6 @@ java_library(
         "//src/java/com/google/devtools/atsconsole:console_info",
         "//src/java/com/google/devtools/atsconsole:console_util",
         "//src/java/com/google/devtools/atsconsole:guice_factory",
-        "//src/java/com/google/devtools/atsconsole:test_util",
         "//src/java/com/google/devtools/atsconsole/command",
         "//src/java/com/google/devtools/atsconsole/result/xml:xml_result_formatter",
         "//src/java/com/google/devtools/atsconsole/result/xml:xml_result_util",

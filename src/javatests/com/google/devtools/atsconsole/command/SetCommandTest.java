@@ -25,11 +25,11 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.GuiceFactory;
-import com.google.devtools.atsconsole.TestUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -90,9 +90,10 @@ public final class SetCommandTest {
     consoleUtil =
         spy(Guice.createInjector(BoundFieldModule.of(printStreams)).getInstance(ConsoleUtil.class));
 
-    consoleInfo = TestUtil.getNewConsoleInfoInstance();
-    consoleInfo.setMoblyTestCasesDir(MOBLY_TESTCASES_DIR);
-    consoleInfo.setResultsDirectory(TEST_RESULTS_DIR);
+    consoleInfo =
+        new ConsoleInfo(
+            ImmutableMap.of(
+                "MOBLY_TESTCASES_DIR", MOBLY_TESTCASES_DIR, "TEST_RESULTS_DIR", TEST_RESULTS_DIR));
     Injector injector =
         Guice.createInjector(BoundFieldModule.of(this), new ConsoleCommandTestModule(consoleInfo));
     injector.injectMembers(this);

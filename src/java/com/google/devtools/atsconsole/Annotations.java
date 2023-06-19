@@ -23,6 +23,11 @@ import javax.inject.Qualifier;
 /** Annotations for ATS console. */
 public class Annotations {
 
+  /** System properties. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface SystemProperties {}
+
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   public @interface DeviceInfraServiceFlags {}

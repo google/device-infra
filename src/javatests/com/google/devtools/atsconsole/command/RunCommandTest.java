@@ -29,12 +29,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.atsconsole.Annotations.ConsoleOutput;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.GuiceFactory;
-import com.google.devtools.atsconsole.TestUtil;
 import com.google.devtools.atsconsole.result.xml.XmlResultFormatter;
 import com.google.devtools.atsconsole.result.xml.XmlResultUtil;
 import com.google.devtools.atsconsole.testbed.config.YamlTestbedUpdater;
@@ -122,9 +122,13 @@ public final class RunCommandTest {
     consoleUtil =
         spy(Guice.createInjector(BoundFieldModule.of(printStreams)).getInstance(ConsoleUtil.class));
 
-    consoleInfo = TestUtil.getNewConsoleInfoInstance();
-    consoleInfo.setMoblyTestCasesDir(MOBLY_TESTCASES_DIR);
-    consoleInfo.setMoblyTestZipSuiteMainFile(MOBLY_TEST_ZIP_SUITE_MAIN_FILE);
+    consoleInfo =
+        new ConsoleInfo(
+            ImmutableMap.of(
+                "MOBLY_TEST_ZIP_SUITE_MAIN_FILE",
+                MOBLY_TEST_ZIP_SUITE_MAIN_FILE,
+                "MOBLY_TESTCASES_DIR",
+                MOBLY_TESTCASES_DIR));
     Injector injector =
         Guice.createInjector(BoundFieldModule.of(this), new ConsoleCommandTestModule(consoleInfo));
     injector.injectMembers(this);
@@ -176,7 +180,7 @@ public final class RunCommandTest {
     Injector injector =
         Guice.createInjector(
             BoundFieldModule.of(this),
-            new ConsoleCommandTestModule(TestUtil.getNewConsoleInfoInstance()));
+            new ConsoleCommandTestModule(new ConsoleInfo(ImmutableMap.of())));
     injector.injectMembers(this);
     commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
 
@@ -188,8 +192,7 @@ public final class RunCommandTest {
 
   @Test
   public void run_missingMoblyTestZipSuiteMainFile() throws Exception {
-    consoleInfo = TestUtil.getNewConsoleInfoInstance();
-    consoleInfo.setMoblyTestCasesDir(MOBLY_TESTCASES_DIR);
+    consoleInfo = new ConsoleInfo(ImmutableMap.of("MOBLY_TESTCASES_DIR", MOBLY_TESTCASES_DIR));
     Injector injector =
         Guice.createInjector(BoundFieldModule.of(this), new ConsoleCommandTestModule(consoleInfo));
     injector.injectMembers(this);
