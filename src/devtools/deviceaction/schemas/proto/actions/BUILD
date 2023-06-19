@@ -31,3 +31,17 @@ java_proto_library(
     name = "install_mainline_spec_java_proto",
     deps = [":install_mainline_spec_proto"],
 )
+
+proto_library(
+    name = "reset_spec_proto",
+    srcs = ["reset_spec.proto"],
+    deps = [
+        "//src/devtools/deviceaction/schemas/proto:base_spec_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:base_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "reset_spec_java_proto",
+    deps = [":reset_spec_proto"],
+)
