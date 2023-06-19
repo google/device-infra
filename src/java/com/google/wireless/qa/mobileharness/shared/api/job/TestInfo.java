@@ -21,12 +21,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CompileTimeConstant;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestBuilderAdapter;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
-import java.util.UUID;
 import java.util.logging.Logger;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -53,16 +51,6 @@ public class TestInfo implements Cloneable {
   public TestInfo(com.google.wireless.qa.mobileharness.shared.model.job.TestInfo newTestInfo) {
     this.newTestInfo = newTestInfo;
     this.oldJobInfo = new JobInfo(newTestInfo.jobInfo());
-  }
-
-  /**
-   * Creates a test.
-   *
-   * @param testName name of the test
-   * @param jobInfo the job that this test belongs to
-   */
-  public TestInfo(String testName, JobInfo jobInfo) {
-    this(UUID.randomUUID().toString(), testName, jobInfo);
   }
 
   /**
@@ -151,15 +139,6 @@ public class TestInfo implements Cloneable {
   public void log(@CompileTimeConstant String message, FluentLogger logger) {
     newTestInfo.log().append(message, logger);
   }
-
-  /**
-   * Gets the output logs of the current test from the given offset to the end of the logs. If the
-   * offset is larger than the current output length, an empty string is returned.
-   */
-  public String getLog(int offset) {
-    return newTestInfo.log().get(offset);
-  }
-
   /**
    * Maps the specified key to the specified value in test properties. Neither the key nor the value
    * can be null.
@@ -239,14 +218,6 @@ public class TestInfo implements Cloneable {
   @CanIgnoreReturnValue
   public TestInfo addAndLogError(MobileHarnessException e, @Nullable FluentLogger logger) {
     newTestInfo.errors().addAndLog(e, logger);
-    return this;
-  }
-
-  /** Saves and log the error of this test. */
-  @CanIgnoreReturnValue
-  public TestInfo addAndLogError(
-      ErrorCode errorCode, Throwable throwable, @Nullable FluentLogger logger) {
-    newTestInfo.errors().addAndLog(errorCode, throwable, logger);
     return this;
   }
 }

@@ -30,8 +30,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.JobSpec;
 import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -435,17 +433,6 @@ public class JobInfo implements Cloneable {
   /** Gets the immutable job setting. */
   public JobSetting getSetting() {
     return newJobInfo.setting();
-  }
-
-  /** Returns the time in milliseconds when the job is expired. */
-  public long getExpireTimeMs() {
-    try {
-      return newJobInfo.timer().expireTime().toEpochMilli();
-    } catch (MobileHarnessException e) {
-      return Instant.now()
-          .plus(Duration.ofMillis(newJobInfo.setting().getTimeout().getJobTimeoutMs()))
-          .toEpochMilli();
-    }
   }
 
   /** Returns the current result. */
