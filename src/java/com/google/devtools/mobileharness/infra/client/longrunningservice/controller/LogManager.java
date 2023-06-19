@@ -79,7 +79,7 @@ public class LogManager<D> {
    * <p>The record class type is {@link LogRecord} or {@link LogProto.LogRecord}.
    */
   @GuardedBy("itself")
-  private final Object[] records = new LogRecord[CAPACITY];
+  private final Object[] records = new Object[CAPACITY];
 
   /** Exclusive. Value range: [0, records.length - 1]. */
   @GuardedBy("records")
