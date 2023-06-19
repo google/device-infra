@@ -268,8 +268,11 @@ public class XtsTradefedTest extends BaseDriver
     }
     Joiner.on(' ').appendTo(cmdString, cmd);
     logger.atInfo().log("Running %s command:%n%s", xtsType.name(), cmdString);
-    try (BufferedWriter writer =
-        Files.newBufferedWriter(Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG))) {
+    try {
+      // The writer will be closed after the command exits.
+      @SuppressWarnings("resource")
+      BufferedWriter writer =
+          Files.newBufferedWriter(Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG));
 
       return cmdExecutor.start(
           Command.of(cmd)
@@ -279,7 +282,7 @@ public class XtsTradefedTest extends BaseDriver
                       line -> {
                         logRecorder.addLogRecord(
                             LogRecord.newBuilder()
-                                .setFormattedLogRecord(line)
+                                .setFormattedLogRecord(line + "\n")
                                 .setSourceType(SourceType.TF)
                                 .build());
                         try {

@@ -27,6 +27,8 @@ message LogRecords {
 
 message LogRecord {
   // Required.
+  //
+  // The record should contain "\n".
   string formatted_log_record = 1;
 
   // Required.
