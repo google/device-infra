@@ -609,10 +609,11 @@ public abstract class AndroidDeviceDelegate {
     // Adds decorators validating sdk version. Not supported by GCE AVD place holders.
     device.addSupportedDecorator("AndroidLocationDecorator");
     device.addSupportedDecorator("NoOpDecorator");
+    device.addSupportedDecorator("AndroidDeviceActionInstallMainlineDecorator");
+    device.addSupportedDecorator("AndroidDeviceActionResetDecorator");
     device.addSupportedDecorator("AndroidHermeticServerLauncherDecorator");
     device.addSupportedDecorator("AndroidHermeticWiredHttpProxyDecorator");
     device.addSupportedDecorator("AndroidLazyProxyDecorator");
-    device.addSupportedDecorator("AndroidInstallMainlineDecorator");
     device.addSupportedDecorator("AndroidInstallMainlineModulesDecorator");
 
     // *********************************************************************************************
