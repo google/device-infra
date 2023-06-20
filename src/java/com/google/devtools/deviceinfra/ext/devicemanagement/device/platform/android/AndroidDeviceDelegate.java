@@ -641,6 +641,7 @@ public abstract class AndroidDeviceDelegate {
 
     device.addSupportedDecorator("AndroidDisableAutoUpdatesDecorator");
     device.addSupportedDecorator("AndroidHermeticServerCertPusherDecorator");
+    device.addSupportedDecorator("AndroidInstallAppBundleDecorator");
     device.addSupportedDecorator("AndroidInstallSystemAppsDecorator");
     device.addSupportedDecorator("AndroidPermissionDecorator");
     device.addSupportedDecorator("AndroidReinstallSystemAppsDecorator");
@@ -655,9 +656,6 @@ public abstract class AndroidDeviceDelegate {
 
     // More Drivers.
     device.addSupportedDriver("HostBin");
-
-    // More Decorators.
-    device.addSupportedDecorator("AndroidInstallAppBundleDecorator");
 
     // Gets GServices Android ID(go/android-id).
     if (device.getIntegerProperty(PROPERTY_NAME_CACHED_SDK_VERSION).orElse(0) >= 18) {
