@@ -34,7 +34,11 @@ public final class FlagParser {
 
   /** The default flags for adb initializer. */
   private static final ImmutableList<String> MUST_HAVE_FLAGS =
-      ImmutableList.of("--adb_dont_kill_server", "--external_adb_initializer_template");
+      ImmutableList.of(
+          "--adb_dont_kill_server",
+          "--external_adb_initializer_template",
+          "--adb_command_retry_attempts",
+          "1");
 
   private static final String KEY_PREFIX = "--";
 

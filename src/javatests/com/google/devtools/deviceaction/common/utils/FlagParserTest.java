@@ -82,7 +82,9 @@ public final class FlagParserTest {
             "string1,string2,string3",
             "--booloption",
             "--adb_dont_kill_server",
-            "--external_adb_initializer_template");
+            "--external_adb_initializer_template",
+            "--adb_command_retry_attempts",
+            "1");
   }
 
   @Test
