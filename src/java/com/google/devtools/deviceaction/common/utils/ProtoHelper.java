@@ -16,6 +16,7 @@
 
 package com.google.devtools.deviceaction.common.utils;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.deviceaction.common.utils.Constants.DEVICE_CONFIG_KEY;
 import static com.google.devtools.deviceaction.common.utils.Constants.GCS_PREFIX;
 import static com.google.devtools.deviceaction.common.utils.Constants.PROPERTY_SEPARATOR;
@@ -23,6 +24,7 @@ import static com.google.devtools.deviceaction.common.utils.Constants.SERIAL_KEY
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions;
@@ -38,7 +40,10 @@ import com.google.devtools.deviceaction.framework.proto.GCSFile;
 import com.google.devtools.deviceaction.framework.proto.Operand;
 import com.google.devtools.deviceaction.framework.proto.Unary;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
+import com.google.devtools.deviceaction.framework.proto.action.ResetSpec;
 import com.google.protobuf.Descriptors.Descriptor;
+import com.google.protobuf.Descriptors.EnumDescriptor;
+import com.google.protobuf.Descriptors.EnumValueDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.Message;
@@ -96,12 +101,21 @@ public class ProtoHelper {
     return getDeviceWrapperMapImp(actionSpec, options);
   }
 
-  /** Gets {@code DeviceConfig} by parsing a text proto. */
+  /**
+   * Gets {@code DeviceConfig} by parsing a text proto.
+   *
+   * <p>The result only includes the extensions corresponding to the {@code cmd}. Irrelevant or
+   * unknown extensions will not be included.
+   */
   public static DeviceConfig getDeviceConfigFromTextproto(String protoAsString, Command cmd)
       throws DeviceActionException {
     ExtensionRegistry registry = getExtensionRegistry(cmd);
+    TextFormat.Parser parser =
+        TextFormat.Parser.newBuilder().setAllowUnknownExtensions(true).build();
     try {
-      return TextFormat.parse(protoAsString, registry, DeviceConfig.class);
+      DeviceConfig.Builder builder = DeviceConfig.newBuilder();
+      parser.merge(protoAsString, registry, builder);
+      return builder.build();
     } catch (ParseException e) {
       throw new DeviceActionException(
           "PROTO_ERROR",
@@ -126,13 +140,23 @@ public class ProtoHelper {
         InstallMainlineSpec installMainlineSpec =
             buildProtoByOptions(options.action(), InstallMainlineSpec.class);
         return getActionSpecForInstallMainline(installMainlineSpec, getUuid(options.firstDevice()));
+      case RESET:
+        Conditions.checkArgument(
+            options.firstDevice() != null,
+            ErrorType.CUSTOMER_ISSUE,
+            "Need to set the first device in " + options);
+        ResetSpec resetSpec = buildProtoByOptions(options.action(), ResetSpec.class);
+        return getActionSpecForReset(resetSpec, getUuid(options.firstDevice()));
       default:
         throw new DeviceActionException(INVALID_CMD, ErrorType.CUSTOMER_ISSUE, "Not supported");
     }
   }
 
   /**
-   * Gets {@code ActionSpec} from {@code DeviceConfig}.
+   * Gets {@link ActionSpec} for {@code cmd} from {@link DeviceConfig}.
+   *
+   * <p>The method gets the extension corresponding to the {@code cmd} from {@link DeviceConfig} and
+   * adds it to {@link ActionSpec}.
    *
    * @throws DeviceActionException if the command is not supported.
    */
@@ -148,6 +172,11 @@ public class ProtoHelper {
                     .setExtension(InstallMainlineSpec.ext, installMainlineSpec)
                     .build())
             .build();
+      case RESET:
+        ResetSpec resetSpec = deviceConfig.getExtension(ResetSpec.resetSpec);
+        return ActionSpec.newBuilder()
+            .setUnary(Unary.newBuilder().setExtension(ResetSpec.ext, resetSpec).build())
+            .build();
       default:
         throw new DeviceActionException(INVALID_CMD, ErrorType.CUSTOMER_ISSUE, "Not supported");
     }
@@ -158,9 +187,12 @@ public class ProtoHelper {
    *
    * @param installMainlineSpec the spec of install mainline action.
    * @param uuid of the device.
+   * @throws DeviceActionException if uuid null or empty.
    */
   public static ActionSpec getActionSpecForInstallMainline(
-      InstallMainlineSpec installMainlineSpec, String uuid) {
+      InstallMainlineSpec installMainlineSpec, String uuid) throws DeviceActionException {
+    Conditions.checkArgument(
+        !Strings.isNullOrEmpty(uuid), ErrorType.CUSTOMER_ISSUE, "Uuid is null or empty.");
     return ActionSpec.newBuilder()
         .setUnary(
             Unary.newBuilder()
@@ -170,6 +202,29 @@ public class ProtoHelper {
                         .setUuid(uuid)
                         .build())
                 .setExtension(InstallMainlineSpec.ext, installMainlineSpec))
+        .build();
+  }
+
+  /**
+   * Gets {@link ActionSpec} for reset action.
+   *
+   * @param resetSpec the spec of reset action.
+   * @param uuid of the device.
+   * @throws DeviceActionException if uuid null or empty.
+   */
+  public static ActionSpec getActionSpecForReset(ResetSpec resetSpec, String uuid)
+      throws DeviceActionException {
+    Conditions.checkArgument(
+        !Strings.isNullOrEmpty(uuid), ErrorType.CUSTOMER_ISSUE, "Uuid is null or empty.");
+    return ActionSpec.newBuilder()
+        .setUnary(
+            Unary.newBuilder()
+                .setFirst(
+                    Operand.newBuilder()
+                        .setDeviceType(DeviceType.ANDROID_PHONE)
+                        .setUuid(uuid)
+                        .build())
+                .setExtension(ResetSpec.ext, resetSpec))
         .build();
   }
 
@@ -207,9 +262,27 @@ public class ProtoHelper {
           break;
         case STRING:
           if (fieldDescriptor.isRepeated()) {
-            builder.addRepeatedField(fieldDescriptor, options.keyValues().get(name));
+            for (String val : options.keyValues().get(name)) {
+              builder.addRepeatedField(fieldDescriptor, val);
+            }
           } else {
             options.getOnlyValue(name).ifPresent(v -> builder.setField(fieldDescriptor, v));
+          }
+          break;
+        case ENUM:
+          EnumDescriptor enumDescriptor = fieldDescriptor.getEnumType();
+          if (fieldDescriptor.isRepeated()) {
+            for (EnumValueDescriptor valueDescriptor :
+                options.keyValues().get(name).stream()
+                    .map(enumDescriptor::findValueByName)
+                    .collect(toImmutableList())) {
+              builder.addRepeatedField(fieldDescriptor, valueDescriptor);
+            }
+          } else {
+            options
+                .getOnlyValue(name)
+                .ifPresent(
+                    v -> builder.setField(fieldDescriptor, enumDescriptor.findValueByName(v)));
           }
           break;
         case MESSAGE:
@@ -253,6 +326,9 @@ public class ProtoHelper {
     switch (cmd) {
       case INSTALL_MAINLINE:
         registry.add(InstallMainlineSpec.installMainlineSpec);
+        break;
+      case RESET:
+        registry.add(ResetSpec.resetSpec);
         break;
       default:
         throw new DeviceActionException(

@@ -10,3 +10,6 @@ device_spec {
 [devtools.deviceaction.schemas.proto.action.InstallMainlineSpec.install_mainline_spec] {
   clean_up_sessions: true
 }
+[devtools.deviceaction.schemas.proto.action.ResetSpec.reset_spec] {
+  reset_option: TEST_HARNESS
+}
