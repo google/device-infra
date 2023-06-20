@@ -25,6 +25,7 @@ java_library(
         exclude = ["ConsoleCommandTestModule.java"],
     ),
     data = [
+        ":testdata",
         "//src/java/com/google/devtools/atsconsole/controller/olcserver:AtsOlcServer_deploy.jar",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/config:testdata",
     ],
@@ -42,6 +43,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole/testbed/config:yaml_testbed_updater",
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
         "//src/java/com/google/devtools/deviceinfra/shared/util/port:portprober",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
@@ -74,6 +76,11 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],
+)
+
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/**/*"]),
 )
 
 junit_test_suites(
