@@ -28,7 +28,8 @@ import java.util.Optional;
 /** Action commands. */
 public enum Command {
   DEFAULT(""),
-  INSTALL_MAINLINE("install_mainline");
+  INSTALL_MAINLINE("install_mainline"),
+  RESET("reset");
 
   private static final ImmutableMap<String, Command> CMD_MAP;
   private final String name;

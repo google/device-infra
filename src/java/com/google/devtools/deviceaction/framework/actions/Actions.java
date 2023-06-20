@@ -31,6 +31,7 @@ import com.google.devtools.deviceaction.framework.operations.ModuleCleaner;
 import com.google.devtools.deviceaction.framework.operations.ModuleInstaller;
 import com.google.devtools.deviceaction.framework.operations.ModulePusher;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
+import com.google.devtools.deviceaction.framework.proto.action.ResetSpec;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecorder;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -70,6 +71,8 @@ public class Actions {
     switch (actionConfig.cmd()) {
       case INSTALL_MAINLINE:
         return createInstallMainline(actionConfig);
+      case RESET:
+        return createReset(actionConfig);
       default:
         throw new DeviceActionException(
             "UNKNOWN_COMMAND",
@@ -101,6 +104,21 @@ public class Actions {
         androidPhone,
         aaptUtil,
         localFileUtil,
+        resolvedFiles);
+  }
+
+  private Reset createReset(ActionConfig actionConfig)
+      throws DeviceActionException, InterruptedException {
+    AndroidPhone androidPhone =
+        devices.createAndroidPhone(
+            actionConfig.actionSpec().getUnary().getFirst().getUuid(),
+            actionConfig.firstSpec().get().getAndroidPhoneSpec());
+    ResetSpec spec = actionConfig.actionSpec().getUnary().getExtension(ResetSpec.ext);
+    ImmutableMultimap<String, File> resolvedFiles = resolver.resolve(spec.getFilesList());
+    return new Reset(
+        new ModulePusher(androidPhone, localFileUtil, resourceHelper),
+        spec,
+        androidPhone,
         resolvedFiles);
   }
 }

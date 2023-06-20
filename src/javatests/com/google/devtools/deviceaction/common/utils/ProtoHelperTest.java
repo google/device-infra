@@ -41,6 +41,8 @@ import com.google.devtools.deviceaction.framework.proto.Nullary;
 import com.google.devtools.deviceaction.framework.proto.Operand;
 import com.google.devtools.deviceaction.framework.proto.Unary;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
+import com.google.devtools.deviceaction.framework.proto.action.ResetOption;
+import com.google.devtools.deviceaction.framework.proto.action.ResetSpec;
 import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -79,6 +81,10 @@ public final class ProtoHelperTest {
       FileSpec.newBuilder().setTag("mainline_modules").setLocalPath("/local/path/f1").build();
   private static final FileSpec LOCAL_FILE_2 =
       FileSpec.newBuilder().setTag("mainline_modules").setLocalPath("/local/path/f2").build();
+  private static final FileSpec LOCAL_FILE_3 =
+      FileSpec.newBuilder().setTag("recovery_modules").setLocalPath("/local/path/f1").build();
+  private static final FileSpec LOCAL_FILE_4 =
+      FileSpec.newBuilder().setTag("recovery_modules").setLocalPath("/local/path/f2").build();
   private static final InstallMainlineSpec FROM_DEVICE_CONFIG =
       InstallMainlineSpec.newBuilder()
           .setCleanUpSessions(false)
@@ -91,7 +97,7 @@ public final class ProtoHelperTest {
           .addFiles(LOCAL_FILE_1)
           .setDevKeySigned(true)
           .build();
-  private static final InstallMainlineSpec COMPLETE_SPEC =
+  private static final InstallMainlineSpec COMPLETE_INSTALL_MAINLINE =
       InstallMainlineSpec.newBuilder()
           .setEnableRollback(true)
           .setCleanUpSessions(false)
@@ -99,24 +105,42 @@ public final class ProtoHelperTest {
           .addFiles(LOCAL_FILE_2)
           .addFiles(GCS_FILE)
           .build();
+
+  private static final ResetSpec COMPLETE_RESET =
+      ResetSpec.newBuilder()
+          .setNeedPreloadModulesRecovery(true)
+          .setResetOption(ResetOption.TEST_HARNESS)
+          .addFiles(LOCAL_FILE_3)
+          .addFiles(LOCAL_FILE_4)
+          .build();
   private static final DeviceConfig DEVICE_CONFIG =
       DeviceConfig.newBuilder()
           .setDeviceSpec(DeviceSpec.newBuilder().setAndroidPhoneSpec(GOOGLE_SPEC))
           .setExtension(InstallMainlineSpec.installMainlineSpec, FROM_DEVICE_CONFIG)
           .build();
-  private static final DeviceConfig DEVICE_CONFIG_FROM_FILE =
-      DeviceConfig.newBuilder()
-          .setDeviceSpec(
-              DeviceSpec.newBuilder()
-                  .setAndroidPhoneSpec(
-                      AndroidPhoneSpec.newBuilder()
-                          .setBrand("Google")
-                          .setNeedDisablePackageCache(false)
-                          .build())
+
+  private static final DeviceSpec DEVICE_SPEC =
+      DeviceSpec.newBuilder()
+          .setAndroidPhoneSpec(
+              AndroidPhoneSpec.newBuilder()
+                  .setBrand("Google")
+                  .setNeedDisablePackageCache(false)
                   .build())
+          .build();
+  private static final DeviceConfig DEVICE_CONFIG_FOR_INSTALL_MAINLINE =
+      DeviceConfig.newBuilder()
+          .setDeviceSpec(DEVICE_SPEC)
           .setExtension(
               InstallMainlineSpec.installMainlineSpec,
               InstallMainlineSpec.newBuilder().setCleanUpSessions(true).build())
+          .build();
+
+  private static final DeviceConfig DEVICE_CONFIG_FOR_RESET =
+      DeviceConfig.newBuilder()
+          .setDeviceSpec(DEVICE_SPEC)
+          .setExtension(
+              ResetSpec.resetSpec,
+              ResetSpec.newBuilder().setResetOption(ResetOption.TEST_HARNESS).build())
           .build();
   private static final Unary INSTALL_MAINLINE =
       Unary.newBuilder().setFirst(DEVICE_1).setExtension(InstallMainlineSpec.ext, FROM_CMD).build();
@@ -181,11 +205,16 @@ public final class ProtoHelperTest {
     assertTrue(actionSpec.hasUnary());
     assertThat(actionSpec.getUnary().getFirst()).isEqualTo(DEVICE_1);
     assertTrue(actionSpec.getUnary().hasExtension(InstallMainlineSpec.ext));
-    InstallMainlineSpec spec = actionSpec.getUnary().getExtension(InstallMainlineSpec.ext);
-    assertTrue(spec.getCleanUpSessions());
-    assertTrue(spec.getDevKeySigned());
-    assertTrue(spec.getEnableRollback());
-    assertThat(spec.getFilesList()).containsExactly(LOCAL_FILE_1, GCS_FILE);
+    assertThat(actionSpec.getUnary().getExtension(InstallMainlineSpec.ext))
+        .ignoringRepeatedFieldOrder()
+        .isEqualTo(
+            InstallMainlineSpec.newBuilder()
+                .setCleanUpSessions(true)
+                .setDevKeySigned(true)
+                .addFiles(GCS_FILE)
+                .addFiles(LOCAL_FILE_1)
+                .setEnableRollback(true)
+                .build());
   }
 
   @Test
@@ -193,7 +222,7 @@ public final class ProtoHelperTest {
     InstallMainlineSpec spec =
         ProtoHelper.buildProtoByOptions(getOptionsForInstallMainline(), InstallMainlineSpec.class);
 
-    assertThat(spec).ignoringRepeatedFieldOrder().isEqualTo(COMPLETE_SPEC);
+    assertThat(spec).ignoringRepeatedFieldOrder().isEqualTo(COMPLETE_INSTALL_MAINLINE);
   }
 
   @Test
@@ -219,13 +248,29 @@ public final class ProtoHelperTest {
   }
 
   @Test
-  public void getDeviceConfigFromTextProto_getExpectedResult() throws Exception {
+  public void buildProtoByOptions_workForResetSpec() throws Exception {
+    ResetSpec spec = ProtoHelper.buildProtoByOptions(getOptionsForReset(), ResetSpec.class);
+
+    assertThat(spec).isEqualTo(COMPLETE_RESET);
+  }
+
+  @Test
+  public void getDeviceConfigFromTextProto_getExpectedResultForInstallMainline() throws Exception {
     String textproto = Files.readString(Paths.get(TEST_FILE_PATH));
 
     DeviceConfig deviceConfig =
         ProtoHelper.getDeviceConfigFromTextproto(textproto, Command.INSTALL_MAINLINE);
 
-    assertThat(deviceConfig).isEqualTo(DEVICE_CONFIG_FROM_FILE);
+    assertThat(deviceConfig).isEqualTo(DEVICE_CONFIG_FOR_INSTALL_MAINLINE);
+  }
+
+  @Test
+  public void getDeviceConfigFromTextProto_getExpectedResultForReset() throws Exception {
+    String textproto = Files.readString(Paths.get(TEST_FILE_PATH));
+
+    DeviceConfig deviceConfig = ProtoHelper.getDeviceConfigFromTextproto(textproto, Command.RESET);
+
+    assertThat(deviceConfig).isEqualTo(DEVICE_CONFIG_FOR_RESET);
   }
 
   @Test
@@ -241,7 +286,24 @@ public final class ProtoHelperTest {
 
     assertThat(spec.getUnary().getExtension(InstallMainlineSpec.ext))
         .ignoringRepeatedFieldOrder()
-        .isEqualTo(COMPLETE_SPEC);
+        .isEqualTo(COMPLETE_INSTALL_MAINLINE);
+    assertThat(spec.getUnary().getFirst()).isEqualTo(DEVICE_1);
+  }
+
+  @Test
+  public void getActionSpec_workForResetSpec() throws Exception {
+    ActionOptions actionOptions =
+        ActionOptions.builder()
+            .setCommand(Command.RESET)
+            .setAction(getOptionsForReset())
+            .setFirstDevice(Options.builder().addKeyValues("serial", ID_1).build())
+            .build();
+
+    ActionSpec spec = ProtoHelper.getActionSpec(actionOptions);
+
+    assertThat(spec.getUnary().getExtension(ResetSpec.ext))
+        .ignoringRepeatedFieldOrder()
+        .isEqualTo(COMPLETE_RESET);
     assertThat(spec.getUnary().getFirst()).isEqualTo(DEVICE_1);
   }
 
@@ -263,6 +325,15 @@ public final class ProtoHelperTest {
         .addKeyValues("not exist", "not used")
         .addFileOptions("mainline_modules", "/local/path/f1", "/local/path/f2")
         .addFileOptions("train_folder", "gcs:fake project&gs://bucket/d1/o1")
+        .build();
+  }
+
+  private static Options getOptionsForReset() throws Exception {
+    return Options.builder()
+        .addTrueBoolOptions("need_preload_modules_recovery")
+        .addKeyValues("not exist", "not used")
+        .addFileOptions("recovery_modules", "/local/path/f1", "/local/path/f2")
+        .addKeyValues("reset_option", "TEST_HARNESS")
         .build();
   }
 }

@@ -16,6 +16,7 @@
 
 package com.google.devtools.deviceaction.lib;
 
+import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionConfig;
@@ -28,9 +29,11 @@ import com.google.devtools.deviceaction.framework.DeviceActionModule;
 import com.google.devtools.deviceaction.framework.actions.Actions;
 import com.google.devtools.deviceaction.framework.proto.ActionSpec;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
+import com.google.devtools.deviceaction.framework.proto.action.ResetSpec;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
@@ -79,21 +82,60 @@ public class DeviceActionUtil {
     }
   }
 
-  /**
-   * Installs mainline modules as specified by {@link InstallMainlineSpec} to the device of id
-   * {@code uuid}.
-   */
+  /** Installs mainline modules as specified by {@code spec} to the device {@code uuid}. */
   public void installMainline(String uuid, InstallMainlineSpec spec)
       throws MobileHarnessException, InterruptedException {
+    MobileHarnessExceptions.check(
+        !Strings.isNullOrEmpty(uuid),
+        AndroidErrorId.DEVICE_ACTION_VALIDATION_FAILURE,
+        () -> "Uuid null or empty");
     runAction(getInstallMainlineConfig(uuid, spec));
+  }
+
+  /** Resets the device {@code uuid} as specified by {@code spec}. */
+  public void reset(String uuid, ResetSpec spec)
+      throws InterruptedException, MobileHarnessException {
+    MobileHarnessExceptions.check(
+        !Strings.isNullOrEmpty(uuid),
+        AndroidErrorId.DEVICE_ACTION_VALIDATION_FAILURE,
+        () -> "Uuid null or empty");
+    runAction(getResetConfig(uuid, spec));
   }
 
   private ActionConfig getInstallMainlineConfig(String uuid, InstallMainlineSpec spec)
       throws MobileHarnessException, InterruptedException {
-    ActionSpec initialSpec = ProtoHelper.getActionSpecForInstallMainline(spec, uuid);
+    ActionSpec initialSpec;
+    try {
+      initialSpec = ProtoHelper.getActionSpecForInstallMainline(spec, uuid);
+    } catch (DeviceActionException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.DEVICE_ACTION_VALIDATION_FAILURE, "Uuid null or empty", e);
+    }
     try {
       ActionConfig actionConfig =
           actionConfigurer.createActionConfigure(Command.INSTALL_MAINLINE, initialSpec);
+      logger.atInfo().log("Get action config:\n%s", actionConfig);
+      return actionConfig;
+    } catch (DeviceActionException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.DEVICE_ACTION_CONFIG_CREATE_ERROR,
+          "Failed to get the action config for spec " + initialSpec,
+          e);
+    }
+  }
+
+  private ActionConfig getResetConfig(String uuid, ResetSpec spec)
+      throws MobileHarnessException, InterruptedException {
+    ActionSpec initialSpec;
+    try {
+      initialSpec = ProtoHelper.getActionSpecForReset(spec, uuid);
+    } catch (DeviceActionException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.DEVICE_ACTION_VALIDATION_FAILURE, "Uuid null or empty", e);
+    }
+    try {
+      ActionConfig actionConfig =
+          actionConfigurer.createActionConfigure(Command.RESET, initialSpec);
       logger.atInfo().log("Get action config:\n%s", actionConfig);
       return actionConfig;
     } catch (DeviceActionException e) {
