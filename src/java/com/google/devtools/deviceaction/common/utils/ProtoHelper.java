@@ -24,7 +24,6 @@ import static com.google.devtools.deviceaction.common.utils.Constants.SERIAL_KEY
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions;
@@ -187,12 +186,9 @@ public class ProtoHelper {
    *
    * @param installMainlineSpec the spec of install mainline action.
    * @param uuid of the device.
-   * @throws DeviceActionException if uuid null or empty.
    */
   public static ActionSpec getActionSpecForInstallMainline(
-      InstallMainlineSpec installMainlineSpec, String uuid) throws DeviceActionException {
-    Conditions.checkArgument(
-        !Strings.isNullOrEmpty(uuid), ErrorType.CUSTOMER_ISSUE, "Uuid is null or empty.");
+      InstallMainlineSpec installMainlineSpec, String uuid) {
     return ActionSpec.newBuilder()
         .setUnary(
             Unary.newBuilder()
@@ -210,12 +206,8 @@ public class ProtoHelper {
    *
    * @param resetSpec the spec of reset action.
    * @param uuid of the device.
-   * @throws DeviceActionException if uuid null or empty.
    */
-  public static ActionSpec getActionSpecForReset(ResetSpec resetSpec, String uuid)
-      throws DeviceActionException {
-    Conditions.checkArgument(
-        !Strings.isNullOrEmpty(uuid), ErrorType.CUSTOMER_ISSUE, "Uuid is null or empty.");
+  public static ActionSpec getActionSpecForReset(ResetSpec resetSpec, String uuid) {
     return ActionSpec.newBuilder()
         .setUnary(
             Unary.newBuilder()

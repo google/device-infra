@@ -104,13 +104,7 @@ public class DeviceActionUtil {
 
   private ActionConfig getInstallMainlineConfig(String uuid, InstallMainlineSpec spec)
       throws MobileHarnessException, InterruptedException {
-    ActionSpec initialSpec;
-    try {
-      initialSpec = ProtoHelper.getActionSpecForInstallMainline(spec, uuid);
-    } catch (DeviceActionException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.DEVICE_ACTION_VALIDATION_FAILURE, "Uuid null or empty", e);
-    }
+    ActionSpec initialSpec = ProtoHelper.getActionSpecForInstallMainline(spec, uuid);
     try {
       ActionConfig actionConfig =
           actionConfigurer.createActionConfigure(Command.INSTALL_MAINLINE, initialSpec);
@@ -126,13 +120,7 @@ public class DeviceActionUtil {
 
   private ActionConfig getResetConfig(String uuid, ResetSpec spec)
       throws MobileHarnessException, InterruptedException {
-    ActionSpec initialSpec;
-    try {
-      initialSpec = ProtoHelper.getActionSpecForReset(spec, uuid);
-    } catch (DeviceActionException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.DEVICE_ACTION_VALIDATION_FAILURE, "Uuid null or empty", e);
-    }
+    ActionSpec initialSpec = ProtoHelper.getActionSpecForReset(spec, uuid);
     try {
       ActionConfig actionConfig =
           actionConfigurer.createActionConfigure(Command.RESET, initialSpec);

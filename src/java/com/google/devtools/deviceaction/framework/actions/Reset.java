@@ -20,7 +20,6 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceaction.common.annotations.Annotations.Configurable;
 import com.google.devtools.deviceaction.common.annotations.Annotations.FilePath;
-import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
 import com.google.devtools.deviceaction.framework.operations.ModulePusher;
 import com.google.devtools.deviceaction.framework.proto.action.ResetSpec;
@@ -62,7 +61,7 @@ public final class Reset implements Action {
   }
 
   @Override
-  public void perform() throws DeviceActionException, InterruptedException {
+  public void perform() {
     logger.atInfo().log("Start to reset the device %s with spec:\n%s", device.getUuid(), spec);
   }
 
