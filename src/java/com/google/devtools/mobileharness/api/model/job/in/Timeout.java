@@ -51,7 +51,7 @@ public abstract class Timeout {
   }
 
   public static Duration getMaxJobTimeout(boolean supportLongevityTest) {
-    return supportLongevityTest ? Duration.ofDays(5) : Duration.ofDays(1);
+    return supportLongevityTest ? Duration.ofDays(10) : Duration.ofDays(1);
   }
 
   public static Duration getMaxTestTimeout(boolean supportLongevityTest) {
