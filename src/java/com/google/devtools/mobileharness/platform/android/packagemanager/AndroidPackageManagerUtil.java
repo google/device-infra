@@ -395,6 +395,7 @@ public class AndroidPackageManagerUtil {
       throws MobileHarnessException, InterruptedException {
     disablePackageVerifier(UtilArgs.builder().setSerial(serial).setSdkVersion(sdkVersion).build());
   }
+
   /**
    * Disable package verifier option. Only works with API level >= 17, no effect when API level <
    * 17. Supports production build.

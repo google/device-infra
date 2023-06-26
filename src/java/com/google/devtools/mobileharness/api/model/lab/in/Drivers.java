@@ -26,6 +26,7 @@ import javax.annotation.concurrent.GuardedBy;
 /** Supported drivers of a device. */
 public class Drivers {
   private final Object lock = new Object();
+
   /** Supported drivers. */
   @GuardedBy("lock")
   private final Set<String> drivers = new HashSet<>();

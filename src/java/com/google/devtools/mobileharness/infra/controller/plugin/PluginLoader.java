@@ -79,12 +79,16 @@ import org.reflections.util.ConfigurationBuilder;
 public class PluginLoader implements AutoCloseable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   /** File paths of the plugin jars. */
   private final ImmutableList<URI> jarUris;
+
   /** If specified, only loads this class from the plugins. */
   @Nullable private final String className;
+
   /** If specified, only loads the given classes as plugin modules. */
   @Nullable private final ImmutableList<String> moduleClassNames;
+
   /**
    * If specified, force loading of classes with names matching the supplied regex from our plugin
    * {@link classLoader}, rather than its parent {@link ClassLoader}. This can be used to resolve
