@@ -50,6 +50,7 @@ import javax.annotation.Nullable;
 public class SingleDeviceDiagnostician implements AllocationDiagnostician {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   /**
    * If the perfect device count is less than this value, we'll only query the perfect devices
    * instead of all the devices.
