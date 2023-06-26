@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
+import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
@@ -257,7 +258,7 @@ public class XtsTradefedTest extends BaseDriver
 
   private CommandProcess runCommand(
       TestInfo testInfo, XtsTradefedTestDriverSpec spec, Path tmpXtsRootDir, XtsType xtsType)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     String[] cmd = getXtsCommand(spec, tmpXtsRootDir, xtsType);
     ImmutableMap<String, String> env = getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType);
     // Logs command string for debug purpose
@@ -454,7 +455,7 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   private ImmutableMap<String, String> getEnvironmentToTradefedConsole(
-      Path tmpXtsRootDir, XtsType xtsType) {
+      Path tmpXtsRootDir, XtsType xtsType) throws MobileHarnessException, InterruptedException {
     ImmutableMap.Builder<String, String> environmentToTradefedConsole = ImmutableMap.builder();
     environmentToTradefedConsole.put(
         "LD_LIBRARY_PATH", getConcatenatedLdLibraryPath(tmpXtsRootDir, xtsType));
@@ -467,12 +468,41 @@ public class XtsTradefedTest extends BaseDriver
     return String.format("%s:%s64", xtsLibDir, xtsLibDir);
   }
 
-  private String getEnvPath() {
-    return Joiner.on(':')
-        .join(
-            new File(adb.getAdbPath()).getParent(),
-            new File(fastboot.getFastbootPath()).getParent(),
-            systemUtil.getEnv("PATH"));
+  private String getEnvPath() throws MobileHarnessException, InterruptedException {
+    List<String> envPathSegments = new ArrayList<>();
+    String adbPath = adb.getAdbPath();
+    envPathSegments.add(
+        Ascii.equalsIgnoreCase(adbPath, "adb")
+            ? getSdkToolPath("adb").getParent().toString()
+            : new File(adbPath).getParent());
+
+    String fastbootPath = fastboot.getFastbootPath();
+    envPathSegments.add(
+        Ascii.equalsIgnoreCase(fastbootPath, "fastboot")
+            ? getSdkToolPath("fastboot").getParent().toString()
+            : new File(fastbootPath).getParent());
+
+    if (systemUtil.getEnv("PATH") != null) {
+      envPathSegments.add(systemUtil.getEnv("PATH"));
+    }
+
+    return Joiner.on(':').join(envPathSegments);
+  }
+
+  private Path getSdkToolPath(String sdkToolName)
+      throws MobileHarnessException, InterruptedException {
+    CommandResult result =
+        cmdExecutor.exec(Command.of("which", sdkToolName).successExitCodes(0, 1));
+
+    if (result.exitCode() != 0) {
+      String possibleSdkTool = cmdExecutor.run(Command.of("whereis", sdkToolName));
+      throw new MobileHarnessException(
+          AndroidErrorId.XTS_TRADEFED_SDK_TOOL_NOT_FOUND_ERROR,
+          String.format(
+              "Unable to find the sdk tool \"%s\". Executables found: %s",
+              sdkToolName, possibleSdkTool));
+    }
+    return Path.of(result.stdout().trim());
   }
 
   private ImmutableList<String> getXtsRunCommandArgs(XtsTradefedTestDriverSpec spec) {
