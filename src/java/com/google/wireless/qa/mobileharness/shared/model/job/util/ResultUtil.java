@@ -40,8 +40,10 @@ public final class ResultUtil {
   public interface TestAdapter<T> {
     // Gets name of a test.
     String getName(T t);
+
     // Gets test status of a test.
     TestStatus getStatus(T t);
+
     // Get test result of a test.
     TestResult getResult(T t);
   }

@@ -98,6 +98,7 @@ public class Aapt {
 
   /** System command executor. */
   private final CommandExecutor cmdExecutor;
+
   /** Patterns for native code are not always present, so the list may stay empty. */
   private static final String NATIVE_CODE_PREFIX = "native-code: ";
 

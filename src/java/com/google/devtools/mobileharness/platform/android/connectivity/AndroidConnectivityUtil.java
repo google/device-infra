@@ -200,10 +200,13 @@ public class AndroidConnectivityUtil {
   static final String ADB_SHELL_TEMPLATE_PING_URL =
       "am instrument -e method checkConnectivity -e urlToCheck %s -w"
           + " com.google.devtools.mobileharness.platform.android.app.binary.wifiutil/.WifiUtil";
+
   /** The target host if the device is not in China. */
   @VisibleForTesting static final String HOST_FOR_NOT_IN_CHINA = "http://www.google.com";
+
   /** The target host if the device is in China. */
   @VisibleForTesting static final String HOST_FOR_IN_CHINA = "http://www.gstatic.com";
+
   /** Output of successfully using apk to ping. */
   private static final String PING_SUCCESS = "INSTRUMENTATION_RESULT: result=true";
 
@@ -239,6 +242,7 @@ public class AndroidConnectivityUtil {
   private final AndroidAdbUtil adbUtil;
   private final AndroidPackageManagerUtil packageManagerUtil;
   private final AndroidFileUtil androidFileUtil;
+
   /** {@code NetUtil} for common network operations. */
   private final NetUtil netUtil;
 
