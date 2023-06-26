@@ -100,6 +100,7 @@ public class TestInfos {
     add(testInfo);
     return testInfo;
   }
+
   /**
    * Creates a new {@code TestInfo} with the given ID, name, timing to the job and fileUtil.
    *
