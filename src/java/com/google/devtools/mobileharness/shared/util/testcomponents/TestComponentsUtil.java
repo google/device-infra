@@ -48,6 +48,7 @@ public class TestComponentsUtil {
   TestComponentsUtil(LocalFileUtil fileUtil) {
     this.fileUtil = fileUtil;
   }
+
   /**
    * Gets the path of the test components directory, and prepares the dir. Test runners can write
    * test components files to this directory on the lab side. Note to make sure the test components

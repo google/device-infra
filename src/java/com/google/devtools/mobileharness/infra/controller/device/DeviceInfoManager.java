@@ -68,6 +68,7 @@ public class DeviceInfoManager {
   private final SystemUtil systemUtil = new SystemUtil();
 
   private final ListeningScheduledExecutorService threadPool;
+
   /** Control ID -> task future for deleting DeviceInfo of the device that the ID is linked with. */
   @VisibleForTesting
   final Map<String, ListenableScheduledFuture<?>> removalFutures = new ConcurrentHashMap<>();
