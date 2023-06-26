@@ -16,8 +16,10 @@
 
 package com.google.devtools.deviceaction.framework.devices;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.deviceaction.common.utils.Constants.APEX_SUFFIX;
 import static com.google.devtools.deviceaction.common.utils.TimeUtils.fromProtoDuration;
+import static java.util.stream.Stream.concat;
 import static org.apache.commons.lang3.ArrayUtils.nullToEmpty;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -26,6 +28,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
@@ -59,6 +62,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Function;
 import javax.annotation.Nullable;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -343,6 +347,17 @@ public class AndroidPhone implements Device {
   public boolean devKeySigned() throws DeviceActionException {
     return Ascii.equalsIgnoreCase(brand(), GOOGLE)
         && Ascii.equalsIgnoreCase(getProperty(AndroidProperty.SIGN), DEV_KEYS);
+  }
+
+  /**
+   * Gets a map of package infos for packages installed on the device (include both apk and apex).
+   *
+   * @return a map from the package names to the package info.
+   */
+  public ImmutableMap<String, PackageInfo> getInstalledPackageMap()
+      throws DeviceActionException, InterruptedException {
+    return concat(listPackages().stream(), listApexPackages().stream())
+        .collect(toImmutableMap(PackageInfo::packageName, Function.identity()));
   }
 
   @SpecValue(field = "brand")

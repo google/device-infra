@@ -16,9 +16,13 @@
 
 package com.google.devtools.deviceaction.framework.actions;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static com.google.devtools.deviceaction.common.utils.Constants.APEX_SUFFIX;
+import static com.google.devtools.deviceaction.common.utils.Constants.APKS_SUFFIX;
+import static com.google.devtools.deviceaction.common.utils.Constants.APK_SUFFIX;
+import static java.util.Arrays.asList;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyCollection;
@@ -32,19 +36,16 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
-import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.truth.Correspondence;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.AndroidPackage;
-import com.google.devtools.deviceaction.common.utils.AaptUtil;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
 import com.google.devtools.deviceaction.framework.operations.ModuleCleaner;
 import com.google.devtools.deviceaction.framework.operations.ModuleInstaller;
 import com.google.devtools.deviceaction.framework.operations.ModulePusher;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
-import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageInfo;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.testing.junit.testparameterinjector.TestParameter;
 import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import com.google.testing.junit.testparameterinjector.TestParameters;
@@ -83,52 +84,25 @@ public final class InstallMainlineTest {
           .setVersionCode(30)
           .build();
 
-  private static final PackageInfo PUSHED_APEX_INFO =
-      PackageInfo.builder()
-          .setIsApex(true)
-          .setPackageName(APEX_PACKAGE)
-          .setSourceDir(SYSTEM_APEX_FAKE_APEX_PACKAGE_APEX)
-          .setVersionCode(VERSION_CODE)
-          .build();
-  private static final PackageInfo ACTIVATED_APEX_INFO =
-      PackageInfo.builder()
-          .setIsApex(true)
-          .setPackageName(APEX_PACKAGE)
-          .setSourceDir("/data/app/fake.apex.package.apex")
-          .setVersionCode(VERSION_CODE)
-          .build();
-
   private static final PackageInfo PRELOAD_APK_INFO =
       PackageInfo.builder()
           .setPackageName(APK_PACKAGE)
           .setSourceDir(DATA_APP_FAKE_APK_PACKAGE + "/base.apk")
           .setVersionCode(29)
           .build();
-  private static final PackageInfo PUSHED_APK_INFO =
-      PackageInfo.builder()
-          .setPackageName(APK_PACKAGE)
-          .setSourceDir(DATA_APP_FAKE_APK_PACKAGE + "/base.apex")
-          .setVersionCode(VERSION_CODE)
-          .build();
-
-  private static final ModuleInfo APEX_MODULE_INFO =
-      ModuleInfo.builder().setName("fake apex module").setPackageName(APEX_PACKAGE).build();
-  private static final ModuleInfo APK_MODULE_INFO =
-      ModuleInfo.builder().setName("fake apk module").setPackageName(APK_PACKAGE).build();
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Captor public ArgumentCaptor<List<File>> listArgumentCaptor;
   @Captor public ArgumentCaptor<Collection<AndroidPackage>> collectionArgumentCaptor;
-  @Captor public ArgumentCaptor<ImmutableMap<String, AndroidPackage>> sourceMapCaptor;
-  @Captor public ArgumentCaptor<ImmutableMap<String, AndroidPackage>> targetMapCaptor;
-  @Mock private AaptUtil aaptUtil;
+  @Captor public ArgumentCaptor<ImmutableMap<AndroidPackage, AndroidPackage>> mapArgumentCaptor;
+
+  @Mock private PackageUpdateTracker mockTracker;
   @Mock private ModuleCleaner mockCleaner;
   @Mock private ModuleInstaller mockInstaller;
   @Mock private ModulePusher mockPusher;
   @Mock private AndroidPhone mockDevice;
-  private final LocalFileUtil localFileUtil = new LocalFileUtil();
 
   private File apexFile;
   private File apkFile;
@@ -175,23 +149,53 @@ public final class InstallMainlineTest {
     trainZip2 = tmpFolder.newFile("train-dir/train2.zip");
     when(mockDevice.getSdkVersion()).thenReturn(33);
     when(mockDevice.devKeySigned()).thenReturn(false);
-    when(mockDevice.listModules())
-        .thenReturn(ImmutableSortedSet.of(APEX_MODULE_INFO, APK_MODULE_INFO));
-    when(mockDevice.getAllInstalledPaths(APEX_PACKAGE))
-        .thenReturn(ImmutableList.of(SYSTEM_APEX_FAKE_APEX_PACKAGE_APEX));
-    when(mockDevice.getAllInstalledPaths(APK_PACKAGE))
+    when(mockTracker.getAllFilesInDir(apksFolder, asList(APKS_SUFFIX, APEX_SUFFIX, APK_SUFFIX)))
+        .thenReturn(ImmutableSet.of(apexApksFile, apkApksFile));
+    when(mockTracker.getAllFilesInDir(splitFolder, asList(APKS_SUFFIX, APEX_SUFFIX, APK_SUFFIX)))
+        .thenReturn(ImmutableSet.of(apexExtractFile, apkExtractFile1, apkExtractFile2));
+    when(mockTracker.getPackageUpdateMap(ImmutableSet.of(apexFile, apkFile)))
         .thenReturn(
-            ImmutableList.of(
-                DATA_APP_FAKE_APK_PACKAGE + "/base.apk", DATA_APP_FAKE_APK_PACKAGE + "/aux.apk"));
-    when(mockDevice.extractFilesFromApks(apexApksFile))
-        .thenReturn(ImmutableList.of(apexExtractFile));
-    when(mockDevice.extractFilesFromApks(apkApksFile))
-        .thenReturn(ImmutableList.of(apkExtractFile1, apkExtractFile2));
-    setUpAapt(apexFile);
-    setUpAapt(apexExtractFile);
-    setUpAapt(apkFile);
-    setUpAapt(apkExtractFile1);
-    setUpAapt(apkExtractFile2);
+            ImmutableMap.of(
+                buildAndroidPackageFromFile(apexFile, ImmutableList.of(apexFile)),
+                buildAndroidPackageOnDevice(
+                    PRELOAD_APEX_INFO, ImmutableList.of(SYSTEM_APEX_FAKE_APEX_PACKAGE_APEX)),
+                buildAndroidPackageFromFile(apkFile, ImmutableList.of(apkFile)),
+                buildAndroidPackageOnDevice(
+                    PRELOAD_APK_INFO, ImmutableList.of(DATA_APP_FAKE_APK_PACKAGE + "/base.apk"))));
+    when(mockTracker.getPackageUpdateMap(ImmutableSet.of(apexApksFile, apkApksFile)))
+        .thenReturn(
+            ImmutableMap.of(
+                buildAndroidPackageFromFile(
+                    apexExtractFile, ImmutableList.of(apexExtractFile), apexApksFile),
+                buildAndroidPackageOnDevice(
+                    PRELOAD_APEX_INFO, ImmutableList.of(SYSTEM_APEX_FAKE_APEX_PACKAGE_APEX)),
+                buildAndroidPackageFromFile(
+                    apkExtractFile1,
+                    ImmutableList.of(apkExtractFile1, apkExtractFile2),
+                    apkApksFile),
+                buildAndroidPackageOnDevice(
+                    PRELOAD_APK_INFO,
+                    ImmutableList.of(
+                        DATA_APP_FAKE_APK_PACKAGE + "/base.apk",
+                        DATA_APP_FAKE_APK_PACKAGE + "/aux.apk"))));
+    when(mockTracker.getPackageUpdateMap(
+            ImmutableSet.of(apexExtractFile, apkExtractFile1, apkExtractFile2)))
+        .thenReturn(
+            ImmutableMap.of(
+                buildAndroidPackageFromFile(
+                    apexExtractFile, ImmutableList.of(apexExtractFile), apexApksFile),
+                buildAndroidPackageOnDevice(
+                    PRELOAD_APEX_INFO, ImmutableList.of(SYSTEM_APEX_FAKE_APEX_PACKAGE_APEX)),
+                buildAndroidPackageFromFile(
+                    apkExtractFile1,
+                    ImmutableList.of(apkExtractFile1, apkExtractFile2),
+                    apkApksFile),
+                buildAndroidPackageOnDevice(
+                    PRELOAD_APK_INFO,
+                    ImmutableList.of(
+                        DATA_APP_FAKE_APK_PACKAGE + "/base.apk",
+                        DATA_APP_FAKE_APK_PACKAGE + "/aux.apk"))));
+    when(mockTracker.getPackageUpdateMap(ImmutableSet.of())).thenReturn(ImmutableMap.of());
   }
 
   @Test
@@ -209,7 +213,7 @@ public final class InstallMainlineTest {
     verify(mockCleaner, never()).cleanUpSessions();
     verify(mockInstaller, never()).sideloadTrains(anyList(), anyBoolean());
     verify(mockInstaller, never()).installModules(anyCollection(), anyBoolean());
-    verify(mockPusher, never()).pushModules(anyMap(), anyMap());
+    verify(mockPusher, never()).pushModules(anyMap());
   }
 
   @Test
@@ -226,7 +230,7 @@ public final class InstallMainlineTest {
     verifyCleanupBehavoir(cleanup);
     verify(mockInstaller, never()).sideloadTrains(anyList(), anyBoolean());
     verify(mockInstaller, never()).installModules(anyCollection(), anyBoolean());
-    verify(mockPusher, never()).pushModules(anyMap(), anyMap());
+    verify(mockPusher, never()).pushModules(anyMap());
   }
 
   @Test
@@ -247,7 +251,7 @@ public final class InstallMainlineTest {
     assertThat(listArgumentCaptor.getValue()).containsExactly(trainZip1, trainZip2);
     assertThat(booleanArgumentCaptor.getValue()).isEqualTo(enableRollback);
     verify(mockInstaller, never()).installModules(anyCollection(), anyBoolean());
-    verify(mockPusher, never()).pushModules(anyMap(), anyMap());
+    verify(mockPusher, never()).pushModules(anyMap());
   }
 
   @Test
@@ -273,26 +277,6 @@ public final class InstallMainlineTest {
       @TestParameter boolean enableRollback)
       throws Exception {
     setUpTestConfig(type, devKey, cleanup, enableRollback);
-    // If devKey, need to push and list packages three times.
-    if (devKey) {
-      when(mockDevice.listPackages())
-          .thenReturn(
-              ImmutableSortedSet.of(PRELOAD_APK_INFO),
-              ImmutableSortedSet.of(PUSHED_APK_INFO),
-              ImmutableSortedSet.of(PUSHED_APK_INFO));
-      when(mockDevice.listApexPackages())
-          .thenReturn(
-              ImmutableSortedSet.of(PRELOAD_APEX_INFO),
-              ImmutableSortedSet.of(PUSHED_APEX_INFO),
-              ImmutableSortedSet.of(ACTIVATED_APEX_INFO));
-    } else {
-      when(mockDevice.listPackages())
-          .thenReturn(
-              ImmutableSortedSet.of(PRELOAD_APK_INFO), ImmutableSortedSet.of(PUSHED_APK_INFO));
-      when(mockDevice.listApexPackages())
-          .thenReturn(
-              ImmutableSortedSet.of(PRELOAD_APEX_INFO), ImmutableSortedSet.of(ACTIVATED_APEX_INFO));
-    }
 
     installMainline.perform();
 
@@ -322,47 +306,12 @@ public final class InstallMainlineTest {
         break;
     }
     if (devKey) {
-      verify(mockPusher).pushModules(sourceMapCaptor.capture(), targetMapCaptor.capture());
-      ImmutableMap<String, AndroidPackage> sourceMap = sourceMapCaptor.getValue();
-      ImmutableMap<String, AndroidPackage> targetMap = targetMapCaptor.getValue();
-      if (type == ModuleType.PACKAGE_FILE) {
-        assertThat(sourceMap.get(APEX_PACKAGE).files()).containsExactly(apexFile);
-        assertThat(sourceMap.get(APK_PACKAGE).files()).containsExactly(apkFile);
-      } else {
-        assertThat(sourceMap.get(APEX_PACKAGE).files()).containsExactly(apexExtractFile);
-        assertThat(sourceMap.get(APK_PACKAGE).files())
-            .containsExactly(apkExtractFile1, apkExtractFile2);
-      }
-      assertThat(targetMap.get(APEX_PACKAGE).files())
-          .containsExactly(new File(SYSTEM_APEX_FAKE_APEX_PACKAGE_APEX));
-      assertThat(targetMap.get(APK_PACKAGE).files())
-          .containsExactly(
-              new File(DATA_APP_FAKE_APK_PACKAGE + "/base.apk"),
-              new File(DATA_APP_FAKE_APK_PACKAGE + "/aux.apk"));
+      verify(mockPusher).pushModules(mapArgumentCaptor.capture());
+      ImmutableMap<AndroidPackage, AndroidPackage> map = mapArgumentCaptor.getValue();
+      assertThat(map).hasSize(2);
     } else {
-      verify(mockPusher, never()).pushModules(anyMap(), anyMap());
+      verify(mockPusher, never()).pushModules(anyMap());
     }
-  }
-
-  @Test
-  public void perform_installPackages_fail(
-      @TestParameter({"APKS", "PACKAGE_FILE", "SPLIT_FOLDER"}) ModuleType type,
-      @TestParameter boolean cleanup,
-      @TestParameter boolean enableRollback)
-      throws Exception {
-    setUpTestConfig(type, /* devKey= */ true, cleanup, enableRollback);
-    when(mockDevice.listPackages())
-        .thenReturn(
-            ImmutableSortedSet.of(PRELOAD_APK_INFO),
-            ImmutableSortedSet.of(PUSHED_APK_INFO),
-            ImmutableSortedSet.of(PUSHED_APK_INFO));
-    when(mockDevice.listApexPackages())
-        .thenReturn(
-            ImmutableSortedSet.of(PRELOAD_APEX_INFO),
-            ImmutableSortedSet.of(PUSHED_APEX_INFO),
-            ImmutableSortedSet.of(PUSHED_APEX_INFO)); // The last data not activated.
-
-    assertThrows(DeviceActionException.class, () -> installMainline.perform());
   }
 
   @Test
@@ -373,18 +322,6 @@ public final class InstallMainlineTest {
       @TestParameter boolean enableRollback)
       throws Exception {
     setUpTestConfig(type, devKey, cleanup, enableRollback);
-    // If devKey, need to push and list packages three times.
-    if (devKey) {
-      when(mockDevice.listPackages())
-          .thenReturn(
-              ImmutableSortedSet.of(PRELOAD_APK_INFO), ImmutableSortedSet.of(PUSHED_APK_INFO));
-      when(mockDevice.listApexPackages())
-          .thenReturn(
-              ImmutableSortedSet.of(PRELOAD_APEX_INFO), ImmutableSortedSet.of(PUSHED_APEX_INFO));
-    } else {
-      when(mockDevice.listPackages()).thenReturn(ImmutableSortedSet.of(PRELOAD_APK_INFO));
-      when(mockDevice.listApexPackages()).thenReturn(ImmutableSortedSet.of(PRELOAD_APEX_INFO));
-    }
     doThrow(DeviceActionException.class)
         .when(mockInstaller)
         .installModules(anyCollection(), anyBoolean());
@@ -405,18 +342,6 @@ public final class InstallMainlineTest {
         ImmutableMultimap.of());
 
     assertThat(installMainline.needPush()).isEqualTo(expectValue);
-  }
-
-  private void setUpAapt(File file) throws DeviceActionException, InterruptedException {
-    boolean isApex = file.getName().endsWith(APEX_SUFFIX);
-    when(aaptUtil.getPackageInfo(file))
-        .thenReturn(
-            PackageInfo.builder()
-                .setIsApex(isApex)
-                .setPackageName(isApex ? APEX_PACKAGE : APK_PACKAGE)
-                .setSourceDir(file.getAbsolutePath())
-                .setVersionCode(VERSION_CODE)
-                .build());
   }
 
   private void setUpTestConfig(
@@ -450,14 +375,36 @@ public final class InstallMainlineTest {
   private void setUpAction(InstallMainlineSpec spec, ImmutableMultimap<String, File> files) {
     installMainline =
         new InstallMainline(
-            mockCleaner,
-            mockInstaller,
-            mockPusher,
-            spec,
-            mockDevice,
-            aaptUtil,
-            localFileUtil,
-            files);
+            mockTracker, mockCleaner, mockInstaller, mockPusher, spec, mockDevice, files);
+  }
+
+  private AndroidPackage buildAndroidPackageFromFile(File file, List<File> files) {
+    boolean isApex = file.getName().endsWith(APEX_SUFFIX);
+    String packageName = isApex ? APEX_PACKAGE : APK_PACKAGE;
+    boolean isSplit = files.size() > 1;
+    return AndroidPackage.builder()
+        .setInfo(
+            PackageInfo.builder()
+                .setIsApex(isApex)
+                .setPackageName(packageName)
+                .setSourceDir(file.getAbsolutePath())
+                .setVersionCode(VERSION_CODE)
+                .build())
+        .setFiles(ImmutableList.copyOf(files))
+        .setIsSplit(isSplit)
+        .build();
+  }
+
+  private AndroidPackage buildAndroidPackageFromFile(File file, List<File> files, File apksFile) {
+    return buildAndroidPackageFromFile(file, files).toBuilder().setApksFile(apksFile).build();
+  }
+
+  private AndroidPackage buildAndroidPackageOnDevice(PackageInfo packageInfo, List<String> files) {
+    return AndroidPackage.builder()
+        .setInfo(packageInfo)
+        .setIsSplit(files.size() > 1)
+        .addFiles(files.stream().map(File::new).collect(toImmutableList()))
+        .build();
   }
 
   private void verifyCleanupBehavoir(boolean cleanup)

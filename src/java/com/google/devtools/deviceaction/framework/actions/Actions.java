@@ -96,14 +96,15 @@ public class Actions {
     InstallMainlineSpec spec =
         actionConfig.actionSpec().getUnary().getExtension(InstallMainlineSpec.ext);
     ImmutableMultimap<String, File> resolvedFiles = resolver.resolve(spec.getFilesList());
+    PackageUpdateTracker packageUpdateTracker =
+        new PackageUpdateTracker(androidPhone, aaptUtil, localFileUtil);
     return new InstallMainline(
+        packageUpdateTracker,
         new ModuleCleaner(androidPhone),
         new ModuleInstaller(androidPhone, sleeper),
         new ModulePusher(androidPhone, localFileUtil, resourceHelper),
         spec,
         androidPhone,
-        aaptUtil,
-        localFileUtil,
         resolvedFiles);
   }
 
@@ -113,9 +114,12 @@ public class Actions {
         devices.createAndroidPhone(
             actionConfig.actionSpec().getUnary().getFirst().getUuid(),
             actionConfig.firstSpec().get().getAndroidPhoneSpec());
+    PackageUpdateTracker packageUpdateTracker =
+        new PackageUpdateTracker(androidPhone, aaptUtil, localFileUtil);
     ResetSpec spec = actionConfig.actionSpec().getUnary().getExtension(ResetSpec.ext);
     ImmutableMultimap<String, File> resolvedFiles = resolver.resolve(spec.getFilesList());
     return new Reset(
+        packageUpdateTracker,
         new ModulePusher(androidPhone, localFileUtil, resourceHelper),
         spec,
         androidPhone,

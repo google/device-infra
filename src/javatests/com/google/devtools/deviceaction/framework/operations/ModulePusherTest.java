@@ -85,8 +85,7 @@ public final class ModulePusherTest {
   private File fakeBaseApk;
   private File fakeHdpiApk;
   private ModulePusher modulePusher;
-  private ImmutableMap<String, AndroidPackage> sourceMap;
-  private ImmutableMap<String, AndroidPackage> onDeviceMap;
+  private ImmutableMap<AndroidPackage, AndroidPackage> packageMap;
 
   public ModulePusherTest() {}
 
@@ -104,19 +103,22 @@ public final class ModulePusherTest {
     when(mockHelper.getTmpFileDir()).thenReturn(tmpDir.toPath());
     when(mockDevice.isUserdebug()).thenReturn(true);
     modulePusher = new ModulePusher(mockDevice, new LocalFileUtil(), mockHelper);
-    sourceMap = getPackageMap(fakeApex, fakeApk, fakeApks, fakeBaseApk, fakeHdpiApk);
-    onDeviceMap =
-        getPackageMap(
-            new File(DATA_APEX_PATH),
-            new File(DATA_APK_PATH),
-            new File("/data/app/com.android.FAKE.SPLIT.APK.PACKAGE.NAME/base.apk"),
-            new File("/data/app/com.android.FAKE.SPLIT.APK.PACKAGE.NAME/base.apk"),
-            new File("/data/app/com.android.FAKE.SPLIT.APK.PACKAGE.NAME/hdpi.apk"));
+    packageMap =
+        ImmutableMap.of(
+            getApex(fakeApex),
+            getApex(new File(DATA_APEX_PATH)),
+            getApk(fakeApk),
+            getApk(new File(DATA_APK_PATH)),
+            getSplit(fakeApks, fakeBaseApk, fakeHdpiApk),
+            getSplit(
+                new File("/data/app/com.android.FAKE.SPLIT.APK.PACKAGE.NAME/base.apk"),
+                new File("/data/app/com.android.FAKE.SPLIT.APK.PACKAGE.NAME/base.apk"),
+                new File("/data/app/com.android.FAKE.SPLIT.APK.PACKAGE.NAME/hdpi.apk")));
   }
 
   @Test
   public void pushModules_reboot() throws Exception {
-    modulePusher.pushModules(sourceMap, onDeviceMap);
+    modulePusher.pushModules(packageMap);
 
     verifyAllFilesExistAndPushedAndFolderOnDeviceRemoved();
     ArgumentCaptor<Path> source = ArgumentCaptor.forClass(Path.class);
@@ -147,7 +149,7 @@ public final class ModulePusherTest {
   public void pushModules_enableTestHarness() throws Exception {
     when(mockDevice.reloadByFactoryReset()).thenReturn(true);
 
-    modulePusher.pushModules(sourceMap, onDeviceMap);
+    modulePusher.pushModules(packageMap);
 
     verify(mockDevice, times(3)).push(any(), any());
     verify(mockDevice).removeFiles(DATA_APP_SPLIT_APK_FOLDER);
@@ -159,7 +161,7 @@ public final class ModulePusherTest {
   public void pushModules_disablePackageCache() throws Exception {
     when(mockDevice.needDisablePackageCache()).thenReturn(true);
 
-    modulePusher.pushModules(sourceMap, onDeviceMap);
+    modulePusher.pushModules(packageMap);
 
     verifyAllFilesExistAndPushedAndFolderOnDeviceRemoved();
     verify(mockDevice).removeFiles("/data/system/package_cache/");
@@ -171,16 +173,14 @@ public final class ModulePusherTest {
     when(mockHelper.getTmpFileDir())
         .thenThrow(new DeviceActionException("FAKE", ErrorType.CUSTOMER_ISSUE, "no message"));
 
-    assertThrows(
-        DeviceActionException.class, () -> modulePusher.pushModules(sourceMap, onDeviceMap));
+    assertThrows(DeviceActionException.class, () -> modulePusher.pushModules(packageMap));
   }
 
   @Test
   public void pushModules_pushFail_throwException() throws Exception {
     doThrow(DeviceActionException.class).when(mockDevice).push(any(), any());
 
-    assertThrows(
-        DeviceActionException.class, () -> modulePusher.pushModules(sourceMap, onDeviceMap));
+    assertThrows(DeviceActionException.class, () -> modulePusher.pushModules(packageMap));
   }
 
   @Test
@@ -384,17 +384,6 @@ public final class ModulePusherTest {
     assertTrue(fakeHdpiApk.exists());
     verify(mockDevice).removeFiles(DATA_APP_SPLIT_APK_FOLDER);
     verify(mockDevice, times(3)).reboot();
-  }
-
-  private ImmutableMap<String, AndroidPackage> getPackageMap(
-      File apexFile, File apkFile, File apksFile, File baseFile, File splitFile) {
-    return ImmutableMap.of(
-        APEX_PACKAGE_NAME,
-        getApex(apexFile),
-        APK_PACKAGE_NAME,
-        getApk(apkFile),
-        SPLIT_APK_PACKAGE_NAME,
-        getSplit(apksFile, baseFile, splitFile));
   }
 
   private static AndroidPackage getApex(File apexFile) {

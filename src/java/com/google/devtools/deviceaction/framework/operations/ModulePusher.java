@@ -82,22 +82,22 @@ public class ModulePusher implements Operation {
   /**
    * Updates the mainline modules by pushing them to the device.
    *
-   * @param source a map from package names to the source packages.
-   * @param packagesOnDevice a map from package names to the targets on device.
+   * @param packageMap a map of packages to update. The key is the package to push and the value is
+   *     the package installed.
    */
-  public void pushModules(
-      Map<String, AndroidPackage> source, Map<String, AndroidPackage> packagesOnDevice)
+  public void pushModules(Map<AndroidPackage, AndroidPackage> packageMap)
       throws DeviceActionException, InterruptedException {
     Conditions.checkState(
         device.isUserdebug(), ErrorType.CUSTOMER_ISSUE, "The device should be of userdebug type.");
     setupDevice();
 
     Path tmpDirOnHost = createRenameDir(resourceHelper.getTmpFileDir());
-    for (String packageName : source.keySet()) {
+    for (AndroidPackage source : packageMap.keySet()) {
+      String packageName = source.info().packageName();
       PackageInfo pushedInfo =
           pushModule(
-              source.get(packageName),
-              packagesOnDevice.get(packageName),
+              source,
+              packageMap.get(source),
               tmpDirOnHost.resolve(packageName)); // Each package has its own tmp dir.
       logger.atInfo().log("Pushed package %s.", pushedInfo);
     }
