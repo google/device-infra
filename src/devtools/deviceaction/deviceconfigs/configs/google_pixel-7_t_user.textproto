@@ -1,0 +1,20 @@
+# proto-file: third_party/deviceinfra/src/devtools/deviceaction/schemas/proto/base_spec.proto
+# proto-message: DeviceConfig
+
+device_spec {
+  android_phone_spec {
+    brand: "GOOGLE"
+    reboot_await: { seconds: 10 }
+    reboot_timeout: { seconds: 300 }
+    testharness_boot_await: { seconds: 60 }
+    testharness_boot_timeout: { seconds: 300 }
+    staged_ready_timeout: { seconds: 90 }
+  }
+}
+[devtools.deviceaction.schemas.proto.action.InstallMainlineSpec.install_mainline_spec] {
+  clean_up_sessions: false
+}
+[devtools.deviceaction.schemas.proto.action.ResetSpec.reset_spec] {
+  reset_option: TEST_HARNESS
+  need_preload_modules_recovery: false
+}

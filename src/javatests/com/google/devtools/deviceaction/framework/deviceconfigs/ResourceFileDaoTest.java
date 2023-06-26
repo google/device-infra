@@ -34,9 +34,9 @@ public final class ResourceFileDaoTest {
   @Test
   public void getDeviceConfig_verifyFileExistence() throws Exception {
     DeviceConfig deviceConfig =
-        dao.getDeviceConfig("oppo_cph2359_t_userdebug", Command.INSTALL_MAINLINE);
+        dao.getDeviceConfig("google_pixel-7_t_user", Command.INSTALL_MAINLINE);
 
-    assertThat(deviceConfig.getDeviceSpec().getAndroidPhoneSpec().getBrand()).isEqualTo("OPPO");
+    assertThat(deviceConfig.getDeviceSpec().getAndroidPhoneSpec().getBrand()).isEqualTo("GOOGLE");
   }
 
   @Test
