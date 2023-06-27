@@ -43,6 +43,13 @@ public final class CompositeDeviceUtil {
             false /* autoDelete */);
       }
     }
+    if (!(device instanceof CompositeDevice)) {
+      DeviceCache.cache(
+          device.getClass().getSimpleName(),
+          device.getDeviceId(),
+          cacheTimeoutMs,
+          /* autoDelete= */ false);
+    }
   }
 
   /**
