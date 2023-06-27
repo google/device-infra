@@ -50,7 +50,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:exit_code",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
