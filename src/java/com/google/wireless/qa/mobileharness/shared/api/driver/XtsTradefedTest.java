@@ -85,6 +85,9 @@ public class XtsTradefedTest extends BaseDriver
 
   private static final String XTS_TF_LOG = "xts_tf_output.log";
 
+  private static final ImmutableSet<String> EXCLUDED_JAR_FILES =
+      ImmutableSet.of("AtsOlcServer_deploy.jar", "atsconsole_deploy.jar");
+
   private volatile ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
 
   private final CommandExecutor cmdExecutor;
@@ -358,7 +361,9 @@ public class XtsTradefedTest extends BaseDriver
           .listFilePaths(
               linkXtsToolsDirRealPath,
               /* recursively= */ false,
-              path -> path.getFileName().toString().endsWith(".jar"))
+              path ->
+                  path.getFileName().toString().endsWith(".jar")
+                      && !EXCLUDED_JAR_FILES.contains(path.getFileName().toString()))
           .forEach(
               jar -> {
                 Path newJarPath = replacePathPrefix(jar, linkXtsToolsDirRealPath, linkXtsToolsDir);
