@@ -25,11 +25,14 @@ java_library(
         "//javatests/com/google/wireless/qa/mobileharness:__subpackages__",
     ],
     deps = [
+        "//google/devtools/resultstore/v2:test_component_java_proto",
+        "//java/com/google/devtools/sponge/shared/parsers:test_component_parser",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
     ],
 )
