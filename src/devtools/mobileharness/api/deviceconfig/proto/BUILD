@@ -16,6 +16,8 @@
 # Description:
 #   Proto definitions for Mobile Harness config service.
 
+load("//tools/build_defs/js/jspb_proto_library:rules.bzl", "jspb_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -34,6 +36,16 @@ proto_library(
     ],
 )
 
+jspb_proto_library(
+    name = "basic_jspb_proto",
+    visibility = [
+        "//devtools/mobileharness/api/deviceconfig/proto:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/copyconfig:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/deviceconfig:__pkg__",
+    ],
+    deps = [":basic_proto"],
+)
+
 java_proto_library(
     name = "basic_java_proto",
     deps = [":basic_proto"],
@@ -48,6 +60,18 @@ proto_library(
     ],
 )
 
+jspb_proto_library(
+    name = "device_jspb_proto",
+    visibility = [
+        "//devtools/mobileharness/api/deviceconfig/proto:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/copyconfig:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/deviceconfig:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/devicelist:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/labdetail:__pkg__",
+    ],
+    deps = [":device_proto"],
+)
+
 java_proto_library(
     name = "device_java_proto",
     deps = [":device_proto"],
@@ -60,6 +84,16 @@ proto_library(
         ":basic_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_proto",
     ],
+)
+
+jspb_proto_library(
+    name = "lab_jspb_proto",
+    visibility = [
+        "//devtools/mobileharness/api/deviceconfig/proto:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/copyconfig:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/labconfig:__pkg__",
+    ],
+    deps = [":lab_proto"],
 )
 
 java_proto_library(

@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("//tools/build_defs/proto/cpp:cc_proto_library.bzl", "cc_proto_library")
+
 DEFAULT_VISIBILITY = [
     "//:deviceinfra_all_pkg",
     "//:deviceinfra_metrics_pkg",
@@ -31,6 +33,12 @@ proto_library(
         "exception.proto",
         "namespace.proto",
     ],
+)
+
+cc_proto_library(
+    name = "error_cc_proto",
+    visibility = ["//devtools/mobileharness/shared/debuggability/flume/utils:__pkg__"],
+    deps = [":error_proto"],
 )
 
 java_proto_library(

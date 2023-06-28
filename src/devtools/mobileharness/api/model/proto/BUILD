@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("//tools/build_defs/js/jspb_proto_library:rules.bzl", "jspb_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -29,6 +31,22 @@ proto_library(
         ":lab_proto",
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
     ],
+)
+
+jspb_proto_library(
+    name = "device_jspb_proto",
+    visibility = [
+        "//devtools/mobileharness/api/model/proto:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/copyconfig:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/deviceconfig:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/devicecontrol:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/devicedetail:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/labdetail:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/soyplugin:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/soyplugin/jstests:__pkg__",
+    ],
+    deps = [":device_proto"],
 )
 
 java_proto_library(
@@ -52,6 +70,12 @@ proto_library(
     srcs = ["job.proto"],
 )
 
+jspb_proto_library(
+    name = "job_jspb_proto",
+    visibility = ["//java/com/google/wireless/android/testtools/moscar/ui/jobsetting:__pkg__"],
+    deps = [":job_proto"],
+)
+
 java_proto_library(
     name = "job_java_proto",
     deps = [":job_proto"],
@@ -60,6 +84,26 @@ java_proto_library(
 proto_library(
     name = "lab_proto",
     srcs = ["lab.proto"],
+)
+
+jspb_proto_library(
+    name = "lab_jspb_proto",
+    visibility = [
+        "//devtools/mobileharness/api/model/proto:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/allsitesearch:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/card/devicelist:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/card/testlist:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/copyconfig:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/devicecontrol:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/devicedetail:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/devicelist:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/labdetail:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/labfile:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/lablist:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/release:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/table:__pkg__",
+    ],
+    deps = [":lab_proto"],
 )
 
 java_proto_library(
@@ -71,6 +115,16 @@ proto_library(
     name = "test_proto",
     srcs = ["test.proto"],
     deps = [":job_proto"],
+)
+
+jspb_proto_library(
+    name = "test_jspb_proto",
+    visibility = [
+        "//devtools/mobileharness/api/model/proto:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/enumrender:__pkg__",
+        "//java/com/google/devtools/mobileharness/fe/v5/ui/sessiondetail:__pkg__",
+    ],
+    deps = [":test_proto"],
 )
 
 java_proto_library(
