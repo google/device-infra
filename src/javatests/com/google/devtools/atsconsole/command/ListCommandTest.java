@@ -65,8 +65,14 @@ public class ListCommandTest {
   private static final ImmutableList<String> CTS_MODULE_LIST =
       ImmutableList.of("CtsAbiOverrideHostTestCases", "CtsBluetoothMultiDevicesTestCases");
 
+  private static final String TEST_CTS_CONFIG_DIR =
+      RunfilesUtil.getRunfilesLocation(
+          "javatests/com/google/devtools/mobileharness/platform/android/xts/config/testdata/cts");
+
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
+
+  private final LocalFileUtil realLocalFileUtil = new LocalFileUtil();
 
   @Mock private LineReader lineReader;
 
@@ -163,6 +169,9 @@ public class ListCommandTest {
 
   @Test
   public void listDevicesAndModules_expectedOutput() throws Exception {
+    // Prepares the cts configs file for testing
+    realLocalFileUtil.copyFileOrDir(TEST_CTS_CONFIG_DIR, xtsRootDirPath);
+
     when(lineReader.readLine(anyString()))
         .thenReturn("list devices")
         .thenReturn("list devices all")

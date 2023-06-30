@@ -84,7 +84,10 @@ message ListDevicesCommand {
   bool list_all_devices = 1;
 }
 
-message ListModulesCommand {}
+message ListModulesCommand {
+  // Required.
+  string xts_root_dir = 1;
+}
 
 message DumpCommand {
   oneof command {

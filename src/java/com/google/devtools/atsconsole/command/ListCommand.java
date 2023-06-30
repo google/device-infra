@@ -16,6 +16,7 @@
 
 package com.google.devtools.atsconsole.command;
 
+import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.controller.olcserver.AtsSessionStub;
 import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
@@ -53,6 +54,7 @@ public class ListCommand implements Callable<Integer> {
 
   @Spec private CommandSpec spec;
 
+  private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
   private final ServerPreparer serverPreparer;
   private final AtsSessionStub atsSessionStub;
@@ -61,11 +63,13 @@ public class ListCommand implements Callable<Integer> {
 
   @Inject
   ListCommand(
+      ConsoleInfo consoleInfo,
       ConsoleUtil consoleUtil,
       ServerPreparer serverPreparer,
       AtsSessionStub atsSessionStub,
       ResultLister resultLister,
       PlanLister planLister) {
+    this.consoleInfo = consoleInfo;
     this.consoleUtil = consoleUtil;
     this.serverPreparer = serverPreparer;
     this.atsSessionStub = atsSessionStub;
@@ -129,7 +133,9 @@ public class ListCommand implements Callable<Integer> {
             AtsSessionPluginConfig.newBuilder()
                 .setListCommand(
                     SessionPluginProto.ListCommand.newBuilder()
-                        .setListModulesCommand(ListModulesCommand.getDefaultInstance()))
+                        .setListModulesCommand(
+                            ListModulesCommand.newBuilder()
+                                .setXtsRootDir(consoleInfo.getXtsRootDirectory().orElse(""))))
                 .build());
     return PluginOutputPrinter.printOutput(output, consoleUtil);
   }

@@ -44,7 +44,7 @@ class ListModulesCommandHandler {
   }
 
   AtsSessionPluginOutput handle(ListModulesCommand command) {
-    return getListModuleOutput(getConfigDirs());
+    return getListModuleOutput(getConfigDirs(command.getXtsRootDir()));
   }
 
   /**
