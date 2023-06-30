@@ -17,7 +17,6 @@
 package com.google.wireless.qa.mobileharness.shared.model.job.util;
 
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
-import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.ResultCounter;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
@@ -75,34 +74,6 @@ public final class ResultUtil {
       case UNCLASSIFIED_ERROR:
     }
     return TestResult.ERROR;
-  }
-
-  public static DesiredTestResult getDesiredTestResultByException(MobileHarnessException e) {
-    if (e instanceof com.google.devtools.mobileharness.api.model.error.MobileHarnessException) {
-      ErrorId errorId =
-          ((com.google.devtools.mobileharness.api.model.error.MobileHarnessException) e)
-              .getErrorId();
-      switch (errorId.type()) {
-        case CUSTOMER_ISSUE:
-          return DesiredTestResult.FAIL;
-        case INFRA_ISSUE:
-          return DesiredTestResult.ERROR;
-        case DEPENDENCY_ISSUE:
-        case UNCLASSIFIED:
-        case UNDETERMINED:
-        case UNRECOGNIZED:
-          break;
-      }
-      return DesiredTestResult.ERROR;
-    }
-    switch (e.getErrorType()) {
-      case INFRA_ERROR:
-        return DesiredTestResult.ERROR;
-      case USERS_FAILURE:
-        return DesiredTestResult.FAIL;
-      case UNCLASSIFIED_ERROR:
-    }
-    return DesiredTestResult.ERROR;
   }
 
   /**
