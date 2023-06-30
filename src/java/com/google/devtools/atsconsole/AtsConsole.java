@@ -35,6 +35,7 @@ import com.google.devtools.atsconsole.Annotations.MainArgs;
 import com.google.devtools.atsconsole.command.RootCommand;
 import com.google.devtools.atsconsole.controller.olcserver.ServerLogPrinter;
 import com.google.devtools.atsconsole.controller.olcserver.ServerPreparer;
+import com.google.devtools.atsconsole.util.console.ConsoleReaderOutputStream;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.shell.ShellUtils;
 import com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.TokenizationException;
@@ -44,6 +45,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -84,8 +86,8 @@ public class AtsConsole implements Callable<Void> {
     // Parses flags.
     ImmutableList<String> deviceInfraServiceFlags = parseFlags(systemProperties);
 
-    // Creates line reader.
-    LineReader lineReader = createLineReader();
+    // Initializes line reader and stdout/stderr.
+    LineReader lineReader = initializeLineReaderAndStdout();
 
     // Creates Guice injector.
     Injector injector =
@@ -255,15 +257,15 @@ public class AtsConsole implements Callable<Void> {
     return ImmutableList.copyOf(deviceInfraServiceFlags);
   }
 
-  /**
-   * Returns a new LineReader, or {@code null} if an IOException occurs. Note that this function
-   * must be static so that we can run it before the superclass constructor.
-   */
-  private static LineReader createLineReader() throws IOException {
-    return LineReaderBuilder.builder()
-        .appName(APPNAME)
-        .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
-        .history(new DefaultHistory())
-        .build();
+  /** Initializes line reader and stdout/stderr. */
+  private static LineReader initializeLineReaderAndStdout() throws IOException {
+    LineReader lineReader =
+        LineReaderBuilder.builder()
+            .appName(APPNAME)
+            .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
+            .history(new DefaultHistory())
+            .build();
+    System.setErr(new PrintStream(new ConsoleReaderOutputStream(lineReader)));
+    return lineReader;
   }
 }

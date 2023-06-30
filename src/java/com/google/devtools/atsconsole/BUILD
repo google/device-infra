@@ -47,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole/command",
         "//src/java/com/google/devtools/atsconsole/controller/olcserver:server_log_printer",
         "//src/java/com/google/devtools/atsconsole/controller/olcserver:server_preparer",
+        "//src/java/com/google/devtools/atsconsole/util/console:console_reader_output_stream",
         "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
