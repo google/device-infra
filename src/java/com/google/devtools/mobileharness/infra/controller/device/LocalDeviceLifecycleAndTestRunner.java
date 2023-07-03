@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.infra.controller.device;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
@@ -442,11 +444,41 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   }
 
   @Override
-  public boolean isJobSupported(JobType jobType) {
-    return isAlive()
-        && device.getDeviceTypes().contains(jobType.getDevice())
-        && device.getDriverTypes().contains(jobType.getDriver())
-        && device.getDecoratorTypes().containsAll(jobType.getDecoratorList());
+  public synchronized boolean isJobSupported(JobType jobType) {
+    synchronized (interruptLock) {
+      if (!isAlive()) {
+        logger.atWarning().log(
+            "The device runner %s is not alive, skip checking job type", runningThread.getName());
+        return false;
+      }
+
+      if (!device.getDeviceTypes().contains(jobType.getDevice())) {
+        logger.atWarning().log(
+            "The device type [%s] is not supported by the device runner %s",
+            Sets.difference(ImmutableSet.of(jobType.getDevice()), device.getDeviceTypes()),
+            runningThread.getName());
+        return false;
+      }
+
+      if (!device.getDriverTypes().contains(jobType.getDriver())) {
+        logger.atWarning().log(
+            "The driver [%s] is not supported by the device runner %s",
+            Sets.difference(ImmutableSet.of(jobType.getDriver()), device.getDriverTypes()),
+            runningThread.getName());
+        return false;
+      }
+
+      if (!device.getDecoratorTypes().containsAll(jobType.getDecoratorList())) {
+        logger.atWarning().log(
+            "The decorators [%s] are not supported by the device runner %s",
+            Sets.difference(
+                ImmutableSet.copyOf(jobType.getDecoratorList()), device.getDecoratorTypes()),
+            runningThread.getName());
+        return false;
+      }
+    }
+
+    return true;
   }
 
   @Override
