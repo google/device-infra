@@ -92,7 +92,7 @@ public class ServerLogPrinter {
     @Override
     public void onNext(GetLogResponse response) {
       for (LogRecord logRecord : response.getLogRecords().getLogRecordList()) {
-        consoleUtil.printStderr("%s", logRecord.getFormattedLogRecord());
+        consoleUtil.printStderr(logRecord.getFormattedLogRecord());
       }
     }
 

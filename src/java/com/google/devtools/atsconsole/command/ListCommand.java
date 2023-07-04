@@ -145,7 +145,7 @@ public class ListCommand implements Callable<Integer> {
       aliases = {"p", "configs"},
       description = "List all plans/configs available")
   public int plans() throws MobileHarnessException {
-    consoleUtil.printlnStdout("%s", planLister.listPlans());
+    consoleUtil.printlnStdout(planLister.listPlans());
     return ExitCode.OK;
   }
 
@@ -154,7 +154,7 @@ public class ListCommand implements Callable<Integer> {
       aliases = {"r"},
       description = "List all results")
   public int results() throws MobileHarnessException {
-    consoleUtil.printlnStdout("%s", resultLister.listResults());
+    consoleUtil.printlnStdout(resultLister.listResults());
     return ExitCode.OK;
   }
 }

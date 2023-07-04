@@ -72,6 +72,18 @@ public class ConsoleUtil {
   }
 
   /**
+   * Displays a text (command output or user-requested help) (without trailing "\n") on the console
+   * (stdout).
+   *
+   * <p>The method is thread safe.
+   */
+  public void printStdout(String text) {
+    synchronized (consoleOutputLock) {
+      consoleOutputOut.print(text);
+    }
+  }
+
+  /**
    * Displays a text line (command output or user-requested help) on the console (stdout).
    *
    * <p>The method is thread safe.
@@ -80,6 +92,18 @@ public class ConsoleUtil {
   public void printlnStdout(String format, Object... args) {
     synchronized (consoleOutputLock) {
       consoleOutputOut.printf(format, args);
+      consoleOutputOut.println();
+    }
+  }
+
+  /**
+   * Displays a text line (command output or user-requested help) on the console (stdout).
+   *
+   * <p>The method is thread safe.
+   */
+  public void printlnStdout(String text) {
+    synchronized (consoleOutputLock) {
+      consoleOutputOut.print(text);
       consoleOutputOut.println();
     }
   }
@@ -97,6 +121,17 @@ public class ConsoleUtil {
   }
 
   /**
+   * Displays a text (error messages or log) (without trailing "\n") on the console (stderr).
+   *
+   * <p>The method is thread safe.
+   */
+  public void printStderr(String text) {
+    synchronized (consoleOutputLock) {
+      consoleOutputErr.print(text);
+    }
+  }
+
+  /**
    * Displays a text line (error messages or log) on the console (stderr).
    *
    * <p>The method is thread safe.
@@ -105,6 +140,18 @@ public class ConsoleUtil {
   public void printlnStderr(String format, Object... args) {
     synchronized (consoleOutputLock) {
       consoleOutputErr.printf(format, args);
+      consoleOutputErr.println();
+    }
+  }
+
+  /**
+   * Displays a text line (error messages or log) on the console (stderr).
+   *
+   * <p>The method is thread safe.
+   */
+  public void printlnStderr(String text) {
+    synchronized (consoleOutputLock) {
+      consoleOutputErr.print(text);
       consoleOutputErr.println();
     }
   }

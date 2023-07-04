@@ -59,7 +59,7 @@ public class PluginOutputPrinter {
   public static int printOutput(AtsSessionPluginOutput output, ConsoleUtil consoleUtil) {
     switch (output.getResultCase()) {
       case SUCCESS:
-        consoleUtil.printlnStdout("%s", output.getSuccess().getOutputMessage());
+        consoleUtil.printlnStdout(output.getSuccess().getOutputMessage());
         return ExitCode.OK;
       case FAILURE:
         consoleUtil.printlnStderr("Error: %s", output.getFailure().getErrorMessage());
