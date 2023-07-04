@@ -19,6 +19,7 @@ package com.google.devtools.deviceaction.framework.devices;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.deviceaction.common.utils.Constants.APEX_SUFFIX;
 import static com.google.devtools.deviceaction.common.utils.TimeUtils.fromProtoDuration;
+import static com.google.devtools.deviceaction.common.utils.TimeUtils.isPositive;
 import static java.util.stream.Stream.concat;
 import static org.apache.commons.lang3.ArrayUtils.nullToEmpty;
 
@@ -80,6 +81,7 @@ public class AndroidPhone implements Device {
   private static final String DEV_KEYS = "dev-keys";
   private static final String EXECUTION_ERROR = "EXECUTION_ERROR";
   private static final String USERDEBUG = "userdebug";
+  private static final String LOCALHOST_PREFIX = "localhost:";
 
   @VisibleForTesting static final Duration DEFAULT_DEVICE_READY_TIMEOUT = Duration.ofMinutes(5);
   private final AndroidAdbUtil androidAdbUtil;
@@ -283,6 +285,9 @@ public class AndroidPhone implements Device {
     try {
       Duration awaitTime = positiveOrElse(testharnessBootAwait(), /* elseValue= */ null);
       androidSystemStateUtil.factoryResetViaTestHarness(uuid, awaitTime);
+      if (isProxyMode() && isPositive(extraWaitForProxyMode())) {
+        sleeper.sleep(extraWaitForProxyMode());
+      }
     } catch (MobileHarnessException e) {
       throw new DeviceActionException(e, "Failed to enable testharness.");
     }
@@ -395,6 +400,11 @@ public class AndroidPhone implements Device {
     return fromProtoDuration(spec.getExtraWaitForStaging());
   }
 
+  @SpecValue(field = "extra_wait_for_proxy_mode")
+  public Duration extraWaitForProxyMode() {
+    return fromProtoDuration(spec.getExtraWaitForProxyMode());
+  }
+
   @SpecValue(field = "need_disable_package_cache")
   public boolean needDisablePackageCache() {
     return spec.getNeedDisablePackageCache();
@@ -440,5 +450,10 @@ public class AndroidPhone implements Device {
       throw new DeviceActionException(
           EXECUTION_ERROR, ErrorType.INFRA_ISSUE, "Failed to get cache property.", e);
     }
+  }
+
+  // A real device in proxy mode will show up as localhost:xxx in adb.
+  private boolean isProxyMode() {
+    return uuid.startsWith(LOCALHOST_PREFIX);
   }
 }

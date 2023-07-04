@@ -56,6 +56,8 @@ message AndroidPhoneSpec {
   optional google.protobuf.Duration staged_ready_timeout = 55;
   // Extra wait time for stage ready. It is a parameter for the host thread.
   optional google.protobuf.Duration extra_wait_for_staging = 56;
+  // Extra wait time if the device is connected via remote protocol.
+  optional google.protobuf.Duration extra_wait_for_proxy_mode = 57;
   // Other options 101 ~
   // Can only connect to wifi 2.4
   optional bool wifi_24_only = 101;
