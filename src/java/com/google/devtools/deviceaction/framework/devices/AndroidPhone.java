@@ -285,7 +285,9 @@ public class AndroidPhone implements Device {
     try {
       Duration awaitTime = positiveOrElse(testharnessBootAwait(), /* elseValue= */ null);
       androidSystemStateUtil.factoryResetViaTestHarness(uuid, awaitTime);
-      if (isProxyMode() && isPositive(extraWaitForProxyMode())) {
+      // We also do the extra wait for a local emulator, although it is unnecessary because we don't
+      // have a good way to tell the proxy mode from a local emulator.
+      if (isProxyModeOrLocalEmulator() && isPositive(extraWaitForProxyMode())) {
         sleeper.sleep(extraWaitForProxyMode());
       }
     } catch (MobileHarnessException e) {
@@ -452,8 +454,8 @@ public class AndroidPhone implements Device {
     }
   }
 
-  // A real device in proxy mode will show up as localhost:xxx in adb.
-  private boolean isProxyMode() {
+  // A device shown as localhost:xxx maybe in proxy mode or a local emulator.
+  private boolean isProxyModeOrLocalEmulator() {
     return uuid.startsWith(LOCALHOST_PREFIX);
   }
 }
