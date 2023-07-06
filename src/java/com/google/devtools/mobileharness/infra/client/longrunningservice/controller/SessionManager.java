@@ -38,12 +38,18 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.FieldMask;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Predicate;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
@@ -105,6 +111,7 @@ public class SessionManager {
    *
    * @throws MobileHarnessException if the queue is full
    */
+  @CanIgnoreReturnValue
   public SessionAddingResult addSession(SessionConfig sessionConfig) throws MobileHarnessException {
     SessionDetail sessionDetail = sessionDetailCreator.create(sessionConfig);
     logger.atInfo().log("Create session: %s", shortDebugString(sessionDetail));
@@ -170,13 +177,33 @@ public class SessionManager {
    *     required. It is acceptable that the implementation outputs more fields than the field mask
    *     requires, e.g., for an archived session.
    */
-  public ImmutableList<SessionDetail> getAllSessions(@Nullable FieldMask fieldMask) {
+  public ImmutableList<SessionDetail> getAllSessions(
+      @Nullable FieldMask fieldMask, @Nullable SessionFilter sessionFilter) {
+    Predicate<SessionStatus> sessionStatusFilter = getSessionStatusFilter(sessionFilter);
+    Predicate<SessionConfig> sessionConfigFilter = getSessionConfigFilter(sessionFilter);
     synchronized (lock) {
       return Streams.concat(
-              sessionQueue.values().stream().map(SessionDetailAndFinalResultFuture::sessionDetail),
-              sessionRunners.values().stream()
-                  .map(sessionRunner -> sessionRunner.sessionRunner().getSession(fieldMask)),
-              archivedSessions.values().stream())
+              sessionStatusFilter.test(SessionStatus.SESSION_SUBMITTED)
+                  ? sessionQueue.values().stream()
+                      .map(SessionDetailAndFinalResultFuture::sessionDetail)
+                      .filter(
+                          sessionDetail ->
+                              sessionConfigFilter.test(sessionDetail.getSessionConfig()))
+                  : Stream.empty(),
+              sessionStatusFilter.test(SessionStatus.SESSION_RUNNING)
+                  ? sessionRunners.values().stream()
+                      .map(SessionRunnerAndFinalResultFuture::sessionRunner)
+                      .filter(
+                          sessionRunner ->
+                              sessionConfigFilter.test(sessionRunner.getSessionConfig()))
+                      .map(sessionRunner -> sessionRunner.getSession(fieldMask))
+                  : Stream.empty(),
+              sessionStatusFilter.test(SessionStatus.SESSION_FINISHED)
+                  ? archivedSessions.values().stream()
+                      .filter(
+                          sessionDetail ->
+                              sessionConfigFilter.test(sessionDetail.getSessionConfig()))
+                  : Stream.empty())
           .collect(toImmutableList());
     }
   }
@@ -287,6 +314,41 @@ public class SessionManager {
       // Completes the final result future.
       sessionRunner.finalResultFuture().set(finalSessionDetail);
     }
+  }
+
+  private static Predicate<SessionStatus> getSessionStatusFilter(
+      @Nullable SessionFilter sessionFilter) {
+    if (sessionFilter != null) {
+      String sessionStatusNameRegexString = sessionFilter.getSessionStatusNameRegex();
+      if (!sessionStatusNameRegexString.isEmpty()) {
+        try {
+          Pattern sessionStatusNameRegex = Pattern.compile(sessionStatusNameRegexString);
+          return sessionStatus -> sessionStatusNameRegex.matcher(sessionStatus.name()).matches();
+        } catch (PatternSyntaxException e) {
+          logger.atWarning().withCause(e).log(
+              "Invalid session status name regex [%s]", sessionStatusNameRegexString);
+        }
+      }
+    }
+    return sessionStatus -> true;
+  }
+
+  private static Predicate<SessionConfig> getSessionConfigFilter(
+      @Nullable SessionFilter sessionFilter) {
+    if (sessionFilter != null) {
+      String sessionNameRegexString = sessionFilter.getSessionNameRegex();
+      if (!sessionNameRegexString.isEmpty()) {
+        try {
+          Pattern sessionNameRegex = Pattern.compile(sessionNameRegexString);
+          return sessionConfig ->
+              sessionNameRegex.matcher(sessionConfig.getSessionName()).matches();
+        } catch (PatternSyntaxException e) {
+          logger.atWarning().withCause(e).log(
+              "Invalid session name regex [%s]", sessionNameRegexString);
+        }
+      }
+    }
+    return sessionConfig -> true;
   }
 
   /** {@link SessionDetail} and the future of the final result of the session. */

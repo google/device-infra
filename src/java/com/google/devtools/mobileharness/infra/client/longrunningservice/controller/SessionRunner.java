@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.inject.assistedinject.Assisted;
 import com.google.protobuf.FieldMask;
@@ -97,5 +98,9 @@ public class SessionRunner implements Callable<Void> {
    */
   public SessionDetail getSession(@Nullable FieldMask fieldMask) {
     return sessionDetailHolder.buildSessionDetail(fieldMask);
+  }
+
+  public SessionConfig getSessionConfig() {
+    return sessionDetailHolder.getSessionConfig();
   }
 }

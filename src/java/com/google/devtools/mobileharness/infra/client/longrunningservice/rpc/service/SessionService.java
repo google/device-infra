@@ -141,7 +141,8 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
     // Gets all sessions.
     ImmutableList<SessionDetail> sessions =
         sessionManager.getAllSessions(
-            request.hasSessionDetailFieldMask() ? request.getSessionDetailFieldMask() : null);
+            request.hasSessionDetailFieldMask() ? request.getSessionDetailFieldMask() : null,
+            request.hasSessionFilter() ? request.getSessionFilter() : null);
 
     // Applies the field mask if any.
     if (request.hasSessionDetailFieldMask()) {

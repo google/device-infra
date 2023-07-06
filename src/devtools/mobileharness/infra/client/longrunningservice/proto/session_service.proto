@@ -96,9 +96,28 @@ message GetAllSessionsRequest {
   // Note that a repeated field is allowed ONLY IF it is the LAST item in a
   // path.
   google.protobuf.FieldMask session_detail_field_mask = 1;
+
+  // Optional.
+  SessionFilter session_filter = 2;
 }
 
 message GetAllSessionsResponse {
   // Required.
   repeated SessionDetail session_detail = 1;
+}
+
+message SessionFilter {
+  // Optional.
+  //
+  // Matches SessionDetail.session_config.session_name of sessions.
+  //
+  // An invalid regex will be treated as not present.
+  string session_name_regex = 1;
+
+  // Optional.
+  //
+  // Matches SessionDetail.session_status.name() of sessions.
+  //
+  // An invalid regex will be treated as not present.
+  string session_status_name_regex = 2;
 }
