@@ -19,6 +19,7 @@ java_library(
     name = "formatter",
     srcs = ["MobileHarnessLogFormatter.java"],
     visibility = [
+        "//java/com/google/wireless/qa/mobileharness/lab:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared:__pkg__",
     ],
     deps = [
@@ -31,11 +32,14 @@ java_library(
     name = "tag",
     srcs = ["MobileHarnessLogTag.java"],
     visibility = [
+        "//java/com/google/wireless/qa/mobileharness/lab:__pkg__",
+        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:__pkg__",
     ],
     deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
     ],
 )
