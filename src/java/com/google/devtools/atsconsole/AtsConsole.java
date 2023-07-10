@@ -265,7 +265,9 @@ public class AtsConsole implements Callable<Void> {
             .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
             .history(new DefaultHistory())
             .build();
-    System.setErr(new PrintStream(new ConsoleReaderOutputStream(lineReader)));
+    PrintStream ps = new PrintStream(new ConsoleReaderOutputStream(lineReader));
+    System.setOut(ps);
+    System.setErr(ps);
     return lineReader;
   }
 }
