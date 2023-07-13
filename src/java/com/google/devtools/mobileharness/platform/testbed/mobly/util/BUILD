@@ -22,9 +22,11 @@ java_library(
         "//src/java/com/google/devtools/atsconsole:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
     deps = [
+        ":install_mobly_test_package_args",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
@@ -67,4 +69,13 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:org_json_json",
     ],
+)
+
+java_library(
+    name = "install_mobly_test_package_args",
+    srcs = ["InstallMoblyTestPackageArgs.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__pkg__",
+    ],
+    deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value"],
 )

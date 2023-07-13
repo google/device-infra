@@ -81,6 +81,13 @@ public class MoblyAospTest extends MoblyTest {
     String pythonVersion = testInfo.jobInfo().params().get(PARAM_PYTHON_VERSION);
 
     return setupUtil.setupEnvAndGenerateTestCommand(
-        moblyPkg, moblyUnzipDir, venvPath, configPath, testPath, testCaseSelector, pythonVersion);
+        moblyPkg,
+        moblyUnzipDir,
+        venvPath,
+        configPath,
+        testPath,
+        testCaseSelector,
+        pythonVersion,
+        /* installMoblyTestPackageArgs= */ null);
   }
 }

@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import javax.annotation.Nullable;
@@ -38,7 +39,12 @@ public class MoblyAospTestSetupUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public static final String TEST_SELECTOR_ALL = "all";
+
+  // Add one of the two following files to your test package to declare pip dependencies.
+  // requirements.txt file (https://pip.pypa.io/en/stable/reference/requirements-file-format/)
   public static final String REQUIREMENTS_TXT = "requirements.txt";
+  // pyproject.toml file (https://setuptools.pypa.io/en/latest/userguide/pyproject_config.html)
+  public static final String PYPROJECT_TOML = "pyproject.toml";
 
   private final LocalFileUtil localFileUtil;
   private final CommandExecutor executor;
@@ -72,12 +78,13 @@ public class MoblyAospTestSetupUtil {
       Path configFile,
       @Nullable String testPath,
       @Nullable String testCaseSelector,
-      @Nullable String pythonVersion)
+      @Nullable String pythonVersion,
+      @Nullable InstallMoblyTestPackageArgs installMoblyTestPackageArgs)
       throws MobileHarnessException, InterruptedException {
     Path sysPythonBin = getPythonPath(pythonVersion);
     Path venvPythonBin = createVenv(sysPythonBin, venvPath);
     Path moblyTestBin = resolveMoblyTestBin(moblyPkg, moblyUnzipDir, testPath);
-    installMoblyTestPackage(venvPythonBin, moblyUnzipDir);
+    installMoblyTestPackage(venvPythonBin, moblyUnzipDir, installMoblyTestPackageArgs);
 
     return getTestCommand(venvPythonBin, moblyTestBin, configFile, testCaseSelector);
   }
@@ -162,25 +169,45 @@ public class MoblyAospTestSetupUtil {
 
   /** Installs the Mobly test package. */
   @VisibleForTesting
-  void installMoblyTestPackage(Path venvPythonBin, Path moblyUnzipDir)
+  void installMoblyTestPackage(
+      Path venvPythonBin,
+      Path moblyUnzipDir,
+      @Nullable InstallMoblyTestPackageArgs installMoblyTestPackageArgs)
       throws MobileHarnessException, InterruptedException {
+    Duration cmdTimeout = Duration.ofMinutes(10);
     List<String> pipCmd = new ArrayList<>();
     pipCmd.add(venvPythonBin.toString());
     pipCmd.add("-m");
     pipCmd.add("pip");
+    if (installMoblyTestPackageArgs != null
+        && installMoblyTestPackageArgs.defaultTimeout().isPresent()) {
+      pipCmd.add(
+          String.format(
+              "--default-timeout=%d",
+              installMoblyTestPackageArgs.defaultTimeout().get().toSeconds()));
+      cmdTimeout = installMoblyTestPackageArgs.defaultTimeout().get();
+    }
     pipCmd.add("install");
+    if (installMoblyTestPackageArgs != null && installMoblyTestPackageArgs.indexUrl().isPresent()) {
+      pipCmd.add("-i");
+      pipCmd.add(installMoblyTestPackageArgs.indexUrl().get());
+    }
     String requirementsFile = moblyUnzipDir.resolve(REQUIREMENTS_TXT).toString();
+    String pyprojectFile = moblyUnzipDir.resolve(PYPROJECT_TOML).toString();
     if (localFileUtil.isFileExist(requirementsFile)) {
       pipCmd.add("-r");
       pipCmd.add(requirementsFile);
-    } else {
+    } else if (localFileUtil.isFileExist(pyprojectFile)) {
       pipCmd.add(moblyUnzipDir.toString());
+    } else {
+      logger.atInfo().log(
+          "No requirements.txt or pyproject.toml file found. Skipping deps install.");
+      return;
     }
     logger.atInfo().log(
-        "Installing Mobly test package with command: %s.",
-        new StringBuilder(Joiner.on(" ").join(pipCmd)));
+        "Installing Mobly test package with command: %s.", Joiner.on(" ").join(pipCmd));
     try {
-      executor.run(Command.of(pipCmd));
+      executor.run(Command.of(pipCmd).timeout(cmdTimeout.plusMinutes(1)));
     } catch (CommandException e) {
       throw new MobileHarnessException(
           ExtErrorId.MOBLY_AOSP_PIP_INSTALL_ERROR,

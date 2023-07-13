@@ -218,7 +218,8 @@ public final class RunCommandTest {
             any(Path.class),
             anyString(),
             eq(null),
-            eq("python3")))
+            eq("python3"),
+            eq(null)))
         .thenReturn(new String[] {""});
 
     commandLine.execute("run", "cts-v", "-m", "mobly_test_zip_a");
@@ -241,7 +242,8 @@ public final class RunCommandTest {
             any(Path.class),
             anyString(),
             eq(null),
-            eq("python3")))
+            eq("python3"),
+            eq(null)))
         .thenReturn(new String[] {""});
 
     commandLine.execute("run", "cts-v");
@@ -301,7 +303,8 @@ public final class RunCommandTest {
             any(Path.class),
             anyString(),
             eq(null),
-            eq("python3")))
+            eq("python3"),
+            eq(null)))
         .thenReturn(new String[] {""});
 
     commandLine.execute("run", "cts-v", "-s", CONNECTED_DEVICE2_SERIAL);
@@ -341,7 +344,8 @@ public final class RunCommandTest {
             any(Path.class),
             anyString(),
             eq(null),
-            eq("python3")))
+            eq("python3"),
+            eq(null)))
         .thenReturn(new String[] {""});
 
     commandLine.execute(

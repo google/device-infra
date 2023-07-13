@@ -79,6 +79,7 @@ public final class MoblyAospTestTest {
             Path.of("config.yaml"),
             "sample_test.py",
             "test1 test2",
-            "3.10");
+            "3.10",
+            /* installMoblyTestPackageArgs= */ null);
   }
 }
