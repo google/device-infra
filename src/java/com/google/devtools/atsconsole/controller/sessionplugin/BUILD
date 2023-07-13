@@ -129,7 +129,10 @@ java_library(
     deps = [
         "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
         "//src/java/com/google/devtools/atsconsole:console_util",
+        "//src/java/com/google/devtools/deviceaction/common/utils",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_util",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",

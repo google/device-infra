@@ -33,6 +33,7 @@ java_library(
     deps = [
         "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/atsconsole:apache_commons_io",
         "//src/java/com/google/devtools/atsconsole:console_info",
         "//src/java/com/google/devtools/atsconsole:console_util",

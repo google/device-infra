@@ -148,9 +148,11 @@ final class RunCommand implements Callable<Integer> {
   private enum RetryType {
     FAILED,
     NOT_EXECUTED
-  };
+  }
 
   @Spec private CommandSpec spec;
+
+  static final String RUN_COMMAND_SESSION_NAME = "run_command";
 
   private static final String CTSV_CONFIG = "cts-v";
   private static final String DEFAULT_MOBLY_LOGPATH = "/tmp/logs/mobly";
@@ -358,7 +360,8 @@ final class RunCommand implements Callable<Integer> {
     serverLogPrinter.enable(true);
     ListenableFuture<AtsSessionPluginOutput> atsRunSessionFuture =
         atsSessionStub.runSession(
-            "run_command", AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build());
+            RUN_COMMAND_SESSION_NAME,
+            AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build());
     addCallback(
         atsRunSessionFuture, new PrintPluginOutputFutureCallback(consoleUtil), directExecutor());
     addCallback(

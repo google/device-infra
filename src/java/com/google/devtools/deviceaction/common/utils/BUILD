@@ -16,6 +16,7 @@
 DEFAULT_VISIBILITY = [
     "//src/java/com/google/devtools/deviceaction:deviceaction_java_pkg",
     "//src/javatests/com/google/devtools/deviceaction:deviceaction_javatests_pkg",
+    "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:__pkg__",
 ]
 
 package(

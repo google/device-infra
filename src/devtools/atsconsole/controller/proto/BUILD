@@ -34,6 +34,9 @@ java_proto_library(
 proto_library(
     name = "session_plugin_proto",
     srcs = ["session_plugin.proto"],
+    deps = [
+        "@com_google_protobuf//:timestamp_proto",
+    ],
 )
 
 java_proto_library(

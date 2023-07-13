@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package atsconsole.controller;
 
+import "google/protobuf/timestamp.proto";
+
 option java_package = "com.google.devtools.atsconsole.controller.proto";
 option java_outer_classname = "SessionPluginProto";
 
@@ -45,6 +47,9 @@ message AtsSessionPluginOutput {
     // Required.
     string error_message = 1;
   }
+
+  // Optional.
+  RunCommandState run_command_state = 3;
 }
 
 message RunCommand {
@@ -70,6 +75,22 @@ message RunCommand {
 
   // Required for XtsTradefedTest
   XtsType xts_type = 7;
+}
+
+message RunCommandState {
+  // Required.
+  string command_id = 1;
+
+  // Required.
+  google.protobuf.Timestamp start_time = 2;
+
+  // Required.
+  repeated string device_id = 3;
+
+  // Required.
+  //
+  // Example: "running cts on build(s) 'DeviceBuildInfo{bid=123, serial=12345}'"
+  string state_summary = 4;
 }
 
 message ListCommand {

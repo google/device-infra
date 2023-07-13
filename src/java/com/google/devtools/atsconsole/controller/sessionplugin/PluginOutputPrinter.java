@@ -16,17 +16,33 @@
 
 package com.google.devtools.atsconsole.controller.sessionplugin;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Comparator.comparing;
+import static java.util.stream.Collectors.joining;
+
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.RunCommandState;
+import com.google.devtools.deviceaction.common.utils.TimeUtils;
+import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.List;
+import java.util.stream.Stream;
 import picocli.CommandLine.ExitCode;
 
 /** Printer for printing {@code AtsSessionPluginOutput} to console. */
 public class PluginOutputPrinter {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final ImmutableList<String> LIST_INVOCATIONS_HEADER =
+      ImmutableList.of("Command Id", "Exec Time", "Device", "State");
 
   /** Future callback which prints {@code AtsSessionPluginOutput} to console. */
   public static class PrintPluginOutputFutureCallback
@@ -67,6 +83,33 @@ public class PluginOutputPrinter {
       default:
     }
     return ExitCode.SOFTWARE;
+  }
+
+  /** Prints output of "list invocations" command. */
+  public static String listInvocations(List<AtsSessionPluginOutput> outputs) {
+    ImmutableList<ImmutableList<String>> table =
+        Stream.concat(
+                Stream.of(LIST_INVOCATIONS_HEADER),
+                outputs.stream()
+                    .flatMap(
+                        pluginOutput ->
+                            pluginOutput.hasRunCommandState()
+                                ? Stream.of(pluginOutput.getRunCommandState())
+                                : Stream.empty())
+                    .sorted(comparing(RunCommandState::getCommandId))
+                    .map(PluginOutputPrinter::formatRunCommandState))
+            .collect(toImmutableList());
+    return TableFormatter.displayTable(table);
+  }
+
+  private static ImmutableList<String> formatRunCommandState(RunCommandState runCommandState) {
+    return ImmutableList.of(
+        runCommandState.getCommandId(),
+        TimeUtil.readableDuration(
+            Duration.between(
+                TimeUtils.fromProtoInstant(runCommandState.getStartTime()), Instant.now())),
+        runCommandState.getDeviceIdList().stream().collect(joining(", ", "[", "]")),
+        runCommandState.getStateSummary());
   }
 
   private PluginOutputPrinter() {}

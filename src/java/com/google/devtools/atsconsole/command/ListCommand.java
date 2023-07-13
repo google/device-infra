@@ -16,6 +16,7 @@
 
 package com.google.devtools.atsconsole.command;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.atsconsole.ConsoleInfo;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.controller.olcserver.AtsSessionStub;
@@ -29,6 +30,7 @@ import com.google.devtools.atsconsole.controller.sessionplugin.PluginOutputPrint
 import com.google.devtools.atsconsole.util.plan.PlanLister;
 import com.google.devtools.atsconsole.util.result.ResultLister;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -116,9 +118,17 @@ public class ListCommand implements Callable<Integer> {
       name = "invocations",
       aliases = {"i"},
       description = "List all invocation threads")
-  public int invocations() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
+  public int invocations() throws MobileHarnessException, InterruptedException {
+    serverPreparer.prepareOlcServer();
+    ImmutableList<AtsSessionPluginOutput> sessionPluginOutputs =
+        atsSessionStub.getAllSessions(
+            RunCommand.RUN_COMMAND_SESSION_NAME,
+            String.format(
+                "%s|%s",
+                SessionStatus.SESSION_SUBMITTED.name(), SessionStatus.SESSION_RUNNING.name()));
+    String result = PluginOutputPrinter.listInvocations(sessionPluginOutputs);
+    consoleUtil.printlnStdout(result);
+    return ExitCode.OK;
   }
 
   @Command(

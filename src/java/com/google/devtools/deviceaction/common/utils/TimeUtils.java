@@ -17,9 +17,13 @@
 package com.google.devtools.deviceaction.common.utils;
 
 import static com.google.common.math.LongMath.checkedAdd;
+import static com.google.common.math.LongMath.checkedSubtract;
 
+import com.google.protobuf.Timestamp;
 import com.google.protobuf.util.Durations;
+import com.google.protobuf.util.Timestamps;
 import java.time.Duration;
+import java.time.Instant;
 
 /** A utility class for time. */
 public class TimeUtils {
@@ -32,15 +36,34 @@ public class TimeUtils {
     return !duration.isNegative() && !duration.isZero();
   }
 
-  /** Converts proto duration to java duration. */
+  /** Converts proto instant to Java instant. */
+  public static Instant fromProtoInstant(Timestamp protoInstant) {
+    protoInstant = normalizedTimestamp(protoInstant.getSeconds(), protoInstant.getNanos());
+    return Instant.ofEpochSecond(protoInstant.getSeconds(), protoInstant.getNanos());
+  }
+
+  /** Converts proto duration to Java duration. */
   public static Duration fromProtoDuration(com.google.protobuf.Duration protoDuration) {
     protoDuration = normalizedDuration(protoDuration.getSeconds(), protoDuration.getNanos());
     return Duration.ofSeconds(protoDuration.getSeconds(), protoDuration.getNanos());
   }
 
-  /** Converts java duration to proto duration. */
+  /** Converts Java duration to proto duration. */
   public static com.google.protobuf.Duration toProtoDuration(Duration duration) {
     return normalizedDuration(duration.getSeconds(), duration.getNano());
+  }
+
+  private static Timestamp normalizedTimestamp(long seconds, int nanos) {
+    if (nanos <= -NANOS_PER_SECOND || nanos >= NANOS_PER_SECOND) {
+      seconds = checkedAdd(seconds, nanos / NANOS_PER_SECOND);
+      nanos = nanos % NANOS_PER_SECOND;
+    }
+    if (nanos < 0) {
+      nanos = nanos + NANOS_PER_SECOND; // no overflow since nanos is negative (and we're adding)
+      seconds = checkedSubtract(seconds, 1);
+    }
+    Timestamp timestamp = Timestamp.newBuilder().setSeconds(seconds).setNanos(nanos).build();
+    return Timestamps.checkValid(timestamp);
   }
 
   private static com.google.protobuf.Duration normalizedDuration(long seconds, int nanos) {
