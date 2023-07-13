@@ -48,10 +48,7 @@ java_library(
     srcs = [
         "MoblyConfigGenerator.java",
     ],
-    visibility = [
-        "//java/com/google/wireless/qa/mobileharness/shared:__subpackages__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:__subpackages__",
-    ],
+    visibility = ["//src/java/com/google/wireless/qa/mobileharness/shared:__subpackages__"],
     runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:android_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:misc_testbed_subdevice",
