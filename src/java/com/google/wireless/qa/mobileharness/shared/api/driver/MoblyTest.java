@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
@@ -37,6 +38,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
+import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
@@ -286,10 +288,16 @@ public class MoblyTest extends BaseDriver {
       throws MobileHarnessException, InterruptedException {
 
     // Use the adb and fastboot binaries that ship with Mobile Harness.
-    Adb adb = new Adb();
-    File adbPath = new File(adb.getAdbPath());
-    Fastboot fastboot = new Fastboot();
-    File fastbootPath = new File(fastboot.getFastbootPath());
+    String adbPathStr = new Adb().getAdbPath();
+    File adbPath =
+        Ascii.equalsIgnoreCase(adbPathStr, "adb")
+            ? getSdkToolPath("adb").toFile()
+            : new File(adbPathStr);
+    String fastbootPathStr = new Fastboot().getFastbootPath();
+    File fastbootPath =
+        Ascii.equalsIgnoreCase(fastbootPathStr, "fastboot")
+            ? getSdkToolPath("fastboot").toFile()
+            : new File(fastbootPathStr);
     String path =
         Joiner.on(':')
             .join(
@@ -514,5 +522,20 @@ public class MoblyTest extends BaseDriver {
   /** Folder where Mobly should write its output files. */
   public static File getLogDir(TestInfo testInfo) throws MobileHarnessException {
     return new File(testInfo.getGenFileDir(), RAW_MOBLY_LOG_DIR);
+  }
+
+  private Path getSdkToolPath(String sdkToolName)
+      throws MobileHarnessException, InterruptedException {
+    CommandResult result = executor.exec(Command.of("which", sdkToolName).successExitCodes(0, 1));
+
+    if (result.exitCode() != 0) {
+      String possibleSdkTool = executor.run(Command.of("whereis", sdkToolName));
+      throw new MobileHarnessException(
+          ExtErrorId.MOBLY_SDK_TOOL_NOT_FOUND_ERROR,
+          String.format(
+              "Unable to find the sdk tool \"%s\". Executables found: %s",
+              sdkToolName, possibleSdkTool));
+    }
+    return Path.of(result.stdout().trim());
   }
 }
