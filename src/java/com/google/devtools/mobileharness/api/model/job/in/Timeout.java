@@ -42,12 +42,12 @@ public abstract class Timeout {
 
   @VisibleForTesting
   static Duration initializeMaxJobTimeout() {
-    return getMaxJobTimeout(false);
+    return getMaxJobTimeout(true);
   }
 
   @VisibleForTesting
   static Duration initializeMaxTestTimeout() {
-    return getMaxTestTimeout(false);
+    return getMaxTestTimeout(true);
   }
 
   public static Duration getMaxJobTimeout(boolean supportLongevityTest) {
