@@ -16,19 +16,28 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.devtools.atsconsole.result.report.CertificationSuiteInfo;
+import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory;
+import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory.SuiteType;
+import com.google.devtools.atsconsole.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
+import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.EmptyDevice;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Log;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,23 +50,25 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class MoblyAospTestTest {
 
+  private static final String SERIAL = "363005dc750400ec";
+
   @Rule public final MockitoRule rule = MockitoJUnit.rule();
 
   @Mock private TestInfo testInfo;
   @Mock private JobInfo jobInfo;
   @Mock private Files files;
   @Mock private EmptyDevice emptyDevice;
+  @Mock private CompositeDevice compositeDevice;
   @Mock private File configFile;
   @Mock private MoblyAospTestSetupUtil setupUtil;
+  @Mock private MoblyReportHelper moblyReportHelper;
+  @Mock private CertificationSuiteInfoFactory certificationSuiteInfoFactory;
 
   private Params params;
-  private final Timing timing = new Timing();
-  private final Log log = new Log(timing);
 
   @Test
   public void generateTestCommand_verifySetupUtilArgs() throws Exception {
     when(testInfo.getTmpFileDir()).thenReturn("/tmp");
-    when(testInfo.log()).thenReturn(log);
     when(files.getSingle(MoblyAospTest.FILE_MOBLY_PKG)).thenReturn("sample_test.zip");
     when(jobInfo.files()).thenReturn(files);
     params = new Params(null);
@@ -67,7 +78,9 @@ public final class MoblyAospTestTest {
     when(jobInfo.params()).thenReturn(params);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(configFile.getPath()).thenReturn("config.yaml");
-    MoblyAospTest moblyAospTest = new MoblyAospTest(emptyDevice, testInfo, setupUtil);
+    MoblyAospTest moblyAospTest =
+        new MoblyAospTest(
+            emptyDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
 
     var unused = moblyAospTest.generateTestCommand(testInfo, configFile, false);
 
@@ -81,5 +94,88 @@ public final class MoblyAospTestTest {
             "test1 test2",
             "3.10",
             /* installMoblyTestPackageArgs= */ null);
+  }
+
+  @Test
+  public void postMoblyCommandExec_verifyAttrFilesCreated() throws Exception {
+    CertificationSuiteInfo certificationSuiteInfo =
+        CertificationSuiteInfo.builder()
+            .setSuiteName("CTS")
+            .setSuiteVariant("CTS")
+            .setSuiteVersion("")
+            .setSuitePlan("")
+            .setSuiteBuild("0")
+            .setSuiteReportVersion("")
+            .build();
+    when(emptyDevice.getDeviceId()).thenReturn(SERIAL);
+    when(testInfo.getGenFileDir()).thenReturn("/gen");
+    params = new Params(null);
+    params.add(MoblyAospTest.PARAM_CERTIFICATION_SUITE_TYPE, "cts");
+    params.add(MoblyAospTest.PARAM_XTS_TEST_PLAN, "cts-plan");
+    when(jobInfo.params()).thenReturn(params);
+    when(testInfo.jobInfo()).thenReturn(jobInfo);
+    when(certificationSuiteInfoFactory.createSuiteInfo(SuiteType.CTS, "cts-plan"))
+        .thenReturn(certificationSuiteInfo);
+
+    MoblyAospTest moblyAospTest =
+        new MoblyAospTest(
+            emptyDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
+
+    moblyAospTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
+
+    verify(moblyReportHelper)
+        .generateResultAttributesFile(
+            Instant.ofEpochSecond(1),
+            Instant.ofEpochSecond(10),
+            ImmutableList.of(SERIAL),
+            certificationSuiteInfo,
+            Paths.get("/gen"));
+    verify(moblyReportHelper).generateBuildAttributesFile(SERIAL, Paths.get("/gen"));
+  }
+
+  @Test
+  public void postMoblyCommandExec_noCertificationSuiteType_skipGeneratingAttrFiles()
+      throws Exception {
+    when(emptyDevice.getDeviceId()).thenReturn(SERIAL);
+    when(testInfo.getGenFileDir()).thenReturn("/gen");
+    params = new Params(null);
+    params.add(MoblyAospTest.PARAM_CERTIFICATION_SUITE_TYPE, "");
+    params.add(MoblyAospTest.PARAM_XTS_TEST_PLAN, "cts-plan");
+    when(jobInfo.params()).thenReturn(params);
+    when(testInfo.jobInfo()).thenReturn(jobInfo);
+
+    MoblyAospTest moblyAospTest =
+        new MoblyAospTest(
+            emptyDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
+
+    moblyAospTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
+
+    verify(certificationSuiteInfoFactory, never()).createSuiteInfo(any(), any());
+    verify(moblyReportHelper, never())
+        .generateResultAttributesFile(any(), any(), any(), any(), any());
+    verify(moblyReportHelper, never()).generateBuildAttributesFile(any(), any());
+  }
+
+  @Test
+  public void postMoblyCommandExec_compositeDeviceHasNoSubDevices_skipGeneratingAttrFiles()
+      throws Exception {
+    when(compositeDevice.getManagedDevices()).thenReturn(ImmutableSet.of());
+    when(testInfo.getGenFileDir()).thenReturn("/gen");
+    params = new Params(null);
+    params.add(MoblyAospTest.PARAM_CERTIFICATION_SUITE_TYPE, "cts");
+    params.add(MoblyAospTest.PARAM_XTS_TEST_PLAN, "cts-plan");
+    when(jobInfo.params()).thenReturn(params);
+    when(testInfo.jobInfo()).thenReturn(jobInfo);
+
+    MoblyAospTest moblyAospTest =
+        new MoblyAospTest(
+            compositeDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
+
+    moblyAospTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
+
+    verify(certificationSuiteInfoFactory, never()).createSuiteInfo(any(), any());
+    verify(moblyReportHelper, never())
+        .generateResultAttributesFile(any(), any(), any(), any(), any());
+    verify(moblyReportHelper, never()).generateBuildAttributesFile(any(), any());
   }
 }

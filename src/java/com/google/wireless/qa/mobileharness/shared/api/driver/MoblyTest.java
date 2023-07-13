@@ -57,7 +57,9 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Random;
@@ -108,6 +110,7 @@ public class MoblyTest extends BaseDriver {
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
   private final CommandExecutor executor;
+  private final Clock clock;
 
   @Nullable protected String testbedName;
 
@@ -119,15 +122,16 @@ public class MoblyTest extends BaseDriver {
    * @param device the device that loads this driver to run the test
    */
   public MoblyTest(Device device, TestInfo testInfo) {
-    this(device, testInfo, new CommandExecutor());
+    this(device, testInfo, new CommandExecutor(), Clock.systemUTC());
   }
 
   @VisibleForTesting
-  MoblyTest(Device device, TestInfo testInfo, CommandExecutor executor) {
+  MoblyTest(Device device, TestInfo testInfo, CommandExecutor executor, Clock clock) {
     super(device, testInfo);
     this.localFileUtil = new LocalFileUtil();
     this.systemUtil = new SystemUtil();
     this.executor = executor;
+    this.clock = clock;
   }
 
   @Override
@@ -136,6 +140,8 @@ public class MoblyTest extends BaseDriver {
     File configFile = prepareMoblyConfig(testInfo);
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     boolean passed;
+    Instant startTime = clock.instant();
+    Instant endTime = null;
     try {
       passed = runMoblyCommand(testInfo, configFile, usePythonSpongeConverter);
       testInfo
@@ -145,7 +151,9 @@ public class MoblyTest extends BaseDriver {
           .log("Finished running Mobly test. Success: %s", passed);
     } finally {
       CompositeDeviceUtil.uncacheTestbed(getDevice());
+      endTime = clock.instant();
     }
+    postMoblyCommandExec(startTime, endTime);
 
     if (!passed && TestResult.TIMEOUT.equals(testInfo.resultWithCause().get().type())) {
       // If we timed out there is a chance that the "latest" dir will not have been created so
@@ -155,10 +163,14 @@ public class MoblyTest extends BaseDriver {
       return;
     }
 
-    // TODO: processTestOutput(testInfo, passed, usePythonSpongeConverter);
     if (passed) {
       testInfo.resultWithCause().setPass();
     }
+  }
+
+  protected void postMoblyCommandExec(Instant testStartTime, Instant testEndTime)
+      throws InterruptedException {
+    // Do nothing by default.
   }
 
   protected File prepareMoblyConfig(TestInfo testInfo)

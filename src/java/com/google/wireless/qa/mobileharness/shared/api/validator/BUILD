@@ -29,6 +29,25 @@ exports_files(
 )
 
 java_library(
+    name = "mobly_aosp_test_validator",
+    srcs = [
+        "MoblyAospTestValidator.java",
+    ],
+    visibility = [
+        "//src/java/com/google/devtools/atsconsole/controller/olcserver:__pkg__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/atsconsole/result/report:certification_suite_info_factory",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:base",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "xts_tradefed_test_validator",
     srcs = [
         "XtsTradefedTestValidator.java",

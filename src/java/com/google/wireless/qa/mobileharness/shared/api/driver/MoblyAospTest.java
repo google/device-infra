@@ -16,21 +16,37 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
+import com.google.devtools.atsconsole.result.report.CertificationSuiteInfo;
+import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory;
+import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory.SuiteType;
+import com.google.devtools.atsconsole.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.File;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.time.Instant;
 
 /** Driver for running Mobly tests packaged in AOSP and distributed via the Android Build. */
 @DriverAnnotation(
     help = "For running Mobly tests packaged in AOSP and distributed via the Android Build.")
 public class MoblyAospTest extends MoblyTest {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   // Driver-specific files and params
 
@@ -54,17 +70,37 @@ public class MoblyAospTest extends MoblyTest {
               + " supplied here must match the executable name.")
   public static final String PARAM_PYTHON_VERSION = "python_version";
 
+  @ParamAnnotation(required = false, help = "Certification suite type for the xTS Mobly run.")
+  public static final String PARAM_CERTIFICATION_SUITE_TYPE = "certification_suite_type";
+
+  @ParamAnnotation(required = false, help = "Test plan for the xTS Mobly run.")
+  public static final String PARAM_XTS_TEST_PLAN = "xts_test_plan";
+
   private final MoblyAospTestSetupUtil setupUtil;
+  private final MoblyReportHelper moblyReportHelper;
+  private final CertificationSuiteInfoFactory certificationSuiteInfoFactory;
 
   /** Creates the MoblyAospTest driver. */
   public MoblyAospTest(Device device, TestInfo testInfo) {
-    this(device, testInfo, new MoblyAospTestSetupUtil());
+    this(
+        device,
+        testInfo,
+        new MoblyAospTestSetupUtil(),
+        Guice.createInjector().getInstance(MoblyReportHelper.class),
+        new CertificationSuiteInfoFactory());
   }
 
   @VisibleForTesting
-  MoblyAospTest(Device device, TestInfo testInfo, MoblyAospTestSetupUtil setupUtil) {
+  MoblyAospTest(
+      Device device,
+      TestInfo testInfo,
+      MoblyAospTestSetupUtil setupUtil,
+      MoblyReportHelper moblyReportHelper,
+      CertificationSuiteInfoFactory certificationSuiteInfoFactory) {
     super(device, testInfo);
     this.setupUtil = setupUtil;
+    this.moblyReportHelper = moblyReportHelper;
+    this.certificationSuiteInfoFactory = certificationSuiteInfoFactory;
   }
 
   /** Generates the test execution command. */
@@ -89,5 +125,52 @@ public class MoblyAospTest extends MoblyTest {
         testCaseSelector,
         pythonVersion,
         /* installMoblyTestPackageArgs= */ null);
+  }
+
+  @Override
+  protected void postMoblyCommandExec(Instant testStartTime, Instant testEndTime)
+      throws InterruptedException {
+    TestInfo testInfo = getTest();
+    String suiteType = testInfo.jobInfo().params().get(PARAM_CERTIFICATION_SUITE_TYPE, "");
+    // If certification suite type is not defined, it means this is not a xTS Mobly test.
+    if (suiteType.isEmpty()) {
+      return;
+    }
+    ImmutableList<String> deviceIds = getDeviceIds();
+    if (deviceIds.isEmpty()) {
+      return;
+    }
+    String xtsTestPlan = testInfo.jobInfo().params().get(PARAM_XTS_TEST_PLAN, "");
+    CertificationSuiteInfo suiteInfo =
+        certificationSuiteInfoFactory.createSuiteInfo(
+            SuiteType.valueOf(Ascii.toUpperCase(suiteType)), xtsTestPlan);
+    try {
+      moblyReportHelper.generateResultAttributesFile(
+          testStartTime, testEndTime, deviceIds, suiteInfo, Paths.get(testInfo.getGenFileDir()));
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log(
+          "Failed to generate result attributes file for xTS Mobly run: %s",
+          MoreThrowables.shortDebugString(e, 0));
+    }
+
+    try {
+      moblyReportHelper.generateBuildAttributesFile(
+          deviceIds.get(0), Paths.get(testInfo.getGenFileDir()));
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log(
+          "Failed to generate build attributes file for xTS Mobly run: %s",
+          MoreThrowables.shortDebugString(e, 0));
+    }
+  }
+
+  private ImmutableList<String> getDeviceIds() {
+    Device device = getDevice();
+    if (!(device instanceof CompositeDevice)) {
+      return ImmutableList.of(device.getDeviceId());
+    }
+    CompositeDevice compositeDevice = (CompositeDevice) device;
+    return compositeDevice.getManagedDevices().stream()
+        .map(Device::getDeviceId)
+        .collect(toImmutableList());
   }
 }

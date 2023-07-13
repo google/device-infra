@@ -108,7 +108,7 @@ public class MoblyTestTest {
 
     setupTestInfo("test_pass");
     CommandExecutor mockCommandExecutor = getMockCommandExecutor();
-    moblyTest = new MoblyTest(new NoOpDevice("device_name"), testInfo, mockCommandExecutor);
+    moblyTest = new MoblyTest(new NoOpDevice("device_name"), testInfo, mockCommandExecutor, clock);
 
     moblyTest.run(testInfo);
 
