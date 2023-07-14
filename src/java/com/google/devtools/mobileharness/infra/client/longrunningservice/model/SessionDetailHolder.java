@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
+import java.util.function.UnaryOperator;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
@@ -167,7 +167,7 @@ public class SessionDetailHolder {
 
   public void setSessionPluginOutput(
       SessionPluginLabel sessionPluginLabel,
-      Function<SessionPluginOutput, SessionPluginOutput> outputComputingFunction) {
+      UnaryOperator<SessionPluginOutput> outputComputingFunction) {
     synchronized (sessionDetailLock) {
       sessionPluginOutputs.compute(
           sessionPluginLabel.getLabel(),

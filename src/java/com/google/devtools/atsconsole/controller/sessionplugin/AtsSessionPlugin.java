@@ -31,8 +31,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginOutput;
-import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -87,8 +85,7 @@ public class AtsSessionPlugin {
     onSessionStarting();
   }
 
-  private void onSessionStarting()
-      throws MobileHarnessException, InvalidProtocolBufferException, InterruptedException {
+  private void onSessionStarting() throws MobileHarnessException, InterruptedException {
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
       runCommandSessionStartingOutput =
           runCommandHandler.handle(config.getRunCommand(), sessionInfo);
@@ -159,8 +156,7 @@ public class AtsSessionPlugin {
   }
 
   private void setOutput(AtsSessionPluginOutput output) {
-    sessionInfo.setSessionPluginOutput(
-        oldOutput -> SessionPluginOutput.newBuilder().setOutput(Any.pack(output)).build());
+    sessionInfo.setSessionPluginOutput(oldOutput -> output, AtsSessionPluginOutput.class);
     logger.atInfo().log("Output: %s", shortDebugString(output));
   }
 }

@@ -66,7 +66,10 @@ java_library(
     deps = [
         ":session_detail_holder",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )

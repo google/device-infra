@@ -27,8 +27,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingOutput;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginOutput;
-import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -93,13 +91,10 @@ public class SessionPluginForTesting {
 
     sessionInfo.setSessionPluginOutput(
         oldOutput ->
-            SessionPluginOutput.newBuilder()
-                .setOutput(
-                    Any.pack(
-                        SessionPluginForTestingOutput.newBuilder()
-                            .setJobResultTypeName(jobResultTypeName)
-                            .build()))
-                .build());
+            SessionPluginForTestingOutput.newBuilder()
+                .setJobResultTypeName(jobResultTypeName)
+                .build(),
+        SessionPluginForTestingOutput.class);
 
     logger.atInfo().log("Job result parsed");
   }
