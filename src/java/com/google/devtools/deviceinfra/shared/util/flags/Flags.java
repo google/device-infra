@@ -502,6 +502,18 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> skipNetwork = skipNetworkDefault;
 
+  private static final Flag<Duration> jobGenFileExpiredTimeDefault =
+      DurationFlag.value(Duration.ZERO);
+
+  @com.beust.jcommander.Parameter(
+      names = "--job_gen_file_expired_time",
+      description =
+          "How soon to clean up the genfile after each test. Default is 0, which means the genfile "
+              + "is removed immediately when a test finishes. It has the risk to blow up the disk "
+              + " of the lab host when setting to non zero.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> jobGenFileExpiredTime = jobGenFileExpiredTimeDefault;
+
   private static final Flag<Boolean> skipRecoverDeviceNetworkDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
