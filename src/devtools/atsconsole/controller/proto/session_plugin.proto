@@ -75,6 +75,9 @@ message RunCommand {
 
   // Required for XtsTradefedTest
   XtsType xts_type = 7;
+
+  // Optional.
+  optional string python_pkg_index_url = 8;
 }
 
 message RunCommandState {

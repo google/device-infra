@@ -111,6 +111,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole/result/report:mobly_report_helper",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:install_mobly_test_package_args",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_aosp_test_setup_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",

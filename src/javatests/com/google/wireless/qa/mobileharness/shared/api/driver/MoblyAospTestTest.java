@@ -27,6 +27,7 @@ import com.google.devtools.atsconsole.result.report.CertificationSuiteInfo;
 import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.devtools.atsconsole.result.report.MoblyReportHelper;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestPackageArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.EmptyDevice;
@@ -37,6 +38,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.time.Instant;
 import org.junit.Rule;
 import org.junit.Test;
@@ -51,6 +53,7 @@ import org.mockito.junit.MockitoRule;
 public final class MoblyAospTestTest {
 
   private static final String SERIAL = "363005dc750400ec";
+  private static final String PY_PKG_INDEX_URL = "https://python.package.index/url";
 
   @Rule public final MockitoRule rule = MockitoJUnit.rule();
 
@@ -75,9 +78,15 @@ public final class MoblyAospTestTest {
     params.add(MoblyAospTest.PARAM_TEST_PATH, "sample_test.py");
     params.add(MoblyTest.TEST_SELECTOR_KEY, "test1 test2");
     params.add(MoblyAospTest.PARAM_PYTHON_VERSION, "3.10");
+    params.add(MoblyAospTest.PARAM_PY_PKG_INDEX_URL, PY_PKG_INDEX_URL);
     when(jobInfo.params()).thenReturn(params);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(configFile.getPath()).thenReturn("config.yaml");
+    InstallMoblyTestPackageArgs installMoblyTestPackageArgs =
+        InstallMoblyTestPackageArgs.builder()
+            .setDefaultTimeout(Duration.ofMinutes(30))
+            .setIndexUrl(PY_PKG_INDEX_URL)
+            .build();
     MoblyAospTest moblyAospTest =
         new MoblyAospTest(
             emptyDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
@@ -93,7 +102,7 @@ public final class MoblyAospTestTest {
             "sample_test.py",
             "test1 test2",
             "3.10",
-            /* installMoblyTestPackageArgs= */ null);
+            installMoblyTestPackageArgs);
   }
 
   @Test

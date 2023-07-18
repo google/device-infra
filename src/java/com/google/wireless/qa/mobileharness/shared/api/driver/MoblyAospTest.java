@@ -27,6 +27,7 @@ import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactor
 import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.devtools.atsconsole.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestPackageArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.inject.Guice;
@@ -39,6 +40,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.time.Instant;
 
 /** Driver for running Mobly tests packaged in AOSP and distributed via the Android Build. */
@@ -75,6 +77,9 @@ public class MoblyAospTest extends MoblyTest {
 
   @ParamAnnotation(required = false, help = "Test plan for the xTS Mobly run.")
   public static final String PARAM_XTS_TEST_PLAN = "xts_test_plan";
+
+  @ParamAnnotation(required = false, help = "Base URL of Python Package Index.")
+  public static final String PARAM_PY_PKG_INDEX_URL = "python_pkg_index_url";
 
   private final MoblyAospTestSetupUtil setupUtil;
   private final MoblyReportHelper moblyReportHelper;
@@ -116,6 +121,14 @@ public class MoblyAospTest extends MoblyTest {
     String testCaseSelector = testInfo.jobInfo().params().get(TEST_SELECTOR_KEY);
     String pythonVersion = testInfo.jobInfo().params().get(PARAM_PYTHON_VERSION);
 
+    InstallMoblyTestPackageArgs.Builder installMoblyTestPackageArgsBuilder =
+        InstallMoblyTestPackageArgs.builder().setDefaultTimeout(Duration.ofMinutes(30));
+
+    if (testInfo.jobInfo().params().getOptional(PARAM_PY_PKG_INDEX_URL).isPresent()) {
+      installMoblyTestPackageArgsBuilder.setIndexUrl(
+          testInfo.jobInfo().params().getOptional(PARAM_PY_PKG_INDEX_URL).get());
+    }
+
     return setupUtil.setupEnvAndGenerateTestCommand(
         moblyPkg,
         moblyUnzipDir,
@@ -124,7 +137,7 @@ public class MoblyAospTest extends MoblyTest {
         testPath,
         testCaseSelector,
         pythonVersion,
-        /* installMoblyTestPackageArgs= */ null);
+        installMoblyTestPackageArgsBuilder.build());
   }
 
   @Override

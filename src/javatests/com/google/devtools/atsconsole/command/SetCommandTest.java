@@ -17,6 +17,7 @@
 package com.google.devtools.atsconsole.command;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -219,5 +220,26 @@ public final class SetCommandTest {
     assertThat(consoleInfo.getMoblyTestCasesDir().orElse("")).isEqualTo(MOBLY_TESTCASES_DIR);
     verify(localFileUtil).isDirExist(newResultsDir);
     verify(localFileUtil).isDirExist(newMoblyTestCasesDir);
+  }
+
+  @Test
+  public void setPythonPackageIndexUrl_success() throws Exception {
+    String newPythonPackageIndexUrl = "https://pypi.tuna.tsinghua.edu.cn/simple";
+
+    int exitCode = commandLine.execute("set", "python-package-index-url", newPythonPackageIndexUrl);
+
+    assertThat(exitCode).isEqualTo(0);
+    assertThat(consoleInfo.getPythonPackageIndexUrl().orElse(""))
+        .isEqualTo(newPythonPackageIndexUrl);
+  }
+
+  @Test
+  public void setPythonPackageIndexUrl_skipIfGivenUrlIsWhitespace() throws Exception {
+    String newPythonPackageIndexUrl = "  ";
+
+    int exitCode = commandLine.execute("set", "python-package-index-url", newPythonPackageIndexUrl);
+
+    assertThat(exitCode).isEqualTo(0);
+    assertThat(consoleInfo.getPythonPackageIndexUrl()).isEmpty();
   }
 }

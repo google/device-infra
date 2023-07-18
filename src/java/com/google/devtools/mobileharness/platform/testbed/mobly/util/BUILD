@@ -72,7 +72,9 @@ java_library(
     name = "install_mobly_test_package_args",
     srcs = ["InstallMoblyTestPackageArgs.java"],
     visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__pkg__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
     deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value"],
 )

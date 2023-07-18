@@ -25,6 +25,7 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithEr
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
+import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
@@ -87,6 +88,21 @@ public class SetCommand implements Callable<Integer> {
     serverPreparer.prepareOlcServer();
     controlStub.setLogLevel(SetLogLevelRequest.newBuilder().setLevel(level).build());
     consoleUtil.printlnStdout("Log level now set to '%s'.", Ascii.toUpperCase(level));
+    return ExitCode.OK;
+  }
+
+  @Command(
+      name = "python-package-index-url",
+      description =
+          "Sets the global base URL of python package index to <python-package-index-url>")
+  public int setPythonPackageIndexUrl(String pythonPackageIndexUrl)
+      throws MobileHarnessException, InterruptedException {
+    if (!StrUtil.isEmptyOrWhitespace(pythonPackageIndexUrl)) {
+      consoleInfo.setPythonPackageIndexUrl(pythonPackageIndexUrl.trim());
+      consoleUtil.printlnStdout(
+          "Base URL of Python Package Index now set to '%s'.", pythonPackageIndexUrl.trim());
+    }
+
     return ExitCode.OK;
   }
 

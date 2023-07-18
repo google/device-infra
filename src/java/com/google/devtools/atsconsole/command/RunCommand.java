@@ -350,6 +350,9 @@ final class RunCommand implements Callable<Integer> {
     if (shardCount > 0) {
       runCommand.setShardCount(shardCount);
     }
+    if (consoleInfo.getPythonPackageIndexUrl().isPresent()) {
+      runCommand.setPythonPkgIndexUrl(consoleInfo.getPythonPackageIndexUrl().get());
+    }
 
     if (isRunRetry) {
       runCommand.setTestPlan("retry").addAllExtraArg(extraRunRetryCmdArgs);

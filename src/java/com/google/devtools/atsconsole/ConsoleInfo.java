@@ -32,10 +32,12 @@ public class ConsoleInfo {
   private static final String MOBLY_TESTCASES_DIR_PROPERTY_KEY = "MOBLY_TESTCASES_DIR";
   private static final String TEST_RESULTS_DIR_PROPERTY_KEY = "TEST_RESULTS_DIR";
   private static final String XTS_ROOT_DIR_PROPERTY_KEY = "XTS_ROOT";
+  private static final String PYTHON_PACKAGE_INDEX_URL_PROPERTY_KEY = "PYTHON_PACKAGE_INDEX_URL";
   private static final String MOBLY_TEST_ZIP_SUITE_MAIN_FILE_PROPERTY_KEY =
       "MOBLY_TEST_ZIP_SUITE_MAIN_FILE";
 
   private final AtomicBoolean shouldExitConsole = new AtomicBoolean(false);
+  private final AtomicReference<String> pythonPackageIndexUrl = new AtomicReference<>();
   private final AtomicReference<String> moblyTestCasesDir = new AtomicReference<>();
   private final AtomicReference<String> resultsDirectory = new AtomicReference<>();
 
@@ -47,6 +49,7 @@ public class ConsoleInfo {
     this.systemProperties = systemProperties;
     setMoblyTestCasesDir(systemProperties.get(MOBLY_TESTCASES_DIR_PROPERTY_KEY));
     setResultsDirectory(systemProperties.get(TEST_RESULTS_DIR_PROPERTY_KEY));
+    setPythonPackageIndexUrl(systemProperties.get(PYTHON_PACKAGE_INDEX_URL_PROPERTY_KEY));
   }
 
   /** Sets whether exit the console. */
@@ -87,5 +90,15 @@ public class ConsoleInfo {
   /** Gets the xTS root directory. */
   public Optional<String> getXtsRootDirectory() {
     return Optional.ofNullable(systemProperties.get(XTS_ROOT_DIR_PROPERTY_KEY));
+  }
+
+  /** Sets the base URL of Python Package Index. */
+  public void setPythonPackageIndexUrl(String pythonPackageIndexUrl) {
+    this.pythonPackageIndexUrl.set(pythonPackageIndexUrl);
+  }
+
+  /** Gets the base URL of Python Package Index. */
+  public Optional<String> getPythonPackageIndexUrl() {
+    return Optional.ofNullable(pythonPackageIndexUrl.get());
   }
 }
