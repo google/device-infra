@@ -49,13 +49,10 @@ message LabConfig {
   // The UUID of testbed configs of this lab.
   repeated string testbed_uuid = 5;
 
-  // The host dimensions of this lab. Deprecated. Please use host_properties
-  // instead.
-  mobileharness.api.model.HostDimensions host_dimensions = 8
-      [deprecated = true];
-
   // The host properties of this lab.
   mobileharness.api.model.HostProperties host_properties = 9;
+
+  reserved 8;
 }
 
 // The configuration of an over SSH device.

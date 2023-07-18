@@ -46,21 +46,6 @@ message LabServerSetting {
   repeated LabPort port = 1;  // Lab port information.
 }
 
-// The host dimension. Deprecated. Please use HostProperty.
-message HostDimension {
-  option deprecated = true;
-
-  string key = 1;
-  string value = 2;
-}
-
-// The List of host dimensions. Deprecated. Please use HostProperties.
-message HostDimensions {
-  option deprecated = true;
-
-  repeated HostDimension host_dimension = 1;
-}
-
 // The host property.
 message HostProperty {
   string key = 1;
@@ -74,8 +59,7 @@ message HostProperties {
 
 // Lab Server feature.
 message LabServerFeature {
-  // Deprecated. Please use host_properties instead.
-  HostDimensions host_dimensions = 1 [deprecated = true];
   // The host properties of the lab server.
   HostProperties host_properties = 2;
+  reserved 1;
 }
