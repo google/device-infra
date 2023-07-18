@@ -18,10 +18,6 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "system",
     srcs = ["SystemUtil.java"],
-    tags = [
-        "alt_dep=//java/com/google/devtools/mobileharness/shared/util/system:system",
-        "avoid_dep",
-    ],
     visibility = [
         "//:deviceinfra_pkg",
     ],
