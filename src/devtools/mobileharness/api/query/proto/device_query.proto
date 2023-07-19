@@ -40,11 +40,11 @@ message DeviceQueryFilter {
   repeated string type_regex = 2;
   // A device is matched only if each driver regex is matched by at least one
   // driver name of the device. For example, ["AndroidInstrumentation",
-  // "AndroidMoreto"] to only match devices which have both
-  // AndroidInstrumentation driver and AndroidMoreto driver;
-  // ["AndroidInstrumentation|AndroidMoreto"] to only match devices which have
-  // AndroidInstrumentation driver or AndroidMoreto driver. An empty list
-  // matches all devices.
+  // "AcidRemoteDriver"] to only match devices which have both
+  // AndroidInstrumentation driver and AcidRemoteDriver driver;
+  // ["AndroidInstrumentation|AcidRemoteDriver"] to only match devices which
+  // have AndroidInstrumentation driver or AcidRemoteDriver driver. An empty
+  // list matches all devices.
   repeated string driver_regex = 3;
   // A device is matched only if each decorator regex is matched by at least one
   // decorator name of the device. For example, ["AndroidLocationDecorator",
@@ -83,7 +83,7 @@ message DeviceQueryResult {
 message DimensionFilter {
   // The key of the dimension.
   string name = 1;
-  // Value regex. Please ommit the word "regex" and write the regex directly.
+  // Value regex. Please omit the word "regex" and write the regex directly.
   string value_regex = 2;
 }
 

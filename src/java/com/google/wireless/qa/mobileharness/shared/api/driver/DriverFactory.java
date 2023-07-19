@@ -213,7 +213,7 @@ public class DriverFactory {
    * Gets the module class of the given driver or decorator. The module class should be a sub-class
    * of {@link Module}, in the package {@link com.google.wireless.qa.mobileharness.shared.api
    * .module} and with the name {@code "<driver-or-decorator-name>Module"} like
-   * "AndroidMoretoModule".
+   * "AcidRemoteDriverModule".
    *
    * @param driverOrDecoratorClass the driver or decorator
    * @return the module class or empty
