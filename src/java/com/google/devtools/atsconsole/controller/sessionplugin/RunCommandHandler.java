@@ -29,6 +29,7 @@ import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
+import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.XtsType;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
@@ -84,27 +85,29 @@ class RunCommandHandler {
    *
    * <p>Jobs added to the session by the plugin will be started by the session job runner later.
    */
-  Optional<AtsSessionPluginOutput> handle(RunCommand command, SessionInfo sessionInfo)
+  void handle(RunCommand command, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
     Optional<JobInfo> jobInfo = createXtsTradefedTestJob(command, command.getXtsType().name());
     if (jobInfo.isEmpty()) {
-      return Optional.of(
-          AtsSessionPluginOutput.newBuilder()
-              .setFailure(
-                  Failure.newBuilder()
-                      .setErrorMessage(
-                          String.format(
-                              "Not able to create a job info per the run command, double check"
-                                  + " device availability: %s",
-                              shortDebugString(command))))
-              .build());
+      sessionInfo.setSessionPluginOutput(
+          oldOutput ->
+              (oldOutput == null ? AtsSessionPluginOutput.newBuilder() : oldOutput.toBuilder())
+                  .setFailure(
+                      Failure.newBuilder()
+                          .setErrorMessage(
+                              String.format(
+                                  "Not able to create a job info per the run command, double check"
+                                      + " device availability: %s",
+                                  shortDebugString(command))))
+                  .build(),
+          AtsSessionPluginOutput.class);
+      return;
     }
     jobInfo.get().properties().add(XTS_TF_JOB_PROP, "true");
     sessionInfo.addJob(jobInfo.get());
     logger.atInfo().log(
         "Added job[%s] to the session %s",
         jobInfo.get().locator().getId(), sessionInfo.getSessionId());
-    return Optional.empty();
   }
 
   private Optional<JobInfo> createXtsTradefedTestJob(RunCommand runCommand, String xtsType)
@@ -237,95 +240,108 @@ class RunCommandHandler {
    */
   void handleResultProcessing(RunCommand command, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
-    Path xtsRootDir = Path.of(command.getXtsRootDir());
-    if (!localFileUtil.isDirExist(xtsRootDir)) {
-      logger.atInfo().log("xTS root dir [%s] doesn't exist, skip processing result.", xtsRootDir);
-      return;
-    }
+    try {
+      Path xtsRootDir = Path.of(command.getXtsRootDir());
+      if (!localFileUtil.isDirExist(xtsRootDir)) {
+        logger.atInfo().log("xTS root dir [%s] doesn't exist, skip processing result.", xtsRootDir);
+        return;
+      }
 
-    Optional<JobInfo> job =
-        sessionInfo.getAllJobs().stream()
-            .filter(jobInfo -> jobInfo.properties().has(XTS_TF_JOB_PROP))
-            .findFirst();
-    if (job.isEmpty()) {
-      logger.atInfo().log("Found no job, skip processing result.");
-      return;
-    }
-    Optional<TestInfo> test = job.get().tests().getAll().values().stream().findFirst();
-    if (test.isEmpty()) {
-      logger.atInfo().log("Found no test, skip processing result.");
-      return;
-    }
+      Optional<JobInfo> job =
+          sessionInfo.getAllJobs().stream()
+              .filter(jobInfo -> jobInfo.properties().has(XTS_TF_JOB_PROP))
+              .findFirst();
+      if (job.isEmpty()) {
+        logger.atInfo().log("Found no job, skip processing result.");
+        return;
+      }
+      Optional<TestInfo> test = job.get().tests().getAll().values().stream().findFirst();
+      if (test.isEmpty()) {
+        logger.atInfo().log("Found no test, skip processing result.");
+        return;
+      }
 
-    String testGenFileDir = test.get().getGenFileDir();
-    List<Path> genFiles = localFileUtil.listFilesOrDirs(Paths.get(testGenFileDir), path -> true);
-    if (genFiles.isEmpty()) {
-      logger.atInfo().log("Found no gen files, skip processing result.");
-      return;
-    }
+      String testGenFileDir = test.get().getGenFileDir();
+      List<Path> genFiles = localFileUtil.listFilesOrDirs(Paths.get(testGenFileDir), path -> true);
+      if (genFiles.isEmpty()) {
+        logger.atInfo().log("Found no gen files, skip processing result.");
+        return;
+      }
 
-    XtsType xtsType = command.getXtsType();
-    String timestampDirName = getTimestampDirName();
-    Path resultDir = getResultDir(xtsRootDir, xtsType, timestampDirName);
-    Path logDir = getLogDir(xtsRootDir, xtsType, timestampDirName);
-    Path tfLogDir = logDir.resolve("tradefed_log");
-    Path atsLogDir = logDir.resolve("ats_log");
+      XtsType xtsType = command.getXtsType();
+      String timestampDirName = getTimestampDirName();
+      Path resultDir = getResultDir(xtsRootDir, xtsType, timestampDirName);
+      Path logDir = getLogDir(xtsRootDir, xtsType, timestampDirName);
+      Path tfLogDir = logDir.resolve("tradefed_log");
+      Path atsLogDir = logDir.resolve("ats_log");
 
-    for (Path genFile : genFiles) {
-      if (genFile.getFileName().toString().endsWith("gen-files")) {
-        Path logsDir = genFile.resolve("logs");
-        if (logsDir.toFile().exists()) {
-          localFileUtil.prepareDir(tfLogDir);
-          List<Path> logsSubDirs = localFileUtil.listDirs(logsDir);
-          for (Path logsSubDir : logsSubDirs) {
-            logger.atInfo().log("Copying dir [%s] into dir [%s]", logsSubDir, tfLogDir);
-            localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                logsSubDir, tfLogDir, ImmutableList.of("-rf"));
-          }
-        }
-        Path genFileResultsDir = genFile.resolve("results");
-        if (genFileResultsDir.toFile().exists()) {
-          localFileUtil.prepareDir(resultDir);
-          List<Path> resultsSubFilesOrDirs =
-              localFileUtil.listFilesOrDirs(
-                  genFileResultsDir,
-                  filePath -> !filePath.getFileName().toString().equals("latest"));
-          for (Path resultsSubFileOrDir : resultsSubFilesOrDirs) {
-            if (resultsSubFileOrDir.toFile().isDirectory()) {
-              // If it's a dir, copy its content into the new result dir.
-              List<Path> resultFilesOrDirs =
-                  localFileUtil.listFilesOrDirs(resultsSubFileOrDir, path -> true);
-              for (Path resultFileOrDir : resultFilesOrDirs) {
-                logger.atInfo().log(
-                    "Copying file/dir [%s] into dir [%s]", resultFileOrDir, resultDir);
-                localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                    resultFileOrDir, resultDir, ImmutableList.of("-rf"));
-              }
-            } else if (resultsSubFileOrDir.getFileName().toString().endsWith(".zip")) {
-              // If it's a zip file, copy it as a sibling file as the new result dir and rename it
-              // as "<new_result_dir_name>.zip"
-              logger.atInfo().log(
-                  "Copying file/dir [%s] into dir [%s]", resultsSubFileOrDir, resultDir);
+      for (Path genFile : genFiles) {
+        if (genFile.getFileName().toString().endsWith("gen-files")) {
+          Path logsDir = genFile.resolve("logs");
+          if (logsDir.toFile().exists()) {
+            localFileUtil.prepareDir(tfLogDir);
+            List<Path> logsSubDirs = localFileUtil.listDirs(logsDir);
+            for (Path logsSubDir : logsSubDirs) {
+              logger.atInfo().log("Copying dir [%s] into dir [%s]", logsSubDir, tfLogDir);
               localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                  resultsSubFileOrDir,
-                  resultDir.resolveSibling(String.format("%s.zip", resultDir.getFileName())),
-                  ImmutableList.of("-rf"));
-            } else {
-              logger.atInfo().log(
-                  "Copying file/dir [%s] into dir [%s]", resultsSubFileOrDir, resultDir);
-              localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                  resultsSubFileOrDir, resultDir, ImmutableList.of("-rf"));
+                  logsSubDir, tfLogDir, ImmutableList.of("-rf"));
             }
           }
+          Path genFileResultsDir = genFile.resolve("results");
+          if (genFileResultsDir.toFile().exists()) {
+            localFileUtil.prepareDir(resultDir);
+            List<Path> resultsSubFilesOrDirs =
+                localFileUtil.listFilesOrDirs(
+                    genFileResultsDir,
+                    filePath -> !filePath.getFileName().toString().equals("latest"));
+            for (Path resultsSubFileOrDir : resultsSubFilesOrDirs) {
+              if (resultsSubFileOrDir.toFile().isDirectory()) {
+                // If it's a dir, copy its content into the new result dir.
+                List<Path> resultFilesOrDirs =
+                    localFileUtil.listFilesOrDirs(resultsSubFileOrDir, path -> true);
+                for (Path resultFileOrDir : resultFilesOrDirs) {
+                  logger.atInfo().log(
+                      "Copying file/dir [%s] into dir [%s]", resultFileOrDir, resultDir);
+                  localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                      resultFileOrDir, resultDir, ImmutableList.of("-rf"));
+                }
+              } else if (resultsSubFileOrDir.getFileName().toString().endsWith(".zip")) {
+                // If it's a zip file, copy it as a sibling file as the new result dir and rename it
+                // as "<new_result_dir_name>.zip"
+                logger.atInfo().log(
+                    "Copying file/dir [%s] into dir [%s]", resultsSubFileOrDir, resultDir);
+                localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                    resultsSubFileOrDir,
+                    resultDir.resolveSibling(String.format("%s.zip", resultDir.getFileName())),
+                    ImmutableList.of("-rf"));
+              } else {
+                logger.atInfo().log(
+                    "Copying file/dir [%s] into dir [%s]", resultsSubFileOrDir, resultDir);
+                localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                    resultsSubFileOrDir, resultDir, ImmutableList.of("-rf"));
+              }
+            }
+          }
+        } else {
+          if (!atsLogDir.toFile().exists()) {
+            localFileUtil.prepareDir(atsLogDir);
+          }
+          logger.atInfo().log("Copying file/dir [%s] into dir [%s]", genFile, atsLogDir);
+          localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+              genFile, atsLogDir, ImmutableList.of("-rf"));
         }
-      } else {
-        if (!atsLogDir.toFile().exists()) {
-          localFileUtil.prepareDir(atsLogDir);
-        }
-        logger.atInfo().log("Copying file/dir [%s] into dir [%s]", genFile, atsLogDir);
-        localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-            genFile, atsLogDir, ImmutableList.of("-rf"));
       }
+    } finally {
+      sessionInfo.setSessionPluginOutput(
+          oldOutput ->
+              (oldOutput == null ? AtsSessionPluginOutput.newBuilder() : oldOutput.toBuilder())
+                  .setSuccess(
+                      Success.newBuilder()
+                          .setOutputMessage(
+                              String.format(
+                                  "run_command session [%s] ended", sessionInfo.getSessionId())))
+                  .build(),
+          AtsSessionPluginOutput.class);
     }
   }
 

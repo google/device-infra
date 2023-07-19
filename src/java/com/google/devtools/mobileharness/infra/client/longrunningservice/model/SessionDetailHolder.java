@@ -175,6 +175,13 @@ public class SessionDetailHolder {
     }
   }
 
+  public Optional<SessionPluginOutput> getSessionPluginOutput(
+      SessionPluginLabel sessionPluginLabel) {
+    synchronized (sessionDetailLock) {
+      return Optional.ofNullable(sessionPluginOutputs.get(sessionPluginLabel.getLabel()));
+    }
+  }
+
   /**
    * Returns field numbers of required fields in {@link SessionOutput}, based on the given field
    * mask relative to {@link SessionDetail}. An empty optional means all fields are required.

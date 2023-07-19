@@ -124,6 +124,32 @@ public class SessionInfo {
         });
   }
 
+  /**
+   * Gets the output of the session plugin (if any) in {@link SessionPluginOutput#getOutput()} of
+   * {@link SessionOutput#getSessionPluginOutputMap()} whose key is {@link SessionPluginLabel}.
+   *
+   * <p>If the type of the output is not {@code clazz}, returns empty.
+   */
+  public <T extends Message> Optional<T> getSessionPluginOutput(Class<T> clazz) {
+    return sessionDetailHolder
+        .getSessionPluginOutput(sessionPluginLabel)
+        .flatMap(
+            output -> {
+              if (!output.hasOutput()) {
+                return Optional.empty();
+              }
+              try {
+                return Optional.of(output.getOutput().unpack(clazz));
+              } catch (InvalidProtocolBufferException e) {
+                logger.atWarning().withCause(e).log(
+                    "Failed to parse session plugin output value, plugin_label=[%s],"
+                        + " target_class=[%s]",
+                    sessionPluginLabel, clazz);
+                return Optional.empty();
+              }
+            });
+  }
+
   public SessionPluginLabel getSessionPluginLabel() {
     return sessionPluginLabel;
   }
