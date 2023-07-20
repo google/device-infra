@@ -51,6 +51,7 @@ java_library(
     visibility = [
         "//java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
         "//java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
+        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
     ],
     deps = [
         ":manager",

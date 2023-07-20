@@ -44,8 +44,9 @@ java_library(
     ],
     visibility = [
         # Do not add other packages here. Please use CommandExecutor instead.
-        "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
         "//src/java/com/google/devtools/deviceaction/framework/actions:__pkg__",
+        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command:__pkg__",
     ],
     deps = [
         ":history",

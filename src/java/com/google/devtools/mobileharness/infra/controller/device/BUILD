@@ -19,6 +19,7 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
@@ -37,6 +38,7 @@ java_library(
     name = "device_helper_factory",
     srcs = ["DeviceHelperFactory.java"],
     visibility = [
+        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -135,6 +137,7 @@ java_library(
     name = "device_id_manager",
     srcs = ["DeviceIdManager.java"],
     visibility = [
+        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat:__pkg__",
     ],
