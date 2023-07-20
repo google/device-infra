@@ -19,6 +19,7 @@ java_library(
         "TestManager.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/deviceinfra/host/utrs/service:__pkg__",
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     ],
