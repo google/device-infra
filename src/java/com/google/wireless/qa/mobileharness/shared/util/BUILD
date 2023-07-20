@@ -92,6 +92,7 @@ java_library(
     srcs = ["NetUtil.java"],
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/util:__pkg__",
     ],

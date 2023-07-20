@@ -108,6 +108,7 @@ java_library(
     visibility = [
         # Do no add visibility here. Please use lite_dimension_factory instead.
         "//src/java/com/google/devtools/mobileharness/api/model/lab:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
     ],
     deps = [
         ":dimension",
