@@ -18,6 +18,7 @@ java_library(
     srcs = ["LocalDeviceTestRunnerLauncher.java"],
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",

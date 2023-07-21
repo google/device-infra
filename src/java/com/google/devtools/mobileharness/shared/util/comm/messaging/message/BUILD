@@ -21,6 +21,7 @@ java_library(
     srcs = ["TestMessageInfo.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:__subpackages__",
     ],

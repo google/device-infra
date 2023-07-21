@@ -26,6 +26,7 @@ java_proto_library(
     name = "mode_setting_java_proto",
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/util:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     ],

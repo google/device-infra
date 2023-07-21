@@ -22,6 +22,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/container/sandbox:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:__pkg__",
     ],
     deps = [

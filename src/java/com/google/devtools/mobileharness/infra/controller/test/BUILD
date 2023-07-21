@@ -25,6 +25,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/launcher:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     ],
     deps = [
@@ -46,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
@@ -82,6 +84,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     exports = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/exception",

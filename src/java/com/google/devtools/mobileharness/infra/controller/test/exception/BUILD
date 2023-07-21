@@ -18,6 +18,7 @@ java_library(
     srcs = ["TestRunnerLauncherConnectedException.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

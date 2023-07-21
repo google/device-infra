@@ -40,6 +40,7 @@ java_library(
     srcs = ["DeviceHelperFactory.java"],
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
