@@ -504,6 +504,7 @@ public abstract class AndroidRealDeviceDelegate {
           || deviceNames.contains("moohan")
           || deviceNames.contains("xrdk1")
           || deviceNames.contains("xrdk2")
+          || deviceNames.contains("xrvst2")
           || allCharacteristics.contains("watch")
           || features.contains(AndroidRealDeviceConstants.FEATURE_IOT)
           || features.contains(AndroidRealDeviceConstants.FEATURE_EMBEDDED)
