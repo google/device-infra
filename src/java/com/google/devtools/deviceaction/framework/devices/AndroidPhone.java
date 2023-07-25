@@ -72,7 +72,6 @@ import org.apache.commons.lang3.ArrayUtils;
 public class AndroidPhone implements Device {
 
   private static final String STAGED = "--staged";
-  private static final String UPDATE_ONLY = "--update-only";
   private static final String STAGED_READY_TIMEOUT = "--staged-ready-timeout";
   private static final String TIMEOUT_MILLIS_FLAG = "--timeout-millis=";
   private static final String REBOOT_SIGN = "INFO: Please reboot device to complete installation.";
@@ -417,6 +416,11 @@ public class AndroidPhone implements Device {
     return spec.getReloadByFactoryReset();
   }
 
+  @SpecValue(field = "module_dir_on_device")
+  public ImmutableMap<String, String> moduleDirOnDevice() {
+    return ImmutableMap.copyOf(spec.getModuleDirOnDeviceMap());
+  }
+
   @Nullable
   private static Duration positiveOrElse(Duration duration, @Nullable Duration elseValue) {
     return Optional.of(duration).filter(TimeUtils::isPositive).orElse(elseValue);
@@ -427,7 +431,7 @@ public class AndroidPhone implements Device {
   }
 
   private String[] addArgsForInstallMultiApks(String[] extraArgs) throws DeviceActionException {
-    extraArgs = ArrayUtils.insert(extraArgs.length, extraArgs, STAGED, UPDATE_ONLY);
+    extraArgs = ArrayUtils.insert(extraArgs.length, extraArgs, STAGED);
     // Flag --timeout-millis applies to Android 12+
     if (TimeUtils.isPositive(stageReadyTimeout())
         && getSdkVersion() >= AndroidVersion.ANDROID_12.getStartSdkVersion()) {

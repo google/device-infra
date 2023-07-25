@@ -63,6 +63,10 @@ message AndroidPhoneSpec {
   optional bool wifi_24_only = 101;
   optional bool need_disable_package_cache = 102;
   optional bool reload_by_factory_reset = 103;
+  // The dir path for apk modules like captive portal login or networkstack.
+  // The key should be the package name.
+  // The value should be the dir path.
+  map<string, string> module_dir_on_device = 120;
 }
 
 // Specs for devices.

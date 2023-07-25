@@ -102,6 +102,7 @@ public final class ModulePusherTest {
     File fakeApks = tmpFolder.newFile("bundletool/arm64.apks");
     when(mockHelper.getTmpFileDir()).thenReturn(tmpDir.toPath());
     when(mockDevice.isUserdebug()).thenReturn(true);
+    when(mockDevice.moduleDirOnDevice()).thenReturn(ImmutableMap.of());
     modulePusher = new ModulePusher(mockDevice, new LocalFileUtil(), mockHelper);
     packageMap =
         ImmutableMap.of(
@@ -332,6 +333,22 @@ public final class ModulePusherTest {
                 .setIsDirectory(true)
                 .build());
     verify(mockDevice).removeFiles("/system/priv-app/com.android.FAKE.SPLIT.APK.PACKAGE.NAME");
+  }
+
+  @Test
+  public void getTargetOnDevice_splitApks_returnDirFromSpec() throws Exception {
+    String baseApp = "/system/priv-app/com.android.FAKE.SPLIT.APK.PACKAGE.NAME/base-master.apk";
+    String hdpi = "/system/priv-app/com.android.FAKE.SPLIT.APK.PACKAGE.NAME/hdpi.apk";
+    AndroidPackage onDevice = getSplit(new File(baseApp), new File(baseApp), new File(hdpi));
+    String vendorPath = "/mnt/vendor/system/priv-app/com.android.FAKE.SPLIT.APK.PACKAGE.NAME";
+    when(mockDevice.moduleDirOnDevice())
+        .thenReturn(ImmutableMap.of(SPLIT_APK_PACKAGE_NAME, vendorPath));
+
+    ResourcePath result = modulePusher.getTargetOnDevice(onDevice);
+
+    assertThat(result)
+        .isEqualTo(ResourcePath.newBuilder().setPath(vendorPath).setIsDirectory(true).build());
+    verify(mockDevice).removeFiles(vendorPath);
   }
 
   @Test

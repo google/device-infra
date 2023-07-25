@@ -424,8 +424,7 @@ public class AndroidPhoneTest {
 
     ArgumentCaptor<String> stringCaptor = ArgumentCaptor.forClass(String.class);
     verify(mockBundletoolUtil).installMultiApks(eq(UUID), eq(packages), stringCaptor.capture());
-    assertThat(stringCaptor.getAllValues())
-        .containsAtLeast("--enable-rollback", "--staged", "--update-only");
+    assertThat(stringCaptor.getAllValues()).containsAtLeast("--enable-rollback", "--staged");
     if (spec.hasStagedReadyTimeout()) {
       assertThat(stringCaptor.getAllValues()).contains("--timeout-millis=120000");
     }
@@ -450,8 +449,7 @@ public class AndroidPhoneTest {
 
     ArgumentCaptor<String> stringCaptor = ArgumentCaptor.forClass(String.class);
     verify(mockBundletoolUtil).installMultiApks(eq(UUID), eq(packages), stringCaptor.capture());
-    assertThat(stringCaptor.getAllValues())
-        .containsAtLeast("--enable-rollback", "--staged", "--update-only");
+    assertThat(stringCaptor.getAllValues()).containsAtLeast("--enable-rollback", "--staged");
     if (spec.hasStagedReadyTimeout()) {
       assertThat(stringCaptor.getAllValues()).contains("--timeout-millis=120000");
     }
@@ -524,8 +522,7 @@ public class AndroidPhoneTest {
 
     ArgumentCaptor<String> stringCaptor = ArgumentCaptor.forClass(String.class);
     verify(mockBundletoolUtil).installApksZip(eq(UUID), eq(train), stringCaptor.capture());
-    assertThat(stringCaptor.getAllValues())
-        .containsAtLeast("--enable-rollback", "--staged", "--update-only");
+    assertThat(stringCaptor.getAllValues()).containsAtLeast("--enable-rollback", "--staged");
     if (spec.hasStagedReadyTimeout()) {
       assertThat(stringCaptor.getAllValues()).contains("--timeout-millis=120000");
     }
