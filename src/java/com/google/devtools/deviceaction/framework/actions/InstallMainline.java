@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.annotations.Annotations.Configurable;
 import com.google.devtools.deviceaction.common.annotations.Annotations.FilePath;
 import com.google.devtools.deviceaction.common.annotations.Annotations.SpecValue;
@@ -39,8 +40,11 @@ import com.google.devtools.deviceaction.framework.operations.ModuleCleaner;
 import com.google.devtools.deviceaction.framework.operations.ModuleInstaller;
 import com.google.devtools.deviceaction.framework.operations.ModulePusher;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import java.io.File;
+import java.time.Duration;
+import java.util.Objects;
 import java.util.Optional;
 
 /** An {@link Action} to install mainline modules. */
@@ -52,6 +56,7 @@ public class InstallMainline implements Action {
   private static final String TAG_MAINLINE_MODULES = "mainline_modules";
   private static final String TAG_TRAIN_FOLDER = "train_folder";
   private static final String TAG_APKS_ZIPS = "apks_zips";
+  private static final Duration WAIT_FOR_POSSIBLE_ROLLBACK = Duration.ofMinutes(3);
 
   private final PackageUpdateTracker packageUpdateTracker;
   private final ModuleCleaner moduleCleaner;
@@ -61,6 +66,8 @@ public class InstallMainline implements Action {
   private final InstallMainlineSpec spec;
   private final ImmutableMultimap<String, File> localFiles;
 
+  private final Sleeper sleeper;
+
   public InstallMainline(
       PackageUpdateTracker packageUpdateTracker,
       ModuleCleaner moduleCleaner,
@@ -68,7 +75,8 @@ public class InstallMainline implements Action {
       ModulePusher modulePusher,
       InstallMainlineSpec spec,
       AndroidPhone device,
-      ImmutableMultimap<String, File> localFiles) {
+      ImmutableMultimap<String, File> localFiles,
+      Sleeper sleeper) {
     this.packageUpdateTracker = packageUpdateTracker;
     this.moduleCleaner = moduleCleaner;
     this.moduleInstaller = moduleInstaller;
@@ -76,6 +84,7 @@ public class InstallMainline implements Action {
     this.spec = spec;
     this.device = device;
     this.localFiles = localFiles;
+    this.sleeper = sleeper;
   }
 
   /**
@@ -124,6 +133,23 @@ public class InstallMainline implements Action {
 
     moduleInstaller.installModules(toInstall.keySet(), enableRollback());
     packageUpdateTracker.checkVersionsUpdatedAndActivated();
+
+    if (enableRollback() && checkRollback()) {
+      // Wait for a period of time and double-check the versions are not rolled back.
+      sleeper.sleep(WAIT_FOR_POSSIBLE_ROLLBACK);
+      try {
+        packageUpdateTracker.checkVersionsUpdated();
+      } catch (DeviceActionException e) {
+        if (Objects.equals(e.getErrorId().type(), ErrorType.INFRA_ISSUE)) {
+          logger.atSevere().withCause(e).log(
+              "The version got rolled back within %s min. Please check device logcat for the"
+                  + " rollback cause.",
+              WAIT_FOR_POSSIBLE_ROLLBACK);
+        }
+        throw e;
+      }
+    }
+    logger.atInfo().log("All packages have been updated successfully!");
   }
 
   private ImmutableList<File> getTrainsInZip() {
@@ -184,5 +210,10 @@ public class InstallMainline implements Action {
   @SpecValue(field = "skip_check_version_after_push")
   private boolean skipCheckVersionAfterPush() {
     return spec.getSkipCheckVersionAfterPush();
+  }
+
+  @SpecValue(field = "check_rollback")
+  private boolean checkRollback() {
+    return spec.getCheckRollback();
   }
 }

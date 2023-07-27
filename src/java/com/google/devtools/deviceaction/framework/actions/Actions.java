@@ -105,7 +105,8 @@ public class Actions {
         new ModulePusher(androidPhone, localFileUtil, resourceHelper),
         spec,
         androidPhone,
-        resolvedFiles);
+        resolvedFiles,
+        sleeper);
   }
 
   private Reset createReset(ActionConfig actionConfig)

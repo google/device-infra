@@ -27,6 +27,7 @@ java_library(
         ["*Test.java"],
     ),
     deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
         "//src/devtools/deviceaction/schemas/proto/actions:install_mainline_spec_java_proto",
         "//src/devtools/deviceaction/schemas/proto/actions:reset_spec_java_proto",
@@ -36,6 +37,7 @@ java_library(
         "//src/java/com/google/devtools/deviceaction/framework/actions",
         "//src/java/com/google/devtools/deviceaction/framework/devices",
         "//src/java/com/google/devtools/deviceaction/framework/operations",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",

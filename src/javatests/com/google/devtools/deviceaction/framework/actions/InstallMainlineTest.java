@@ -28,8 +28,10 @@ import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +40,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.truth.Correspondence;
+import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.AndroidPackage;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
@@ -45,6 +48,7 @@ import com.google.devtools.deviceaction.framework.operations.ModuleCleaner;
 import com.google.devtools.deviceaction.framework.operations.ModuleInstaller;
 import com.google.devtools.deviceaction.framework.operations.ModulePusher;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageInfo;
 import com.google.testing.junit.testparameterinjector.TestParameter;
 import com.google.testing.junit.testparameterinjector.TestParameterInjector;
@@ -103,6 +107,8 @@ public final class InstallMainlineTest {
   @Mock private ModuleInstaller mockInstaller;
   @Mock private ModulePusher mockPusher;
   @Mock private AndroidPhone mockDevice;
+
+  private final Sleeper sleeper = Sleeper.noOpSleeper();
 
   private File apexFile;
   private File apkFile;
@@ -203,10 +209,13 @@ public final class InstallMainlineTest {
       @TestParameter({"ZIP", "APKS", "PACKAGE_FILE"}) ModuleType type,
       @TestParameter boolean devKey,
       @TestParameter boolean cleanup,
-      @TestParameter boolean enableRollback)
+      @TestParameter boolean enableRollback,
+      @TestParameter boolean skipCheckVersionAfterPush,
+      @TestParameter boolean checkRollback)
       throws Exception {
     when(mockDevice.getSdkVersion()).thenReturn(28);
-    setUpTestConfig(type, devKey, cleanup, enableRollback);
+    setUpTestConfig(
+        type, devKey, cleanup, enableRollback, skipCheckVersionAfterPush, checkRollback);
 
     installMainline.perform();
 
@@ -214,6 +223,7 @@ public final class InstallMainlineTest {
     verify(mockInstaller, never()).sideloadTrains(anyList(), anyBoolean());
     verify(mockInstaller, never()).installModules(anyCollection(), anyBoolean());
     verify(mockPusher, never()).pushModules(anyMap());
+    verify(mockTracker, never()).checkVersionsUpdated();
   }
 
   @Test
@@ -221,9 +231,12 @@ public final class InstallMainlineTest {
       @TestParameter({"EMPTY"}) ModuleType type,
       @TestParameter boolean devKey,
       @TestParameter boolean cleanup,
-      @TestParameter boolean enableRollback)
+      @TestParameter boolean enableRollback,
+      @TestParameter boolean skipCheckVersionAfterPush,
+      @TestParameter boolean checkRollback)
       throws Exception {
-    setUpTestConfig(type, devKey, cleanup, enableRollback);
+    setUpTestConfig(
+        type, devKey, cleanup, enableRollback, skipCheckVersionAfterPush, checkRollback);
 
     installMainline.perform();
 
@@ -231,6 +244,7 @@ public final class InstallMainlineTest {
     verify(mockInstaller, never()).sideloadTrains(anyList(), anyBoolean());
     verify(mockInstaller, never()).installModules(anyCollection(), anyBoolean());
     verify(mockPusher, never()).pushModules(anyMap());
+    verify(mockTracker, never()).checkVersionsUpdated();
   }
 
   @Test
@@ -238,9 +252,12 @@ public final class InstallMainlineTest {
       @TestParameter({"ZIP"}) ModuleType type,
       @TestParameter boolean devKey,
       @TestParameter boolean cleanup,
-      @TestParameter boolean enableRollback)
+      @TestParameter boolean enableRollback,
+      @TestParameter boolean skipCheckVersionAfterPush,
+      @TestParameter boolean checkRollback)
       throws Exception {
-    setUpTestConfig(type, devKey, cleanup, enableRollback);
+    setUpTestConfig(
+        type, devKey, cleanup, enableRollback, skipCheckVersionAfterPush, checkRollback);
 
     installMainline.perform();
 
@@ -252,6 +269,7 @@ public final class InstallMainlineTest {
     assertThat(booleanArgumentCaptor.getValue()).isEqualTo(enableRollback);
     verify(mockInstaller, never()).installModules(anyCollection(), anyBoolean());
     verify(mockPusher, never()).pushModules(anyMap());
+    verify(mockTracker, never()).checkVersionsUpdated();
   }
 
   @Test
@@ -259,14 +277,18 @@ public final class InstallMainlineTest {
       @TestParameter({"ZIP"}) ModuleType type,
       @TestParameter boolean devKey,
       @TestParameter boolean cleanup,
-      @TestParameter boolean enableRollback)
+      @TestParameter boolean enableRollback,
+      @TestParameter boolean skipCheckVersionAfterPush,
+      @TestParameter boolean checkRollback)
       throws Exception {
-    setUpTestConfig(type, devKey, cleanup, enableRollback);
+    setUpTestConfig(
+        type, devKey, cleanup, enableRollback, skipCheckVersionAfterPush, checkRollback);
     doThrow(DeviceActionException.class)
         .when(mockInstaller)
         .sideloadTrains(anyList(), anyBoolean());
 
     assertThrows(DeviceActionException.class, () -> installMainline.perform());
+    verify(mockTracker, never()).checkVersionsUpdated();
   }
 
   @Test
@@ -274,9 +296,12 @@ public final class InstallMainlineTest {
       @TestParameter({"APKS", "PACKAGE_FILE", "SPLIT_FOLDER"}) ModuleType type,
       @TestParameter boolean devKey,
       @TestParameter boolean cleanup,
-      @TestParameter boolean enableRollback)
+      @TestParameter boolean enableRollback,
+      @TestParameter boolean skipCheckVersionAfterPush,
+      @TestParameter boolean checkRollback)
       throws Exception {
-    setUpTestConfig(type, devKey, cleanup, enableRollback);
+    setUpTestConfig(
+        type, devKey, cleanup, enableRollback, skipCheckVersionAfterPush, checkRollback);
 
     installMainline.perform();
 
@@ -309,8 +334,47 @@ public final class InstallMainlineTest {
       verify(mockPusher).pushModules(mapArgumentCaptor.capture());
       ImmutableMap<AndroidPackage, AndroidPackage> map = mapArgumentCaptor.getValue();
       assertThat(map).hasSize(2);
+      if (enableRollback && checkRollback && !skipCheckVersionAfterPush) {
+        verify(mockTracker, times(2)).checkVersionsUpdated();
+      } else if ((enableRollback && checkRollback) || !skipCheckVersionAfterPush) {
+        verify(mockTracker).checkVersionsUpdated();
+      } else {
+        verify(mockTracker, never()).checkVersionsUpdated();
+      }
     } else {
       verify(mockPusher, never()).pushModules(anyMap());
+      if (enableRollback && checkRollback) {
+        verify(mockTracker).checkVersionsUpdated();
+      } else {
+        verify(mockTracker, never()).checkVersionsUpdated();
+      }
+    }
+  }
+
+  @Test
+  public void perform_installPackages_rollback_throwExceptionOnlyIfCheckRollback(
+      @TestParameter({"APKS", "PACKAGE_FILE", "SPLIT_FOLDER"}) ModuleType type,
+      @TestParameter boolean devKey,
+      @TestParameter boolean cleanup,
+      @TestParameter boolean enableRollback,
+      @TestParameter boolean skipCheckVersionAfterPush,
+      @TestParameter boolean checkRollback)
+      throws Exception {
+    setUpTestConfig(
+        type, devKey, cleanup, enableRollback, skipCheckVersionAfterPush, checkRollback);
+    DeviceActionException rollbackFailure =
+        new DeviceActionException("ILLEGAL_STATE", ErrorType.INFRA_ISSUE, "fake");
+    if (enableRollback && checkRollback && !skipCheckVersionAfterPush && devKey) {
+      doNothing().doThrow(rollbackFailure).when(mockTracker).checkVersionsUpdated();
+    } else if (enableRollback && checkRollback) {
+      doThrow(rollbackFailure).when(mockTracker).checkVersionsUpdated();
+    }
+
+    if (enableRollback && checkRollback) {
+      assertThrows(DeviceActionException.class, () -> installMainline.perform());
+    } else {
+      // In this case, we missed the rollback.
+      installMainline.perform();
     }
   }
 
@@ -319,14 +383,22 @@ public final class InstallMainlineTest {
       @TestParameter({"APKS", "PACKAGE_FILE", "SPLIT_FOLDER"}) ModuleType type,
       @TestParameter boolean devKey,
       @TestParameter boolean cleanup,
-      @TestParameter boolean enableRollback)
+      @TestParameter boolean enableRollback,
+      @TestParameter boolean skipCheckVersionAfterPush,
+      @TestParameter boolean checkRollback)
       throws Exception {
-    setUpTestConfig(type, devKey, cleanup, enableRollback);
+    setUpTestConfig(
+        type, devKey, cleanup, enableRollback, skipCheckVersionAfterPush, checkRollback);
     doThrow(DeviceActionException.class)
         .when(mockInstaller)
         .installModules(anyCollection(), anyBoolean());
 
     assertThrows(DeviceActionException.class, () -> installMainline.perform());
+    if (devKey && !skipCheckVersionAfterPush) {
+      verify(mockTracker).checkVersionsUpdated();
+    } else {
+      verify(mockTracker, never()).checkVersionsUpdated();
+    }
   }
 
   @Test
@@ -345,12 +417,19 @@ public final class InstallMainlineTest {
   }
 
   private void setUpTestConfig(
-      ModuleType moduleType, boolean devKey, boolean cleanUp, boolean enableRollback) {
+      ModuleType moduleType,
+      boolean devKey,
+      boolean cleanUp,
+      boolean enableRollback,
+      boolean skipCheckVersionAfterPush,
+      boolean checkRollback) {
     InstallMainlineSpec spec =
         InstallMainlineSpec.newBuilder()
             .setDevKeySigned(devKey)
             .setCleanUpSessions(cleanUp)
             .setEnableRollback(enableRollback)
+            .setSkipCheckVersionAfterPush(skipCheckVersionAfterPush)
+            .setCheckRollback(checkRollback)
             .build();
     ImmutableMultimap.Builder<String, File> filesBuilder = ImmutableMultimap.builder();
     switch (moduleType) {
@@ -375,7 +454,7 @@ public final class InstallMainlineTest {
   private void setUpAction(InstallMainlineSpec spec, ImmutableMultimap<String, File> files) {
     installMainline =
         new InstallMainline(
-            mockTracker, mockCleaner, mockInstaller, mockPusher, spec, mockDevice, files);
+            mockTracker, mockCleaner, mockInstaller, mockPusher, spec, mockDevice, files, sleeper);
   }
 
   private AndroidPackage buildAndroidPackageFromFile(File file, List<File> files) {

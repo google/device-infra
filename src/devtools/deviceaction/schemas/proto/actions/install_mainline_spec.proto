@@ -43,4 +43,6 @@ message InstallMainlineSpec {
   optional bool clean_up_sessions = 5;
   optional bool dev_key_signed = 6;
   optional bool skip_check_version_after_push = 7;
+  // Check rollback is meaningful only if rollback is enabled.
+  optional bool check_rollback = 8;
 }
