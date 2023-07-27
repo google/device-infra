@@ -117,7 +117,9 @@ public class InstallMainline implements Action {
 
     if (needPush()) {
       modulePusher.pushModules(toInstall);
-      packageUpdateTracker.checkVersionsUpdated();
+      if (!skipCheckVersionAfterPush()) {
+        packageUpdateTracker.checkVersionsUpdated();
+      }
     }
 
     moduleInstaller.installModules(toInstall.keySet(), enableRollback());
@@ -177,5 +179,10 @@ public class InstallMainline implements Action {
   @SpecValue(field = "dev_key_signed")
   private boolean devKeySigned() {
     return spec.getDevKeySigned();
+  }
+
+  @SpecValue(field = "skip_check_version_after_push")
+  private boolean skipCheckVersionAfterPush() {
+    return spec.getSkipCheckVersionAfterPush();
   }
 }

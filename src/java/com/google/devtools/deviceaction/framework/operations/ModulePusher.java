@@ -42,6 +42,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Optional;
 import java.util.SortedSet;
 
 /** An {@link Operation} to push mainline modules to the device. */
@@ -189,7 +190,10 @@ public class ModulePusher implements Operation {
           "Not find the system package for " + onDevice);
     }
     if (onDevice.isSplit()) {
-      Path parent = onDevice.files().get(0).toPath().getParent();
+      Path parent =
+          Optional.ofNullable(device.moduleDirOnDevice().get(packageName))
+              .map(Path::of)
+              .orElse(onDevice.files().get(0).toPath().getParent());
       device.removeFiles(parent.toString());
       return ResourcePath.newBuilder().setPath(parent.toString()).setIsDirectory(true).build();
     }
