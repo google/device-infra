@@ -71,4 +71,16 @@ public final class CommandHistoryWriterTest {
     writer.onAddCommandResult(commandRecord, FakeCommandResult.of("pass", "", 0));
     assertThat(Files.readAllLines(cmdHistory.toPath())).hasSize(5);
   }
+
+  @Test
+  public void onAddCommandResult_skipCommonCommands() throws Exception {
+    when(commandRecord.command())
+        .thenReturn(ImmutableList.of("adb", "shell", "am broadcast  check.if.device.is.ready"));
+    when(commandRecord.startTime()).thenReturn(FAKE_INSTANT);
+
+    assertThat(cmdHistory.exists()).isTrue();
+    assertThat(Files.size(cmdHistory.toPath())).isEqualTo(0);
+    writer.onAddCommandResult(commandRecord, FakeCommandResult.of("pass", "", 0));
+    assertThat(Files.readAllLines(cmdHistory.toPath())).hasSize(0);
+  }
 }

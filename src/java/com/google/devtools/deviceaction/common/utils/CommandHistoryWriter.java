@@ -18,6 +18,7 @@ package com.google.devtools.deviceaction.common.utils;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -40,6 +41,16 @@ public class CommandHistoryWriter implements CommandRecorderListener {
   /** The output file to save all command history. */
   private static final String FILE_NAME = "command_history.txt";
 
+  private static final String CHECK_IF_DEVICE_IS_READY = "am broadcast  check.if.device.is.ready";
+
+  private static final String SYS_BOOT_COMPLETED = "getprop sys.boot_completed";
+
+  private static final String DEV_BOOTCOMPLETE = "getprop dev.bootcomplete";
+
+  /** Common commands to skip to avoid large history file. */
+  private static final ImmutableList<String> SKIP_COMMANDS =
+      ImmutableList.of(CHECK_IF_DEVICE_IS_READY, SYS_BOOT_COMPLETED, DEV_BOOTCOMPLETE);
+
   private static final String ARG_SEPARATOR = " ";
 
   private final Path outputFile;
@@ -54,7 +65,7 @@ public class CommandHistoryWriter implements CommandRecorderListener {
   }
 
   @VisibleForTesting
-  CommandHistoryWriter(Path dir, LocalFileUtil localFileUtil) throws DeviceActionException {
+  CommandHistoryWriter(Path dir, LocalFileUtil localFileUtil) {
     this.outputFile = dir.resolve(FILE_NAME);
     this.localFileUtil = localFileUtil;
   }
@@ -84,10 +95,16 @@ public class CommandHistoryWriter implements CommandRecorderListener {
 
   private static List<String> getRecords(CommandRecord commandRecord, CommandResult result) {
     List<String> records = new ArrayList<>();
-    records.add(commandRecord.startTime().toString());
-    records.add(Joiner.on(ARG_SEPARATOR).join(commandRecord.command()));
-    records.add(result.toString());
-    records.add("\n");
+    if (needRecord(commandRecord)) {
+      records.add(commandRecord.startTime().toString());
+      records.add(Joiner.on(ARG_SEPARATOR).join(commandRecord.command()));
+      records.add(result.toString());
+      records.add("\n");
+    }
     return records;
+  }
+
+  static boolean needRecord(CommandRecord commandRecord) {
+    return commandRecord.command().stream().noneMatch(SKIP_COMMANDS::contains);
   }
 }
