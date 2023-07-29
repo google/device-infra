@@ -68,10 +68,7 @@ java_library(
     srcs = [
         "MoblyTest.java",
     ],
-    visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-    ],
+    visibility = ["//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
