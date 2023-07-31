@@ -16,6 +16,9 @@
 
 package com.google.devtools.deviceaction.cli;
 
+import static com.google.devtools.deviceaction.common.utils.Constants.CURRENT_VERSION;
+import static com.google.devtools.deviceaction.common.utils.Constants.VERSION_COMMAND;
+
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionConfig;
@@ -27,6 +30,7 @@ import com.google.devtools.deviceaction.framework.DeviceActionModule;
 import com.google.devtools.deviceaction.framework.actions.Actions;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import java.util.Objects;
 
 /**
  * A tool to perform device actions.
@@ -39,6 +43,11 @@ public final class DeviceActionMain {
   private DeviceActionMain() {}
 
   public static void main(String[] args) throws DeviceActionException, InterruptedException {
+    if (args.length > 0 && Objects.equals(args[0], VERSION_COMMAND)) {
+      System.out.println(CURRENT_VERSION);
+      return;
+    }
+
     ActionOptions actionOptions;
     try {
       actionOptions = FlagParser.parse(args);

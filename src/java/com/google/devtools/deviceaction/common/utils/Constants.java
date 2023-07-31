@@ -16,10 +16,15 @@
 
 package com.google.devtools.deviceaction.common.utils;
 
+import com.google.devtools.deviceaction.common.schemas.Version;
 import java.security.SecureRandom;
 
 /** A utility class to share constants. */
 public final class Constants {
+
+  public static final Version CURRENT_VERSION = Version.of("0.0.0");
+
+  public static final String VERSION_COMMAND = "version";
 
   public static final String APEX_SUFFIX = ".apex";
 

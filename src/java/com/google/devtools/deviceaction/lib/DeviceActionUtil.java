@@ -16,6 +16,8 @@
 
 package com.google.devtools.deviceaction.lib;
 
+import static com.google.devtools.deviceaction.common.utils.Constants.CURRENT_VERSION;
+
 import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
@@ -80,6 +82,7 @@ public class DeviceActionUtil {
           "Failed to bind the device action module.",
           e);
     }
+    logger.atInfo().log("The current version is %s", CURRENT_VERSION);
   }
 
   /** Installs mainline modules as specified by {@code spec} to the device {@code uuid}. */
