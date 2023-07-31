@@ -272,8 +272,7 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
 
   @Override
   protected boolean ifHasInternet() throws InterruptedException {
-    // For shared lab, we don't check the internet connection, and regard it as always true.
-    return connectivityUtil.pingSuccessfully(deviceId);
+    return getFlagSkipCheckDeviceInternet() || connectivityUtil.pingSuccessfully(deviceId);
   }
 
   @Override

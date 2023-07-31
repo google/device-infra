@@ -2349,4 +2349,8 @@ public abstract class AndroidRealDeviceDelegate {
   protected boolean getFlagClearAndroidDeviceMultiUsers() {
     return Flags.instance().clearAndroidDeviceMultiUsers.getNonNull();
   }
+
+  protected boolean getFlagSkipCheckDeviceInternet() {
+    return Flags.instance().skipCheckDeviceInternet.getNonNull();
+  }
 }

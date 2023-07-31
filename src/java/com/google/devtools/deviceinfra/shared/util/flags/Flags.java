@@ -483,6 +483,18 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> shouldManageDevices = shouldManageDevicesDefault;
 
+  private static final Flag<Boolean> skipCheckDeviceInternetDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--skip_check_device_internet",
+      description =
+          "Whether to skip checking device connect to Internet via ping. Default is false. When set"
+              + " to true, it means you have confidence that the device can successfully connect to"
+              + " Internet, and OmniLab will set dimension internet to true without checking the"
+              + " connection.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> skipCheckDeviceInternet = skipCheckDeviceInternetDefault;
+
   private static final Flag<Boolean> skipConnectDeviceToWifiDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
