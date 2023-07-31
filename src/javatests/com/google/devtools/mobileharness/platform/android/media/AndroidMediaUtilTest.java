@@ -25,6 +25,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.base.Optional;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -206,9 +207,11 @@ public final class AndroidMediaUtilTest {
                     () ->
                         androidMediaUtil.recordScreen(
                             SERIAL,
-                            outputFileOnDevice,
-                            bitRate,
-                            /* size= */ null,
+                            ScreenRecordArgs.builder(outputFileOnDevice)
+                                .setBitRate(bitRate)
+                                .setVerbose(true)
+                                .setSize(Optional.absent())
+                                .build(),
                             Duration.ofMinutes(10)))
                 .getErrorId())
         .isEqualTo(AndroidErrorId.ANDROID_MEDIA_UTIL_RECORD_SCREEN_ERROR);

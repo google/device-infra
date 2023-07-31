@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.platform.android.media;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Optional;
 import com.google.common.base.Strings;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
@@ -34,7 +33,6 @@ import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.errorprone.annotations.InlineMe;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -43,7 +41,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 
 /**
  * Utility methods to manage audio, video, and other media types on Android devices/emulators.
@@ -251,59 +248,6 @@ public class AndroidMediaUtil {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_MEDIA_UTIL_RECORD_SCREEN_ERROR, e.getMessage(), e);
     }
-  }
-
-  /**
-   * @deprecated This method is no longer supported. Use {@link #recordScreen(String,
-   *     ScreenRecordArgs, Duration)} instead.
-   */
-  @InlineMe(
-      replacement =
-          "this.recordScreen(serial,"
-              + " ScreenRecordArgs.builder(outputFileOnDevice).setBitRate(bitRate).setVerbose(true).build(),"
-              + " timeout)",
-      imports = "com.google.devtools.mobileharness.platform.android.media.ScreenRecordArgs")
-  @Nonnull
-  @Deprecated
-  public final CommandProcess recordScreen(
-      String serial, String outputFileOnDevice, int bitRate, Duration timeout)
-      throws MobileHarnessException, InterruptedException {
-    return recordScreen(
-        serial,
-        ScreenRecordArgs.builder(outputFileOnDevice).setBitRate(bitRate).setVerbose(true).build(),
-        timeout);
-  }
-
-  /**
-   * @deprecated This method is no longer supported. Use {@link #recordScreen(String,
-   *     ScreenRecordArgs, Duration)} instead.
-   */
-  @InlineMe(
-      replacement =
-          "this.recordScreen(serial,"
-              + " ScreenRecordArgs.builder(outputFileOnDevice).setBitRate(bitRate).setVerbose(true).setSize(Optional.fromNullable(size)).build(),"
-              + " timeout)",
-      imports = {
-        "com.google.common.base.Optional",
-        "com.google.devtools.mobileharness.platform.android.media.ScreenRecordArgs"
-      })
-  @Nonnull
-  @Deprecated
-  public final CommandProcess recordScreen(
-      String serial,
-      String outputFileOnDevice,
-      int bitRate,
-      @Nullable String size,
-      Duration timeout)
-      throws MobileHarnessException, InterruptedException {
-    return recordScreen(
-        serial,
-        ScreenRecordArgs.builder(outputFileOnDevice)
-            .setBitRate(bitRate)
-            .setVerbose(true)
-            .setSize(Optional.fromNullable(size))
-            .build(),
-        timeout);
   }
 
   /**
