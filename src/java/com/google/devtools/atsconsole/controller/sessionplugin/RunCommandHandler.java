@@ -241,12 +241,13 @@ class RunCommandHandler {
   void handleResultProcessing(RunCommand command, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
     try {
-      Path xtsRootDir = Path.of(command.getXtsRootDir());
-      if (!localFileUtil.isDirExist(xtsRootDir)) {
-        logger.atInfo().log("xTS root dir [%s] doesn't exist, skip processing result.", xtsRootDir);
+      if (!localFileUtil.isDirExist(command.getXtsRootDir())) {
+        logger.atInfo().log(
+            "xTS root dir [%s] doesn't exist, skip processing result.", command.getXtsRootDir());
         return;
       }
 
+      Path xtsRootDir = Path.of(command.getXtsRootDir());
       Optional<JobInfo> job =
           sessionInfo.getAllJobs().stream()
               .filter(jobInfo -> jobInfo.properties().has(XTS_TF_JOB_PROP))
