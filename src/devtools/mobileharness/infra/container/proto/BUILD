@@ -19,6 +19,7 @@ proto_library(
     name = "mode_setting_proto",
     srcs = ["mode_setting.proto"],
     visibility = [
+        "//src/devtools/mobileharness/infra/lab/proto:__pkg__",
     ],
 )
 
