@@ -476,7 +476,7 @@ final class RunCommand implements Callable<Integer> {
               MOBLY_TEST_ZIP_DEFAULT_TEST,
               /* testCaseSelector= */ null,
               "python3",
-              /* installMoblyTestPackageArgs= */ null);
+              /* installMoblyTestDepsArgs= */ null);
 
       com.google.devtools.mobileharness.shared.util.command.Command cmd =
           com.google.devtools.mobileharness.shared.util.command.Command.of(commandArray)

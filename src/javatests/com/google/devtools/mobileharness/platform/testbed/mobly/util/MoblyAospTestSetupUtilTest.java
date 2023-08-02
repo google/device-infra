@@ -66,14 +66,15 @@ public final class MoblyAospTestSetupUtilTest {
   }
 
   @Test
-  public void setUpEnvAndGenerateTestCommand_generatesCommand() throws Exception {
+  public void setUpEnvAndGenerateTestCommand_generatesCommandWithVenv() throws Exception {
     MoblyAospTestSetupUtil setupUtilSpy = spy(moblyAospTestSetupUtil);
+    doReturn(true).when(setupUtilSpy).hasDeps(any());
     doReturn(null).when(setupUtilSpy).getPythonPath(any());
     doReturn(Path.of("mobly_venv/bin/python3")).when(setupUtilSpy).createVenv(any(), any());
     doReturn(Path.of("mobly/sample_test.py"))
         .when(setupUtilSpy)
         .resolveMoblyTestBin(any(), any(), any());
-    doNothing().when(setupUtilSpy).installMoblyTestPackage(any(), any(), any());
+    doNothing().when(setupUtilSpy).installMoblyTestDeps(any(), any(), any());
 
     assertThat(
             setupUtilSpy.setupEnvAndGenerateTestCommand(
@@ -84,7 +85,7 @@ public final class MoblyAospTestSetupUtilTest {
                 "sample_test.py",
                 "test1 test2",
                 "python3",
-                /* installMoblyTestPackageArgs= */ null))
+                /* installMoblyTestDepsArgs= */ null))
         .asList()
         .containsExactly(
             "mobly_venv/bin/python3",
@@ -93,6 +94,26 @@ public final class MoblyAospTestSetupUtilTest {
             "--test_case",
             "test1",
             "test2");
+  }
+
+  @Test
+  public void setUpEnvAndGenerateTestCommand_generatesCommandWithoutVenv() throws Exception {
+    MoblyAospTestSetupUtil setupUtilSpy = spy(moblyAospTestSetupUtil);
+    doReturn(false).when(setupUtilSpy).hasDeps(any());
+
+    assertThat(
+            setupUtilSpy.setupEnvAndGenerateTestCommand(
+                Path.of("sample_test"),
+                Path.of("mobly"),
+                Path.of("mobly_venv"),
+                Path.of("sample_config.yaml"),
+                null,
+                "test1 test2",
+                "python3",
+                /* installMoblyTestDepsArgs= */ null))
+        .asList()
+        .containsExactly(
+            "sample_test", "--config=sample_config.yaml", "--test_case", "test1", "test2");
   }
 
   @Test
@@ -189,8 +210,8 @@ public final class MoblyAospTestSetupUtilTest {
         Path.of("mobly").resolve(MoblyAospTestSetupUtil.REQUIREMENTS_TXT).toString();
     when(localFileUtil.isFileExist(requirementsTxt)).thenReturn(true);
 
-    moblyAospTestSetupUtil.installMoblyTestPackage(
-        Path.of("venv/python3"), Path.of("mobly"), /* installMoblyTestPackageArgs= */ null);
+    moblyAospTestSetupUtil.installMoblyTestDeps(
+        Path.of("venv/python3"), Path.of("mobly"), /* installMoblyTestDepsArgs= */ null);
     ImmutableList<String> expectedCmd =
         ImmutableList.of("venv/python3", "-m", "pip", "install", "-r", requirementsTxt);
 
@@ -203,8 +224,8 @@ public final class MoblyAospTestSetupUtilTest {
         Path.of("mobly").resolve(MoblyAospTestSetupUtil.PYPROJECT_TOML).toString();
     when(localFileUtil.isFileExist(pyprojectToml)).thenReturn(true);
 
-    moblyAospTestSetupUtil.installMoblyTestPackage(
-        Path.of("venv/python3"), Path.of("mobly"), /* installMoblyTestPackageArgs= */ null);
+    moblyAospTestSetupUtil.installMoblyTestDeps(
+        Path.of("venv/python3"), Path.of("mobly"), /* installMoblyTestDepsArgs= */ null);
     ImmutableList<String> expectedCmd =
         ImmutableList.of("venv/python3", "-m", "pip", "install", "mobly");
 
@@ -213,8 +234,8 @@ public final class MoblyAospTestSetupUtilTest {
 
   @Test
   public void installMoblyTestBin_noDepsFile_skipsInstallation() throws Exception {
-    moblyAospTestSetupUtil.installMoblyTestPackage(
-        Path.of("venv/python3"), Path.of("mobly"), /* installMoblyTestPackageArgs= */ null);
+    moblyAospTestSetupUtil.installMoblyTestDeps(
+        Path.of("venv/python3"), Path.of("mobly"), /* installMoblyTestDepsArgs= */ null);
 
     verify(commandExecutor, never()).run(any(Command.class));
   }
@@ -225,14 +246,14 @@ public final class MoblyAospTestSetupUtilTest {
         Path.of("mobly").resolve(MoblyAospTestSetupUtil.REQUIREMENTS_TXT).toString();
     when(localFileUtil.isFileExist(requirementsTxt)).thenReturn(true);
 
-    InstallMoblyTestPackageArgs installMoblyTestPackageArgs =
-        InstallMoblyTestPackageArgs.builder()
+    InstallMoblyTestDepsArgs installMoblyTestDepsArgs =
+        InstallMoblyTestDepsArgs.builder()
             .setDefaultTimeout(Duration.ofMinutes(20))
             .setIndexUrl("index-url")
             .build();
 
-    moblyAospTestSetupUtil.installMoblyTestPackage(
-        Path.of("venv/python3"), Path.of("mobly"), installMoblyTestPackageArgs);
+    moblyAospTestSetupUtil.installMoblyTestDeps(
+        Path.of("venv/python3"), Path.of("mobly"), installMoblyTestDepsArgs);
     ImmutableList<String> expectedCmd =
         ImmutableList.of(
             "venv/python3",

@@ -27,7 +27,7 @@ import com.google.devtools.atsconsole.result.report.CertificationSuiteInfo;
 import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.devtools.atsconsole.result.report.MoblyReportHelper;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestPackageArgs;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.EmptyDevice;
@@ -82,8 +82,8 @@ public final class MoblyAospTestTest {
     when(jobInfo.params()).thenReturn(params);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(configFile.getPath()).thenReturn("config.yaml");
-    InstallMoblyTestPackageArgs installMoblyTestPackageArgs =
-        InstallMoblyTestPackageArgs.builder()
+    InstallMoblyTestDepsArgs installMoblyTestDepsArgs =
+        InstallMoblyTestDepsArgs.builder()
             .setDefaultTimeout(Duration.ofMinutes(30))
             .setIndexUrl(PY_PKG_INDEX_URL)
             .build();
@@ -102,7 +102,7 @@ public final class MoblyAospTestTest {
             "sample_test.py",
             "test1 test2",
             "3.10",
-            installMoblyTestPackageArgs);
+            installMoblyTestDepsArgs);
   }
 
   @Test

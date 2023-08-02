@@ -27,7 +27,7 @@ import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactor
 import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.devtools.atsconsole.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestPackageArgs;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.inject.Guice;
@@ -121,11 +121,11 @@ public class MoblyAospTest extends MoblyTest {
     String testCaseSelector = testInfo.jobInfo().params().get(TEST_SELECTOR_KEY);
     String pythonVersion = testInfo.jobInfo().params().get(PARAM_PYTHON_VERSION);
 
-    InstallMoblyTestPackageArgs.Builder installMoblyTestPackageArgsBuilder =
-        InstallMoblyTestPackageArgs.builder().setDefaultTimeout(Duration.ofMinutes(30));
+    InstallMoblyTestDepsArgs.Builder installMoblyTestDepsArgsBuilder =
+        InstallMoblyTestDepsArgs.builder().setDefaultTimeout(Duration.ofMinutes(30));
 
     if (testInfo.jobInfo().params().getOptional(PARAM_PY_PKG_INDEX_URL).isPresent()) {
-      installMoblyTestPackageArgsBuilder.setIndexUrl(
+      installMoblyTestDepsArgsBuilder.setIndexUrl(
           testInfo.jobInfo().params().getOptional(PARAM_PY_PKG_INDEX_URL).get());
     }
 
@@ -137,7 +137,7 @@ public class MoblyAospTest extends MoblyTest {
         testPath,
         testCaseSelector,
         pythonVersion,
-        installMoblyTestPackageArgsBuilder.build());
+        installMoblyTestDepsArgsBuilder.build());
   }
 
   @Override

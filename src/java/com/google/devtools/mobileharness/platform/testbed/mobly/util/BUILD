@@ -26,7 +26,7 @@ java_library(
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
     deps = [
-        ":install_mobly_test_package_args",
+        ":install_mobly_test_deps_args",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
@@ -69,8 +69,8 @@ java_library(
 )
 
 java_library(
-    name = "install_mobly_test_package_args",
-    srcs = ["InstallMoblyTestPackageArgs.java"],
+    name = "install_mobly_test_deps_args",
+    srcs = ["InstallMoblyTestDepsArgs.java"],
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__pkg__",

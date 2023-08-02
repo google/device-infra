@@ -70,6 +70,7 @@ public class MoblyAospTestSetupUtil {
    * @param testPath Relative path to the specific test/suite to run.
    * @param testCaseSelector Specifies a subset of test cases in a test file to run.
    * @param pythonVersion Desired Python version.
+   * @param installMoblyTestDepsArgs args used when installing Mobly test deps.
    */
   public String[] setupEnvAndGenerateTestCommand(
       Path moblyPkg,
@@ -79,60 +80,19 @@ public class MoblyAospTestSetupUtil {
       @Nullable String testPath,
       @Nullable String testCaseSelector,
       @Nullable String pythonVersion,
-      @Nullable InstallMoblyTestPackageArgs installMoblyTestPackageArgs)
+      @Nullable InstallMoblyTestDepsArgs installMoblyTestDepsArgs)
       throws MobileHarnessException, InterruptedException {
-    Path sysPythonBin = getPythonPath(pythonVersion);
-    Path venvPythonBin = createVenv(sysPythonBin, venvPath);
     Path moblyTestBin = resolveMoblyTestBin(moblyPkg, moblyUnzipDir, testPath);
-    installMoblyTestPackage(venvPythonBin, moblyUnzipDir, installMoblyTestPackageArgs);
+    Path venvPythonBin = null;
+    // Use a virtualenv if testPath is specified, or the test package has pip dependencies.
+    // Otherwise, run the test package directly as a binary.
+    if (testPath != null || hasDeps(moblyUnzipDir)) {
+      Path sysPythonBin = getPythonPath(pythonVersion);
+      venvPythonBin = createVenv(sysPythonBin, venvPath);
+      installMoblyTestDeps(venvPythonBin, moblyUnzipDir, installMoblyTestDepsArgs);
+    }
 
     return getTestCommand(venvPythonBin, moblyTestBin, configFile, testCaseSelector);
-  }
-
-  /** Creates the Python virtual environment for installing dependencies and executing the test. */
-  @VisibleForTesting
-  Path createVenv(Path sysPythonBin, Path venvPath)
-      throws MobileHarnessException, InterruptedException {
-    logger.atInfo().log("Creating Python venv at %s", venvPath);
-    List<String> venvCmd = new ArrayList<>();
-    venvCmd.add(sysPythonBin.toString());
-    venvCmd.add("-m");
-    venvCmd.add("venv");
-    venvCmd.add(venvPath.toString());
-    try {
-      executor.run(Command.of(venvCmd));
-    } catch (CommandException e) {
-      throw new MobileHarnessException(
-          ExtErrorId.MOBLY_AOSP_CREATE_VENV_ERROR,
-          "Failed to create Python venv on host. Please check error logs.",
-          e);
-    }
-    return venvPath.resolve("bin").resolve("python3");
-  }
-
-  /** Locate the path to the system Python binary. */
-  @VisibleForTesting
-  Path getPythonPath(@Nullable String pythonVersion)
-      throws MobileHarnessException, InterruptedException {
-    if (pythonVersion == null) {
-      pythonVersion = "python3";
-    }
-
-    if (!pythonVersion.startsWith("python")) {
-      pythonVersion = String.format("python%s", pythonVersion);
-    }
-    CommandResult result = executor.exec(Command.of("which", pythonVersion).successExitCodes(0, 1));
-
-    if (result.exitCode() != 0) {
-      String possiblePythons = executor.run(Command.of("whereis", "python"));
-      throw new MobileHarnessException(
-          ExtErrorId.MOBLY_AOSP_PYTHON_VERSION_NOT_FOUND_ERROR,
-          String.format(
-              "Unable to find a suitable python version. Attempted to find \"%s\"."
-                  + " Executables found: %s.",
-              pythonVersion, possiblePythons));
-    }
-    return Path.of(result.stdout().trim());
   }
 
   /**
@@ -167,30 +127,80 @@ public class MoblyAospTestSetupUtil {
     }
   }
 
-  /** Installs the Mobly test package. */
+  /** Checks if the unzipped Mobly test package has any files declaring pip dependencies. */
+  boolean hasDeps(Path moblyUnzipDir) {
+    return localFileUtil.isFileExist(moblyUnzipDir.resolve(REQUIREMENTS_TXT))
+        || localFileUtil.isFileExist(moblyUnzipDir.resolve(PYPROJECT_TOML));
+  }
+
+  /** Locate the path to the system Python binary. */
   @VisibleForTesting
-  void installMoblyTestPackage(
+  Path getPythonPath(@Nullable String pythonVersion)
+      throws MobileHarnessException, InterruptedException {
+    if (pythonVersion == null) {
+      pythonVersion = "python3";
+    }
+
+    if (!pythonVersion.startsWith("python")) {
+      pythonVersion = String.format("python%s", pythonVersion);
+    }
+    CommandResult result = executor.exec(Command.of("which", pythonVersion).successExitCodes(0, 1));
+
+    if (result.exitCode() != 0) {
+      String possiblePythons = executor.run(Command.of("whereis", "python"));
+      throw new MobileHarnessException(
+          ExtErrorId.MOBLY_AOSP_PYTHON_VERSION_NOT_FOUND_ERROR,
+          String.format(
+              "Unable to find a suitable python version. Attempted to find \"%s\"."
+                  + " Executables found: %s.",
+              pythonVersion, possiblePythons));
+    }
+    return Path.of(result.stdout().trim());
+  }
+
+  /** Creates the Python virtual environment for installing dependencies and executing the test. */
+  @VisibleForTesting
+  Path createVenv(Path sysPythonBin, Path venvPath)
+      throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("Creating Python venv at %s", venvPath);
+    List<String> venvCmd = new ArrayList<>();
+    venvCmd.add(sysPythonBin.toString());
+    venvCmd.add("-m");
+    venvCmd.add("venv");
+    venvCmd.add(venvPath.toString());
+    try {
+      executor.run(Command.of(venvCmd));
+    } catch (CommandException e) {
+      throw new MobileHarnessException(
+          ExtErrorId.MOBLY_AOSP_CREATE_VENV_ERROR,
+          "Failed to create Python venv on host. Please check error logs.",
+          e);
+    }
+    return venvPath.resolve("bin").resolve("python3");
+  }
+
+  /** Installs the Mobly test dependencies. */
+  @VisibleForTesting
+  void installMoblyTestDeps(
       Path venvPythonBin,
       Path moblyUnzipDir,
-      @Nullable InstallMoblyTestPackageArgs installMoblyTestPackageArgs)
+      @Nullable InstallMoblyTestDepsArgs installMoblyTestDepsArgs)
       throws MobileHarnessException, InterruptedException {
     Duration cmdTimeout = Duration.ofMinutes(10);
     List<String> pipCmd = new ArrayList<>();
     pipCmd.add(venvPythonBin.toString());
     pipCmd.add("-m");
     pipCmd.add("pip");
-    if (installMoblyTestPackageArgs != null
-        && installMoblyTestPackageArgs.defaultTimeout().isPresent()) {
+    if (installMoblyTestDepsArgs != null && installMoblyTestDepsArgs.defaultTimeout().isPresent()) {
       pipCmd.add(
           String.format(
-              "--default-timeout=%d",
-              installMoblyTestPackageArgs.defaultTimeout().get().toSeconds()));
-      cmdTimeout = installMoblyTestPackageArgs.defaultTimeout().get();
+              "--default-timeout=%d", installMoblyTestDepsArgs.defaultTimeout().get().toSeconds()));
+      cmdTimeout = installMoblyTestDepsArgs.defaultTimeout().get();
     }
     pipCmd.add("install");
-    if (installMoblyTestPackageArgs != null && installMoblyTestPackageArgs.indexUrl().isPresent()) {
+    if (installMoblyTestDepsArgs != null && installMoblyTestDepsArgs.indexUrl().isPresent()) {
       pipCmd.add("-i");
-      pipCmd.add(installMoblyTestPackageArgs.indexUrl().get());
+      pipCmd.add(installMoblyTestDepsArgs.indexUrl().get());
     }
     String requirementsFile = moblyUnzipDir.resolve(REQUIREMENTS_TXT).toString();
     String pyprojectFile = moblyUnzipDir.resolve(PYPROJECT_TOML).toString();
@@ -205,13 +215,13 @@ public class MoblyAospTestSetupUtil {
       return;
     }
     logger.atInfo().log(
-        "Installing Mobly test package with command: %s.", Joiner.on(" ").join(pipCmd));
+        "Installing Mobly test dependencies with command: %s.", Joiner.on(" ").join(pipCmd));
     try {
       executor.run(Command.of(pipCmd).timeout(cmdTimeout.plusMinutes(1)));
     } catch (CommandException e) {
       throw new MobileHarnessException(
           ExtErrorId.MOBLY_AOSP_PIP_INSTALL_ERROR,
-          "Failed to install the test package via pip. Please check the error logs. Make sure "
+          "Failed to install the test dependencies via pip. Please check the error logs. Make sure "
               + "that the test package contains a valid "
               + "'requirements.txt'/'setup.cfg'/'pyproject.toml' file.",
           e);
@@ -221,10 +231,16 @@ public class MoblyAospTestSetupUtil {
   /** Generates the test execution command. */
   @VisibleForTesting
   String[] getTestCommand(
-      Path venvPythonBin, Path moblyTestBin, Path configFile, @Nullable String testCaseSelector) {
-    List<String> cmdElements =
-        Lists.newArrayList(
-            venvPythonBin.toString(), moblyTestBin.toString(), "--config=" + configFile);
+      @Nullable Path venvPythonBin,
+      Path moblyTestBin,
+      Path configFile,
+      @Nullable String testCaseSelector) {
+    List<String> cmdElements = Lists.newArrayList();
+    if (venvPythonBin != null) {
+      cmdElements.add(venvPythonBin.toString());
+    }
+    cmdElements.add(moblyTestBin.toString());
+    cmdElements.add("--config=" + configFile);
     if (testCaseSelector != null && !testCaseSelector.equals(TEST_SELECTOR_ALL)) {
       logger.atInfo().log("Selected test cases: %s", testCaseSelector);
       cmdElements.add("--test_case");
