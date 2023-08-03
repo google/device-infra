@@ -1,4 +1,4 @@
-module cas_uploader
+module casuploader
 
 go 1.21
 
