@@ -1,0 +1,130 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.shared.trace;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.google.devtools.mobileharness.shared.trace.proto";
+option java_outer_classname = "SpanProto";
+
+// One timeline describes the timestamp information of one span.
+message Timeline {
+  // The start time in local clock.
+  google.protobuf.Timestamp local_start_timestamp = 1;
+
+  // The end time in local clock.
+  google.protobuf.Timestamp local_end_timestamp = 2;
+
+  // The send time in local clock.
+  google.protobuf.Timestamp local_send_timestamp = 3;
+
+  // The receive time in server clock.
+  google.protobuf.Timestamp server_receive_timestamp = 4;
+}
+
+// The source for a span.
+// It represents the source that generates the span.
+// It can be a UUID to keep universal unique.
+message Source {
+  string id = 1;
+  enum SourceType {
+    UNKNOWN = 0;
+    CLIENT = 1;
+    GATEWAY = 2;
+    LAB = 3;
+    MASTER = 4;
+    SANDBOX = 5;
+  }
+  SourceType source_type = 2;
+}
+
+// The name for a span.
+// It can be "name_space.concrete_name" format.
+message Name {
+  string name = 1;
+}
+
+// The type for a span.
+message Type {
+  // The type of one span.
+  enum SpanType {
+    UNKNOWN_TYPE = 0;
+
+    PRE_RUN_JOB = 1;
+    RUN_JOB = 2;
+    POST_RUN_JOB = 3;
+    DEVICE_ALLOCATION = 4;
+    FILE_RESOLVE = 5;
+    CONCRETE_FILE_RESOLVE = 6;
+
+    PRE_RUN_TEST = 101;
+    RUN_TEST = 102;
+    POST_RUN_TEST = 103;
+    SEND_FILE = 104;
+    DOWNLOAD_FILE = 105;
+    RUN_DECORATOR = 106;
+
+    EXEC_COMMAND = 201;
+  }
+  SpanType type = 1;
+}
+
+// The tags for a span.
+// One tag can be any string.
+message Tags {
+  repeated string tag = 1;
+}
+
+// One span is a time span and its properties.
+// The spans are organized in a tree structure.
+message Span {
+  // ID of the span. It should be global unique.
+  // Client should be responsible to create it.
+  // If the ID already exists in system, the span will not be inserted.
+  string id = 1;
+
+  // The parent span's id.
+  string parent_id = 2;
+
+  // Name of the span.
+  Name name = 3;
+
+  // Type of the span.
+  Type type = 4;
+
+  // The tag of the span. One span can have multiple tags for search.
+  Tags tags = 5;
+
+  // The time data of the span.
+  Timeline timeline = 6;
+
+  // The source for this span.
+  Source source = 7;
+
+  // The parent span
+  // Don't use it in future. An ID is enough for a parent.
+  ParentSpan parent = 8 [deprecated = true];
+}
+
+// Describes a parent span.
+message ParentSpan {
+  string id = 1;
+  mobileharness.shared.trace.Name name = 2;
+  mobileharness.shared.trace.Tags tags = 3;
+}
