@@ -1,0 +1,232 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.master.rpc;
+
+import "google/protobuf/duration.proto";
+import "src/devtools/mobileharness/api/model/proto/device.proto";
+import "src/devtools/mobileharness/api/model/proto/error.proto";
+import "src/devtools/mobileharness/api/model/proto/job.proto";
+import "src/devtools/mobileharness/api/model/proto/lab.proto";
+import "src/devtools/mobileharness/api/model/proto/test.proto";
+import "src/devtools/mobileharness/shared/version/proto/version.proto";
+
+option java_package = "com.google.devtools.mobileharness.infra.master.rpc.proto";
+option java_outer_classname = "JobSyncServiceProto";
+
+message OpenJobRequest {
+  // Required: version information for checking the compatibility of the Master
+  // and Client.
+  mobileharness.shared.version.VersionCheckRequest version_check_request = 1;
+  string id = 2;                                   // Required
+  string name = 3;                                 // Required
+  mobileharness.api.model.JobFeature feature = 4;  // Required
+  mobileharness.api.model.JobSetting setting = 5;  // Required
+
+  repeated .mobileharness.api.model.JobFile file = 6;  // Optional
+  map<string, string> param = 7;                       // Optional
+
+  repeated .mobileharness.api.model.TestIdName test = 10;
+
+  // Optional: Max time that a job can live in the Master without heartbeats. It
+  // should not be less than 5 minutes
+  int64 keep_alive_timeout_ms = 11;
+
+  // TODO: No need to send the file/param/retry info to Master.
+  // TODO: Send the job start time from Client and save in Master.
+}
+
+message OpenJobResponse {
+  // Empty but may be extended.
+  mobileharness.shared.version.VersionCheckResponse version_check_response = 1;
+
+  // Whether the job should be failed fast.
+  // When it is fulfilled, the job is not aranged for scheduling,
+  // |JobSyncService.GetAllocations| will return bad_test_id.
+  //
+  // See more details in go/mh-test-fail-fast.
+  .mobileharness.api.model.ExceptionDetail fail_fast = 2;
+}
+
+message AddExtraTestsRequest {
+  // Required: job id of the new tests.
+  string job_id = 1;
+  // Tests to be added to master.
+  repeated .mobileharness.api.model.TestIdName test = 2;
+  // Optional: whether to reopen tests if the tests exist and are closed.
+  bool reopen = 3;
+}
+
+message AddExtraTestsResponse {
+  // Empty but may be extended.
+}
+
+message GetAllocationsRequest {
+  string job_id = 1;  // Required.
+  repeated string test_id = 2;
+}
+
+// Next ID: 6
+message GetAllocationsResponse {
+  message Allocation {
+    // Required.
+    string test_id = 1;
+    // Required: at least one device is provided.
+    repeated .mobileharness.api.model.DeviceLocator device_locator = 2;
+
+    // Allocation latency stats.
+    message Stats {
+      // Required.
+      string scheduler_latency_type = 1;
+      // Required. The latency contributed by the Scheduler itself. Calculation
+      // method: http://b/71722259#comment3.
+      int64 scheduler_latency_ms = 2;
+      // Required. The duration for how long the test is suspended due to quota
+      // issues.
+      int64 central_suspended_duration_ms = 3;
+    }
+    // Required.
+    Stats stats = 3;
+
+    // Quota related result of this allocation.
+    message QuotaResult {
+      // Optional: the quota pool this test is allocated to. Only meaningful
+      // when test is successfully allocated to any devices.
+      string quota_pool = 1;
+    }
+
+    // Optional. Only shared lab will have this field if successfully allocated.
+    QuotaResult quota_result = 4;
+  }
+  // Allocations of the queried tests.
+  repeated Allocation allocation = 1;
+
+  // Tests are unknown/closed in master. Needs client to reopen the test if the
+  // client is still waiting for allocations for them. Examples of the
+  // unknown/closed tests in master:
+  // 1) When client needs to retry a test and calls ExtraTests but the RPC
+  //    fails, the test is added to client side but unknown in master.
+  // 2) When an allocation is just created in master and client hasn't received
+  //    it, lab server signs out the device will cause the master to close the
+  //    test. So the test is closed in master, but new in client waiting for
+  //    allocation.
+  repeated string bad_test_id = 2;
+
+  // Whether the job killed by user is being killed in Master.
+  bool is_being_killed = 3;
+
+  // Tests which are suspended in master due to quota issues.
+  repeated string suspended_test_id = 4;
+
+  // Tests which are waiting for allocation in scheduler queue.
+  repeated string allocating_test_id = 5;
+}
+
+// NEXT ID TO USE: 10
+message CloseTestRequest {
+  // Required: belonging job of the test.
+  string job_id = 1;
+  // Required: test id.
+  string test_id = 2;
+  // Required: test result.
+  .mobileharness.api.model.TestResult test_result = 3;
+  // Optional: cause exception when test result is not UNKNOWN/PASS. See
+  // go/mh-test-result.
+  .mobileharness.api.model.ExceptionDetail test_result_cause = 8;
+  // Optional: Lab IP of the devices to release. If not specified,
+  // Master will auto detect the IP of the RPC client and use it as the lab IP.
+  string lab_ip = 4 [deprecated = true];
+  // Optional: the lab the devices are allocated to for this test.
+  .mobileharness.api.model.LabLocator lab_locator = 9;
+  // Optional: devices to be released from this test.
+  repeated string device_id = 5;
+  // Optional: Whether to leave the device as DIRTY after releasing the
+  // allocation.
+  bool device_dirty = 6;
+  // Optional: The time in Lab Server when this RPC is sent.
+  int64 timestamp_ms_from_lab = 7;
+}
+
+message CloseTestResponse {
+  google.protobuf.Duration device_usage_duration = 1;
+}
+
+message CloseJobRequest {
+  string job_id = 1;  // Required
+}
+
+message CloseJobResponse {
+  // Empty but may be extended.
+}
+
+message CheckJobsRequest {
+  repeated string job_id = 1;
+}
+
+message CheckJobsResponse {
+  // The IDs of jobs alive in master.
+  repeated string job_id = 1;
+}
+
+message UpsertDeviceTempRequiredDimensionsRequest {
+  mobileharness.api.model.DeviceLocator device_locator = 1;
+  repeated mobileharness.api.model.DeviceDimension temp_required_dimension = 2;
+  int64 duration_ms = 3;
+}
+
+message UpsertDeviceTempRequiredDimensionsResponse {
+  // Empty but may be extended.
+}
+
+message KillJobRequest {
+  // Required: Id of the job to be killed.
+  string job_id = 1;
+}
+
+message KillJobResponse {
+  // Empty but may be extended.
+}
+
+// Service for syncing the job/test/allocation info with Master.
+service JobSyncService {
+  // Sends the job information to master server.
+  rpc OpenJob(OpenJobRequest) returns (OpenJobResponse) {}
+
+  // Adds tests to an existing job.
+  rpc AddExtraTests(AddExtraTestsRequest) returns (AddExtraTestsResponse) {}
+
+  // Gets the allocation info.
+  rpc GetAllocations(GetAllocationsRequest) returns (GetAllocationsResponse) {}
+
+  // Closes the test and releases the device.
+  rpc CloseTest(CloseTestRequest) returns (CloseTestResponse) {}
+
+  // Closes the job and releases the devices.
+  rpc CloseJob(CloseJobRequest) returns (CloseJobResponse) {}
+
+  // Checks whether the jobs are alive.
+  rpc CheckJobs(CheckJobsRequest) returns (CheckJobsResponse) {}
+
+  // Upserts temp required dimensions into a device.
+  rpc UpsertDeviceTempRequiredDimensions(
+      UpsertDeviceTempRequiredDimensionsRequest)
+      returns (UpsertDeviceTempRequiredDimensionsResponse) {}
+
+  // Kill a job if it exists and is running.
+  rpc KillJob(KillJobRequest) returns (KillJobResponse) {}
+}

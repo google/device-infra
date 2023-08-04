@@ -1,0 +1,44 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.master.rpc;
+
+option java_package = "com.google.devtools.mobileharness.infra.master.rpc.proto";
+option java_outer_classname = "DebugServiceProto";
+
+message RecycleExpiredLabsRequest {}
+
+message RecycleExpiredLabsResponse {
+  repeated string recycled_device_id = 1;
+}
+
+message GetConfigRequest {}
+
+message GetConfigResponse {
+  int64 lab_recycle_threshold_ms = 1;
+}
+
+// Service for debugging or integration tests only.
+service DebugService {
+  // Force recycle the expired labs and devices.
+  rpc RecycleExpiredLabs(RecycleExpiredLabsRequest)
+      returns (RecycleExpiredLabsResponse) {}
+
+  // Get the Master internal config.
+  rpc GetConfig(GetConfigRequest) returns (GetConfigResponse) {}
+}

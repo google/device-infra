@@ -1,0 +1,105 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.master.rpc;
+
+import "src/devtools/mobileharness/api/model/proto/lab.proto";
+import "src/devtools/mobileharness/api/query/proto/device_query.proto";
+
+option java_package = "com.google.devtools.mobileharness.infra.master.rpc.proto";
+option java_outer_classname = "DeviceInfoServiceProto";
+
+message DeviceSummary {
+  .mobileharness.api.model.LabLocator lab_locator = 1;
+  .mobileharness.shared.query.DeviceInfo device_info = 2;
+
+  int64 status_modify_time_ms = 3;
+}
+
+message GetDeviceSummariesRequest {
+  // A filter is made up of a series of key-value pairs(EXCLUDE_KEY type has no
+  // value) connected by AND(' ') or OR('|'). Match type is determined by the
+  // separator of a key-value pair.
+  //
+  // Following are the definitions and formats of three match types:
+  //
+  // MATCH_ANY: to check whether the device's key field matches any of the
+  // values. For example: key:value, key:(value1|value2)
+  //
+  // MATCH_ALL: to check whether the device's key field matches all of the
+  // values. For example: key::value, key::(value1|value2)
+  //
+  // EXCLUDE_KEY: to check whether the device has the key field in its
+  // dimensions. For example: !key
+  string filter = 1;
+
+  // Whether to use the cached data.
+  bool use_realtime_data = 2;
+}
+
+message GetDeviceSummariesResponse {
+  repeated DeviceSummary device_summary = 1;
+  string error_message = 2;
+}
+
+// Autocomplete suggestions.
+message SearchSuggestions {
+  // Search key.
+  string key = 1;
+  // Suggestions for the key search autocomplete.
+  repeated string suggestion = 2;
+}
+
+message GetDeviceSearchSuggestionsRequest {}
+
+message GetDeviceSearchSuggestionsResponse {
+  repeated SearchSuggestions search_suggestions = 1;
+}
+
+message GetGroupedDeviceInfosRequest {
+  optional string filter = 1;
+  repeated string group_by = 2;
+}
+
+message GetGroupedDeviceInfosResponse {
+  repeated GroupedDeviceInfo grouped_device_info = 1;
+  string error_message = 2;
+}
+
+// The device query result grouped by several dimensions.
+message GroupedDeviceInfo {
+  // The device info which deivices are grouped by.
+  .mobileharness.shared.query.DeviceInfo device_info = 1;
+  // The number of devices meeting such device info.
+  int32 count = 2;
+}
+
+// Service for providing device info.
+service DeviceInfoService {
+  // Gets the summary info of all devices or those which meet conditions.
+  rpc GetDeviceSummaries(GetDeviceSummariesRequest)
+      returns (GetDeviceSummariesResponse) {}
+
+  // Gets device search suggestions.
+  rpc GetDeviceSearchSuggestions(GetDeviceSearchSuggestionsRequest)
+      returns (GetDeviceSearchSuggestionsResponse) {}
+
+  // Gets grouped device info.
+  rpc GetGroupedDeviceInfos(GetGroupedDeviceInfosRequest)
+      returns (GetGroupedDeviceInfosResponse) {}
+}
