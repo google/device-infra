@@ -36,8 +36,8 @@ proto_library(
     name = "device_allocation_service_proto",
     srcs = ["device_allocation_service.proto"],
     deps = [
-        "//devtools/deviceinfra/api/deviceinfo/proto:device_locator_proto",
-        "//devtools/deviceinfra/api/deviceinfo/proto:device_requirement_proto",
+        "//src/devtools/deviceinfra/api/deviceinfo/proto:device_locator_proto",
+        "//src/devtools/deviceinfra/api/deviceinfo/proto:device_requirement_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_proto",
         "@com_google_protobuf//:duration_proto",
     ],

@@ -18,9 +18,9 @@ syntax = "proto3";
 
 package devtools.mobileharness.infra.master.rpc.proto;
 
-import "devtools/deviceinfra/api/deviceinfo/proto/device_locator.proto";
-import "devtools/deviceinfra/api/deviceinfo/proto/device_requirement.proto";
 import "google/protobuf/duration.proto";
+import "src/devtools/deviceinfra/api/deviceinfo/proto/device_locator.proto";
+import "src/devtools/deviceinfra/api/deviceinfo/proto/device_requirement.proto";
 import "src/devtools/mobileharness/api/query/proto/device_query.proto";
 
 option java_package = "com.google.devtools.mobileharness.infra.master.rpc.proto";
