@@ -34,10 +34,12 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Attribute;
 import com.google.devtools.atsconsole.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Module;
+import com.google.devtools.atsconsole.result.proto.ReportProto.Reason;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Result;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Run;
 import com.google.devtools.atsconsole.result.proto.ReportProto.RunHistory;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Summary;
+import com.google.devtools.atsconsole.result.proto.ReportProto.TestCase;
 import com.google.devtools.atsconsole.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.atsconsole.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
@@ -51,6 +53,7 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 import javax.inject.Inject;
 
 /** Merger to merge compatibitly xTS reports. */
@@ -130,8 +133,6 @@ public class CompatibilityReportMerger {
 
     long passedInSummary = 0L;
     long failedInSummary = 0L;
-    int modulesDoneInSummary = 0;
-    int modulesTotalInSummary = 0;
     for (Result report : usableReports) {
       List<Run> runsInReport =
           report.hasRunHistory() ? report.getRunHistory().getRunList() : ImmutableList.of();
@@ -140,9 +141,11 @@ public class CompatibilityReportMerger {
       // Accumulates counts in Summary
       passedInSummary += report.getSummary().getPassed();
       failedInSummary += report.getSummary().getFailed();
-      modulesDoneInSummary += report.getSummary().getModulesDone();
-      modulesTotalInSummary += report.getSummary().getModulesTotal();
     }
+
+    ImmutableList<Module> mergedModuleList = mergeModules(modules.build());
+    int modulesDoneInSummary = (int) mergedModuleList.stream().filter(Module::getDone).count();
+    int modulesTotalInSummary = mergedModuleList.size();
 
     Summary summary =
         Summary.newBuilder()
@@ -155,7 +158,7 @@ public class CompatibilityReportMerger {
     Result.Builder res = Result.newBuilder();
     res.setBuild(getNewBuildInfo(usableReports))
         .setSummary(summary)
-        .addAllModuleInfo(modules.build())
+        .addAllModuleInfo(mergedModuleList)
         .addAllAttribute(getNewResultAttrs(usableReports));
 
     if (!runs.build().isEmpty()) {
@@ -163,6 +166,102 @@ public class CompatibilityReportMerger {
     }
 
     return Optional.of(res.build());
+  }
+
+  private static ImmutableList<Module> mergeModules(List<Module> modules) {
+    if (modules.isEmpty()) {
+      return ImmutableList.of();
+    } else if (modules.size() == 1) {
+      return ImmutableList.copyOf(modules);
+    }
+
+    ImmutableList.Builder<Module> mergedModules = ImmutableList.builder();
+    LinkedHashMap<String, ImmutableList<Module>> moduleMap =
+        modules.stream()
+            .collect(
+                Collectors.groupingBy(
+                    module -> module.getName() + "_" + module.getAbi(),
+                    LinkedHashMap::new,
+                    toImmutableList()));
+
+    for (ImmutableList<Module> moduleList : moduleMap.values()) {
+      mergeModulesWithSameNameAndAbi(moduleList).ifPresent(mergedModules::add);
+    }
+
+    return mergedModules.build();
+  }
+
+  private static Optional<Module> mergeModulesWithSameNameAndAbi(List<Module> modules) {
+    if (modules.isEmpty()) {
+      return Optional.empty();
+    } else if (modules.size() == 1) {
+      return Optional.of(modules.get(0));
+    }
+
+    Module.Builder mergedModule =
+        Module.newBuilder().setName(modules.get(0).getName()).setAbi(modules.get(0).getAbi());
+    long mergedModuleRuntime = 0L;
+    boolean mergedModuleDone = true;
+    int mergedModulePassedTests = 0;
+    int mergedModuleTotalTests = 0;
+    List<TestCase> testCases = new ArrayList<>();
+    Reason moduleNotDoneReason = null;
+    for (Module module : modules) {
+      mergedModuleRuntime += module.getRuntimeMillis();
+      mergedModuleDone &= module.getDone();
+      mergedModulePassedTests += module.getPassed();
+      mergedModuleTotalTests += module.getTotalTests();
+      if (module.hasReason()) {
+        moduleNotDoneReason = module.getReason();
+      }
+      testCases.addAll(module.getTestCaseList());
+    }
+    testCases = mergeTestCasesFromSameModule(testCases);
+    mergedModule
+        .setRuntimeMillis(mergedModuleRuntime)
+        .setDone(mergedModuleDone)
+        .setPassed(mergedModulePassedTests)
+        .setTotalTests(mergedModuleTotalTests)
+        .addAllTestCase(testCases);
+    if (moduleNotDoneReason != null) {
+      mergedModule.setReason(moduleNotDoneReason);
+    }
+    return Optional.of(mergedModule.build());
+  }
+
+  private static ImmutableList<TestCase> mergeTestCasesFromSameModule(List<TestCase> testCases) {
+    if (testCases.isEmpty()) {
+      return ImmutableList.of();
+    } else if (testCases.size() == 1) {
+      return ImmutableList.copyOf(testCases);
+    }
+
+    ImmutableList.Builder<TestCase> mergedTestCases = ImmutableList.builder();
+    LinkedHashMap<String, ImmutableList<TestCase>> testCaseMap =
+        testCases.stream()
+            .collect(
+                Collectors.groupingBy(TestCase::getName, LinkedHashMap::new, toImmutableList()));
+
+    for (ImmutableList<TestCase> testCaseList : testCaseMap.values()) {
+      mergeTestCasesWithSameName(testCaseList).ifPresent(mergedTestCases::add);
+    }
+
+    return mergedTestCases.build();
+  }
+
+  private static Optional<TestCase> mergeTestCasesWithSameName(List<TestCase> testCases) {
+    if (testCases.isEmpty()) {
+      return Optional.empty();
+    } else if (testCases.size() == 1) {
+      return Optional.of(testCases.get(0));
+    }
+
+    TestCase.Builder mergedTestCase = TestCase.newBuilder().setName(testCases.get(0).getName());
+    for (TestCase testCase : testCases) {
+      mergedTestCase.addAllTest(testCase.getTestList());
+    }
+
+    return Optional.of(mergedTestCase.build());
   }
 
   /**

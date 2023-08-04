@@ -22,6 +22,7 @@ import static com.google.common.truth.Truth8.assertThat;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Attribute;
 import com.google.devtools.atsconsole.result.proto.ReportProto.BuildInfo;
+import com.google.devtools.atsconsole.result.proto.ReportProto.Module;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Result;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Summary;
 import com.google.devtools.atsconsole.result.report.CompatibilityReportMerger.ParseResult;
@@ -137,10 +138,20 @@ public final class CompatibilityReportMergerTest {
             Summary.newBuilder()
                 .setPassed(20)
                 .setFailed(2)
-                .setModulesDone(5)
-                .setModulesTotal(5)
+                .setModulesDone(3)
+                .setModulesTotal(3)
                 .build());
-    assertThat(result.getModuleInfoCount()).isEqualTo(5);
+    assertThat(result.getModuleInfoCount()).isEqualTo(3);
+
+    // Assert module mergion
+    Module module1 = result.getModuleInfoList().get(0);
+    assertThat(module1.getName()).isEqualTo("Module1");
+    assertThat(module1.getRuntimeMillis()).isEqualTo(7495 + 7495);
+    assertThat(module1.getPassed()).isEqualTo(6);
+    assertThat(module1.getTotalTests()).isEqualTo(8);
+    assertThat(module1.getTestCaseCount()).isEqualTo(2);
+    assertThat(module1.getTestCase(0).getTestCount()).isEqualTo(4);
+    assertThat(module1.getTestCase(1).getTestCount()).isEqualTo(4);
   }
 
   @Test
