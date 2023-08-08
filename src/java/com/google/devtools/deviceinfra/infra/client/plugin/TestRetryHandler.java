@@ -276,7 +276,7 @@ public class TestRetryHandler {
         }
       }
       if (retryReason != null) {
-        TestInfo newTest = addNewTest(jobInfo, currentTestInfo);
+        TestInfo newTest = addNewTest(jobInfo, currentTestInfo, validAttemptNum);
         newTest.properties().add(Test.RETRY_REASON, retryReason);
 
         if (criticalErrorId != null
@@ -347,7 +347,8 @@ public class TestRetryHandler {
     return allAttempts.build();
   }
 
-  private static TestInfo addNewTest(JobInfo jobInfo, TestInfo currentTestInfo)
+  private static TestInfo addNewTest(
+      JobInfo jobInfo, TestInfo currentTestInfo, long validAttemptNum)
       throws MobileHarnessException {
     String testName = currentTestInfo.locator().getName();
     TestInfo newTestInfo = jobInfo.tests().add(testName);
@@ -360,6 +361,10 @@ public class TestRetryHandler {
     String currentTestId = currentTestInfo.locator().getId();
     newTestInfo.properties().add(Test.FOREGOING_TEST_ID, currentTestId);
     newTestInfo.properties().add(Test.FOREGOING_TEST_RESULT, currentTestInfo.result().get().name());
+    if (validAttemptNum > 0) {
+      // If there have been valid attempts, set the index for the retry
+      newTestInfo.properties().add(Test.RETRY_INDEX, Long.toString(validAttemptNum));
+    }
     currentTestInfo.properties().add(Test.RETRY_TEST_ID, newTestInfo.locator().getId());
 
     // Disable hybrid UTP mode for all retries, excepts the following cases:
