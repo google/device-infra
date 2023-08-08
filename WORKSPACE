@@ -47,11 +47,53 @@ http_archive(
 
 http_archive(
     name = "bazel_tools",
-    sha256 = "820a94dbb14071ed6d8c266cf0c080ecb265a5eea65307579489c4662c2d582a",
+    sha256 = "2676319e86c5aeab142dccd42434364a33aa330a091c13562b7de87a10e68775",
     urls = [
-        "https://github.com/bazelbuild/bazel/releases/download/5.2.0/bazel-5.2.0-dist.zip",
+        "https://github.com/bazelbuild/bazel/releases/download/6.3.1/bazel-6.3.1-dist.zip",
     ],
 )
+
+# Gazelle and Go rules
+
+http_archive(
+    name = "io_bazel_rules_go",
+    sha256 = "6dc2da7ab4cf5d7bfc7c949776b1b7c733f05e56edc4bcd9022bb249d2e2a996",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/rules_go/releases/download/v0.39.1/rules_go-v0.39.1.zip",
+        "https://github.com/bazelbuild/rules_go/releases/download/v0.39.1/rules_go-v0.39.1.zip",
+    ],
+)
+
+http_archive(
+    name = "bazel_gazelle",
+    sha256 = "727f3e4edd96ea20c29e8c2ca9e8d2af724d8c7778e7923a854b2c80952bc405",
+    urls = [
+        "https://mirror.bazel.build/github.com/bazelbuild/bazel-gazelle/releases/download/v0.30.0/bazel-gazelle-v0.30.0.tar.gz",
+        "https://github.com/bazelbuild/bazel-gazelle/releases/download/v0.30.0/bazel-gazelle-v0.30.0.tar.gz",
+    ],
+)
+
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+
+go_rules_dependencies()
+go_register_toolchains(version = "1.20.5")
+gazelle_dependencies()
+
+# Needed for the googleapis protos used by com_github_bazelbuild_remote_apis below.
+http_archive(
+    name = "googleapis",
+    build_file = "//:builddeps/BUILD.bazel.googleapis",
+    sha256 = "7b6ea252f0b8fb5cd722f45feb83e115b689909bbb6a393a873b6cbad4ceae1d",
+    strip_prefix = "googleapis-143084a2624b6591ee1f9d23e7f5241856642f4d",
+    urls = [
+      "https://github.com/googleapis/googleapis/archive/143084a2624b6591ee1f9d23e7f5241856642f4d.zip"
+    ],
+)
+
+load("//:builddeps/rbe_go_deps.bzl", "rbe_go_deps")
+# gazelle:repository_macro builddeps/rbe_go_deps.bzl%rbe_go_deps
+rbe_go_deps()
 
 # Android Bazel rules
 http_archive(
