@@ -35,6 +35,7 @@ LIB_SRCS = [
     "FlagParser.java",
     "GCSResolver.java",
     "GCSUtil.java",
+    "HelpUtil.java",
     "LazyCached.java",
     "LocalFileResolver.java",
     "ProtoHelper.java",

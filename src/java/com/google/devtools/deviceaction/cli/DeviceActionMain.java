@@ -17,6 +17,7 @@
 package com.google.devtools.deviceaction.cli;
 
 import static com.google.devtools.deviceaction.common.utils.Constants.CURRENT_VERSION;
+import static com.google.devtools.deviceaction.common.utils.Constants.HELP_COMMAND;
 import static com.google.devtools.deviceaction.common.utils.Constants.VERSION_COMMAND;
 
 import com.google.common.flogger.FluentLogger;
@@ -25,6 +26,7 @@ import com.google.devtools.deviceaction.common.schemas.ActionConfig;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions;
 import com.google.devtools.deviceaction.common.utils.FlagBasedResourceHelper;
 import com.google.devtools.deviceaction.common.utils.FlagParser;
+import com.google.devtools.deviceaction.common.utils.HelpUtil;
 import com.google.devtools.deviceaction.framework.ActionConfigurer;
 import com.google.devtools.deviceaction.framework.DeviceActionModule;
 import com.google.devtools.deviceaction.framework.actions.Actions;
@@ -35,7 +37,16 @@ import java.util.Objects;
 /**
  * A tool to perform device actions.
  *
- * <p>TODO: b/285060049 - Add java doc.
+ * <p>Assume the devices already have device config files in the database. Or you can pass a device
+ * config file by '--device1 device_config=<device_config. textproto>'
+ *
+ * <p>Use 'DeviceActionMain help <command>' to learn more about the given command.
+ *
+ * <p>Use 'DeviceActionMain version' to check the version.
+ *
+ * <p>Synopsis: DeviceActionMain <command> ["--aapt <aapt>"] ["--adb <adb>"] "--da_bundletool
+ * <bundletool.jar>" "--da_cred_file <key_file.json>" ["--da_gen_file_dir </gen/file/dir>"]
+ * ["--java_command_path </java/jdk/bin/java>"] ["--tmp_dir_root </tmp/file/dir>"] ...
  */
 public final class DeviceActionMain {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -45,6 +56,16 @@ public final class DeviceActionMain {
   public static void main(String[] args) throws DeviceActionException, InterruptedException {
     if (args.length > 0 && Objects.equals(args[0], VERSION_COMMAND)) {
       System.out.println(CURRENT_VERSION);
+      return;
+    }
+
+    if (args.length > 0 && Objects.equals(args[0], HELP_COMMAND)) {
+      HelpUtil helpUtil = new HelpUtil(System.out);
+      if (args.length > 1) {
+        helpUtil.help(args[1]);
+      } else {
+        helpUtil.help();
+      }
       return;
     }
 

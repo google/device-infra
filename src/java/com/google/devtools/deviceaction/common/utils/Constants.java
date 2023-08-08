@@ -22,9 +22,11 @@ import java.security.SecureRandom;
 /** A utility class to share constants. */
 public final class Constants {
 
-  public static final Version CURRENT_VERSION = Version.of("0.0.0");
+  public static final Version CURRENT_VERSION = Version.of("0.1.0");
 
   public static final String VERSION_COMMAND = "version";
+
+  public static final String HELP_COMMAND = "help";
 
   public static final String APEX_SUFFIX = ".apex";
 
