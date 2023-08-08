@@ -18,6 +18,7 @@ syntax = "proto2";
 
 package devtools.deviceaction.schemas.proto;
 
+import "google/protobuf/descriptor.proto";
 import "google/protobuf/duration.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
 
@@ -169,4 +170,8 @@ message ResourcePath {
   // Need to store the info because it is expensive to get it if the resource is
   // remote or on device.
   optional bool is_directory = 2;
+}
+
+extend google.protobuf.FieldOptions {
+  optional string description = 494234521;
 }

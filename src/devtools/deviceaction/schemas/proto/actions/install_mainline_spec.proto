@@ -39,10 +39,13 @@ message InstallMainlineSpec {
   // "train_folder" for a folder containing module packages.
   // "apks_zips" for multiple zipped trains.
   repeated FileSpec files = 1;
-  optional bool enable_rollback = 4;
-  optional bool clean_up_sessions = 5;
-  optional bool dev_key_signed = 6;
-  optional bool skip_check_version_after_push = 7;
+  optional bool enable_rollback = 4 [
+    default = true,
+    (description) = "Optional flag to enable rollback after install failure."
+  ];
+  optional bool clean_up_sessions = 5 [default = false];
+  optional bool dev_key_signed = 6 [default = false];
+  optional bool skip_check_version_after_push = 7 [default = false];
   // Check rollback is meaningful only if rollback is enabled.
   optional bool check_rollback = 8;
 }

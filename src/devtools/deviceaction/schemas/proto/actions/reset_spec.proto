@@ -45,7 +45,8 @@ message ResetSpec {
   extend mobileharness.shared.spec.DecoratorSpec {
     optional ResetSpec decorator_ext = 1001;
   }
+  // Use tag recovery_modules to provide recovery modules.
   repeated FileSpec files = 1;
   optional ResetOption reset_option = 2;
-  optional bool need_preload_modules_recovery = 3;
+  optional bool need_preload_modules_recovery = 3 [default = false];
 }
