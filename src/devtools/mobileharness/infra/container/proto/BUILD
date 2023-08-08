@@ -33,3 +33,37 @@ java_proto_library(
     ],
     deps = [":mode_setting_proto"],
 )
+
+proto_library(
+    name = "sandbox_setting_proto",
+    srcs = ["sandbox_setting.proto"],
+    visibility = [
+        "//src/devtools/mobileharness/infra/lab/proto:__pkg__",
+    ],
+)
+
+java_proto_library(
+    name = "sandbox_setting_java_proto",
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = [":sandbox_setting_proto"],
+)
+
+proto_library(
+    name = "test_engine_proto",
+    srcs = ["test_engine.proto"],
+    visibility = [
+        "//src/devtools/mobileharness/infra/lab/proto:__pkg__",
+    ],
+    deps = [
+    ],
+)
+
+java_proto_library(
+    name = "test_engine_java_proto",
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = [":test_engine_proto"],
+)

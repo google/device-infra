@@ -57,6 +57,7 @@ java_library(
         "TestRunnerTiming.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
     ],
 )

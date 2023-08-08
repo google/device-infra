@@ -20,6 +20,7 @@ java_library(
         "TestExecutionUnit.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/container/controller:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container/sandbox:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
@@ -43,6 +44,7 @@ java_library(
         "TestExecutionResult.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/container:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
     ],

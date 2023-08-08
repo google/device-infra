@@ -1,0 +1,53 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.container;
+
+option java_package = "com.google.devtools.mobileharness.infra.container.proto";
+option java_outer_classname = "TestEngine";
+
+// Locator for MH client to talk to a test engine.
+message TestEngineLocator {
+  reserved 1, 2;  // For internal.
+
+  StubbyLocator stubby_locator = 3;
+  bool enable_stubby = 4;
+
+  message StubbyLocator {
+    // Optional. A test engine may report no or more than one IPs. If so, client
+    // should use the IP of the lab server (which is detected by MH master)
+    // instead.
+    string ip = 1;
+    // Required.
+    string host_name = 2;
+    // Required.
+    int32 port = 3;
+  }
+}
+
+enum TestEngineStatus {
+  // NOTE: Only for old lab server which does not support test engine.
+  UNKNOWN = 0;
+  NOT_STARTED = 1;
+  STARTING = 2;
+  STARTED = 3;
+  // Client only can talk to a test engine which is in this status.
+  READY = 4;
+  FAILED = 5;
+  CLOSED = 6;
+}
