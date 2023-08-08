@@ -81,7 +81,7 @@ public class TestLister {
         .log()
         .atInfo()
         .alsoTo(logger)
-        .log("enerating tests using %s...", listerClass.getSimpleName());
+        .log("Generating tests using %s...", listerClass.getSimpleName());
     // The test lister may add TestInfo into JobInfo directly.
     List<String> tests = lister.listTests(jobInfo);
     if (tests.isEmpty() && jobInfo.tests().isEmpty()) {
