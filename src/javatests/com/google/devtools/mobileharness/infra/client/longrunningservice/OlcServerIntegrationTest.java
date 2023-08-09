@@ -173,10 +173,9 @@ public class OlcServerIntegrationTest {
 
       // Gets the server log.
       ControlStub controlStub = new ControlStub(channel);
-      @SuppressWarnings("Convert2Diamond")
       StreamObserver<GetLogRequest> requestObserver =
           controlStub.getLog(
-              new StreamObserver<GetLogResponse>() {
+              new StreamObserver<>() {
                 @Override
                 public void onNext(GetLogResponse response) {
                   response.getLogRecords().getLogRecordList().stream()

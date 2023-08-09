@@ -86,10 +86,9 @@ public class SessionManager {
   private final Map<String, SessionRunnerAndFinalResultFuture> sessionRunners = new HashMap<>();
 
   /** Archived sessions. */
-  @SuppressWarnings("Convert2Diamond")
   @GuardedBy("lock")
   private final LinkedHashMap<String, SessionDetail> archivedSessions =
-      new LinkedHashMap<String, SessionDetail>() {
+      new LinkedHashMap<>() {
         @Override
         protected boolean removeEldestEntry(Entry<String, SessionDetail> eldest) {
           return size() > ARCHIVED_SESSION_CAPACITY;
@@ -291,7 +290,7 @@ public class SessionManager {
       SessionDetail.Builder sessionDetailBuilder = sessionDetail.toBuilder();
       sessionDetailBuilder.setSessionStatus(SessionStatus.SESSION_FINISHED);
 
-      logger.atInfo().withCause(error).log("Session finished: %s", sessionDetail);
+      logger.atInfo().withCause(error).log("Session finished: %s", shortDebugString(sessionDetail));
 
       // Adds the error thrown from the session runner to SessionDetail, if any.
       if (error != null) {

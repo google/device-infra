@@ -27,6 +27,7 @@ package(
 android_binary(
     name = "WifiUtil",
     custom_package = "com.google.devtools.mobileharness.platform.android.app.binary.wifiutil",
+    javacopts = ["-source 8 -target 8"],
     manifest = "AndroidManifest.xml",
     multidex = "legacy",
     deps = [":WifiUtilLib"],
@@ -36,5 +37,6 @@ android_library(
     name = "WifiUtilLib",
     srcs = glob(["*.java"]),
     custom_package = "com.google.devtools.mobileharness.platform.android.app.binary.wifiutil",
+    javacopts = ["-source 8 -target 8"],
     manifest = "AndroidManifest.xml",
 )

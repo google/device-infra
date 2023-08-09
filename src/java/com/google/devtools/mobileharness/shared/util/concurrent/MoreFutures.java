@@ -40,14 +40,14 @@ public class MoreFutures {
   private MoreFutures() {}
 
   /** Adds a callback to a future that will log a message if the future fails. */
-  @SuppressWarnings({"Convert2Diamond", "FloggerWithoutCause"})
+  @SuppressWarnings("FloggerWithoutCause")
   @FormatMethod
   @CanIgnoreReturnValue
   public static <V> ListenableFuture<V> logFailure(
       ListenableFuture<V> future, Level level, String message, Object... params) {
     addCallback(
         future,
-        new FutureCallback<V>() {
+        new FutureCallback<>() {
           @Override
           public void onSuccess(V result) {}
 
