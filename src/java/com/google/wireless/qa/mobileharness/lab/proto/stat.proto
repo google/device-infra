@@ -1,0 +1,124 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.lab;
+
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
+import "src/devtools/mobileharness/api/model/proto/device.proto";
+import "src/devtools/mobileharness/api/model/proto/error.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.lab.proto";
+
+// Counter of a specific status of a device.
+message DeviceStatusDuration {
+  // Device status.
+  optional mobileharness.api.model.DeviceStatus status = 1;
+  // Approximate time in milliseconds when the device is in such status.
+  optional int64 ms = 2;  // required.
+}
+
+// Information of a historical job.
+message Job {
+  // ID of the job.
+  optional string id = 1;  // required.
+  // TODO: After all lab servers >= 4.1.19, changes field 5 & 6 to
+  // required and updates the processing logic in FE. Name of the job.
+  optional string name = 5;
+  // Job user.
+  optional string user = 6;
+  // Type of the job.
+  optional string type = 2;  // required.
+  // Max run time in milliseconds for each test.
+  optional int64 test_timeout_ms = 3;  // required.
+  // Parameters of the job.
+  repeated mobileharness.shared.StrPair param = 4;
+}
+
+// Information of a historical test.
+// Next ID: 13
+message Test {
+  // Id of the test.
+  optional string id = 8;  // required.
+  // Name of the test.
+  optional string name = 1;  // required.
+  // The job that this test belongs to.
+  optional Job job = 2;  // required.
+  // Status of this test.
+  optional mobileharness.shared.TestStatus status = 3;  // required.
+  // Result of this test.
+  optional mobileharness.shared.TestResult result = 4;  // required.
+  // Cause of a non-passing test result.
+  optional mobileharness.api.model.ExceptionDetail deprecated_result_cause = 11
+      [deprecated = true];
+  optional stability.model.ExceptionDetail result_cause = 12;
+  // Test output logs.
+  optional string log = 5;
+  // Test errors.
+  repeated mobileharness.shared.ErrorInfo error = 9;
+  // Test properties.
+  repeated mobileharness.shared.StrPair property = 10;
+  // Time in milliseconds when this test is created in lab server.
+  optional int64 create_time = 6;  // required.
+  // Time in milliseconds when the test is last modified.
+  optional int64 modify_time = 7;  // required.
+}
+
+// Statistic of a device.
+// To be safety, next ID: 12.
+message Device {
+  // ID of the device.
+  optional string id = 1;  // required.
+  // Total number of the tests finished on this device.
+  optional int32 total_test_num = 2;  // required.
+
+  // Historical tests run on this device. Will only keep up to 100 tests. If
+  // exceeded, older tests will be deleted. Deprecated: This field will not be
+  // filled by lab server now.
+  repeated Test latest_test = 3 [deprecated = true];
+  // Time in milliseconds when this device is first time detected by the lab
+  // server.
+  optional int64 first_show_up_time = 4;  // required.
+  // Time in milliseconds when this device showed up last time.
+  optional int64 last_show_up_time = 5;  // required.
+  // Time in milliseconds when this device became ready last time. If the device
+  // has never become ready before, will return a negative value.
+  optional int64 last_ready_time = 6;  // required.
+  // Time in milliseconds when this device was removed or rebooted last time. If
+  // the device has never died before, will return a negative value.
+  optional int64 last_die_time = 7;  // required.
+  // Status duration of the device since first showed up in the lab server.
+  // Won't be reset when device is reconnected.
+  repeated DeviceStatusDuration status_duration = 8;
+  // Status duration of the device since last time the device is
+  // started/connected. Will be reset when device is reconnected.
+  repeated DeviceStatusDuration last_status_duration = 9;
+}
+
+// Statistic of a lab server.
+message Lab {
+  // Start time in milliseconds of the current lab server.
+  optional int64 start_time = 1;  // required.
+  // Statistic data of any devices ever show up in the current lab server.
+  repeated Device device_stat = 2;
+}
+
+message LabServerStatus {
+  repeated string device_id = 1;
+}

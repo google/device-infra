@@ -1,0 +1,268 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.lab;
+
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
+import "src/devtools/mobileharness/api/model/proto/device.proto";
+import "src/devtools/mobileharness/api/model/proto/error.proto";
+import "src/devtools/mobileharness/api/model/proto/job.proto";
+import "src/devtools/mobileharness/shared/trace/proto/span.proto";
+import "src/java/com/google/wireless/qa/mobileharness/lab/proto/stat.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/job_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.lab.proto";
+
+// Note that whenever it changes, please also modify MH lab TestInfoCreator.
+message KickOffTestRequest {
+  reserved 4 to 6;
+
+  // Version of the MH client.
+  // Required.
+  // Since MH client 4.29.
+  optional string client_version = 8;
+
+  // Job information.
+  // Required.
+  // Since MH client 4.29.
+  optional Job job = 9;
+
+  // Test information.
+  // Required.
+  // Since MH client 4.29.
+  optional Test test = 10;
+
+  // Device IDs which should contain at least one device.
+  repeated string device_id = 7;
+
+  // The span of the method which calls this RPC call.
+  optional mobileharness.shared.trace.ParentSpan parent_span = 11;
+
+  // Job information.
+  message Job {
+    // Job ID.
+    // Required.
+    optional string job_id = 1;
+    // Job Name.
+    // Required.
+    optional string job_name = 2;
+    // Job feature.
+    // Required.
+    optional mobileharness.api.model.JobFeature job_feature = 3;
+    // Parameters of the job.
+    repeated mobileharness.shared.StrPair job_param = 4;
+    // Timeout setting of the job and test.
+    // Required.
+    optional mobileharness.shared.Timeout timeout = 5;
+    // Spec for drivers and decorators.
+    // Required.
+    optional mobileharness.shared.spec.JobSpec job_spec = 6;
+    // A json string of JobInfo.scopedSpecs(). We use its json string because
+    // the Spec is small and the json string is helpful for debugging.
+    // Required.
+    optional string job_scoped_specs_json = 7;
+    // The time stamp of job create time in milliseconds.
+    // Required.
+    optional int64 job_create_time_ms = 8;
+    // The time stamp of job start time in milliseconds.
+    // Required.
+    optional int64 job_start_time_ms = 9;
+    // Job properties generated on Client side.
+    repeated shared.StrPair job_property = 10;
+    // JSON scoped specs for all devices in the Job. Required.
+    // Since MH lab server 4.69.1.
+    repeated string device_scoped_specs_json = 11;
+  }
+
+  // Test information.
+  message Test {
+    // Test ID.
+    // Required.
+    optional string test_id = 1;
+    // Test name.
+    // Required.
+    optional string test_name = 2;
+    // The time stamp of test create time in milliseconds.
+    // Required.
+    optional int64 test_create_time_ms = 3;
+    // The time stamp of test start time in milliseconds.
+    // Required.
+    optional int64 test_start_time_ms = 4;
+    // Test properties generated on Client side.
+    repeated shared.StrPair test_property = 5;
+  }
+
+  // Job ID.
+  // Deprecated: Use job.job_id instead.
+  // TODO: Removes it after all MH labs >= 4.123.
+  optional string job_id = 1 [deprecated = true];
+  // Test ID.
+  // Deprecated: Use test.test_id instead.
+  // TODO: Removes it after all MH labs >= 4.123.
+  optional string test_id = 2 [deprecated = true];
+  // Device ID.
+  // Deprecated.
+  // TODO: Removes it after all MH labs >= 4.123.
+  optional string deprecated_device_id = 3 [deprecated = true];
+}
+
+message KickOffTestResponse {
+  // Empty but may be extended.
+}
+
+message TestMessage {
+  // Message content.
+  map<string, string> message_content = 1;
+  // Test ID chain from root test to destination sub test.
+  repeated string sub_test_id_chain = 2;
+}
+
+message GetTestStatusRequest {
+  // Job ID.
+  required string job_id = 1;
+  // Test Id.
+  required string test_id = 2;
+  // Current offset of the logs which have already been retrieved from lab to
+  // user.
+  optional int32 test_log_offset = 3;
+  // Status of the sub tests.
+  repeated GetTestStatusRequest sub_test = 4;
+}
+
+// Next ID: 9
+message GetTestStatusResponse {
+  // Current status of the test.
+  optional mobileharness.shared.TestStatus test_status = 1;
+  // Test result. When the result is PASS/FAIL/ERROR/TIMEOUT, it doesn't mean
+  // the test is finished. The lab server may do some addition work like dumping
+  // device logs.
+  required mobileharness.shared.TestResult test_result = 2;
+  // Cause of a non-passing test result.
+  optional mobileharness.api.model.ExceptionDetail
+      deprecated_test_result_cause = 6 [deprecated = true];
+  optional stability.model.ExceptionDetail test_result_cause = 8;
+  // Output log from the specified offset.
+  required string test_log = 3;
+  // Test messages. Only valid for the top-level test.
+  repeated TestMessage test_message = 4;
+  // Status of the sub tests.
+  repeated SubTestStatusResponse sub_test = 5;
+  // Device feature in the same order of device id in request.
+  // Since MH lab server 4.24.
+  // To avoid huge rpc cost, we only set this field when test status is DONE.
+  // This field would also be empty if the local test runner has not checked
+  // device yet.
+  // This field is only set / valid for top-level tests. For sub-tests, this
+  // field will not be set.
+  repeated mobileharness.api.model.DeviceFeature device_feature = 7;
+}
+
+message GetTestDetailRequest {
+  // Job ID.
+  required string job_id = 1;
+  // Test ID.
+  required string test_id = 2;
+}
+
+message GetTestDetailResponse {
+  required Test test_detail = 1;
+}
+
+message SubTestStatusResponse {
+  // To have GetTestStatusResponse as a field here is because sub-test could
+  // have sub-tests
+  optional GetTestStatusResponse status = 1;
+  // Test Id.
+  optional string test_id = 2;
+  // Test name.
+  optional string test_name = 3;
+}
+
+message GetTestGenDataRequest {
+  // Job ID.
+  required string job_id = 1;
+  // Test Id.
+  required string test_id = 2;
+  // Gen data of the sub tests
+  repeated GetTestGenDataRequest sub_test = 3;
+}
+
+message GetTestGenDataResponse {
+  reserved 3 to 5;
+
+  // URLs of the files generated by the test. When test is DONE, The client
+  // should retrieve these files using the URLs.
+  repeated string test_gen_file_url = 1 [deprecated = true];
+  // Properties generated by the test.
+  repeated shared.StrPair test_property = 2;
+  // Related path of the gen files in the test gen file dir.
+  repeated string gen_file_related_path = 6;
+  // Gen file dir if there is any gen files.
+  optional string gen_file_dir = 7;
+  // Gen data of the sub tests.
+  repeated SubTestGenDataResponse sub_test = 8;
+  // Test warnings.
+  repeated mobileharness.api.model.ExceptionDetail test_warning = 9;
+}
+
+message SubTestGenDataResponse {
+  // Sub-test generated data shares the same fields as root-test.
+  // To have GetTestGenDataResponse as a field here so we don't need to
+  // duplicate those fields. We won't set gen_data.sub_test
+  // (unless sub-test has sub-tests)
+  optional GetTestGenDataResponse gen_data = 1;
+  // Test Id.
+  optional string test_id = 2;
+}
+
+message ForwardTestMessageRequest {
+  // Root test ID.
+  required string test_id = 1;
+  // Test message.
+  required TestMessage test_message = 2;
+  // Whether this is intended for a remote destination.
+  optional bool is_remote_message = 3 [default = true];
+}
+
+message ForwardTestMessageResponse {
+  // Empty but may be extended.
+}
+
+// Lab service for MobileHarness users. Before talking to the lab, user talk to
+// master server and already know which device is assigned to run a particular
+// test.
+service ExecTestService {
+  // Kicks off a test on the allocated device. You should make sure test info
+  // and all files have already been sent.
+  rpc KickOffTest(KickOffTestRequest) returns (KickOffTestResponse) {}
+  // Gets the current status of a test.
+  // This method should only be invoked by MH client RemoteTestRunner because
+  // test messaging system depends on this assumption. go/mh-messaging-design.
+  rpc GetTestStatus(GetTestStatusRequest) returns (GetTestStatusResponse) {}
+  // Gets the detail information of a running test.
+  // This method will be used by MOSS.
+  // Since MH lab server 4.43.
+  rpc GetTestDetail(GetTestDetailRequest) returns (GetTestDetailResponse) {}
+  // Forwards a test message to the lab side.
+  rpc ForwardTestMessage(ForwardTestMessageRequest)
+      returns (ForwardTestMessageResponse) {}
+  // Gets generated files and properties of a test.
+  rpc GetTestGenData(GetTestGenDataRequest) returns (GetTestGenDataResponse) {}
+}

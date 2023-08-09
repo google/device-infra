@@ -31,6 +31,7 @@ java_library(
     name = "device_state_checker",
     srcs = ["DeviceStateChecker.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
 )
@@ -141,6 +142,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat:__pkg__",
     ],
     deps = [
@@ -212,6 +214,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],

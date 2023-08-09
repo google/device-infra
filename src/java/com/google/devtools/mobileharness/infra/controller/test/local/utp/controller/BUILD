@@ -18,6 +18,7 @@ java_library(
     srcs = ["TestFlowConverter.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/controller/test/local/utp/proto:basic_flow_java_proto",
@@ -34,7 +35,7 @@ java_library(
     name = "no_op_test_flow_converter",
     srcs = ["NoOpTestFlowConverter.java"],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
         ":test_flow_converter",
