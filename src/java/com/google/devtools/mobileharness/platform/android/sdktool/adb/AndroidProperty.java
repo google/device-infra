@@ -47,6 +47,7 @@ public enum AndroidProperty {
   SDK_VERSION("ro.build.version.sdk"),
   SIGN("ro.build.tags"),
   SOC_ID("ro.boot.hw.soc.id"),
+  SOC_REV("ro.boot.hw.soc.rev"),
   TYPE("ro.product.name"),
   VERITYMODE("ro.boot.veritymode");
 

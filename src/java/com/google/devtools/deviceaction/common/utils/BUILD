@@ -13,15 +13,12 @@
 # limitations under the License.
 #
 
-DEFAULT_VISIBILITY = [
-    "//src/java/com/google/devtools/deviceaction:deviceaction_java_pkg",
-    "//src/javatests/com/google/devtools/deviceaction:deviceaction_javatests_pkg",
-    "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:__pkg__",
-]
-
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
+    default_visibility = [
+        "//src/java/com/google/devtools/deviceaction:deviceaction_java_pkg",
+        "//src/javatests/com/google/devtools/deviceaction:deviceaction_javatests_pkg",
+    ],
 )
 
 LIB_SRCS = [
@@ -44,13 +41,16 @@ LIB_SRCS = [
     "ResourceHelper.java",
     "ResourceUtil.java",
     "SimpleResolver.java",
-    "TimeUtils.java",
 ]
 
 java_library(
     name = "utils",
     srcs = LIB_SRCS,
+    exports = [
+        ":time",
+    ],
     deps = [
+        ":time",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
         "//src/devtools/deviceaction/schemas/proto/actions:install_mainline_spec_java_proto",
@@ -68,8 +68,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf//:protobuf_java_util",
-        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_api_client_google_api_client",
         "@maven//:com_google_apis_google_api_services_storage",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -78,6 +76,19 @@ java_library(
         "@maven//:com_google_http_client_google_http_client",
         "@maven//:com_google_http_client_google_http_client_gson",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "time",
+    srcs = ["TimeUtils.java"],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = [
+        "@com_google_protobuf//:protobuf_java_util",
+        "@com_google_protobuf_protobuf_java",
+        "@maven//:com_google_guava_guava",
     ],
 )
 
