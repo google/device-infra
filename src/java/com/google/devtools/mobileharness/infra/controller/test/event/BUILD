@@ -22,6 +22,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     ],
     deps = [

@@ -48,6 +48,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],
     deps = [
@@ -161,6 +162,7 @@ java_library(
     name = "device_feature_manager",
     srcs = ["DeviceFeatureManager.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
@@ -172,6 +174,7 @@ java_library(
     name = "test_info_manager",
     srcs = ["TestInfoManager.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

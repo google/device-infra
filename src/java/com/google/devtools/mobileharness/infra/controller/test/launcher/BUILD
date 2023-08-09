@@ -57,6 +57,7 @@ java_library(
     name = "direct_test_runner_launcher_factory",
     srcs = ["DirectTestRunnerLauncherFactory.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

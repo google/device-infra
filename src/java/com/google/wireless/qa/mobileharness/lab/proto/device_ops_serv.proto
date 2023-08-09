@@ -1,0 +1,81 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.lab;
+
+import "src/devtools/mobileharness/api/model/proto/device.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.lab.proto";
+
+message TakeScreenshotRequest {
+  required string device_id = 1;
+}
+
+message TakeScreenshotResponse {
+  repeated string screenshot_url = 1;
+}
+
+message GetDeviceLogRequest {
+  optional string device_id = 1;
+
+  optional mobileharness.api.model.DeviceLogType device_log_type = 2;
+}
+
+message GetDeviceLogResponse {
+  optional string device_log_url = 1;
+}
+
+message CommandExecutionResult {
+  optional string command = 1;
+  optional string stdout = 2;
+  optional string stderr = 3;
+}
+
+message GetDeviceDebugInfoRequest {
+  enum GetDeviceDebugInfoCommand {
+    ALL = -1;
+    UNKNOWN = 0;
+    LSUSB = 1;
+    PS = 2;
+    ADB = 3;
+    FASTBOOT = 4;
+    NDM = 5;
+    NDM_VERSION = 6;
+    USB_DEVICE_DETECTOR = 7;
+    IP_LINK_SHOW = 8;
+  }
+  repeated GetDeviceDebugInfoCommand command = 1;
+}
+
+message GetDeviceDebugInfoResponse {
+  repeated CommandExecutionResult device_debug_info = 1;
+}
+
+// Lab service for FE to take the screenshot.
+service DeviceOpsService {
+  // Sends the screenshot file info to the lab.
+  rpc TakeScreenshot(TakeScreenshotRequest) returns (TakeScreenshotResponse) {}
+
+  // Gets the device log file info of the specific device.
+  rpc GetDeviceLog(GetDeviceLogRequest) returns (GetDeviceLogResponse) {}
+
+  // Gets the debug info by running shell commands, such as "adb devices",
+  // "lsusb", etc.
+  rpc GetDeviceDebugInfo(GetDeviceDebugInfoRequest)
+      returns (GetDeviceDebugInfoResponse) {}
+}

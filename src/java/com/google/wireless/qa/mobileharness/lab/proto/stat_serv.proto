@@ -1,0 +1,51 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.lab;
+
+import "src/java/com/google/wireless/qa/mobileharness/lab/proto/stat.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.lab.proto";
+
+message GetLabStatRequest {
+  // Empty but may be extended.
+}
+
+message GetLabStatResponse {
+  required Lab lab_stat = 1;
+}
+
+message GetDeviceStatRequest {
+  // ID of the device.
+  required string device_id = 1;
+}
+
+message GetDeviceStatResponse {
+  required Device device_stat = 1;
+}
+
+// Lab service for showing statistic data in MobileHarness FE.
+service StatService {
+  // Gets the overall statistic of the whole lab server. Detailed test history
+  // will not be included in the response.
+  rpc GetLabStat(GetLabStatRequest) returns (GetLabStatResponse) {}
+
+  // Gets detail statistic of a specific device in the lab server without the
+  // test history.
+  rpc GetDeviceStat(GetDeviceStatRequest) returns (GetDeviceStatResponse) {}
+}

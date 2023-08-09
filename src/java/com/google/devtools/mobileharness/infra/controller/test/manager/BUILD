@@ -21,6 +21,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/host/utrs/service:__pkg__",
         "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     ],
     exports = [
@@ -58,6 +59,36 @@ java_library(
         ":manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
+    ],
+)
+
+java_library(
+    name = "proxy_test_manager",
+    srcs = ["ProxyTestManager.java"],
+    visibility = [
+        "//java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//javatests/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//javatests/com/google/devtools/mobileharness/infra/controller/test/manager:__subpackages__",
+        "//javatests/com/google/devtools/mobileharness/infra/lab:__subpackages__",
+        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
+    ],
+    exports = [
+        ":exception",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/in",
+        "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_to_direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_direct_test_runner_holder",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller/util:lab_file_notifier",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
 )
 
