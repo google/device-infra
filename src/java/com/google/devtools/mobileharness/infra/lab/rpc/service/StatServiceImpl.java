@@ -18,11 +18,11 @@ package com.google.devtools.mobileharness.infra.lab.rpc.service;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.wireless.qa.mobileharness.lab.proto.Stat.Device;
 import com.google.wireless.qa.mobileharness.lab.proto.Stat.DeviceStatusDuration;
 import com.google.wireless.qa.mobileharness.lab.proto.Stat.Lab;
@@ -103,8 +103,7 @@ public class StatServiceImpl {
     deviceProto.setLastReadyTime(deviceStat.getLastReadyTime());
     deviceProto.setLastDieTime(deviceStat.getLastDieTime());
 
-    long detectDeviceIntervalMs =
-        LocalDeviceManager.FLAG_detectDeviceIntervalSec.getNonNull() * 1000L;
+    long detectDeviceIntervalMs = Flags.instance().detectDeviceIntervalSec.getNonNull() * 1000L;
     for (Entry<DeviceStatus, Long> statusCount : deviceStat.getStatusCounts().entrySet()) {
       deviceProto.addStatusDuration(
           DeviceStatusDuration.newBuilder()

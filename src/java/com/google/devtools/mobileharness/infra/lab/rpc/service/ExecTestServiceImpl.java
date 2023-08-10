@@ -45,7 +45,7 @@ import com.google.devtools.mobileharness.shared.trace.TraceClient;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
-import com.google.errorprone.annotations.ResultIgnorabilityUnspecified;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.assistedinject.Assisted;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.ForwardTestMessageRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.ForwardTestMessageResponse;
@@ -166,7 +166,7 @@ public class ExecTestServiceImpl {
     this.traceClient = traceClient;
   }
 
-  @ResultIgnorabilityUnspecified
+  @CanIgnoreReturnValue
   public KickOffTestResponse kickOffTest(KickOffTestRequest req) throws MobileHarnessException {
     MobileHarnessLocalTraceSpanBuilder traceSpanBuilder =
         new MobileHarnessLocalTraceSpanBuilder(
@@ -269,7 +269,7 @@ public class ExecTestServiceImpl {
         .build();
   }
 
-  @ResultIgnorabilityUnspecified
+  @CanIgnoreReturnValue
   public ForwardTestMessageResponse forwardTestMessage(ForwardTestMessageRequest req)
       throws MobileHarnessException {
     String rootTestId = req.getTestId();

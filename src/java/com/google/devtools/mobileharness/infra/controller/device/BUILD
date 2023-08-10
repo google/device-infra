@@ -95,6 +95,7 @@ java_library(
         ":local_device_runner_provider",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:callables",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",

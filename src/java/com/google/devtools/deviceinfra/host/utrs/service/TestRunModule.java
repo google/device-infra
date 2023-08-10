@@ -22,16 +22,12 @@ import com.google.devtools.deviceinfra.host.utrs.service.Annotations.CloudRpcSha
 import com.google.devtools.deviceinfra.host.utrs.service.Annotations.DeviceRunner;
 import com.google.devtools.deviceinfra.host.utrs.service.Annotations.GlobalEventBus;
 import com.google.devtools.deviceinfra.host.utrs.service.Annotations.LabRpcPort;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.Sandbox;
 import com.google.devtools.deviceinfra.host.utrs.service.Annotations.ServViaCloudRpc;
 import com.google.devtools.deviceinfra.host.utrs.service.Annotations.ServViaStubby;
-import com.google.devtools.mobileharness.infra.container.controller.ContainerFileNotificationCache;
-import com.google.devtools.mobileharness.infra.container.util.SandboxUtil;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunnerProvider;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.lab.controller.JobManager;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServiceImpl;
-import com.google.devtools.mobileharness.shared.trace.TraceClient;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.AbstractModule;
@@ -39,7 +35,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 
-/** Module for UTRS. Shared configuration for both Lab and Borg environment. */
+/** Module for UTRS. Shared configuration for both Lab and Prod environment. */
 public final class TestRunModule extends AbstractModule {
 
   @Provides
@@ -49,11 +45,8 @@ public final class TestRunModule extends AbstractModule {
       ProxyTestManager testManager,
       JobManager jobManager,
       NetUtil netUtil,
-      ContainerFileNotificationCache containerFileNotificationCache,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
-      TraceClient traceClient,
-      @Sandbox SandboxUtil sandboxUtil,
       @GlobalEventBus EventBus eventBus,
       @CloudRpcDnsAddress String cloudRpcDnsAddress,
       @CloudRpcShardName String cloudRpcShardName,
@@ -65,17 +58,14 @@ public final class TestRunModule extends AbstractModule {
         localDeviceRunnerProvider,
         jobManager,
         testManager,
-        containerFileNotificationCache,
         localFileUtil,
         netUtil,
-        sandboxUtil,
         systemUtil,
         servViaStubby,
         labRpcPort,
         servViaCloudRpc,
         cloudRpcDnsAddress,
         cloudRpcShardName,
-        eventBus,
-        traceClient);
+        eventBus);
   }
 }
