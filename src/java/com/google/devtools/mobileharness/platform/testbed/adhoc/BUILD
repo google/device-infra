@@ -19,10 +19,7 @@ java_library(
         "AdhocSubDeviceInfo.java",
         "AdhocTestbedConfig.java",
     ],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/platform/testbed:__subpackages__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
-    ],
+    visibility = ["//src/java/com/google/devtools/mobileharness/platform/testbed:__subpackages__"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
