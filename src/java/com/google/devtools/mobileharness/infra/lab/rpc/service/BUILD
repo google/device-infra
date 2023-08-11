@@ -79,6 +79,47 @@ java_library(
 )
 
 java_library(
+    name = "exec_test",
+    srcs = ["ExecTestServiceImpl.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/host/utrs/common/env",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/out",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_helper_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/exception",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:file_publisher",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:forwarding_test_message_buffer",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_direct_test_runner_holder",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_local_direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller/util:lab_file_notifier",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service/util:lab_response_proto_generator",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service/util:test_info_creator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
+        "//src/java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/lab/proto:stat_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_assistedinject",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "stat",
     srcs = ["StatServiceImpl.java"],
     deps = [

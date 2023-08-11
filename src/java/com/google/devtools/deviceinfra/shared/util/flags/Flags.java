@@ -52,7 +52,7 @@ public class Flags {
   @com.beust.jcommander.Parameter(
       names = "--adb_command_retry_interval",
       description =
-          "The wait interval betwenn retry attempts for executing adb command. Default is 0.",
+          "The wait interval between retry attempts for executing adb command. Default is 0.",
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> adbCommandRetryInterval = adbCommandRetryIntervalDefault;
 
@@ -508,7 +508,7 @@ public class Flags {
   @com.beust.jcommander.Parameter(
       names = "--skip_connect_device_to_wifi",
       description =
-          "Whether to skip connecting device to their default wifi network. Default is false.",
+          "Whether to skip connecting device to their default Wi-Fi network. Default is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> skipConnectDeviceToWifi = skipConnectDeviceToWifiDefault;
 
@@ -530,7 +530,7 @@ public class Flags {
       description =
           "How soon to clean up the genfile after each test. Default is 0, which means the genfile "
               + "is removed immediately when a test finishes. It has the risk to blow up the disk "
-              + " of the lab host when setting to non zero.",
+              + " of the lab host when setting to non-zero.",
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> jobGenFileExpiredTime = jobGenFileExpiredTimeDefault;
 

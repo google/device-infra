@@ -24,6 +24,18 @@ package(
 )
 
 java_library(
+    name = "file_publisher",
+    srcs = ["FilePublisher.java"],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "forwarding_test_message_buffer",
     srcs = ["ForwardingTestMessageBuffer.java"],
     deps = [

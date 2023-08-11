@@ -201,7 +201,7 @@ public class LabResponseProtoGenerator {
       builder.setTestLog(testInfo.log().get(0));
     }
 
-    // This assumes that each of the sub-tests of testInfo has an unique test ID.
+    // This assumes that each of the sub-tests of testInfo has a unique test ID.
     // To make sure the same testInfo won't be added again, if already requested by the client.
     Set<String> requestedTestId = new HashSet<>();
 

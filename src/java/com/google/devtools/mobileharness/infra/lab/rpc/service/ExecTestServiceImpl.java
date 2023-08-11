@@ -39,9 +39,6 @@ import com.google.devtools.mobileharness.infra.lab.controller.LabLocalDirectTest
 import com.google.devtools.mobileharness.infra.lab.controller.util.LabFileNotifier;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.util.LabResponseProtoGenerator;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.util.TestInfoCreator;
-import com.google.devtools.mobileharness.shared.trace.MobileHarnessLocalTraceSpanBuilder;
-import com.google.devtools.mobileharness.shared.trace.MobileHarnessWithLocalTraceSpan;
-import com.google.devtools.mobileharness.shared.trace.TraceClient;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
@@ -104,8 +101,6 @@ public class ExecTestServiceImpl {
 
   @Nullable private final EventBus globalInternalEventBus;
 
-  private final TraceClient traceClient;
-
   private volatile boolean forceCleanUpForDrainTimeout = false;
 
   /* Constructor for UTRS injection */
@@ -122,16 +117,14 @@ public class ExecTestServiceImpl {
         null,
         TestMessageManager.getInstance(),
         new ForwardingTestMessageBuffer(testRunnerHolder),
-        new TestInfoCreator(testRunnerHolder, new LocalFileUtil()),
-        new TraceClient());
+        new TestInfoCreator(testRunnerHolder, new LocalFileUtil()));
   }
 
   public ExecTestServiceImpl(
       LabDirectTestRunnerHolder testRunnerHolder,
       DeviceHelperFactory deviceHelperFactory,
       ListeningExecutorService threadPool,
-      @Nullable EventBus globalInternalEventBus,
-      TraceClient traceClient) {
+      @Nullable EventBus globalInternalEventBus) {
     this(
         testRunnerHolder,
         deviceHelperFactory,
@@ -140,8 +133,7 @@ public class ExecTestServiceImpl {
         globalInternalEventBus,
         TestMessageManager.getInstance(),
         new ForwardingTestMessageBuffer(testRunnerHolder),
-        new TestInfoCreator(testRunnerHolder, new LocalFileUtil()),
-        traceClient);
+        new TestInfoCreator(testRunnerHolder, new LocalFileUtil()));
   }
 
   @VisibleForTesting
@@ -153,8 +145,7 @@ public class ExecTestServiceImpl {
       @Nullable EventBus globalInternalEventBus,
       TestMessageManager testMessageManager,
       ForwardingTestMessageBuffer forwardingTestMessageBuffer,
-      TestInfoCreator testInfoCreator,
-      TraceClient traceClient) {
+      TestInfoCreator testInfoCreator) {
     this.testRunnerHolder = testRunnerHolder;
     this.deviceHelperFactory = deviceHelperFactory;
     this.labResponseProtoGenerator = labResponseProtoGenerator;
@@ -163,86 +154,77 @@ public class ExecTestServiceImpl {
     this.testMessageManager = testMessageManager;
     this.forwardingTestMessageBuffer = forwardingTestMessageBuffer;
     this.testInfoCreator = testInfoCreator;
-    this.traceClient = traceClient;
   }
 
   @CanIgnoreReturnValue
   public KickOffTestResponse kickOffTest(KickOffTestRequest req) throws MobileHarnessException {
-    MobileHarnessLocalTraceSpanBuilder traceSpanBuilder =
-        new MobileHarnessLocalTraceSpanBuilder(
-                getClass().getSimpleName(), "kickOffTest", traceClient)
-            .setParent(req.getParentSpan().getId());
-    req.getParentSpan().getTags().getTagList().forEach(tag -> traceSpanBuilder.addTag(tag));
-    try (MobileHarnessWithLocalTraceSpan kickOffTestSpan = traceSpanBuilder.build()) {
-      logger.atInfo().log("KickOffTestRequest: %s", req);
+    logger.atInfo().log("KickOffTestRequest: %s", req);
 
-      // Creates TestInfo.
-      TestInfo testInfo;
-      try {
-        testInfo = testInfoCreator.create(req);
-        testInfo
-            .properties()
-            .add(PropertyName.Test._IS_RUN_IN_DM, String.valueOf(UtrsEnvironments.isRunInDM()));
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new MobileHarnessException(
-            InfraErrorId.LAB_RPC_EXEC_TEST_KICK_OFF_TEST_INTERRUPTED,
-            "Interrupted when creating test info",
-            e);
-      }
+    // Creates TestInfo.
+    TestInfo testInfo;
+    try {
+      testInfo = testInfoCreator.create(req);
+      testInfo
+          .properties()
+          .add(PropertyName.Test._IS_RUN_IN_DM, String.valueOf(UtrsEnvironments.isRunInDM()));
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new MobileHarnessException(
+          InfraErrorId.LAB_RPC_EXEC_TEST_KICK_OFF_TEST_INTERRUPTED,
+          "Interrupted when creating test info",
+          e);
+    }
 
-      // Gets DeviceHelpers.
-      List<Device> devices = new ArrayList<>();
-      for (String deviceId : req.getDeviceIdList()) {
-        devices.add(deviceHelperFactory.getDeviceHelper(deviceId));
-      }
-      List<String> deviceIds =
-          devices.stream().map(Device::getDeviceId).collect(Collectors.toList());
+    // Gets DeviceHelpers.
+    List<Device> devices = new ArrayList<>();
+    for (String deviceId : req.getDeviceIdList()) {
+      devices.add(deviceHelperFactory.getDeviceHelper(deviceId));
+    }
+    List<String> deviceIds = devices.stream().map(Device::getDeviceId).collect(Collectors.toList());
 
-      // Creates Allocation.
-      Allocation allocation =
-          new Allocation(
-              testInfo.locator(),
-              // TODO: Use the correct way to create DeviceLocator after b/37969936
-              // fixed.
-              deviceIds.stream().map(DeviceLocator::new).collect(Collectors.toList()),
-              devices.stream()
-                  .map(Device::getDimensions)
-                  .map(StrPairUtil::convertCollectionToMultimap)
-                  .collect(Collectors.toList()));
+    // Creates Allocation.
+    Allocation allocation =
+        new Allocation(
+            testInfo.locator(),
+            // TODO: Use the correct way to create DeviceLocator after b/37969936
+            // fixed.
+            deviceIds.stream().map(DeviceLocator::new).collect(Collectors.toList()),
+            devices.stream()
+                .map(Device::getDimensions)
+                .map(StrPairUtil::convertCollectionToMultimap)
+                .collect(Collectors.toList()));
 
-      // Creates DirectTestRunner.
-      TestRunnerLauncher<? super DirectTestRunner> connectorTestRunnerLauncher =
-          testRunnerHolder.createTestRunnerLauncher(testInfo.locator().getId());
-      LabFileNotifier labFileNotifier =
-          testRunnerHolder.createLabFileNotifier(testInfo.locator().getId());
-      DirectTestRunnerSetting setting =
-          DirectTestRunnerSetting.create(
-              testInfo,
-              allocation,
-              globalInternalEventBus,
-              null /* internalPluginSubscribers */,
-              null /* apiPluginSubscribers */,
-              null /* jarPluginSubscribers */);
-      DirectTestRunner testRunner;
-      try {
-        testRunner =
-            new LabLocalDirectTestRunner(
-                connectorTestRunnerLauncher, setting, devices, threadPool, labFileNotifier);
-      } catch (TestRunnerLauncherConnectedException e) {
-        logger.atSevere().log(
-            "Skipped the duplicated kickOffTest request for the running allocation %s. "
-                + "See b/38099373 for more detail.",
-            allocation);
-        return KickOffTestResponse.getDefaultInstance();
-      }
-      testRunner.registerTestEventSubscriber(forwardingTestMessageBuffer, EventScope.TEST_MESSAGE);
-
-      // Starts DirectTestRunner.
-      testRunner.start();
-      logger.atInfo().log("Start test %s with device %s", testInfo.locator().getId(), deviceIds);
+    // Creates DirectTestRunner.
+    TestRunnerLauncher<? super DirectTestRunner> connectorTestRunnerLauncher =
+        testRunnerHolder.createTestRunnerLauncher(testInfo.locator().getId());
+    LabFileNotifier labFileNotifier =
+        testRunnerHolder.createLabFileNotifier(testInfo.locator().getId());
+    DirectTestRunnerSetting setting =
+        DirectTestRunnerSetting.create(
+            testInfo,
+            allocation,
+            globalInternalEventBus,
+            /* internalPluginSubscribers= */ null,
+            /* apiPluginSubscribers= */ null,
+            /* jarPluginSubscribers= */ null);
+    DirectTestRunner testRunner;
+    try {
+      testRunner =
+          new LabLocalDirectTestRunner(
+              connectorTestRunnerLauncher, setting, devices, threadPool, labFileNotifier);
+    } catch (TestRunnerLauncherConnectedException e) {
+      logger.atSevere().log(
+          "Skipped the duplicated kickOffTest request for the running allocation %s. "
+              + "See b/38099373 for more detail.",
+          allocation);
       return KickOffTestResponse.getDefaultInstance();
     }
+    testRunner.registerTestEventSubscriber(forwardingTestMessageBuffer, EventScope.TEST_MESSAGE);
+
+    // Starts DirectTestRunner.
+    testRunner.start();
+    logger.atInfo().log("Start test %s with device %s", testInfo.locator().getId(), deviceIds);
+    return KickOffTestResponse.getDefaultInstance();
   }
 
   public GetTestStatusResponse getTestStatus(GetTestStatusRequest req)
@@ -259,6 +241,8 @@ public class ExecTestServiceImpl {
   }
 
   /**
+   * Gets test detail.
+   *
    * @since MH lab server 4.43
    */
   public GetTestDetailResponse getTestDetail(GetTestDetailRequest req)
