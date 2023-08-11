@@ -166,6 +166,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> detectAdbDevice = detectAdbDeviceDefault;
 
+  private static final Flag<Integer> detectDeviceIntervalSecDefault = Flag.value(1);
+
+  @com.beust.jcommander.Parameter(
+      names = "--detect_device_interval_sec",
+      description = "Interval in seconds for detecting the current active devices.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> detectDeviceIntervalSec = detectDeviceIntervalSecDefault;
+
   private static final Flag<Boolean> pingGoogleDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
