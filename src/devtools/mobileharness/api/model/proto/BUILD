@@ -73,6 +73,12 @@ proto_library(
     deps = [":job_proto"],
 )
 
+py_proto_library(
+    name = "test_py_pb2",
+    api_version = 2,
+    deps = [":test_proto"],
+)
+
 java_proto_library(
     name = "test_java_proto",
     deps = [":test_proto"],

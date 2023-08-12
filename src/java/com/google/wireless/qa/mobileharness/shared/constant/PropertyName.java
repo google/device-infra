@@ -720,5 +720,11 @@ public interface PropertyName {
       /** Whether the TestInfo is for a adhoc testbed sub device. */
       IS_ADHOC_TESTBED_SUB_DEVICE,
     }
+
+    /** DefaultSpongeTreeGenerator property name constants. */
+    public enum DefaultSpongeTreeGenerator implements PropertyName {
+      /** Whether to omit the test info from Sponge. */
+      OMIT_FROM_SPONGE,
+    }
   }
 }
