@@ -295,6 +295,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> createFailedDevice = createFailedDeviceDefault;
 
+  private static final Flag<Boolean> enableRdhDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_rdh",
+      description = "Whether to enable the remote DeviceProxyHostService.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableRdh = enableRdhDefault;
+
   private static final Flag<Boolean> enableStubbyFileTransferDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -513,6 +521,16 @@ public class Flags {
       description = "OLC server port. By default, it is 7030.",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> olcServerPort = olcServerPortDefault;
+
+  private static final Flag<Boolean> printLabStatsDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--print_lab_stats",
+      description =
+          "If true, print binary stats of Lab, and return silently. All other settings will be "
+              + "ignored.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> printLabStats = printLabStatsDefault;
 
   private static final Flag<String> publicDirDefault = Flag.value("/var/www");
 

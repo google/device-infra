@@ -16,10 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.util;
 
-/**
- * @deprecated Use {@link org.apache.commons.lang3.ArrayUtils} instead.
- */
-@Deprecated
+/** Operations on arrays. Prefer to use {@code org.apache.commons.lang3.ArrayUtils} instead. */
 public final class ArrayUtil {
 
   /** Joins multiple string array as a single string array. */
