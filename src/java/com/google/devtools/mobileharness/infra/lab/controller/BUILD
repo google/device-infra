@@ -24,6 +24,18 @@ package(
 )
 
 java_library(
+    name = "file_publisher",
+    srcs = ["FilePublisher.java"],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "forwarding_test_message_buffer",
     srcs = ["ForwardingTestMessageBuffer.java"],
     deps = [
@@ -50,7 +62,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
