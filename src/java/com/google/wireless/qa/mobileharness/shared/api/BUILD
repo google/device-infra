@@ -103,6 +103,7 @@ java_library(
     name = "validator_factory",
     srcs = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:ValidatorFactory.java"],
     visibility = [
+        "//javatests/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
     ],
     deps = [
         ":api",

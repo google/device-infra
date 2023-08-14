@@ -46,10 +46,6 @@ java_library(
 java_library(
     name = "device_info",
     srcs = ["DeviceInfoUtil.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness:__subpackages__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:__pkg__",
-    ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
@@ -62,9 +58,6 @@ java_library(
 java_library(
     name = "flag_parser",
     srcs = ["FlagUtil.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -90,12 +83,6 @@ java_library(
 java_library(
     name = "net_util",
     srcs = ["NetUtil.java"],
-    visibility = [
-        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/util:__pkg__",
-    ],
     deps = [
         ":device",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
