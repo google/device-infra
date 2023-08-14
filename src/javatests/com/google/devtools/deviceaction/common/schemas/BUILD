@@ -15,10 +15,7 @@
 
 load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
-package(
-    default_applicable_licenses = ["//:license"],
-    default_visibility = ["//src/javatests/com/google/devtools/deviceaction:deviceaction_javatests_pkg"],
-)
+package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "tests",

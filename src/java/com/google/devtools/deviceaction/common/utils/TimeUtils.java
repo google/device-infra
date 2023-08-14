@@ -42,6 +42,11 @@ public class TimeUtils {
     return Instant.ofEpochSecond(protoInstant.getSeconds(), protoInstant.getNanos());
   }
 
+  /** Converts Java instant to proto timestamp. */
+  public static Timestamp toProtoTimestamp(Instant instant) {
+    return normalizedTimestamp(instant.getEpochSecond(), instant.getNano());
+  }
+
   /** Converts proto duration to Java duration. */
   public static Duration fromProtoDuration(com.google.protobuf.Duration protoDuration) {
     protoDuration = normalizedDuration(protoDuration.getSeconds(), protoDuration.getNanos());

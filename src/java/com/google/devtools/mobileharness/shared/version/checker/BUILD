@@ -13,20 +13,25 @@
 # limitations under the License.
 #
 
-package(default_applicable_licenses = ["//:license"])
+# Description:
+#   Utility for check version.
+
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
 
 java_library(
-    name = "poster",
-    srcs = ["TestMessagePoster.java"],
-    visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:__pkg__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+    name = "checker",
+    srcs = [
+        "ServiceSideVersionChecker.java",
     ],
     deps = [
+        "//src/devtools/mobileharness/shared/version/proto:version_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
+        "//src/java/com/google/devtools/mobileharness/shared/version",
+        "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
