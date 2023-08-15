@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.service.grpc;
 
-import com.google.devtools.mobileharness.infra.lab.monitoring.RpcMetrics;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.StatServiceImpl;
 import com.google.devtools.mobileharness.shared.util.comm.service.GrpcServiceUtil;
 import com.google.wireless.qa.mobileharness.lab.proto.StatServ.GetDeviceStatRequest;
@@ -31,7 +30,7 @@ import io.grpc.stub.StreamObserver;
 public class StatGrpcImpl extends StatServiceImplBase {
 
   private final StatServiceImpl base;
-  private final GrpcServiceUtil grpcServiceUtil = new GrpcServiceUtil(RpcMetrics.getInstance());
+  private final GrpcServiceUtil grpcServiceUtil = new GrpcServiceUtil();
 
   public StatGrpcImpl() {
     base = new StatServiceImpl();

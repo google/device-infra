@@ -16,9 +16,6 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
-        "//java/com/google/devtools/mobileharness/infra/bridge:__subpackages__",
-        "//java/com/google/devtools/mobileharness/infra/container/testengine:__subpackages__",
         "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
     ],
 )
@@ -27,12 +24,10 @@ java_library(
     name = "prepare_test",
     srcs = ["PrepareTestGrpcImpl.java"],
     deps = [
-        "//java/com/google/devtools/mobileharness/infra/lab/monitoring:metrics",
-        "//java/com/google/devtools/mobileharness/shared/util/comm/service:grpc",
         "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_grpc",
         "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_proto",
-        "//src/devtools/mobileharness/infra/lab/proto:prepare_test_service_java_stubby",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:prepare_test",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/service:grpc",
         "@io_grpc_grpc_java//stub",
     ],
 )
@@ -41,25 +36,10 @@ java_library(
     name = "exec_test",
     srcs = ["ExecTestGrpcImpl.java"],
     deps = [
-        "//java/com/google/devtools/mobileharness/infra/lab/monitoring:metrics",
-        "//java/com/google/devtools/mobileharness/shared/util/comm/service:grpc",
-        "//java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_grpc",
-        "//java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:exec_test",
-        "@io_grpc_grpc_java//stub",
-    ],
-)
-
-java_library(
-    name = "device_ops",
-    srcs = ["DeviceOpsGrpcImpl.java"],
-    deps = [
-        "//java/com/google/devtools/mobileharness/infra/lab/monitoring:metrics",
-        "//java/com/google/devtools/mobileharness/shared/util/comm/service:grpc",
-        "//java/com/google/wireless/qa/mobileharness/lab/proto:device_ops_serv_grpc",
-        "//java/com/google/wireless/qa/mobileharness/lab/proto:device_ops_serv_java_proto",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device",
-        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:device_ops",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/service:grpc",
+        "//src/java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_grpc",
+        "//src/java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_java_proto",
         "@io_grpc_grpc_java//stub",
     ],
 )
@@ -68,11 +48,10 @@ java_library(
     name = "stat",
     srcs = ["StatGrpcImpl.java"],
     deps = [
-        "//java/com/google/devtools/mobileharness/infra/lab/monitoring:metrics",
-        "//java/com/google/devtools/mobileharness/shared/util/comm/service:grpc",
-        "//java/com/google/wireless/qa/mobileharness/lab/proto:stat_serv_grpc",
-        "//java/com/google/wireless/qa/mobileharness/lab/proto:stat_serv_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:stat",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/service:grpc",
+        "//src/java/com/google/wireless/qa/mobileharness/lab/proto:stat_serv_grpc",
+        "//src/java/com/google/wireless/qa/mobileharness/lab/proto:stat_serv_java_proto",
         "@io_grpc_grpc_java//stub",
     ],
 )

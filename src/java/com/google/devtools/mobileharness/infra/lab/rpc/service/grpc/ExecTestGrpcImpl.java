@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.service.grpc;
 
-import com.google.devtools.mobileharness.infra.lab.monitoring.RpcMetrics;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.devtools.mobileharness.shared.util.comm.service.GrpcServiceUtil;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.ForwardTestMessageRequest;
@@ -37,7 +36,7 @@ import io.grpc.stub.StreamObserver;
 public class ExecTestGrpcImpl extends ExecTestServiceImplBase {
 
   private final ExecTestServiceImpl base;
-  private final GrpcServiceUtil grpcServiceUtil = new GrpcServiceUtil(RpcMetrics.getInstance());
+  private final GrpcServiceUtil grpcServiceUtil = new GrpcServiceUtil();
 
   public ExecTestGrpcImpl(ExecTestServiceImpl service) {
     base = service;
@@ -82,7 +81,7 @@ public class ExecTestGrpcImpl extends ExecTestServiceImplBase {
     grpcServiceUtil.invoke(
         req,
         responseObserver,
-        request -> base.getTestGenData(request, false /* encodeFilePath */),
+        request -> base.getTestGenData(request, /* encodeFilePath= */ false),
         ExecTestServiceGrpc.getServiceDescriptor(),
         ExecTestServiceGrpc.getGetTestGenDataMethod());
   }

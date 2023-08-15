@@ -16,8 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.service.grpc;
 
-import com.google.devtools.mobileharness.infra.lab.monitoring.RpcMetrics;
-import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestService;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceGrpc;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CloseTestRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CloseTestResponse;
@@ -31,7 +29,7 @@ import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServic
 import com.google.devtools.mobileharness.shared.util.comm.service.GrpcServiceUtil;
 import io.grpc.stub.StreamObserver;
 
-/** gRPC implementation for {@link PrepareTestService}. */
+/** gRPC implementation for {@code PrepareTestService}. */
 public class PrepareTestGrpcImpl extends PrepareTestServiceGrpc.PrepareTestServiceImplBase {
 
   private final PrepareTestServiceImpl impl;
@@ -39,7 +37,7 @@ public class PrepareTestGrpcImpl extends PrepareTestServiceGrpc.PrepareTestServi
 
   public PrepareTestGrpcImpl(PrepareTestServiceImpl impl) {
     this.impl = impl;
-    this.grpcServiceUtil = new GrpcServiceUtil(RpcMetrics.getInstance());
+    this.grpcServiceUtil = new GrpcServiceUtil();
   }
 
   @Override
