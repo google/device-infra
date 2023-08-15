@@ -107,3 +107,39 @@ java_library(
         "@maven//:com_google_inject_guice",
     ],
 )
+
+java_library(
+    name = "master_syncer_for_device",
+    srcs = ["MasterSyncerForDevice.java"],
+    deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/infra/master/rpc/proto:lab_sync_service_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_provider",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/helper:lab_sync",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:device",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "master_syncer_for_job",
+    srcs = ["MasterSyncerForJob.java"],
+    deps = [
+        ":job_manager",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_state_checker",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/event",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/helper:job_sync",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
+        "@maven//:com_google_guava_guava",
+    ],
+)
