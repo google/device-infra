@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.util.jobconfig;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
+import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import java.time.Duration;
@@ -39,7 +40,8 @@ final class JobConfigHelper {
     timeout.setTestTimeoutMs(finalizedTestTimeout.toMillis());
     timeout.setStartTimeoutMs(finalizedStartTimeout.toMillis());
 
-    return timeout;
+    // Rewrites start timeout in M&M if necessary. see http://b/135557356 for more details.
+    return SharedPoolJobUtil.maybeExtendStartTimeout(timeout.build(), jobConfig).toBuilder();
   }
 
   public static JobUser finalizeUser(JobConfig jobConfig) throws MobileHarnessException {

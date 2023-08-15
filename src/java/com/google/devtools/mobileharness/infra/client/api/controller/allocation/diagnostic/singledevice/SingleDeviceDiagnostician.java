@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.DeviceFilter;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.Report;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
@@ -119,6 +120,7 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
       }
     }
 
+    boolean isUsingSharedPool = SharedPoolJobUtil.isUsingSharedPool(job);
     boolean isProdMaster = isUsingProdMaster(job);
 
     // When the overall assessment has MAX_SCORE, means every job requirements can always be

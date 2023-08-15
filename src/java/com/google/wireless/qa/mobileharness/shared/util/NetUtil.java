@@ -45,11 +45,11 @@ public class NetUtil {
 
   private final NetworkUtil newUtil;
 
-  /** The location type of a host. */
+  /** The location type of host. */
   public enum LocationType {
     IN_CHINA,
     NOT_IN_CHINA,
-    INDETERMINABLE;
+    INDETERMINABLE
   }
 
   public NetUtil() {
@@ -99,6 +99,10 @@ public class NetUtil {
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(BasicErrorId.LOCAL_NETWORK_ERROR, e.getMessage(), e);
     }
+  }
+
+  public Optional<String> getLocalHostLocation() throws MobileHarnessException {
+    return Optional.empty();
   }
 
   /**

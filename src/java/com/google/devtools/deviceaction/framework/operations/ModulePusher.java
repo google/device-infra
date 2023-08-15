@@ -133,7 +133,12 @@ public class ModulePusher implements Operation {
             : moduleFiles.get(0).toPath();
     Path targetOnHost =
         prepareTargetOnHost(source, tmpDirOnHost, Path.of(targetOnDevice.getPath()).getFileName());
-
+    try {
+      fileUtil.touchFileOrDir(targetOnHost, /* ifCreateNewFile= */ false);
+    } catch (MobileHarnessException e) {
+      throw new DeviceActionException(
+          e, "Failed to update the modified time of source file %s.", targetOnHost);
+    }
     device.push(targetOnHost, Path.of(targetOnDevice.getPath()));
     return sourcePackage.info();
   }

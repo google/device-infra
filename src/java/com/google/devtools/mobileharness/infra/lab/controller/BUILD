@@ -24,6 +24,18 @@ package(
 )
 
 java_library(
+    name = "file_publisher",
+    srcs = ["FilePublisher.java"],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "forwarding_test_message_buffer",
     srcs = ["ForwardingTestMessageBuffer.java"],
     deps = [
@@ -50,7 +62,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
@@ -94,5 +105,41 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "master_syncer_for_device",
+    srcs = ["MasterSyncerForDevice.java"],
+    deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/infra/master/rpc/proto:lab_sync_service_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_provider",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/helper:lab_sync",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:device",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "master_syncer_for_job",
+    srcs = ["MasterSyncerForJob.java"],
+    deps = [
+        ":job_manager",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_state_checker",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/event",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/helper:job_sync",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
+        "@maven//:com_google_guava_guava",
     ],
 )

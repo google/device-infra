@@ -16,7 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic;
 
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
@@ -54,6 +57,12 @@ public class DeviceFilter {
   public DeviceQueryFilter getFilter(JobScheduleUnit job, List<FilterType> filterTypes) {
     DeviceQueryFilter.Builder filter = DeviceQueryFilter.newBuilder();
     filter.addTypeRegex(job.type().getDevice());
+    if (SharedPoolJobUtil.isUsingSharedPool(job)) {
+      filter.addDimensionFilter(
+          DimensionFilter.newBuilder()
+              .setName(Ascii.toLowerCase(Name.POOL.name()))
+              .setValueRegex(Value.POOL_SHARED));
+    }
     filterTypes.forEach(
         diagnosticFilter -> {
           switch (diagnosticFilter) {

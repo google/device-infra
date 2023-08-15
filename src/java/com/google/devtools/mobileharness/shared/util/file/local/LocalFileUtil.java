@@ -264,6 +264,74 @@ public class LocalFileUtil {
   }
 
   /**
+   * Clear all unopened files or directories directly under the given directory. It contains the
+   * following steps to lists all opened files and formats the output with file names only before
+   * removing unopened files.
+   *
+   * <p>1. Use command - "lsof -w -Fn +D <dir>" to list opened files. Normall there will be 3 lines
+   * per file.
+   *
+   * <p>1.1 A line of process id with leading p like - p12345
+   *
+   * <p>1.2 A line of file descriptor with leading f like - fcwd
+   *
+   * <p>1.3 A line of file name with leading n like - n/foo/bar/filename
+   *
+   * <p>2. Use sed command to keep lines of filenames and remove the leading n.
+   *
+   * <p>3. Use sort command to sort and remove duplicate lines.
+   *
+   * <p>This method may consume GB memory if passes a high level directory path like root - /.
+   */
+  public void clearUnopenedFilesOrDirs(Path dirPath)
+      throws MobileHarnessException, InterruptedException {
+    checkDir(dirPath);
+
+    String listOpenedFiles = String.format("lsof -w -Fn +D %s", dirPath);
+    String removeUnrelatedLines = "sed '/^[^n]/d'";
+    String removeLeadingN = "sed 's/^n//'";
+    String sortAndRemoveDuplicateLines = "sort -u";
+    // Command "lsof+D path" could easily return 1 if there are files under this directory
+    // which aren't opened by any process.
+    Command command =
+        Command.of(
+                "/bin/sh",
+                "-c",
+                String.join(
+                    " | ",
+                    listOpenedFiles,
+                    removeUnrelatedLines,
+                    removeLeadingN,
+                    sortAndRemoveDuplicateLines))
+            .successExitCodes(0, 1);
+
+    String allOpenedFilesOrDirs;
+    try {
+      allOpenedFilesOrDirs = cmdExecutor.exec(command).stdout();
+      logger.atInfo().log("Opened files or dirs: %s", allOpenedFilesOrDirs);
+    } catch (CommandException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.SYSTEM_LIST_OPEN_FILES_ERROR,
+          String.format("Failed to list open files or directories under %s", dirPath),
+          e);
+    }
+
+    List<String> allFilesOrDirs = listFileOrDirPaths(dirPath.toString());
+    for (String fileOrDir : allFilesOrDirs) {
+      if (allOpenedFilesOrDirs.contains(fileOrDir)) {
+        // Skip opened files or dirs.
+        continue;
+      }
+      try {
+        removeFileOrDir(fileOrDir);
+      } catch (MobileHarnessException e) {
+        // Catch exception here to avoid breaking the whole process.
+        logger.atWarning().withCause(e).log("Failed to remove unopened file or dir %s.", fileOrDir);
+      }
+    }
+  }
+
+  /**
    * Copies a single file, or recursively copies a directory.
    *
    * <p>It uses Java NIO to iterate the files under the source directory and copy to the destination

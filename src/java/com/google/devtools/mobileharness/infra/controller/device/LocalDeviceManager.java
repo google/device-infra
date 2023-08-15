@@ -26,6 +26,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
@@ -57,8 +58,6 @@ import javax.annotation.Nullable;
 public class LocalDeviceManager extends BaseDeviceStatusProvider
     implements Runnable, DeviceHelperFactory, LocalDeviceRunnerProvider, DeviceStateChecker {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static final int DETECT_DEVICE_INTERVAL_SEC = 1;
 
   private static final int DISPATCH_DEVICE_INTERVAL_SEC = 1;
 
@@ -138,7 +137,8 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
                   threadRenaming(
                       () -> {
                         Duration detectDeviceInterval =
-                            Duration.ofSeconds(DETECT_DEVICE_INTERVAL_SEC);
+                            Duration.ofSeconds(
+                                Flags.instance().detectDeviceIntervalSec.getNonNull());
                         // Use the detector's detection interval if specified, otherwise, use the
                         // global interval instead.
                         Optional<Duration> detectionIntervalPerDetector =
