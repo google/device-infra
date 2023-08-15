@@ -22,7 +22,7 @@ import java.security.SecureRandom;
 /** A utility class to share constants. */
 public final class Constants {
 
-  public static final Version CURRENT_VERSION = Version.of("0.1.0");
+  public static final Version CURRENT_VERSION = Version.of("0.1.1");
 
   public static final String VERSION_COMMAND = "version";
 

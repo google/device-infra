@@ -34,3 +34,21 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "test_message_manager",
+    srcs = [
+        "TestMessageManager.java",
+    ],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)

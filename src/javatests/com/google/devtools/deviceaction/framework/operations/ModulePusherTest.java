@@ -201,6 +201,7 @@ public final class ModulePusherTest {
   public void pushModule_success() throws Exception {
     AndroidPackage sourcePackage = getApex(fakeApex);
     AndroidPackage targetPackage = getApex(new File(DATA_APEX_PATH));
+    long modified = fakeApex.lastModified();
 
     PackageInfo info = modulePusher.pushModule(sourcePackage, targetPackage, tmpDir.toPath());
 
@@ -210,6 +211,7 @@ public final class ModulePusherTest {
     verify(mockDevice).push(source.capture(), target.capture());
     Path sourcePath = source.getValue();
     Path targetPath = target.getValue();
+    assertThat(sourcePath.toFile().lastModified()).isGreaterThan(modified);
     assertIsFileAndEndWith(sourcePath, APEX_FILE_NAME);
     assertThat(targetPath.toString()).isEqualTo(SYSTEM_APEX_PATH);
     assertThat(info).isAtLeast(sourcePackage.info());

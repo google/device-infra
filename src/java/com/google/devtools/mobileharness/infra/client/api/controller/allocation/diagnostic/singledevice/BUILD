@@ -35,6 +35,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/diagnostic",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
+        "//src/java/com/google/devtools/mobileharness/shared/util/sharedpool:shared_pool_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",

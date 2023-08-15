@@ -25,6 +25,7 @@ import com.google.devtools.common.metrics.stability.util.ErrorIdFormatter;
 import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.errorprone.annotations.FormatMethod;
+import com.google.errorprone.annotations.FormatString;
 import javax.annotation.Nullable;
 
 /** A dedicated exception class for device action. */
@@ -64,7 +65,8 @@ public final class DeviceActionException extends Exception
 
   /** Converts a MobileHarness exception to a {@link DeviceActionException}. */
   @FormatMethod
-  public DeviceActionException(MobileHarnessException e, String message, Object... args) {
+  public DeviceActionException(
+      MobileHarnessException e, @FormatString String message, Object... args) {
     this(e, String.format(message, args));
   }
 
@@ -75,7 +77,8 @@ public final class DeviceActionException extends Exception
 
   /** Converts a DeviceInfra exception to a {@link DeviceActionException}. */
   @FormatMethod
-  public DeviceActionException(DeviceInfraException e, String message, Object... args) {
+  public DeviceActionException(
+      DeviceInfraException e, @FormatString String message, Object... args) {
     this(e, String.format(message, args));
   }
 
