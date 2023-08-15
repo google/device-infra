@@ -34,20 +34,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.util.Objects;
 
-/**
- * A tool to perform device actions.
- *
- * <p>Assume the devices already have device config files in the database. Or you can pass a device
- * config file by '--device1 device_config=<device_config. textproto>'
- *
- * <p>Use 'DeviceActionMain help <command>' to learn more about the given command.
- *
- * <p>Use 'DeviceActionMain version' to check the version.
- *
- * <p>Synopsis: DeviceActionMain <command> ["--aapt <aapt>"] ["--adb <adb>"] "--da_bundletool
- * <bundletool.jar>" "--da_cred_file <key_file.json>" ["--da_gen_file_dir </gen/file/dir>"]
- * ["--java_command_path </java/jdk/bin/java>"] ["--tmp_dir_root </tmp/file/dir>"] ...
- */
+/** Main entry point of the cli. */
 public final class DeviceActionMain {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

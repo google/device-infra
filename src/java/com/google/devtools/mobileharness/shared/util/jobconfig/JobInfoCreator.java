@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.api.proto.Device.DeviceSpec;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -454,7 +455,10 @@ public final class JobInfoCreator {
 
   private static JobType mayAppendDecorator(
       JobType type, com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig) {
-    JobType newType = type;
+    JobType newType =
+        SharedPoolJobUtil.isUsingSharedDefaultPerformancePool(jobConfig)
+            ? mayAppendPerformanceLockDecorator(type)
+            : type;
     return mayAddSysLogDecoratorForIosTest(newType);
   }
 
