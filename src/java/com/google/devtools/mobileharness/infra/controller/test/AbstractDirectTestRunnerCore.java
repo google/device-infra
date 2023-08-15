@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.shared.util.comm.messaging.message.Test
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
+import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.comm.message.CacheableTestMessageHandler;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
@@ -381,11 +382,19 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
             if ("lab".equals(getComponentName()) || "local".equals(getComponentName())) {
               // If the test is not timeout, and it runs in lab or local mode, it should be
               // some error such as device disconnected.
-              cause =
-                  new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                      InfraErrorId.TR_TEST_INTERRUPTED_WHEN_DEVICE_DISCONNECTED,
-                      "Test interrupted because device disconnected",
-                      e);
+              if (SharedPoolJobUtil.isUsingSharedPool(testInfo.jobInfo())) {
+                cause =
+                    new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                        InfraErrorId.TR_TEST_INTERRUPTED_WHEN_MNM_DEVICE_DISCONNECTED,
+                        "Test interrupted because device disconnected",
+                        e);
+              } else {
+                cause =
+                    new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                        InfraErrorId.TR_TEST_INTERRUPTED_WHEN_DEVICE_DISCONNECTED,
+                        "Test interrupted because device disconnected",
+                        e);
+              }
             } else {
               // If the test is not timeout, and it runs in client, it may be killed by user.
               cause =

@@ -17,8 +17,8 @@
 package com.google.devtools.mobileharness.infra.lab.controller.handler;
 
 import com.google.common.flogger.FluentLogger;
-import com.google.common.time.Sleeper;
 import com.google.devtools.deviceinfra.host.daemon.health.handler.DrainHandler;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.inject.Inject;
 import java.time.Duration;
@@ -42,10 +42,9 @@ public class ExecTestServiceDrainHandler implements DrainHandler {
 
     // Sleep for 1 minutes to make sure all interrupted results have been updated to the client.
     try {
-      Sleeper.defaultSleeper().sleep(Duration.ofMinutes(1));
+      Sleeper.defaultSleeper().sleep(Duration.ofMinutes(1L));
     } catch (InterruptedException e) {
-      logger.atWarning().withCause(e).log(
-          "Interrupted when wait for the clean up of ExecTestServiceImpl.");
+      logger.atWarning().log("Interrupted when wait for the clean up of ExecTestServiceImpl.");
       Thread.currentThread().interrupt();
     }
   }
