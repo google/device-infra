@@ -37,7 +37,7 @@ public class NetworkUtil {
    */
   public String getLocalHostName() throws MobileHarnessException {
     try {
-      return InetAddress.getLocalHost().getHostName();
+      return InetAddress.getLocalHost().getCanonicalHostName();
     } catch (UnknownHostException e) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_NETWORK_HOSTNAME_DETECTION_ERROR, "Failed to detect host name.", e);
