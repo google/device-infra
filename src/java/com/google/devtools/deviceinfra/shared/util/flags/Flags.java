@@ -438,6 +438,14 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> extraAdbCommandTimeout = extraAdbCommandTimeoutDefault;
 
+  private static final Flag<String> mhProxySpecDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--mhproxy_spec",
+      description = "GSLB blade target for MH Proxy.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> mhProxySpec = mhProxySpecDefault;
+
   private static final Flag<Boolean> muteAndroidDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -516,6 +524,14 @@ public class Flags {
               + "Only works for devices which support this (i.e., marlin, sailfish).",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> safeChargeLevel = safeChargeLevelDefault;
+
+  private static final Flag<Boolean> servViaCloudRpcDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--serv_via_cloud_rpc",
+      description = "Whether to serve the inbound gRPC requests via Cloud RPC. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> servViaCloudRpc = servViaCloudRpcDefault;
 
   private static final Flag<Boolean> setTestHarnessPropertyDefault = Flag.value(true);
 
