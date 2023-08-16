@@ -53,7 +53,6 @@ public final class TestRunModule extends AbstractModule {
       @LabRpcPort int labRpcPort,
       @ServViaStubby boolean servViaStubby,
       @ServViaCloudRpc boolean servViaCloudRpc) {
-
     return new PrepareTestServiceImpl(
         localDeviceRunnerProvider,
         jobManager,

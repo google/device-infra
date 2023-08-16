@@ -134,6 +134,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> clearAndroidDeviceMultiUsers = clearAndroidDeviceMultiUsersDefault;
 
+  private static final Flag<Integer> commandPortDefault = Flag.value(9995);
+
+  @com.beust.jcommander.Parameter(
+      names = "--command_port",
+      description = "Command port for the lab server to issue command to Daemon.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> commandPort = commandPortDefault;
+
   private static final Flag<String> daBundletoolDefault = Flag.value(null);
 
   @com.beust.jcommander.Parameter(
@@ -157,6 +165,15 @@ public class Flags {
       description = "Path to device action gen file dir.",
       converter = Flag.StringConverter.class)
   public Flag<String> daGenFileDir = daGenFileDirDefault;
+
+  private static final Flag<Boolean> debugRandomExitDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--debug_random_exit",
+      description =
+          "Randomly exit and rely on prod scheduling for restart, only for debug/test purpose.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> debugRandomExit = debugRandomExitDefault;
 
   private static final Flag<Boolean> detectAdbDeviceDefault = Flag.value(true);
 
@@ -247,6 +264,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDeviceAirplaneMode = enableDeviceAirplaneModeDefault;
 
+  private static final Flag<Boolean> enableDeviceResourceServiceDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_device_resource_service",
+      description = "Whether to enable device resource service. default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableDeviceResourceService = enableDeviceResourceServiceDefault;
+
   private static final Flag<Boolean> enableEmulatorDetectionDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -300,6 +325,16 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> fastbootPathFromUser = fastbootPathFromUserDefault;
 
+  private static final Flag<Integer> grpcPortDefault = Flag.value(9994);
+
+  @com.beust.jcommander.Parameter(
+      names = "--grpc_port",
+      description =
+          "gRPC port of lab server local gRPC services including the lab resource monitoring"
+              + " service",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> grpcPort = grpcPortDefault;
+
   private static final Flag<Integer> internalStorageAlertDefault = Flag.value(200);
 
   @com.beust.jcommander.Parameter(
@@ -327,6 +362,18 @@ public class Flags {
       description = "File path of json string that is parsed from mobileharness.client.JobConfigs.",
       converter = Flag.StringConverter.class)
   public Flag<String> jobConfigsJson = jobConfigsJsonDefault;
+
+  private static final Flag<Duration> jobGenFileExpiredTimeDefault =
+      DurationFlag.value(Duration.ZERO);
+
+  @com.beust.jcommander.Parameter(
+      names = "--job_gen_file_expired_time",
+      description =
+          "How soon to clean up the genfile after each test. Default is 0, which means the genfile "
+              + "is removed immediately when a test finishes. It has the risk to blow up the disk "
+              + " of the lab host when setting to non-zero.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> jobGenFileExpiredTime = jobGenFileExpiredTimeDefault;
 
   private static final Flag<Integer> logFileNumDefault = Flag.value(100);
 
@@ -522,18 +569,6 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> skipNetwork = skipNetworkDefault;
 
-  private static final Flag<Duration> jobGenFileExpiredTimeDefault =
-      DurationFlag.value(Duration.ZERO);
-
-  @com.beust.jcommander.Parameter(
-      names = "--job_gen_file_expired_time",
-      description =
-          "How soon to clean up the genfile after each test. Default is 0, which means the genfile "
-              + "is removed immediately when a test finishes. It has the risk to blow up the disk "
-              + " of the lab host when setting to non-zero.",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> jobGenFileExpiredTime = jobGenFileExpiredTimeDefault;
-
   private static final Flag<Boolean> skipRecoverDeviceNetworkDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -543,6 +578,14 @@ public class Flags {
               + "is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> skipRecoverDeviceNetwork = skipRecoverDeviceNetworkDefault;
+
+  private static final Flag<Integer> socketPortDefault = Flag.value(9998);
+
+  @com.beust.jcommander.Parameter(
+      names = "--socket_port",
+      description = "Socket port of the file transfer service of the lab server",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> socketPort = socketPortDefault;
 
   private static final Flag<Integer> startChargeLevelDefault = Flag.value(40);
 
