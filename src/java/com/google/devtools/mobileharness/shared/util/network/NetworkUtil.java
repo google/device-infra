@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.network;
 
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import java.net.InetAddress;
@@ -30,6 +31,9 @@ import javax.annotation.Nullable;
 
 /** Utility class for common network operation. */
 public class NetworkUtil {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   /**
    * Returns host name of local host.
    *
@@ -37,6 +41,10 @@ public class NetworkUtil {
    */
   public String getLocalHostName() throws MobileHarnessException {
     try {
+      // TODO: Revert the logs after getting the data.
+      logger.atInfo().log(
+          "Canonical Local host name: %s", InetAddress.getLocalHost().getCanonicalHostName());
+      logger.atInfo().log("Local host name: %s", InetAddress.getLocalHost().getHostName());
       return InetAddress.getLocalHost().getHostName();
     } catch (UnknownHostException e) {
       throw new MobileHarnessException(

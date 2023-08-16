@@ -24,6 +24,7 @@ java_library(
         "//:deviceinfra_all_pkg",
     ],
     deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@maven//:com_google_code_findbugs_jsr305",
     ],
