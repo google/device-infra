@@ -295,6 +295,22 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> createFailedDevice = createFailedDeviceDefault;
 
+  private static final Flag<Boolean> enableStubbyFileTransferDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_stubby_file_transfer",
+      description = "Whether to enable stubby file transfer. default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableStubbyFileTransfer = enableStubbyFileTransferDefault;
+
+  private static final Flag<Boolean> enableStubbyRpcServerDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_stubby_rpc_server",
+      description = "Whether to enable stubby RPC server. default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableStubbyRpcServer = enableStubbyRpcServerDefault;
+
   private static final Flag<Boolean> enforceSafeDischargeDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -446,6 +462,22 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> mhProxySpec = mhProxySpecDefault;
 
+  private static final Flag<Boolean> monitorLabDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--monitor_lab",
+      description = "Whether enable the lab monitor. default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> monitorLab = monitorLabDefault;
+
+  private static final Flag<Boolean> monitorCloudRpcDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--monitor_cloudrpc",
+      description = "Whether enable the cloudrpc monitor. default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> monitorCloudRpc = monitorCloudRpcDefault;
+
   private static final Flag<Boolean> muteAndroidDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -514,6 +546,14 @@ public class Flags {
       description = "Name of resource directory.",
       converter = Flag.StringConverter.class)
   public Flag<String> resDirName = resDirNameDefault;
+
+  private static final Flag<Integer> rpcPortDefault = Flag.value(9999);
+
+  @com.beust.jcommander.Parameter(
+      names = "--rpc_port",
+      description = "Stubby port of the lab server",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> rpcPort = rpcPortDefault;
 
   private static final Flag<Integer> safeChargeLevelDefault = Flag.value(50);
 
