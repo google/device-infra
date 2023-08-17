@@ -57,6 +57,9 @@ java_library(
     ],
     deps = [
         ":manager",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_to_direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
     ],
