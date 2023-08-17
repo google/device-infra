@@ -140,15 +140,6 @@ public class UnifiedTestRunServer {
     this.rpcPort = rpcPort;
   }
 
-  /**
-   * Starting the standalone unified test run services. See /omni-device-lab-test-runner.
-   *
-   * @param args command line arguments, we are using flags only
-   */
-  public static void main(String[] args) {
-    // TODO: create a separate "main" class and start UTRS as binary.
-  }
-
   /** Initializes and runs UTRS, and blocks until shutdown. */
   public void run() throws MobileHarnessException, InterruptedException {
     try {
