@@ -151,7 +151,6 @@ java_library(
     srcs = ["CertificationSuiteInfo.java"],
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-        "//src/javatests/com/google/devtools/atsconsole/result/report:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value"],
