@@ -37,8 +37,11 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 
-// Module for UTRS on lab host.
-// Configurations specified for lab host environment.
+/**
+ * Module for UTRS on lab host.
+ *
+ * <p>Configurations specified for lab host environment.
+ */
 class UtrsTestRunLabModule extends AbstractModule {
 
   private final String cloudRpcDnsAddress;

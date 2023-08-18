@@ -62,7 +62,7 @@ public class LabServer {
   }
 
   /**
-   * Entry point to start the lab server
+   * Entry point to start the lab server.
    *
    * @param args command line arguments, we are using flags only
    */
