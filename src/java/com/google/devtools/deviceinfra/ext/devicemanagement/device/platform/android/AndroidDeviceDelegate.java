@@ -65,8 +65,6 @@ public abstract class AndroidDeviceDelegate {
   static final String[] ANDROID_UNEXPECTED_PACKAGE =
       new String[] {"com.google.android.apps.internal.statusbarhider"};
 
-  private static final String DIMENSION_NAME_ROOTED = "rooted";
-
   @VisibleForTesting static final String PROPERTY_NAME_CACHED_ABI = "cached_abi";
 
   @VisibleForTesting
@@ -534,7 +532,7 @@ public abstract class AndroidDeviceDelegate {
       throws MobileHarnessException, InterruptedException {
 
     // Checks root.
-    device.addDimension(DIMENSION_NAME_ROOTED, String.valueOf(isRooted));
+    device.addDimension(Dimension.Name.ROOTED, String.valueOf(isRooted));
 
     // Adds general drivers.
     device.addSupportedDriver("AndroidChopin");
