@@ -309,7 +309,7 @@ public class UnifiedTestRunServer {
       // Prepares the lab server's temporary log directory.
       localFileUtil.prepareDir(DirCommon.getTempDirRoot());
       localFileUtil.grantFileOrDirFullAccess(DirCommon.getTempDirRoot());
-    } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           InfraErrorId.LAB_INIT_ENV_PREPARE_DIR_ERROR, "Failed to setup local file dirs!", e);
     }
@@ -330,9 +330,7 @@ public class UnifiedTestRunServer {
     }
   }
 
-  private void initHostLevelDeviceDimensions()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  private void initHostLevelDeviceDimensions() throws MobileHarnessException, InterruptedException {
     // Required dimensions
     // Adds "pool:shared" to lab required dimensions for m&m labs.
     if (DeviceUtil.inSharedLab()) {
