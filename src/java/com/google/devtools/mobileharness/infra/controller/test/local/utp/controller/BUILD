@@ -36,6 +36,7 @@ java_library(
     srcs = ["NoOpTestFlowConverter.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
     ],
     deps = [
         ":test_flow_converter",

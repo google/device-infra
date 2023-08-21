@@ -17,6 +17,7 @@ java_library(
     name = "local_device_test_runner_launcher",
     srcs = ["LocalDeviceTestRunnerLauncher.java"],
     visibility = [
+        "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],

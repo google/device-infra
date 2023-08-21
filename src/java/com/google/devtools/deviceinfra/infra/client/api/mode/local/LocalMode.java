@@ -208,6 +208,13 @@ public class LocalMode implements ExecMode {
             IncompatibleReasonProto.InfraIncompatibleReason.ATS2, "ATS2 uses classic mode"));
   }
 
+  /** Returns the local device manager created and owned by LocalMode. */
+  public LocalDeviceManager getDeviceManager(EventBus globalInternalBus)
+      throws InterruptedException {
+    initialize(globalInternalBus);
+    return localDeviceManager;
+  }
+
   protected ImmutableList<Detector> createDeviceDetectorCandidates() {
     ImmutableList.Builder<Detector> detectorCandidates = ImmutableList.builder();
     if (Flags.instance().detectAdbDevice.getNonNull()) {

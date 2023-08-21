@@ -49,3 +49,7 @@ message JobOrTestFileUnit {
     TestFileUnit test_file_unit = 2;
   }
 }
+
+message JobFilesPackage {
+  repeated JobOrTestFileUnit job_or_test_files = 1;
+}

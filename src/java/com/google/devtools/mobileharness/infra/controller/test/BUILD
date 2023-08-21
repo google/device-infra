@@ -30,9 +30,9 @@ java_library(
         "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
     ],
     deps = [
+        ":test_runner",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_runner",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
@@ -85,6 +85,7 @@ java_library(
         "TestRunnerLauncher.java",
     ],
     visibility = [
+        "//java/com/google/devtools/mobileharness/rbe:__subpackages__",
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",

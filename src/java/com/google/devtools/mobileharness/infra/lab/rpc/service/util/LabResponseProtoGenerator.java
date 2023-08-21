@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
 /**
  * Lab server response proto generator. Generates the responses based on client side request and
@@ -61,6 +62,7 @@ public class LabResponseProtoGenerator {
 
   private final LocalFileUtil fileUtil;
 
+  @Inject
   public LabResponseProtoGenerator(FilePublisher filePublisher, LocalFileUtil fileUtil) {
     this.filePublisher = filePublisher;
     this.fileUtil = fileUtil;

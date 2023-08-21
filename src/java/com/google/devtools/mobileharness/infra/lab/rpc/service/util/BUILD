@@ -23,6 +23,9 @@ package(
 java_library(
     name = "test_info_creator",
     srcs = ["TestInfoCreator.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
+    ],
     deps = [
         ":job_dir_factory",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
@@ -42,6 +45,11 @@ java_library(
 java_library(
     name = "job_dir_factory",
     srcs = ["JobDirFactory.java"],
+    visibility = [
+        "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
+        "//javatests/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
@@ -51,6 +59,10 @@ java_library(
 java_library(
     name = "lab_response_proto_generator",
     srcs = ["LabResponseProtoGenerator.java"],
+    visibility = [
+        "//javatests/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
+    ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
@@ -69,5 +81,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
