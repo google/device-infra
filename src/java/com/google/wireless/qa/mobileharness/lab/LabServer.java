@@ -67,9 +67,6 @@ public class LabServer {
    * @param args command line arguments, we are using flags only
    */
   public static void main(String[] args) throws InterruptedException {
-    // See b/294793926.
-    System.setProperty("java.net.preferIPv6Addresses", "false");
-
     // Adds extra flags.
     List<String> extraArgs = new ArrayList<>();
     // Make sure the new ResUtil runs in a different directory.
