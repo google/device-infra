@@ -7,13 +7,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 
 	log "github.com/golang/glog"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
-	"github.com/mholt/archiver"
 	"github.com/hanwen/go-fuse/v2/fs"
 	"github.com/hanwen/go-fuse/v2/fuse"
 	"github.com/hanwen/go-fuse/v2/zipfs"
@@ -192,9 +192,11 @@ func (zu *ZipUploader) unzipAndUpload() (digest.Digest, error) {
 		}
 	}()
 
-	zipArchiver := archiver.Zip{}
-	if err := zipArchiver.Unarchive(zu.path, targetDir); err != nil {
-		return digest.Digest{}, fmt.Errorf("failed to unzip %s to %s: %v", zu.path, targetDir, err)
+	cmd := exec.Command("unzip", zu.path, "-d", targetDir)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return digest.Digest{}, fmt.Errorf("failed to unzip %s to %s: %v\n%s",
+			zu.path, targetDir, err, string(output))
 	}
 
 	du := NewDirUploader(zu.ctx, zu.client, targetDir, zu.excludeFilters, nil)

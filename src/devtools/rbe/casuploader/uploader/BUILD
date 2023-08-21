@@ -39,6 +39,5 @@ go_library(
         "@com_github_hanwen_go_fuse_v2//fs",
         "@com_github_hanwen_go_fuse_v2//fuse",
         "@com_github_hanwen_go_fuse_v2//zipfs",
-        "@com_github_mholt_archiver//:archiver",
     ],
 )
