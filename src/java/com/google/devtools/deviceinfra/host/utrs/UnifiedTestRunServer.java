@@ -244,7 +244,8 @@ public class UnifiedTestRunServer {
       throw exception;
     }
 
-    // TODO: Wait here.
+    // Waits until interrupted.
+    Thread.currentThread().join();
   }
 
   /**
