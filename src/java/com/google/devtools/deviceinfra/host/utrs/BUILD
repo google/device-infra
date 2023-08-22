@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:base_detector_dispatcher_picker",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_helper_factory",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_runner_provider",

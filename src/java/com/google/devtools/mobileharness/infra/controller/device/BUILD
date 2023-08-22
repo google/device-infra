@@ -28,36 +28,18 @@ package(
 )
 
 java_library(
-    name = "device_state_checker",
-    srcs = ["DeviceStateChecker.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
-    ],
-    deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
-)
-
-java_library(
-    name = "device_helper_factory",
-    srcs = ["DeviceHelperFactory.java"],
-    visibility = [
-        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
-    ],
+    name = "base_detector_dispatcher_picker",
+    srcs = ["BaseDetectorDispatcherPicker.java"],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
-    ],
-)
-
-java_library(
-    name = "device_status_provider",
-    srcs = ["DeviceStatusProvider.java"],
-    deps = [
-        ":device_status_info",
-        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
-        "@maven//:com_google_code_findbugs_jsr305",
+        "//src/java/com/google/devtools/deviceinfra/infra/core/devicemanager",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base_adb",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:no_op",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_real_device",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:no_op_device",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -119,21 +101,15 @@ java_library(
 )
 
 java_library(
-    name = "device_info_manager",
-    srcs = ["DeviceInfoManager.java"],
+    name = "device_helper_factory",
+    srcs = ["DeviceHelperFactory.java"],
     visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
-        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
-        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info_factory",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
-        "//src/java/com/google/devtools/mobileharness/shared/util/system",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
     ],
 )
 
@@ -153,32 +129,54 @@ java_library(
 )
 
 java_library(
-    name = "local_device_runner",
-    srcs = ["LocalDeviceRunner.java"],
+    name = "device_info_manager",
+    srcs = ["DeviceInfoManager.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+    ],
     deps = [
-        ":local_device_test_runner",
-        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
     ],
 )
 
 java_library(
-    name = "local_device_runner_provider",
-    srcs = ["LocalDeviceRunnerProvider.java"],
+    name = "device_state_checker",
+    srcs = ["DeviceStateChecker.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
+    ],
+    deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
+)
+
+java_library(
+    name = "device_status_info",
+    srcs = ["DeviceStatusInfo.java"],
     deps = [
-        ":local_device_test_runner",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
 
 java_library(
-    name = "local_device_test_runner",
-    srcs = ["LocalDeviceTestRunner.java"],
+    name = "device_status_provider",
+    srcs = ["DeviceStatusProvider.java"],
     deps = [
-        ":local_device_test_executor",
+        ":device_status_info",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
     ],
 )
 
@@ -222,6 +220,24 @@ java_library(
 )
 
 java_library(
+    name = "local_device_runner",
+    srcs = ["LocalDeviceRunner.java"],
+    deps = [
+        ":local_device_test_runner",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+    ],
+)
+
+java_library(
+    name = "local_device_runner_provider",
+    srcs = ["LocalDeviceRunnerProvider.java"],
+    deps = [
+        ":local_device_test_runner",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+    ],
+)
+
+java_library(
     name = "local_device_test_executor",
     srcs = ["LocalDeviceTestExecutor.java"],
     deps = [
@@ -231,12 +247,13 @@ java_library(
 )
 
 java_library(
-    name = "device_status_info",
-    srcs = ["DeviceStatusInfo.java"],
+    name = "local_device_test_runner",
+    srcs = ["LocalDeviceTestRunner.java"],
     deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+        ":local_device_test_executor",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "@maven//:com_google_code_findbugs_jsr305",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
     ],
 )

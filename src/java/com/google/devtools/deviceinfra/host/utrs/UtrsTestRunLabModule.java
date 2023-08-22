@@ -90,9 +90,10 @@ class UtrsTestRunLabModule extends AbstractModule {
       throws InterruptedException {
     LocalDeviceManager localDeviceManager =
         new LocalDeviceManager(
-            // TODO: Create detectors and dispatchers.
-            com.google.common.collect.ImmutableList.of(),
-            com.google.common.collect.ImmutableList.of(),
+            com.google.devtools.mobileharness.infra.controller.device.BaseDetectorDispatcherPicker
+                .checkAndGetSupportedDetectors(),
+            com.google.devtools.mobileharness.infra.controller.device.BaseDetectorDispatcherPicker
+                .getSupportedDispatchers(),
             /* keepGoing= */ true,
             deviceManagerThreadPool,
             globalInternalBus,

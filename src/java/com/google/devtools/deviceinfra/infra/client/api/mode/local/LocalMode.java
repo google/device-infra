@@ -23,22 +23,18 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutur
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
-import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.deviceinfra.infra.core.devicemanager.DispatcherManager;
 import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
-import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
-import com.google.devtools.mobileharness.api.devicemanager.detector.NoOpDeviceDetector;
-import com.google.devtools.mobileharness.api.devicemanager.dispatcher.AndroidRealDeviceDispatcher;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.Dispatcher;
-import com.google.devtools.mobileharness.api.devicemanager.dispatcher.NoOpDeviceDispatcher;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.controller.device.BaseDetectorDispatcherPicker;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceTestRunner;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
@@ -69,7 +65,6 @@ import java.util.logging.Level;
 
 /** Execution mode which run tests on local devices. */
 public class LocalMode implements ExecMode {
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** LocalDeviceManager is singleton and shared by all LocalMode jobs in the same machine. */
   private static volatile LocalDeviceManager localDeviceManager;
@@ -216,41 +211,16 @@ public class LocalMode implements ExecMode {
   }
 
   protected ImmutableList<Detector> createDeviceDetectorCandidates() {
-    ImmutableList.Builder<Detector> detectorCandidates = ImmutableList.builder();
-    if (Flags.instance().detectAdbDevice.getNonNull()) {
-      detectorCandidates.add(
-          new com.google.devtools.mobileharness.api.devicemanager.detector.BaseAdbDetector());
-    }
-    if (Flags.instance().noOpDeviceNum.getNonNull() > 0) {
-      detectorCandidates.add(new NoOpDeviceDetector());
-    }
-    return detectorCandidates.build();
+    return BaseDetectorDispatcherPicker.createDetectorCandidates();
   }
 
   protected void addDeviceDispatchers(DispatcherManager dispatcherManager) {
-    // Adds Android real device dispatcher.
-    if (Flags.instance().detectAdbDevice.getNonNull()) {
-      dispatcherManager.add(AndroidRealDeviceDispatcher.class);
-    }
-
-    // Adds NoOp dispatcher.
-    if (Flags.instance().noOpDeviceNum.getNonNull() > 0) {
-      dispatcherManager.add(NoOpDeviceDispatcher.class);
-    }
+    BaseDetectorDispatcherPicker.addDispatchers(dispatcherManager);
   }
 
   private List<Detector> checkAndGetDetectors() throws InterruptedException {
     ImmutableList<Detector> detectorCandidates = createDeviceDetectorCandidates();
-    List<Detector> validDetectors = new ArrayList<>();
-    for (Detector detector : detectorCandidates) {
-      if (detector.precondition()) {
-        validDetectors.add(detector);
-      } else {
-        logger.atWarning().log(
-            "Current system environment does not support %s", detector.getClass().getSimpleName());
-      }
-    }
-    return validDetectors;
+    return BaseDetectorDispatcherPicker.checkDetectors(detectorCandidates);
   }
 
   private ImmutableList<Class<? extends Dispatcher>> getSupportedDispatchers() {
