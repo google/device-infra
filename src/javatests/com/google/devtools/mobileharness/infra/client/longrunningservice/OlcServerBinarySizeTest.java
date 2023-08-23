@@ -16,10 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
-import static com.google.common.truth.Truth.assertWithMessage;
-
 import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.BinarySizeChecker;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -45,7 +43,7 @@ public class OlcServerBinarySizeTest {
 
   @Test
   public void checkBaseServerBinarySize() throws Exception {
-    checkBinarySize(
+    BinarySizeChecker.checkBinarySize(
         "OmniLab client with no_op test",
         MAX_BASE_SERVER_BINARY_SIZE_BYTE,
         BASE_SERVER_BINARY_FILE_PATH);
@@ -53,7 +51,7 @@ public class OlcServerBinarySizeTest {
 
   @Test
   public void checkAndroidServerBinarySize() throws Exception {
-    checkBinarySize(
+    BinarySizeChecker.checkBinarySize(
         "OmniLab client with Android device",
         MAX_ANDROID_SERVER_BINARY_SIZE_BYTE,
         ANDROID_SERVER_BINARY_FILE_PATH);
@@ -61,18 +59,7 @@ public class OlcServerBinarySizeTest {
 
   @Test
   public void checkAtsServerBinarySize() throws Exception {
-    checkBinarySize(
+    BinarySizeChecker.checkBinarySize(
         "ATS OmniLab client", MAX_ATS_SERVER_BINARY_SIZE_BYTE, ATS_SERVER_BINARY_FILE_PATH);
-  }
-
-  private static void checkBinarySize(String name, long maxSizeByte, String filePath)
-      throws Exception {
-    assertWithMessage(
-            "The binary size of %s should be less than %s bytes. If"
-                + " you are sure that the new added deps are necessary, please"
-                + " update the number and explain the necessity. file_path=%s",
-            name, maxSizeByte, filePath)
-        .that(new LocalFileUtil().getFileSize(filePath))
-        .isLessThan(maxSizeByte);
   }
 }

@@ -13,25 +13,27 @@
 # limitations under the License.
 #
 
-DEFAULT_VISIBILITY = [
-    "//:deviceinfra_all_pkg",
-]
-
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
-)
-
-java_library(
-    name = "job_type_util",
-    srcs = ["job/JobTypeUtil.java"],
-    deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
     ],
 )
+
+################################################################################
+# Test sets containing runtime_deps of driver/decorator/device
+################################################################################
+
+java_library(
+    name = "oss_lab_test",
+    runtime_deps = [
+        ":android_real_device",
+    ],
+)
+
+################################################################################
+# Common libraries
+################################################################################
 
 java_library(
     name = "api",
@@ -70,90 +72,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:reflection",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "device_cache",
-    srcs = ["DeviceCache.java"],
-    deps = ["//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache"],
-)
-
-java_library(
-    name = "composite_device_util",
-    srcs = ["CompositeDeviceUtil.java"],
-    visibility = [
-        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-    ],
-    deps = [
-        ":api",
-        ":device_cache",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-    ],
-)
-
-java_library(
-    name = "validator_factory",
-    srcs = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:ValidatorFactory.java"],
-    visibility = [
-        "//javatests/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
-    ],
-    deps = [
-        ":api",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "job_validator",
-    srcs = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:JobValidator.java"],
-    deps = [
-        ":api",
-        ":validator_factory",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "base_device",
-    srcs = [
-        "device/BaseDevice.java",
-    ],
-    deps = [
-        ":api",
-        ":validator_factory",
-        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device:base_device_helper",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
-        "//src/java/com/google/devtools/mobileharness/api/model/lab:lite_device_info_factory",
-        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
-        "//src/java/com/google/devtools/mobileharness/infra/container/annotation",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_info_manager",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:communication_java_proto",
-        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
@@ -200,11 +118,106 @@ java_library(
 )
 
 java_library(
+    name = "base_device",
+    srcs = [
+        "device/BaseDevice.java",
+    ],
+    deps = [
+        ":api",
+        ":validator_factory",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device:base_device_helper",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:lite_device_info_factory",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
+        "//src/java/com/google/devtools/mobileharness/infra/container/annotation",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_info_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:communication_java_proto",
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "composite_device_util",
+    srcs = ["CompositeDeviceUtil.java"],
+    visibility = [
+        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+    ],
+    deps = [
+        ":api",
+        ":device_cache",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
+    name = "device_cache",
+    srcs = ["DeviceCache.java"],
+    deps = ["//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache"],
+)
+
+java_library(
+    name = "job_type_util",
+    srcs = ["job/JobTypeUtil.java"],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+    ],
+)
+
+java_library(
+    name = "job_validator",
+    srcs = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:JobValidator.java"],
+    deps = [
+        ":api",
+        ":validator_factory",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "simple_composite_device",
     srcs = ["device/SimpleCompositeDevice.java"],
     deps = [
         ":api",
         ":base_device",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "validator_factory",
+    srcs = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:ValidatorFactory.java"],
+    visibility = [
+        "//javatests/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
+    ],
+    deps = [
+        ":api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -267,7 +280,7 @@ java_library(
 )
 
 ################################################################################
-# Misc
+# MiscDevice
 ################################################################################
 
 java_library(

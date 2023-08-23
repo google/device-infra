@@ -16,6 +16,7 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/javatests/com/google/wireless/qa/mobileharness/lab:__subpackages__",
     ],
 )
 
@@ -39,5 +40,17 @@ java_library(
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+    ],
+)
+
+# Open-source version of MH lab server.
+java_binary(
+    name = "lab_server_oss",
+    main_class = "com.google.wireless.qa.mobileharness.lab.LabServer",
+    # Think twice before adding resources here. Always try to pack the resources
+    # into the libraries using the resources.
+    runtime_deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/lab:lab_lib",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:oss_lab_test",
     ],
 )
