@@ -34,6 +34,7 @@ import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
+import com.google.devtools.mobileharness.platform.android.lightning.shared.SharedLogUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageType;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
@@ -47,6 +48,7 @@ import com.google.devtools.mobileharness.platform.android.shared.constant.Splitt
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.wireless.qa.mobileharness.shared.log.LogCollector;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil.LocationType;
@@ -60,6 +62,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -290,7 +293,11 @@ public class AndroidConnectivityUtil {
    * @throws InterruptedException if current thread is interrupted during this method
    */
   public boolean connectToWifi(
-      String serial, int sdkVersion, String wifiSsid, @Nullable String wifiPsk)
+      String serial,
+      int sdkVersion,
+      String wifiSsid,
+      @Nullable String wifiPsk,
+      @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     ConnectToWifiArgs.Builder builder =
         ConnectToWifiArgs.builder()
@@ -302,7 +309,7 @@ public class AndroidConnectivityUtil {
     if (!Strings.isNullOrEmpty(wifiPsk)) {
       builder.setWifiPsk(wifiPsk);
     }
-    return connectToWifi(builder.build());
+    return connectToWifi(builder.build(), log);
   }
 
   /**
@@ -319,7 +326,12 @@ public class AndroidConnectivityUtil {
    * @throws InterruptedException if current thread is interrupted during this method
    */
   public boolean connectToWifi(
-      String serial, int sdkVersion, String wifiSsid, @Nullable String wifiPsk, boolean scanSsid)
+      String serial,
+      int sdkVersion,
+      String wifiSsid,
+      @Nullable String wifiPsk,
+      boolean scanSsid,
+      @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     ConnectToWifiArgs.Builder builder =
         ConnectToWifiArgs.builder()
@@ -331,7 +343,7 @@ public class AndroidConnectivityUtil {
     if (!Strings.isNullOrEmpty(wifiPsk)) {
       builder.setWifiPsk(wifiPsk);
     }
-    return connectToWifi(builder.build());
+    return connectToWifi(builder.build(), log);
   }
 
   /**
@@ -343,7 +355,7 @@ public class AndroidConnectivityUtil {
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if current thread is interrupted during this method
    */
-  public boolean connectToWifi(ConnectToWifiArgs args)
+  public boolean connectToWifi(ConnectToWifiArgs args, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     String serial = args.serial();
     int sdkVersion = args.sdkVersion();
@@ -356,8 +368,13 @@ public class AndroidConnectivityUtil {
     if (DeviceUtil.inSharedLab()) {
       // TODO:shouldManageDevices check should be moved to higher level API while
       // AndroidConnectivityUtil can focus on managing device wifi/network.
-      logger.atSevere().log(
-          "Ignoring attempt to connect device %s to WiFi while not managing devices.", serial);
+      SharedLogUtil.logMsg(
+          logger,
+          Level.SEVERE,
+          log,
+          /* cause= */ null,
+          "Ignoring attempt to connect device %s to WiFi while not managing devices.",
+          serial);
       return false;
     }
 
@@ -365,7 +382,7 @@ public class AndroidConnectivityUtil {
     if (!Strings.isNullOrEmpty(wifiPsk)) {
       wifiPsk = ShellUtils.shellEscape(wifiPsk);
     }
-    if (canConnectToWifi(serial, sdkVersion, wifiSsid, wifiPsk, scanSsid, forceTryConnect)) {
+    if (canConnectToWifi(serial, sdkVersion, wifiSsid, wifiPsk, scanSsid, forceTryConnect, log)) {
       String cmd = null;
       if (scanSsid) {
         cmd =
@@ -373,7 +390,7 @@ public class AndroidConnectivityUtil {
                 ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITH_PASSWORD_AND_SCAN_SSID,
                 wifiSsid,
                 Strings.nullToEmpty(wifiPsk),
-                scanSsid);
+                String.valueOf(scanSsid));
       } else if (Strings.isNullOrEmpty(wifiPsk)) {
         cmd = String.format(ADB_SHELL_TEMPLATE_CONNECT_WIFI_WITHOUT_PASSWORD, wifiSsid);
       } else {
@@ -398,11 +415,23 @@ public class AndroidConnectivityUtil {
       if (waitForNetwork(serial, sdkVersion, wifiSsid, waitTimeout)) {
         return true;
       }
-      logger.atWarning().log("Failed to connect device %s to ssid '%s'", serial, wifiSsid);
+      SharedLogUtil.logMsg(
+          logger,
+          Level.WARNING,
+          log,
+          /* cause= */ null,
+          "Failed to connect device %s to ssid '%s'",
+          serial,
+          wifiSsid);
     } else {
-      logger.atWarning().log(
+      SharedLogUtil.logMsg(
+          logger,
+          Level.WARNING,
+          log,
+          /* cause= */ null,
           "Skip connecting device %s to ssid '%s', check prior logs for reasons.",
-          serial, wifiSsid);
+          serial,
+          wifiSsid);
     }
     return false;
   }
@@ -701,14 +730,15 @@ public class AndroidConnectivityUtil {
    * @throws MobileHarnessException if some error occurs in executing system commands
    * @throws InterruptedException if current thread is interrupted during this method
    */
-  public void reEnableWifi(String serial) throws MobileHarnessException, InterruptedException {
+  public void reEnableWifi(String serial, @Nullable LogCollector<?> log)
+      throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Device %s: Re-enable Wi-Fi.", serial);
-    if (!setWifiEnabled(serial, /* enabled= */ false)) {
+    if (!setWifiEnabled(serial, /* enabled= */ false, log)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_CONNECTIVITY_DISABLE_WIFI_ERROR,
           String.format("Failed to disable wifi on device %s", serial));
     }
-    if (!setWifiEnabled(serial, /* enabled= */ true)) {
+    if (!setWifiEnabled(serial, /* enabled= */ true, log)) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_CONNECTIVITY_ENABLE_WIFI_ERROR,
           String.format("Failed to enable wifi on device %s", serial));
@@ -803,32 +833,61 @@ public class AndroidConnectivityUtil {
       String ssid,
       @Nullable String pwd,
       boolean scanSsid,
-      boolean forceTryConnect)
+      boolean forceTryConnect,
+      @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     if (Strings.isNullOrEmpty(ssid)) {
-      logger.atInfo().log("Can not connect device %s to wifi as SSID is empty", serial);
+      SharedLogUtil.logMsg(
+          logger,
+          Level.INFO,
+          log,
+          /* cause= */ null,
+          "Can not connect device %s to wifi as SSID is empty",
+          serial);
       return false;
     }
 
-    if (!setWifiEnabled(serial, /* enabled= */ true)) {
-      logger.atInfo().log("Can not connect device %s to wifi as failed to enable wifi", serial);
+    if (!setWifiEnabled(serial, /* enabled= */ true, log)) {
+      SharedLogUtil.logMsg(
+          logger,
+          Level.INFO,
+          log,
+          /* cause= */ null,
+          "Can not connect device %s to wifi as failed to enable wifi",
+          serial);
       return false;
     }
 
     if (scanSsid) {
-      logger.atInfo().log("SSID is hidden, connecting device %s to it anyway", serial);
+      SharedLogUtil.logMsg(
+          logger,
+          Level.INFO,
+          log,
+          /* cause= */ null,
+          "SSID is hidden, connecting device %s to it anyway",
+          serial);
       return true;
     }
     if (forceTryConnect) {
-      logger.atInfo().log(
-          "Connecting device %s to SSID %s without checking wifi scan results", serial, ssid);
+      SharedLogUtil.logMsg(
+          logger,
+          Level.INFO,
+          log,
+          /* cause= */ null,
+          "Connecting device %s to SSID %s without checking wifi scan results",
+          serial,
+          ssid);
       return true;
     }
 
-    boolean wifiScanDone = waitForWifiScanResults(serial, sdkVersion);
+    boolean wifiScanDone = waitForWifiScanResults(serial, sdkVersion, log);
     if (!wifiScanDone) {
       // For debugging purpose, dump wifi scan results to logs.
-      logger.atInfo().log(
+      SharedLogUtil.logMsg(
+          logger,
+          Level.INFO,
+          log,
+          /* cause= */ null,
           "Wifi scan didn't finish as expected, here is the current wifi scan results:%n%s",
           dumpWifiScanResults(serial, sdkVersion));
       return false;
@@ -840,23 +899,39 @@ public class AndroidConnectivityUtil {
     for (String line : Splitters.LINE_SPLITTER.split(wifiLatestScanResult)) {
       if (ssidPattern.matcher(line).find()) {
         if (PATTERN_WIFI_SECURITY_MODE.matcher(line).find()) {
-          logger.atInfo().log(
-              "Found SSID %s (secured) in wifiscanner, password is required.", ssid);
+          SharedLogUtil.logMsg(
+              logger,
+              Level.INFO,
+              log,
+              /* cause= */ null,
+              "Found SSID %s (secured) in wifiscanner, password is required.",
+              ssid);
           return !pwdEmptyOrNull;
         } else {
-          logger.atInfo().log(
-              "Found SSID %s (unsecured) in wifiscanner, no password should be given.", ssid);
+          SharedLogUtil.logMsg(
+              logger,
+              Level.INFO,
+              log,
+              /* cause= */ null,
+              "Found SSID %s (unsecured) in wifiscanner, no password should be given.",
+              ssid);
           return pwdEmptyOrNull;
         }
       }
     }
     // For debugging purpose, dump real time wifi scan results to logs.
-    logger.atWarning().log(
-        "Can't find any matched SSID for ssid [%s].%n"
-            + "If the SSID is hidden, please specify \"wifi_scan_ssid\": \"true\" in the params.%n"
-            + "Analyzed wifi latest scan results for device %s:%n%s%n"
-            + "Current wifi scan results for debugging purpose:%n%s",
-        ssid, serial, wifiLatestScanResult, dumpWifiScanResults(serial, sdkVersion));
+    SharedLogUtil.logMsg(
+        logger,
+        Level.WARNING,
+        log,
+        /* cause= */ null,
+        "Can't find any matched SSID for ssid [%s].%nIf the SSID is hidden, please specify"
+            + " \"wifi_scan_ssid\": \"true\" in the params.%nAnalyzed wifi latest scan results"
+            + " for device %s:%n%s%nCurrent wifi scan results for debugging purpose:%n%s",
+        ssid,
+        serial,
+        wifiLatestScanResult,
+        dumpWifiScanResults(serial, sdkVersion));
     return false;
   }
 
@@ -1063,14 +1138,21 @@ public class AndroidConnectivityUtil {
    */
   @CanIgnoreReturnValue
   @VisibleForTesting
-  boolean setWifiEnabled(String serial, boolean enabled)
+  boolean setWifiEnabled(String serial, boolean enabled, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     WifiState targetWifiState = enabled ? WifiState.ENABLED : WifiState.DISABLED;
     if (currentWifiStateMatchTargetState(serial, targetWifiState)) {
       return true;
     }
 
-    logger.atInfo().log("%s wifi on device %s...", enabled ? "Enabling" : "Disabling", serial);
+    SharedLogUtil.logMsg(
+        logger,
+        Level.INFO,
+        log,
+        /* cause= */ null,
+        "%s wifi on device %s...",
+        enabled ? "Enabling" : "Disabling",
+        serial);
 
     boolean setWifiSucceeded = false;
     if (packageManagerUtil
@@ -1095,23 +1177,42 @@ public class AndroidConnectivityUtil {
     }
     if (!setWifiSucceeded) {
       String wifiOp = enabled ? "enable" : "disable";
-      logger.atInfo().log("%s wifi on device %s via svc...", wifiOp, serial);
+      SharedLogUtil.logMsg(
+          logger,
+          Level.INFO,
+          log,
+          /* cause= */ null,
+          "%s wifi on device %s via svc...",
+          wifiOp,
+          serial);
       AndroidSvc svcArgs =
           AndroidSvc.builder().setCommand(AndroidSvc.Command.WIFI).setOtherArgs(wifiOp).build();
       try {
         adbUtil.svc(serial, svcArgs);
       } catch (MobileHarnessException e) {
-        logger.atSevere().log(
+        SharedLogUtil.logMsg(
+            logger,
+            Level.SEVERE,
+            log,
+            /* cause= */ null,
             "Failed to %s wifi on device %s, upcoming tests may not work as expected:%n%s",
-            enabled ? "enable" : "disable", serial, e.getMessage());
+            enabled ? "enable" : "disable",
+            serial,
+            e.getMessage());
         return false;
       }
     }
 
     boolean wifiStateReady = waitForWifiState(serial, targetWifiState);
     if (!wifiStateReady) {
-      logger.atWarning().log(
-          "Failed %s wifi on device %s", enabled ? "enabling" : "disabling", serial);
+      SharedLogUtil.logMsg(
+          logger,
+          Level.WARNING,
+          log,
+          /* cause= */ null,
+          "Failed %s wifi on device %s",
+          enabled ? "enabling" : "disabling",
+          serial);
     }
     return wifiStateReady;
   }
@@ -1162,10 +1263,11 @@ public class AndroidConnectivityUtil {
    * <p>Tested from API 15 to API 28, and Q.
    */
   @VisibleForTesting
-  boolean waitForWifiScanResults(String serial, int sdkVersion) throws InterruptedException {
+  boolean waitForWifiScanResults(String serial, int sdkVersion, @Nullable LogCollector<?> log)
+      throws InterruptedException {
     return AndroidAdbUtil.waitForDeviceReady(
         UtilArgs.builder().setSerial(serial).build(),
-        utilArgs -> checkWifiScanResultsReady(utilArgs.serial(), sdkVersion),
+        utilArgs -> checkWifiScanResultsReady(utilArgs.serial(), sdkVersion, log),
         WaitArgs.builder()
             .setSleeper(sleeper)
             .setClock(clock)
@@ -1174,21 +1276,34 @@ public class AndroidConnectivityUtil {
             .build());
   }
 
-  /** Helper method for {@link #waitForWifiScanResults(String, int)}. */
-  private boolean checkWifiScanResultsReady(String serial, int sdkVersion) {
+  /** Helper method for {@link #waitForWifiScanResults(String, int, LogCollector)}. */
+  private boolean checkWifiScanResultsReady(
+      String serial, int sdkVersion, @Nullable LogCollector<?> log) {
     try {
-      logger.atInfo().log("Checking wifi scan status...");
+      SharedLogUtil.logMsg(
+          logger, Level.INFO, log, /* cause= */ null, "Checking wifi scan status...");
       return checkWifiScanResults(
           dumpWifiScanResults(serial, sdkVersion), isSdkVersionAboveNougat(sdkVersion));
     } catch (MobileHarnessException e) {
-      logger.atWarning().log(
-          "Failed to get wifi scan results for device %s:%n%s", serial, e.getMessage());
+      SharedLogUtil.logMsg(
+          logger,
+          Level.WARNING,
+          log,
+          /* cause= */ null,
+          "Failed to get wifi scan results for device %s:%n%s",
+          serial,
+          e.getMessage());
       return false;
     } catch (InterruptedException ie) {
-      logger.atWarning().log(
+      SharedLogUtil.logMsg(
+          logger,
+          Level.WARNING,
+          log,
+          /* cause= */ null,
           "Caught interrupted exception when getting device %s wifi scan results, interrupt "
               + "current thread:%n%s",
-          serial, ie.getMessage());
+          serial,
+          ie.getMessage());
       Thread.currentThread().interrupt();
     }
     return false;

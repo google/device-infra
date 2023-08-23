@@ -30,6 +30,7 @@ java_library(
         "SharedLogUtil.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning:__subpackages__",
     ],
     deps = [

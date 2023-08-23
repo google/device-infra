@@ -1500,7 +1500,7 @@ public abstract class AndroidRealDeviceDelegate {
     if (!Strings.isNullOrEmpty(pwd)) {
       argsBuilder.setWifiPsk(pwd);
     }
-    if (!connectivityUtil.connectToWifi(argsBuilder.build())) {
+    if (!connectivityUtil.connectToWifi(argsBuilder.build(), /* log= */ null)) {
       logger.atWarning().log("Failed to connect device %s to SSID '%S'", serial, ssid);
     }
   }
@@ -1691,7 +1691,7 @@ public abstract class AndroidRealDeviceDelegate {
     logger.atInfo().log("Recovering device %s network...", deviceId);
     String currentSsid = null;
     try {
-      connectivityUtil.reEnableWifi(deviceId);
+      connectivityUtil.reEnableWifi(deviceId, /* log= */ null);
       if (connectivityUtil.waitForNetwork(
           deviceId, sdkVersion, null, AndroidRealDeviceConstants.WAIT_FOR_INTERNET)) {
         logger.atInfo().log("Device %s connected to network after re-enabling Wifi", deviceId);
