@@ -28,6 +28,7 @@ java_library(
     name = "oss_lab_test",
     runtime_deps = [
         ":android_real_device",
+        ":no_op_test",
     ],
 )
 
