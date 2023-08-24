@@ -353,9 +353,7 @@ public class Flags {
 
   @com.beust.jcommander.Parameter(
       names = "--grpc_port",
-      description =
-          "gRPC port of lab server local gRPC services including the lab resource monitoring"
-              + " service",
+      description = "Port of lab server local gRPC services. Default is 9994.",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> grpcPort = grpcPortDefault;
 

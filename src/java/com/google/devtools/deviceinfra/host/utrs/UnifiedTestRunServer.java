@@ -59,6 +59,8 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.devtools.mobileharness.shared.version.rpc.service.VersionServiceImpl;
+import com.google.devtools.mobileharness.shared.version.rpc.service.grpc.VersionGrpcImpl;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
@@ -69,6 +71,7 @@ import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import io.grpc.BindableService;
 import io.grpc.netty.NettyServerBuilder;
+import io.grpc.protobuf.services.ProtoReflectionService;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -173,7 +176,7 @@ public class UnifiedTestRunServer {
         apiConfig.addObserver(masterSyncerForDevice);
       }
 
-      // TODO: Create VersionServiceImpl.
+      VersionServiceImpl versionService = new VersionServiceImpl(Version.LAB_VERSION);
 
       logger.atInfo().log("Lab server %s starts.", Version.LAB_VERSION);
 
@@ -200,6 +203,10 @@ public class UnifiedTestRunServer {
       List<BindableService> localGrpcServices = new ArrayList<>();
 
       // TODO: Add local grpc services here.
+      VersionGrpcImpl versionGrpcService = new VersionGrpcImpl(versionService);
+      localGrpcServices.add(versionGrpcService);
+
+      localGrpcServices.add(ProtoReflectionService.newInstance());
 
       // Starts grpc server for local requests only.
       NettyServerBuilder localGrpcServerBuilder =
@@ -209,8 +216,6 @@ public class UnifiedTestRunServer {
         localGrpcServerBuilder.addService(service);
       }
       localGrpcServerBuilder.build().start();
-
-      // Starts CloudRPC server.
 
       // NOTE: Only for debug/test purpose.
       if (Flags.instance().debugRandomExit.getNonNull()) {
