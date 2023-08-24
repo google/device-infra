@@ -106,7 +106,8 @@ public interface ExitCode {
     RELEASE_SERVER_ERROR(93),
     COMMAND_SERVER_ERROR(94),
     RELEASE_SYNC_ERROR(95),
-    GRPC_SERVER_ERROR(96);
+    GRPC_SERVER_ERROR(96),
+    EXIT_ERROR(97);
 
     private final int code;
 
