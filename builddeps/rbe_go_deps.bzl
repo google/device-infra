@@ -28,8 +28,8 @@ def rbe_go_deps():
     go_repository(
         name = "com_github_bazelbuild_remote_apis_sdks",
         importpath = "github.com/bazelbuild/remote-apis-sdks",
-        sum = "h1:/rrIbpkgKmdEY650UThljpRj262Q35q+mvBeghIk5Tk=",
-        version = "v0.0.0-20230526202722-1fbb879f0b2f",
+        sum = "h1:yZg+GHAYpuaNNuzTXdVjZ6uyMGiDNtISuqJcdVgIEJE=",
+        version = "v0.0.0-20230822143022-8ee7a6ff900a",
     )
     go_repository(
         name = "com_github_dsnet_compress",

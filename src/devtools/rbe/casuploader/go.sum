@@ -8,8 +8,8 @@ cloud.google.com/go/longrunning v0.5.1/go.mod h1:spvimkwdz6SPWKEt/XBij79E9fiTkHS
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/bazelbuild/remote-apis v0.0.0-20230411132548-35aee1c4a425 h1:Lj8uXWW95oXyYguUSdQDvzywQb4f0jbJWsoLPQWAKTY=
 github.com/bazelbuild/remote-apis v0.0.0-20230411132548-35aee1c4a425/go.mod h1:ry8Y6CkQqCVcYsjPOlLXDX2iRVjOnjogdNwhvHmRcz8=
-github.com/bazelbuild/remote-apis-sdks v0.0.0-20230526202722-1fbb879f0b2f h1:/rrIbpkgKmdEY650UThljpRj262Q35q+mvBeghIk5Tk=
-github.com/bazelbuild/remote-apis-sdks v0.0.0-20230526202722-1fbb879f0b2f/go.mod h1:fUQHOmdjqFNgE7CGmwwqcM0a4f/8/oy23iDvdvELExY=
+github.com/bazelbuild/remote-apis-sdks v0.0.0-20230822143022-8ee7a6ff900a h1:yZg+GHAYpuaNNuzTXdVjZ6uyMGiDNtISuqJcdVgIEJE=
+github.com/bazelbuild/remote-apis-sdks v0.0.0-20230822143022-8ee7a6ff900a/go.mod h1:WNEeW945Wmw9cBzCRmuExXm0RN5vF3nczx/c4I5H3Fw=
 github.com/census-instrumentation/opencensus-proto v0.2.1/go.mod h1:f6KPmirojxKA12rnyqOA5BBL4O983OfeGPqjHWSTneU=
 github.com/client9/misspell v0.3.4/go.mod h1:qj6jICC3Q7zFZvVWo7KLAzC3yx5G7kyvSDkc90ppPyw=
 github.com/cncf/udpa/go v0.0.0-20201120205902-5459f2c99403/go.mod h1:WmhPx2Nbnhtbo57+VJT5O0JRkEi1Wbu0z5j0R8u5Hbk=

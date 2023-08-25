@@ -3,7 +3,7 @@ module github.com/google/device-infra/src/devtools/rbe/casuploader
 go 1.22
 
 require (
-	github.com/bazelbuild/remote-apis-sdks v0.0.0-20230526202722-1fbb879f0b2f
+	github.com/bazelbuild/remote-apis-sdks v0.0.0-20230822143022-8ee7a6ff900a
 	github.com/golang/glog v1.1.2
 	github.com/google/device-infra v0.0.0-20230821085359-d99bb10f2d1d
 	github.com/google/uuid v1.3.0
