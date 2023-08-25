@@ -123,7 +123,8 @@ func (du *DirUploader) getEntriesToUpload() (rootDigest digest.Digest, uploadEnt
 	// See https://github.com/hanwen/go-fuse/issues/391 for the information of the bug inside go-fuse.
 	for tryCount < 20 {
 		tryCount++
-		rootDigest, uploadEntries, _, _ = du.client.ComputeMerkleTree(du.dirPath, "", "", &inputSpec, du.digestCache)
+		rootDigest, uploadEntries, _, _ = du.client.ComputeMerkleTree(
+			du.ctx, du.dirPath, "", "", &inputSpec, du.digestCache)
 		if rootDigestSet[rootDigest] {
 			break
 		} else {
