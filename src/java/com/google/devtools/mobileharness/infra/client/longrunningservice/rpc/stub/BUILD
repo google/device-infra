@@ -23,15 +23,6 @@ package(
 )
 
 java_library(
-    name = "channel_factory",
-    srcs = ["ChannelFactory.java"],
-    deps = [
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//netty",
-    ],
-)
-
-java_library(
     name = "control_stub",
     srcs = ["ControlStub.java"],
     visibility = [

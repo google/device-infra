@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub;
+package com.google.devtools.mobileharness.shared.util.comm.stub;
 
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NegotiationType;

@@ -27,8 +27,21 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/lab:lab_server_oss_deploy.jar",
     ],
     deps = [
+        "//src/devtools/mobileharness/shared/version/proto:version_service_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/port:portprober",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/devtools/mobileharness/shared/version",
+        "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub",
+        "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub/grpc",
+        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/file/local:binary_size_checker",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
     ],
 )
@@ -37,6 +50,7 @@ junit_test_suites(
     name = "gen_tests",
     sizes = [
         "small",
+        "medium",
     ],
     deps = [":lab"],
 )

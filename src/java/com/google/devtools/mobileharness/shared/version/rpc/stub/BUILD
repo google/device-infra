@@ -13,32 +13,17 @@
 # limitations under the License.
 #
 
-package(
-    default_applicable_licenses = ["//:license"],
-    default_visibility = [
+package(default_applicable_licenses = ["//:license"])
+
+java_library(
+    name = "stub",
+    srcs = ["VersionStub.java"],
+    visibility = [
         "//:deviceinfra_all_pkg",
     ],
-)
-
-java_library(
-    name = "channel_factory",
-    srcs = ["ChannelFactory.java"],
     deps = [
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//netty",
-    ],
-)
-
-java_library(
-    name = "master_grpc_stub_helper",
-    srcs = [
-        "MasterGrpcStubHelper.java",
-    ],
-    runtime_deps = [
-    ],
-    deps = [
-        "@io_grpc_grpc_java//core",
-        "@io_grpc_grpc_java//stub",
-        "@maven//:com_google_guava_guava",
+        "//src/devtools/mobileharness/shared/version/proto:version_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
+        "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )

@@ -68,10 +68,10 @@ java_library(
     deps = [
         ":annotations",
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",

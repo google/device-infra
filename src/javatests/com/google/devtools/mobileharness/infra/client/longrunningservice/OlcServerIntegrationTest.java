@@ -50,10 +50,10 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ChannelFactory;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
+import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;

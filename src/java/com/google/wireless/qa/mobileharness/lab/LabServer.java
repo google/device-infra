@@ -122,17 +122,5 @@ public class LabServer {
         Guice.createInjector(new UnifiedTestRunServerModule(labArgs, globalInternalBus));
     UnifiedTestRunServer.initializeEnv();
     utrs = injector.getInstance(UnifiedTestRunServer.class);
-
-    // Lab Server shouldn't run as root.
-    if (SYSTEM_UTIL.isRunAsRoot()) {
-      SYSTEM_UTIL.exit(
-          Lab.RUN_AS_ROOT,
-          "Lab Server(version: "
-              + Version.LAB_VERSION
-              + ") should not run as root. If you starts this Lab Server via command line, don't "
-              + "run it with sudo. If you push this Lab Server via MH FE, please upgrade your "
-              + "Daemon Server on the host machine and try again. Or file a bug to go/mh-bug if "
-              + "you need further help.");
-    }
   }
 }

@@ -156,13 +156,17 @@ public class UnifiedTestRunServer {
       ApiConfig apiConfig = ApiConfig.getInstance();
       apiConfig.init(DeviceUtil.inSharedLab());
 
-      // Initializes the master service Stubby stub. If master host is set to empty, the lab server
+      // Initializes the master service stub. If master host is set to empty, the lab server
       // will run independently without the master server for debugging.
       MasterSyncerForDevice masterSyncerForDevice = null;
       MasterSyncerForJob masterSyncerForJob = null;
 
       LabSyncStub labSyncStub = null;
       JobSyncStub jobSyncStub = null;
+
+      if (Flags.instance().enableMasterSyncer.getNonNull()) {
+        // TODO: Create labSyncStub and jobSyncStub.
+      }
 
       if ((labSyncStub != null || jobSyncStub != null)) {
 

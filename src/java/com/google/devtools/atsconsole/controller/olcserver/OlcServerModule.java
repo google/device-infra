@@ -21,10 +21,10 @@ import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerBin
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerChannel;
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerStub;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ChannelFactory;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
+import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import io.grpc.ManagedChannel;

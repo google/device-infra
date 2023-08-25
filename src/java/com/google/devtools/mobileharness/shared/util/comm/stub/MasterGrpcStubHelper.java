@@ -28,6 +28,10 @@ public class MasterGrpcStubHelper {
   private final ManagedChannel channel;
   private final ImmutableList<ClientInterceptor> interceptors;
 
+  public MasterGrpcStubHelper(ManagedChannel channel) {
+    this(channel, ImmutableList.of());
+  }
+
   private MasterGrpcStubHelper(
       ManagedChannel channel, ImmutableList<ClientInterceptor> interceptors) {
     this.channel = checkNotNull(channel);

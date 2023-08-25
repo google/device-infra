@@ -247,6 +247,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAtsConsoleOlcServerLog = enableAtsConsoleOlcServerLogDefault;
 
+  private static final Flag<Boolean> enableCloudLoggingDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_cloud_logging",
+      description = "Whether to enable cloud logging.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableCloudLogging = enableCloudLoggingDefault;
+
   private static final Flag<Boolean> enableDebugModeDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -294,6 +302,22 @@ public class Flags {
               + " default value of this flag is true.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> createFailedDevice = createFailedDeviceDefault;
+
+  private static final Flag<Boolean> enableFileCleanerDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_file_cleaner",
+      description = "Whether to enable file cleaner.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableFileCleaner = enableFileCleanerDefault;
+
+  private static final Flag<Boolean> enableMasterSyncerDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_master_syncer",
+      description = "Whether to enable master syncer in lab.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableMasterSyncer = enableMasterSyncerDefault;
 
   private static final Flag<Boolean> enableRdhDefault = Flag.value(false);
 
