@@ -1,0 +1,54 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+// Specs for {@link AndroidInstallSystemAppsDecoratorSpec}
+// Next tag: 4
+message AndroidInstallSystemAppsDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidInstallSystemAppsDecoratorSpec ext = 1002;
+  }
+
+  // System apks to install before test. This is a list of system apk file paths
+  // which will be downloaded by mobile harness platform before test.
+  repeated string system_apk = 1 [(file_detail) = {
+    is_required: true,
+    help: "The system apks to install before going into the core driver."
+  }];
+
+  // Permission files to push to Android system before test. This is a list of
+  // permission file paths which will be downloaded by mobile harness platform
+  // before test.
+  repeated string permissions_file = 2 [(file_detail) = {
+    help: "The permissions xml to be pushed to the device to give necessary "
+          "permissions to the apk."
+  }];
+
+  // The paths to push permission files to before test. This is a list of
+  // locations on the device to push the permission files to. This list should
+  // have the same number of items as "permissions_file".
+  optional string permissions_file_path = 3 [(field_detail) = {
+    help: "The paths to push permission files to before test."
+  }];
+}
