@@ -26,17 +26,19 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.port.PortProber;
 import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
+import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
-import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub;
 import io.grpc.ManagedChannel;
+import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.After;
@@ -44,6 +46,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
@@ -53,6 +57,33 @@ public class LabServerIntegrationTest {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
+
+  @Rule
+  public TestWatcher testWatcher =
+      new TestWatcher() {
+
+        @Override
+        protected void starting(Description description) {
+          // Prints test name to help debug lab server output in test logs.
+          logger.atInfo().log(
+              "\n========================================\n"
+                  + "Starting test: %s\n"
+                  + "========================================\n",
+              description.getDisplayName());
+        }
+
+        @Override
+        protected void failed(Throwable e, Description description) {
+          // Adds lab server stdout/stderr to a failed test.
+          Exception labServerOutput =
+              new IllegalStateException(
+                  String.format(
+                      "lab_server_stdout=[%s], lab_server_stderr=[%s]",
+                      labServerStdoutBuilder, labServerStderrBuilder));
+          labServerOutput.setStackTrace(new StackTraceElement[0]);
+          e.addSuppressed(labServerOutput);
+        }
+      };
 
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
@@ -145,48 +176,46 @@ public class LabServerIntegrationTest {
   }
 
   @Test
-  public void runLabServer() throws Exception {
-    try {
-      logger.atInfo().log("Starting lab server, command=%s", labServerCommand);
-      labServerProcess = new CommandExecutor().start(labServerCommand);
+  public void getVersion() throws Exception {
+    startLabServerAndWaitUntilReady();
 
-      // Waits until lab server starts and detects devices successfully.
-      assertWithMessage("Lab server didn't start in 60 seconds")
-          .that(labServerStartedOrFailedToStart.await(60L, SECONDS))
-          .isTrue();
-      assertWithMessage("Lab server didn't start successfully")
-          .that(labServerStartedSuccessfully.get())
-          .isTrue();
-      assertWithMessage("Lab server didn't detect devices in 15 seconds")
-          .that(labServerFoundDevice.await(15L, SECONDS))
-          .isTrue();
+    GetVersionResponse getVersionResponse =
+        new VersionGrpcStub(labServerChannel).getVersion(GetVersionRequest.getDefaultInstance());
 
-      // Checks VersionService.
-      VersionStub versionStub = new VersionGrpcStub(labServerChannel);
-      assertThat(versionStub.getVersion(GetVersionRequest.getDefaultInstance()))
-          .isEqualTo(
-              GetVersionResponse.newBuilder().setVersion(Version.LAB_VERSION.toString()).build());
+    assertThat(getVersionResponse)
+        .isEqualTo(
+            GetVersionResponse.newBuilder().setVersion(Version.LAB_VERSION.toString()).build());
+  }
 
-      // Checks exceptions in log.
-      String labServerStderr = labServerStderrBuilder.toString();
-      assertWithMessage(
-              "A normal lab server run should not print exception stack traces, which will confuse"
-                  + " users and affect debuggability when debugging lab server logs.\n"
-                  + "lab server stderr")
-          .that(labServerStderr)
-          .doesNotContain("\tat ");
-    } catch (
-        @SuppressWarnings("InterruptedExceptionSwallowed")
-        Throwable e) {
-      // Prints lab server stdout/stderr when the test fails.
-      Exception labServerOutput =
-          new IllegalStateException(
-              String.format(
-                  "lab_server_stdout=[%s], lab_server_stderr=[%s]",
-                  labServerStdoutBuilder, labServerStderrBuilder));
-      labServerOutput.setStackTrace(new StackTraceElement[0]);
-      e.addSuppressed(labServerOutput);
-      throw e;
-    }
+  @Test
+  public void checkLabServerLog() throws Exception {
+    startLabServerAndWaitUntilReady();
+
+    logger.atInfo().log("Running lab server for a while...");
+    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(10L));
+
+    assertWithMessage(
+            "A normal lab server run should not print exception stack traces, which will confuse"
+                + " users and affect debuggability when debugging lab server logs.\n"
+                + "lab server stderr")
+        .that(labServerStderrBuilder.toString())
+        .doesNotContain("\tat ");
+  }
+
+  private void startLabServerAndWaitUntilReady()
+      throws CommandStartException, InterruptedException {
+    logger.atInfo().log("Starting lab server, command=%s", labServerCommand);
+    labServerProcess = new CommandExecutor().start(labServerCommand);
+
+    // Waits until lab server starts and detects devices successfully.
+    assertWithMessage("Lab server didn't start in 60 seconds")
+        .that(labServerStartedOrFailedToStart.await(60L, SECONDS))
+        .isTrue();
+    assertWithMessage("Lab server didn't start successfully")
+        .that(labServerStartedSuccessfully.get())
+        .isTrue();
+    assertWithMessage("Lab server didn't detect devices in 15 seconds")
+        .that(labServerFoundDevice.await(15L, SECONDS))
+        .isTrue();
   }
 }
