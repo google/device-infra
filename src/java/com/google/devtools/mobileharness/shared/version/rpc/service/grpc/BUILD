@@ -24,6 +24,5 @@ java_library(
         "//src/devtools/mobileharness/shared/version/proto:version_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/service",
         "@io_grpc_grpc_java//stub",
-        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )

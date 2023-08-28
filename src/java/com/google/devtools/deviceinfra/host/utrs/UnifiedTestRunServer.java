@@ -16,6 +16,7 @@
 
 package com.google.devtools.deviceinfra.host.utrs;
 
+import static com.google.common.base.StandardSystemProperty.OS_NAME;
 import static com.google.common.base.StandardSystemProperty.OS_VERSION;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -23,6 +24,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -51,6 +53,9 @@ import com.google.devtools.mobileharness.infra.lab.controller.MasterSyncerForDev
 import com.google.devtools.mobileharness.infra.lab.controller.MasterSyncerForJob;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServiceImpl;
+import com.google.devtools.mobileharness.infra.lab.rpc.service.grpc.ExecTestGrpcImpl;
+import com.google.devtools.mobileharness.infra.lab.rpc.service.grpc.PrepareTestGrpcImpl;
+import com.google.devtools.mobileharness.infra.lab.rpc.service.grpc.StatGrpcImpl;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.JobSyncHelper;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.LabSyncHelper;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
@@ -203,16 +208,20 @@ public class UnifiedTestRunServer {
             "Master syncer for job fatal error");
       }
 
-      // Grpc services for local RPC only.
-      List<BindableService> localGrpcServices = new ArrayList<>();
+      // gRPC services for both local RPC and CloudRPC.
+      ImmutableList<BindableService> grpcServices =
+          ImmutableList.of(
+              new VersionGrpcImpl(versionService),
+              new ExecTestGrpcImpl(execTestService),
+              new PrepareTestGrpcImpl(prepareTestService),
+              new StatGrpcImpl());
 
-      // TODO: Add local grpc services here.
-      VersionGrpcImpl versionGrpcService = new VersionGrpcImpl(versionService);
-      localGrpcServices.add(versionGrpcService);
+      // gRPC services for local RPC only.
+      List<BindableService> localGrpcServices = new ArrayList<>(grpcServices);
 
       localGrpcServices.add(ProtoReflectionService.newInstance());
 
-      // Starts grpc server for local requests only.
+      // Starts gRPC server for local requests only.
       NettyServerBuilder localGrpcServerBuilder =
           NettyServerBuilder.forPort(Flags.instance().grpcPort.getNonNull())
               .executor(localGrpcThreadPool);
@@ -371,7 +380,7 @@ public class UnifiedTestRunServer {
                     .add(Ascii.toLowerCase(Name.LAB_LOCATION.name()), labLocation));
     LabDimensionManager.getInstance()
         .getSupportedLocalDimensions()
-        .add(Ascii.toLowerCase(Name.HOST_OS.name()), System.getProperty("os.name"));
+        .add(Ascii.toLowerCase(Name.HOST_OS.name()), OS_NAME.value());
     LabDimensionManager.getInstance()
         .getSupportedLocalDimensions()
         .add(Ascii.toLowerCase(Name.HOST_VERSION.name()), Version.LAB_VERSION.toString());
