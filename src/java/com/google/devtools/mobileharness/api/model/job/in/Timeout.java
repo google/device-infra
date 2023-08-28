@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.api.model.job.in;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.api.model.proto.Job;
 import java.time.Duration;
 
 /** Timeout setting of a job. */
