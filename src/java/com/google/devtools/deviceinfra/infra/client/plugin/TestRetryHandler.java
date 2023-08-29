@@ -60,6 +60,7 @@ public class TestRetryHandler {
   /** Blocklist for disabling the extra retry for infra errors. */
   private static final ImmutableSet<String> DRIVER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY =
       ImmutableSet.of(
+          "AndroidTradefedTest",
           "AndroidCopycatRemoteControlledMoblySnippetTest",
           "IosCopycatRemoteControlledMoblySnippetTest");
 
