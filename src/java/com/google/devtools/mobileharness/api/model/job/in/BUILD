@@ -54,6 +54,8 @@ java_library(
         "DeviceSpec.java",
         "DeviceSpecs.java",
     ],
+    visibility = [
+    ],
     deps = [
         ":decorators",
         ":dimensions",
@@ -95,6 +97,8 @@ java_library(
 java_library(
     name = "files",
     srcs = ["Files.java"],
+    visibility = [
+    ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -125,6 +129,9 @@ java_library(
 java_library(
     name = "timeout",
     srcs = ["Timeout.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
+    ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",

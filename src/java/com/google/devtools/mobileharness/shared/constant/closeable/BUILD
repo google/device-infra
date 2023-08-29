@@ -25,5 +25,10 @@ package(
 
 java_library(
     name = "closeable",
+    srcs = ["NonThrowingAutoCloseable.java"],
+)
+
+java_library(
+    name = "mobile_harness_auto_closeable",
     srcs = ["MobileHarnessAutoCloseable.java"],
 )

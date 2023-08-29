@@ -57,7 +57,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/event",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
-        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:mobile_harness_auto_closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:future",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",

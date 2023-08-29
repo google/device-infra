@@ -133,7 +133,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/exception",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
-        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:mobile_harness_auto_closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
