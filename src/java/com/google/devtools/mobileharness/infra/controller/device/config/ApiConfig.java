@@ -36,7 +36,7 @@ public interface ApiConfig {
   }
 
   /** Initialize. */
-  void init(boolean defaultPublic) throws MobileHarnessException;
+  void init(boolean defaultPublic);
 
   /** Gets all the monitored device ids. */
   List<String> getMonitoredDeviceUuids();

@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.controller.device.BaseDetectorDispatcherPicker;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceTestRunner;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.scheduler.Scheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
@@ -98,6 +99,8 @@ public class LocalMode implements ExecMode {
                   Executors.newCachedThreadPool(
                       ThreadFactoryUtil.createThreadFactory("local-mode-thread-pool")));
           Runtime.getRuntime().addShutdownHook(new Thread(localEnvThreadPool::shutdownNow));
+
+          ApiConfig.getInstance().init(/* defaultPublic= */ true);
 
           // Subscribes LocalDeviceUpEvent.
           globalInternalBus.register(this);

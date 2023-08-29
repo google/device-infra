@@ -35,7 +35,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecModeUtil;
 import com.google.devtools.mobileharness.infra.client.api.util.lister.TestLister;
-import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
@@ -114,10 +113,6 @@ public class ClientApi {
       JobInfo jobInfo, ExecMode execMode, @Nullable Collection<Object> jobSpecificEventHandlers)
       throws MobileHarnessException, InterruptedException {
     try {
-      if (execMode.getClass().getSimpleName().equals("LocalMode")) {
-        ApiConfig.getInstance().init(true);
-      }
-
       jobInfo
           .properties()
           .add(Job.EXEC_MODE, Ascii.toLowerCase(ExecModeUtil.getModeName(execMode)));
