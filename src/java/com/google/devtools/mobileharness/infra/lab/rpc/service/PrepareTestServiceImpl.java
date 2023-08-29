@@ -21,6 +21,7 @@ import static com.google.devtools.deviceaction.common.utils.TimeUtils.toProtoDur
 import static com.google.devtools.deviceaction.common.utils.TimeUtils.toProtoTimestamp;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
@@ -158,13 +159,13 @@ public class PrepareTestServiceImpl {
     // Creates TestExecutionUnit.
     TestExecutionUnit testExecutionUnit = createTestExecutionUnit(req.getTest(), jobExecutionUnit);
 
-    List<Device> devices =
+    ImmutableList<Device> devices =
         deviceRunners.stream().map(LocalDeviceTestRunner::getDevice).collect(toImmutableList());
 
     // Creates TestRunnerLauncher.
     TestRunnerLauncher<? super ProxyTestRunner> launcher =
         new LocalDeviceTestRunnerLauncher(
-            deviceRunners.get(0), deviceRunners.stream().skip(1L).collect(Collectors.toList()));
+            deviceRunners.get(0), deviceRunners.stream().skip(1L).collect(toImmutableList()));
 
     // Creates Allocation.
     Allocation allocation =
