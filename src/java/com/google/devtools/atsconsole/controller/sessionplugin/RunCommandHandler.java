@@ -67,7 +67,6 @@ class RunCommandHandler {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String DEVICE_DEFAULT_OWNER = "mobileharness-device-default-owner";
   private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
 
@@ -143,7 +142,6 @@ class RunCommandHandler {
             .setJobTimeoutSec(3 * 24 * 60 * 60)
             .setTestTimeoutSec(3 * 24 * 60 * 60)
             .setStartTimeoutSec(5 * 60)
-            .setRunAs(DEVICE_DEFAULT_OWNER)
             .setPriority(Priority.HIGH)
             .setTestAttempts(1)
             .setTests(
