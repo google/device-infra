@@ -100,6 +100,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDaemon = enableDaemonDefault;
 
+  private static final Flag<Boolean> asOnBorgDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--as_on_borg",
+      description = "Override the actual runtime system as Borg for debugging.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> asOnBorg = asOnBorgDefault;
+
   private static final Flag<Boolean> atsConsoleAlwaysRestartOlcServerDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
