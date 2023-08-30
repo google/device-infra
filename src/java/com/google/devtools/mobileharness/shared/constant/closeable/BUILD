@@ -29,6 +29,14 @@ java_library(
 )
 
 java_library(
+    name = "counting_closeable",
+    srcs = ["CountingCloseable.java"],
+    deps = [
+        ":closeable",
+    ],
+)
+
+java_library(
     name = "mobile_harness_auto_closeable",
     srcs = ["MobileHarnessAutoCloseable.java"],
 )

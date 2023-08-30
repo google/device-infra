@@ -35,6 +35,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/devtools/mobileharness/shared/version",
+        "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub/grpc",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",

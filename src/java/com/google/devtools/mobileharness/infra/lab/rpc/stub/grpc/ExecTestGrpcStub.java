@@ -20,6 +20,7 @@ import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
+import com.google.devtools.mobileharness.shared.constant.closeable.CountingCloseable;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.ForwardTestMessageRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.ForwardTestMessageResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.GetTestDetailRequest;
@@ -35,7 +36,7 @@ import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServiceGrpc.ExecTe
 import io.grpc.Channel;
 
 /** gRPC stub of {@code ExecTestService}. */
-public class ExecTestGrpcStub implements ExecTestStub {
+public class ExecTestGrpcStub extends CountingCloseable implements ExecTestStub {
 
   private final ExecTestServiceBlockingStub stub;
 
@@ -91,10 +92,5 @@ public class ExecTestGrpcStub implements ExecTestStub {
         request,
         InfraErrorId.LAB_RPC_EXEC_TEST_GET_TEST_GEN_DATA_GRPC_ERROR,
         "Failed to get test gen data, test_id=" + request.getTestId());
-  }
-
-  @Override
-  public void close() {
-    // This stub is not responsible for managing lifecycle of the channel.
   }
 }

@@ -32,6 +32,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:counting_closeable",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub",
         "@io_grpc_grpc_java//core",
     ],

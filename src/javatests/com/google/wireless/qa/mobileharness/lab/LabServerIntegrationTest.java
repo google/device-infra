@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
+import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub;
 import io.grpc.ManagedChannel;
 import java.time.Duration;
@@ -179,8 +180,10 @@ public class LabServerIntegrationTest {
   public void getVersion() throws Exception {
     startLabServerAndWaitUntilReady();
 
-    GetVersionResponse getVersionResponse =
-        new VersionGrpcStub(labServerChannel).getVersion(GetVersionRequest.getDefaultInstance());
+    GetVersionResponse getVersionResponse;
+    try (VersionStub versionStub = new VersionGrpcStub(labServerChannel)) {
+      getVersionResponse = versionStub.getVersion(GetVersionRequest.getDefaultInstance());
+    }
 
     assertThat(getVersionResponse)
         .isEqualTo(

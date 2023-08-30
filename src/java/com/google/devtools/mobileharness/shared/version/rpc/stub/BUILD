@@ -24,6 +24,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/shared/version/proto:version_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )

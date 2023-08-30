@@ -21,11 +21,37 @@ package(
 )
 
 java_library(
+    name = "counting_managed_channel",
+    srcs = ["CountingManagedChannel.java"],
+    visibility = ["//visibility:private"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:counting_closeable",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "channel_factory",
     srcs = ["ChannelFactory.java"],
     deps = [
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//netty",
+    ],
+)
+
+java_library(
+    name = "channel_manager",
+    srcs = ["ChannelManager.java"],
+    deps = [
+        ":counting_managed_channel",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:counting_closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:future",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

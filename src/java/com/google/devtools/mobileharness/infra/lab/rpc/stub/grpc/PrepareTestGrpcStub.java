@@ -30,10 +30,11 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineResponse;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
+import com.google.devtools.mobileharness.shared.constant.closeable.CountingCloseable;
 import io.grpc.Channel;
 
 /** gRPC stub of {@code PrepareTestService}. */
-public class PrepareTestGrpcStub implements PrepareTestStub {
+public class PrepareTestGrpcStub extends CountingCloseable implements PrepareTestStub {
 
   private final PrepareTestServiceBlockingStub stub;
 
@@ -77,10 +78,5 @@ public class PrepareTestGrpcStub implements PrepareTestStub {
         request,
         InfraErrorId.LAB_RPC_PREPARE_TEST_CLOST_TEST_GRPC_ERROR,
         "Failed to close test, test_id=" + request.getTestId());
-  }
-
-  @Override
-  public void close() {
-    // This stub is not responsible for managing lifecycle of the channel.
   }
 }

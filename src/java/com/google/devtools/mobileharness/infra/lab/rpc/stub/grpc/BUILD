@@ -28,6 +28,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:exec_test",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:counting_closeable",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_grpc",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:exec_test_serv_java_proto",
         "@io_grpc_grpc_java//core",
@@ -44,6 +45,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:prepare_test",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:counting_closeable",
         "@io_grpc_grpc_java//core",
     ],
 )
