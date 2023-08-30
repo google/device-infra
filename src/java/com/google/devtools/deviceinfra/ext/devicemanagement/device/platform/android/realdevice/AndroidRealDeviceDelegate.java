@@ -1693,7 +1693,11 @@ public abstract class AndroidRealDeviceDelegate {
     try {
       connectivityUtil.reEnableWifi(deviceId, /* log= */ null);
       if (connectivityUtil.waitForNetwork(
-          deviceId, sdkVersion, null, AndroidRealDeviceConstants.WAIT_FOR_INTERNET)) {
+          deviceId,
+          sdkVersion,
+          null,
+          AndroidRealDeviceConstants.WAIT_FOR_INTERNET,
+          /* log= */ null)) {
         logger.atInfo().log("Device %s connected to network after re-enabling Wifi", deviceId);
       } else {
         logger.atInfo().log(
