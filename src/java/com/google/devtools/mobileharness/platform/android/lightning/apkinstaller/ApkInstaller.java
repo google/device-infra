@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.platform.android.shared.constant.Packag
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSystemSpecUtil;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.checksum.ChecksumUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
@@ -333,9 +334,9 @@ public class ApkInstaller {
       SharedLogUtil.logMsg(
           logger,
           log,
-          "Failed to get a valid version code for apk %s:%n%s",
+          "Not found a valid version code for apk %s:%n%s",
           apkPath,
-          e.getMessage());
+          MoreThrowables.shortDebugString(e, 0));
     }
     if (apkVersionCode != null
         && shouldSkipOnVersionCode(
