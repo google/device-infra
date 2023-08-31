@@ -412,7 +412,7 @@ public class AndroidConnectivityUtil {
             AndroidErrorId.ANDROID_CONNECTIVITY_FAIL_CONNECT_TO_WIFI, errorMessage, e);
       }
 
-      if (waitForNetwork(serial, sdkVersion, wifiSsid, waitTimeout)) {
+      if (waitForNetwork(serial, sdkVersion, wifiSsid, waitTimeout, log)) {
         return true;
       }
       SharedLogUtil.logMsg(
@@ -543,7 +543,7 @@ public class AndroidConnectivityUtil {
   @Nullable
   public String getNetworkSsid(String serial, int sdkVersion)
       throws MobileHarnessException, InterruptedException {
-    List<String> resultList = getNetworkSsidList(serial, sdkVersion);
+    List<String> resultList = getNetworkSsidList(serial, sdkVersion, /* log= */ null);
     if (resultList.isEmpty()) {
       return null;
     } else {
@@ -561,16 +561,17 @@ public class AndroidConnectivityUtil {
    *     string if the device is connected to an unknown network such as a watch using bluetooth
    *     connection or empty list if there is no network connection
    */
-  public List<String> getNetworkSsidList(String serial, int sdkVersion)
+  public List<String> getNetworkSsidList(
+      String serial, int sdkVersion, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
     String connectivityOutput = adbUtil.dumpSys(serial, DumpSysType.CONNECTIVITY);
     Set<String> resultSet = new HashSet<>();
-    resultSet.addAll(parseNetworkSsid(serial, connectivityOutput));
+    resultSet.addAll(parseNetworkSsid(serial, connectivityOutput, log));
 
     // Starting from Android P (PPR1.180328.001+),
     // SSID is hidden in CONNECTIVITY output, dump WIFI for SSID info.
     if (sdkVersion >= 27) {
-      resultSet.addAll(parseNetworkSsid(serial, adbUtil.dumpSys(serial, DumpSysType.WIFI)));
+      resultSet.addAll(parseNetworkSsid(serial, adbUtil.dumpSys(serial, DumpSysType.WIFI), log));
     }
     // Note: there may be one empty string in result set after parsing. So in the case when there
     // are multiple SSIDs in the result set, it should filter out the empty string.
@@ -787,12 +788,23 @@ public class AndroidConnectivityUtil {
    * @throws InterruptedException if current thread is interrupted during this method
    */
   public boolean waitForNetwork(
-      String serial, int sdkVersion, @Nullable String ssid, Duration timeout)
+      String serial,
+      int sdkVersion,
+      @Nullable String ssid,
+      Duration timeout,
+      @Nullable LogCollector<?> log)
       throws InterruptedException {
-    logger.atInfo().log("Waiting until device %s connects to SSID '%s'...", serial, ssid);
+    SharedLogUtil.logMsg(
+        logger,
+        Level.INFO,
+        log,
+        /* cause= */ null,
+        "Waiting until device %s connects to SSID '%s'...",
+        serial,
+        ssid);
     return AndroidAdbUtil.waitForDeviceReady(
         UtilArgs.builder().setSerial(serial).setSdkVersion(sdkVersion).build(),
-        utilArgs -> isDeviceConnectedToNetwork(utilArgs, ssid),
+        utilArgs -> isDeviceConnectedToNetwork(utilArgs, ssid, log),
         WaitArgs.builder()
             .setSleeper(sleeper)
             .setClock(clock)
@@ -967,31 +979,71 @@ public class AndroidConnectivityUtil {
    * @return {@code true} if succeeds to connect to the given network (or any network if ssid is
    *     null).
    */
-  private boolean isDeviceConnectedToNetwork(UtilArgs utilArgs, @Nullable String ssid) {
+  private boolean isDeviceConnectedToNetwork(
+      UtilArgs utilArgs, @Nullable String ssid, @Nullable LogCollector<?> log) {
     String serial = utilArgs.serial();
     int sdkVersion = utilArgs.sdkVersion().getAsInt();
     try {
-      List<String> currentSsidList = getNetworkSsidList(serial, sdkVersion);
-      if (!currentSsidList.isEmpty() && (ssid == null || currentSsidList.contains(ssid))) {
-        return true;
+      List<String> currentSsidList = getNetworkSsidList(serial, sdkVersion, log);
+      if (currentSsidList.isEmpty()) {
+        SharedLogUtil.logMsg(
+            logger,
+            Level.INFO,
+            log,
+            /* cause= */ null,
+            "Device %s is not connected to any network.",
+            serial);
+        return false;
+      } else {
+        SharedLogUtil.logMsg(
+            logger,
+            Level.INFO,
+            log,
+            /* cause= */ null,
+            "Device %s is connected to the following network: %s",
+            serial,
+            String.join(",", currentSsidList));
+        if (ssid == null || currentSsidList.contains(ssid)) {
+          return true;
+        }
       }
     } catch (MobileHarnessException e) {
-      logger.atWarning().log(
-          "Failed to get network SSID list for device %s:%n%s", serial, e.getMessage());
+      SharedLogUtil.logMsg(
+          logger,
+          Level.WARNING,
+          log,
+          e,
+          "Failed to get network SSID list for device %s:%n%s",
+          serial,
+          e.getMessage());
       return false;
     } catch (InterruptedException ie) {
-      logger.atWarning().log(
+      SharedLogUtil.logMsg(
+          logger,
+          Level.WARNING,
+          log,
+          ie,
           "Caught interrupted exception when getting device %s network SSID, interrupt current "
               + "thread:%n%s",
-          serial, ie.getMessage());
+          serial,
+          ie.getMessage());
       Thread.currentThread().interrupt();
     }
+    SharedLogUtil.logMsg(
+        logger,
+        Level.INFO,
+        log,
+        /* cause= */ null,
+        "Device %s is not connected to the given network:%s",
+        serial,
+        ssid);
     return false;
   }
 
   /** Parse network SSID from dumpsy connectivity/wifi output. */
-  private List<String> parseNetworkSsid(String serial, String output) {
-    StringBuilder log = new StringBuilder();
+  private List<String> parseNetworkSsid(
+      String serial, String output, @Nullable LogCollector<?> log) {
+    StringBuilder logStr = new StringBuilder();
     List<String> resultList = new ArrayList<>();
     String result = null;
     for (String line : Splitters.LINE_SPLITTER.split(output)) {
@@ -999,7 +1051,7 @@ public class AndroidConnectivityUtil {
       // Do NOT return null if the device is connected to network.
       if (line.startsWith("NetworkInfo: type:") /* Android <= 4.4.4 */
           || line.startsWith("NetworkAgentInfo") /* Android L */) {
-        log.append('\n').append(line);
+        logStr.append('\n').append(line);
         if (line.contains("state: CONNECTED/CONNECTED, reason:")) {
           Matcher matcher = PATTERN_NETWORK_SSID_NEW.matcher(line);
           // It does not return here because if Android < 3.2.1, the SSID is in the next line.
@@ -1009,7 +1061,7 @@ public class AndroidConnectivityUtil {
       } else if (line.startsWith("SSID: ") /* Android < 3.2.1 */
           || (line.startsWith("mWifiInfo SSID:")
               && line.contains("state: COMPLETED")) /* Android P */) {
-        log.append('\n').append(line);
+        logStr.append('\n').append(line);
         Matcher matcher =
             isBuildSOrAbove(serial)
                 ? PATTERN_NETWORK_SSID_S_AND_ABOVE.matcher(line)
@@ -1017,11 +1069,26 @@ public class AndroidConnectivityUtil {
         result = matcher.find() ? Strings.nullToEmpty(matcher.group("ssid")) : "";
         resultList.add(result);
       }
+      if (result != null) {
+        SharedLogUtil.logMsg(
+            logger,
+            Level.FINE,
+            log,
+            /* cause= */ null,
+            "Device %s connected to network:%s",
+            serial,
+            result);
+      } else {
+        SharedLogUtil.logMsg(
+            logger,
+            Level.FINE,
+            log,
+            /* cause= */ null,
+            "Trying to parse ssid for Device %s from [%s].",
+            serial,
+            logStr);
+      }
     }
-    if (result != null) {
-      logger.atInfo().log("Device %s connected to network:%s", serial, log);
-    }
-
     return resultList;
   }
 
