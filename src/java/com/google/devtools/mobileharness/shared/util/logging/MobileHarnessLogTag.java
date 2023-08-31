@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.logging;
 
+import com.google.common.flogger.MetadataKey;
 
 /** Utility to add logging tags. */
 public final class MobileHarnessLogTag {
@@ -29,6 +30,8 @@ public final class MobileHarnessLogTag {
   public static final String JOB_ID = "job_id";
 
   public static final String TEST_ID = "test_id";
+
+  public static final MetadataKey<String> ACID_ID = MetadataKey.single("acid_id", String.class);
 
   public static void addTag(String tag, String value) {}
 
