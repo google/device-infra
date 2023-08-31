@@ -16,6 +16,8 @@
 # Description:
 #   Proto definitions for Mobile Harness config service.
 
+load("//third_party/bazel_rules/rules_python/python:proto.bzl", "py_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
