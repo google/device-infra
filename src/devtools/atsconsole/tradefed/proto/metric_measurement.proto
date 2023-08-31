@@ -1,0 +1,84 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package tradefed.metric;
+
+option java_package = "com.android.tradefed.metrics.proto";
+option java_outer_classname = "MetricMeasurement";
+
+// Represents what is the expected directionality of the measurements
+// For example: If we are measuring how fast a device is charging, the
+// directionality of UP_BETTER would describe it the best. Overall if the trend
+// of the list of measurements has a desired pattern that we can refer too for
+// understanding the expectation better.
+enum Directionality {
+  DIRECTIONALITY_UNSPECIFIED = 0;
+  UP_BETTER = 1;
+  DOWN_BETTER = 2;
+  CLOSER_BETTER = 3;  // If the values should be as close as possible
+}
+
+// Represents whether the data was already processed or is raw data.
+enum DataType {
+  RAW = 0;
+  PROCESSED = 1;
+}
+
+// Represents the actual measurement values
+message Measurements {
+  // All the types a measurement can take, use the oneOf to find which type was
+  // used.
+  oneof measurement {
+    string single_string = 1;
+    int64 single_int = 2;
+    double single_double = 3;
+    StringValues string_values = 4;
+    NumericValues numeric_values = 5;
+    DoubleValues double_values = 6;
+  }
+}
+
+// Represents a list of string measurements
+message StringValues {
+  repeated string string_value = 1;
+}
+
+// Represents a list of numeric measurements
+message NumericValues {
+  repeated int64 numeric_value = 1;
+}
+
+// Represents a list of float measurements
+message DoubleValues {
+  repeated double double_value = 1;
+}
+
+// Represents the full metric: The measurements and its metadata
+message Metric {
+  // The measurements
+  Measurements measurements = 1;
+
+  // The Unit of the measurements.
+  string unit = 2;
+
+  // The Directionality of the measurements
+  Directionality direction = 3;
+
+  // Whether the measurements is raw data or processed.
+  DataType type = 4;
+}

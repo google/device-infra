@@ -1,0 +1,58 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package tradefed.config;
+
+option java_package = "com.android.tradefed.config.proto";
+option java_outer_classname = "ConfigurationDescription";
+
+// Representation of the metadata attributes in a similar way as MultiMap in
+// Tradefed. One key associated to a list of values.
+message Metadata {
+  // Key of the pair to identify the metadata.
+  string key = 1;
+  // List of values associated to the key.
+  repeated string value = 2;
+}
+
+// Representation of abi
+message Abi {
+  // Name of the abi.
+  // For example: arm64-v8a, armeabi-v7a, x86_64, x86
+  string name = 1;
+  // The bitness of the abi. Can be 32 or 64.
+  string bitness = 2;
+}
+
+// Representation of a Tradefed Configuration Descriptor in proto format.
+message Descriptor {
+  // The suite names that the configuration belong to.
+  repeated string test_suite_tag = 1;
+  // A set of metadata representing some configuration attributes
+  repeated Metadata metadata = 2;
+  // Whether the configuration is shardable or not.
+  bool shardable = 3;
+  // Whether the configuration is strict shardable or not.
+  bool strict_shardable = 4;
+  // Whether we are currently running the configuration in sandbox mode or not.
+  bool use_sandboxing = 5;
+  // The module name if running in a suite.
+  string module_name = 6;
+  // The Abi of the module.
+  Abi abi = 7;
+}

@@ -16,6 +16,7 @@
 
 package com.google.devtools.atsconsole.result.report;
 
+import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
@@ -31,6 +32,7 @@ import com.google.devtools.atsconsole.result.proto.ReportProto.Test;
 import com.google.devtools.atsconsole.result.proto.ReportProto.TestCase;
 import com.google.devtools.atsconsole.result.proto.ReportProto.TestFailure;
 import com.google.devtools.atsconsole.result.xml.XmlConstants;
+import com.google.devtools.atsconsole.util.tradefed.TestRecordWriter;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
@@ -44,6 +46,7 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
@@ -66,20 +69,23 @@ public class CompatibilityReportCreator {
   @VisibleForTesting static final String TEST_RESULT_FILE_NAME = "test_result.xml";
   @VisibleForTesting static final String HTML_REPORT_NAME = "test_result.html";
   @VisibleForTesting static final String REPORT_XSL_FILE_NAME = "compatibility_result.xsl";
+  @VisibleForTesting static final String TEST_RECORD_PROTO_FILE_NAME = "test-record.pb";
 
   @VisibleForTesting
   static final ImmutableList<String> RESULT_RESOURCES =
       ImmutableList.of("compatibility_result.css", REPORT_XSL_FILE_NAME, "logo.png");
 
   private final LocalFileUtil localFileUtil;
+  private final TestRecordWriter testRecordWriter;
 
   @Inject
-  CompatibilityReportCreator(LocalFileUtil localFileUtil) {
+  CompatibilityReportCreator(LocalFileUtil localFileUtil, TestRecordWriter testRecordWriter) {
     this.localFileUtil = localFileUtil;
+    this.testRecordWriter = testRecordWriter;
   }
 
   /**
-   * Creates report and releated files under directory {@code resultDir}, and a zip file for
+   * Creates report and related files under directory {@code resultDir}, and a zip file for
    * directory {@code resultDir} and its contents later for upload.
    *
    * <p>Things done in this method:
@@ -95,9 +101,11 @@ public class CompatibilityReportCreator {
    *
    * @param report the result report
    * @param resultDir the directory where to store the generated report files
+   * @param testRecord test record proto packed into the report if specified
    * @throws MobileHarnessException if failed to write the report to a XML file
    */
-  public void createReport(Result report, Path resultDir) throws MobileHarnessException {
+  public void createReport(Result report, Path resultDir, @Nullable TestRecord testRecord)
+      throws MobileHarnessException, InterruptedException {
     try {
       writeReportToXml(report, resultDir.toFile());
     } catch (IOException e) {
@@ -113,6 +121,17 @@ public class CompatibilityReportCreator {
       logger.atWarning().log(
           "Failed to crete checksum for result dir [%s] and report with build fingerprint [%s]",
           resultDir, report.getBuild().getBuildFingerprint());
+    }
+
+    if (testRecord != null) {
+      Path testRecordProtoDir = resultDir.resolve("proto");
+      localFileUtil.prepareDir(testRecordProtoDir);
+      testRecordWriter.writeTestRecordProto(
+          testRecord,
+          testRecordProtoDir.resolve(TEST_RECORD_PROTO_FILE_NAME),
+          /* useDelimitedApi= */ true);
+    } else {
+      logger.atInfo().log("No test record specified.");
     }
 
     try {

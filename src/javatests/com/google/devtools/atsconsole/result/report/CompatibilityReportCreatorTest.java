@@ -24,8 +24,11 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.atsconsole.result.proto.ReportProto.Result;
 import com.google.devtools.atsconsole.util.TestRunfilesUtil;
+import com.google.devtools.atsconsole.util.tradefed.TestRecordWriter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
+import com.google.inject.testing.fieldbinder.Bind;
+import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.io.File;
 import java.nio.file.Paths;
 import javax.inject.Inject;
@@ -35,6 +38,9 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.Mock;
+import org.mockito.junit.MockitoJUnit;
+import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class CompatibilityReportCreatorTest {
@@ -47,16 +53,18 @@ public final class CompatibilityReportCreatorTest {
 
   private final LocalFileUtil realLocalFileUtil = new LocalFileUtil();
 
+  @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  @Bind @Mock private TestRecordWriter testRecordWriter;
   @Inject private CompatibilityReportParser reportParser;
 
   private CompatibilityReportCreator reportCreator;
 
   @Before
   public void setUp() {
-    Guice.createInjector(new TestModule()).injectMembers(this);
-    reportCreator = new CompatibilityReportCreator(realLocalFileUtil);
+    Guice.createInjector(new TestModule(), BoundFieldModule.of(this)).injectMembers(this);
+    reportCreator = new CompatibilityReportCreator(realLocalFileUtil, testRecordWriter);
   }
 
   @Test
@@ -85,7 +93,7 @@ public final class CompatibilityReportCreatorTest {
 
     File xmlResultDir = temporaryFolder.newFolder("xml_result");
 
-    reportCreator.createReport(report, xmlResultDir.toPath());
+    reportCreator.createReport(report, xmlResultDir.toPath(), /* testRecord= */ null);
 
     assertThat(
             realLocalFileUtil.listFilePaths(xmlResultDir.toPath(), false).stream()

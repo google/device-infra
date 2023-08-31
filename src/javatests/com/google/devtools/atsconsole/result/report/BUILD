@@ -42,6 +42,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole/result/report:mobly_report_helper",
         "//src/java/com/google/devtools/atsconsole/result/report:mobly_report_parser",
         "//src/java/com/google/devtools/atsconsole/result/xml:xml_constants",
+        "//src/java/com/google/devtools/atsconsole/util/tradefed:test_record_writer",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/atsconsole/util:test_runfiles_util",
