@@ -37,6 +37,11 @@ java_library(
 java_library(
     name = "res_util",
     srcs = ["ResUtil.java"],
+    visibility = [
+        "//:deviceinfra_api_users",
+        "//java/com/google/devtools/mobileharness/shared/util/file/local:local_file_util_users",
+        "//javatests/com/google/android/apps/gsa/uitests/performance/hawkeye/tng/googleapp/search:__pkg__",
+    ],
     deps = [
         ":local",
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
