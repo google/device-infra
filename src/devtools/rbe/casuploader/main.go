@@ -76,6 +76,8 @@ func main() {
 	flag.Set("stderrthreshold", "INFO")
 	flag.Parse()
 
+	print("test")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
