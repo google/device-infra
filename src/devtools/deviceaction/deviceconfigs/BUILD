@@ -23,8 +23,5 @@ filegroup(
     srcs = glob([
         "configs/*_user.textproto",
     ]),
-    visibility = [
-        "//src/java/com/google/devtools/deviceaction/framework/deviceconfigs:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceaction/framework/deviceconfigs/ResourceFileDaoTest.java:__subpackages__",
-    ],
+    visibility = ["//src/java/com/google/devtools/deviceaction/framework/deviceconfigs:__subpackages__"],
 )
