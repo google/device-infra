@@ -21,6 +21,7 @@ import com.google.common.base.Joiner.MapJoiner;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ListMultimap;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
@@ -70,6 +71,8 @@ import javax.annotation.Nullable;
  * to it.
  */
 public class JobInfo extends JobScheduleUnit {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   /**
    * File tag name of the plugin jar with the handler for job/test events. The handler is executed
    * on client side.
@@ -498,14 +501,16 @@ public class JobInfo extends JobScheduleUnit {
    * @return a spec union that combines all relevant values in {@link #params()}, {@link #files} and
    *     {@link #protoSpec}
    */
-  public UnionJobSpec getUnionJobSpec(@Nullable SubDeviceSpec subDeviceSpec)
-      throws InterruptedException {
+  public UnionJobSpec getUnionJobSpec(@Nullable SubDeviceSpec subDeviceSpec) {
     UnionJobSpec unionJobSpec = new UnionJobSpec();
     if (subDeviceSpec != null) {
       unionJobSpec = unionJobSpec.addWrapper(subDeviceSpec.scopedSpecs());
+    } else {
+      logger.atWarning().log(
+          "The sub device spec should exist and the global scoped spec should not be used.");
+      unionJobSpec = unionJobSpec.addWrapper(scopedSpecs());
     }
     return unionJobSpec
-        .addWrapper(scopedSpecs())
         .addWrapper(new ParamsJobSpec(params()))
         .addWrapper(new FilesJobSpec(files()))
         .addWrapper(protoSpec());
