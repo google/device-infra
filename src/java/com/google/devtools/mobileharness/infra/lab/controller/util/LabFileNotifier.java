@@ -34,6 +34,7 @@ import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper.FilePathVisitor;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.JobSpec;
@@ -199,15 +200,11 @@ public class LabFileNotifier {
                       jobFileUnit.getOriginalPath(),
                       extraFileHandler)));
     } else if (jobFileUnit.getTag().startsWith(ScopedSpecs.FILE_TAG_PREFIX)) {
-      ScopedSpecs scopedSpecs = jobInfo.scopedSpecs();
-      scopedSpecs.addAll(
-          JobSpecHelper.forEachFiles(
-              scopedSpecs.toJobSpec(jobSpecHelper),
-              new SpecFileReplacer(
-                  jobFileUnit.getTag(),
-                  jobFileUnit.getLocalPath(),
-                  jobFileUnit.getOriginalPath(),
-                  extraFileHandler)));
+      updateScopedSpecFilesToLocalPath(jobFileUnit, jobInfo.scopedSpecs(), extraFileHandler);
+      for (SubDeviceSpec subDeviceSpec : jobInfo.subDeviceSpecs().getAllSubDevices()) {
+        updateScopedSpecFilesToLocalPath(
+            jobFileUnit, subDeviceSpec.scopedSpecs(), extraFileHandler);
+      }
     } else {
       String targetFileOrDirPath =
           extraFileHandler.getTargetFileOrDirPath(jobFileUnit.getLocalPath());
@@ -242,6 +239,19 @@ public class LabFileNotifier {
             e);
       }
     }
+  }
+
+  private void updateScopedSpecFilesToLocalPath(
+      JobFileUnit jobFileUnit, ScopedSpecs scopedSpecs, AddFileHandler extraFileHandler)
+      throws MobileHarnessException, InterruptedException {
+    scopedSpecs.addAll(
+        JobSpecHelper.forEachFiles(
+            scopedSpecs.toJobSpec(jobSpecHelper),
+            new SpecFileReplacer(
+                jobFileUnit.getTag(),
+                jobFileUnit.getLocalPath(),
+                jobFileUnit.getOriginalPath(),
+                extraFileHandler)));
   }
 
   /**
