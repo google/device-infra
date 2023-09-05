@@ -30,6 +30,19 @@ java_library(
 )
 
 java_library(
+    name = "channel_manager",
+    srcs = ["ChannelManager.java"],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:future",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "master_grpc_stub_helper",
     srcs = [
         "MasterGrpcStubHelper.java",

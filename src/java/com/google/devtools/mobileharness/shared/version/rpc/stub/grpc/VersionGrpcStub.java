@@ -23,14 +23,14 @@ import com.google.devtools.mobileharness.shared.version.proto.VersionServiceGrpc
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;
-import io.grpc.ManagedChannel;
+import io.grpc.Channel;
 
 /** GRPC stub for talking to VersionService. */
 public class VersionGrpcStub implements VersionStub {
 
   private final VersionServiceGrpc.VersionServiceBlockingStub stub;
 
-  public VersionGrpcStub(ManagedChannel channel) {
+  public VersionGrpcStub(Channel channel) {
     this.stub = VersionServiceGrpc.newBlockingStub(channel);
   }
 
