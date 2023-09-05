@@ -53,7 +53,7 @@ message AndroidAdbShellDecoratorSpec {
           "in your command. If you want to run 'adb shell ls /data' and 'adb "
           "shell rm /data/cache/myfile', just use 'ls /data,rm /data/cache/"
           "myfile'In the case that you do need use ',' in your command, use "
-          "'\\' to excape the ','Example would be like:ls /data,rm "
+          "'\\' to escape the ','Example would be like:ls /data,rm "
           "/data/cache/myfile,am broadcast 'class1\\, class2'"
   }];
 
@@ -65,7 +65,7 @@ message AndroidAdbShellDecoratorSpec {
           "myfile'.Commands that are appended with & will be executed "
           "asynchronously but killed shortly after test end to avoid polluting "
           "other tests. In the case that you do need use ',' in your command, "
-          "use '\\' to excape the ','. Example would be like: ls /data,rm "
+          "use '\\' to escape the ','. Example would be like: ls /data,rm "
           "/data/cache/myfile,am broadcast 'class1\\, class2'"
   }];
 }

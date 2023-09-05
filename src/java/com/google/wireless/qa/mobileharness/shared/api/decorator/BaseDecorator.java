@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-// Copyright 2011 Google Inc. All Rights Reserved.
-
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import com.google.wireless.qa.mobileharness.shared.api.driver.BaseDriver;
