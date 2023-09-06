@@ -38,6 +38,7 @@ proto_library(
     deps = [
         "//src/devtools/deviceinfra/api/deviceinfo/proto:device_locator_proto",
         "//src/devtools/deviceinfra/api/deviceinfo/proto:device_requirement_proto",
+        "//src/devtools/mobileharness/api/model/proto:test_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_proto",
         "@com_google_protobuf//:duration_proto",
     ],

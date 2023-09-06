@@ -21,6 +21,7 @@ package devtools.mobileharness.infra.master.rpc.proto;
 import "google/protobuf/duration.proto";
 import "src/devtools/deviceinfra/api/deviceinfo/proto/device_locator.proto";
 import "src/devtools/deviceinfra/api/deviceinfo/proto/device_requirement.proto";
+import "src/devtools/mobileharness/api/model/proto/test.proto";
 import "src/devtools/mobileharness/api/query/proto/device_query.proto";
 
 option java_package = "com.google.devtools.mobileharness.infra.master.rpc.proto";
@@ -39,6 +40,9 @@ message AllocationRequest {
   // The maximum amount of time that this allocation will last for.
   // Required.
   google.protobuf.Duration lease_time = 3;
+
+  // The locator of the test, it's only used for tracking and debugging.
+  .mobileharness.api.model.TestLocator test_locator = 4;
 }
 
 // A response from requesting that devices ware allocated. The response contains
