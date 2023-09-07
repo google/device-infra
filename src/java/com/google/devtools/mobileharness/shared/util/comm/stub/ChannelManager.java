@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.shared.util.comm.stub;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
@@ -36,11 +35,11 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 
 /** Channel manager for managing gRPC {@link ManagedChannel}s. */
 public class ChannelManager {
@@ -61,6 +60,8 @@ public class ChannelManager {
   }
 
   private final Duration channelExpirationTime;
+
+  /** Channels whose key is the channel key provided by the caller. */
   private final Map<String, CountingChannel> channels = new ConcurrentHashMap<>();
 
   /** Weak references to stubs, whose value is the key of the channel associated with the stub. */
@@ -100,8 +101,8 @@ public class ChannelManager {
   }
 
   /**
-   * Creates a gRPC stub. If necessary, creates a {@link ManagedChannel} and caches it in the
-   * manager before creating the stub.
+   * Creates a gRPC stub. If needed, creates a {@link ManagedChannel} and caches it in the manager
+   * before creating the stub.
    *
    * <p>After all stubs associated with a channel become unreferenced and garbage collected, the
    * channel will be shut down and removed from the manager after a while (in detail, {@link
@@ -127,100 +128,117 @@ public class ChannelManager {
       String channelKey,
       Supplier<? extends ManagedChannel> channelCreator,
       Function<Channel, T> stubCreator) {
-    AtomicReference<T> stubReceiver = new AtomicReference<>();
-    AtomicReference<Throwable> stubCreationFailureReceiver = new AtomicReference<>();
-
-    // Creates or gets a channel, and then creates a stub using the channel.
-    channels.compute(
-        channelKey,
-        (key, existingChannel) -> {
-          CountingChannel channel =
-              existingChannel == null
-                  ? new CountingChannel(channelKey, channelCreator.get())
-                  : existingChannel;
-          channel.createStub(stubCreator, stubReceiver, stubCreationFailureReceiver);
-          return channel;
-        });
-    rethrowUncheckedIfAny(stubCreationFailureReceiver.get());
+    T stub;
+    while (true) {
+      // Gets or creates a channel wrapper.
+      CountingChannel channel = channels.computeIfAbsent(channelKey, CountingChannel::new);
+      try {
+        // Creates a channel if needed, and then create a stub using the channel.
+        stub = channel.createChannelAndStub(channelCreator, stubCreator);
+        break;
+      } catch (ChannelClosedException e) {
+        // If the channel cleaner is cleaning up the same key, and the channel shutdown happened
+        // before channel.createChannelAndStub(), but the channel wrapper removal happened after
+        // channels.computeIfAbsent(), it needs to remove the channel wrapper here and create a new
+        // channel wrapper. The case may happen at most once per createStub() call.
+        channels.remove(channelKey, channel);
+      }
+    }
 
     // Records a weak reference to the new stub.
-    stubs.put(new WeakReference<>(stubReceiver.get(), collectedStubs), channelKey);
-    return stubReceiver.get();
+    stubs.put(new WeakReference<>(stub, collectedStubs), channelKey);
+    return stub;
   }
 
   /**
    * A {@link ManagedChannel} wrapper that tracks the number of stubs associated with the channel
    * and the time when the stub count reaches zero.
-   *
-   * <p>Note that this class is not thread-safe. All access to this class must be guarded by atomic
-   * computing operations (e.g., {@link Map#compute}) with the same key in a {@link
-   * ConcurrentHashMap}.
    */
   private class CountingChannel {
 
     private final String channelKey;
-    private final ManagedChannel channel;
+
+    private final Object lock = new Object();
+
+    /** Whether {@link #shutdown()} of this channel has been invoked. */
+    @GuardedBy("lock")
+    private boolean closed;
+
+    @GuardedBy("lock")
+    @Nullable
+    private ManagedChannel channel;
 
     /** The number of stubs associated with the channel. */
+    @GuardedBy("lock")
     private int stubCount;
 
     /** The time when {@link #stubCount} reached zero, or {@code null} if the count is non-zero. */
-    @Nullable private Instant becomeUnusedTime;
+    @GuardedBy("lock")
+    @Nullable
+    private Instant becomeUnusedTime;
 
-    private CountingChannel(String channelKey, ManagedChannel channel) {
+    private CountingChannel(String channelKey) {
       this.channelKey = channelKey;
-      this.channel = channel;
       this.becomeUnusedTime = Instant.now();
-      logger.atInfo().log(
-          "Channel [%s] cached, channel_id=%s", channelKey, System.identityHashCode(channel));
     }
 
     /**
-     * Creates a stub using the channel. If successful, updates the {@link #stubCount} and {@link
-     * #becomeUnusedTime}. If failed, saves the exception in {@code stubCreationFailureReceiver}.
+     * Creates a channel if needed, and then creates a stub using the channel. If successful,
+     * updates the {@link #stubCount} and {@link #becomeUnusedTime}.
+     *
+     * @throws ChannelClosedException if {@link #shutdown()} of this channel has been invoked
      */
-    private <T> void createStub(
-        Function<Channel, T> stubCreator,
-        AtomicReference<T> stubReceiver,
-        AtomicReference<Throwable> stubCreationFailureReceiver) {
-      try {
-        stubReceiver.set(stubCreator.apply(channel));
+    private <T> T createChannelAndStub(
+        Supplier<? extends ManagedChannel> channelCreator, Function<Channel, T> stubCreator)
+        throws ChannelClosedException {
+      synchronized (lock) {
+        if (closed) {
+          throw new ChannelClosedException();
+        }
+
+        // Creates a channel if needed.
+        if (channel == null) {
+          channel = channelCreator.get();
+          logger.atInfo().log(
+              "Channel [%s] cached, channel_id=%s", channelKey, System.identityHashCode(channel));
+        }
+
+        // Creates a stub using the channel.
+        T stub = stubCreator.apply(channel);
+
         stubCount++;
         becomeUnusedTime = null;
         logger.atInfo().log(
             "Channel [%s] stub count: %s -> %s", channelKey, stubCount - 1, stubCount);
-      } catch (RuntimeException | Error e) {
-        // Catches the stub creation failure to ensure that the new channel will be cached.
-        stubCreationFailureReceiver.set(e);
+        return stub;
       }
     }
 
-    private CountingChannel decrementStubCount() {
-      stubCount--;
-      if (stubCount == 0) {
-        becomeUnusedTime = Instant.now();
+    private void decrementStubCount() {
+      synchronized (lock) {
+        stubCount--;
+        if (stubCount == 0) {
+          becomeUnusedTime = Instant.now();
+        }
+        logger.atInfo().log(
+            "Channel [%s] stub count: %s -> %s", channelKey, stubCount + 1, stubCount);
       }
-      logger.atInfo().log(
-          "Channel [%s] stub count: %s -> %s", channelKey, stubCount + 1, stubCount);
-      return this;
     }
 
     /**
-     * Tries to shut down the channel.
-     *
-     * @return {@code null} if the channel can be shut down and has been shut down by this method,
-     *     {@code this} if the channel cannot be shut down
+     * Attempts to shut down the channel. If the channel can be shut down, shuts down it and removes
+     * it from the manager.
      */
-    @Nullable
-    private CountingChannel tryShutdown() {
-      if (canShutdown()) {
-        shutdown();
-        logger.atInfo().log(
-            "Channel [%s] is shut down and removed from cache manager, channel_id=%s",
-            channelKey, System.identityHashCode(channel));
-        return null;
-      } else {
-        return this;
+    private void tryShutdownAndRemove() {
+      boolean canShutdown;
+      synchronized (lock) {
+        canShutdown = canShutdown();
+        if (canShutdown) {
+          shutdown();
+        }
+      }
+      if (canShutdown) {
+        channels.remove(channelKey, this);
       }
     }
 
@@ -230,13 +248,21 @@ public class ChannelManager {
      * <p>A channel can be shut down if no stubs have been associated with the channel for {@link
      * #channelExpirationTime}.
      */
+    @GuardedBy("lock")
     private boolean canShutdown() {
       return becomeUnusedTime != null
           && Instant.now().isAfter(becomeUnusedTime.plus(channelExpirationTime));
     }
 
+    @GuardedBy("lock")
     private void shutdown() {
-      channel.shutdown();
+      if (channel != null) {
+        channel.shutdown();
+        logger.atInfo().log(
+            "Channel [%s] is shut down and removed from cache manager, channel_id=%s",
+            channelKey, System.identityHashCode(channel));
+      }
+      closed = true;
     }
   }
 
@@ -252,8 +278,10 @@ public class ChannelManager {
 
         // Updates the stub count of the channel associated with the stub.
         String channelKey = stubs.remove(stub);
-        channels.computeIfPresent(
-            channelKey, (key, existingChannel) -> existingChannel.decrementStubCount());
+        CountingChannel channel = channels.get(channelKey);
+        if (channel != null) {
+          channel.decrementStubCount();
+        }
       }
     }
   }
@@ -266,24 +294,13 @@ public class ChannelManager {
 
     @Override
     public void run() {
-      channels
-          .keySet()
-          .forEach(
-              channelKey ->
-                  channels.computeIfPresent(
-                      channelKey, (key, existingChannel) -> existingChannel.tryShutdown()));
+      channels.values().forEach(CountingChannel::tryShutdownAndRemove);
     }
   }
 
   /**
-   * Throws {@code error} if it is an unchecked exception ({@link Runtime} or {@link Error}). Does
-   * nothing if {@code error} is {@code null}. Throws {@link AssertionError} if {@code error} is a
-   * checked exception (assuming it will not happen).
+   * Signals that {@link CountingChannel#shutdown()} has been invoked before {@link
+   * CountingChannel#createChannelAndStub(Supplier, Function)} on the same channel.
    */
-  private static void rethrowUncheckedIfAny(@Nullable Throwable error) {
-    if (error != null) {
-      Throwables.throwIfUnchecked(error);
-      throw new AssertionError(error);
-    }
-  }
+  private static class ChannelClosedException extends Exception {}
 }
