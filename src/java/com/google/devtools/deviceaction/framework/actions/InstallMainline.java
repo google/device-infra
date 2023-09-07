@@ -56,7 +56,9 @@ public class InstallMainline implements Action {
   private static final String TAG_MAINLINE_MODULES = "mainline_modules";
   private static final String TAG_TRAIN_FOLDER = "train_folder";
   private static final String TAG_APKS_ZIPS = "apks_zips";
-  private static final Duration WAIT_FOR_POSSIBLE_ROLLBACK = Duration.ofMinutes(3);
+  // Package Watchdog may rollback the mainline modules if issues are observed.
+  // In particular, it will look for native crashes in the first 5 min after the device boots.
+  private static final Duration WAIT_FOR_POSSIBLE_ROLLBACK = Duration.ofMinutes(5);
 
   private final PackageUpdateTracker packageUpdateTracker;
   private final ModuleCleaner moduleCleaner;

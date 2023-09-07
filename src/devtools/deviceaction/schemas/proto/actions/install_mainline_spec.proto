@@ -47,5 +47,9 @@ message InstallMainlineSpec {
   optional bool dev_key_signed = 6 [default = false];
   optional bool skip_check_version_after_push = 7 [default = false];
   // Check rollback is meaningful only if rollback is enabled.
-  optional bool check_rollback = 8;
+  optional bool check_rollback = 8 [
+    default = true,
+    (description) =
+        "Check if the installation is rolled back by package watchdog."
+  ];
 }

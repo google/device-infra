@@ -267,7 +267,7 @@ public final class ProtoHelperTest {
         deviceConfig.getExtension(InstallMainlineSpec.installMainlineSpec).getEnableRollback());
     assertFalse(
         deviceConfig.getExtension(InstallMainlineSpec.installMainlineSpec).getDevKeySigned());
-    assertFalse(
+    assertTrue(
         deviceConfig.getExtension(InstallMainlineSpec.installMainlineSpec).getCheckRollback());
   }
 
