@@ -65,6 +65,9 @@ message CreateTestRequest {
     // If true, this job will not be synced to master,
     // and will not be checked for expiration from master.
     bool disable_master_syncing = 7;
+    // Optional.
+    // The files to be resolved in lab.
+    repeated ResolveFileItem lab_resolve_file = 8;
   }
 
   message Test {
@@ -76,6 +79,13 @@ message CreateTestRequest {
     int64 test_create_time_ms = 3;
     // Required. It represents client-side time.
     int64 test_start_time_ms = 4;
+  }
+
+  // The file that should be resolved in lab.
+  message ResolveFileItem {
+    string tag = 1;
+    string file = 2;
+    map<string, string> resolving_parameter = 3;
   }
 
   // Container and sandbox mode preferences will be handled as the following
