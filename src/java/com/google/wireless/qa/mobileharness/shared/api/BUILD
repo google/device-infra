@@ -36,7 +36,7 @@ java_library(
 # No-op test for integration test only.
 java_library(
     name = "no_op_test",
-    exports = [
+    runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:no_op_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:no_op_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:no_op_driver",
@@ -119,17 +119,4 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
     ],
-)
-
-################################################################################
-# Legacy targets which should be replaced by the exported one
-################################################################################
-
-java_library(
-    name = "no_op_device",
-    visibility = [
-        "//java/com/google/devtools/mobileharness/platform/testbed/mobly/util:__pkg__",
-        "//javatests/com/google/devtools/mobileharness/platform/testbed:__subpackages__",
-    ],
-    exports = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/device:no_op_device"],
 )
