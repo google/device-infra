@@ -30,6 +30,7 @@ PYTHON_API_VERSION = 2
 proto_library(
     name = "spec",
     deps = [
+        ":android_adb_shell_decorator_spec_proto",
         ":base_spec_proto",
         ":job_spec_proto",
     ],
@@ -100,6 +101,17 @@ proto_library(
 java_proto_library(
     name = "no_op_test_spec_java_proto",
     deps = [":no_op_test_spec"],
+)
+
+proto_library(
+    name = "android_adb_shell_decorator_spec_proto",
+    srcs = ["decorator/android_adb_shell_decorator_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "android_adb_shell_decorator_spec_java_proto",
+    deps = [":android_adb_shell_decorator_spec_proto"],
 )
 
 proto_library(

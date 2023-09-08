@@ -21,6 +21,15 @@ package(
 )
 
 java_library(
+    name = "android_adb_shell_spec",
+    srcs = ["AndroidAdbShellSpec.java"],
+    deps = [
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_real_device_spec",
     srcs = ["AndroidRealDeviceSpec.java"],
     deps = [
