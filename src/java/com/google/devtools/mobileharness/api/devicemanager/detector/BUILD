@@ -53,7 +53,7 @@ java_library(
     name = "no_op",
     srcs = ["NoOpDeviceDetector.java"],
     runtime_deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:no_op_device",
     ],
     deps = [
         ":base",

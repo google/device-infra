@@ -74,7 +74,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/service/grpc",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared:log",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:base_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:base_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",

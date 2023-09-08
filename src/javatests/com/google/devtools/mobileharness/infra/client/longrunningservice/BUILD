@@ -74,8 +74,8 @@ olc_server_binary(
 olc_server_binary(
     name = "OlcServerWithAndroidDevice",
     extra_runtime_deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
     ],
 )
 

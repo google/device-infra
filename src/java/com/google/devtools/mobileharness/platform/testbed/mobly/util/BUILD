@@ -50,10 +50,10 @@ java_library(
     ],
     visibility = ["//src/java/com/google/wireless/qa/mobileharness/shared:__subpackages__"],
     runtime_deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:android_device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:misc_testbed_subdevice",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:simple_composite_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:misc_testbed_sub_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:no_op_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:simple_composite_device",
     ],
     deps = [
         ":subdevice_type",

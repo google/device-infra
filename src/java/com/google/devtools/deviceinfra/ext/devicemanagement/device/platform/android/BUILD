@@ -41,8 +41,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:android_packages",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:sqlite",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:base_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:base_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:resolution",
@@ -68,7 +68,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:sqlite",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:base_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:base_device",
         "@maven//:com_google_guava_guava",
     ],
 )

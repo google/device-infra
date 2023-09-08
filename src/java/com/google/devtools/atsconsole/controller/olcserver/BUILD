@@ -28,7 +28,7 @@ olc_server_binary(
     name = "AtsOlcServer",
     extra_runtime_deps = [
         "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:ats_session_plugin",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:android_real_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:xts_tradefed_test_validator",
     ],

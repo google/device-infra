@@ -27,8 +27,6 @@ import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp
 import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.UnsupportedDeviceSandboxController;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
-import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
@@ -71,10 +69,10 @@ public interface Device {
   /** Gets a copy of the supported device types. */
   Set<String> getDeviceTypes();
 
-  /** Gets a copy of the supported drivers, which are sub-classes of {@link Driver}. */
+  /** Gets a copy of the supported drivers, which are sub-classes of {@code Driver}. */
   Set<String> getDriverTypes();
 
-  /** Gets a copy of the supported decorators, which are sub-classes of {@link Decorator}. */
+  /** Gets a copy of the supported decorators, which are sub-classes of {@code Decorator}. */
   Set<String> getDecoratorTypes();
 
   /** Gets the list of the owners for this device. */

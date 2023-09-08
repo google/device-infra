@@ -13,31 +13,139 @@
 # limitations under the License.
 #
 
-package(default_applicable_licenses = ["//:license"])
-
-exports_files(
-    [
-        "BaseDriver.java",
-        "Driver.java",
-        "DriverFactory.java",
-        "NoOpDriver.java",
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
     ],
-    visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+)
+
+################################################################################
+# Common libraries in alphabetical order
+################################################################################
+
+java_library(
+    name = "base_driver",
+    srcs = ["BaseDriver.java"],
+    deps = [
+        ":driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "driver",
+    srcs = ["Driver.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
+    name = "driver_factory",
+    srcs = ["DriverFactory.java"],
+    deps = [
+        ":driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:class_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:reflection",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_assistedinject",
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+################################################################################
+# Driver libraries in alphabetical order
+################################################################################
+
+java_library(
+    name = "mobly_test",
+    srcs = ["MoblyTest.java"],
+    deps = [
+        ":base_driver",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:config_generator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:composite_device_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:org_json_json",
+        "@maven//:org_yaml_snakeyaml",
+    ],
+)
+
+java_library(
+    name = "mobly_aosp_test",
+    srcs = ["MoblyAospTest.java"],
+    deps = [
+        ":mobly_test",
+        "//src/java/com/google/devtools/atsconsole/result/report:certification_suite_info",
+        "//src/java/com/google/devtools/atsconsole/result/report:certification_suite_info_factory",
+        "//src/java/com/google/devtools/atsconsole/result/report:mobly_report_helper",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:install_mobly_test_deps_args",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_aosp_test_setup_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "no_op_driver",
+    srcs = ["NoOpDriver.java"],
+    deps = [
+        ":base_driver",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:no_op_driver_spec_java_proto",
+        "@maven//:com_google_guava_guava",
     ],
 )
 
 java_library(
     name = "xts_tradefed_test",
-    srcs = [
-        "XtsTradefedTest.java",
-    ],
-    visibility = [
-        "//src/java/com/google/devtools/atsconsole/controller/olcserver:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-    ],
+    srcs = ["XtsTradefedTest.java"],
     deps = [
+        ":base_driver",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
@@ -51,70 +159,14 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:base",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:composite_device_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:xts_tradefed_test_spec_java_proto",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "mobly_test",
-    srcs = [
-        "MoblyTest.java",
-    ],
-    visibility = ["//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__"],
-    deps = [
-        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
-        "//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:config_generator",
-        "//src/java/com/google/devtools/mobileharness/shared/util/command",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/system",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:base",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:composite_device_util",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
-        "@maven//:org_json_json",
-        "@maven//:org_yaml_snakeyaml",
-    ],
-)
-
-java_library(
-    name = "mobly_aosp_test",
-    srcs = ["MoblyAospTest.java"],
-    visibility = [
-        "//src/java/com/google/devtools/atsconsole/controller/olcserver:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
-    ],
-    deps = [
-        ":mobly_test",
-        "//src/java/com/google/devtools/atsconsole/result/report:certification_suite_info",
-        "//src/java/com/google/devtools/atsconsole/result/report:certification_suite_info_factory",
-        "//src/java/com/google/devtools/atsconsole/result/report:mobly_report_helper",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:install_mobly_test_deps_args",
-        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_aosp_test_setup_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
     ],
 )

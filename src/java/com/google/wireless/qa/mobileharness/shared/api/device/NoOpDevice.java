@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
@@ -43,6 +44,7 @@ public class NoOpDevice extends BaseDevice {
     super(deviceId);
   }
 
+  @VisibleForTesting
   public NoOpDevice(
       @Nullable ApiConfig apiConfig, ValidatorFactory validatorFactory, DeviceInfo deviceInfo) {
     super(apiConfig, validatorFactory, deviceInfo);

@@ -25,11 +25,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * Util methods for handling JobType proto.
- *
- * @author derekchen@google.com (Derek Chen)
- */
+/** Util methods for handling JobType proto. */
 public final class JobTypeUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

@@ -60,7 +60,7 @@ java_binary(
         ":client_lib",
         # For validation logic of AndroidTradefedTest in the client side.
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
     ],
 )

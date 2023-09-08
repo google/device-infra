@@ -13,34 +13,92 @@
 # limitations under the License.
 #
 
-package(default_applicable_licenses = ["//:license"])
-
-exports_files(
-    [
-        "AdapterValidator.java",
-        "BaseValidator.java",
-        "JobValidator.java",
-        "Validator.java",
-        "ValidatorFactory.java",
-    ],
-    visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
     ],
 )
+
+################################################################################
+# Common libraries in alphabetical order
+################################################################################
+
+java_library(
+    name = "adapter_validator",
+    srcs = ["AdapterValidator.java"],
+    deps = [
+        ":base_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
+    name = "base_validator",
+    srcs = ["BaseValidator.java"],
+    deps = [
+        ":validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "job_validator",
+    srcs = ["JobValidator.java"],
+    deps = [
+        ":validator",
+        ":validator_factory",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:class_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "validator",
+    srcs = ["Validator.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
+    name = "validator_factory",
+    srcs = ["ValidatorFactory.java"],
+    deps = [
+        ":validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+################################################################################
+# Validator libraries in alphabetical order
+################################################################################
 
 java_library(
     name = "mobly_aosp_test_validator",
     srcs = [
         "MoblyAospTestValidator.java",
     ],
-    visibility = [
-        "//src/java/com/google/devtools/atsconsole/controller/olcserver:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
-    ],
     deps = [
+        ":base_validator",
         "//src/java/com/google/devtools/atsconsole/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:base",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
@@ -49,16 +107,10 @@ java_library(
 
 java_library(
     name = "xts_tradefed_test_validator",
-    srcs = [
-        "XtsTradefedTestValidator.java",
-    ],
-    visibility = [
-        "//src/java/com/google/devtools/atsconsole/controller/olcserver:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
-    ],
+    srcs = ["XtsTradefedTestValidator.java"],
     deps = [
+        ":base_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:base",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",

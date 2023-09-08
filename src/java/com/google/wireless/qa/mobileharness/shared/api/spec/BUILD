@@ -13,13 +13,17 @@
 # limitations under the License.
 #
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
 
 java_library(
     name = "android_real_device_spec",
     srcs = ["AndroidRealDeviceSpec.java"],
-    visibility = [
-        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
     ],
-    deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation"],
 )

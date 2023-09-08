@@ -132,7 +132,7 @@ java_library(
     name = "device_info_manager",
     srcs = ["DeviceInfoManager.java"],
     visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",

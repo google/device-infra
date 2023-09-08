@@ -25,7 +25,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfiga
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
 import java.util.List;
 
-/** Validator for the {@link XtsTradefedTest} driver. */
+/** Validator for the {@code XtsTradefedTest} driver. */
 public class XtsTradefedTestValidator extends BaseValidator
     implements SpecConfigable<XtsTradefedTestDriverSpec> {
 
