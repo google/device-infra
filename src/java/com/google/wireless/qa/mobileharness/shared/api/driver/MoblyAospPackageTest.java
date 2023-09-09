@@ -46,7 +46,7 @@ import java.time.Instant;
 /** Driver for running Mobly tests packaged in AOSP and distributed via the Android Build. */
 @DriverAnnotation(
     help = "For running Mobly tests packaged in AOSP and distributed via the Android Build.")
-public class MoblyAospTest extends MoblyTest {
+public class MoblyAospPackageTest extends MoblyGenericTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -85,8 +85,8 @@ public class MoblyAospTest extends MoblyTest {
   private final MoblyReportHelper moblyReportHelper;
   private final CertificationSuiteInfoFactory certificationSuiteInfoFactory;
 
-  /** Creates the MoblyAospTest driver. */
-  public MoblyAospTest(Device device, TestInfo testInfo) {
+  /** Creates the MoblyAospPackageTest driver. */
+  public MoblyAospPackageTest(Device device, TestInfo testInfo) {
     this(
         device,
         testInfo,
@@ -96,7 +96,7 @@ public class MoblyAospTest extends MoblyTest {
   }
 
   @VisibleForTesting
-  MoblyAospTest(
+  MoblyAospPackageTest(
       Device device,
       TestInfo testInfo,
       MoblyAospTestSetupUtil setupUtil,

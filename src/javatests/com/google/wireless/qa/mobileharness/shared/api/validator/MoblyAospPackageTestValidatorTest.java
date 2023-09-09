@@ -23,7 +23,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.driver.MoblyAospTest;
+import com.google.wireless.qa.mobileharness.shared.api.driver.MoblyAospPackageTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
@@ -38,9 +38,9 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public final class MoblyAospTestValidatorTest {
+public final class MoblyAospPackageTestValidatorTest {
 
-  private MoblyAospTestValidator validator;
+  private MoblyAospPackageTestValidator validator;
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private JobInfo mockJobInfo;
@@ -49,15 +49,15 @@ public final class MoblyAospTestValidatorTest {
 
   @Before
   public void setUp() {
-    validator = new MoblyAospTestValidator();
+    validator = new MoblyAospPackageTestValidator();
     when(mockJobInfo.files()).thenReturn(jobFiles);
     when(mockJobInfo.params()).thenReturn(jobParams);
   }
 
   @Test
   public void validateJob_pass() throws Exception {
-    doNothing().when(jobFiles).checkUnique(MoblyAospTest.FILE_MOBLY_PKG);
-    when(jobParams.get(MoblyAospTest.PARAM_CERTIFICATION_SUITE_TYPE)).thenReturn("cts");
+    doNothing().when(jobFiles).checkUnique(MoblyAospPackageTest.FILE_MOBLY_PKG);
+    when(jobParams.get(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE)).thenReturn("cts");
 
     assertThat(validator.validateJob(mockJobInfo)).isEmpty();
   }
@@ -69,8 +69,8 @@ public final class MoblyAospTestValidatorTest {
                 BasicErrorId.JOB_OR_TEST_FILE_MULTI_PATHS,
                 "More than one files/dirs marked for each tag(s)"))
         .when(jobFiles)
-        .checkUnique(MoblyAospTest.FILE_MOBLY_PKG);
-    when(jobParams.get(MoblyAospTest.PARAM_CERTIFICATION_SUITE_TYPE)).thenReturn("cts");
+        .checkUnique(MoblyAospPackageTest.FILE_MOBLY_PKG);
+    when(jobParams.get(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE)).thenReturn("cts");
 
     List<String> errors = validator.validateJob(mockJobInfo);
 
@@ -80,8 +80,8 @@ public final class MoblyAospTestValidatorTest {
 
   @Test
   public void validateJob_certificationSuiteTypeNotRecognized_error() throws Exception {
-    doNothing().when(jobFiles).checkUnique(MoblyAospTest.FILE_MOBLY_PKG);
-    when(jobParams.get(MoblyAospTest.PARAM_CERTIFICATION_SUITE_TYPE)).thenReturn("abc");
+    doNothing().when(jobFiles).checkUnique(MoblyAospPackageTest.FILE_MOBLY_PKG);
+    when(jobParams.get(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE)).thenReturn("abc");
 
     List<String> errors = validator.validateJob(mockJobInfo);
 

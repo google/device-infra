@@ -20,25 +20,25 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.driver.MoblyAospTest;
+import com.google.wireless.qa.mobileharness.shared.api.driver.MoblyAospPackageTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Validator for the {@link MoblyAospTest} driver. */
-public class MoblyAospTestValidator extends BaseValidator {
+/** Validator for the {@link MoblyAospPackageTest} driver. */
+public class MoblyAospPackageTestValidator extends BaseValidator {
 
   @Override
   public List<String> validateJob(JobInfo job) {
     List<String> errors = new ArrayList<>();
     // Ensure that only one test package is specified in the job info.
     try {
-      job.files().checkUnique(MoblyAospTest.FILE_MOBLY_PKG);
+      job.files().checkUnique(MoblyAospPackageTest.FILE_MOBLY_PKG);
     } catch (MobileHarnessException e) {
       errors.add(e.getMessage());
     }
 
-    String suiteType = job.params().get(MoblyAospTest.PARAM_CERTIFICATION_SUITE_TYPE);
+    String suiteType = job.params().get(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE);
     if (!Strings.isNullOrEmpty(suiteType)) {
       try {
         SuiteType unused = SuiteType.valueOf(Ascii.toUpperCase(suiteType));

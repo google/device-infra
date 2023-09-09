@@ -48,9 +48,9 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-/** Unit tests for {@link MoblyAospTest}. */
+/** Unit tests for {@link MoblyAospPackageTest}. */
 @RunWith(JUnit4.class)
-public final class MoblyAospTestTest {
+public final class MoblyAospPackageTestTest {
 
   private static final String SERIAL = "363005dc750400ec";
   private static final String PY_PKG_INDEX_URL = "https://python.package.index/url";
@@ -72,13 +72,13 @@ public final class MoblyAospTestTest {
   @Test
   public void generateTestCommand_verifySetupUtilArgs() throws Exception {
     when(testInfo.getTmpFileDir()).thenReturn("/tmp");
-    when(files.getSingle(MoblyAospTest.FILE_MOBLY_PKG)).thenReturn("sample_test.zip");
+    when(files.getSingle(MoblyAospPackageTest.FILE_MOBLY_PKG)).thenReturn("sample_test.zip");
     when(jobInfo.files()).thenReturn(files);
     params = new Params(null);
-    params.add(MoblyAospTest.PARAM_TEST_PATH, "sample_test.py");
-    params.add(MoblyTest.TEST_SELECTOR_KEY, "test1 test2");
-    params.add(MoblyAospTest.PARAM_PYTHON_VERSION, "3.10");
-    params.add(MoblyAospTest.PARAM_PY_PKG_INDEX_URL, PY_PKG_INDEX_URL);
+    params.add(MoblyAospPackageTest.PARAM_TEST_PATH, "sample_test.py");
+    params.add(MoblyGenericTest.TEST_SELECTOR_KEY, "test1 test2");
+    params.add(MoblyAospPackageTest.PARAM_PYTHON_VERSION, "3.10");
+    params.add(MoblyAospPackageTest.PARAM_PY_PKG_INDEX_URL, PY_PKG_INDEX_URL);
     when(jobInfo.params()).thenReturn(params);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(configFile.getPath()).thenReturn("config.yaml");
@@ -87,11 +87,11 @@ public final class MoblyAospTestTest {
             .setDefaultTimeout(Duration.ofMinutes(30))
             .setIndexUrl(PY_PKG_INDEX_URL)
             .build();
-    MoblyAospTest moblyAospTest =
-        new MoblyAospTest(
+    MoblyAospPackageTest moblyAospPackageTest =
+        new MoblyAospPackageTest(
             emptyDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
 
-    var unused = moblyAospTest.generateTestCommand(testInfo, configFile, false);
+    var unused = moblyAospPackageTest.generateTestCommand(testInfo, configFile, false);
 
     verify(setupUtil)
         .setupEnvAndGenerateTestCommand(
@@ -119,18 +119,18 @@ public final class MoblyAospTestTest {
     when(emptyDevice.getDeviceId()).thenReturn(SERIAL);
     when(testInfo.getGenFileDir()).thenReturn("/gen");
     params = new Params(null);
-    params.add(MoblyAospTest.PARAM_CERTIFICATION_SUITE_TYPE, "cts");
-    params.add(MoblyAospTest.PARAM_XTS_TEST_PLAN, "cts-plan");
+    params.add(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE, "cts");
+    params.add(MoblyAospPackageTest.PARAM_XTS_TEST_PLAN, "cts-plan");
     when(jobInfo.params()).thenReturn(params);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(certificationSuiteInfoFactory.createSuiteInfo(SuiteType.CTS, "cts-plan"))
         .thenReturn(certificationSuiteInfo);
 
-    MoblyAospTest moblyAospTest =
-        new MoblyAospTest(
+    MoblyAospPackageTest moblyAospPackageTest =
+        new MoblyAospPackageTest(
             emptyDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
 
-    moblyAospTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
+    moblyAospPackageTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
 
     verify(moblyReportHelper)
         .generateResultAttributesFile(
@@ -148,16 +148,16 @@ public final class MoblyAospTestTest {
     when(emptyDevice.getDeviceId()).thenReturn(SERIAL);
     when(testInfo.getGenFileDir()).thenReturn("/gen");
     params = new Params(null);
-    params.add(MoblyAospTest.PARAM_CERTIFICATION_SUITE_TYPE, "");
-    params.add(MoblyAospTest.PARAM_XTS_TEST_PLAN, "cts-plan");
+    params.add(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE, "");
+    params.add(MoblyAospPackageTest.PARAM_XTS_TEST_PLAN, "cts-plan");
     when(jobInfo.params()).thenReturn(params);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
 
-    MoblyAospTest moblyAospTest =
-        new MoblyAospTest(
+    MoblyAospPackageTest moblyAospPackageTest =
+        new MoblyAospPackageTest(
             emptyDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
 
-    moblyAospTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
+    moblyAospPackageTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
 
     verify(certificationSuiteInfoFactory, never()).createSuiteInfo(any(), any());
     verify(moblyReportHelper, never())
@@ -171,16 +171,16 @@ public final class MoblyAospTestTest {
     when(compositeDevice.getManagedDevices()).thenReturn(ImmutableSet.of());
     when(testInfo.getGenFileDir()).thenReturn("/gen");
     params = new Params(null);
-    params.add(MoblyAospTest.PARAM_CERTIFICATION_SUITE_TYPE, "cts");
-    params.add(MoblyAospTest.PARAM_XTS_TEST_PLAN, "cts-plan");
+    params.add(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE, "cts");
+    params.add(MoblyAospPackageTest.PARAM_XTS_TEST_PLAN, "cts-plan");
     when(jobInfo.params()).thenReturn(params);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
 
-    MoblyAospTest moblyAospTest =
-        new MoblyAospTest(
+    MoblyAospPackageTest moblyAospPackageTest =
+        new MoblyAospPackageTest(
             compositeDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
 
-    moblyAospTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
+    moblyAospPackageTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
 
     verify(certificationSuiteInfoFactory, never()).createSuiteInfo(any(), any());
     verify(moblyReportHelper, never())

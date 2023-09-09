@@ -55,9 +55,9 @@ import org.mockito.Captor;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-/** Unit tests for {@link MoblyTest}. */
+/** Unit tests for {@link MoblyGenericTest}. */
 @RunWith(JUnit4.class)
-public class MoblyTestTest {
+public class MoblyGenericTestTest {
 
   private static final String MOBLY_TEST_TEST_PAR = "mobly_test_test.par";
 
@@ -79,7 +79,7 @@ public class MoblyTestTest {
   private FakeTimeSource timeSource;
   private File genFileDir;
   private File tmpFileDir;
-  private MoblyTest moblyTest;
+  private MoblyGenericTest moblyGenericTest;
   private LocalFileUtil localFileUtil;
   private String moblyTestLibPar;
 
@@ -108,15 +108,16 @@ public class MoblyTestTest {
 
     setupTestInfo("test_pass");
     CommandExecutor mockCommandExecutor = getMockCommandExecutor();
-    moblyTest = new MoblyTest(new NoOpDevice("device_name"), testInfo, mockCommandExecutor, clock);
+    moblyGenericTest =
+        new MoblyGenericTest(new NoOpDevice("device_name"), testInfo, mockCommandExecutor, clock);
 
-    moblyTest.run(testInfo);
+    moblyGenericTest.run(testInfo);
 
     verify(mockCommandExecutor).start(executedCommand.capture());
     assertThat(executedCommand.getAllValues()).hasSize(1);
 
     setupTestInfo("test_pass");
-    moblyTest.run(testInfo);
+    moblyGenericTest.run(testInfo);
     assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
 
     Path rawLog =
@@ -142,12 +143,12 @@ public class MoblyTestTest {
             .setSetting(jobSetting)
             .setTiming(timing)
             .build();
-    jobInfo.params().add(MoblyTest.TEST_SELECTOR_KEY, testName);
+    jobInfo.params().add(MoblyGenericTest.TEST_SELECTOR_KEY, testName);
     jobInfo.params().add("use_python_sponge_converter", "false");
-    jobInfo.files().add(MoblyTest.FILE_TEST_LIB_PAR, moblyTestLibPar);
+    jobInfo.files().add(MoblyGenericTest.FILE_TEST_LIB_PAR, moblyTestLibPar);
     testInfo = jobInfo.tests().add(TEST_ID, testName, timing, localFileUtil);
     // Set up the test lib par for the driver
-    testInfo.files().add(MoblyTest.FILE_TEST_LIB_PAR, moblyTestLibPar);
+    testInfo.files().add(MoblyGenericTest.FILE_TEST_LIB_PAR, moblyTestLibPar);
   }
 
   private CommandExecutor getMockCommandExecutor() throws Exception {

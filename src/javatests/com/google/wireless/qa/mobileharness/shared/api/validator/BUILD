@@ -25,8 +25,8 @@ java_library(
     srcs = glob(["*.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_test",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:mobly_aosp_test_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_package_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:mobly_aosp_package_test_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:xts_tradefed_test_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:xts_tradefed_test_spec_java_proto",
