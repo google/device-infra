@@ -80,7 +80,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/app/binary/wifiutil:WifiUtil.apk",
     ],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
         ":aapt",

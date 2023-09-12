@@ -31,8 +31,11 @@ proto_library(
     name = "spec",
     deps = [
         ":android_adb_shell_decorator_spec_proto",
+        ":android_device_setting_decorator_spec_proto",
         ":base_spec_proto",
         ":job_spec_proto",
+        ":no_op_decorator_spec_proto",
+        ":no_op_driver_spec_proto",
     ],
 )
 
@@ -60,6 +63,19 @@ proto_library(
 java_proto_library(
     name = "job_spec_java_proto",
     deps = [":job_spec_proto"],
+)
+
+proto_library(
+    name = "android_device_setting_decorator_spec_proto",
+    srcs = ["decorator/android_device_settings_decorator_spec.proto"],
+    deps = [
+        ":base_spec_proto",
+    ],
+)
+
+java_proto_library(
+    name = "android_device_setting_decorator_spec_java_proto",
+    deps = [":android_device_setting_decorator_spec_proto"],
 )
 
 proto_library(

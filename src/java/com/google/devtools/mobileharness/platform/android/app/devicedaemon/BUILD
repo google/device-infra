@@ -18,7 +18,7 @@
 java_library(
     name = "device_daemon_apk_info",
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+        "//:deviceinfra_all_pkg",
     ],
     exports = [
         ":device_daemon_apk_info_interface",

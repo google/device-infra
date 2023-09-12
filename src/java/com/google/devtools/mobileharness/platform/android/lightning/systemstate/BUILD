@@ -21,8 +21,7 @@ java_library(
         "SystemStateManager.java",
     ],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",

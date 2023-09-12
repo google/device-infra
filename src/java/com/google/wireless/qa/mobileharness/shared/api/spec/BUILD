@@ -30,6 +30,14 @@ java_library(
 )
 
 java_library(
+    name = "android_clean_apps_spec",
+    srcs = ["AndroidCleanAppsSpec.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+    ],
+)
+
+java_library(
     name = "android_real_device_spec",
     srcs = ["AndroidRealDeviceSpec.java"],
     deps = [
