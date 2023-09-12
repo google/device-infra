@@ -781,7 +781,8 @@ public class ApkInstaller {
    * @throws MobileHarnessException if GmsCore apk is incompatible with device, or an error occurs.
    * @throws InterruptedException if current thread is interrupted during this method
    */
-  private void checkGmsCompatibility(
+  @VisibleForTesting
+  void checkGmsCompatibility(
       Device device,
       int deviceSdkVersion,
       String apkPath,
