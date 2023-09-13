@@ -19,7 +19,7 @@ java_library(
     name = "system_setting_util",
     srcs = ["AndroidSystemSettingUtil.java"],
     visibility = [
-        "//:deviceinfra_pkg",
+        "//:deviceinfra_all_pkg",
     ],
     exports = [
         ":enums",

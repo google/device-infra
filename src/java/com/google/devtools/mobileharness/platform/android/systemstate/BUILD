@@ -19,7 +19,7 @@ java_library(
     name = "system_state_util",
     srcs = ["AndroidSystemStateUtil.java"],
     visibility = [
-        "//:deviceinfra_pkg",
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",

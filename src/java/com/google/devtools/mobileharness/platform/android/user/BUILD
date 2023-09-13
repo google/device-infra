@@ -24,12 +24,7 @@ java_library(
         "AndroidUserUtil.java",
     ],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/file:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller:__pkg__",
-        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/file:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/user:__pkg__",
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
