@@ -18,7 +18,7 @@ package com.google.devtools.atsconsole.controller.olcserver;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
-import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.util.stream.Collectors.partitioningBy;
 

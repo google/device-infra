@@ -17,7 +17,7 @@
 package com.google.devtools.deviceinfra.infra.client.api.mode.local;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
 import com.google.common.collect.ImmutableList;
@@ -27,7 +27,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.deviceinfra.infra.core.devicemanager.DispatcherManager;
-import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.Dispatcher;
@@ -49,6 +48,7 @@ import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDev
 import com.google.devtools.mobileharness.infra.controller.test.local.LocalDirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.NoOpTestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException.ErrorType;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;

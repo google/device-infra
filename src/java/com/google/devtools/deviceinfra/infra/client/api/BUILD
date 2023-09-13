@@ -56,7 +56,7 @@ java_library(
     deps = [
         ":annotations",
         "//src/java/com/google/devtools/deviceinfra/infra/client/controller:job_factory",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",

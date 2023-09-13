@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.shared.util.concurrent;
+package com.google.devtools.mobileharness.shared.util.concurrent;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;

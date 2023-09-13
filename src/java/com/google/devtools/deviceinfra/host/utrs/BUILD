@@ -65,7 +65,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_sync",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:master_grpc_stub_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history:recorder",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:future",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",

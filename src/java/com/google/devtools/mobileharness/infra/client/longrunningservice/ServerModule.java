@@ -24,7 +24,6 @@ import com.google.devtools.deviceinfra.infra.client.api.Annotations.GlobalIntern
 import com.google.devtools.deviceinfra.infra.client.api.ClientApi;
 import com.google.devtools.deviceinfra.infra.client.api.ClientApiModule;
 import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
-import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
@@ -33,6 +32,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;

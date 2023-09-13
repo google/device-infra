@@ -67,7 +67,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:test_flow_converter",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:test_command_history_saver",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc/controller:adhoc_testbed_driver",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:concurrency_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:tag",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",

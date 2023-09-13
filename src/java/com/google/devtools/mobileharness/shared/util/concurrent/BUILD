@@ -13,16 +13,27 @@
 # limitations under the License.
 #
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
 
 java_library(
-    name = "concurrent",
+    name = "callables",
+    srcs = ["Callables.java"],
+    deps = [
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "concurrency_util",
     srcs = [
         "ConcurrencyUtil.java",
         "MobileHarnessCallable.java",
-    ],
-    visibility = [
-        "//:deviceinfra_all_pkg",
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
@@ -33,15 +44,21 @@ java_library(
 )
 
 java_library(
-    name = "future",
+    name = "more_futures",
     srcs = ["MoreFutures.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "thread_factory_util",
+    srcs = ["ThreadFactoryUtil.java"],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )

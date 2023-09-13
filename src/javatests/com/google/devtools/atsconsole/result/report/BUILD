@@ -62,7 +62,7 @@ java_library(
     srcs = ["TestModule.java"],
     deps = [
         "//src/java/com/google/devtools/atsconsole/result/report:compatibility_report_module",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",

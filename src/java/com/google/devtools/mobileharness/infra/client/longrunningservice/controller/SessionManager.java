@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.min;
 

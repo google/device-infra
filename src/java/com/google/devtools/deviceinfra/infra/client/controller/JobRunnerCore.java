@@ -36,7 +36,6 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
-import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
@@ -69,6 +68,7 @@ import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberEx
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler.SubscriberException;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.version.Version;

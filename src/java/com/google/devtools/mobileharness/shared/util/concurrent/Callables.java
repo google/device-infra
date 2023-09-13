@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.shared.util.concurrent;
+package com.google.devtools.mobileharness.shared.util.concurrent;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 

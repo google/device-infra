@@ -23,7 +23,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import java.lang.ref.Reference;

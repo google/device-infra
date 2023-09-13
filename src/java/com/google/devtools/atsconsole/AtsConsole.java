@@ -19,8 +19,8 @@ package com.google.devtools.atsconsole;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
-import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.tokenize;
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.Arrays.asList;
 

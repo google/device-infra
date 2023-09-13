@@ -26,7 +26,7 @@ import com.google.devtools.deviceinfra.infra.client.api.Annotations.JobThreadPoo
 import com.google.devtools.deviceinfra.infra.client.api.Annotations.ShutdownJobThreadWhenShutdownProcess;
 import com.google.devtools.deviceinfra.infra.client.controller.JobManagerCoreFactory;
 import com.google.devtools.deviceinfra.infra.client.controller.JobManagerCoreFactory.DefaultJobManagerCoreFactory;
-import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.util.concurrent.Executors;

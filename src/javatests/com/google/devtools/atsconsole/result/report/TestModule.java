@@ -18,7 +18,7 @@ package com.google.devtools.atsconsole.result.report;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.util.concurrent.Executors;

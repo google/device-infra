@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.controller.device;
 
-import static com.google.devtools.deviceinfra.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.MINUTES;
 

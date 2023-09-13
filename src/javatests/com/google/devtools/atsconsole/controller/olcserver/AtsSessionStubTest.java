@@ -34,7 +34,6 @@ import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSes
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
-import com.google.devtools.deviceinfra.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.deviceinfra.shared.util.port.PortProber;
 import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
@@ -42,6 +41,7 @@ import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
