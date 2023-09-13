@@ -19,5 +19,5 @@ package com.google.devtools.mobileharness.platform.android.systemsetting;
 /** The device operation after the set dm-verity. */
 public enum PostSetDmVerityDeviceOp {
   NONE,
-  REBOOT;
+  REBOOT,
 }

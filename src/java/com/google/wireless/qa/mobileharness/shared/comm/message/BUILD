@@ -18,6 +18,13 @@
 
 package(default_applicable_licenses = ["//:license"])
 
+package_group(
+    name = "test_message_users",
+    includes = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
+
 java_library(
     name = "cacheable_test_message_handler",
     srcs = ["CacheableTestMessageHandler.java"],
@@ -49,6 +56,21 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
         "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "message",
+    srcs = [
+        "TestMessageUtil.java",
+    ],
+    visibility = [":test_message_users"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
     ],
 )

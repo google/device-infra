@@ -244,6 +244,8 @@ public class Params {
   /**
    * Gets the comma separated value list from the parameter.
    *
+   * <p>Changes to the returned list will not be reflected in the params.
+   *
    * @param name parameter name/key.
    * @param defaultValue the default if the param does not exist, or the param value is not valid
    */

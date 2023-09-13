@@ -18,9 +18,6 @@
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
 )
 
 java_library(
@@ -28,6 +25,7 @@ java_library(
     srcs = [
         "TestMessageEvent.java",
     ],
+    visibility = ["//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_users"],
     deps = [
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
