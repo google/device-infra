@@ -16,12 +16,14 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
+import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.atsconsole.result.report.CertificationSuiteInfo;
 import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory;
@@ -29,6 +31,7 @@ import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactor
 import com.google.devtools.atsconsole.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.EmptyDevice;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -40,6 +43,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -64,10 +69,28 @@ public final class MoblyAospPackageTestTest {
   @Mock private CompositeDevice compositeDevice;
   @Mock private File configFile;
   @Mock private MoblyAospTestSetupUtil setupUtil;
+  @Mock private LocalFileUtil localFileUtil;
   @Mock private MoblyReportHelper moblyReportHelper;
   @Mock private CertificationSuiteInfoFactory certificationSuiteInfoFactory;
 
   private Params params;
+
+  @Test
+  public void convertMoblyConfig_stripsMhPrefix() throws Exception {
+    JSONObject moblyJson = new JSONObject();
+    moblyJson.put("param1", "value1");
+    moblyJson.put("mh_param2", "value2");
+    moblyJson.put("param3", new JSONObject(ImmutableMap.of("mh_param3a", "value3a")));
+    moblyJson.put(
+        "param4",
+        new JSONArray(ImmutableList.of(new JSONObject(ImmutableMap.of("mh_param4a", "value4a")))));
+    JSONObject newMoblyJson = MoblyAospPackageTest.convertMoblyConfig(moblyJson);
+    assertThat(newMoblyJson.get("param1")).isEqualTo("value1");
+    assertThat(newMoblyJson.get("param2")).isEqualTo("value2");
+    assertThat(newMoblyJson.getJSONObject("param3").get("param3a")).isEqualTo("value3a");
+    assertThat(newMoblyJson.getJSONArray("param4").getJSONObject(0).get("param4a"))
+        .isEqualTo("value4a");
+  }
 
   @Test
   public void generateTestCommand_verifySetupUtilArgs() throws Exception {
@@ -89,7 +112,12 @@ public final class MoblyAospPackageTestTest {
             .build();
     MoblyAospPackageTest moblyAospPackageTest =
         new MoblyAospPackageTest(
-            emptyDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
+            emptyDevice,
+            testInfo,
+            setupUtil,
+            localFileUtil,
+            moblyReportHelper,
+            certificationSuiteInfoFactory);
 
     var unused = moblyAospPackageTest.generateTestCommand(testInfo, configFile, false);
 
@@ -128,7 +156,12 @@ public final class MoblyAospPackageTestTest {
 
     MoblyAospPackageTest moblyAospPackageTest =
         new MoblyAospPackageTest(
-            emptyDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
+            emptyDevice,
+            testInfo,
+            setupUtil,
+            localFileUtil,
+            moblyReportHelper,
+            certificationSuiteInfoFactory);
 
     moblyAospPackageTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
 
@@ -155,7 +188,12 @@ public final class MoblyAospPackageTestTest {
 
     MoblyAospPackageTest moblyAospPackageTest =
         new MoblyAospPackageTest(
-            emptyDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
+            emptyDevice,
+            testInfo,
+            setupUtil,
+            localFileUtil,
+            moblyReportHelper,
+            certificationSuiteInfoFactory);
 
     moblyAospPackageTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
 
@@ -178,7 +216,12 @@ public final class MoblyAospPackageTestTest {
 
     MoblyAospPackageTest moblyAospPackageTest =
         new MoblyAospPackageTest(
-            compositeDevice, testInfo, setupUtil, moblyReportHelper, certificationSuiteInfoFactory);
+            compositeDevice,
+            testInfo,
+            setupUtil,
+            localFileUtil,
+            moblyReportHelper,
+            certificationSuiteInfoFactory);
 
     moblyAospPackageTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
 

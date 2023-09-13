@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
@@ -42,6 +43,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Iterator;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 /** Driver for running Mobly tests packaged in AOSP and distributed via the Android Build. */
 @DriverAnnotation(
@@ -81,7 +85,10 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
   @ParamAnnotation(required = false, help = "Base URL of Python Package Index.")
   public static final String PARAM_PY_PKG_INDEX_URL = "python_pkg_index_url";
 
+  private static final String MOBLY_CONFIG_KEY_PREFIX_MH = "mh_";
+
   private final MoblyAospTestSetupUtil setupUtil;
+  private final LocalFileUtil localFileUtil;
   private final MoblyReportHelper moblyReportHelper;
   private final CertificationSuiteInfoFactory certificationSuiteInfoFactory;
 
@@ -91,6 +98,7 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
         device,
         testInfo,
         new MoblyAospTestSetupUtil(),
+        new LocalFileUtil(),
         Guice.createInjector().getInstance(MoblyReportHelper.class),
         new CertificationSuiteInfoFactory());
   }
@@ -100,12 +108,60 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
       Device device,
       TestInfo testInfo,
       MoblyAospTestSetupUtil setupUtil,
+      LocalFileUtil localFileUtil,
       MoblyReportHelper moblyReportHelper,
       CertificationSuiteInfoFactory certificationSuiteInfoFactory) {
     super(device, testInfo);
     this.setupUtil = setupUtil;
+    this.localFileUtil = localFileUtil;
     this.moblyReportHelper = moblyReportHelper;
     this.certificationSuiteInfoFactory = certificationSuiteInfoFactory;
+  }
+
+  /** Recursively strips "mh_" prefix from Mobly config keys. */
+  @VisibleForTesting
+  static JSONObject convertMoblyConfig(JSONObject moblyJson) {
+    JSONObject newMoblyJson = new JSONObject();
+    Iterator<String> keys = moblyJson.keys();
+    while (keys.hasNext()) {
+      String key = keys.next();
+      String newKey = key.replaceFirst("^" + MOBLY_CONFIG_KEY_PREFIX_MH, "");
+      Object value = moblyJson.get(key);
+      if (value instanceof JSONObject) {
+        JSONObject newJsonObject = convertMoblyConfig((JSONObject) value);
+        newMoblyJson.put(newKey, newJsonObject);
+      } else if (value instanceof JSONArray) {
+        JSONArray newJsonArray = new JSONArray();
+        for (Object element : (JSONArray) value) {
+          if (element instanceof JSONObject) {
+            JSONObject newJsonObject = convertMoblyConfig((JSONObject) element);
+            newJsonArray.put(newJsonObject);
+          } else {
+            newJsonArray.put(element);
+          }
+        }
+        newMoblyJson.put(newKey, newJsonArray);
+      } else {
+        newMoblyJson.put(newKey, value);
+      }
+    }
+    return newMoblyJson;
+  }
+
+  /**
+   * Prepares the Mobly config.
+   *
+   * <p>Invokes {@link MoblyGenericTest#generateMoblyConfig} to populate the config fields, but also
+   * strips any key names with a "mh_" prefix so that a test written in AOSP can avoid making
+   * explicit references to MH (e.g. "mh_files" becomes "files" in the config).
+   */
+  @Override
+  protected File prepareMoblyConfig(TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
+    JSONObject moblyJson =
+        convertMoblyConfig(MoblyGenericTest.generateMoblyConfig(testInfo, getDevice()));
+    testbedName = MoblyGenericTest.getTestbedName(moblyJson);
+    return prepareMoblyConfig(testInfo, moblyJson, localFileUtil);
   }
 
   /** Generates the test execution command. */
