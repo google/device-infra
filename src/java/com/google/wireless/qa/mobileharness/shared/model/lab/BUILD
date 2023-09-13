@@ -21,10 +21,6 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "locator",
     srcs = glob(["*Locator.java"]),
-    tags = [
-        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
-        "avoid_dep",
-    ],
     visibility = ["//visibility:public"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",

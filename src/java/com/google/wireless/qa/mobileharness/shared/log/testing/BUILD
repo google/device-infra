@@ -30,10 +30,6 @@ java_library(
     srcs = [
         "FakeLogCollector.java",
     ],
-    tags = [
-        "alt_dep=//java/com/google/wireless/qa/mobileharness/shared/log/testing",
-        "avoid_dep",
-    ],
     deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/log",
         "//src/java/com/google/wireless/qa/mobileharness/shared/log:log_collector_backend",
