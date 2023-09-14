@@ -73,11 +73,13 @@ http_archive(
     ],
 )
 
-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
 
 go_rules_dependencies()
+
 go_register_toolchains(version = "1.20.5")
+
 gazelle_dependencies()
 
 # Needed for the googleapis protos used by com_github_bazelbuild_remote_apis below.
@@ -87,11 +89,12 @@ http_archive(
     sha256 = "7b6ea252f0b8fb5cd722f45feb83e115b689909bbb6a393a873b6cbad4ceae1d",
     strip_prefix = "googleapis-143084a2624b6591ee1f9d23e7f5241856642f4d",
     urls = [
-      "https://github.com/googleapis/googleapis/archive/143084a2624b6591ee1f9d23e7f5241856642f4d.zip"
+        "https://github.com/googleapis/googleapis/archive/143084a2624b6591ee1f9d23e7f5241856642f4d.zip",
     ],
 )
 
 load("//:builddeps/rbe_go_deps.bzl", "rbe_go_deps")
+
 # gazelle:repository_macro builddeps/rbe_go_deps.bzl%rbe_go_deps
 rbe_go_deps()
 
@@ -186,6 +189,7 @@ maven_install(
         "org.json:json:20230227",
         "org.mockito:mockito-core:4.3.1",
         "org.reflections:reflections:0.9.10",
+        "org.robolectric:android-all:8.0.0_r4-robolectric-r1",
         "org.yaml:snakeyaml:1.32",
         "xmlpull:xmlpull:1.1.3.1",
     ] + IO_GRPC_GRPC_JAVA_ARTIFACTS,
