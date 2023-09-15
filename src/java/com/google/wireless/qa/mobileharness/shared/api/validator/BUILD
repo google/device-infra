@@ -138,6 +138,22 @@ java_library(
 )
 
 java_library(
+    name = "android_switch_user_decorator_validator",
+    srcs = ["AndroidSwitchUserDecoratorValidator.java"],
+    deps = [
+        ":base_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/user:android_user_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_user_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
+)
+
+java_library(
     name = "mobly_aosp_package_test_validator",
     srcs = ["MoblyAospPackageTestValidator.java"],
     deps = [
