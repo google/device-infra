@@ -8,7 +8,7 @@
          require runtime permissions checks on newer SDKs. For those permissions,
          need to update DeviceDaemonApkInfo implementations to grant the new permissions,
          and change the daemon app to request them in a runtime permission style. -->
-    <uses-sdk android:minSdkVersion="14" android:targetSdkVersion="19"/>
+    <uses-sdk android:minSdkVersion="19" android:targetSdkVersion="19"/>
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
