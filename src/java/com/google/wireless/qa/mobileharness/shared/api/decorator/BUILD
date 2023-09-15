@@ -160,6 +160,26 @@ java_library(
 )
 
 java_library(
+    name = "android_install_apps_decorator",
+    srcs = ["AndroidInstallAppsDecorator.java"],
+    deps = [
+        ":base_decorator",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:test_runner_injector",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/step/android:install_apk_step",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:install_apk_step_spec_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "no_op_decorator",
     srcs = ["NoOpDecorator.java"],
     deps = [

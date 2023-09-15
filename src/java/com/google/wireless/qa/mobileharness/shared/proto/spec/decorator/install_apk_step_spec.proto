@@ -1,0 +1,112 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+// Specs for {@link InstallApkStep}.
+// Next tag: 15
+message InstallApkStepSpec {
+  extend DecoratorSpec {
+    optional InstallApkStepSpec ext = 241344121;
+  }
+
+  repeated Google3File build_apk = 1 [(file_detail) = {
+    help: "The build APKs. Typically it is the app under test. If you have packaged your test code with your app under test APK, you can ignore this parameter. If there are other APK dependencies list them here."
+  }];
+
+  repeated Google3File extra_apk = 2 [(file_detail) = {
+    help: "Extra apks to install.  Used in combination with build_apk."
+  }];
+
+  optional string install_apk_extra_file_tags = 3 [(field_detail) = {
+    help: "Comma separated file tags. Apks in this tags will also be installed"
+  }];
+
+  optional bool skip_gms_downgrade = 4 [
+    default = true,
+    (field_detail) = {
+      help: "Skip installing GMS if it is a downgrade. Defaults to true"
+    }
+  ];
+
+  optional int64 install_apk_timeout_sec = 5 [(field_detail) = {
+    help: "Max execution time of the \"adb install ...\" command."
+  }];
+
+  optional bool grant_permissions_on_install = 6 [
+    default = true,
+    (field_detail) = {
+      help: "Use -g for installing build apks. Defaults to true."
+    }
+  ];
+
+  optional bool broadcast_install_message = 7 [
+    default = false,
+    (field_detail) = {
+      help: "Whether to broadcast message when starting and finishing installing the app. Defaults to false."
+    }
+  ];
+
+  optional bool clear_gms_app_data = 8 [
+    default = false,
+    (field_detail) = {
+      help: "Whether to clear GMS app data before and after installation. Defaults to false."
+    }
+  ];
+
+  optional bool force_install_apks = 9 [
+    default = false,
+    (field_detail) = {
+      help: "Whether to force install apks. Defaults to false."
+    }
+  ];
+
+  optional int64 sleep_after_install_gms_sec = 10 [(field_detail) = {
+    help: "The time to sleep after installing GMS core APK."
+  }];
+
+  repeated Google3File dex_metadata = 11 [(file_detail) = {
+    help: "Dex metadata files to install with the apks. Each Dex metadata file must match by name with one of the apks being installed."
+  }];
+
+  optional bool skip_gms_download = 12 [
+    default = false,
+    (field_detail) = {
+      help: "Skip downloading GMSCore. Used for skipping gmscore update for an individual device in a testbed. Default value is false."
+    }
+  ];
+
+  optional bool reboot_after_all_build_apks_installation = 13 [
+    default = false,
+    (field_detail) = {
+      help: "Force to reboot the device after installing all build APKs."
+    }
+  ];
+
+  optional bool bypass_low_target_sdk_block = 14 [
+    default = false,
+    (field_detail) = {
+      help: "Whether to bypass low target sdk check, only works on the device with sdk >= 34. Default is false."
+    }
+  ];
+}

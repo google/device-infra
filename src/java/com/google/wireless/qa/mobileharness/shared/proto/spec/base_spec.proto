@@ -139,6 +139,18 @@ message FileDetail {
   optional string help = 2;
 }
 
+// A file item.
+message Google3File {
+  reserved 1;  // For internal.
+
+  reserved 2;  // For internal.
+
+  // File paths.
+  repeated string output = 3;
+
+  reserved 4;  // For internal.
+}
+
 // Set details message as Protobuf field option. It is for system use.
 extend google.protobuf.FieldOptions {
   optional FieldDetail field_detail = 122869282;

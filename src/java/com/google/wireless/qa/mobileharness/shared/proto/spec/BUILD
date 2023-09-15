@@ -33,6 +33,7 @@ proto_library(
         ":android_adb_shell_decorator_spec_proto",
         ":android_device_setting_decorator_spec_proto",
         ":base_spec_proto",
+        ":install_apk_step_spec_proto",
         ":job_spec_proto",
         ":no_op_decorator_spec_proto",
         ":no_op_driver_spec_proto",
@@ -117,6 +118,17 @@ proto_library(
 java_proto_library(
     name = "no_op_test_spec_java_proto",
     deps = [":no_op_test_spec"],
+)
+
+proto_library(
+    name = "install_apk_step_spec_proto",
+    srcs = ["decorator/install_apk_step_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "install_apk_step_spec_java_proto",
+    deps = [":install_apk_step_spec_proto"],
 )
 
 proto_library(
