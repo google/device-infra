@@ -87,7 +87,9 @@ java_library(
 java_library(
     name = "list_modules_command_handler",
     srcs = ["ListModulesCommandHandler.java"],
-    visibility = ["//src/javatests/com/google/devtools/atsconsole/controller/sessionplugin:__pkg__"],
+    visibility = [
+        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
+    ],
     deps = [
         "//src/devtools/atsconsole/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
