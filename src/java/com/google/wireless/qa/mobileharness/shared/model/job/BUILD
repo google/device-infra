@@ -26,9 +26,6 @@ package(
 java_library(
     name = "locator",
     srcs = glob(["*Locator.java"]),
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -58,9 +55,6 @@ java_library(
     name = "builder_adapter",
     srcs = ["TestBuilderAdapter.java"],
     visibility = [
-        # This target is only used for exposing the new TestInfo.Builder to the
-        # old TestInfo. DO NOT expose this "builder_adapter" target for other
-        # purposes.
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
     deps = [":job"],
@@ -70,7 +64,6 @@ java_library(
     name = "job_helper",
     srcs = ["JobHelper.java"],
     visibility = [
-        # Note: this tool is only for MH infra, please don't add more visibilities.
     ],
     deps = [
         ":job",
