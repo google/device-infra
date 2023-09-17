@@ -112,7 +112,6 @@ java_library(
     name = "abstract_direct_test_runner_core",
     srcs = ["AbstractDirectTestRunnerCore.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
     ],
     runtime_deps = [
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:skip_exception_factory",  # For package-visible method access.
