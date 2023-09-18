@@ -42,3 +42,19 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
 )
+
+java_library(
+    name = "module_configuration_helper",
+    srcs = ["ModuleConfigurationHelper.java"],
+    deps = [
+        ":configuration_util",
+        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_code_gson_gson",
+        "@maven//:com_google_guava_guava",
+    ],
+)

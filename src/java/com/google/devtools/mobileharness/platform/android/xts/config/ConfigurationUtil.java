@@ -32,6 +32,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /** Utility functions to handle configuration files. */
@@ -40,6 +41,7 @@ public class ConfigurationUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String[] CONFIG_FILE_EXTENSIONS = {".config", ".xml"};
+  private static final int CLASS_SEPARATOR = '.';
 
   private final LocalFileUtil localFileUtil;
 
@@ -140,5 +142,29 @@ public class ConfigurationUtil {
    */
   public static ImmutableList<File> getConfigDirs(String xtsRootDir) {
     return ImmutableList.of(new File(xtsRootDir));
+  }
+
+  /**
+   * Gets the simple class name from a given class name string. Returns the original string if it is
+   * already a simple name.
+   */
+  public static String getSimpleClassName(String clazz) {
+    return clazz.substring(clazz.lastIndexOf(CLASS_SEPARATOR) + 1);
+  }
+
+  /**
+   * Gets a file in a directory based on file name. If there are multiple files with the same name,
+   * will return the first one found. If no file is found, will return an empty Optional.
+   */
+  public Optional<File> getFileInDir(String fileName, File dir) throws MobileHarnessException {
+    FileFilter fileFilter = (file) -> file.isFile() && file.getName().equals(fileName);
+
+    List<File> files =
+        localFileUtil.listFiles(dir.getAbsolutePath(), /* recursively= */ true, fileFilter);
+    if (files.isEmpty()) {
+      return Optional.empty();
+    } else {
+      return Optional.of(files.get(0));
+    }
   }
 }

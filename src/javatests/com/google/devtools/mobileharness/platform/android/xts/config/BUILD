@@ -28,12 +28,18 @@ java_library(
     data = [
         ":testdata",
     ],
+    runtime_deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
+    ],
     deps = [
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_xml_parser",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
         "@com_google_protobuf//:protobuf_java",

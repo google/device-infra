@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.xts.config;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -24,8 +25,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -116,5 +119,48 @@ public class ConfigurationUtilTest {
             ImmutableList.of(testcasesDir1.toFile(), testcasesDir2.toFile()));
 
     assertThat(configNames).containsExactly(newFile12.toString());
+  }
+
+  @Test
+  public void getSimpleClassName() {
+    assertThat(
+            ConfigurationUtil.getSimpleClassName(
+                "com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil"))
+        .isEqualTo("ConfigurationUtil");
+    assertThat(ConfigurationUtil.getSimpleClassName("ConfigurationUtil"))
+        .isEqualTo("ConfigurationUtil");
+  }
+
+  @Test
+  public void getFileInDir_exist() throws Exception {
+    String fileName = "testcase";
+    Path file = tempDirPath.resolve(fileName);
+    localFileUtil.writeToFile(file.toString(), "test");
+
+    Optional<File> result = configurationUtil.getFileInDir(fileName, tempDirPath.toFile());
+
+    assertThat(result).isPresent();
+    assertThat(result.get().exists()).isTrue();
+  }
+
+  @Test
+  public void getFileInDir_notExist() throws Exception {
+    Optional<File> result = configurationUtil.getFileInDir("not_exist", tempDirPath.toFile());
+
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  public void getFileInDir_multipleFiles() throws Exception {
+    String fileName = "testcase";
+    Path file1 = tempDirPath.resolve(fileName);
+    Path file2 = tempDirPath.resolve("dir").resolve(fileName);
+    localFileUtil.writeToFile(file1.toString(), "file1");
+    localFileUtil.writeToFile(file2.toString(), "file2");
+
+    Optional<File> result = configurationUtil.getFileInDir(fileName, tempDirPath.toFile());
+
+    assertThat(result).isPresent();
+    assertThat(localFileUtil.readFile(result.get().toPath())).isEqualTo("file1");
   }
 }
