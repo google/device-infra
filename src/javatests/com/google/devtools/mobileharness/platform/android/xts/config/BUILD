@@ -32,12 +32,16 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
     ],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_xml_parser",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_lab_plugin",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
@@ -46,6 +50,7 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 
@@ -53,6 +58,7 @@ junit_test_suites(
     name = "gen_tests",
     sizes = [
         "medium",
+        "small",
     ],
     deps = [":config"],
 )
