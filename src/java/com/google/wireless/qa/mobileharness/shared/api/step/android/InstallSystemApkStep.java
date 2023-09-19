@@ -209,7 +209,13 @@ public class InstallSystemApkStep {
       }
     }
     rebootDevice(deviceId, deviceClassName, deviceRebootType);
-    systemStateUtil.waitUntilReady(deviceId);
+    if (sdkVersion == 23
+        && systemSpecUtil.isEmulator(deviceId)
+        && !systemSpecUtil.isCuttlefishEmulator(deviceId)) {
+      systemStateUtil.waitUntilReady(deviceId, Duration.ofMinutes(20));
+    } else {
+      systemStateUtil.waitUntilReady(deviceId);
+    }
   }
 
   /**
