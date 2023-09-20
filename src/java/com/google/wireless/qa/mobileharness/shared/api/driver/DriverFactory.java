@@ -16,41 +16,31 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Stage;
-import com.google.inject.assistedinject.FactoryModuleBuilder;
-import com.google.inject.util.Types;
+import com.google.inject.assistedinject.Assisted;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.util.ReflectionUtil;
+import java.lang.reflect.Constructor;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.BiFunction;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /** Simple factory for creating {@link Driver} instances. */
 public class DriverFactory {
-
-  /** The base driver factory. */
-  private interface BaseDriverFactory<T extends Driver> {
-
-    T create(Device device, TestInfo testInfo);
-  }
-
-  /** The base decorator factory. */
-  private interface BaseDecoratorFactory<T extends Decorator> {
-
-    T create(Driver driver, TestInfo testInfo);
-  }
 
   /**
    * Creates a new {@link Driver} instance according to the given {@link Driver} class type.
@@ -64,18 +54,21 @@ public class DriverFactory {
   @VisibleForTesting
   Driver createDriver(Device device, TestInfo testInfo, Class<? extends Driver> driverClass)
       throws MobileHarnessException {
-    // Gets the module class of the driver.
+    // Gets the module class if any.
     Optional<Class<? extends Module>> moduleClass = getModuleClass(driverClass);
-    if (moduleClass.isPresent()) {
-      // Creates the driver with the module.
-      return createDriverWithModule(device, testInfo, driverClass, moduleClass.get());
+
+    // Gets the public Xxx(Device, Test) constructor if any.
+    Optional<? extends Constructor<? extends Driver>> driverConstructor =
+        getConstructor(driverClass, Device.class, TestInfo.class);
+
+    if (moduleClass.isPresent() || driverConstructor.isEmpty()) {
+      // Uses Guice to instantiate the driver.
+      return injectDriver(driverClass, moduleClass.orElse(null), testInfo, device);
     } else {
-      // Creates the driver by invoking the constructor directly.
+      // Calls the constructor.
       try {
-        return driverClass
-            .getConstructor(Device.class, TestInfo.class)
-            .newInstance(device, testInfo);
-      } catch (IllegalArgumentException | ReflectiveOperationException e) {
+        return driverConstructor.get().newInstance(device, testInfo);
+      } catch (ReflectiveOperationException e) {
         throw new MobileHarnessException(
             ErrorCode.REFLECTION_INSTANTIATION_ERROR,
             String.format(
@@ -85,35 +78,6 @@ public class DriverFactory {
             e);
       }
     }
-  }
-
-  /**
-   * Given a driver class and a decorator class list: [Decorator1, Decorator2, ... DecoratorN], will
-   * create a driver instance like: new DecoratorN(...new Decorator2(new Decorator1(new
-   * Driver(Device)))).
-   *
-   * @param device the {@code Device} owning this new {@code Driver}
-   * @param testInfo the test info
-   * @param driverClass {@code Driver} class type
-   * @param decoratorClasses a list of {@code Decorator} class types
-   * @param driverWrapper wrapper for wrapping each driver/decorator
-   * @param decoratorExtender decorator extender for extending a decorator when it decorates another
-   *     driver. Its first parameter represents the decoratored driver and its return value will
-   *     replace the decorated driver.
-   * @return a new {@link Driver} instance associated with the given {@link Device} and decorated by
-   *     the given decorators
-   * @throws MobileHarnessException if fails to create a new {@link Driver} instance
-   */
-  public Driver createDriver(
-      Device device,
-      TestInfo testInfo,
-      Class<? extends Driver> driverClass,
-      List<Class<? extends Decorator>> decoratorClasses,
-      @Nullable BiFunction<Driver, String, Decorator> driverWrapper,
-      @Nullable BiFunction<Driver, Class<? extends Decorator>, Decorator> decoratorExtender)
-      throws MobileHarnessException {
-    Driver driver = createDriver(device, testInfo, driverClass, driverWrapper);
-    return decorateDriver(driver, testInfo, decoratorClasses, driverWrapper, decoratorExtender);
   }
 
   /**
@@ -147,7 +111,7 @@ public class DriverFactory {
    * @param decoratorClasses a list of {@code Decorator} class types
    * @param driverWrapper wrapper for wrapping each driver/decorator
    * @param decoratorExtender decorator extender for extending a decorator when it decorates another
-   *     driver. Its first parameter represents the decoratored driver and its return value will
+   *     driver. Its first parameter represents the decorated driver and its return value will
    *     replace the decorated driver.
    * @return a new {@link Driver} instance associated with the given {@link Device} and decorated by
    *     the given decorators
@@ -184,19 +148,21 @@ public class DriverFactory {
   protected Decorator decorateDriver(
       Driver decoratedDriver, TestInfo testInfo, Class<? extends Decorator> decoratorClass)
       throws MobileHarnessException {
-    // Gets the module class of the decorator.
+    // Gets the module class if any.
     Optional<Class<? extends Module>> moduleClass = getModuleClass(decoratorClass);
-    if (moduleClass.isPresent()) {
-      // Creates the decorator with the module.
-      return createDecoratorWithModule(
-          decoratedDriver, testInfo, decoratorClass, moduleClass.get());
+
+    // Gets the public Xxx(Driver, TestInfo) constructor if any.
+    Optional<? extends Constructor<? extends Decorator>> decoratorConstructor =
+        getConstructor(decoratorClass, Driver.class, TestInfo.class);
+
+    if (moduleClass.isPresent() || decoratorConstructor.isEmpty()) {
+      // Uses Guice to instantiate the decorator.
+      return injectDecorator(decoratorClass, moduleClass.orElse(null), testInfo, decoratedDriver);
     } else {
-      // Creates the decorator by invoking the constructor directly.
+      // Calls the constructor.
       try {
-        return decoratorClass
-            .getConstructor(Driver.class, TestInfo.class)
-            .newInstance(decoratedDriver, testInfo);
-      } catch (IllegalArgumentException | ReflectiveOperationException e) {
+        return decoratorConstructor.get().newInstance(decoratedDriver, testInfo);
+      } catch (ReflectiveOperationException e) {
         throw new MobileHarnessException(
             ErrorCode.REFLECTION_INSTANTIATION_ERROR,
             String.format(
@@ -218,88 +184,113 @@ public class DriverFactory {
    * @param driverOrDecoratorClass the driver or decorator
    * @return the module class or empty
    */
-  public Optional<Class<? extends Module>> getModuleClass(
+  private static Optional<Class<? extends Module>> getModuleClass(
       Class<? extends Driver> driverOrDecoratorClass) {
     try {
       Class<? extends Module> moduleClass =
           ReflectionUtil.getClass(
               driverOrDecoratorClass.getSimpleName() + Module.class.getSimpleName(),
               Module.class,
-              ClassUtil.class.getPackage().getName() + ".module");
+              "com.google.wireless.qa.mobileharness.shared.api.module");
       return Optional.of(moduleClass);
     } catch (MobileHarnessException e) {
       return Optional.empty();
     }
   }
 
-  private <T extends Driver> T createDriverWithModule(
-      Device device, TestInfo testInfo, Class<T> driverClass, Class<? extends Module> moduleClass)
+  // Gets a public constructor with two parameters if any.
+  private static <T> Optional<Constructor<T>> getConstructor(
+      Class<T> clazz, Class<?> parameterType1, Class<?> parameterType2) {
+    try {
+      return Optional.of(clazz.getConstructor(parameterType1, parameterType2));
+    } catch (NoSuchMethodException e) {
+      return Optional.empty();
+    }
+  }
+
+  private static <T extends Driver> T injectDriver(
+      Class<T> driverClass,
+      @Nullable Class<? extends Module> moduleClass,
+      TestInfo testInfo,
+      Device device)
+      throws MobileHarnessException {
+    return injectInstance(
+        driverClass,
+        moduleClass,
+        /* context= */ ImmutableMap.of(TestInfo.class, testInfo, Device.class, device));
+  }
+
+  private static <T extends Decorator> T injectDecorator(
+      Class<T> decoratorClass,
+      @Nullable Class<? extends Module> moduleClass,
+      TestInfo testInfo,
+      Driver decoratedDriver)
+      throws MobileHarnessException {
+    return injectInstance(
+        decoratorClass,
+        moduleClass,
+        /* context= */ ImmutableMap.of(
+            TestInfo.class,
+            testInfo,
+            Driver.class,
+            decoratedDriver,
+            Device.class,
+            decoratedDriver.getDevice()));
+  }
+
+  /**
+   * Uses Guice to instantiate a class, with an optional module class, and a context map containing
+   * instances bound in the injector.
+   *
+   * @param clazz the class to instantiate
+   * @param moduleClass an optional module class
+   * @param context a map containing instances bound in the injector
+   */
+  private static <T> T injectInstance(
+      Class<T> clazz,
+      @Nullable Class<? extends Module> moduleClass,
+      ImmutableMap<Class<?>, Object> context)
       throws MobileHarnessException {
     try {
-      Module module = moduleClass.getConstructor().newInstance();
-      @SuppressWarnings("unchecked")
-      Key<BaseDriverFactory<T>> factoryKey =
-          (Key<BaseDriverFactory<T>>)
-              Key.get(
-                  Types.newParameterizedTypeWithOwner(
-                      DriverFactory.class, BaseDriverFactory.class, driverClass));
+      Optional<Module> module = injectModule(moduleClass);
+      ContextModule contextModule = new ContextModule(context);
       Injector injector =
           Guice.createInjector(
               Stage.PRODUCTION,
-              module,
-              new AbstractModule() {
-
-                @Override
-                protected void configure() {
-                  install(new FactoryModuleBuilder().build(factoryKey));
-                  bind(TestInfo.class).toInstance(testInfo);
-                  bind(Device.class).toInstance(device);
-                }
-              });
-      BaseDriverFactory<T> factory = injector.getInstance(factoryKey);
-      return factory.create(device, testInfo);
-    } catch (ReflectiveOperationException e) {
+              Stream.concat(module.stream(), Stream.of(contextModule)).collect(toImmutableList()));
+      return injector.getInstance(clazz);
+    } catch (RuntimeException e) {
       throw new MobileHarnessException(
           ErrorCode.REFLECTION_INSTANTIATION_ERROR,
-          "Reflection error when creating driver with module: " + driverClass.getSimpleName(),
+          String.format("Reflection error when creating %s", clazz),
           e);
     }
   }
 
-  private <T extends Decorator> T createDecoratorWithModule(
-      Driver decoratedDriver,
-      TestInfo testInfo,
-      Class<T> decoratorClass,
-      Class<? extends Module> moduleClass)
-      throws MobileHarnessException {
-    try {
-      Module module = moduleClass.getConstructor().newInstance();
-      @SuppressWarnings("unchecked")
-      Key<BaseDecoratorFactory<T>> factoryKey =
-          (Key<BaseDecoratorFactory<T>>)
-              Key.get(
-                  Types.newParameterizedTypeWithOwner(
-                      DriverFactory.class, BaseDecoratorFactory.class, decoratorClass));
-      Injector injector =
-          Guice.createInjector(
-              Stage.PRODUCTION,
-              module,
-              new AbstractModule() {
+  /** Uses an empty injector to instantiate the module class of a driver/decorator. */
+  private static Optional<Module> injectModule(@Nullable Class<? extends Module> moduleClass) {
+    return Optional.ofNullable(moduleClass)
+        .map(clazz -> Guice.createInjector(Stage.PRODUCTION).getInstance(clazz));
+  }
 
-                @Override
-                protected void configure() {
-                  install(new FactoryModuleBuilder().build(factoryKey));
-                  bind(TestInfo.class).toInstance(testInfo);
-                  bind(Device.class).toInstance(decoratedDriver.getDevice());
-                }
-              });
-      BaseDecoratorFactory<T> factory = injector.getInstance(factoryKey);
-      return factory.create(decoratedDriver, testInfo);
-    } catch (ReflectiveOperationException e) {
-      throw new MobileHarnessException(
-          ErrorCode.REFLECTION_INSTANTIATION_ERROR,
-          "Reflection error when creating decorator with module: " + decoratorClass.getSimpleName(),
-          e);
+  private static class ContextModule extends AbstractModule {
+
+    private final ImmutableMap<Class<?>, Object> context;
+
+    private ContextModule(ImmutableMap<Class<?>, Object> context) {
+      this.context = context;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    protected void configure() {
+      context.forEach(
+          (clazz, instance) -> {
+            Class<Object> objectClass = (Class<Object>) clazz;
+            bind(objectClass).toInstance(instance);
+            // Also binds @Assisted instances to support the legacy API.
+            bind(objectClass).annotatedWith(Assisted.class).toInstance(instance);
+          });
     }
   }
 }

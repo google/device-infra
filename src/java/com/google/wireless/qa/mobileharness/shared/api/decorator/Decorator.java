@@ -19,40 +19,35 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 
 /**
- * Decorator for adding additional functionality to drivers. Don't forget to call the
- * setUp/run/reset/tearDown methods of {@link Decorator#getDecorated()} in the overrided methods.
+ * Decorator for adding additional functionality to drivers.
  *
- * <p>A decorator could be constructed in one of the following two ways by {@linkplain
- * com.google.wireless.qa.mobileharness.shared.api.driver.DriverFactory DriverFactory} in
- * {@linkplain com.google.devtools.mobileharness.infra.controller.test.local.LocalDirectTestRunner
- * LocalTestRunner}:
+ * <p>There are two ways to instantiate a Decorator class:
  *
  * <ol>
- *   <li>Invoking its constructor with two parameters {@link Driver} and {@linkplain
- *       com.google.wireless.qa.mobileharness.shared.model.job.TestInfo TestInfo} if it does not
- *       have a module.
- *       <p>The following is an example:
- *       <pre>
- * public class MyDecorator extends BaseDecorator {
- *   <b>public MyDecorator(Driver driver, TestInfo testInfo)</b> {
- *     ...
- *   }
- *   ...
- * }</pre>
- *   <li>Dependency injection with its module if it has one.
- *       <p>The following is an example:
+ *   <li>(preferred) Define an {@linkplain javax.inject.Inject @Inject} constructor in the Decorator
+ *       class.
+ *       <p>For example:
  *       <pre>
  * public class MyDecorator extends BaseDecorator {
  *   <b>&#064;Inject</b>
- *   <b>public MyDecorator(&#064;Assisted Driver driver, &#064;Assisted TestInfo testInfo,
- *          OtherParam1 otherParam1, OtherParam2 otherParam2, OtherParam3 ...)</b> {
+ *   MyDecorator(<b>Driver decoratedDriver, TestInfo testInfo,</b> OtherParam1 otherParam1,
+ *       OtherParam2 otherParam2, OtherParam3 ...) {
  *     ...
  *   }
- *   ...
  * }</pre>
- *       <p>Additionally, in this way, you need to write a {@linkplain com.google.inject.Module
- *       Module} in {@link com.google.wireless.qa.mobileharness.shared.api.module} for the decorator
- *       with the name "{@code <your-decorator-name>Module}". For example:
+ *       <p>In the example above, the {@code Driver} and {@code TestInfo} can appear in any place in
+ *       the parameter list.
+ *       <p>Instances of the following types will be provided by the test runner:
+ *       <ul>
+ *         <li>{@linkplain com.google.wireless.qa.mobileharness.shared.model.job.TestInfo TestInfo}
+ *         <li>{@link Driver} (the decorated driver)
+ *         <li>{@linkplain com.google.wireless.qa.mobileharness.shared.api.device.Device Device}
+ *       </ul>
+ *       <p>Additionally, if necessary, you can write a {@linkplain com.google.inject.Module Module}
+ *       class whose name is {@code "<your_driver_name>Module"} in the package {@link
+ *       com.google.wireless.qa.mobileharness.shared.api.module}, to inject other parameters of the
+ *       constructor.
+ *       <p>For example:
  *       <pre>
  * public class <b>MyDecoratorModule</b> extends AbstractModule {
  *   &#064;Override
@@ -60,6 +55,18 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
  *     install(new OtherParam1Module());
  *     install(new OtherParam2Module());
  *     bind(OtherParam3.class).to(OtherParam3Impl.class);
+ *     ...
+ *   }
+ * }</pre>
+ *       <p>The module class itself should be able to be injected by an empty injector. In another
+ *       word, it should either have a constructor taking no arguments, or have an {@linkplain
+ *       javax.inject.Inject @Inject} constructor which does not need a corresponding module.
+ *   <li>Define a public constructor with a parameter list [Driver, TestInfo] in the Decorator
+ *       class.
+ *       <p>For example:
+ *       <pre>
+ * public class MyDecorator extends BaseDecorator {
+ *   <b>public MyDecorator(Driver decoratedDriver, TestInfo testInfo)</b> {
  *     ...
  *   }
  * }</pre>

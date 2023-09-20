@@ -25,35 +25,32 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
  * drivers to run test using different tools such as: Android Instrumentation, IOS UIAutomation,
  * WebDriver, SkyTree, ...
  *
- * <p>A driver could be constructed in one of the following two ways by {@link DriverFactory} in
- * {@linkplain com.google.devtools.mobileharness.infra.controller.test.local.LocalDirectTestRunner
- * LocalTestRunner}:
+ * <p>There are two ways to instantiate a Driver class:
  *
  * <ol>
- *   <li>Invoking its constructor with two parameters {@link Device} and {@link TestInfo} if it does
- *       not have a module.
- *       <p>The following is an example:
- *       <pre>
- * public class MyDriver extends BaseDriver {
- *   <b>public MyDriver(Device device, TestInfo testInfo)</b> {
- *     ...
- *   }
- *   ...
- * }</pre>
- *   <li>Dependency injection with its module if it has one.
- *       <p>The following is an example:
+ *   <li>(preferred) Define an {@linkplain javax.inject.Inject @Inject} constructor in the Driver
+ *       class.
+ *       <p>For example:
  *       <pre>
  * public class MyDriver extends BaseDriver {
  *   <b>&#064;Inject</b>
- *   <b>public MyDriver(&#064;Assisted Device device, &#064;Assisted TestInfo testInfo,
- *       OtherParam1 otherParam1, OtherParam2 otherParam2, OtherParam3 ...)</b> {
+ *   MyDriver(<b>Device device, TestInfo testInfo,</b> OtherParam1 otherParam1,
+ *       OtherParam2 otherParam2, OtherParam3 ...) {
  *     ...
  *   }
- *   ...
  * }</pre>
- *       <p>Additionally, in this way, you need to write a {@linkplain com.google.inject.Module
- *       Module} in {@link com.google.wireless.qa.mobileharness.shared.api.module} for the driver
- *       with the name "{@code <your-driver-name>Module}". For example:
+ *       <p>In the example above, the {@code Device} and {@code TestInfo} can appear in any place in
+ *       the parameter list.
+ *       <p>Instances of the following types will be provided by the test runner:
+ *       <ul>
+ *         <li>{@link TestInfo}
+ *         <li>{@link Device}
+ *       </ul>
+ *       <p>Additionally, if necessary, you can write a {@linkplain com.google.inject.Module Module}
+ *       class whose name is {@code "<your_driver_name>Module"} in the package {@link
+ *       com.google.wireless.qa.mobileharness.shared.api.module}, to inject other parameters of the
+ *       constructor.
+ *       <p>For example:
  *       <pre>
  * public class <b>MyDriverModule</b> extends AbstractModule {
  *   &#064;Override
@@ -61,6 +58,17 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
  *     install(new OtherParam1Module());
  *     install(new OtherParam2Module());
  *     bind(OtherParam3.class).to(OtherParam3Impl.class);
+ *     ...
+ *   }
+ * }</pre>
+ *       <p>The module class itself should be able to be injected by an empty injector. In another
+ *       word, it should either have a constructor taking no arguments, or have an {@linkplain
+ *       javax.inject.Inject @Inject} constructor which does not need a corresponding module.
+ *   <li>Define a public constructor with a parameter list [Device, TestInfo] in the Driver class.
+ *       <p>For example:
+ *       <pre>
+ * public class MyDriver extends BaseDriver {
+ *   <b>public MyDriver(Device device, TestInfo testInfo)</b> {
  *     ...
  *   }
  * }</pre>

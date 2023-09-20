@@ -54,7 +54,6 @@ java_library(
     deps = [
         ":driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:class_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
