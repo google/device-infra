@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.shared.util.comm.service;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -42,7 +41,6 @@ public class GrpcServiceUtil {
       GrpcMethod<RequestT, ResponseT> method,
       ServiceDescriptor serviceDescriptor,
       MethodDescriptor<RequestT, ResponseT> methodDescriptor) {
-    Stopwatch stopwatch = Stopwatch.createStarted();
     try {
       ResponseT response = method.execute(request);
       responseObserver.onNext(response);
@@ -55,7 +53,6 @@ public class GrpcServiceUtil {
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
-    } finally {
     }
   }
 }
