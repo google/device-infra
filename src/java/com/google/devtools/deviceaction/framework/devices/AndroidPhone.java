@@ -83,6 +83,7 @@ public class AndroidPhone implements Device {
   private static final String LOCALHOST_PREFIX = "localhost:";
 
   @VisibleForTesting static final Duration DEFAULT_DEVICE_READY_TIMEOUT = Duration.ofMinutes(5);
+  private static final Duration DEFAULT_AWAIT_FOR_DISCONNECT = Duration.ofSeconds(30);
   private final AndroidAdbUtil androidAdbUtil;
   private final AndroidFileUtil androidFileUtil;
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
@@ -271,12 +272,12 @@ public class AndroidPhone implements Device {
       throw new DeviceActionException(e, "Failed to reboot.");
     }
     // Wait for the device to be disconnected after reboot command.
-    sleeper.sleep(positiveOrElse(rebootAwait(), Duration.ofSeconds(30)));
+    sleeper.sleep(positiveOrElse(rebootAwait(), DEFAULT_AWAIT_FOR_DISCONNECT));
     try {
       androidSystemStateUtil.waitUntilReady(
           uuid, positiveOrElse(rebootTimeout(), DEFAULT_DEVICE_READY_TIMEOUT));
     } catch (MobileHarnessException e) {
-      throw new DeviceActionException(e, "Missing device %s", uuid);
+      throw new DeviceActionException(e, "Missing device %s after reboot", uuid);
     }
   }
 
@@ -297,7 +298,30 @@ public class AndroidPhone implements Device {
     try {
       androidSystemStateUtil.waitUntilReady(uuid, deviceReadyTimeout);
     } catch (MobileHarnessException e) {
-      throw new DeviceActionException(e, "Missing device %s", uuid);
+      throw new DeviceActionException(e, "Missing device %s after test harness.", uuid);
+    }
+  }
+
+  /**
+   * Restarts the Zygote process.
+   *
+   * <p>Essentially, it is executing adb commands
+   *
+   * <pre>{@code adb shell stop && adb shell start}</pre>
+   */
+  public void softReboot() throws InterruptedException, DeviceActionException {
+    try {
+      androidSystemStateUtil.softReboot(uuid);
+    } catch (MobileHarnessException e) {
+      throw new DeviceActionException(e, "Failed to soft reboot %s", uuid);
+    }
+    // Wait for the device to be disconnected after reboot command.
+    sleeper.sleep(positiveOrElse(rebootAwait(), DEFAULT_AWAIT_FOR_DISCONNECT));
+    try {
+      androidSystemStateUtil.waitUntilReady(
+          uuid, positiveOrElse(rebootTimeout(), DEFAULT_DEVICE_READY_TIMEOUT));
+    } catch (MobileHarnessException e) {
+      throw new DeviceActionException(e, "Missing device %s after soft reboot.", uuid);
     }
   }
 

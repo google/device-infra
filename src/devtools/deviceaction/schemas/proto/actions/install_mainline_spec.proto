@@ -45,11 +45,18 @@ message InstallMainlineSpec {
   ];
   optional bool clean_up_sessions = 5 [default = false];
   optional bool dev_key_signed = 6 [default = false];
-  optional bool skip_check_version_after_push = 7 [default = false];
+  optional bool skip_check_version_after_push = 7 [
+    default = false,
+    (description) = "Optional flag to skip checking version after push."
+  ];
   // Check rollback is meaningful only if rollback is enabled.
   optional bool check_rollback = 8 [
     default = true,
     (description) =
-        "Check if the installation is rolled back by package watchdog."
+        "Optional flag to check if the installation is rolled back by package watchdog."
+  ];
+  optional bool soft_reboot_after_push = 9 [
+    default = false,
+    (description) = "Optional flag to do soft reboot after pushing modules."
   ];
 }

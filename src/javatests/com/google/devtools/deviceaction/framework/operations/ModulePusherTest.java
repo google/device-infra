@@ -147,6 +147,14 @@ public final class ModulePusherTest {
   }
 
   @Test
+  public void pushModules_softReboot() throws Exception {
+    modulePusher.pushModules(packageMap, /* softReboot= */ true);
+
+    verify(mockDevice, times(2)).reboot();
+    verify(mockDevice).softReboot();
+  }
+
+  @Test
   public void pushModules_enableTestHarness() throws Exception {
     when(mockDevice.reloadByFactoryReset()).thenReturn(true);
 

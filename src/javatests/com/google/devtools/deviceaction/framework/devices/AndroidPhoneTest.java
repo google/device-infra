@@ -627,6 +627,28 @@ public class AndroidPhoneTest {
   }
 
   @Test
+  public void softReboot_rebootAndWait() throws Exception {
+    device.softReboot();
+
+    ArgumentCaptor<Duration> durationArgumentCaptor = ArgumentCaptor.forClass(Duration.class);
+    verify(mockSystemStateUtil).softReboot(UUID);
+    verify(mockSystemStateUtil).waitUntilReady(eq(UUID), durationArgumentCaptor.capture());
+    if (spec.hasRebootTimeout()) {
+      assertThat(durationArgumentCaptor.getValue())
+          .isEqualTo(Duration.ofSeconds(spec.getRebootTimeout().getSeconds()));
+    } else {
+      assertThat(durationArgumentCaptor.getValue()).isEqualTo(DEFAULT_DEVICE_READY_TIMEOUT);
+    }
+  }
+
+  @Test
+  public void softReboot_catchMobileHarnessException_throwsException() throws Exception {
+    doThrow(fakeMobileHarnessException()).when(mockSystemStateUtil).softReboot(anyString());
+
+    assertThrows(DeviceActionException.class, () -> device.softReboot());
+  }
+
+  @Test
   public void becomeRoot_callSystemStateUtil() throws Exception {
     device.becomeRoot();
 

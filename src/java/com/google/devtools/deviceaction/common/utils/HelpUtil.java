@@ -112,7 +112,14 @@ public final class HelpUtil {
       OptionDescription.builder()
           .setFlag("action")
           .setKey("check_rollback")
-          .setDescription("Optional flag to check rollback after success install.")
+          .setDescription(
+              "Optional flag to check if the installation is rolled back by package watchdog.")
+          .build();
+  private static final OptionDescription SOFT_REBOOT_AFTER_PUSH_FLAG =
+      OptionDescription.builder()
+          .setFlag("action")
+          .setKey("soft_reboot_after_push")
+          .setDescription("Optional flag to do soft reboot after pushing modules.")
           .build();
   private static final OptionDescription TRAIN_FOLDER_FLAG =
       OptionDescription.builder()
@@ -201,6 +208,7 @@ public final class HelpUtil {
           .addFlag("dev_key_signed", DEV_KEY_SIGNED_FLAG)
           .addFlag("skip_check_version_after_push", SKIP_CHECK_VERSION_AFTER_PUSH_FLAG)
           .addFlag("check_rollback", CHECK_ROLLBACK_FLAG)
+          .addFlag("soft_reboot_after_push", SOFT_REBOOT_AFTER_PUSH_FLAG)
           .addFlag("files", TRAIN_FOLDER_FLAG)
           .addFlag("files", MAINLINE_MODULES_FLAG)
           .addFlag("files", ZIPS_FLAG)

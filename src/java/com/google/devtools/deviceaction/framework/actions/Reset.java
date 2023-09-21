@@ -103,6 +103,7 @@ public class Reset implements Action {
     }
 
     device.enableTestharness();
+    logger.atInfo().log("The device %s is reset successfully!", device.getUuid());
   }
 
   private ImmutableSet<File> getAllModuleFiles() throws DeviceActionException {

@@ -56,7 +56,7 @@ public class InstallMainline implements Action {
   private static final String TAG_MAINLINE_MODULES = "mainline_modules";
   private static final String TAG_TRAIN_FOLDER = "train_folder";
   private static final String TAG_APKS_ZIPS = "apks_zips";
-  // Package Watchdog may rollback the mainline modules if issues are observed.
+  // Package Watchdog may roll back the mainline modules if issues are observed.
   // In particular, it will look for native crashes in the first 5 min after the device boots.
   private static final Duration WAIT_FOR_POSSIBLE_ROLLBACK = Duration.ofMinutes(5);
 
@@ -127,8 +127,8 @@ public class InstallMainline implements Action {
     }
 
     if (needPush()) {
-      modulePusher.pushModules(toInstall);
-      if (!skipCheckVersionAfterPush()) {
+      modulePusher.pushModules(toInstall, softRebootAfterPush());
+      if (!skipCheckVersionAfterPush() && !softRebootAfterPush()) {
         packageUpdateTracker.checkVersionsUpdated();
       }
     }
@@ -137,16 +137,18 @@ public class InstallMainline implements Action {
     packageUpdateTracker.checkVersionsUpdatedAndActivated();
 
     if (enableRollback() && checkRollback()) {
-      // Wait for a period of time and double-check the versions are not rolled back.
+      logger.atInfo().log(
+          "Wait for %d min to make sure the modules are not rolled back by package watchdog.",
+          WAIT_FOR_POSSIBLE_ROLLBACK.toMinutes());
       sleeper.sleep(WAIT_FOR_POSSIBLE_ROLLBACK);
       try {
         packageUpdateTracker.checkVersionsUpdated();
       } catch (DeviceActionException e) {
         if (Objects.equals(e.getErrorId().type(), ErrorType.INFRA_ISSUE)) {
           logger.atSevere().withCause(e).log(
-              "The version got rolled back within %s min. Please check device logcat for the"
+              "The version got rolled back within %d min. Please check device logcat for the"
                   + " rollback cause.",
-              WAIT_FOR_POSSIBLE_ROLLBACK);
+              WAIT_FOR_POSSIBLE_ROLLBACK.toMinutes());
         }
         throw e;
       }
@@ -217,5 +219,10 @@ public class InstallMainline implements Action {
   @SpecValue(field = "check_rollback")
   private boolean checkRollback() {
     return spec.getCheckRollback();
+  }
+
+  @SpecValue(field = "soft_reboot_after_push")
+  private boolean softRebootAfterPush() {
+    return spec.getSoftRebootAfterPush();
   }
 }

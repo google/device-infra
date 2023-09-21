@@ -88,6 +88,18 @@ public class ModulePusher implements Operation {
    */
   public void pushModules(Map<AndroidPackage, AndroidPackage> packageMap)
       throws DeviceActionException, InterruptedException {
+    pushModules(packageMap, /* softReboot= */ false);
+  }
+
+  /**
+   * Updates the mainline modules by pushing them to the device.
+   *
+   * @param packageMap a map of packages to update. The key is the package to push and the value is
+   *     the package installed.
+   * @param softReboot do soft reboot after pushing modules.
+   */
+  public void pushModules(Map<AndroidPackage, AndroidPackage> packageMap, boolean softReboot)
+      throws DeviceActionException, InterruptedException {
     Conditions.checkState(
         device.isUserdebug(), ErrorType.CUSTOMER_ISSUE, "The device should be of userdebug type.");
     setupDevice();
@@ -103,7 +115,11 @@ public class ModulePusher implements Operation {
       logger.atInfo().log("Pushed package %s.", pushedInfo);
     }
 
-    activatePushdedModules();
+    if (softReboot) {
+      device.softReboot();
+    } else {
+      activatePushdedModules();
+    }
   }
 
   /** Prepares the device for file overwriting. */
