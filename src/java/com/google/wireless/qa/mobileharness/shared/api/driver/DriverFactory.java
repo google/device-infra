@@ -25,7 +25,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Stage;
-import com.google.inject.assistedinject.Assisted;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -284,13 +283,7 @@ public class DriverFactory {
     @SuppressWarnings("unchecked")
     @Override
     protected void configure() {
-      context.forEach(
-          (clazz, instance) -> {
-            Class<Object> objectClass = (Class<Object>) clazz;
-            bind(objectClass).toInstance(instance);
-            // Also binds @Assisted instances to support the legacy API.
-            bind(objectClass).annotatedWith(Assisted.class).toInstance(instance);
-          });
+      context.forEach((clazz, instance) -> bind((Class<Object>) clazz).toInstance(instance));
     }
   }
 }
