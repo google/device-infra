@@ -722,7 +722,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   private void postTestExecutionEndedEvent(
       Allocation allocation, TestResult testResult, boolean needReboot) {
     logger.atInfo().log(
-        "Post TestExecutionEndedEvent, allocation=%s, result=%s, need_reboot=%s",
+        "Posting TestExecutionEndedEvent, allocation=%s, result=%s, need_reboot=%s",
         allocation, testResult, needReboot);
     globalInternalBus.post(
         new TestExecutionEndedEvent() {
@@ -742,6 +742,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
             return needReboot;
           }
         });
+    logger.atInfo().log("TestExecutionEndedEvent posted");
   }
 
   /**
