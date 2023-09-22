@@ -53,6 +53,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import javax.inject.Inject;
 
 /**
  * Driver decorator for uninstalling all the third party apks from the Android device before test.
@@ -85,25 +86,7 @@ public class AndroidCleanAppsDecorator extends BaseDecorator implements AndroidC
   private final SystemStateManager systemStateManager;
   private final WifiUtil wifiUtil;
 
-  /**
-   * Constructor. Do NOT modify the parameter list. This constructor is required by the lab server
-   * framework.
-   */
-  public AndroidCleanAppsDecorator(Driver decoratedDriver, TestInfo testInfo) {
-    this(
-        decoratedDriver,
-        testInfo,
-        new Aapt(),
-        new AndroidFileUtil(),
-        new AndroidPackageManagerUtil(),
-        new AndroidSystemSettingUtil(),
-        new ApkInstaller(),
-        new DeviceDaemonApkInfoProvider(),
-        new SystemStateManager(),
-        new WifiUtil());
-  }
-
-  @VisibleForTesting
+  @Inject
   AndroidCleanAppsDecorator(
       Driver decoratedDriver,
       TestInfo testInfo,

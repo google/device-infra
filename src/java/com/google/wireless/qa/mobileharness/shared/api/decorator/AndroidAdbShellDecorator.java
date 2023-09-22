@@ -16,7 +16,6 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -34,6 +33,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidA
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import javax.inject.Inject;
 
 /**
  * Driver decorator for running some ADB shell commands before/after the test is run. It only
@@ -50,11 +50,7 @@ public class AndroidAdbShellDecorator extends BaseDecorator
 
   private final Adb adb;
 
-  public AndroidAdbShellDecorator(Driver decoratedDriver, TestInfo testInfo) {
-    this(decoratedDriver, testInfo, new Adb());
-  }
-
-  @VisibleForTesting
+  @Inject
   AndroidAdbShellDecorator(Driver decoratedDriver, TestInfo testInfo, Adb adb) {
     super(decoratedDriver, testInfo);
     this.adb = adb;

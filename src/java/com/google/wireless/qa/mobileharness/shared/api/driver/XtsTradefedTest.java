@@ -72,6 +72,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import javax.inject.Inject;
 
 /** Driver for running Tradefed based xTS test suites. */
 @DriverAnnotation(help = "Running Tradefed based xTS test suites.")
@@ -97,15 +98,23 @@ public class XtsTradefedTest extends BaseDriver
   private final Fastboot fastboot;
   private final LogRecorder logRecorder;
 
-  public XtsTradefedTest(Device device, TestInfo testInfo) {
+  @Inject
+  XtsTradefedTest(
+      Device device,
+      TestInfo testInfo,
+      CommandExecutor cmdExecutor,
+      LocalFileUtil localFileUtil,
+      SystemUtil systemUtil,
+      Adb adb,
+      Fastboot fastboot) {
     this(
         device,
         testInfo,
-        new CommandExecutor(),
-        new LocalFileUtil(),
-        new SystemUtil(),
-        new Adb(),
-        new Fastboot(),
+        cmdExecutor,
+        localFileUtil,
+        systemUtil,
+        adb,
+        fastboot,
         LogRecorder.getInstance());
   }
 

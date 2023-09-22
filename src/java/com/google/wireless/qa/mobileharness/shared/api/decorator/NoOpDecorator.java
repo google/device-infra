@@ -26,12 +26,14 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfiga
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
 import com.google.wireless.qa.mobileharness.shared.proto.Job;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.NoOpDecoratorSpec;
+import javax.inject.Inject;
 
 /** Simple {@link Decorator} implementation for tests only. */
 @DecoratorAnnotation(help = "Do nothing in the decorator.")
 public class NoOpDecorator extends BaseDecorator implements SpecConfigable<NoOpDecoratorSpec> {
 
-  public NoOpDecorator(Driver decoratedDriver, TestInfo testInfo) {
+  @Inject
+  NoOpDecorator(Driver decoratedDriver, TestInfo testInfo) {
     super(decoratedDriver, testInfo);
   }
 

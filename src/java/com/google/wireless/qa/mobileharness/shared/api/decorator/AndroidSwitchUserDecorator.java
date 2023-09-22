@@ -40,6 +40,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import javax.inject.Inject;
 
 /** Driver decorator for starting applications on Android device. */
 @DecoratorAnnotation(
@@ -87,13 +88,19 @@ public class AndroidSwitchUserDecorator extends BaseDecorator {
 
   private final Sleeper sleeper;
 
-  public AndroidSwitchUserDecorator(Driver decoratedDriver, TestInfo testInfo) {
+  @Inject
+  AndroidSwitchUserDecorator(
+      Driver decoratedDriver,
+      TestInfo testInfo,
+      AndroidSystemSettingUtil systemSettingUtil,
+      AndroidUserUtil userUtil,
+      DeviceDaemonHelper deviceDaemonHelper) {
     this(
         decoratedDriver,
         testInfo,
-        new AndroidSystemSettingUtil(),
-        new AndroidUserUtil(),
-        new DeviceDaemonHelper(),
+        systemSettingUtil,
+        userUtil,
+        deviceDaemonHelper,
         Sleeper.defaultSleeper());
   }
 

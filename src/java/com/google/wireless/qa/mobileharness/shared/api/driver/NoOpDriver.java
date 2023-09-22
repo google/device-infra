@@ -36,7 +36,9 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfiga
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.NoOpDriverSpec;
 import java.time.Duration;
+import java.util.Locale;
 import java.util.Map;
+import javax.inject.Inject;
 
 /**
  * The driver that does nothing but sleeping for specified time and allowing users run their
@@ -59,6 +61,8 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
   private volatile com.google.devtools.mobileharness.api.model.error.MobileHarnessException
       testResultCauseFromMessage;
 
+  @VisibleForTesting
+  @Inject
   public NoOpDriver(Device device, TestInfo testInfo) {
     this(device, testInfo, Sleeper.defaultSleeper());
   }
@@ -139,7 +143,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
         "type",
         "set_result",
         "result",
-        testResult.name().toLowerCase());
+        testResult.name().toLowerCase(Locale.ROOT));
   }
 
   @Subscribe
@@ -155,7 +159,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
             .alsoTo(logger)
             .log("Set result to: [%s]", resultString);
         try {
-          testResultFromMessage = Test.TestResult.valueOf(resultString.toUpperCase());
+          testResultFromMessage = Test.TestResult.valueOf(resultString.toUpperCase(Locale.ROOT));
           testResultCauseFromMessage =
               new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
                   ExtErrorId.NO_OP_DRIVER_NON_PASSING_RESULT_SET_BY_MESSAGE,

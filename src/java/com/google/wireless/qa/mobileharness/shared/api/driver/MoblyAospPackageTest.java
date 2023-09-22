@@ -31,7 +31,6 @@ import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMobl
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
@@ -44,6 +43,7 @@ import java.nio.file.Paths;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
+import javax.inject.Inject;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
@@ -92,18 +92,7 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
   private final MoblyReportHelper moblyReportHelper;
   private final CertificationSuiteInfoFactory certificationSuiteInfoFactory;
 
-  /** Creates the MoblyAospPackageTest driver. */
-  public MoblyAospPackageTest(Device device, TestInfo testInfo) {
-    this(
-        device,
-        testInfo,
-        new MoblyAospTestSetupUtil(),
-        new LocalFileUtil(),
-        Guice.createInjector().getInstance(MoblyReportHelper.class),
-        new CertificationSuiteInfoFactory());
-  }
-
-  @VisibleForTesting
+  @Inject
   MoblyAospPackageTest(
       Device device,
       TestInfo testInfo,

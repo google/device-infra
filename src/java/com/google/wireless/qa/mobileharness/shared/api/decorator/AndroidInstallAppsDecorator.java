@@ -16,11 +16,9 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.TestRunnerInjector;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.StepAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -32,6 +30,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfiga
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.InstallApkStepSpec;
 import java.time.Duration;
 import java.time.Instant;
+import javax.inject.Inject;
 
 /** Decorator for installing apks on Android real devices/emulators. */
 @DecoratorAnnotation(
@@ -61,19 +60,7 @@ public class AndroidInstallAppsDecorator extends BaseDecorator
   /** Util for sending progress report messages. */
   private final TestMessageUtil testMessageUtil;
 
-  /**
-   * Constructor. Do NOT modify the parameter list. This constructor is required by the framework.
-   */
-  public AndroidInstallAppsDecorator(Driver decoratedDriver, TestInfo testInfo) {
-    this(
-        decoratedDriver,
-        testInfo,
-        TestRunnerInjector.getInjector().getInstance(InstallApkStep.class),
-        new TestMessageUtil());
-  }
-
-  /** Constructor for testing only. */
-  @VisibleForTesting
+  @Inject
   AndroidInstallAppsDecorator(
       Driver decoratedDriver,
       TestInfo testInfo,

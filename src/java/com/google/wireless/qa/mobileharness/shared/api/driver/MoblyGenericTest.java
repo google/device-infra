@@ -64,6 +64,7 @@ import java.util.ArrayList;
 import java.util.Map;
 import java.util.Random;
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -114,14 +115,8 @@ public class MoblyGenericTest extends BaseDriver {
 
   @Nullable protected String testbedName;
 
-  /**
-   * Creates the driver for running Mobly tests.
-   *
-   * <p>This constructor is required by the lab server framework. Do NOT modify the parameter list.
-   *
-   * @param device the device that loads this driver to run the test
-   */
-  public MoblyGenericTest(Device device, TestInfo testInfo) {
+  @Inject
+  MoblyGenericTest(Device device, TestInfo testInfo) {
     this(device, testInfo, new CommandExecutor(), Clock.systemUTC());
   }
 
@@ -141,7 +136,7 @@ public class MoblyGenericTest extends BaseDriver {
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     boolean passed;
     Instant startTime = clock.instant();
-    Instant endTime = null;
+    Instant endTime;
     try {
       passed = runMoblyCommand(testInfo, configFile, usePythonSpongeConverter);
       testInfo

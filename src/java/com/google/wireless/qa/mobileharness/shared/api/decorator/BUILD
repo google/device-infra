@@ -78,6 +78,7 @@ java_library(
     name = "android_adb_shell_decorator",
     srcs = ["AndroidAdbShellDecorator.java"],
     deps = [
+        ":base_decorator",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -85,13 +86,13 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:base_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_adb_shell_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_adb_shell_decorator_spec_java_proto",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -122,6 +123,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -155,6 +157,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
         "@maven//:org_robolectric_android_all",
     ],
 )
@@ -166,7 +169,6 @@ java_library(
         ":base_decorator",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:test_runner_injector",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/step/android:install_apk_step",
@@ -176,6 +178,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:install_apk_step_spec_java_proto",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -197,6 +200,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -215,5 +219,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:no_op_decorator_spec_java_proto",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )

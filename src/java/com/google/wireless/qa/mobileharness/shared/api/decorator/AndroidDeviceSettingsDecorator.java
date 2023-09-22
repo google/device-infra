@@ -70,6 +70,7 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.inject.Inject;
 
 /**
  * Driver decorator for setting android device by following in the setting in {@code
@@ -381,21 +382,7 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
   private final SystemSettingManager systemSettingManager;
   private final SystemStateManager systemStateManager;
 
-  public AndroidDeviceSettingsDecorator(Driver decoratedDriver, TestInfo testInfo) {
-    this(
-        decoratedDriver,
-        testInfo,
-        new Adb(),
-        new AndroidAdbUtil(),
-        new AndroidFileUtil(),
-        new AndroidPackageManagerUtil(),
-        new AndroidSystemSettingUtil(),
-        new AndroidSystemSpecUtil(),
-        new SystemSettingManager(),
-        new SystemStateManager());
-  }
-
-  @VisibleForTesting
+  @Inject
   AndroidDeviceSettingsDecorator(
       Driver decoratedDriver,
       TestInfo testInfo,
