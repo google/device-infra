@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.device;
 
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugStackTrace;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
@@ -418,8 +420,10 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
             && runningThread != null) {
           logger.atInfo().log(
               "The device runner %s was not killed after being canceled for %s minutes, try to"
-                  + " interrupt it again.",
-              runningThread.getName(), RUNNER_INTERRUPT_INTERVAL.toMinutes());
+                  + " interrupt it again. stack_trace=%s",
+              runningThread.getName(),
+              RUNNER_INTERRUPT_INTERVAL.toMinutes(),
+              shortDebugStackTrace(runningThread, /* maxLength= */ 0));
           // b/191837695 to try to interrupt a timeout thread repeatedly to prevent some logic from
           // eating the InterruptException.
           runningThread.interrupt();
