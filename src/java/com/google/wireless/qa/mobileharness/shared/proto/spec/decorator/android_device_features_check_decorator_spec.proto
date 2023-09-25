@@ -29,10 +29,13 @@ message AndroidDeviceFeaturesCheckDecoratorSpec {
     optional AndroidDeviceFeaturesCheckDecoratorSpec ext = 1003;
   }
 
-  repeated string required_feature = 1
-      [(field_detail) = { help: "Required feature for the test to run." }];
+  repeated string required_feature = 1 [(field_detail) = {
+    help: "Required feature for the test to run. The test result will be "
+          "marked as SKIP if any required features don't exist."
+  }];
 
   repeated string forbidden_feature = 2 [(field_detail) = {
-    help: "Forbidden feature which will cause the test to be skipped."
+    help: "Forbidden feature which will cause the test to be skipped. The "
+          "test result will be marked as SKIP if any forbidden features exist."
   }];
 }

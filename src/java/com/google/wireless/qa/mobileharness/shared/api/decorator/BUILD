@@ -128,6 +128,26 @@ java_library(
 )
 
 java_library(
+    name = "android_device_features_check_decorator",
+    srcs = ["AndroidDeviceFeaturesCheckDecorator.java"],
+    deps = [
+        ":base_decorator",
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemspec",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_device_features_check_decorator_spec_java_proto",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "android_device_settings_decorator",
     srcs = ["AndroidDeviceSettingsDecorator.java"],
     deps = [
