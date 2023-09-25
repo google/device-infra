@@ -593,6 +593,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidSystemHealthMemoryDecorator");
     device.addSupportedDecorator("AndroidPerfettoDecorator");
     device.addSupportedDecorator("AndroidWebviewBridgeDecorator");
+    device.addSupportedDecorator("DimensionTestArgsDecorator");
     device.addSupportedDecorator("ManekiYouTubeLauncherDecorator");
     device.addSupportedDecorator("ManekiAndroidWebdriverPortForwardDecorator");
     device.addSupportedDecorator("MaskImageDecorator");
