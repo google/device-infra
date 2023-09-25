@@ -20,6 +20,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -33,18 +37,24 @@ import com.google.devtools.mobileharness.infra.controller.test.model.TestExecuti
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobFileUnit;
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit;
 import com.google.devtools.mobileharness.infra.lab.proto.File.TestFileUnit;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -75,6 +85,8 @@ public class JobManager {
 
       @GuardedBy("this")
       private final Set<TestFileUnit> testFileUnits = new HashSet<>();
+
+      @Nullable private volatile ListenableFuture<List<ResolveResult>> resolveAllJobFilesFuture;
 
       private TestLabExecutionUnit(ProxyTestRunner testRunner) {
         this.testRunner = testRunner;
@@ -129,6 +141,14 @@ public class JobManager {
     @GuardedBy("this")
     private final boolean disableMasterSyncing;
 
+    @GuardedBy("this")
+    private final Map<ResolveSource, ListenableFuture<ResolveResult>> resolveFileFutures =
+        new HashMap<>();
+
+    // The job has been closed from job manager and should not do further operation on it.
+    @GuardedBy("this")
+    private boolean closed;
+
     private JobLabExecutionUnit(JobExecutionUnit jobExecutionUnit, boolean disableMasterSyncing) {
       this.jobExecutionUnit = jobExecutionUnit;
       this.disableMasterSyncing = disableMasterSyncing;
@@ -141,6 +161,10 @@ public class JobManager {
     private synchronized Optional<TestExecutionUnit> getTestExecutionUnit(String testId) {
       TestLabExecutionUnit test = tests.get(testId);
       return test == null ? Optional.empty() : Optional.of(test.getTestExecutionUnit());
+    }
+
+    private synchronized Optional<TestLabExecutionUnit> getTestLabExecutionUnit(String testId) {
+      return Optional.ofNullable(tests.get(testId));
     }
 
     private synchronized Map<String, TestExecutionUnit> getAllTestExecutionUnits() {
@@ -197,6 +221,26 @@ public class JobManager {
 
     private synchronized boolean isDisableMasterSyncing() {
       return this.disableMasterSyncing;
+    }
+
+    private synchronized ListenableFuture<ResolveResult> startResolveFile(
+        ResolveSource resolveSource,
+        Function<ResolveSource, ListenableFuture<ResolveResult>> resolveFileOperation)
+        throws MobileHarnessException {
+      if (!closed) {
+        return resolveFileFutures.computeIfAbsent(resolveSource, resolveFileOperation);
+      }
+      throw new MobileHarnessException(
+          InfraErrorId.LAB_JM_ADD_RESOLVE_FILE_FUTURE_TO_CLOSED_JOB_ERROR,
+          String.format(
+              "Should not add resolve file future to the closed job %s.",
+              jobExecutionUnit.locator().id()));
+    }
+
+    @SuppressWarnings("Interruption")
+    private synchronized void close() {
+      closed = true;
+      resolveFileFutures.values().forEach(future -> future.cancel(true));
     }
   }
 
@@ -324,6 +368,85 @@ public class JobManager {
   }
 
   /**
+   * Start to resolve job files. It returns immediately and doesn't wait for resolve finished.
+   *
+   * <p>The resolve file operation will be added in the job level cache. So the same file of
+   * different tests in same job only need to be downloaded once.
+   */
+  public void startResolveJobFiles(
+      TestLocator testLocator,
+      List<ResolveSource> resolveSources,
+      Function<ResolveSource, ListenableFuture<ResolveResult>> resolveFileOperation)
+      throws MobileHarnessException {
+    List<ListenableFuture<ResolveResult>> resolveJobFileFutures = new ArrayList<>();
+    JobLabExecutionUnit jobLabExecutionUnit = getJobLabExecutionUnit(testLocator.jobLocator().id());
+    for (ResolveSource resolveSource : resolveSources) {
+      ListenableFuture<ResolveResult> resolveJobFileFuture =
+          jobLabExecutionUnit.startResolveFile(resolveSource, resolveFileOperation);
+      Futures.addCallback(
+          resolveJobFileFuture,
+          new ResolveJobFileFutureCallback(testLocator),
+          MoreExecutors.directExecutor());
+      resolveJobFileFutures.add(resolveJobFileFuture);
+    }
+    getJobLabExecutionUnit(testLocator.jobLocator().id())
+        .getTestLabExecutionUnit(testLocator.id())
+        .ifPresent(
+            testLabExecutionUnit ->
+                testLabExecutionUnit.resolveAllJobFilesFuture =
+                    Futures.allAsList(resolveJobFileFutures));
+  }
+
+  /** The callback to process the completed future of ResolveJobFile. */
+  private class ResolveJobFileFutureCallback implements FutureCallback<ResolveResult> {
+
+    private final TestLocator testLocator;
+
+    private ResolveJobFileFutureCallback(TestLocator testLocator) {
+      this.testLocator = testLocator;
+    }
+
+    @Override
+    public void onSuccess(ResolveResult resolveResult) {
+      try {
+        for (String path : resolveResult.paths()) {
+          notifyJobFile(
+              JobFileUnit.newBuilder()
+                  .setJobLocator(testLocator.jobLocator().toProto())
+                  .setTag(resolveResult.resolveSource().tag())
+                  .setOriginalPath(resolveResult.resolveSource().path())
+                  .setLocalPath(path)
+                  .build());
+        }
+      } catch (MobileHarnessException e) {
+        logger.atSevere().withCause(e).log(
+            "Failed to notify file %s being resolved for job %s.",
+            resolveResult.resolveSource().path(), testLocator.jobLocator().id());
+      }
+    }
+
+    @Override
+    public void onFailure(Throwable t) {
+      logger.atSevere().withCause(t).log(
+          "Failed to resolve file for job %s.", testLocator.jobLocator().id());
+    }
+  }
+
+  public Optional<ListenableFuture<List<ResolveResult>>> getResolveJobFilesFuture(
+      String jobId, String testId) throws MobileHarnessException {
+    return getJobLabExecutionUnit(jobId)
+        .getTestLabExecutionUnit(testId)
+        .map(
+            testLabExecutionUnit ->
+                Optional.ofNullable(testLabExecutionUnit.resolveAllJobFilesFuture))
+        .orElseThrow(
+            () ->
+                new MobileHarnessException(
+                    InfraErrorId.LAB_JM_TEST_NOT_FOUND,
+                    String.format("Test %s does not exist", testId)));
+  }
+
+  /**
    * Removes the job from the manager.
    *
    * @param jobId ID of the job
@@ -342,6 +465,7 @@ public class JobManager {
         job != null,
         InfraErrorId.LAB_JM_JOB_NOT_FOUND,
         () -> String.format("Job %s does not exist", jobId));
+    job.close();
 
     Dirs jobDirs = job.getJobExecutionUnit().dirs();
 

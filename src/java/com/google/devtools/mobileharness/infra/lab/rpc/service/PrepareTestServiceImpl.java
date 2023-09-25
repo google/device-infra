@@ -17,16 +17,24 @@
 package com.google.devtools.mobileharness.infra.lab.rpc.service;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.devtools.deviceaction.common.utils.TimeUtils.toProtoDuration;
 import static com.google.devtools.deviceaction.common.utils.TimeUtils.toProtoTimestamp;
 import static com.google.protobuf.TextFormat.shortDebugString;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
@@ -58,6 +66,7 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CloseTestResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CreateTestRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CreateTestRequest.ContainerSetting;
+import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CreateTestRequest.ResolveFileItem;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CreateTestResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CreateTestResponse.ContainerInfo;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.GetTestEngineStatusRequest;
@@ -65,6 +74,9 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineResponse;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.TestRunnerTiming;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
@@ -76,12 +88,14 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -109,6 +123,7 @@ public class PrepareTestServiceImpl {
   private final String cloudRpcDnsName;
   private final String cloudRpcShardName;
   private final EventBus globalInternalEventBus;
+  private final FileResolver fileResolver;
 
   @Inject
   public PrepareTestServiceImpl(
@@ -118,6 +133,7 @@ public class PrepareTestServiceImpl {
       LocalFileUtil localFileUtil,
       NetUtil netUtil,
       SystemUtil systemUtil,
+      FileResolver fileResolver,
       boolean servViaStubby,
       int labRpcPort,
       boolean servViaCloudRpc,
@@ -136,6 +152,7 @@ public class PrepareTestServiceImpl {
     this.cloudRpcDnsName = cloudRpcDnsName;
     this.cloudRpcShardName = cloudRpcShardName;
     this.globalInternalEventBus = globalInternalEventBus;
+    this.fileResolver = fileResolver;
   }
 
   @CanIgnoreReturnValue
@@ -173,12 +190,12 @@ public class PrepareTestServiceImpl {
             testExecutionUnit.locator(),
             req.getDeviceIdList().stream()
                 .map(deviceId -> DeviceLocator.of(deviceId, LabLocator.LOCALHOST))
-                .collect(Collectors.toList()));
+                .collect(toImmutableList()));
 
     List<String> decorators =
         req.getJob().getJobFeature().getDeviceRequirements().getDeviceRequirementList().stream()
             .flatMap(deviceRequirementList -> deviceRequirementList.getDecoratorList().stream())
-            .collect(Collectors.toList());
+            .collect(toImmutableList());
 
     // Creates TestRunner.
     ProxyTestRunner proxyTestRunner =
@@ -192,6 +209,13 @@ public class PrepareTestServiceImpl {
 
     // Adds TestRunner to JobManager.
     jobManager.addTestIfAbsent(proxyTestRunner);
+
+    TestLocator testLocator =
+        TestLocator.of(
+            req.getTest().getTestId(),
+            req.getTest().getTestName(),
+            JobLocator.of(req.getJob().getJobId(), req.getJob().getJobName()));
+    startResolveJobFiles(testLocator, jobExecutionUnit, req.getJob().getLabResolveFileList());
 
     // Starts TestRunner.
     try {
@@ -209,7 +233,8 @@ public class PrepareTestServiceImpl {
     }
 
     // Waits until the test engine is ready if it does not need starting license.
-    waitUntilTestEngineReady(proxyTestRunner, req.getContainerSetting());
+    waitUntilTestEngineAndResolveJobFilesReady(
+        testLocator, proxyTestRunner, req.getContainerSetting());
 
     // Creates the response.
     CreateTestResponse response =
@@ -219,13 +244,15 @@ public class PrepareTestServiceImpl {
                 deviceRunners.stream()
                     .map(LocalDeviceTestRunner::getDevice)
                     .map(Device::toFeature)
-                    .collect(Collectors.toList()))
+                    .collect(toImmutableList()))
             .setContainerInfo(
                 ContainerInfo.newBuilder()
                     .setIsContainerMode(proxyTestRunner.isContainerMode())
                     .setIsSandboxMode(proxyTestRunner.isSandboxMode())
                     .build())
-            .setGetTestEngineStatusResponse(getGetTestEngineStatusResponse(proxyTestRunner))
+            .setGetTestEngineStatusResponse(
+                getGetTestEngineStatusResponse(
+                    req.getJob().getJobId(), req.getTest().getTestId(), proxyTestRunner))
             .build();
 
     logger.atInfo().log("CreateTestResponse [%s]", shortDebugString(response));
@@ -233,9 +260,49 @@ public class PrepareTestServiceImpl {
     return response;
   }
 
+  private void startResolveJobFiles(
+      TestLocator testLocator, JobExecutionUnit jobExecutionUnit, List<ResolveFileItem> jobFiles)
+      throws MobileHarnessException {
+    String runFileDir = jobExecutionUnit.dirs().runFileDir();
+    String tmpFileDir = jobExecutionUnit.dirs().tmpFileDir();
+
+    ImmutableList<ResolveSource> resolveSources =
+        jobFiles.stream()
+            .map(
+                jobFile ->
+                    ResolveSource.create(
+                        jobFile.getFile(),
+                        jobFile.getTag(),
+                        ImmutableMap.copyOf(jobFile.getResolvingParameterMap()),
+                        runFileDir,
+                        tmpFileDir))
+            .collect(toImmutableList());
+    jobManager.startResolveJobFiles(
+        testLocator,
+        resolveSources,
+        source -> {
+          ListenableFuture<Optional<ResolveResult>> resolveFileFuture =
+              fileResolver.resolveAsync(source);
+          return Futures.transformAsync(
+              resolveFileFuture,
+              resolveResult -> {
+                if (resolveResult != null && resolveResult.isPresent()) {
+                  return immediateFuture(resolveResult.get());
+                } else {
+                  throw new MobileHarnessException(
+                      BasicErrorId.RESOLVE_FILE_INVALID_FILE_ERROR,
+                      String.format(
+                          "The file %s is not supported to resolve in lab.", source.path()));
+                }
+              },
+              directExecutor());
+        });
+  }
+
   public GetTestEngineStatusResponse getTestEngineStatus(GetTestEngineStatusRequest req)
       throws MobileHarnessException {
-    return getGetTestEngineStatusResponse(testManager.getProxyTestRunner(req.getTestId()));
+    return getGetTestEngineStatusResponse(
+        req.getJobId(), req.getTestId(), testManager.getProxyTestRunner(req.getTestId()));
   }
 
   @CanIgnoreReturnValue
@@ -312,15 +379,16 @@ public class PrepareTestServiceImpl {
     jobTiming.start(Instant.ofEpochMilli(job.getJobStartTimeMs()));
     Dirs jobDirs =
         new Dirs(
-            PathUtil.join(DirUtil.getPublicGenDir(), jobId) /* genFileDir */,
-            PathUtil.join(DirUtil.getPrivateGenDir(), jobId) /* tmpFileDir */,
-            PathUtil.join(DirUtil.getRunDir(), jobId) /* runFileDir */,
-            null /* remoteFileDir */,
-            true /* hasTestSubdirs */,
+            /* genFileDir= */ PathUtil.join(DirUtil.getPublicGenDir(), jobId),
+            /* tmpFileDir= */ PathUtil.join(DirUtil.getPrivateGenDir(), jobId),
+            /* runFileDir= */ PathUtil.join(DirUtil.getRunDir(), jobId),
+            /* remoteFileDir= */ null,
+            /* hasTestSubdirs= */ true,
             localFileUtil);
 
     JobExecutionUnit jobExecutionUnit =
         JobExecutionUnit.create(jobLocator, driver, jobTimeout, jobTiming, jobDirs);
+
     return jobManager.addJobIfAbsent(jobExecutionUnit, job.getDisableMasterSyncing());
   }
 
@@ -384,16 +452,35 @@ public class PrepareTestServiceImpl {
     return builder.build();
   }
 
-  private void waitUntilTestEngineReady(
-      ProxyTestRunner proxyTestRunner, ContainerSetting containerSetting)
+  private void waitUntilTestEngineAndResolveJobFilesReady(
+      TestLocator testLocator, ProxyTestRunner proxyTestRunner, ContainerSetting containerSetting)
       throws MobileHarnessException {
     try {
+      Clock clock = Clock.systemUTC();
       Duration testEngineSyncStartingTimeout =
           containerSetting.getNeedStartingLicense()
               ? Duration.ZERO
               : Duration.ofMillis(containerSetting.getSyncStartingTimeoutMs());
-      logger.atInfo().log("Wait [%s] until test engine is ready", testEngineSyncStartingTimeout);
-      proxyTestRunner.waitUntilTestEngineReady(testEngineSyncStartingTimeout);
+      logger.atInfo().log(
+          "Wait [%s] until test engine  and resolving job files is ready",
+          testEngineSyncStartingTimeout);
+
+      Instant expireTime = clock.instant().plus(testEngineSyncStartingTimeout);
+      boolean ready = proxyTestRunner.waitUntilTestEngineReady(testEngineSyncStartingTimeout);
+      Instant now = clock.instant();
+      if (ready && expireTime.isAfter(now)) {
+        Optional<ListenableFuture<List<ResolveResult>>> resolveJobFilesFuture =
+            jobManager.getResolveJobFilesFuture(testLocator.jobLocator().id(), testLocator.id());
+        if (resolveJobFilesFuture.isPresent()) {
+          try {
+            resolveJobFilesFuture
+                .get()
+                .get(Duration.between(now, expireTime).toMillis(), MILLISECONDS);
+          } catch (ExecutionException | TimeoutException e) {
+            // Ignore the exception here. GetTestEngineStatus will process the exception.
+          }
+        }
+      }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       throw new MobileHarnessException(
@@ -404,16 +491,50 @@ public class PrepareTestServiceImpl {
   }
 
   private GetTestEngineStatusResponse getGetTestEngineStatusResponse(
-      ProxyTestRunner proxyTestRunner) {
+      String jobId, String testId, ProxyTestRunner proxyTestRunner) throws MobileHarnessException {
     TestEngineStatus testEngineStatus = proxyTestRunner.getTestEngineStatus();
     Optional<TestEngineLocator> testEngineLocator = proxyTestRunner.getTestEngineLocator();
-    Optional<MobileHarnessException> testEngineError = proxyTestRunner.getTestEngineError();
+    Optional<Throwable> testEngineErrorInResponse =
+        proxyTestRunner.getTestEngineError().map(e -> e);
+
+    Optional<ListenableFuture<List<ResolveResult>>> resolveJobFilesFuture =
+        jobManager.getResolveJobFilesFuture(jobId, testId);
+    TestEngineStatus resolveJobFilesStatus;
+    if (resolveJobFilesFuture.isPresent()) {
+      try {
+        resolveJobFilesFuture.get().get(0, SECONDS);
+        resolveJobFilesStatus = TestEngineStatus.READY;
+      } catch (ExecutionException e) {
+        resolveJobFilesStatus = TestEngineStatus.FAILED;
+        if (testEngineErrorInResponse.isPresent()) {
+          testEngineErrorInResponse.get().addSuppressed(e.getCause());
+        } else {
+          testEngineErrorInResponse = Optional.ofNullable(e.getCause());
+        }
+      } catch (TimeoutException e) {
+        resolveJobFilesStatus = TestEngineStatus.STARTED;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new MobileHarnessException(
+            InfraErrorId.LAB_RPC_PREPARE_TEST_INTERRUPTED,
+            "Interrupted when waiting until test engine is ready",
+            e);
+      }
+    } else {
+      resolveJobFilesStatus = TestEngineStatus.NOT_STARTED;
+    }
+
     GetTestEngineStatusResponse.Builder response =
         GetTestEngineStatusResponse.newBuilder()
             .setHasTestEngineLocator(testEngineLocator.isPresent())
-            .setTestEngineStatus(testEngineStatus);
+            .setTestEngineStatus(
+                testEngineStatus.equals(TestEngineStatus.READY)
+                    ? resolveJobFilesStatus
+                    : testEngineStatus);
     testEngineLocator.ifPresent(response::setTestEngineLocator);
-    testEngineError.map(ErrorModelConverter::toExceptionDetail).ifPresent(response::setError);
+    testEngineErrorInResponse
+        .map(ErrorModelConverter::toExceptionDetail)
+        .ifPresent(response::setError);
     return response.build();
   }
 }

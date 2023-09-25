@@ -22,6 +22,7 @@ import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEn
 import com.google.devtools.mobileharness.infra.controller.test.TestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.util.TestRunnerTiming;
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -66,7 +67,15 @@ public interface ProxyTestRunner extends TestRunner, TestRunnerTiming {
 
   Optional<MobileHarnessException> getTestEngineError();
 
-  void waitUntilTestEngineReady(Duration timeout) throws InterruptedException;
+  /**
+   * Waits if necessary for at most the given time for the test engine ready, and then retrieves its
+   * result, if available.
+   *
+   * @param timeout the maximum time to wait
+   * @return true if the test engine is ready, or false if timeout.
+   */
+  @CanIgnoreReturnValue
+  boolean waitUntilTestEngineReady(Duration timeout) throws InterruptedException;
 
   void asyncStartTestEngine();
 

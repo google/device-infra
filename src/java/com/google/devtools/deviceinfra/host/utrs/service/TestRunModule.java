@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunn
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.lab.controller.JobManager;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServiceImpl;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.AbstractModule;
@@ -47,6 +48,7 @@ public final class TestRunModule extends AbstractModule {
       NetUtil netUtil,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
+      FileResolver fileResolver,
       @GlobalEventBus EventBus eventBus,
       @CloudRpcDnsAddress String cloudRpcDnsAddress,
       @CloudRpcShardName String cloudRpcShardName,
@@ -60,6 +62,7 @@ public final class TestRunModule extends AbstractModule {
         localFileUtil,
         netUtil,
         systemUtil,
+        fileResolver,
         servViaStubby,
         labRpcPort,
         servViaCloudRpc,

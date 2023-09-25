@@ -23,9 +23,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.devtools.deviceinfra.host.utrs.Annotations.DebugThreadPool;
 import com.google.devtools.deviceinfra.host.utrs.Annotations.DeviceManagerThreadPool;
+import com.google.devtools.deviceinfra.host.utrs.Annotations.FileResolverThreadPool;
 import com.google.devtools.deviceinfra.host.utrs.Annotations.LabServerRpcThreadPool;
 import com.google.devtools.deviceinfra.host.utrs.Annotations.LocalGrpcThreadPool;
 import com.google.devtools.deviceinfra.host.utrs.Annotations.MainThreadPool;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -57,11 +59,16 @@ public class UtrsThreadPoolFactoryModule extends AbstractModule {
             MoreExecutors.listeningDecorator(
                 new ScheduledThreadPoolExecutor(
                     1, createThreadFactory("mh-lab-server-debug-random-exit-task"))));
+    bind(ListeningExecutorService.class)
+        .annotatedWith(FileResolverThreadPool.class)
+        .toInstance(
+            MoreExecutors.listeningDecorator(
+                Executors.newCachedThreadPool(createThreadFactory("file-resolver-thread"))));
   }
 
   private static ListeningExecutorService createThreadPool(String threadNamePrefix) {
     return MoreExecutors.listeningDecorator(
-        Executors.newCachedThreadPool(createThreadFactory(threadNamePrefix)));
+        Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory(threadNamePrefix)));
   }
 
   /**

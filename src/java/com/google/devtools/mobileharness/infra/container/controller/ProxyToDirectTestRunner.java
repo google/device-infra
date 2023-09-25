@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.infra.controller.test.model.TestExecuti
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionUnit;
 import com.google.devtools.mobileharness.infra.lab.controller.util.LabFileNotifier;
 import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.time.Duration;
 import java.util.Optional;
@@ -128,8 +129,10 @@ public class ProxyToDirectTestRunner extends AbstractProxyTestRunner<ProxyToDire
   }
 
   @Override
-  public void waitUntilTestEngineReady(Duration timeout) {
+  @CanIgnoreReturnValue
+  public boolean waitUntilTestEngineReady(Duration timeout) {
     // Returns immediately because a proxied test engine (lab server) is always ready.
+    return true;
   }
 
   @Override

@@ -29,6 +29,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:test_runner_timing",
+        "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
 

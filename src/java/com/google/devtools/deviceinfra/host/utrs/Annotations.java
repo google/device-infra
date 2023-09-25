@@ -57,6 +57,12 @@ class Annotations {
   @BindingAnnotation
   @interface DebugThreadPool {}
 
+  /** Annotation for binding file resolver thread pool. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface FileResolverThreadPool {}
+
   /** Annotation for binding RPC port flag value. */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})

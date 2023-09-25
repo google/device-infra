@@ -44,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:proxy_test_manager",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:job_manager",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:prepare_test",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",

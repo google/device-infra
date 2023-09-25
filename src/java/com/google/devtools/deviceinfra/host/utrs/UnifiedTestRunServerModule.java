@@ -23,6 +23,7 @@ import com.google.devtools.deviceinfra.host.utrs.Annotations.RpcPort;
 import com.google.devtools.deviceinfra.host.utrs.service.Annotations.GlobalEventBus;
 import com.google.devtools.deviceinfra.host.utrs.service.TestRunBaseModule;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceHelperFactory;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
@@ -30,6 +31,8 @@ import com.google.devtools.mobileharness.infra.controller.test.manager.TestMessa
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunnerHolder;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
+import com.google.devtools.mobileharness.shared.file.resolver.AbstractFileResolver;
+import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -86,6 +89,29 @@ public class UnifiedTestRunServerModule extends AbstractModule {
 
   private static boolean enableStubbyRpcServer() {
     return Flags.instance().enableStubbyRpcServer.getNonNull() && !DeviceUtil.inSharedLab();
+  }
+
+  @Provides
+  @Singleton
+  FileResolver provideFileResolver() {
+    return createFileResolver();
+  }
+
+  @SuppressWarnings("unused")
+  private FileResolver createFileResolver() {
+    return new AbstractFileResolver(null) {
+      @Override
+      protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
+        return false;
+      }
+
+      @Override
+      protected ResolveResult actuallyResolve(ResolveSource resolveSource)
+          throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+        throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+            BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Should not run this method.");
+      }
+    };
   }
 
   @Provides
