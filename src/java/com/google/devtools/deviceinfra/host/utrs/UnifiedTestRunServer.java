@@ -279,6 +279,7 @@ public class UnifiedTestRunServer {
   public void onShutdown() {
     logger.atInfo().log("UTRS is shutting down.");
 
+    SystemUtil.setProcessIsShuttingDown();
     // Shuts down the server and all threads here.
     if (deviceManagerThreadPool != null) {
       deviceManagerThreadPool.shutdownNow();

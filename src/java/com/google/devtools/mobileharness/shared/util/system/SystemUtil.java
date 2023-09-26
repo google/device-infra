@@ -105,6 +105,7 @@ public class SystemUtil {
 
   @VisibleForTesting static final String GUITAR_CHANGELIST_ENV_VAR = "GUITAR_CHANGELIST";
   private static final Pattern CHANGELIST_PATTERN = Pattern.compile("^\\d+$");
+  private static volatile boolean processIsShuttingDown;
 
   private String osName = System.getProperty("os.name");
   private final CommandExecutor executor;
@@ -1256,5 +1257,14 @@ public class SystemUtil {
       return String.format(
           "Process: user=%s, pid=%d, ppid=%d, pgid=%d, command=%s", user, pid, ppid, pgid, command);
     }
+  }
+
+  /** Checks whether the JVM is shutting down. */
+  public static boolean isProcessShuttingDown() {
+    return processIsShuttingDown;
+  }
+
+  public static void setProcessIsShuttingDown() {
+    processIsShuttingDown = true;
   }
 }

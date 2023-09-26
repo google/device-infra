@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestM
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.comm.message.CacheableTestMessageHandler;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
@@ -375,28 +376,42 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
                         InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
                         "Test timeout and interrupted",
                         e));
+          } else if (SystemUtil.isProcessShuttingDown()) {
+            // The process is shutting down.
+            testInfo
+                .result()
+                .toNewResult()
+                .setNonPassing(
+                    Test.TestResult.ERROR,
+                    new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                        InfraErrorId.TR_TEST_INTERRUPTED_WHEN_PROCESS_SHUTDOWN,
+                        "The process is shutting down.",
+                        e));
           } else {
             // If job is not timeout but test timeout, TestManager has already marked the test as
             // TIMEOUT and can not be overwritten here.
             com.google.devtools.mobileharness.api.model.error.MobileHarnessException cause;
+
             if ("lab".equals(getComponentName()) || "local".equals(getComponentName())) {
               // If the test is not timeout, and it runs in lab or local mode, it should be
               // some error such as device disconnected.
               if (SharedPoolJobUtil.isUsingSharedPool(testInfo.jobInfo())) {
                 cause =
                     new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                        InfraErrorId.TR_TEST_INTERRUPTED_WHEN_MNM_DEVICE_DISCONNECTED,
-                        "Test interrupted because device disconnected",
+                        InfraErrorId.TR_TEST_INTERRUPTED_IN_SHARED_LAB,
+                        "Test is interrupted in the shared lab. It can be caused by device"
+                            + " disconnection.",
                         e);
               } else {
                 cause =
                     new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                        InfraErrorId.TR_TEST_INTERRUPTED_WHEN_DEVICE_DISCONNECTED,
-                        "Test interrupted because device disconnected",
+                        InfraErrorId.TR_TEST_INTERRUPTED_IN_SATELLITE_LAB,
+                        "Test is interrupted in the satellite lab. It can be caused by device"
+                            + " disconnection",
                         e);
               }
             } else {
-              // If the test is not timeout, and it runs in client, it may be killed by user.
+              // If the test is not timeout, and it runs in client, it's usually killed by user.
               cause =
                   new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
                       InfraErrorId.TR_TEST_INTERRUPTED_WHEN_USER_KILL_JOB,
