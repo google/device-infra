@@ -29,11 +29,12 @@ import com.google.devtools.mobileharness.platform.android.user.AndroidUserState;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidSwitchUserDecoratorSpec;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -49,31 +50,8 @@ import javax.inject.Inject;
             + "\nNote that for satellite labs it is advisable to ensure this decorator is"
             + " always used or set dimension 'recovery' = 'wipe'."
             + "\nThis decorator only supports Android P or higher (sdk>=28).")
-public class AndroidSwitchUserDecorator extends BaseDecorator {
-  @ParamAnnotation(
-      required = false,
-      help =
-          "Whether to perform cleanup"
-              + " i.e. switch back to starting user, delete created users, etc. default=true")
-  public static final String PARAM_CLEANUP_USERS = "cleanup_users";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "The user to switch to. Must be one of"
-              + " [current, system, primary, secondary, guest]. default=current")
-  public static final String PARAM_SWITCH_USER = "switch_user";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "The state to wait for after switching users. Most common (and default) is"
-              + " RUNNING_UNLOCKED. Other (rare) values might be RUNNING_LOCKED or"
-              + " RUNNING_UNLOCKING.")
-  public static final String PARAM_SWITCH_USER_WAIT_STATE = "switch_user_wait_state";
-
-  public static final String DEFAULT_PARAM_SWITCH_USER = "current";
-  public static final String DEFAULT_PARAM_SWITCH_USER_WAIT_STATE = "RUNNING_UNLOCKED";
+public class AndroidSwitchUserDecorator extends BaseDecorator
+    implements SpecConfigable<AndroidSwitchUserDecoratorSpec> {
 
   // TODO: gather data on how long this is supposed to take
   // Manual measurement: android P Pixel2 this took at least 10 second for each switch
@@ -128,17 +106,9 @@ public class AndroidSwitchUserDecorator extends BaseDecorator {
 
     JobInfo jobInfo = testInfo.jobInfo();
     String deviceId = getDevice().getDeviceId();
-    String switchUserParam =
-        jobInfo.params().get(PARAM_SWITCH_USER, /* defaultValue= */ DEFAULT_PARAM_SWITCH_USER);
-    userType = UserType.fromParam(switchUserParam);
-
-    String waitStateParam =
-        jobInfo
-            .params()
-            .get(
-                PARAM_SWITCH_USER_WAIT_STATE,
-                /* defaultValue= */ DEFAULT_PARAM_SWITCH_USER_WAIT_STATE);
-    waitState = convertWaitState(waitStateParam);
+    AndroidSwitchUserDecoratorSpec spec = jobInfo.combinedSpec(this, deviceId);
+    userType = UserType.fromParam(spec.getSwitchUser());
+    waitState = convertWaitState(spec.getSwitchUserWaitState());
 
     testInfo
         .log()
@@ -199,14 +169,14 @@ public class AndroidSwitchUserDecorator extends BaseDecorator {
       getDecorated().run(testInfo);
     } finally {
       if (state != null) {
-        performCleanup(testInfo);
+        performCleanup(testInfo, spec);
       }
     }
   }
 
-  void performCleanup(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    JobInfo jobInfo = testInfo.jobInfo();
-    boolean cleanupUsers = jobInfo.params().getBool(PARAM_CLEANUP_USERS, true);
+  void performCleanup(TestInfo testInfo, AndroidSwitchUserDecoratorSpec spec)
+      throws MobileHarnessException, InterruptedException {
+    boolean cleanupUsers = spec.getCleanupUsers();
 
     State endState = new State(userUtil, state.deviceId, state.sdkVersion, userType);
 

@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.validator;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserState;
@@ -24,12 +25,14 @@ import com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidSwitchUs
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import java.util.ArrayList;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
+import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidSwitchUserDecoratorSpec;
 import java.util.List;
 import javax.annotation.Nullable;
 
 /** Validator for {@link AndroidSwitchUserDecorator} */
-public class AndroidSwitchUserDecoratorValidator extends BaseValidator {
+public class AndroidSwitchUserDecoratorValidator extends BaseValidator
+    implements SpecConfigable<AndroidSwitchUserDecoratorSpec> {
   private static final int SDK_VERSION_MIN = 28;
 
   @Override
@@ -54,56 +57,63 @@ public class AndroidSwitchUserDecoratorValidator extends BaseValidator {
 
   @Override
   public List<String> validateJob(JobInfo job) throws InterruptedException {
-    List<String> errors = new ArrayList<>();
+    ImmutableList.Builder<String> errors = ImmutableList.builder();
 
+    List<AndroidSwitchUserDecoratorSpec> specs;
     try {
-      job.params().checkBool(AndroidSwitchUserDecorator.PARAM_CLEANUP_USERS, /* optional= */ true);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+      specs =
+          job.combinedSpecForDevices(
+              this,
+              subDeviceSpec ->
+                  subDeviceSpec.decorators().getAll().contains("AndroidSwitchUserDecorator"));
+    } catch (MobileHarnessException e) {
       errors.add(e.getMessage());
+      return errors.build();
     }
 
-    String error = validateSwitchUserParam(job);
-    if (error != null) {
-      errors.add(error);
+    for (AndroidSwitchUserDecoratorSpec spec : specs) {
+      String error = validateSwitchUserParam(spec);
+      if (error != null) {
+        errors.add(error);
+      }
+
+      error = validateWaitStateparam(spec);
+      if (error != null) {
+        errors.add(error);
+      }
     }
 
-    error = validateWaitStateparam(job);
-    if (error != null) {
-      errors.add(error);
-    }
-
-    return errors;
+    return errors.build();
   }
 
   @Nullable
-  private static String validateSwitchUserParam(JobInfo job) {
-    String switchUserParam =
-        job.params()
-            .get(
-                AndroidSwitchUserDecorator.PARAM_SWITCH_USER,
-                /* defaultValue= */ AndroidSwitchUserDecorator.DEFAULT_PARAM_SWITCH_USER);
+  private static String validateSwitchUserParam(AndroidSwitchUserDecoratorSpec spec) {
+    String switchUserParam = spec.getSwitchUser();
 
     try {
       UserType unused = UserType.fromParam(switchUserParam);
       return null;
     } catch (IllegalArgumentException e) {
-      return String.format("%s: %s", AndroidSwitchUserDecorator.PARAM_SWITCH_USER, e.getMessage());
+      return String.format(
+          "%s: %s",
+          AndroidSwitchUserDecoratorSpec.getDescriptor()
+              .findFieldByNumber(AndroidSwitchUserDecoratorSpec.SWITCH_USER_FIELD_NUMBER)
+              .getName(),
+          e.getMessage());
     }
   }
 
   @Nullable
-  private static String validateWaitStateparam(JobInfo job) {
-    String waitStateParam =
-        job.params()
-            .get(
-                AndroidSwitchUserDecorator.PARAM_SWITCH_USER_WAIT_STATE,
-                /* defaultValue= */ AndroidSwitchUserDecorator
-                    .DEFAULT_PARAM_SWITCH_USER_WAIT_STATE);
+  private static String validateWaitStateparam(AndroidSwitchUserDecoratorSpec spec) {
+    String waitStateParam = spec.getSwitchUserWaitState();
     AndroidUserState state = AndroidSwitchUserDecorator.convertWaitState(waitStateParam);
     if (state == AndroidUserState.STATE_UNKNOWN) {
       return String.format(
           "Unknown %s: %s",
-          AndroidSwitchUserDecorator.PARAM_SWITCH_USER_WAIT_STATE, waitStateParam);
+          AndroidSwitchUserDecoratorSpec.getDescriptor()
+              .findFieldByNumber(AndroidSwitchUserDecoratorSpec.SWITCH_USER_WAIT_STATE_FIELD_NUMBER)
+              .getName(),
+          waitStateParam);
     }
     return null;
   }
