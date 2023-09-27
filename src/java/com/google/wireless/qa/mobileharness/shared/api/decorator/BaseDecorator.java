@@ -20,7 +20,11 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.BaseDriver;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 
-/** Base class for all decorators. */
+/**
+ * Base class for all decorators.
+ *
+ * <p>See {@link Decorator} about how to instantiate a decorator.
+ */
 public abstract class BaseDecorator extends BaseDriver implements Decorator {
 
   /** The driver going to be decorated. */

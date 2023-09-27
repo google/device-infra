@@ -22,7 +22,11 @@ import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 
-/** Base class for all kinds of drivers. */
+/**
+ * Base class for all drivers.
+ *
+ * <p>See {@link Driver} about how to instantiate a driver.
+ */
 public abstract class BaseDriver implements Driver {
   /** The device which loads this driver. */
   private final Device device;

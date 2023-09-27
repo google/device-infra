@@ -54,6 +54,7 @@ java_library(
     deps = [
         ":driver",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:common_library_module",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
@@ -82,6 +83,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:install_mobly_test_deps_args",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_aosp_test_setup_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",

@@ -42,6 +42,20 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
  *         <li>{@linkplain com.google.wireless.qa.mobileharness.shared.model.job.TestInfo TestInfo}
  *         <li>{@link Driver} (the decorated driver)
  *         <li>{@linkplain com.google.wireless.qa.mobileharness.shared.api.device.Device Device}
+ *         <li>Common types bound in {@linkplain
+ *             com.google.wireless.qa.mobileharness.shared.api.CommonLibraryModule
+ *             CommonLibraryModule}:
+ *             <ul>
+ *               <li>{@linkplain java.time.Clock Clock}
+ *               <li>{@linkplain java.util.concurrent.Executor Executor} / {@linkplain
+ *                   java.util.concurrent.ExecutorService ExecutorService} / {@linkplain
+ *                   com.google.common.util.concurrent.ListeningExecutorService
+ *                   ListeningExecutorService}
+ *               <li>Sleeper ({@linkplain com.google.common.time.Sleeper Guava} / {@linkplain
+ *                   com.google.devtools.deviceinfra.shared.util.time.Sleeper deviceinfra})
+ *               <li>{@linkplain com.google.common.base.Ticker Ticker}
+ *               <li>{@linkplain com.google.common.time.TimeSource TimeSource}
+ *             </ul>
  *       </ul>
  *       <p>Additionally, if necessary, you can write a {@linkplain com.google.inject.Module Module}
  *       class whose name is {@code "<your_driver_name>Module"} in the package {@link

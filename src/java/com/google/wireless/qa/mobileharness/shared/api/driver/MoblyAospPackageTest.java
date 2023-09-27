@@ -29,6 +29,7 @@ import com.google.devtools.atsconsole.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
@@ -40,6 +41,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Iterator;
@@ -96,11 +98,13 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
   MoblyAospPackageTest(
       Device device,
       TestInfo testInfo,
+      CommandExecutor executor,
+      Clock clock,
       MoblyAospTestSetupUtil setupUtil,
       LocalFileUtil localFileUtil,
       MoblyReportHelper moblyReportHelper,
       CertificationSuiteInfoFactory certificationSuiteInfoFactory) {
-    super(device, testInfo);
+    super(device, testInfo, executor, clock);
     this.setupUtil = setupUtil;
     this.localFileUtil = localFileUtil;
     this.moblyReportHelper = moblyReportHelper;

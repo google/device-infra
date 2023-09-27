@@ -27,6 +27,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.api.CommonLibraryModule;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
@@ -259,7 +260,8 @@ public class DriverFactory {
       Injector injector =
           Guice.createInjector(
               Stage.PRODUCTION,
-              Stream.concat(module.stream(), Stream.of(contextModule)).collect(toImmutableList()));
+              Stream.concat(Stream.of(contextModule, new CommonLibraryModule()), module.stream())
+                  .collect(toImmutableList()));
       return injector.getInstance(clazz);
     } catch (RuntimeException e) {
       throw new MobileHarnessException(

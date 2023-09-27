@@ -120,6 +120,18 @@ java_library(
 )
 
 java_library(
+    name = "common_library_module",
+    srcs = ["CommonLibraryModule.java"],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
     name = "composite_device_util",
     srcs = ["CompositeDeviceUtil.java"],
     deps = [

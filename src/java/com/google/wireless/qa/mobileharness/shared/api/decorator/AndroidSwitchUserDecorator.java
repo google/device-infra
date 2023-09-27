@@ -57,32 +57,17 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
   // Manual measurement: android P Pixel2 this took at least 10 second for each switch
   private static final int MAX_DECISECONDS_SWITCH_USER_WAIT = 300;
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-  private final DeviceDaemonHelper deviceDaemonHelper;
-  private final AndroidUserUtil userUtil;
+
   private final AndroidSystemSettingUtil systemSettingUtil;
+  private final AndroidUserUtil userUtil;
+  private final DeviceDaemonHelper deviceDaemonHelper;
+  private final Sleeper sleeper;
+
   @VisibleForTesting State state = null;
   private UserType userType = null;
   private AndroidUserState waitState = null;
 
-  private final Sleeper sleeper;
-
   @Inject
-  AndroidSwitchUserDecorator(
-      Driver decoratedDriver,
-      TestInfo testInfo,
-      AndroidSystemSettingUtil systemSettingUtil,
-      AndroidUserUtil userUtil,
-      DeviceDaemonHelper deviceDaemonHelper) {
-    this(
-        decoratedDriver,
-        testInfo,
-        systemSettingUtil,
-        userUtil,
-        deviceDaemonHelper,
-        Sleeper.defaultSleeper());
-  }
-
-  @VisibleForTesting
   AndroidSwitchUserDecorator(
       Driver decoratedDriver,
       TestInfo testInfo,

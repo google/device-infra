@@ -31,6 +31,7 @@ import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactor
 import com.google.devtools.atsconsole.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.EmptyDevice;
@@ -41,6 +42,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import org.json.JSONArray;
@@ -114,6 +116,8 @@ public final class MoblyAospPackageTestTest {
         new MoblyAospPackageTest(
             emptyDevice,
             testInfo,
+            new CommandExecutor(),
+            Clock.systemUTC(),
             setupUtil,
             localFileUtil,
             moblyReportHelper,
@@ -158,6 +162,8 @@ public final class MoblyAospPackageTestTest {
         new MoblyAospPackageTest(
             emptyDevice,
             testInfo,
+            new CommandExecutor(),
+            Clock.systemUTC(),
             setupUtil,
             localFileUtil,
             moblyReportHelper,
@@ -190,6 +196,8 @@ public final class MoblyAospPackageTestTest {
         new MoblyAospPackageTest(
             emptyDevice,
             testInfo,
+            new CommandExecutor(),
+            Clock.systemUTC(),
             setupUtil,
             localFileUtil,
             moblyReportHelper,
@@ -218,6 +226,8 @@ public final class MoblyAospPackageTestTest {
         new MoblyAospPackageTest(
             compositeDevice,
             testInfo,
+            new CommandExecutor(),
+            Clock.systemUTC(),
             setupUtil,
             localFileUtil,
             moblyReportHelper,

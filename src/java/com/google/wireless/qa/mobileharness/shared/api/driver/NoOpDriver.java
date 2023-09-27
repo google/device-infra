@@ -63,11 +63,6 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
 
   @VisibleForTesting
   @Inject
-  public NoOpDriver(Device device, TestInfo testInfo) {
-    this(device, testInfo, Sleeper.defaultSleeper());
-  }
-
-  @VisibleForTesting
   public NoOpDriver(Device device, TestInfo testInfo, Sleeper sleeper) {
     super(device, testInfo);
     this.sleeper = sleeper;

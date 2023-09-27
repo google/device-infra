@@ -116,11 +116,6 @@ public class MoblyGenericTest extends BaseDriver {
   @Nullable protected String testbedName;
 
   @Inject
-  MoblyGenericTest(Device device, TestInfo testInfo) {
-    this(device, testInfo, new CommandExecutor(), Clock.systemUTC());
-  }
-
-  @VisibleForTesting
   MoblyGenericTest(Device device, TestInfo testInfo, CommandExecutor executor, Clock clock) {
     super(device, testInfo);
     this.localFileUtil = new LocalFileUtil();
