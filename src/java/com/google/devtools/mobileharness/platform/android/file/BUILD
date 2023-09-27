@@ -35,6 +35,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/user:android_user_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "@maven//:com_google_code_findbugs_jsr305",

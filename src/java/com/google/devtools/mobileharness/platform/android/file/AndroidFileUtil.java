@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSyst
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
@@ -96,6 +97,10 @@ public class AndroidFileUtil {
 
   /** Indicator for the success of remounting the device. */
   private static final String ADB_REMOUNT_SUCCESS_INDICATOR = "remount succeeded";
+
+  private static final String ADB_REMOUNT_REBOOT_INDICATOR =
+      "Now reboot your device for settings to take effect";
+  private static final String ADB_REMOUNT_EXIT_CODE_INDICATOR = "exit_code=11";
 
   /** Indicator for a file showed in "adb shell ls -l". */
   private static final char ADB_SHELL_LIST_FILE_INDICATOR = '-';
@@ -983,6 +988,7 @@ public class AndroidFileUtil {
    */
   public void remount(String serial, boolean checkResults)
       throws MobileHarnessException, InterruptedException {
+    String output = "";
     try {
       if (androidSystemSpecUtil.isEmulator(serial)) {
         int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(serial);
@@ -996,15 +1002,25 @@ public class AndroidFileUtil {
           return;
         }
       }
-      String output = adb.run(serial, new String[] {ADB_ARG_REMOUNT});
+      output = adb.run(serial, new String[] {ADB_ARG_REMOUNT});
       if (checkResults && !output.contains(ADB_REMOUNT_SUCCESS_INDICATOR)) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_FILE_UTIL_REMOUNT_ERROR,
             "The output of adb remount doesn't indicate the success: " + output);
       }
     } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_FILE_UTIL_REMOUNT_ERROR, e.getMessage(), e);
+      // b/296730927, sometimes the exit code is 11 instead of 0, which is also an indication
+      // of success run.
+      if (e.getErrorId().equals(AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE)
+          && output.contains(ADB_REMOUNT_REBOOT_INDICATOR)
+          && e.getMessage().contains(ADB_REMOUNT_EXIT_CODE_INDICATOR)) {
+        logger.atWarning().log(
+            "Needs to reboot device %s to make remount effective because [%s].",
+            serial, MoreThrowables.shortDebugString(e, 0));
+      } else {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_FILE_UTIL_REMOUNT_ERROR, e.getMessage(), e);
+      }
     }
   }
 

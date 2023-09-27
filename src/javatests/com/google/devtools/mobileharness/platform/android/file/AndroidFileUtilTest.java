@@ -1065,6 +1065,34 @@ public final class AndroidFileUtilTest {
   }
 
   @Test
+  public void remount_exitCode11() throws Exception {
+    String adbRemountOutput =
+        "Failed command with exit_code=11 and success_exit_codes=[0], result=[code=11, out=[Binder"
+            + " ioctl to enable oneway spam detection failed: Invalid argument"
+            + "Disabling verity for /system"
+            + "Disabling verity for /system_ext"
+            + "Waited one second for gsiservice (is service started? are binder threads started and"
+            + " available?)"
+            + "Using overlayfs for /system_ext"
+            + "Disabling verity for /vendor"
+            + "Using overlayfs for /vendor"
+            + "Disabling verity for /product"
+            + "Using overlayfs for /product"
+            + "Now reboot your device for settings to take effect";
+    when(adb.run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT})))
+        .thenReturn("")
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, adbRemountOutput));
+
+    when(androidSystemSettingUtil.getDeviceSdkVersion(eq(SERIAL))).thenReturn(29);
+    when(androidSystemSpecUtil.isEmulator(eq(SERIAL))).thenReturn(false);
+
+    androidFileUtil.remount(SERIAL);
+    verify(adb).run(eq(SERIAL), aryEq(new String[] {AndroidFileUtil.ADB_ARG_REMOUNT}));
+  }
+
+  @Test
   public void remountSDK30Emulator() throws Exception {
     when(adb.run(eq(SERIAL), aryEq(new String[] {"shell", "mount", "-o", "rw,remount", "/"})))
         .thenReturn("")
