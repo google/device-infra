@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -89,6 +90,7 @@ public class DriverFactory {
    * @return a new {@link Driver} instance associated with the given {@link Device}
    * @throws MobileHarnessException if fails to create a new {@link Driver} instance
    */
+  @CanIgnoreReturnValue
   public Driver createDriver(
       Device device,
       TestInfo testInfo,
@@ -116,6 +118,7 @@ public class DriverFactory {
    *     the given decorators
    * @throws MobileHarnessException if fails to create a new {@link Driver} instance
    */
+  @CanIgnoreReturnValue
   public Driver decorateDriver(
       Driver driver,
       TestInfo testInfo,

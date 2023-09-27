@@ -44,6 +44,24 @@ java_library(
     ],
 )
 
+java_library(
+    name = "all_drivers_and_decorators_for_unit_tests",
+    testonly = 1,
+    runtime_deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_adb_shell_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_clean_apps_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_features_check_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_settings_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_install_apps_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_user_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:no_op_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_package_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_generic_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:no_op_driver",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
+    ],
+)
+
 ################################################################################
 # Common libraries
 ################################################################################

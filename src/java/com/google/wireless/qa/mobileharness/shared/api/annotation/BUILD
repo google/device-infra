@@ -13,12 +13,25 @@
 # limitations under the License.
 #
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
 
 java_library(
     name = "annotation",
-    srcs = glob(["*Annotation.java"]),
+    srcs = glob(
+        ["*Annotation.java"],
+        exclude = [
+            "ConstraintsForTesting.java",
+            "FileAnnotation.java",
+            "ParamAnnotation.java",
+        ],
+    ),
     visibility = ["//visibility:public"],
+    exports = [":basic_annotation"],
     deps = ["@maven//:com_google_errorprone_error_prone_annotations"],
 )
 
@@ -28,7 +41,10 @@ java_library(
         "FileAnnotation.java",
         "ParamAnnotation.java",
     ],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+)
+
+java_library(
+    name = "constraints_for_testing",
+    srcs = ["ConstraintsForTesting.java"],
+    deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/api/device"],
 )
