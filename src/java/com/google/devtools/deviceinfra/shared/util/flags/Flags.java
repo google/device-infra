@@ -385,7 +385,7 @@ public class Flags {
 
   @com.beust.jcommander.Parameter(
       names = "--grpc_port",
-      description = "Port of lab server local gRPC services. Default is 9994.",
+      description = "Port of server local gRPC services. Default is 9994.",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> grpcPort = grpcPortDefault;
 
@@ -599,7 +599,7 @@ public class Flags {
 
   @com.beust.jcommander.Parameter(
       names = "--rpc_port",
-      description = "Stubby port of the lab server",
+      description = "Stubby port of the server",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> rpcPort = rpcPortDefault;
 
