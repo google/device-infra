@@ -150,11 +150,3 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
     ],
 )
-
-java_library(
-    name = "test_runner_injector",
-    srcs = ["TestRunnerInjector.java"],
-    deps = [
-        "@maven//:com_google_inject_guice",
-    ],
-)
