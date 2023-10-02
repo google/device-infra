@@ -32,7 +32,6 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestStatus;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.errorprone.annotations.InlineMe;
 import java.util.Objects;
 import java.util.Optional;
 import javax.annotation.Nullable;
@@ -128,23 +127,6 @@ public class Result {
         result,
         com.google.devtools.common.metrics.stability.converter.ErrorModelConverter
             .toExceptionDetail(cause));
-  }
-
-  /**
-   * Sets to non-PASSing result and records the cause.
-   *
-   * @param result can't be PASS/UNKNOWN
-   * @see <a href="go/mh-test-result">MH Test Result Classification</a>
-   * @deprecated Please use {@link #setNonPassing(TestResult, ExceptionProto.ExceptionDetail)}
-   */
-  @CanIgnoreReturnValue
-  @InlineMe(
-      replacement =
-          "this.setNonPassing(result, ErrorModelConverter.toCommonExceptionDetail(cause))",
-      imports = "com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter")
-  @Deprecated
-  public final Result setNonPassing(TestResult result, ExceptionDetail cause) {
-    return setNonPassing(result, ErrorModelConverter.toCommonExceptionDetail(cause));
   }
 
   /**
