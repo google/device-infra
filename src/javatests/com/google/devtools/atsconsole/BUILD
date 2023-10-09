@@ -24,7 +24,7 @@ java_library(
     name = "atsconsole",
     srcs = glob(["*.java"]),
     data = [
-        "//src/java/com/google/devtools/atsconsole/controller/olcserver:AtsOlcServer_deploy.jar",
+        "//src/java/com/google/devtools/atsconsole/controller/olcserver:ats_olc_server_deploy.jar",
     ],
     deps = [
         "//src/java/com/google/devtools/atsconsole:ats_console_lib",

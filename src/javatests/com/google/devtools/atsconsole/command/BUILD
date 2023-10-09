@@ -26,7 +26,7 @@ java_library(
     ),
     data = [
         ":testdata",
-        "//src/java/com/google/devtools/atsconsole/controller/olcserver:AtsOlcServer_deploy.jar",
+        "//src/java/com/google/devtools/atsconsole/controller/olcserver:ats_olc_server_deploy.jar",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/config:testdata",
     ],
     deps = [

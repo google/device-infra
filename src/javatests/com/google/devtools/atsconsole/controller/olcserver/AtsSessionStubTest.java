@@ -112,7 +112,7 @@ public class AtsSessionStubTest {
     Path serverBinary =
         Path.of(
             RunfilesUtil.getRunfilesLocation(
-                "java/com/google/devtools/atsconsole/controller/olcserver/AtsOlcServer_deploy.jar"));
+                "java/com/google/devtools/atsconsole/controller/olcserver/ats_olc_server_deploy.jar"));
 
     Guice.createInjector(new OlcServerModule(() -> serverBinary), BoundFieldModule.of(this))
         .injectMembers(this);

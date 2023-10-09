@@ -25,7 +25,7 @@ package(
 )
 
 olc_server_binary(
-    name = "AtsOlcServer",
+    name = "ats_olc_server",
     extra_runtime_deps = [
         "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:ats_session_plugin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
