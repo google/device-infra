@@ -33,8 +33,10 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.WaitArgs;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -61,8 +63,11 @@ public class AndroidUserUtil {
   /** ADB shell command for listing users. */
   @VisibleForTesting static final String ADB_SHELL_PM_LIST_USERS = "pm list users";
 
+  /** ADB shell command to get the maximum number of supported users. */
+  @VisibleForTesting static final String ADB_SHELL_GET_MAX_USERS = "pm get-max-users";
+
   /** ADB shell command template for start a user and switch to that user in foreground. */
-  @VisibleForTesting static final String ADB_SHELL_TEMPLATE_AM_SWITCH_USER = "am switch-user %d";
+  @VisibleForTesting static final String ADB_SHELL_TEMPLATE_AM_SWITCH_USER = "am switch-user %s";
 
   /** ADB shell command template for remove a user. */
   @VisibleForTesting static final String ADB_SHELL_TEMPLATE_PM_REMOVE_USER = "pm remove-user %d";
@@ -113,7 +118,7 @@ public class AndroidUserUtil {
   }
 
   /**
-   * Create a new user with the given USER_NAME, printing the new user identifier of the user.
+   * Creates a new user with the given USER_NAME, printing the new user identifier of the user.
    * Minimal API requires 17 for both root and non-root device.
    *
    * @param serial serial number of the device
@@ -133,7 +138,7 @@ public class AndroidUserUtil {
   }
 
   /**
-   * Create a new user with the given USER_NAME, printing the new user identifier of the user.
+   * Creates a new user with the given USER_NAME, printing the new user identifier of the user.
    * Minimal API requires 24 for both root and non-root device.
    *
    * <p>Supports both root and non-root device, minimal API 24 for guest option and minimal API 28
@@ -170,7 +175,7 @@ public class AndroidUserUtil {
   }
 
   /**
-   * Create a new user with the given USER_NAME, printing the new user identifier of the user.
+   * Creates a new user with the given USER_NAME, printing the new user identifier of the user.
    * Minimal API requires 17 for both root and non-root device.
    *
    * @param serial serial number of the device
@@ -232,7 +237,7 @@ public class AndroidUserUtil {
   }
 
   /**
-   * Create work profile and return user id if success.
+   * Creates work profile and return user id if success.
    *
    * <p>Minimal API requires 21 for both root and non-root device. Root is not required.
    */
@@ -299,7 +304,7 @@ public class AndroidUserUtil {
   }
 
   /**
-   * Get user state from "dumpsys activity" by parsing mStartedUsers.
+   * Gets user state from "dumpsys activity" by parsing mStartedUsers.
    *
    * <p>Only works with API level >=24. Supports production build.
    *
@@ -316,7 +321,33 @@ public class AndroidUserUtil {
   }
 
   /**
-   * Check if user is ready in state {@code AndroidUserState.STATE_RUNNING_UNLOCKED}.
+   * Gets the maximum number of supported users. Defaults to 0.
+   *
+   * @return an integer indicating the number of supported users
+   */
+  public int getMaxNumberOfUsersSupported(String serial)
+      throws MobileHarnessException, InterruptedException {
+    String cmdOutput;
+    try {
+      cmdOutput = adb.runShellWithRetry(serial, ADB_SHELL_GET_MAX_USERS);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_USER_UTIL_GET_MAX_USERS_ERROR,
+          "Failed to get supported max users",
+          e);
+    }
+
+    try {
+      return Integer.parseInt(cmdOutput.substring(cmdOutput.lastIndexOf(" ")).trim());
+    } catch (NumberFormatException e) {
+      logger.atWarning().log(
+          "Failed to parse result [%s]: %s", cmdOutput, MoreThrowables.shortDebugString(e, 0));
+    }
+    return 0;
+  }
+
+  /**
+   * Checks if user is ready in state {@code AndroidUserState.STATE_RUNNING_UNLOCKED}.
    *
    * <p>Support from API 24 and production build.
    *
@@ -453,13 +484,27 @@ public class AndroidUserUtil {
   }
 
   /**
-   * Start a user in background. Root is not required. Support from API 21.
+   * Starts a user in background. Root is not required. Support from API 21.
    *
    * @param serial serial number of the device
    * @param sdkVersion device sdk version
    * @param userId id of the user to start
    */
   public void startUser(String serial, int sdkVersion, int userId)
+      throws MobileHarnessException, InterruptedException {
+    startUser(serial, sdkVersion, userId, /* waitFlag= */ false);
+  }
+
+  /**
+   * Starts a user in background. Root is not required. Support from API 21.
+   *
+   * @param serial serial number of the device
+   * @param sdkVersion device sdk version
+   * @param userId id of the user to start
+   * @param waitFlag whether to specify the wait flag "-w" when starting the user, it only supports
+   *     from API 29
+   */
+  public void startUser(String serial, int sdkVersion, int userId, boolean waitFlag)
       throws MobileHarnessException, InterruptedException {
     // "am start-user" only available from API 21.
     if (sdkVersion < AndroidVersion.LOLLIPOP.getStartSdkVersion()) {
@@ -468,12 +513,20 @@ public class AndroidUserUtil {
           "am start-user support require min api 21.");
     }
 
+    if (waitFlag && sdkVersion < AndroidVersion.ANDROID_10.getStartSdkVersion()) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_USER_UTIL_SDK_VERSION_NOT_SUPPORT,
+          "am start-user -w support require min api 29.");
+    }
+
     checkUserExistOnDevice(serial, sdkVersion, userId);
 
     String output = "";
     Exception exception = null;
     try {
-      output = adb.runShellWithRetry(serial, String.format("am start-user %d", userId));
+      output =
+          adb.runShellWithRetry(
+              serial, String.format("am start-user %s%d", waitFlag ? "-w " : "", userId));
     } catch (MobileHarnessException e) {
       exception = e;
     }
@@ -485,13 +538,22 @@ public class AndroidUserUtil {
               userId, (exception == null ? output : exception.getMessage())),
           exception);
     }
+
+    if (waitFlag) {
+      String state = adb.runShellWithRetry(serial, "am get-started-user-state " + userId);
+      if (!state.contains(DEFAULT_USER_READY_STATE.getUserState())) {
+        logger.atWarning().log(
+            "User %s on device %s is not %s after start-user -w: %s",
+            userId, serial, DEFAULT_USER_READY_STATE.getUserState(), state);
+      }
+    }
   }
 
   /**
-   * Switch to put userId in the foreground, starting execution of that user if it is currently
+   * Switches to put userId in the foreground, starting execution of that user if it is currently
    * stopped. Support from API 17 and production build.
    *
-   * @param serial serial numner of the device
+   * @param serial serial number of the device
    * @param sdkVersion device sdk version
    * @param userId id of the user to switch
    */
@@ -506,19 +568,30 @@ public class AndroidUserUtil {
     checkUserExistOnDevice(serial, sdkVersion, userId);
 
     Exception exception = null;
-    int currentUserId = 0;
+    String switchCommand =
+        String.format(
+            ADB_SHELL_TEMPLATE_AM_SWITCH_USER,
+            (sdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion() ? "-w " : "") + userId);
+    boolean success = false;
+    Duration checkUserInterval = Duration.ofSeconds(1);
     try {
+      Instant startTime = clock.instant();
       // Instead of check if userId is already in foreground, we simply switch and check.
-      String unused =
-          adb.runShell(serial, String.format(ADB_SHELL_TEMPLATE_AM_SWITCH_USER, userId));
+      String unused = adb.runShell(serial, switchCommand);
       // Give it short time to update current user after switching user
-      sleeper.sleep(Duration.ofSeconds(1));
-      currentUserId = getCurrentUser(serial, sdkVersion);
+      sleeper.sleep(checkUserInterval);
+      success = userId == getCurrentUser(serial, sdkVersion);
+      Instant expireTime = startTime.plus(Duration.ofMinutes(1));
+      while (!success && clock.instant().isBefore(expireTime)) {
+        unused = adb.runShell(serial, switchCommand);
+        sleeper.sleep(checkUserInterval);
+        success = userId == getCurrentUser(serial, sdkVersion);
+      }
     } catch (MobileHarnessException e) {
       exception = e;
     }
 
-    if (exception != null || currentUserId != userId) {
+    if (exception != null || !success) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_USER_UTIL_SWITCH_USER_ERROR,
           String.format(
@@ -527,14 +600,14 @@ public class AndroidUserUtil {
               (exception != null
                   ? exception.getMessage()
                   : String.format(
-                      "expect current id: %s, actual current id: %s%nsystem users info: %s",
-                      userId, currentUserId, listUsersInfo(serial, sdkVersion)))),
+                      "expect current id: %s%nsystem users info: %s",
+                      userId, listUsersInfo(serial, sdkVersion)))),
           exception);
     }
   }
 
   /**
-   * Wait for user to be in state of {@code AndroidUserState.STATE_USER_UNLOCKED}.
+   * Waits for user to be in state of {@code AndroidUserState.STATE_USER_UNLOCKED}.
    *
    * <p>Support from API 24 and production build.
    *
@@ -548,7 +621,7 @@ public class AndroidUserUtil {
   }
 
   /**
-   * Wait for user to be in state of {@code AndroidUserState.STATE_USER_UNLOCKED}.
+   * Waits for user to be in state of {@code AndroidUserState.STATE_USER_UNLOCKED}.
    *
    * <p>Support from API 24 and production build.
    *
@@ -661,7 +734,7 @@ public class AndroidUserUtil {
   }
 
   /**
-   * Check if user is in target user state. Since this function will be used as predicate, no
+   * Checks if user is in target user state. Since this function will be used as predicate, no
    * exception will be thrown.
    */
   private boolean isUserInExpectedState(
@@ -680,7 +753,7 @@ public class AndroidUserUtil {
   }
 
   /**
-   * Get user state from "dumpsys activity" by parsing mStartedUsers.
+   * Gets user state from "dumpsys activity" by parsing mStartedUsers.
    *
    * <p>Only works with API level >=24. Supports production build.
    */

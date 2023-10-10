@@ -234,6 +234,16 @@ public final class AndroidUserUtilTest {
   }
 
   @Test
+  public void getMaxNumberOfUsersSupported() throws Exception {
+    when(adb.runShellWithRetry(SERIAL, AndroidUserUtil.ADB_SHELL_GET_MAX_USERS))
+        .thenReturn("Maximum supported users: 4")
+        .thenReturn("Invalid output");
+
+    assertThat(userUtil.getMaxNumberOfUsersSupported(SERIAL)).isEqualTo(4);
+    assertThat(userUtil.getMaxNumberOfUsersSupported(SERIAL)).isEqualTo(0);
+  }
+
+  @Test
   public void isUserReady() throws Exception {
     String dumpsysActivityOutputMultiUserBooting =
         "mStartedUsers:\n" + " User #0: state=RUNNING_UNLOCKED\n" + " User #11: state=BOOTING\n";
@@ -319,17 +329,53 @@ public final class AndroidUserUtilTest {
   }
 
   @Test
-  public void switchUser_api24() throws Exception {
+  public void startUser_withWaitFlag_api29_success() throws Exception {
+    mockListUser("0", "10");
+    mockStartUserCommandOutput("am start-user -w 10", "Success: user started");
+    when(adb.runShellWithRetry(SERIAL, "am get-started-user-state 10"))
+        .thenReturn("RUNNING_UNLOCKED");
+
+    userUtil.startUser(SERIAL, 29, 10, true);
+
+    verify(adb).runShellWithRetry(SERIAL, "am get-started-user-state 10");
+  }
+
+  @Test
+  public void startUser_withWaitFlag_api28_failed() throws Exception {
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> userUtil.startUser(SERIAL, 28, 10, true))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_USER_UTIL_SDK_VERSION_NOT_SUPPORT);
+  }
+
+  @Test
+  public void switchUser_api24_success() throws Exception {
     int targetUserId = 12;
     mockListUser("0", "10", "12");
     when(adb.runShell(
             SERIAL, String.format(AndroidUserUtil.ADB_SHELL_TEMPLATE_AM_SWITCH_USER, targetUserId)))
         .thenReturn("");
-    when(adb.runShell(SERIAL, AndroidUserUtil.ADB_SHELL_GET_CURRENT_USER))
-        .thenReturn("12")
-        .thenReturn("10");
+    when(adb.runShell(SERIAL, AndroidUserUtil.ADB_SHELL_GET_CURRENT_USER)).thenReturn("12");
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1L));
 
     userUtil.switchUser(SERIAL, 24, targetUserId);
+  }
+
+  @Test
+  public void switchUser_api24_failed() throws Exception {
+    int targetUserId = 12;
+    mockListUser("0", "10", "12");
+    when(adb.runShell(
+            SERIAL, String.format(AndroidUserUtil.ADB_SHELL_TEMPLATE_AM_SWITCH_USER, targetUserId)))
+        .thenReturn("");
+    when(adb.runShell(SERIAL, AndroidUserUtil.ADB_SHELL_GET_CURRENT_USER)).thenReturn("10");
+    long nowMs = 1;
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(nowMs))
+        .thenReturn(Instant.ofEpochMilli(nowMs + Duration.ofSeconds(1).toMillis()))
+        .thenReturn(Instant.ofEpochMilli(nowMs + Duration.ofMinutes(2).toMillis()));
+
     assertThat(
             assertThrows(
                     MobileHarnessException.class,
@@ -339,17 +385,32 @@ public final class AndroidUserUtilTest {
   }
 
   @Test
-  public void switchUser_api23() throws Exception {
+  public void switchUser_api23_success() throws Exception {
     int targetUserId = 12;
     mockListUser("0", "10", "12");
     when(adb.runShell(
             SERIAL, String.format(AndroidUserUtil.ADB_SHELL_TEMPLATE_AM_SWITCH_USER, targetUserId)))
         .thenReturn("");
-    when(adbUtil.dumpSys(SERIAL, DumpSysType.ACTIVITY))
-        .thenReturn("mUserLru: [10, 0, 12]\n")
-        .thenReturn("mUserLru: [10, 12, 0]\n");
+    when(adbUtil.dumpSys(SERIAL, DumpSysType.ACTIVITY)).thenReturn("mUserLru: [10, 0, 12]\n");
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1L));
 
     userUtil.switchUser(SERIAL, 23, targetUserId);
+  }
+
+  @Test
+  public void switchUser_api23_failed() throws Exception {
+    int targetUserId = 12;
+    mockListUser("0", "10", "12");
+    when(adb.runShell(
+            SERIAL, String.format(AndroidUserUtil.ADB_SHELL_TEMPLATE_AM_SWITCH_USER, targetUserId)))
+        .thenReturn("");
+    when(adbUtil.dumpSys(SERIAL, DumpSysType.ACTIVITY)).thenReturn("mUserLru: [10, 12, 0]\n");
+    long nowMs = 1;
+    when(clock.instant())
+        .thenReturn(Instant.ofEpochMilli(nowMs))
+        .thenReturn(Instant.ofEpochMilli(nowMs + Duration.ofSeconds(1).toMillis()))
+        .thenReturn(Instant.ofEpochMilli(nowMs + Duration.ofMinutes(2).toMillis()));
+
     assertThat(
             assertThrows(
                     MobileHarnessException.class,
