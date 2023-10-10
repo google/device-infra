@@ -18,10 +18,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "plan_lister",
     srcs = ["PlanLister.java"],
-    visibility = [
-        "//src/java/com/google/devtools/atsconsole/command:__pkg__",
-        "//src/javatests/com/google/devtools/atsconsole/util/plan:__pkg__",
-    ],
+    visibility = ["//src/java/com/google/devtools/atsconsole/command:__pkg__"],
     deps = [
         ":plan_config_util",
         "//src/java/com/google/devtools/atsconsole:console_info",
