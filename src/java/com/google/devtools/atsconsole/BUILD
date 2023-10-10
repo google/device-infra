@@ -28,7 +28,7 @@ java_library(
 )
 
 java_binary(
-    name = "atsconsole",
+    name = "ats_console",
     main_class = "com.google.devtools.atsconsole.AtsConsole",
     runtime_deps = [
         ":ats_console_lib",

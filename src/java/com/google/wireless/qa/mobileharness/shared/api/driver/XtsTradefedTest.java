@@ -87,7 +87,7 @@ public class XtsTradefedTest extends BaseDriver
   private static final String XTS_TF_LOG = "xts_tf_output.log";
 
   private static final ImmutableSet<String> EXCLUDED_JAR_FILES =
-      ImmutableSet.of("ats_olc_server_deploy.jar", "atsconsole_deploy.jar");
+      ImmutableSet.of("ats_olc_server_deploy.jar", "ats_console_deploy.jar");
 
   private volatile ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
 
