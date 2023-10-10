@@ -35,17 +35,6 @@ import javax.annotation.Nullable;
 
 /** Input parameters. */
 public class Params {
-  /**
-   * Param name of the canonical class name of the plugin handler for job/test start/end events. The
-   * handler is executed on client side.
-   */
-  public static final String PARAM_CLIENT_PLUGIN = "client_plugin_class";
-
-  /**
-   * Param name of the canonical class name of the plugin handler for test start/end events. The
-   * handler is executed on lab server side.
-   */
-  public static final String PARAM_LAB_PLUGIN = "lab_plugin_class";
 
   /** Default splitter to split a long string into a string list. */
   private static final Splitter LIST_SPLITTER = Splitter.on(',').trimResults().omitEmptyStrings();
@@ -153,11 +142,7 @@ public class Params {
    */
   public boolean isTrue(String name) {
     Optional<String> value = get(name);
-    if (value.isPresent()) {
-      return Boolean.parseBoolean(value.get());
-    } else {
-      return false;
-    }
+    return value.filter(Boolean::parseBoolean).isPresent();
   }
 
   /**
@@ -302,7 +287,7 @@ public class Params {
    * Checks whether the parameters is a valid integer of the given range.
    *
    * @param paramName parameter name/key.
-   * @throws the error list if the parameter's value is not a valid integer of the given range
+   * @return the error list if the parameter's value is not a valid integer of the given range
    */
   public List<MobileHarnessException> validateInt(String paramName, int min, int max) {
     String paramValue = params.get(paramName);
@@ -345,7 +330,7 @@ public class Params {
     String message = null;
     String paramValue = params.get(paramName);
     if (!StrUtil.isEmptyOrWhitespace(paramValue)) {
-      // Boolean.parseBoolean() checks for "true", case-insenstive. Everything else is considered
+      // Boolean.parseBoolean() checks for "true", case-insensitive. Everything else is considered
       // false, even "yes", which can be misleading and is thus worth checking for.
       if (!Ascii.equalsIgnoreCase(Boolean.TRUE.toString(), paramValue)
           && !Ascii.equalsIgnoreCase(Boolean.FALSE.toString(), paramValue)) {
