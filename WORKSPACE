@@ -183,6 +183,7 @@ maven_install(
         "info.picocli:picocli:4.1.4",
         "javax.inject:jsr330-api:0.9",
         "junit:junit:4.13",
+        "net.bytebuddy:byte-buddy:1.14.8",
         "net.sf.kxml:kxml2:2.3.0",
         "org.apache.commons:commons-lang3:3.6",
         "org.jline:jline:3.13.3",
