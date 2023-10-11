@@ -1,0 +1,75 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.shared.util.event;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.google.devtools.mobileharness.shared.util.event.proto";
+option java_outer_classname = "EventBusProto";
+
+// Statistics of EventBus post invocation.
+message EventStatistics {
+  repeated EventReceiving event_receiving = 1;
+}
+
+// A subscriber method receives an event.
+message EventReceiving {
+  // Required.
+  ObjectSummary subscriber_object = 1;
+
+  // Required.
+  SubscriberMethod subscriber_method = 2;
+
+  // Required.
+  ObjectSummary event = 3;
+
+  // Optional.
+  //
+  // Exception thrown by the subscriber method (if any).
+  ObjectSummary exception = 4;
+
+  // Required.
+  TimingInfo timing_info = 5;
+}
+
+message ObjectSummary {
+  // Required.
+  string class_name = 1;
+
+  // Required.
+  //
+  // Value of System.identityHashCode(object).
+  int32 identity_hash_code = 2;
+}
+
+message SubscriberMethod {
+  // Required.
+  string method_name = 1;
+
+  // Required.
+  string parameter_class_name = 2;
+}
+
+message TimingInfo {
+  // Required.
+  google.protobuf.Timestamp start_time = 1;
+
+  // Required.
+  google.protobuf.Timestamp end_time = 2;
+}
