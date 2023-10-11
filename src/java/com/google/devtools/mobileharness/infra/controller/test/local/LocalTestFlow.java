@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.controller.test.local;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -79,7 +80,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import javax.annotation.Nullable;
 
@@ -151,7 +151,7 @@ public class LocalTestFlow {
         .log("Loading lab plugins for test %s", testInfo.locator().getId());
     JobInfo jobInfo = testInfo.jobInfo();
     ImmutableSet<String> labPluginPaths = jobInfo.files().get(JobInfo.TAG_LAB_PLUGIN);
-    String labPluginClasses = jobInfo.params().get(JobInfo.PARAM_LAB_PLUGIN);
+    List<String> labPluginClasses = jobInfo.params().getList(JobInfo.PARAM_LAB_PLUGIN, null);
     List<String> labPluginModuleClasses =
         jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN_MODULES, null);
     String labPluginForceLoadFromJarClassRegex =
@@ -444,9 +444,9 @@ public class LocalTestFlow {
                             + device.getDeviceId(),
                         MobileHarnessLogTag.SUB_DEVICE_ID,
                         device.getDeviceId()))
-            .collect(Collectors.toList()),
+            .collect(toImmutableList()),
         testThreadPool,
-        results -> null /* resultMerger */);
+        /* resultMerger= */ results -> null);
   }
 
   private void runDevicePreRunTest(TestInfo testInfo, Device device)
@@ -494,7 +494,7 @@ public class LocalTestFlow {
                             + device.getDeviceId(),
                         MobileHarnessLogTag.SUB_DEVICE_ID,
                         device.getDeviceId()))
-            .collect(Collectors.toList()),
+            .collect(toImmutableList()),
         testThreadPool,
         results ->
             results.contains(PostTestDeviceOp.REBOOT)
@@ -564,7 +564,8 @@ public class LocalTestFlow {
 
   private void logDimensionsOfDevices(TestInfo testInfo, List<Device> devices) {
     // Logs device dimensions.
-    List<String> deviceIds = devices.stream().map(Device::getDeviceId).collect(Collectors.toList());
+    ImmutableList<String> deviceIds =
+        devices.stream().map(Device::getDeviceId).collect(toImmutableList());
     String deviceInfoString =
         IntStream.range(0, devices.size())
             .mapToObj(
@@ -580,8 +581,8 @@ public class LocalTestFlow {
                                         + dimension.getName()
                                         + " = "
                                         + dimension.getValue())
-                            .collect(Collectors.joining()))
-            .collect(Collectors.joining());
+                            .collect(joining()))
+            .collect(joining());
 
     testInfo
         .log()

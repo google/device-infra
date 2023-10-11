@@ -86,8 +86,8 @@ public class JobInfo extends JobScheduleUnit {
   public static final String TAG_LAB_PLUGIN = "lab_plugin_jar";
 
   /**
-   * Param name of the canonical class name of the plugin handler for job/test start/end events. The
-   * handler is executed on client side.
+   * Param name of the canonical class names (split by ",") of the plugin handlers for job/test
+   * start/end events. The handlers are executed on client side.
    */
   public static final String PARAM_CLIENT_PLUGIN = "client_plugin_class";
 
@@ -106,8 +106,8 @@ public class JobInfo extends JobScheduleUnit {
       "client_plugin_force_load_from_jar_class_regex";
 
   /**
-   * Param name of the canonical class name of the plugin handler for test start/end events. The
-   * handler is executed on lab server side.
+   * Param name of the canonical class names (split by ",") of the plugin handlers for test
+   * start/end events. The handlers are executed on lab server side.
    */
   public static final String PARAM_LAB_PLUGIN = "lab_plugin_class";
 

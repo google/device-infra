@@ -37,7 +37,7 @@ public class CommonPluginLoaderFactory extends PluginLoader.Factory {
   @Override
   public PluginLoader create(
       Collection<String> jarPaths,
-      @Nullable String className,
+      @Nullable Collection<String> classNames,
       @Nullable Collection<String> moduleClassNames,
       @Nullable String forceLoadFromJarClassRegex,
       PluginType pluginType,
@@ -45,7 +45,7 @@ public class CommonPluginLoaderFactory extends PluginLoader.Factory {
       Module... systemModules) {
     return super.create(
         jarPaths,
-        className,
+        classNames,
         moduleClassNames,
         forceLoadFromJarClassRegex,
         pluginType,

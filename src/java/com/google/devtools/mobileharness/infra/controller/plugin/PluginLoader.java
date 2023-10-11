@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.controller.plugin;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -47,9 +46,9 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
@@ -68,7 +67,7 @@ import org.reflections.util.ConfigurationBuilder;
  * PluginType#UNSPECIFIED} instead.
  *
  * <p>If forceLoadFromJarClassRegex is specified, we force loading of classes with names matching
- * the supplied regex from our plugin {@link classLoader}, rather than its parent {@link
+ * the supplied regex from our plugin {@link #classLoader}, rather than its parent {@link
  * ClassLoader}. This can be used to resolve problems arising from a plugin's unintended use of
  * classes from Mobile Harness, rather than its own classes (since parent classes are always used,
  * if they are present).
@@ -83,15 +82,15 @@ public class PluginLoader implements AutoCloseable {
   /** File paths of the plugin jars. */
   private final ImmutableList<URI> jarUris;
 
-  /** If specified, only loads this class from the plugins. */
-  @Nullable private final String className;
+  /** If specified, only loads these classes from the plugins. */
+  @Nullable private final ImmutableList<String> classNames;
 
   /** If specified, only loads the given classes as plugin modules. */
   @Nullable private final ImmutableList<String> moduleClassNames;
 
   /**
    * If specified, force loading of classes with names matching the supplied regex from our plugin
-   * {@link classLoader}, rather than its parent {@link ClassLoader}. This can be used to resolve
+   * {@link #classLoader}, rather than its parent {@link ClassLoader}. This can be used to resolve
    * problems arising from a plugin's unintended use of classes from Mobile Harness, rather than its
    * own classes (since parent classes are always used, if they are present).
    */
@@ -124,7 +123,7 @@ public class PluginLoader implements AutoCloseable {
    * Creates a plugin loader.
    *
    * @param jarUris uris of the jar files which defines the plugin classes
-   * @param className canonical name of the target plugin class, only load it if specified;
+   * @param classNames canonical names of the target plugin classes, only load them if specified;
    *     otherwise, all classes marked with @{@link Plugin} are loaded
    * @param moduleClassNames canonical names of the target plugin module classes, only load them if
    *     specified; otherwise all classes marked with @{@link PluginModule} are loaded.
@@ -134,7 +133,7 @@ public class PluginLoader implements AutoCloseable {
    */
   public PluginLoader(
       Iterable<URI> jarUris,
-      @Nullable String className,
+      @Nullable Collection<String> classNames,
       @Nullable Collection<String> moduleClassNames,
       @Nullable String forceLoadFromJarClassRegex,
       PluginType pluginType,
@@ -145,7 +144,7 @@ public class PluginLoader implements AutoCloseable {
         "Plugin type should not be %s",
         PluginType.UNSPECIFIED);
     this.jarUris = ImmutableList.copyOf(jarUris);
-    this.className = className;
+    this.classNames = classNames == null ? null : ImmutableList.copyOf(classNames);
     if (moduleClassNames != null) {
       this.moduleClassNames = ImmutableList.copyOf(moduleClassNames);
     } else {
@@ -161,7 +160,7 @@ public class PluginLoader implements AutoCloseable {
    * Creates a plugin loader.
    *
    * @param jarPaths path of the jar files which defines the plugin classes
-   * @param className canonical name of the target plugin class, only load it if specified;
+   * @param classNames canonical names of the target plugin classes, only load them if specified;
    *     otherwise, all classes marked with @{@link Plugin} are loaded
    * @param moduleClassNames canonical names of the target plugin module classes, only load them if
    *     specified; otherwise all classes marked with @{@link PluginModule} are loaded
@@ -171,7 +170,7 @@ public class PluginLoader implements AutoCloseable {
    */
   public PluginLoader(
       Collection<String> jarPaths,
-      @Nullable String className,
+      @Nullable Collection<String> classNames,
       @Nullable Collection<String> moduleClassNames,
       @Nullable String forceLoadFromJarClassRegex,
       PluginType pluginType,
@@ -179,7 +178,7 @@ public class PluginLoader implements AutoCloseable {
       Module... systemModules) {
     this(
         jarPaths.stream().map(File::new).map(File::toURI).collect(Collectors.toList()),
-        className,
+        classNames,
         moduleClassNames,
         forceLoadFromJarClassRegex,
         pluginType,
@@ -263,7 +262,7 @@ public class PluginLoader implements AutoCloseable {
 
       // Finds plugin classes.
       Set<Class<?>> classes;
-      if (Strings.isNullOrEmpty(className)) {
+      if (classNames == null) {
         logger.atInfo().log(
             "No plugin class name given, searching plugin class by plugin annotation");
         classes = new HashSet<>();
@@ -302,9 +301,8 @@ public class PluginLoader implements AutoCloseable {
           classes.addAll(newClasses);
         }
       } else {
-        logger.atInfo().log("Searching plugin class in all jars by name [%s]", className);
-        PluginClassProvider classProvider =
-            new NamedPluginClassProvider(Collections.singleton(className), classLoader);
+        logger.atInfo().log("Searching plugin classes in all jars by names %s", classNames);
+        PluginClassProvider classProvider = new NamedPluginClassProvider(classNames, classLoader);
         try {
           classes = classProvider.getPluginClasses();
         } catch (MobileHarnessException e) {
@@ -355,11 +353,7 @@ public class PluginLoader implements AutoCloseable {
   /** Gets the plugin instances if there is any plugin loaded. Never return null. */
   public List<Object> getPlugins() {
     synchronized (lock) {
-      if (plugins == null) {
-        return ImmutableList.of();
-      } else {
-        return plugins;
-      }
+      return Objects.requireNonNullElseGet(plugins, ImmutableList::of);
     }
   }
 
@@ -387,7 +381,7 @@ public class PluginLoader implements AutoCloseable {
   public static class Factory {
     public PluginLoader create(
         Collection<String> jarPaths,
-        @Nullable String className,
+        @Nullable Collection<String> classNames,
         @Nullable Collection<String> moduleClassNames,
         @Nullable String forceLoadFromJarClassRegex,
         PluginType pluginType,
@@ -395,7 +389,7 @@ public class PluginLoader implements AutoCloseable {
         Module... systemModules) {
       return new PluginLoader(
           jarPaths,
-          className,
+          classNames,
           moduleClassNames,
           forceLoadFromJarClassRegex,
           pluginType,
