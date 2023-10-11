@@ -27,6 +27,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.constant.DeviceProperty;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -87,6 +88,9 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
    * and extend another 2 mins to make sure device tear down and reboot complete. b/32101092
    */
   private static final Duration TEAR_DOWN_EXPIRE = Duration.ofMinutes(3);
+
+  private static final Duration WAIT_IDLE_IN_EXTERNAL_DEVICE_MANAGER_EXPIRE =
+      Duration.ofSeconds(10);
 
   /** Wait interval in milliseconds when the runner is idle. */
   private static final long WAIT_INTERVAL_MS = TimeUnit.SECONDS.toMillis(10);
@@ -362,11 +366,23 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   /**
    * @return whether the device is IDLE or NEAR_IDLE in external device manager
    */
-  private boolean isIdleInExternalDeviceManager() {
-    ExternalDeviceManager.DeviceStatus deviceStatus =
-        externalDeviceManager.getDeviceStatus(device.getDeviceId());
-    return deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE)
-        || deviceStatus.equals(ExternalDeviceManager.DeviceStatus.NEAR_IDLE);
+  private boolean waitIdleInExternalDeviceManager(Duration timeout) {
+    Instant expireTime = clock.instant().plus(timeout);
+    while (clock.instant().isBefore(expireTime)) {
+      ExternalDeviceManager.DeviceStatus deviceStatus =
+          externalDeviceManager.getDeviceStatus(device.getDeviceId());
+      if (deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE)
+          || deviceStatus.equals(ExternalDeviceManager.DeviceStatus.NEAR_IDLE)) {
+        return true;
+      }
+      try {
+        Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1));
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        return false;
+      }
+    }
+    return false;
   }
 
   @Override
@@ -522,7 +538,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
           InfraErrorId.DM_RESERVE_NON_READY_DEVICE, "Device is not ready");
     }
-    if (!isIdleInExternalDeviceManager()) {
+    if (!waitIdleInExternalDeviceManager(WAIT_IDLE_IN_EXTERNAL_DEVICE_MANAGER_EXPIRE)) {
       throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
           InfraErrorId.DM_RESERVE_NON_DUAL_STACK_READY_DEVICE,
           String.format("Device %s is not idle in the dual stack DM", device.getDeviceId()));
