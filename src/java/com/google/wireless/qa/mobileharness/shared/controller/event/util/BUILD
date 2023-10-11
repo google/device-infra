@@ -16,20 +16,14 @@
 # Description:
 #   Utility classes for event handling.
 
-DEFAULT_VISIBILITY = [
-    "//java/com/google/wireless/qa/mobileharness:__subpackages__",
-    "//javatests/com/google/wireless/qa/mobileharness:__subpackages__",
-]
-
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
+    default_visibility = ["//:deviceinfra_all_pkg"],
 )
 
 java_library(
     name = "scoped_bus",
     srcs = ["ScopedEventBus.java"],
-    visibility = ["//visibility:public"],
     deps = [
         ":injection_event",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
