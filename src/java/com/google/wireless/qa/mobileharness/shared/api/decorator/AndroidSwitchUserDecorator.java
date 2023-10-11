@@ -23,6 +23,11 @@ import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonHelper;
+import com.google.devtools.mobileharness.platform.android.lightning.systemstate.SystemStateManager;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidSettings;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
+import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserInfo;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserState;
@@ -31,15 +36,16 @@ import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
-import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidSwitchUserDecoratorSpec;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -58,8 +64,15 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
   private static final int MAX_DECISECONDS_SWITCH_USER_WAIT = 300;
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  @VisibleForTesting static final String OMNILAB_CREATED_USER = "omnilab_created_user";
+  @VisibleForTesting static final String TF_CREATED_USER = "tf_created_user";
+
+  @VisibleForTesting static final String USER_SETUP_COMPLETE = "user_setup_complete";
+
   private final AndroidSystemSettingUtil systemSettingUtil;
   private final AndroidUserUtil userUtil;
+  private final AndroidAdbUtil adbUtil;
+  private final SystemStateManager systemStateManager;
   private final DeviceDaemonHelper deviceDaemonHelper;
   private final Sleeper sleeper;
 
@@ -73,11 +86,15 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
       TestInfo testInfo,
       AndroidSystemSettingUtil systemSettingUtil,
       AndroidUserUtil userUtil,
+      AndroidAdbUtil adbUtil,
+      SystemStateManager systemStateManager,
       DeviceDaemonHelper deviceDaemonHelper,
       Sleeper sleeper) {
     super(decoratedDriver, testInfo);
     this.systemSettingUtil = systemSettingUtil;
     this.userUtil = userUtil;
+    this.adbUtil = adbUtil;
+    this.systemStateManager = systemStateManager;
     this.deviceDaemonHelper = deviceDaemonHelper;
     this.sleeper = sleeper;
   }
@@ -86,12 +103,29 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
   public void run(TestInfo testInfo)
       throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
           InterruptedException {
+    String deviceId = getDevice().getDeviceId();
+    AndroidSwitchUserDecoratorSpec spec = testInfo.jobInfo().combinedSpec(this, deviceId);
+    int sdkVersion = systemSettingUtil.getDeviceSdkVersion(deviceId);
+    if (spec.getSwitchToTestUser()) {
+      switchToTestUser(spec, deviceId, sdkVersion, testInfo);
+    } else {
+      switchToSelectedUser(spec, deviceId, sdkVersion, testInfo);
+    }
+
+    try {
+      getDecorated().run(testInfo);
+    } finally {
+      if (state != null) {
+        performCleanup(testInfo, spec);
+      }
+    }
+  }
+
+  private void switchToSelectedUser(
+      AndroidSwitchUserDecoratorSpec spec, String serial, int sdkVersion, TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
     Clock clock = Clock.systemUTC();
     Instant startTime = clock.instant();
-
-    JobInfo jobInfo = testInfo.jobInfo();
-    String deviceId = getDevice().getDeviceId();
-    AndroidSwitchUserDecoratorSpec spec = jobInfo.combinedSpec(this, deviceId);
     userType = UserType.fromParam(spec.getSwitchUser());
     waitState = convertWaitState(spec.getSwitchUserWaitState());
 
@@ -101,8 +135,7 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
         .alsoTo(logger)
         .log("AndroidSwitchUserDecorator: ensuring user switches to %s", userType.toString());
 
-    state =
-        new State(userUtil, deviceId, systemSettingUtil.getDeviceSdkVersion(deviceId), userType);
+    state = new State(userUtil, serial, sdkVersion, userType);
 
     Optional<AndroidUserInfo> existingUserMaybe = state.findUser();
     if (existingUserMaybe.isPresent()) {
@@ -124,7 +157,7 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
             .log(
                 "Switching to existing %s user userId=%d",
                 userType.toString(), existingUser.userId());
-        switchUser(testInfo, existingUser.userId());
+        switchUserTillWaitState(testInfo, existingUser.userId());
       }
     } else {
       // Create a new user of the correct type and switch to it.
@@ -139,7 +172,7 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
           .atInfo()
           .alsoTo(logger)
           .log("Switching to created %s user userId=%d.", userType.toString(), userId);
-      switchUser(testInfo, userId);
+      switchUserTillWaitState(testInfo, userId);
     }
 
     Instant endTime = clock.instant();
@@ -149,14 +182,25 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
         .add(
             PropertyName.Test.PREFIX_DECORATOR_RUN_TIME_MS + getClass().getSimpleName(),
             Long.toString(runTimeMs));
+  }
 
-    try {
-      getDecorated().run(testInfo);
-    } finally {
-      if (state != null) {
-        performCleanup(testInfo, spec);
-      }
-    }
+  private void switchToTestUser(
+      AndroidSwitchUserDecoratorSpec spec, String serial, int sdkVersion, TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
+    int testUserId = createTestUser(testInfo, serial, sdkVersion, spec.getReuseTestUser());
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("Switching to test user %d on device %s", testUserId, serial);
+    switchCurrentUser(serial, sdkVersion, testUserId);
+    testInfo
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log("Switched to test user %d on device %s", testUserId, serial);
+
+    systemStateManager.becomeRoot(getDevice());
   }
 
   void performCleanup(TestInfo testInfo, AndroidSwitchUserDecoratorSpec spec)
@@ -180,7 +224,7 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
         int previousUser = state.currentUserInfo.userId();
         // only switch if the user still exists.
         if (endState.usersInfo.containsKey(previousUser)) {
-          switchUser(testInfo, previousUser);
+          switchUserTillWaitState(testInfo, previousUser);
         } else {
           testInfo
               .log()
@@ -236,7 +280,7 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
     }
   }
 
-  private void switchUser(TestInfo testInfo, int userId)
+  private void switchUserTillWaitState(TestInfo testInfo, int userId)
       throws MobileHarnessException, InterruptedException {
     userUtil.switchUser(state.deviceId, state.sdkVersion, userId);
     int i = 0;
@@ -360,5 +404,78 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
   /** Convert the param string to AndroidUserState. */
   public static AndroidUserState convertWaitState(String waitStateParam) {
     return AndroidUserState.enumOf(Ascii.toUpperCase(waitStateParam));
+  }
+
+  private int createTestUser(
+      TestInfo testInfo, String serial, int sdkVersion, boolean reuseTestUser)
+      throws MobileHarnessException, InterruptedException {
+    if (reuseTestUser) {
+      Optional<Integer> existingTestUser = findExistingTestUser(serial, sdkVersion);
+      if (existingTestUser.isPresent()) {
+        return existingTestUser.get();
+      }
+    }
+
+    cleanupOldTestUsersIfLimitReached(serial, sdkVersion);
+    try {
+      int userId = userUtil.createUser(serial, sdkVersion, OMNILAB_CREATED_USER);
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Marking test user %d as setup complete on device %s", userId, serial);
+      adbUtil.settings(
+          UtilArgs.builder().setSerial(serial).setUserId(String.valueOf(userId)).build(),
+          AndroidSettings.Spec.create(
+              AndroidSettings.Command.PUT,
+              AndroidSettings.NameSpace.SECURE,
+              String.format("%s %s", USER_SETUP_COMPLETE, "1")));
+      return userId;
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_SWITCH_USER_DECORATOR_CREATE_TEST_USER_ERROR,
+          String.format("Failed to create test user %s on device %s", OMNILAB_CREATED_USER, serial),
+          e);
+    }
+  }
+
+  private Optional<Integer> findExistingTestUser(String serial, int sdkVersion)
+      throws MobileHarnessException, InterruptedException {
+    return userUtil.listUsersInfo(serial, sdkVersion).stream()
+        .filter(userInfo -> userInfo.userName().equals(OMNILAB_CREATED_USER))
+        .findFirst()
+        .map(AndroidUserInfo::userId);
+  }
+
+  private void cleanupOldTestUsersIfLimitReached(String serial, int sdkVersion)
+      throws MobileHarnessException, InterruptedException {
+    ArrayList<Integer> createdTestUsers = new ArrayList<>();
+    int existingUsersCount = 0;
+    for (AndroidUserInfo userInfo : userUtil.listUsersInfo(serial, sdkVersion)) {
+      String userName = userInfo.userName();
+
+      if (!userInfo.isGuest()) {
+        // Guest users don't fall under the quota.
+        existingUsersCount++;
+      }
+      if (Objects.equals(userName, OMNILAB_CREATED_USER)
+          || Objects.equals(userName, TF_CREATED_USER)) {
+        createdTestUsers.add(userInfo.userId());
+      }
+    }
+
+    if (existingUsersCount >= userUtil.getMaxNumberOfUsersSupported(serial)) {
+      // Reached the maximum number of users allowed. Remove stale test users to free up space.
+      for (int userId : createdTestUsers) {
+        userUtil.removeUser(serial, sdkVersion, userId);
+      }
+    }
+  }
+
+  private void switchCurrentUser(String serial, int sdkVersion, int userId)
+      throws MobileHarnessException, InterruptedException {
+    userUtil.startUser(
+        serial, sdkVersion, userId, sdkVersion >= AndroidVersion.ANDROID_10.getStartSdkVersion());
+    userUtil.switchUser(serial, sdkVersion, userId);
   }
 }
