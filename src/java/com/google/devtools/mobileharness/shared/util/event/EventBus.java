@@ -66,14 +66,16 @@ public class EventBus {
 
     public abstract Object event();
 
+    public abstract Throwable exception();
+
     public abstract Object subscriberObject();
 
     public abstract Method subscriberMethod();
 
     public static SubscriberExceptionContext of(
-        Object event, Object subscriberObject, Method subscriberMethod) {
+        Object event, Throwable exception, Object subscriberObject, Method subscriberMethod) {
       return new AutoValue_EventBus_SubscriberExceptionContext(
-          event, subscriberObject, subscriberMethod);
+          event, exception, subscriberObject, subscriberMethod);
     }
   }
 
@@ -206,7 +208,7 @@ public class EventBus {
             if (exception != null && exceptionHandler != null) {
               SubscriberExceptionContext context =
                   SubscriberExceptionContext.of(
-                      event, subscriber.subscriberObject(), subscriberMethod.method());
+                      event, exception, subscriber.subscriberObject(), subscriberMethod.method());
               try {
                 exceptionHandler.handleException(exception, context);
               } catch (RuntimeException | Error e) {
