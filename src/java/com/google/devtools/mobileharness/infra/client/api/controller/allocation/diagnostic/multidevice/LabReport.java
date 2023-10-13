@@ -83,8 +83,8 @@ public final class LabReport implements Report {
   public Report.Result getResult() {
     if (assessments.isEmpty()) {
       return Report.Result.create(
-          InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR,
-          "There are no lab hosts to evaluate. Please file a bug through go/mh-bug.",
+          InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR,
+          "There are no device supporting the user requested device type.",
           null);
     }
 
