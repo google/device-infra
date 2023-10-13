@@ -61,6 +61,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
+        "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",

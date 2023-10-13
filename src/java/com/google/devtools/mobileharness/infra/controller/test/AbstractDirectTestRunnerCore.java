@@ -38,11 +38,11 @@ import com.google.devtools.mobileharness.infra.controller.test.TestContext.WithT
 import com.google.devtools.mobileharness.infra.controller.test.exception.TestRunnerLauncherConnectedException;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
-import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler.SubscriberException;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
+import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberExceptionContext;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -86,7 +86,7 @@ import javax.annotation.Nullable;
  * For executing a single test with multiple devices.
  *
  * <ul>
- *   <li>trace.* that may cause the library carshed.
+ *   <li>trace.* that may cause the library to crash.
  * </ul>
  */
 public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestRunnerCore<T>>
@@ -178,7 +178,7 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
     scopedEventBus.add(EventScope.GLOBAL_INTERNAL, setting.globalInternalBus().orElse(null));
 
     internalPluginExceptionHandler =
-        new SubscriberExceptionLoggingHandler(true /* saveException */, false /*isUserPlugin */);
+        new SubscriberExceptionLoggingHandler(/* saveException= */ true, /* isUserPlugin= */ false);
     scopedEventBus.add(EventScope.INTERNAL_PLUGIN, new EventBus(internalPluginExceptionHandler));
     setting
         .internalPluginSubscribers()
@@ -598,7 +598,7 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
   protected abstract PostTestDeviceOp postRunTest(TestInfo testInfo, Allocation allocation)
       throws MobileHarnessException, InterruptedException;
 
-  /** Gets the span to be used in test excute logic, empty by default. */
+  /** Gets the span to be used in test execution logic, empty by default. */
   protected MobileHarnessAutoCloseable getExecuteSpan() {
     return new MobileHarnessAutoCloseable();
   }
@@ -981,15 +981,17 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
   /**
    * Returns {@code true} if the test should be skipped and also sets the test result.
    *
-   * @param afterDriverExecution if it is after all drivers have been exceuted. If so, ignore test
+   * @param afterDriverExecution if it is after all drivers have been executed. If so, ignore test
    *     skipping and give warnings.
    * @return if the test should be skipped
    */
   private boolean checkPluginExceptions(boolean afterDriverExecution) {
-    List<SubscriberException> internalPluginExceptions =
+    List<SubscriberExceptionContext> internalPluginExceptions =
         internalPluginExceptionHandler.pollExceptions();
-    List<SubscriberException> apiPluginExceptions = apiPluginExceptionHandler.pollExceptions();
-    List<SubscriberException> jarPluginExceptions = jarPluginExceptionHandler.pollExceptions();
+    List<SubscriberExceptionContext> apiPluginExceptions =
+        apiPluginExceptionHandler.pollExceptions();
+    List<SubscriberExceptionContext> jarPluginExceptions =
+        jarPluginExceptionHandler.pollExceptions();
     ImmutableList<SkipInformation> skipInfos =
         Streams.concat(
                 internalPluginExceptions.stream(),

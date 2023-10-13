@@ -65,11 +65,11 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
-import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler.SubscriberException;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
+import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberExceptionContext;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.inject.AbstractModule;
@@ -112,7 +112,7 @@ import javax.annotation.Nullable;
  * external environment. E.g. in a RBE instance. The logic removed includes:
  *
  * <ul>
- *   <li>trace.* that may cause the library carshed.
+ *   <li>trace.* that may cause the library to crash.
  *   <li>JobFileResolver and TestMessagePoster that need further refactor and are useless in
  *       external currently.
  * </ul>
@@ -565,7 +565,7 @@ public class JobRunnerCore implements Runnable {
 
                 try (MobileHarnessAutoCloseable allocateDeviceSpan =
                     getAllocateDeviceSpan(startDeviceAllocationTime, testInfo)) {
-                  // Does nothig.
+                  // Does nothing.
                 }
 
                 if (!hasAllocation) {
@@ -1540,10 +1540,12 @@ public class JobRunnerCore implements Runnable {
    * @return if the job should be skipped
    */
   private boolean checkPluginExceptions(boolean postRunJob) {
-    List<SubscriberException> internalPluginExceptions =
+    List<SubscriberExceptionContext> internalPluginExceptions =
         internalPluginExceptionHandler.pollExceptions();
-    List<SubscriberException> apiPluginExceptions = apiPluginExceptionHandler.pollExceptions();
-    List<SubscriberException> jarPluginExceptions = jarPluginExceptionHandler.pollExceptions();
+    List<SubscriberExceptionContext> apiPluginExceptions =
+        apiPluginExceptionHandler.pollExceptions();
+    List<SubscriberExceptionContext> jarPluginExceptions =
+        jarPluginExceptionHandler.pollExceptions();
 
     ImmutableList<SkipInformation> skipInfos =
         Streams.concat(

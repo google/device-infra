@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.collect.ImmutableList;
-import com.google.common.eventbus.SubscriberExceptionContext;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
@@ -31,9 +30,9 @@ import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWith
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipJobException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
-import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler.SubscriberException;
 import com.google.devtools.mobileharness.shared.util.comparator.ErrorTypeComparator;
 import com.google.devtools.mobileharness.shared.util.comparator.TestResultComparator;
+import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberExceptionContext;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -53,19 +52,16 @@ public final class SkipInformationHandler {
    */
   @AutoValue
   public abstract static class SkipInformation {
-    static SkipInformation of(
-        Throwable exception, SubscriberExceptionContext context, boolean isJob) {
+    static SkipInformation of(SubscriberExceptionContext context, boolean isJob) {
       checkArgument(
-          exception instanceof SkipJobException
-              || exception instanceof SkipTestException
-              || exception instanceof InterruptedException,
+          context.exception() instanceof SkipJobException
+              || context.exception() instanceof SkipTestException
+              || context.exception() instanceof InterruptedException,
           "Exception for SkipInformation can only be instanceof SkipJobException, SkipTestException"
               + " or InterruptedException, but was %s.",
-          exception.getClass());
-      return new AutoValue_SkipInformationHandler_SkipInformation(exception, context, isJob);
+          context.exception().getClass());
+      return new AutoValue_SkipInformationHandler_SkipInformation(context, isJob);
     }
-
-    public abstract Throwable exception();
 
     public abstract SubscriberExceptionContext context();
 
@@ -87,17 +83,17 @@ public final class SkipInformationHandler {
     // the error id of the exception().
     @Memoized
     ErrorId criticalErrorId() {
-      if (exception() instanceof InterruptedException) {
+      if (context().exception() instanceof InterruptedException) {
         return isJob()
             ? BasicErrorId.USER_PLUGIN_SKIP_JOB_BY_INTERRUPTED_EXCEPTION
             : BasicErrorId.USER_PLUGIN_SKIP_TEST_BY_INTERRUPTED_EXCEPTION;
       }
 
       ErrorId errorId =
-          exception() instanceof SkipJobException
-              ? ((SkipJobException) exception()).errorId()
-              : ((SkipTestException) exception()).errorId();
-      Throwable cause = exception().getCause();
+          context().exception() instanceof SkipJobException
+              ? ((SkipJobException) context().exception()).errorId()
+              : ((SkipTestException) context().exception()).errorId();
+      Throwable cause = context().exception().getCause();
       while (cause != null) {
         if (errorId.type() != ErrorType.UNCLASSIFIED && errorId.type() != ErrorType.UNDETERMINED) {
           return errorId;
@@ -112,10 +108,10 @@ public final class SkipInformationHandler {
 
     @Memoized
     TestResult getTestResult() {
-      if (exception() instanceof SkipJobException) {
-        return ((SkipJobException) exception()).jobResult();
-      } else if (exception() instanceof SkipTestException) {
-        return ((SkipTestException) exception()).testResult();
+      if (context().exception() instanceof SkipJobException) {
+        return ((SkipJobException) context().exception()).jobResult();
+      } else if (context().exception() instanceof SkipTestException) {
+        return ((SkipTestException) context().exception()).testResult();
       } else {
         return TestResult.FAIL;
       }
@@ -139,19 +135,19 @@ public final class SkipInformationHandler {
     public abstract String report();
   }
 
-  public static Optional<SkipInformation> convertIfSkipJobRunning(SubscriberException se) {
+  public static Optional<SkipInformation> convertIfSkipJobRunning(SubscriberExceptionContext se) {
     if (se.exception() instanceof InterruptedException
         || se.exception() instanceof SkipJobException) {
-      return Optional.of(SkipInformation.of(se.exception(), se.context(), /* isJob= */ true));
+      return Optional.of(SkipInformation.of(se, /* isJob= */ true));
     } else {
       return Optional.empty();
     }
   }
 
-  public static Optional<SkipInformation> convertIfSkipTestRunning(SubscriberException se) {
+  public static Optional<SkipInformation> convertIfSkipTestRunning(SubscriberExceptionContext se) {
     if (se.exception() instanceof InterruptedException
         || se.exception() instanceof SkipTestException) {
-      return Optional.of(SkipInformation.of(se.exception(), se.context(), /* isJob= */ false));
+      return Optional.of(SkipInformation.of(se, /* isJob= */ false));
     } else {
       return Optional.empty();
     }
@@ -160,12 +156,12 @@ public final class SkipInformationHandler {
   // Package visible class to store the internal status of selected top SkipInformation,
   // the remaining SkipInformations, and the result.
   @AutoValue
-  abstract static class InternalSplittedSkipInfos {
-    private static InternalSplittedSkipInfos of(
+  abstract static class InternalSplitSkipInfos {
+    private static InternalSplitSkipInfos of(
         SkipInformation skipReason,
         ImmutableList<SkipInformation> otherSkipReasons,
         TestResult result) {
-      return new AutoValue_SkipInformationHandler_InternalSplittedSkipInfos(
+      return new AutoValue_SkipInformationHandler_InternalSplitSkipInfos(
           skipReason, otherSkipReasons, result);
     }
 
@@ -180,15 +176,15 @@ public final class SkipInformationHandler {
    * Creates the {@code MobileHarnessException} as the exception that causes the job/test result.
    */
   private static MobileHarnessException createResultCauseException(
-      InternalSplittedSkipInfos splittedSkipInfos, String messageWithResult, boolean isJob) {
-    Throwable skipReasonException = splittedSkipInfos.skipReason().exception();
+      InternalSplitSkipInfos splitSkipInfos, String messageWithResult, boolean isJob) {
+    Throwable skipReasonException = splitSkipInfos.skipReason().context().exception();
     ErrorId resultCauseExceptionErrorId =
         getResultCauseExceptionErrorId(skipReasonException, isJob);
     MobileHarnessException resultCauseException =
         new MobileHarnessException(
             resultCauseExceptionErrorId, messageWithResult, skipReasonException);
-    for (SkipInformation otherReason : splittedSkipInfos.otherSkipReasons()) {
-      resultCauseException.addSuppressed(otherReason.exception());
+    for (SkipInformation otherReason : splitSkipInfos.otherSkipReasons()) {
+      resultCauseException.addSuppressed(otherReason.context().exception());
     }
     return resultCauseException;
   }
@@ -205,45 +201,45 @@ public final class SkipInformationHandler {
     }
   }
 
-  private static InternalSplittedSkipInfos splitSkipInfos(List<SkipInformation> skipInfos) {
+  private static InternalSplitSkipInfos splitSkipInfos(List<SkipInformation> skipInfos) {
     SkipInformation skipReason = getTopSkipInformation(skipInfos);
     // The other skipInfos which is not top stored in another list.
     // Note that skipReason is one of the element in skipInfos, so we use != instead of !equals().
     ImmutableList<SkipInformation> remainedSkipInfos =
         skipInfos.stream().filter(skipInfo -> skipInfo != skipReason).collect(toImmutableList());
     TestResult result = skipReason.getTestResult();
-    return InternalSplittedSkipInfos.of(skipReason, remainedSkipInfos, result);
+    return InternalSplitSkipInfos.of(skipReason, remainedSkipInfos, result);
   }
 
   public static SkipResultWithCause getJobResult(List<SkipInformation> skipInfos) {
-    InternalSplittedSkipInfos splittedSkipInfos = splitSkipInfos(skipInfos);
-    String messageWithResult = createReport(splittedSkipInfos, /* isSkipJob= */ true);
-    if (splittedSkipInfos.result().equals(TestResult.PASS)) {
-      return SkipResultWithCause.of(splittedSkipInfos.result(), null, messageWithResult);
+    InternalSplitSkipInfos splitSkipInfos = splitSkipInfos(skipInfos);
+    String messageWithResult = createReport(splitSkipInfos, /* isSkipJob= */ true);
+    if (splitSkipInfos.result().equals(TestResult.PASS)) {
+      return SkipResultWithCause.of(splitSkipInfos.result(), null, messageWithResult);
     } else {
       MobileHarnessException resultCauseException =
-          createResultCauseException(splittedSkipInfos, messageWithResult, /* isJob= */ true);
+          createResultCauseException(splitSkipInfos, messageWithResult, /* isJob= */ true);
       return SkipResultWithCause.of(
-          splittedSkipInfos.result(), resultCauseException, messageWithResult);
+          splitSkipInfos.result(), resultCauseException, messageWithResult);
     }
   }
 
   public static SkipResultWithCause getTestResult(List<SkipInformation> skipInfos) {
-    InternalSplittedSkipInfos splittedSkipInfos = splitSkipInfos(skipInfos);
-    String messageWithResult = createReport(splittedSkipInfos, /*isSkipJob*/ false);
-    if (splittedSkipInfos.result().equals(TestResult.PASS)) {
+    InternalSplitSkipInfos splitSkipInfos = splitSkipInfos(skipInfos);
+    String messageWithResult = createReport(splitSkipInfos, /* isSkipJob= */ false);
+    if (splitSkipInfos.result().equals(TestResult.PASS)) {
       return SkipResultWithCause.of(TestResult.PASS, null, messageWithResult);
     } else {
       MobileHarnessException resultCauseException =
-          createResultCauseException(splittedSkipInfos, messageWithResult, /* isJob= */ false);
+          createResultCauseException(splitSkipInfos, messageWithResult, /* isJob= */ false);
       return SkipResultWithCause.of(
-          splittedSkipInfos.result(), resultCauseException, messageWithResult);
+          splitSkipInfos.result(), resultCauseException, messageWithResult);
     }
   }
 
   // Return a string report that contains all context of the information list and the result.
   // @param isSkipJob indicates we are dealing with jobs skipping or tests skipping.
-  private static String createReport(InternalSplittedSkipInfos skipInfos, boolean isSkipJob) {
+  private static String createReport(InternalSplitSkipInfos skipInfos, boolean isSkipJob) {
     String pattern = "Plugin [%s] throws [%s]";
     String prefix =
         isSkipJob
@@ -255,22 +251,22 @@ public final class SkipInformationHandler {
             skipInfos.result(),
             String.format(
                 pattern,
-                skipInfos.skipReason().context().getSubscriber().getClass().getSimpleName(),
-                skipInfos.skipReason().exception()))
+                skipInfos.skipReason().context().subscriberObject().getClass().getSimpleName(),
+                skipInfos.skipReason().context().exception()))
         : String.format(
             prefix + " because of critical reason: %s, and suppressed other reasons: %s",
             skipInfos.result(),
             String.format(
                 pattern,
-                skipInfos.skipReason().context().getSubscriber().getClass().getSimpleName(),
-                skipInfos.skipReason().exception()),
+                skipInfos.skipReason().context().subscriberObject().getClass().getSimpleName(),
+                skipInfos.skipReason().context().exception()),
             skipInfos.otherSkipReasons().stream()
                 .map(
                     exception ->
                         String.format(
                             pattern,
-                            exception.context().getSubscriber().getClass().getSimpleName(),
-                            exception.exception()))
+                            exception.context().subscriberObject().getClass().getSimpleName(),
+                            exception.context().exception()))
                 .collect(toImmutableList()));
   }
 

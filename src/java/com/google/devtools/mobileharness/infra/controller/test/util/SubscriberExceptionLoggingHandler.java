@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.util;
 
-import com.google.auto.value.AutoValue;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.SubscriberExceptionContext;
@@ -27,6 +26,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipJobException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
+import com.google.devtools.mobileharness.shared.util.event.EventBus;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEvent;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEvent;
@@ -37,37 +37,24 @@ import java.util.List;
 import javax.annotation.concurrent.GuardedBy;
 
 /** For logging the exception in subscribers. Will log to test log if it is a test event. */
-public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHandler {
+public class SubscriberExceptionLoggingHandler
+    implements SubscriberExceptionHandler, EventBus.SubscriberExceptionHandler {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  /** Subscriber exception with context. */
-  @AutoValue
-  public abstract static class SubscriberException {
-
-    private static SubscriberException of(Throwable exception, SubscriberExceptionContext context) {
-      return new AutoValue_SubscriberExceptionLoggingHandler_SubscriberException(
-          exception, context);
-    }
-
-    public abstract Throwable exception();
-
-    public abstract SubscriberExceptionContext context();
-  }
 
   private final boolean saveException;
 
   /**
-   * Whethher the plugins are provided by users. If yes, will convert all their exceptions to set
+   * Whether the plugins are provided by users. If yes, will convert all their exceptions to set
    * their ErrorType to CUSTOMER_ISSUE.
    */
   private final boolean isUserPlugin;
 
   @GuardedBy("itself")
-  private final List<SubscriberException> exceptions = new ArrayList<>();
+  private final List<EventBus.SubscriberExceptionContext> exceptions = new ArrayList<>();
 
   public SubscriberExceptionLoggingHandler() {
-    this(false /* saveException */, false /*isUserPlugin*/);
+    this(/* saveException= */ false, /* isUserPlugin= */ false);
   }
 
   public SubscriberExceptionLoggingHandler(boolean saveException, boolean isUserPlugin) {
@@ -75,24 +62,31 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
     this.isUserPlugin = isUserPlugin;
   }
 
-  @SuppressWarnings("FloggerWithoutCause")
   @Override
-  public void handleException(Throwable exception, SubscriberExceptionContext context) {
+  public void handleException(Throwable exception, EventBus.SubscriberExceptionContext context) {
     if (saveException) {
       synchronized (exceptions) {
-        exceptions.add(SubscriberException.of(exception, context));
+        exceptions.add(context);
       }
     }
 
     if (exception instanceof SkipTestException || exception instanceof SkipJobException) {
       // Handles exception for skipping test/job.
-      handleSkipException(exception, context);
+      handleSkipException(context);
     } else {
       // Handles unexpected exception.
       // InterruptedException is treated as unexpected exception here because it is deprecated for
       // skipping test/job and it may be thrown because of timeout rather than plugin itself.
-      handleUnexpectedException(exception, context, isUserPlugin);
+      handleUnexpectedException(context, isUserPlugin);
     }
+  }
+
+  @Override
+  public void handleException(Throwable exception, SubscriberExceptionContext context) {
+    handleException(
+        exception,
+        EventBus.SubscriberExceptionContext.of(
+            context.getEvent(), exception, context.getSubscriber(), context.getSubscriberMethod()));
   }
 
   /**
@@ -101,8 +95,8 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
    * <p>You need to set <tt>saveException</tt> to <tt>true</tt> when constructing the handler to use
    * this feature.
    */
-  public List<SubscriberException> pollExceptions() {
-    ImmutableList<SubscriberException> result;
+  public List<EventBus.SubscriberExceptionContext> pollExceptions() {
+    ImmutableList<EventBus.SubscriberExceptionContext> result;
     synchronized (exceptions) {
       result = ImmutableList.copyOf(exceptions);
       exceptions.clear();
@@ -110,12 +104,12 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
     return result;
   }
 
-  private static void handleSkipException(Throwable exception, SubscriberExceptionContext context) {
-    Object event = context.getEvent();
+  private static void handleSkipException(EventBus.SubscriberExceptionContext context) {
+    Object event = context.event();
     if (isTestEvent(event)) {
       TestInfo testInfo = getTestInfoFromTestEvent(event);
-      if (exception instanceof SkipTestException) {
-        SkipTestException skipTestException = (SkipTestException) exception;
+      if (context.exception() instanceof SkipTestException) {
+        SkipTestException skipTestException = (SkipTestException) context.exception();
         if (shouldPrintDetailForSkipException(skipTestException.testResult())) {
           testInfo
               .warnings()
@@ -125,9 +119,9 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
                       String.format(
                           "Plugin [%s] wants to skip test and set test to [%s]. "
                               + "Check test log for more details.",
-                          context.getSubscriber().getClass().getSimpleName(),
+                          context.subscriberObject().getClass().getSimpleName(),
                           skipTestException.testResult()),
-                      exception),
+                      context.exception()),
                   logger);
         } else {
           testInfo
@@ -136,11 +130,11 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
               .alsoTo(logger)
               .log(
                   "Plugin [%s] wants to skip test and set test to [%s] by [%s]",
-                  context.getSubscriber().getClass().getSimpleName(),
+                  context.subscriberObject().getClass().getSimpleName(),
                   skipTestException.testResult(),
-                  exception);
+                  context.exception());
         }
-      } else if (exception instanceof SkipJobException) {
+      } else if (context.exception() instanceof SkipJobException) {
         testInfo
             .warnings()
             .addAndLog(
@@ -151,13 +145,13 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
                             + "SkipJobException only works in JobStartEvent. "
                             + "Do you mean SkipTestException?",
                         event.getClass().getSimpleName()),
-                    exception),
+                    context.exception()),
                 logger);
       }
     } else if (isJobEvent(event)) {
       JobInfo jobInfo = getJobInfoFromJobEvent(event);
-      if (exception instanceof SkipJobException) {
-        TestResult desiredJobResult = ((SkipJobException) exception).jobResult();
+      if (context.exception() instanceof SkipJobException) {
+        TestResult desiredJobResult = ((SkipJobException) context.exception()).jobResult();
         if (shouldPrintDetailForSkipException(desiredJobResult)) {
           jobInfo
               .warnings()
@@ -167,8 +161,8 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
                       String.format(
                           "Plugin [%s] wants to skip job and set job to [%s]. "
                               + "Check job log for more details.",
-                          context.getSubscriber().getClass().getSimpleName(), desiredJobResult),
-                      exception),
+                          context.subscriberObject().getClass().getSimpleName(), desiredJobResult),
+                      context.exception()),
                   logger);
         } else {
           jobInfo
@@ -177,9 +171,11 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
               .alsoTo(logger)
               .log(
                   "Plugin [%s] wants to skip job and set job to [%s] by [%s]",
-                  context.getSubscriber().getClass().getSimpleName(), desiredJobResult, exception);
+                  context.subscriberObject().getClass().getSimpleName(),
+                  desiredJobResult,
+                  context.exception());
         }
-      } else if (exception instanceof SkipTestException) {
+      } else if (context.exception() instanceof SkipTestException) {
         jobInfo
             .warnings()
             .addAndLog(
@@ -190,22 +186,22 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
                             + "SkipTestException only works in test events. "
                             + "Do you mean SkipJobException?",
                         event.getClass().getSimpleName()),
-                    exception),
+                    context.exception()),
                 logger);
       }
     } else {
-      logger.atWarning().withCause(exception).log(
+      logger.atWarning().withCause(context.exception()).log(
           "%s is thrown in neither TestEvent or JobEvent so it will NOT work",
-          exception.getClass().getSimpleName());
+          context.exception().getClass().getSimpleName());
     }
   }
 
   private static void handleUnexpectedException(
-      Throwable exception, SubscriberExceptionContext context, boolean isUserPlugin) {
-    String message = "Error occurred in:\n" + context.getSubscriberMethod();
-    logger.atWarning().withCause(exception).log("%s", message);
-    Object event = context.getEvent();
-    String stackTrace = Throwables.getStackTraceAsString(exception);
+      EventBus.SubscriberExceptionContext context, boolean isUserPlugin) {
+    String message = "Error occurred in:\n" + context.subscriberMethod();
+    logger.atWarning().withCause(context.exception()).log("%s", message);
+    Object event = context.event();
+    String stackTrace = Throwables.getStackTraceAsString(context.exception());
     if (isTestEvent(event)) {
       TestInfo testInfo = getTestInfoFromTestEvent(event);
       if (isUserPlugin) {
@@ -213,23 +209,29 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
             .warnings()
             .add(
                 new MobileHarnessException(
-                    InfraErrorId.TR_PLUGIN_USER_TEST_ERROR, "User test plugin error", exception));
+                    InfraErrorId.TR_PLUGIN_USER_TEST_ERROR,
+                    "User test plugin error",
+                    context.exception()));
       } else {
-        if (exception instanceof com.google.wireless.qa.mobileharness.shared.MobileHarnessException
-            && ((com.google.wireless.qa.mobileharness.shared.MobileHarnessException) exception)
+        if (context.exception()
+                instanceof com.google.wireless.qa.mobileharness.shared.MobileHarnessException
+            && ((com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
+                        context.exception())
                     .getErrorCode()
                 != ErrorCode.UNKNOWN.code()) {
           // Uses the error code in MobileHarnessException.
           testInfo
               .errors()
-              .add((com.google.wireless.qa.mobileharness.shared.MobileHarnessException) exception);
+              .add(
+                  (com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
+                      context.exception());
         } else {
           testInfo
               .warnings()
               .add(
                   InfraErrorId.TR_PLUGIN_UNKNOWN_TEST_ERROR,
                   "Unexpected exception from test plugin",
-                  exception);
+                  context.exception());
         }
       }
       testInfo.log().atInfo().log("%s", stackTrace);
@@ -242,23 +244,29 @@ public class SubscriberExceptionLoggingHandler implements SubscriberExceptionHan
             .warnings()
             .add(
                 new MobileHarnessException(
-                    InfraErrorId.TR_PLUGIN_USER_JOB_ERROR, "User job plugin error", exception));
+                    InfraErrorId.TR_PLUGIN_USER_JOB_ERROR,
+                    "User job plugin error",
+                    context.exception()));
       } else {
-        if (exception instanceof com.google.wireless.qa.mobileharness.shared.MobileHarnessException
-            && ((com.google.wireless.qa.mobileharness.shared.MobileHarnessException) exception)
+        if (context.exception()
+                instanceof com.google.wireless.qa.mobileharness.shared.MobileHarnessException
+            && ((com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
+                        context.exception())
                     .getErrorCode()
                 != ErrorCode.UNKNOWN.code()) {
           // Uses the error code in MobileHarnessException.
           jobInfo
               .errors()
-              .add((com.google.wireless.qa.mobileharness.shared.MobileHarnessException) exception);
+              .add(
+                  (com.google.wireless.qa.mobileharness.shared.MobileHarnessException)
+                      context.exception());
         } else {
           jobInfo
               .warnings()
               .add(
                   InfraErrorId.TR_PLUGIN_UNKNOWN_JOB_ERROR,
                   "Unexpected exception from job plugin",
-                  exception);
+                  context.exception());
         }
       }
       logger.atWarning().log(
