@@ -27,7 +27,7 @@ option java_multiple_files = true;
 // If a field is not set explicitly, it will be ignored, but not set to the
 // default value.
 //
-// next tag: 81
+// next tag: 82
 
 message AndroidDeviceSettingsDecoratorSpec {
   extend DecoratorSpec {
@@ -39,8 +39,10 @@ message AndroidDeviceSettingsDecoratorSpec {
   }];
   optional bool enable_screen_saver = 3
       [(field_detail) = { help: "Turn screen saver on or off." }];
-  optional int64 screen_timeout_sec = 4
-      [(field_detail) = { help: "Set the screen timeout in second." }];
+  optional int64 screen_timeout_sec = 4 [(field_detail) = {
+    help: "Set the screen timeout in second. If set, then screen_always_on "
+          "must be off or not set."
+  }];
   optional bool screen_adaptive_brightness = 5
       [(field_detail) = { help: "Turn screen adaptive brightness on or off." }];
   optional bool notification_led = 6
@@ -389,6 +391,11 @@ message AndroidDeviceSettingsDecoratorSpec {
     deprecated = true,
     (field_detail) = { help: "Use chimera_denylist instead." }
   ];
+
+  optional bool screen_always_on = 81 [(field_detail) = {
+    help: "Turn 'screen always on' on or off. If set to true, then "
+          "screen_timeout_sec must be unset."
+  }];
 
   // Deprecated fields. DO NOT reuse them.
   reserved 1, 11, 15;

@@ -1525,6 +1525,45 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
     }
   }
 
+  /**
+   * Handles screen always on settings.
+   *
+   * <p>This is done in a dedicated method because special handling is required in case of setting
+   * screen to always on.
+   */
+  private void handleScreenAlwaysOnSetting(
+      AndroidDeviceSettingsDecoratorSpec spec, TestInfo testInfo)
+      throws MobileHarnessException, InterruptedException {
+    if (!spec.hasScreenAlwaysOn()) {
+      return;
+    }
+    String deviceId = getDevice().getDeviceId();
+
+    if (spec.getScreenAlwaysOn()) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Setting screen always on to true on device %s", deviceId);
+      androidSystemSettingUtil.keepAwake(deviceId, /* alwaysAwake= */ true);
+      // Send MENU press in case keyguard needs to be dismissed again
+      String unused = adb.runShellWithRetry(deviceId, "input keyevent 82");
+      // Send HOME press in case keyguard was already dismissed, so we bring device back to home
+      // screen. No need for this on Wear OS, since that causes the launcher to show instead of the
+      // home screen
+      if (!androidSystemSpecUtil.isWearableDevice(deviceId)) {
+        unused = adb.runShellWithRetry(deviceId, "input keyevent 3");
+      }
+    } else {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("Setting screen always on to false on device %s", deviceId);
+      androidSystemSettingUtil.keepAwake(deviceId, /* alwaysAwake= */ false);
+    }
+  }
+
   @Override
   public void run(TestInfo testInfo)
       throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
@@ -1574,6 +1613,8 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
 
     changeSettings(testInfo, spec);
     runCommands(testInfo, commandsAfterSettings);
+
+    handleScreenAlwaysOnSetting(spec, testInfo);
 
     if (spec.hasForceReboot() && spec.getForceReboot() == Reboot.AFTER_SETTING) {
       checkCanReboot(testInfo, "Force to reboot after setting.");

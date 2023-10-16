@@ -1376,18 +1376,20 @@ public class AndroidSystemSettingUtil {
   }
 
   /**
-   * Tries to keep the device awake while charging. This only works if the device has root access
-   * and has already become root.
+   * Controls device to keep it awake or not while charging. This only works if the device has root
+   * access and has already become root.
    *
    * @param serial the serial number of the device
+   * @param alwaysAwake {@code true} to keep the device always awake, otherwise {@code false}
    * @throws MobileHarnessException if some error occurs in executing system commands
    * @throws InterruptedException if current thread is interrupted during this method
    */
-  public void keepAwake(String serial) throws MobileHarnessException, InterruptedException {
+  public void keepAwake(String serial, boolean alwaysAwake)
+      throws MobileHarnessException, InterruptedException {
     AndroidSvc svcArgs =
         AndroidSvc.builder()
             .setCommand(AndroidSvc.Command.POWER)
-            .setOtherArgs(ADB_SHELL_SVC_KEEP_AWAKE_ARGS)
+            .setOtherArgs("stayon " + (alwaysAwake ? "true" : "false"))
             .build();
     try {
       adbUtil.svc(serial, svcArgs);

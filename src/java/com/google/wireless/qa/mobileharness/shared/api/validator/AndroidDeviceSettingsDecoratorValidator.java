@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.validator;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
@@ -28,30 +29,27 @@ import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidDeviceSettingsDecoratorSpec;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
 /** Validator for {@code AndroidDeviceSettingsDecorator}. */
-public class AndroidDeviceSettingsDecoratorValidator extends BaseValidator {
+public class AndroidDeviceSettingsDecoratorValidator extends BaseValidator
+    implements SpecConfigable<AndroidDeviceSettingsDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final Supplier<AndroidSystemSettingUtil> androidSystemSettingUtilSupplier;
-  private final JobSpecHelper jobSpecHelper;
 
   @Keep
   public AndroidDeviceSettingsDecoratorValidator() {
-    this(JobSpecHelper.getDefaultHelper(), Suppliers.memoize(AndroidSystemSettingUtil::new));
+    this(Suppliers.memoize(AndroidSystemSettingUtil::new));
   }
 
   @VisibleForTesting
   AndroidDeviceSettingsDecoratorValidator(
-      JobSpecHelper jobSpecHelper,
       Supplier<AndroidSystemSettingUtil> androidSystemSettingUtilSupplier) {
-    this.jobSpecHelper = jobSpecHelper;
     this.androidSystemSettingUtilSupplier = androidSystemSettingUtilSupplier;
   }
 
@@ -80,36 +78,49 @@ public class AndroidDeviceSettingsDecoratorValidator extends BaseValidator {
   }
 
   @Override
-  public List<String> validateJob(JobInfo job) {
-    List<String> errors = new ArrayList<>();
+  public List<String> validateJob(JobInfo job) throws InterruptedException {
+    ImmutableList.Builder<String> errors = ImmutableList.builder();
+
+    List<AndroidDeviceSettingsDecoratorSpec> specs;
     try {
-      AndroidDeviceSettingsDecoratorSpec spec =
-          jobSpecHelper.getSpec(
-              job.protoSpec().getProto(), AndroidDeviceSettingsDecoratorSpec.class);
-      validateSpec(spec);
-
-      if (spec.getEnforceCpuStatus() || spec.getStopInterferingServices()) {
-        job.log()
-            .atWarning()
-            .alsoTo(logger)
-            .log(
-                "Enforce cpu status and stop interfering service may not work properly on your"
-                    + " device. Please use at your own risk.");
-      }
-
-      if (!spec.getCpuRuntimeFreqList().isEmpty()) {
-        job.log()
-            .atWarning()
-            .alsoTo(logger)
-            .log(
-                "cpu runtime frequency lock may not work properly on your device. Please use at"
-                    + " your own risk. It is recommended to use AndroidPerformanceLockDecorator if"
-                    + " you are not sure about the behavior.");
-      }
+      specs =
+          job.combinedSpecForDevices(
+              this,
+              subDeviceSpec ->
+                  subDeviceSpec.decorators().getAll().contains("AndroidDeviceSettingsDecorator"));
     } catch (MobileHarnessException e) {
       errors.add(e.getMessage());
+      return errors.build();
     }
-    return errors;
+
+    for (AndroidDeviceSettingsDecoratorSpec spec : specs) {
+      try {
+        validateSpec(spec);
+
+        if (spec.getEnforceCpuStatus() || spec.getStopInterferingServices()) {
+          job.log()
+              .atWarning()
+              .alsoTo(logger)
+              .log(
+                  "Enforce cpu status and stop interfering service may not work properly on your"
+                      + " device. Please use at your own risk.");
+        }
+
+        if (!spec.getCpuRuntimeFreqList().isEmpty()) {
+          job.log()
+              .atWarning()
+              .alsoTo(logger)
+              .log(
+                  "cpu runtime frequency lock may not work properly on your device. Please use at"
+                      + " your own risk. It is recommended to use AndroidPerformanceLockDecorator"
+                      + " if you are not sure about the behavior.");
+        }
+      } catch (MobileHarnessException e) {
+        errors.add(e.getMessage());
+      }
+    }
+
+    return errors.build();
   }
 
   /** Validates {@code spec}. Throws exceptions if it contains any error. */
@@ -121,6 +132,14 @@ public class AndroidDeviceSettingsDecoratorValidator extends BaseValidator {
           AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_SETTINGS_CONFLICT,
           "screen_adaptive_brightness must be set to false explicitly while screen_brightness "
               + "is set.");
+    }
+    if (spec.hasScreenAlwaysOn()
+        && spec.hasScreenTimeoutSec()
+        && (spec.getScreenAlwaysOn() && spec.getScreenTimeoutSec() > 0)) {
+      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+          AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_SETTINGS_CONFLICT,
+          "screen_always_on with value true and screen_timeout_sec cannot be set at the same"
+              + " time.");
     }
   }
 }

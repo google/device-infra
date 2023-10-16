@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidService;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidSettings;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidSvc;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.IntentArgs;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
@@ -695,6 +696,32 @@ public class AndroidSystemSettingUtilTest {
         .thenReturn("1");
 
     assertThat(settingUtil.isTestHarnessModeEnabled(DEVICE_ID)).isTrue();
+  }
+
+  @Test
+  public void keepAwake_true() throws Exception {
+    settingUtil.keepAwake(DEVICE_ID, /* alwaysAwake= */ true);
+
+    verify(adbUtil)
+        .svc(
+            DEVICE_ID,
+            AndroidSvc.builder()
+                .setCommand(AndroidSvc.Command.POWER)
+                .setOtherArgs("stayon true")
+                .build());
+  }
+
+  @Test
+  public void keepAwake_false() throws Exception {
+    settingUtil.keepAwake(DEVICE_ID, /* alwaysAwake= */ false);
+
+    verify(adbUtil)
+        .svc(
+            DEVICE_ID,
+            AndroidSvc.builder()
+                .setCommand(AndroidSvc.Command.POWER)
+                .setOtherArgs("stayon false")
+                .build());
   }
 
   @Test

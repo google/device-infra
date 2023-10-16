@@ -719,7 +719,7 @@ public abstract class AndroidRealDeviceDelegate {
     enableTestPropertiesAndDisablePackages(deviceId);
     // Tries to keep device awake.
     logger.atInfo().log("Device %s stays awake", deviceId);
-    systemSettingUtil.keepAwake(deviceId);
+    systemSettingUtil.keepAwake(deviceId, /* alwaysAwake= */ true);
 
     // Forces USB to 'adb' mode only.
     logger.atInfo().log("Check device %s USB mode", deviceId);
