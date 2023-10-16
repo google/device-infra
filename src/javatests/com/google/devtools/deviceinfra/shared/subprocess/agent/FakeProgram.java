@@ -20,7 +20,9 @@ import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import java.io.IOException;
+import java.time.Duration;
 
 public class FakeProgram {
 
@@ -34,6 +36,8 @@ public class FakeProgram {
       new ProcessBuilder(command).start().waitFor();
 
       logger.atInfo().log("Command %s ended", command);
+
+      Sleeper.defaultSleeper().sleep(Duration.ofMillis(500L));
     }
     assertThrows(IOException.class, () -> new ProcessBuilder("wrong_command").start().waitFor());
   }
