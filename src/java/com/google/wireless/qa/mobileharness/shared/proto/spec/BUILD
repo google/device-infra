@@ -33,6 +33,7 @@ proto_library(
         ":android_adb_shell_decorator_spec_proto",
         ":android_device_features_check_decorator_spec_proto",
         ":android_device_setting_decorator_spec_proto",
+        ":android_switch_user_decorator_spec_proto",
         ":base_spec_proto",
         ":install_apk_step_spec_proto",
         ":job_spec_proto",
