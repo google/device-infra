@@ -219,6 +219,9 @@ public class AndroidPackageManagerUtil {
   private static final Pattern LIST_PACKAGE_WITH_SOURCE_DIR_AND_VERSION_REGEX =
       Pattern.compile(
           "package:(?<sourceDir>.*)=(?<pkgName>[^=]*) versionCode:(?<versionCode>\\d+)");
+  private static final Pattern LIST_PACKAGE_WITH_VERSION_REGEX =
+      Pattern.compile("package:(?<pkgName>.*) versionCode:(?<versionCode>\\d+)");
+
   private static final String ADB_SHELL_GET_MODULEINFO = "pm get-moduleinfo";
 
   private static final Pattern MODULEINFO_REGEX =
@@ -1487,7 +1490,6 @@ public class AndroidPackageManagerUtil {
   public SortedSet<PackageInfo> listApexPackageInfos(UtilArgs utilArgs)
       throws MobileHarnessException, InterruptedException {
     String serial = utilArgs.serial();
-    SortedSet<PackageInfo> packages = new TreeSet<>();
 
     String[] adbCommand =
         new String[] {ADB_SHELL_LIST_PACKAGES, SHOW_VERSION_CODE_FLAG, "--apex-only", "-f"};
@@ -1504,19 +1506,10 @@ public class AndroidPackageManagerUtil {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_PKG_MNGR_UTIL_LIST_APEX_PACKAGES_ERROR, e.getMessage(), e);
     }
-    for (String line : Splitters.LINE_SPLITTER.trimResults().split(output)) {
-      Matcher matcher;
-      if ((matcher = LIST_PACKAGE_WITH_SOURCE_DIR_AND_VERSION_REGEX.matcher(line)).matches()) {
-        packages.add(
-            PackageInfo.builder()
-                .setPackageName(matcher.group("pkgName"))
-                .setSourceDir(matcher.group("sourceDir"))
-                .setVersionCode(Long.parseLong(matcher.group("versionCode")))
-                .setIsApex(true)
-                .build());
-      } else {
-        logger.atWarning().log("The line %s doesn't match the package pattern", line);
-      }
+
+    SortedSet<PackageInfo> packages = parseApexesFromOutput(output, /* withPath= */ true);
+    if (packages.isEmpty()) {
+      packages = parseApexesFromOutput(output, /* withPath= */ false);
     }
 
     return packages;
@@ -1786,5 +1779,36 @@ public class AndroidPackageManagerUtil {
         throw toThrow;
       }
     }
+  }
+
+  private static SortedSet<PackageInfo> parseApexesFromOutput(String output, boolean withPath) {
+    SortedSet<PackageInfo> packages = new TreeSet<>();
+
+    Matcher matcher =
+        withPath
+            ? LIST_PACKAGE_WITH_SOURCE_DIR_AND_VERSION_REGEX.matcher(output)
+            : LIST_PACKAGE_WITH_VERSION_REGEX.matcher(output);
+
+    while (matcher.find()) {
+      if (withPath) {
+        packages.add(
+            PackageInfo.builder()
+                .setSourceDir(matcher.group("sourceDir"))
+                .setPackageName(matcher.group("pkgName"))
+                .setVersionCode(Long.parseLong(matcher.group("versionCode")))
+                .setIsApex(true)
+                .build());
+      } else {
+        packages.add(
+            PackageInfo.builder()
+                .setSourceDir("")
+                .setPackageName(matcher.group("pkgName"))
+                .setVersionCode(Long.parseLong(matcher.group("versionCode")))
+                .setIsApex(true)
+                .build());
+      }
+    }
+
+    return packages;
   }
 }
