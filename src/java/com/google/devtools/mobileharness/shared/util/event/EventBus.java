@@ -90,8 +90,20 @@ public class EventBus {
 
   private static final EventBusBackend BACKEND = new EventBusBackend();
 
+  @Nullable private final SubscriberExceptionHandler globalExceptionHandler;
+
   @GuardedBy("itself")
   private final List<SubscriberMethodSearchResult> subscribers = new ArrayList<>();
+
+  /** Creates an event bus without event bus global exception handler. */
+  public EventBus() {
+    this(null);
+  }
+
+  /** Creates an event bus with the given event bus global exception handler. */
+  public EventBus(@Nullable SubscriberExceptionHandler globalExceptionHandler) {
+    this.globalExceptionHandler = globalExceptionHandler;
+  }
 
   /**
    * Registers a subscriber object. See {@linkplain #post(List, SubscriberOrder,
@@ -127,40 +139,43 @@ public class EventBus {
    * Posts one event (or more) to registered subscriber objects' subscriber methods that <b>can</b>
    * receive the event.
    *
-   * <p>A subscriber method is a method annotated with {@link
+   * <p><b>Subscriber method:</b> A subscriber method is a method annotated with {@link
    * com.google.common.eventbus.Subscribe @Subscribe}, declared in the class of a {@linkplain
    * #register registered} subscriber object, with exactly one (non-primitive type) parameter.
    *
-   * <p>A subscriber method <b>can</b> receive an event if the parameter type of the method is
-   * {@linkplain Class#isAssignableFrom class/superclass} of the event object. A subscriber method
-   * receives an event means calling the subscriber method's {@link Method#invoke} on the subscriber
-   * object of the subscriber method, with the event object as the parameter.
+   * <p><b>Receive event:</b> A subscriber method <b>can</b> receive an event if the parameter type
+   * of the method is {@linkplain Class#isAssignableFrom class/superclass} of the event object. A
+   * subscriber method receives an event means calling the subscriber method's {@link Method#invoke}
+   * on the subscriber object of the subscriber method, with the event object as the parameter.
    *
-   * <p>Subscriber methods receive an event in <b>serial</b> when the event is posted. After
-   * <b>all</b> subscriber methods receive the posted event and return, this method will return.
+   * <p><b>Synchronization:</b> Subscriber methods receive an event in <b>serial</b> when the event
+   * is posted. After <b>all</b> subscriber methods receive the posted event and return, this method
+   * will return.
    *
-   * <p>Subscriber methods receive an event in the order their subscriber objects registered (using
-   * {@link SubscriberOrder#REGISTER}) or reversed (using {@link SubscriberOrder#REVERSED}). Note
-   * that subscriber methods of one subscriber object may <b>not</b> be in their declaration order.
+   * <p><b>Order:</b> Subscriber methods receive an event in the order their subscriber objects
+   * registered (using {@link SubscriberOrder#REGISTER}) or reversed (using {@link
+   * SubscriberOrder#REVERSED}). Note that subscriber methods of one subscriber object may
+   * <b>not</b> be in their declaration order.
    *
-   * <p>If there are multiple events in {@code events}, the outer loop iterates over subscriber
-   * methods and the inner loop iterates over events. It is useful when migrating an event type to
-   * another without breaking the original subscriber order.
+   * <p><b>Multiple events in one post:</b> If there are multiple events in {@code events}, the
+   * outer loop iterates over subscriber methods and the inner loop iterates over events. It is
+   * useful when migrating an event type to another without breaking the original subscriber order.
    *
-   * <p>Exceptions thrown from subscriber methods will be caught and logged. Additionally, if {@code
-   * exceptionHandler} is specified, it will also be called. Exceptions thrown from {@code
-   * exceptionHandler} will also be caught and logged. If a subscriber method throws an {@link
-   * InterruptedException}, {@link Thread#currentThread()}{@linkplain Thread#interrupt()
-   * .interrupt()} will be called, which may cause the successor subscriber method to throw {@link
-   * InterruptedException}.
+   * <p><b>Exception:</b> Exceptions thrown from subscriber methods will be caught and logged.
+   * Additionally, if {@code exceptionHandler} and/or {@code globalExceptionHandler} are specified,
+   * they will also be called ({@code globalExceptionHandler} will be called first). Exceptions
+   * thrown from {@code exceptionHandler} and/or {@code globalExceptionHandler} will also be caught
+   * and logged. If a subscriber method throws an {@link InterruptedException}, {@link
+   * Thread#currentThread()}{@linkplain Thread#interrupt() .interrupt()} will be called, which may
+   * cause the successor subscriber method to throw {@link InterruptedException}.
    *
-   * <p>The start and end that a subscriber method receives an event will be logged.
+   * <p><b>Logging:</b> The start and end that a subscriber method receives an event will be logged.
    *
-   * <p>Execution time of each subscriber method is recorded in the returned {@link
-   * EventStatistics}.
+   * <p><b>Statistic:</b> Execution time of each subscriber method is recorded in the returned
+   * {@link EventStatistics}.
    *
-   * <p>Multiple {@link #register} and {@link #post} can be invoked at the same time, but a
-   * subscriber method needs to ensure its own thread safety.
+   * <p><b>Thread safety:</b> Multiple {@link #register} and {@link #post} can be invoked at the
+   * same time, but a subscriber method needs to ensure its own thread safety.
    */
   @CanIgnoreReturnValue
   public EventStatistics post(
@@ -205,16 +220,28 @@ public class EventBus {
                 "Event [%s] posted to subscriber [%s]", event, subscriberMethod);
 
             // Calls SubscriberExceptionHandler.
-            if (exception != null && exceptionHandler != null) {
+            if (exception != null && (exceptionHandler != null || globalExceptionHandler != null)) {
               SubscriberExceptionContext context =
                   SubscriberExceptionContext.of(
                       event, exception, subscriber.subscriberObject(), subscriberMethod.method());
-              try {
-                exceptionHandler.handleException(exception, context);
-              } catch (RuntimeException | Error e) {
-                logger.atWarning().withCause(e).log(
-                    "Error occurred when handling subscriber exception, event=%s, subscriber=%s",
-                    event, subscriberMethod);
+              if (globalExceptionHandler != null) {
+                try {
+                  globalExceptionHandler.handleException(exception, context);
+                } catch (RuntimeException | Error e) {
+                  logger.atWarning().withCause(e).log(
+                      "Error occurred when event bus global exception handler is handling"
+                          + " subscriber exception, event=%s, subscriber=%s",
+                      event, subscriberMethod);
+                }
+              }
+              if (exceptionHandler != null) {
+                try {
+                  exceptionHandler.handleException(exception, context);
+                } catch (RuntimeException | Error e) {
+                  logger.atWarning().withCause(e).log(
+                      "Error occurred when handling subscriber exception, event=%s, subscriber=%s",
+                      event, subscriberMethod);
+                }
               }
             }
 
