@@ -27,30 +27,32 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
-import com.google.devtools.mobileharness.infra.controller.scheduler.Scheduler;
+import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceChangeEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceDownEvent;
 
 /**
  * Event handler to sync the local device/test change between {@link LocalDeviceManager} and local
- * {@link Scheduler}.
+ * {@link AbstractScheduler}.
  */
 class LocalDeviceManagerSchedulerSyncer {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final LabScheduleUnit LOCAL_LAB_UNIT = new LabScheduleUnit(LabLocator.LOCALHOST);
   private final LocalDeviceManager deviceManager;
-  private final Scheduler scheduler;
+  private final AbstractScheduler scheduler;
   private final ApiConfig apiConfig;
 
   public LocalDeviceManagerSchedulerSyncer(
-      LocalDeviceManager localDeviceManager, Scheduler localScheduler) {
+      LocalDeviceManager localDeviceManager, AbstractScheduler localScheduler) {
     this(localDeviceManager, localScheduler, ApiConfig.getInstance());
   }
 
   @VisibleForTesting
   LocalDeviceManagerSchedulerSyncer(
-      LocalDeviceManager localDeviceManager, Scheduler localScheduler, ApiConfig apiConfig) {
+      LocalDeviceManager localDeviceManager,
+      AbstractScheduler localScheduler,
+      ApiConfig apiConfig) {
     this.deviceManager = localDeviceManager;
     this.scheduler = localScheduler;
     this.apiConfig = apiConfig;

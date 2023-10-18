@@ -47,7 +47,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/external:noop_external_device_manager",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/simple",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",

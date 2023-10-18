@@ -28,7 +28,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import javax.annotation.Nullable;
 
 /** Scheduler for scheduling the device resource to execute multiple jobs in parallel. */
-public abstract class Scheduler {
+public abstract class AbstractScheduler {
   /** Event bus for scheduler events. */
   private final EventBus schedulerInternalBus = new EventBus();
 

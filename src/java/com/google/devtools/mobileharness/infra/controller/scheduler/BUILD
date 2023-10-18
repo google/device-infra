@@ -25,8 +25,8 @@ package(
 )
 
 java_library(
-    name = "scheduler",
-    srcs = ["Scheduler.java"],
+    name = "abstract_scheduler",
+    srcs = ["AbstractScheduler.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",

@@ -25,8 +25,8 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
+import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AdhocTestbedSchedulingUtil;
-import com.google.devtools.mobileharness.infra.controller.scheduler.Scheduler;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
@@ -51,7 +51,7 @@ import javax.annotation.Nullable;
  * Simple scheduler. It rotately assigns devices to waiting jobs. So a huge job won't blocking the
  * latter jobs.
  */
-public class SimpleScheduler extends Scheduler implements Runnable {
+public class SimpleScheduler extends AbstractScheduler implements Runnable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

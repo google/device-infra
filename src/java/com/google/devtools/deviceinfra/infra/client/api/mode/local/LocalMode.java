@@ -38,7 +38,7 @@ import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceMana
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceTestRunner;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
-import com.google.devtools.mobileharness.infra.controller.scheduler.Scheduler;
+import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
@@ -81,10 +81,11 @@ public class LocalMode implements ExecMode {
   private static final CountDownLatch firstDeviceLatch = new CountDownLatch(1);
 
   /** Scheduler is singleton and shared by all LocalMode jobs in the same machine. */
-  private static volatile Scheduler localScheduler;
+  private static volatile AbstractScheduler localScheduler;
 
   /** Future which is set when the local scheduler is initialized. */
-  private static final SettableFuture<Scheduler> localSchedulerFuture = SettableFuture.create();
+  private static final SettableFuture<AbstractScheduler> localSchedulerFuture =
+      SettableFuture.create();
 
   /** Synchronization lock for {@link #localDeviceManager} and {@link #localScheduler}. */
   private static final Object LOCAL_ENV_LOCK = new Object();

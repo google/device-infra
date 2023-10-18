@@ -27,7 +27,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
-import com.google.devtools.mobileharness.infra.controller.scheduler.Scheduler;
+import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
@@ -49,7 +49,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
   private final LocalDeviceManager deviceManager;
 
   /** Universal scheduler for scheduling local devices for local tests. */
-  private final ListenableFuture<Scheduler> schedulerFuture;
+  private final ListenableFuture<AbstractScheduler> schedulerFuture;
 
   /** Allocations returned by scheduler, & haven't been retrieved by {@link #pollAllocations()}. */
   private final ConcurrentLinkedQueue<Allocation> allocations;
@@ -60,7 +60,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
   public LocalDeviceAllocator(
       final JobInfo jobInfo,
       LocalDeviceManager deviceManager,
-      ListenableFuture<Scheduler> schedulerFuture) {
+      ListenableFuture<AbstractScheduler> schedulerFuture) {
     super(jobInfo);
     this.deviceManager = deviceManager;
     this.schedulerFuture = schedulerFuture;
@@ -86,7 +86,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
   public synchronized Optional<ExceptionDetail> setUp()
       throws MobileHarnessException, InterruptedException {
     super.setUp();
-    Scheduler scheduler = getScheduler();
+    AbstractScheduler scheduler = getScheduler();
     scheduler.registerEventHandler(allocationEventHandler);
     scheduler.addJob(jobInfo);
     for (TestInfo test : jobInfo.tests().getAll().values()) {
@@ -100,7 +100,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
       throws MobileHarnessException, InterruptedException {
     List<AllocationWithStats> results = new ArrayList<>();
     Allocation allocation = null;
-    Scheduler scheduler = getScheduler();
+    AbstractScheduler scheduler = getScheduler();
     while ((allocation = allocations.poll()) != null) {
       // Finds the TestInfo in the current job.
       TestInfo test = jobInfo.tests().getById(allocation.getTest().id());
@@ -170,7 +170,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
   @Override
   public void extraAllocation(TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
-    Scheduler scheduler = getScheduler();
+    AbstractScheduler scheduler = getScheduler();
     scheduler.addTest(testInfo);
   }
 
@@ -180,7 +180,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
     DeviceLocator deviceLocator = allocation.getDevice();
     String deviceSerial = deviceLocator.id();
     LocalDeviceRunner deviceRunner = deviceManager.getLocalDeviceRunner(deviceSerial);
-    Scheduler scheduler = getScheduler();
+    AbstractScheduler scheduler = getScheduler();
     try {
       if (deviceRunner == null) {
         logger.atInfo().log(
@@ -205,13 +205,13 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
 
   @Override
   public synchronized void tearDown() throws MobileHarnessException, InterruptedException {
-    Scheduler scheduler = getScheduler();
+    AbstractScheduler scheduler = getScheduler();
     // Closes the job and changes the device back to IDLE.
     scheduler.removeJob(jobInfo.locator().getId(), false);
     scheduler.unregisterEventHandler(allocationEventHandler);
   }
 
-  private Scheduler getScheduler() throws MobileHarnessException, InterruptedException {
+  private AbstractScheduler getScheduler() throws MobileHarnessException, InterruptedException {
     return MoreFutures.get(
         schedulerFuture, InfraErrorId.SCHEDULER_LOCAL_DEVICE_ALLOCATOR_SCHEDULER_INIT_ERROR);
   }
