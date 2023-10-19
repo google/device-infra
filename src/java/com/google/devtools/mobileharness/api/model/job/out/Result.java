@@ -163,7 +163,7 @@ public class Result {
         return this;
       }
 
-      if (this.result.equals(TestResult.FAIL)
+      if ((this.result.equals(TestResult.FAIL) || this.result.equals(TestResult.SKIP))
           && (result.equals(TestResult.ERROR)
               || result.equals(TestResult.INFRA_ERROR)
               || result.equals(TestResult.TIMEOUT))) {
