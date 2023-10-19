@@ -53,6 +53,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_features_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_settings_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_install_apps_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_mainline_modules_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_switch_user_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:no_op_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_package_test",

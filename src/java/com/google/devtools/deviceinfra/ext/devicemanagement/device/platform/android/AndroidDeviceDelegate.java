@@ -579,6 +579,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidInstallAppsDecorator");
     device.addSupportedDecorator("AndroidInstallMultipleApksDecorator");
     device.addSupportedDecorator("AndroidLogCatDecorator");
+    device.addSupportedDecorator("AndroidMainlineModulesCheckDecorator");
     device.addSupportedDecorator("AndroidNuwaDecorator");
     device.addSupportedDecorator("AndroidOrientationDecorator");
     device.addSupportedDecorator("AndroidPackageStatsDecorator");
