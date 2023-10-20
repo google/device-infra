@@ -210,6 +210,11 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
   }
 
   @Override
+  protected boolean rebootToFastbootForInitFailures() {
+    return false;
+  }
+
+  @Override
   protected boolean alwaysCheckNetwork() {
     return false;
   }
