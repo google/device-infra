@@ -18,6 +18,8 @@ import (
 	"github.com/google/device-infra/src/devtools/rbe/rbeclient"
 )
 
+const version = "1.0"
+
 // multiStringFlag is a slice of strings for parsing command flags into a string list.
 type multiStringFlag []string
 
@@ -35,6 +37,8 @@ func (f *multiStringFlag) Get() any {
 }
 
 var (
+	printVersion = flag.Bool("version", false, "Print version information")
+
 	zipPath        = flag.String("zip-path", "", "Path to a .zip file to upload")
 	dirPath        = flag.String("dir-path", "", "Path to a directory to upload")
 	casInstance    = flag.String("cas-instance", "", "RBE instance")
@@ -75,6 +79,11 @@ func main() {
 	flag.Set("logtostderr", "true")
 	flag.Set("stderrthreshold", "INFO")
 	flag.Parse()
+
+	if *printVersion == true {
+		fmt.Printf("version: %s\n", version)
+		os.Exit(0)
+	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
