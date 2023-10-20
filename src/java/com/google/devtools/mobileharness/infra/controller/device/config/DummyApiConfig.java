@@ -53,7 +53,7 @@ public class DummyApiConfig extends Observable implements ApiConfig {
   DummyApiConfig() {}
 
   @Override
-  public void init(boolean isDefaultPublic) {}
+  public void init(boolean isDefaultPublic, String hostName) {}
 
   @Override
   public int getMaxConsecutiveFail(String deviceControlId) {

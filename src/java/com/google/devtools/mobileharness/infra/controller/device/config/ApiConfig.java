@@ -36,7 +36,7 @@ public interface ApiConfig {
   }
 
   /** Initialize. */
-  void init(boolean defaultPublic);
+  void init(boolean defaultPublic, String hostName);
 
   /** Gets all the monitored device ids. */
   List<String> getMonitoredDeviceUuids();

@@ -159,7 +159,8 @@ public class UnifiedTestRunServer {
       // TODO: Create FileTransferSocketService.
 
       ApiConfig apiConfig = ApiConfig.getInstance();
-      apiConfig.init(/* defaultPublic= */ DeviceUtil.inSharedLab());
+      String hostName = netUtil.getLocalHostName();
+      apiConfig.init(/* defaultPublic= */ DeviceUtil.inSharedLab(), hostName);
 
       // Initializes the master service stub. If master host is set to empty, the lab server
       // will run independently without the master server for debugging.
