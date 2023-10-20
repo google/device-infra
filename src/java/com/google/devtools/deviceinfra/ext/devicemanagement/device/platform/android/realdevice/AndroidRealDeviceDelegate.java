@@ -2143,6 +2143,9 @@ public abstract class AndroidRealDeviceDelegate {
   /** Returns {@code true} if skip clearing multi users on the device. */
   protected abstract boolean ifSkipClearMultiUsers(int sdkVersion);
 
+  /** Returns {@code true} if devices could reboot to fastboot mode due to init failures. */
+  protected abstract boolean rebootToFastbootForInitFailures();
+
   /**
    * Gets the whitelisted system features {@link AndroidRealDeviceConstants#FEATURES_KEYWORDS} on
    * the device. Only select features existing on whitelist since there could be too many features
