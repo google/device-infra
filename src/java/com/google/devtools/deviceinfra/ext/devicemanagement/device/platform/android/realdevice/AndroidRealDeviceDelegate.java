@@ -76,6 +76,7 @@ import com.google.wireless.qa.mobileharness.shared.android.RuntimeChargingUtil;
 import com.google.wireless.qa.mobileharness.shared.android.SerialConsole;
 import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
+import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidRealDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
@@ -381,6 +382,9 @@ public abstract class AndroidRealDeviceDelegate {
       throws MobileHarnessException, InterruptedException;
 
   private void setUpOnlineModeDevice() throws MobileHarnessException, InterruptedException {
+    logger.atWarning().log("=============Add device type mode at first.");
+    BaseDeviceHelper.setUp(device, BaseDevice.class, extraDimensionsForSetUpDevice());
+
     androidDeviceDelegate.ensureDeviceReady();
     validateDeviceOnceReady(deviceId, device.getClass().getSimpleName());
     androidDeviceDelegate.setUp(isRooted(), extraDimensionsForSetUpDevice());
