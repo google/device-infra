@@ -90,7 +90,6 @@ public class AndroidDeviceFeaturesCheckDecorator extends BaseDecorator
                   supportedFeatures,
                   deviceId));
       testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
-      throw error;
     }
   }
 }

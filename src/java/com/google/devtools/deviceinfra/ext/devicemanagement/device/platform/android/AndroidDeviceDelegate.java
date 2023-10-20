@@ -567,6 +567,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidChromeWebViewInstallerDecorator");
     device.addSupportedDecorator("AndroidCleanAppsDecorator");
     device.addSupportedDecorator("AndroidCrashMonitorDecorator");
+    device.addSupportedDecorator("AndroidDeviceFeaturesCheckDecorator");
     device.addSupportedDecorator("AndroidDisableAppsDecorator");
     device.addSupportedDecorator("AndroidDumpSysDecorator");
     device.addSupportedDecorator("AndroidFilePullerDecorator");

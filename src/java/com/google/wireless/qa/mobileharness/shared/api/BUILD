@@ -28,8 +28,20 @@ package(
 java_library(
     name = "oss_lab_test",
     runtime_deps = [
+        ":ats_test",
         ":no_op_test",
+    ],
+)
+
+# Driver/decorator/device/validator/lister/... for ATS
+java_library(
+    name = "ats_test",
+    runtime_deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_features_check_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_mainline_modules_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:xts_tradefed_test_validator",
     ],
 )
 
