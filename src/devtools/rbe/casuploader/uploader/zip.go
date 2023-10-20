@@ -6,17 +6,16 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
-	"os/exec"
-	"path"
+	"path/filepath"
+	"time"
 
 	log "github.com/golang/glog"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
-	"github.com/hanwen/go-fuse/v2/fs"
-	"github.com/hanwen/go-fuse/v2/fuse"
-	"github.com/hanwen/go-fuse/v2/zipfs"
+	"github.com/pkg/xattr"
 )
 
 const (
@@ -27,7 +26,161 @@ const (
 	// Sha256HeaderSignature is the signature to verify that the extra data block is used to store the
 	// SHA checksum. It is defined in build/soong/zip/zip.go
 	Sha256HeaderSignature = 0x9514
+
+	// XattrDigestName is the xattr name for the object digest. It is used by Remote API Sdks to get
+	// the file digest without loading actual file content.
+	XattrDigestName = "user.digest.sha256"
+
+	// XattrSrcZipPath is the xattr name for the path in zip file. It maps the extracted file to the
+	// compressed file inside the original zip.
+	XattrSrcZipPath = "user.zip_src"
 )
+
+// ZipUploader is the uploader to uploader the a zip
+type ZipUploader struct {
+	uploaderConfig
+}
+
+// NewZipUploader creates
+func NewZipUploader(ctx context.Context, client *client.Client, zipPath string, excludeFilters []string) Uploader {
+	return &ZipUploader{
+		uploaderConfig: uploaderConfig{ctx: ctx, client: client, path: zipPath, excludeFilters: excludeFilters},
+	}
+}
+
+// DoUpload uploads the unarchived zip file to CAS, and returns the digest of the root directory.
+func (zu *ZipUploader) DoUpload() (digest.Digest, error) {
+	// Set the digest xattr key name to filemetadata
+	filemetadata.XattrDigestName = XattrDigestName
+
+	targetDir := createTmpDir()
+	defer func() {
+		if err := os.RemoveAll(targetDir); err != nil {
+			log.Errorf("Failed to remove tmp dir: %v\n", err)
+		}
+	}()
+
+	log.Infof("Extracting %s to %s with digests\n", zu.path, targetDir)
+
+	unarchiver, err := newZipUnarchiver(zu.path, targetDir)
+	if err != nil {
+		return digest.Digest{}, fmt.Errorf("failed to create zip unarchiver for %s: %v", zu.path, err)
+	}
+	defer unarchiver.Close()
+
+	err = unarchiver.extractAll(true)
+	if err != nil {
+		return digest.Digest{}, fmt.Errorf("failed to extract %s to %s: %v", zu.path, targetDir, err)
+	}
+
+	du := NewDirUploader(zu.ctx, zu.client, targetDir, zu.excludeFilters, &zipFileLoader{Unarchiver: unarchiver})
+	rootDigest, err := du.DoUpload()
+	if err != nil {
+		return rootDigest, fmt.Errorf("failed to upload the directory %s for zip %s: %v", targetDir, zu.path, err)
+	}
+	return rootDigest, nil
+}
+
+type zipUnarchiver struct {
+	zipPath string
+	dstRoot string
+	zr      *zip.ReadCloser
+}
+
+func newZipUnarchiver(zipPath string, dstRoot string) (*zipUnarchiver, error) {
+	zipReader, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open zip archive: %v", err)
+	}
+	return &zipUnarchiver{
+		zipPath: zipPath,
+		dstRoot: dstRoot,
+		zr:      zipReader,
+	}, nil
+}
+
+func (zu *zipUnarchiver) Close() error {
+	return zu.zr.Close()
+}
+
+// extractAll extracts all files from the zip file to the destination directory. If skipFileWithDigest
+// is true, for files with SHA256 value stored in the zip file header, this extractor will only
+// create an empty file, and set the digest to xattr values.
+func (zu *zipUnarchiver) extractAll(skipFileWithDigest bool) error {
+	for _, f := range zu.zr.File {
+		if f.FileHeader.Mode().IsDir() {
+			if err := zu.extractDir(f); err != nil {
+				return fmt.Errorf("failed to extract directory %s: %v", f.Name, err)
+			}
+			continue
+		}
+		if err := zu.extractFile(f, skipFileWithDigest); err != nil {
+			return fmt.Errorf("failed to extract file %s: %v", f.Name, err)
+		}
+	}
+	return nil
+}
+
+func (zu *zipUnarchiver) extractDir(zf *zip.File) error {
+	filePath := filepath.Join(zu.dstRoot, zf.Name)
+	if err := os.MkdirAll(filePath, zf.Mode()); err != nil {
+		return fmt.Errorf("failed to extract directory %s: %v", filePath, err)
+	}
+	return nil
+}
+
+func (zu *zipUnarchiver) extractFile(zf *zip.File, skipIfDigestExists bool) error {
+	filePath := filepath.Join(zu.dstRoot, zf.Name)
+	if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create directory %s: %v", filepath.Dir(filePath), err)
+	}
+
+	if skipIfDigestExists {
+		sha256, err := readSHA256(zf.FileHeader.Extra)
+		if err != nil {
+			log.Warningf("Failed to read SHA256 of file %s, skip. Error: %v\n", zf.Name, err)
+		}
+		// If the digest value exists in zip file header, only create an empty file and set xattr
+		// values.
+		if sha256 != "" {
+			if _, err = os.Create(filePath); err != nil {
+				return fmt.Errorf("failed to create file %s: %v", filePath, err)
+			}
+			if err := xattr.Set(filePath, XattrDigestName, []byte(
+				fmt.Sprintf("%s/%d", sha256, zf.FileHeader.UncompressedSize64))); err != nil {
+				return fmt.Errorf("failed to set xattr %s to %s: %v", XattrDigestName, filePath, err)
+			}
+			if err := xattr.Set(filePath, XattrSrcZipPath, []byte(zf.Name)); err != nil {
+				return fmt.Errorf("failed to set xattr %s to %s: %v", XattrSrcZipPath, filePath, err)
+			}
+			if err := os.Chmod(filePath, zf.Mode()); err != nil {
+				return fmt.Errorf("failed to set mode %s to file %s: %v", zf.Mode(), filePath, err)
+			}
+			if err := os.Chtimes(filePath, time.Time{}, zf.Modified); err != nil {
+				return fmt.Errorf("failed to set modified time %s to file %s: %v", zf.Modified, filePath, err)
+			}
+			return nil
+		}
+	}
+
+	// Write the file content to the destination.
+	dst, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
+	if err != nil {
+		return fmt.Errorf("failed to open file %s: %v", filePath, err)
+	}
+	defer dst.Close()
+
+	src, err := zf.Open()
+	if err != nil {
+		return fmt.Errorf("failed to open file %s in archive: %v", zf.Name, err)
+	}
+	defer src.Close()
+
+	if _, err = io.Copy(dst, src); err != nil {
+		return fmt.Errorf("failed to extract file %s in archive: %v", zf.Name, err)
+	}
+	return nil
+}
 
 // readSHA256 reads SHA256 checksum from the `extra` field in the file header.
 func readSHA256(fhExtra []byte) (string, error) {
@@ -50,159 +203,39 @@ func readSHA256(fhExtra []byte) (string, error) {
 	return "", nil
 }
 
-// ZipUploader is the uploader to uploader the a zip
-type ZipUploader struct {
-	uploaderConfig
+type zipFileLoader struct {
+	Unarchiver *zipUnarchiver
 }
 
-// NewZipUploader creates
-func NewZipUploader(ctx context.Context, client *client.Client, zipPath string, excludeFilters []string) Uploader {
-	return &ZipUploader{
-		uploaderConfig: uploaderConfig{ctx: ctx, client: client, path: zipPath, excludeFilters: excludeFilters},
-	}
-}
-
-func (zu *ZipUploader) mountZip(zipPath string) (string, *fuse.Server, error) {
-	target := createTmpDir()
-	root, err := zipfs.NewArchiveFileSystem(zipPath)
-	if err != nil {
-		return "", nil, err
-	}
-
-	server, err := fs.Mount(target, root, nil)
-	if err != nil {
-		return "", nil, err
-	}
-	log.Infof("Mounted %s to %s\n", zipPath, target)
-	return target, server, nil
-}
-
-func (zu *ZipUploader) hasCachedDigest() (bool, error) {
-	archive, err := zip.OpenReader(zu.path)
-	if err != nil {
-		return false, fmt.Errorf("failed to open zip archive: %v", err)
-	}
-	defer archive.Close()
-
-	for _, f := range archive.File {
-		sha256, _ := readSHA256(f.FileHeader.Extra)
-		if sha256 != "" {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-func (zu *ZipUploader) createCacheFromZip(rootDir string, zipPath string) (filemetadata.Cache, error) {
-	archive, err := zip.OpenReader(zipPath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open zip archive: %v", err)
-	}
-	defer archive.Close()
-
-	cache := filemetadata.NewSingleFlightCache()
-	cacheCount := 0
-	dupCount := 0
-	dup := make(map[string]bool)
-	for _, f := range archive.File {
-		fh := f.FileHeader
-		if fh.Mode().IsDir() || len(fh.Extra) == 0 {
-			continue
-		}
-		sha256, err := readSHA256(fh.Extra)
+func (zfl *zipFileLoader) LoadFiles(dstPaths []string) error {
+	start := time.Now()
+	paths := make(map[string]string)
+	for _, path := range dstPaths {
+		stat, err := os.Stat(path)
 		if err != nil {
-			log.Warningf("Failed to read SHA256 of file %s, skip. Error: %v\n", f.Name, err)
+			return err
+		}
+		if stat.Size() > 0 {
 			continue
 		}
-		if sha256 == "" {
-			continue
+		srcPathXattr, err := xattr.Get(path, XattrSrcZipPath)
+		if err != nil {
+			return err
 		}
+		paths[string(srcPathXattr)] = path
+	}
 
-		cacheCount++
-		if dup[sha256] == true {
-			dupCount++
+	var count int
+	var size int64
+	for _, f := range zfl.Unarchiver.zr.File {
+		if targetPath, ok := paths[f.Name]; ok {
+			if err := zfl.Unarchiver.extractFile(f, false); err != nil {
+				return fmt.Errorf("failed to load file content of %s from archive: %v", targetPath, err)
+			}
+			count++
+			size += int64(f.UncompressedSize64)
 		}
-		dup[sha256] = true
-
-		cache.Update(path.Join(rootDir, f.Name), &filemetadata.Metadata{
-			Digest: digest.Digest{
-				Hash: sha256,
-				Size: int64(fh.UncompressedSize64),
-			},
-			IsExecutable: fh.Mode()&0111 == 0111,
-			MTime:        fh.ModTime(),
-		})
 	}
-	return cache, nil
-}
-
-// DoUpload uploads the unarchived zip file to CAS, and returns the digest of the root directory.
-func (zu *ZipUploader) DoUpload() (digest.Digest, error) {
-	hasCachedDigest, err := zu.hasCachedDigest()
-	if err != nil {
-		return digest.Digest{}, err
-	}
-	if hasCachedDigest {
-		rootDigest, err := zu.mountAndUpload()
-		return rootDigest, err
-	}
-	rootDigest, err := zu.unzipAndUpload()
-	return rootDigest, err
-}
-
-func (zu *ZipUploader) mountAndUpload() (digest.Digest, error) {
-	// Mount the zip archive as a FUSE file system for building the Merkle tree with the full
-	// directory structure and extracting only parts of the archive.
-	mountPath, fuseServer, err := zu.mountZip(zu.path)
-	if err != nil {
-		return digest.Digest{}, fmt.Errorf("Failed to mount %s to %s: %v", zu.path, mountPath, err)
-	}
-	defer func() {
-		if err := fuseServer.Unmount(); err != nil {
-			log.Errorf("Unable to unmount: %v\n", err)
-		} else {
-			log.Infoln("Successfully unmount Fuse Server")
-		}
-		if err := os.RemoveAll(mountPath); err != nil {
-			log.Errorf("Failed to remove mounted path: %v\n", err)
-		} else {
-			log.Infof("Successfully remove mounted path: %s\n", mountPath)
-		}
-	}()
-
-	// Create a cache by reading the zip file header.
-	digestCache, err := zu.createCacheFromZip(mountPath, zu.path)
-	if err != nil {
-		return digest.Digest{}, fmt.Errorf("failed to create digest from zip: %v", err)
-	}
-
-	du := NewDirUploader(zu.ctx, zu.client, mountPath, zu.excludeFilters, digestCache)
-	rootDigest, err := du.DoUpload()
-	if err != nil {
-		return rootDigest, fmt.Errorf("failed to upload mounted zip path %s: %v", mountPath, err)
-	}
-	return rootDigest, nil
-}
-
-func (zu *ZipUploader) unzipAndUpload() (digest.Digest, error) {
-	targetDir := createTmpDir()
-	defer func() {
-		if err := os.RemoveAll(targetDir); err != nil {
-			log.Errorf("Failed to clean up target dir %s: %v", targetDir, err)
-		}
-	}()
-
-	cmd := exec.Command("unzip", zu.path, "-d", targetDir)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return digest.Digest{}, fmt.Errorf("failed to unzip %s to %s: %v\n%s",
-			zu.path, targetDir, err, string(output))
-	}
-
-	du := NewDirUploader(zu.ctx, zu.client, targetDir, zu.excludeFilters, nil)
-	rootDigest, err := du.DoUpload()
-	if err != nil {
-		return rootDigest, fmt.Errorf("failed to upload the unzipped directory %s: %v", targetDir, err)
-	}
-	return rootDigest, nil
+	log.Infof("Loaded %d files, %d bytes. Time: %v\n", count, size, time.Since(start))
+	return nil
 }

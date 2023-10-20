@@ -7,7 +7,6 @@ require (
 	github.com/golang/glog v1.1.2
 	github.com/google/device-infra v0.0.0-20230821085359-d99bb10f2d1d
 	github.com/google/uuid v1.3.0
-	github.com/hanwen/go-fuse/v2 v2.3.0
 )
 
 require (

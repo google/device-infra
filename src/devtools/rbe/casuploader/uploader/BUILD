@@ -36,8 +36,6 @@ go_library(
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/uploadinfo",
         "@com_github_golang_glog//:glog",
         "@com_github_google_uuid//:uuid",
-        "@com_github_hanwen_go_fuse_v2//fs",
-        "@com_github_hanwen_go_fuse_v2//fuse",
-        "@com_github_hanwen_go_fuse_v2//zipfs",
+        "@com_github_pkg_xattr//:xattr",
     ],
 )

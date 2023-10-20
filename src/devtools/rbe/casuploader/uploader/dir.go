@@ -3,7 +3,6 @@ package uploader
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	log "github.com/golang/glog"
@@ -14,23 +13,27 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 )
 
+// fileLoader is the common interface to load content of files
+type fileLoader interface {
+	// LoadFiles loads the files specified in paths
+	LoadFiles(paths []string) error
+}
+
 // DirUploader is the uploader to upload a directory to CAS.
 type DirUploader struct {
 	uploaderConfig
-	dirPath     string
-	digestCache filemetadata.Cache
+	dirPath string
+	// fileLoader specifies how to load a list of files from the file system.
+	fileLoader fileLoader
 }
 
 // NewDirUploader creates a new directory uploader to upload a directory to CAS.
 func NewDirUploader(ctx context.Context, client *client.Client, dirPath string,
-	excludeFilters []string, digestCache filemetadata.Cache) Uploader {
-	if digestCache == nil {
-		digestCache = filemetadata.NewSingleFlightCache()
-	}
+	excludeFilters []string, fileLoader fileLoader) Uploader {
 	return &DirUploader{
 		uploaderConfig: uploaderConfig{ctx: ctx, client: client, excludeFilters: excludeFilters},
 		dirPath:        dirPath,
-		digestCache:    digestCache,
+		fileLoader:     fileLoader,
 	}
 }
 
@@ -47,8 +50,13 @@ func (du *DirUploader) inputSpec() command.InputSpec {
 
 // DoUpload uploads the given directories to CAS, and returns the digest of the root directory.
 func (du *DirUploader) DoUpload() (digest.Digest, error) {
-	rootDigest, uploadEntries := du.getEntriesToUpload()
-	printEntriesStats(uploadEntries, "all entries in the dir")
+	inputSpec := du.inputSpec()
+	rootDigest, uploadEntries, _, err := du.client.ComputeMerkleTree(
+		du.ctx, du.dirPath, "", "", &inputSpec, filemetadata.NewNoopCache())
+	if err != nil {
+		return digest.Digest{}, fmt.Errorf("failed to compute merkle tree: %v", err)
+	}
+	printEntriesStats(uploadEntries, "all entries in the directory")
 
 	// Check with CAS service to find out all files that do not exist remotely, and only load these
 	// files from local disk.
@@ -57,8 +65,16 @@ func (du *DirUploader) DoUpload() (digest.Digest, error) {
 		return digest.Digest{}, fmt.Errorf("failed to find missing blobs: %v", err)
 	}
 
-	if err := du.loadFiles(missingEntries); err != nil {
-		return digest.Digest{}, fmt.Errorf("failed to load missing files: %v", err)
+	if du.fileLoader != nil {
+		paths := []string{}
+		for _, entry := range missingEntries {
+			if entry.IsFile() && entry.Path != "" {
+				paths = append(paths, entry.Path)
+			}
+		}
+		if err := du.fileLoader.LoadFiles(paths); err != nil {
+			return digest.Digest{}, fmt.Errorf("failed to load missing files: %v", err)
+		}
 	}
 
 	if err := du.upload(missingEntries); err != nil {
@@ -92,47 +108,6 @@ func (du *DirUploader) findMissing(uploadInfos []*uploadinfo.Entry) ([]*uploadin
 	}
 	printEntriesStats(missingEntries, "missing entries in remote server")
 	return missingEntries, nil
-}
-
-func (du *DirUploader) loadFiles(entries []*uploadinfo.Entry) error {
-	start := time.Now()
-	var count int
-	var size int64
-	for _, entry := range entries {
-		if entry.Path != "" {
-			entry.Contents, _ = os.ReadFile(entry.Path)
-			count++
-			size += int64(len(entry.Contents))
-		}
-		select {
-		case <-du.ctx.Done():
-			return fmt.Errorf("failed to load files, context cancelled")
-		default:
-		}
-	}
-	log.Infof("Loaded %d files, %d bytes. Time: %v\n", count, size, time.Since(start))
-	return nil
-}
-
-func (du *DirUploader) getEntriesToUpload() (rootDigest digest.Digest, uploadEntries []*uploadinfo.Entry) {
-	rootDigestSet := make(map[digest.Digest]bool)
-	inputSpec := du.inputSpec()
-	tryCount := 0
-	// b/271174764 go-fuse is flaky to list files when heavy read load. Use retry to get the correct
-	// root digest and upload entries.
-	// See https://github.com/hanwen/go-fuse/issues/391 for the information of the bug inside go-fuse.
-	for tryCount < 20 {
-		tryCount++
-		rootDigest, uploadEntries, _, _ = du.client.ComputeMerkleTree(
-			du.ctx, du.dirPath, "", "", &inputSpec, du.digestCache)
-		if rootDigestSet[rootDigest] {
-			break
-		} else {
-			rootDigestSet[rootDigest] = true
-		}
-	}
-	log.Infof("Tried %d times to get correct root digest and upload entries", tryCount)
-	return rootDigest, uploadEntries
 }
 
 func (du *DirUploader) upload(uploadInfos []*uploadinfo.Entry) error {

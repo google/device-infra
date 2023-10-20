@@ -56,12 +56,6 @@ def rbe_go_deps():
         version = "v1.3.0",
     )
     go_repository(
-        name = "com_github_hanwen_go_fuse_v2",
-        importpath = "github.com/hanwen/go-fuse/v2",
-        sum = "h1:t5ivNIH2PK+zw4OBul/iJjsoG9K6kXo4nMDoBpciC8A=",
-        version = "v2.3.0",
-    )
-    go_repository(
         name = "com_github_klauspost_compress",
         importpath = "github.com/klauspost/compress",
         sum = "h1:G5AfA94pHPysR56qqrkO2pxEexdDzrpFJ6yt/VqWxVU=",
