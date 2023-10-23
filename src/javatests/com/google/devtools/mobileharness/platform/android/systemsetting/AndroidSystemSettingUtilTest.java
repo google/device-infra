@@ -467,9 +467,26 @@ public class AndroidSystemSettingUtilTest {
   @Test
   public void getDeviceSdkVersion() throws Exception {
     when(adbUtil.getIntProperty(DEVICE_ID, AndroidProperty.SDK_VERSION)).thenReturn(28);
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.PREVIEW_SDK_VERSION)).thenReturn("");
     assertThat(settingUtil.getDeviceSdkVersion(DEVICE_ID)).isEqualTo(28);
 
     when(adbUtil.getIntProperty(DEVICE_ID, AndroidProperty.SDK_VERSION))
+        .thenThrow(MobileHarnessException.class);
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class, () -> settingUtil.getDeviceSdkVersion(DEVICE_ID))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_DEVICE_SDK_ERROR);
+  }
+
+  @Test
+  public void getDeviceSdkVersionForPreview() throws Exception {
+    when(adbUtil.getIntProperty(DEVICE_ID, AndroidProperty.SDK_VERSION)).thenReturn(28);
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.PREVIEW_SDK_VERSION)).thenReturn("1");
+
+    assertThat(settingUtil.getDeviceSdkVersion(DEVICE_ID)).isEqualTo(29);
+
+    when(adbUtil.getProperty(DEVICE_ID, AndroidProperty.PREVIEW_SDK_VERSION))
         .thenThrow(MobileHarnessException.class);
     assertThat(
             assertThrows(
@@ -856,8 +873,7 @@ public class AndroidSystemSettingUtilTest {
             String.format(
                 AndroidSystemSettingUtil.ADB_SHELL_TEMPLATE_SET_SYSTEM_TIME,
                 "-s",
-                AndroidSystemSettingUtil.SET_SYSTEM_TIME_FORMAT.format(
-                    calendar.getTime().toInstant()))))
+                AndroidSystemSettingUtil.SET_SYSTEM_TIME_FORMAT.format(calendar.toInstant()))))
         .thenReturn(AndroidSystemSettingUtil.SET_SYSTEM_TIME_RETURN_FORMAT.format(nowInstant));
 
     // Wrong time zone offset format

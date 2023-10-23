@@ -37,6 +37,7 @@ public enum AndroidProperty {
   LOCALE("persist.sys.locale"),
   MODEL("ro.product.model"),
   NATIVE_BRIDGE("ro.dalvik.vm.native.bridge"),
+  PREVIEW_SDK_VERSION("ro.build.version.preview_sdk"),
   PRODUCT("ro.build.product"),
   PRODUCT_BOARD("ro.product.board", "ro.hardware"),
   REGION("persist.sys.country", "ro.product.locale.region"),

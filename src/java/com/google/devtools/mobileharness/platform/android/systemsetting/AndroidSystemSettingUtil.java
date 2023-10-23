@@ -48,6 +48,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Calendar;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.TimeZone;
 import java.util.regex.Matcher;
@@ -741,7 +742,7 @@ public class AndroidSystemSettingUtil {
                     AndroidSettings.NameSpace.GLOBAL,
                     ADB_SHELL_SETTINGS_UNKNOWN_SOURCES),
                 SHORT_COMMAND_TIMEOUT);
-        if ("0".equals(secureValue)) {
+        if (Objects.equals(secureValue, "0")) {
           logger.atInfo().log("Enable secure unknown source");
           adbUtil.settings(
               UtilArgs.builder().setSerial(serial).build(),
@@ -1004,7 +1005,13 @@ public class AndroidSystemSettingUtil {
   public int getDeviceSdkVersion(String serial)
       throws MobileHarnessException, InterruptedException {
     try {
-      return adbUtil.getIntProperty(serial, AndroidProperty.SDK_VERSION);
+      int baseSdkVersion = adbUtil.getIntProperty(serial, AndroidProperty.SDK_VERSION);
+      String previewSdkVersion = adbUtil.getProperty(serial, AndroidProperty.PREVIEW_SDK_VERSION);
+      if (!previewSdkVersion.isEmpty() && Integer.parseInt(previewSdkVersion) > 0) {
+        return baseSdkVersion + 1;
+      } else {
+        return baseSdkVersion;
+      }
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_SYSTEM_SETTING_GET_DEVICE_SDK_ERROR,
