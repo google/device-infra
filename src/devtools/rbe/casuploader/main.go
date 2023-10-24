@@ -113,14 +113,15 @@ func main() {
 	defer client.Close()
 
 	var rootDigest digest.Digest
+	uploaderConfig := uploader.NewCommonConfig(ctx, client, excludeFilters)
 	if *zipPath != "" {
-		zipUploader := uploader.NewZipUploader(ctx, client, *zipPath, excludeFilters)
+		zipUploader := uploader.NewZipUploader(uploaderConfig, *zipPath)
 		rootDigest, err = zipUploader.DoUpload()
 		if err != nil {
 			log.Exitf("Failed to upload the zip archive to CAS: %v", err)
 		}
 	} else if *dirPath != "" {
-		dirUploader := uploader.NewDirUploader(ctx, client, *dirPath, excludeFilters, nil)
+		dirUploader := uploader.NewDirUploader(uploaderConfig, *dirPath, nil)
 		rootDigest, err = dirUploader.DoUpload()
 		if err != nil {
 			log.Exitf("Failed to upload the directory to CAS: %v", err)

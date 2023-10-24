@@ -17,11 +17,20 @@ type Uploader interface {
 	DoUpload() (digest.Digest, error)
 }
 
-type uploaderConfig struct {
+// CommonConfig is the common configurations used for all kinds of uploders
+type CommonConfig struct {
 	ctx            context.Context
 	client         *client.Client
-	path           string
 	excludeFilters []string
+}
+
+// NewCommonConfig creates a common CAS uploader configuration.
+func NewCommonConfig(ctx context.Context, client *client.Client, excludeFilters []string) *CommonConfig {
+	return &CommonConfig{
+		ctx:            ctx,
+		client:         client,
+		excludeFilters: excludeFilters,
+	}
 }
 
 func createTmpDir() string {

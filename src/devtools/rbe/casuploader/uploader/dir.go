@@ -1,12 +1,10 @@
 package uploader
 
 import (
-	"context"
 	"fmt"
 	"time"
 
 	log "github.com/golang/glog"
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/command"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
@@ -21,19 +19,18 @@ type fileLoader interface {
 
 // DirUploader is the uploader to upload a directory to CAS.
 type DirUploader struct {
-	uploaderConfig
+	CommonConfig
 	dirPath string
 	// fileLoader specifies how to load a list of files from the file system.
 	fileLoader fileLoader
 }
 
 // NewDirUploader creates a new directory uploader to upload a directory to CAS.
-func NewDirUploader(ctx context.Context, client *client.Client, dirPath string,
-	excludeFilters []string, fileLoader fileLoader) Uploader {
+func NewDirUploader(config *CommonConfig, dirPath string, fileLoader fileLoader) Uploader {
 	return &DirUploader{
-		uploaderConfig: uploaderConfig{ctx: ctx, client: client, excludeFilters: excludeFilters},
-		dirPath:        dirPath,
-		fileLoader:     fileLoader,
+		CommonConfig: *config,
+		dirPath:      dirPath,
+		fileLoader:   fileLoader,
 	}
 }
 

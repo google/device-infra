@@ -2,7 +2,6 @@ package uploader
 
 import (
 	"archive/zip"
-	"context"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
@@ -12,7 +11,6 @@ import (
 	"time"
 
 	log "github.com/golang/glog"
-	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
 	"github.com/pkg/xattr"
@@ -38,13 +36,15 @@ const (
 
 // ZipUploader is the uploader to uploader the a zip
 type ZipUploader struct {
-	uploaderConfig
+	CommonConfig
+	zipPath string
 }
 
 // NewZipUploader creates
-func NewZipUploader(ctx context.Context, client *client.Client, zipPath string, excludeFilters []string) Uploader {
+func NewZipUploader(config *CommonConfig, zipPath string) Uploader {
 	return &ZipUploader{
-		uploaderConfig: uploaderConfig{ctx: ctx, client: client, path: zipPath, excludeFilters: excludeFilters},
+		CommonConfig: *config,
+		zipPath:      zipPath,
 	}
 }
 
@@ -60,23 +60,23 @@ func (zu *ZipUploader) DoUpload() (digest.Digest, error) {
 		}
 	}()
 
-	log.Infof("Extracting %s to %s with digests\n", zu.path, targetDir)
+	log.Infof("Extracting %s to %s with digests\n", zu.zipPath, targetDir)
 
-	unarchiver, err := newZipUnarchiver(zu.path, targetDir)
+	unarchiver, err := newZipUnarchiver(zu.zipPath, targetDir)
 	if err != nil {
-		return digest.Digest{}, fmt.Errorf("failed to create zip unarchiver for %s: %v", zu.path, err)
+		return digest.Digest{}, fmt.Errorf("failed to create zip unarchiver for %s: %v", zu.zipPath, err)
 	}
 	defer unarchiver.Close()
 
 	err = unarchiver.extractAll(true)
 	if err != nil {
-		return digest.Digest{}, fmt.Errorf("failed to extract %s to %s: %v", zu.path, targetDir, err)
+		return digest.Digest{}, fmt.Errorf("failed to extract %s to %s: %v", zu.zipPath, targetDir, err)
 	}
 
-	du := NewDirUploader(zu.ctx, zu.client, targetDir, zu.excludeFilters, &zipFileLoader{Unarchiver: unarchiver})
+	du := NewDirUploader(&zu.CommonConfig, targetDir, &zipFileLoader{Unarchiver: unarchiver})
 	rootDigest, err := du.DoUpload()
 	if err != nil {
-		return rootDigest, fmt.Errorf("failed to upload the directory %s for zip %s: %v", targetDir, zu.path, err)
+		return rootDigest, fmt.Errorf("failed to upload the directory %s for zip %s: %v", targetDir, zu.zipPath, err)
 	}
 	return rootDigest, nil
 }
