@@ -1,7 +1,10 @@
 package uploader
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"time"
 
 	log "github.com/golang/glog"
@@ -54,6 +57,7 @@ func (du *DirUploader) DoUpload() (digest.Digest, error) {
 		return digest.Digest{}, fmt.Errorf("failed to compute merkle tree: %v", err)
 	}
 	printEntriesStats(uploadEntries, "all entries in the directory")
+	du.exportEntriesInfo(uploadEntries)
 
 	// Check with CAS service to find out all files that do not exist remotely, and only load these
 	// files from local disk.
@@ -130,4 +134,42 @@ func printEntriesStats(entries []*uploadinfo.Entry, message string) {
 	}
 	log.Infof("Stats of %s. Size: %d bytes, count: %d, files: %d, blobs: %d\n",
 		message, size, len(entries), numFiles, numBlobs)
+}
+
+type uploadEntryInfo struct {
+	Path   string `json:"path"`
+	Digest string `json:"digest"`
+	Size   int64  `json:"size"`
+}
+
+// exportEntriesInfo outputs the information of upload entries to the file path specified in `dumpFileDetails`
+func (du *DirUploader) exportEntriesInfo(entries []*uploadinfo.Entry) {
+	path := du.dumpFileDetails
+	if path == "" {
+		return
+	}
+	var infoList []uploadEntryInfo
+	for _, entry := range entries {
+		// Skip directories
+		if entry.Path == "" {
+			continue
+		}
+		relPath, _ := filepath.Rel(du.dirPath, entry.Path)
+		infoList = append(infoList, uploadEntryInfo{
+			Path:   relPath,
+			Digest: entry.Digest.Hash,
+			Size:   entry.Digest.Size,
+		})
+	}
+	outputContent, err := json.MarshalIndent(infoList, "", "  ")
+	if err != nil {
+		log.Warningf("failed to export upload entries info: %v", err)
+		return
+	}
+
+	log.Infof("exporting file digests to %s", path)
+	err = ioutil.WriteFile(path, outputContent, 0644)
+	if err != nil {
+		log.Warningf("failed to export upload entries info to %s: %v", path, err)
+	}
 }

@@ -19,17 +19,19 @@ type Uploader interface {
 
 // CommonConfig is the common configurations used for all kinds of uploders
 type CommonConfig struct {
-	ctx            context.Context
-	client         *client.Client
-	excludeFilters []string
+	ctx             context.Context
+	client          *client.Client
+	excludeFilters  []string
+	dumpFileDetails string
 }
 
 // NewCommonConfig creates a common CAS uploader configuration.
-func NewCommonConfig(ctx context.Context, client *client.Client, excludeFilters []string) *CommonConfig {
+func NewCommonConfig(ctx context.Context, client *client.Client, excludeFilters []string, dumpFileDetails string) *CommonConfig {
 	return &CommonConfig{
-		ctx:            ctx,
-		client:         client,
-		excludeFilters: excludeFilters,
+		ctx:             ctx,
+		client:          client,
+		excludeFilters:  excludeFilters,
+		dumpFileDetails: dumpFileDetails,
 	}
 }
 

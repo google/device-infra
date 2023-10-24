@@ -39,14 +39,15 @@ func (f *multiStringFlag) Get() any {
 var (
 	printVersion = flag.Bool("version", false, "Print version information")
 
-	zipPath        = flag.String("zip-path", "", "Path to a .zip file to upload")
-	dirPath        = flag.String("dir-path", "", "Path to a directory to upload")
-	casInstance    = flag.String("cas-instance", "", "RBE instance")
-	casAddr        = flag.String("cas-addr", "remotebuildexecution.googleapis.com:443", "RBE server addr")
-	serviceAccount = flag.String("service-account-json", "", "Path to JSON file with service account credentials to use.")
-	useADC         = flag.Bool("use-adc", false, "True to use Application Default Credentials (ADC).")
-	dumpDigest     = flag.String("dump-digest", "", "Output the digest to file")
-	excludeFilters multiStringFlag
+	zipPath         = flag.String("zip-path", "", "Path to a .zip file to upload")
+	dirPath         = flag.String("dir-path", "", "Path to a directory to upload")
+	casInstance     = flag.String("cas-instance", "", "RBE instance")
+	casAddr         = flag.String("cas-addr", "remotebuildexecution.googleapis.com:443", "RBE server addr")
+	serviceAccount  = flag.String("service-account-json", "", "Path to JSON file with service account credentials to use.")
+	useADC          = flag.Bool("use-adc", false, "True to use Application Default Credentials (ADC).")
+	dumpDigest      = flag.String("dump-digest", "", "Output the digest to file")
+	dumpFileDetails = flag.String("dump-file-details", "", "Export information of all uploaded files to a file")
+	excludeFilters  multiStringFlag
 )
 
 func checkFlags() error {
@@ -113,7 +114,7 @@ func main() {
 	defer client.Close()
 
 	var rootDigest digest.Digest
-	uploaderConfig := uploader.NewCommonConfig(ctx, client, excludeFilters)
+	uploaderConfig := uploader.NewCommonConfig(ctx, client, excludeFilters, *dumpFileDetails)
 	if *zipPath != "" {
 		zipUploader := uploader.NewZipUploader(uploaderConfig, *zipPath)
 		rootDigest, err = zipUploader.DoUpload()
