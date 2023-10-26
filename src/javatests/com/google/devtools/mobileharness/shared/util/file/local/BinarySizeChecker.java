@@ -26,9 +26,10 @@ public class BinarySizeChecker {
   public static void checkBinarySize(String name, long maxSizeByte, String filePath)
       throws MobileHarnessException {
     assertWithMessage(
-            "The binary size of %s should be less than %s bytes. If"
-                + " you are sure that the new added deps are necessary, please"
-                + " update the number and explain the necessity. file_path=%s",
+            "The binary size of %s should be less than %s bytes. If you are sure that the new added"
+                + " deps are necessary, please update the number and explain the necessity (what"
+                + " libs are added to the binary, their sizes, why they are necessary) in the"
+                + " change description. file_path=%s",
             name, maxSizeByte, filePath)
         .that(new LocalFileUtil().getFileSize(filePath))
         .isLessThan(maxSizeByte);
