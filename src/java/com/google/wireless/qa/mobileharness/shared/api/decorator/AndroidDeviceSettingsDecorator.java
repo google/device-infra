@@ -21,9 +21,6 @@ import static com.google.common.collect.Streams.stream;
 import static com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.shellEscape;
 import static java.util.Comparator.naturalOrder;
 
-import android.provider.Settings.Global;
-import android.provider.Settings.Secure;
-import android.provider.Settings.System;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
@@ -448,18 +445,18 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
     AndroidDeviceSettingsDecoratorValidator.validateSpec(spec);
     // screen_brightness
     if (spec.hasScreenBrightness()) {
-      settings.system.add(System.SCREEN_BRIGHTNESS, spec.getScreenBrightness());
+      settings.system.add("screen_brightness", spec.getScreenBrightness());
     }
 
     // screen_adaptive_brightness
     if (spec.hasScreenAdaptiveBrightness()) {
-      settings.system.add(System.SCREEN_BRIGHTNESS_MODE, toInt(spec.getScreenAdaptiveBrightness()));
+      settings.system.add("screen_brightness_mode", toInt(spec.getScreenAdaptiveBrightness()));
     }
 
     // screen_timeout_sec
     if (spec.hasScreenTimeoutSec()) {
       settings.system.add(
-          System.SCREEN_OFF_TIMEOUT, Duration.ofSeconds(spec.getScreenTimeoutSec()).toMillis());
+          "screen_off_timeout", Duration.ofSeconds(spec.getScreenTimeoutSec()).toMillis());
     }
 
     // notification_led
@@ -469,12 +466,12 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
 
     // enable_auto_rotate
     if (spec.hasEnableAutoRotate()) {
-      settings.system.add(System.ACCELEROMETER_ROTATION, toInt(spec.getEnableAutoRotate()));
+      settings.system.add("accelerometer_rotation", toInt(spec.getEnableAutoRotate()));
     }
 
     // enable_sound_effects
     if (spec.hasEnableSoundEffects()) {
-      settings.system.add(System.SOUND_EFFECTS_ENABLED, toInt(spec.getEnableSoundEffects()));
+      settings.system.add("sound_effects_enabled", toInt(spec.getEnableSoundEffects()));
     }
 
     // enable_volta
@@ -558,7 +555,7 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
     // enable_location_gps
     if (spec.hasEnableLocationGps()) {
       settings.secure.add(
-          Secure.LOCATION_PROVIDERS_ALLOWED, spec.getEnableLocationGps() ? "+gps" : "-gps");
+          "location_providers_allowed", spec.getEnableLocationGps() ? "+gps" : "-gps");
     }
 
     // enable_location_network
@@ -576,8 +573,7 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
           "--bind",
           String.format("value:s:%d", spec.getEnableLocationNetwork() ? 1 : 0));
       settings.secure.add(
-          Secure.LOCATION_PROVIDERS_ALLOWED,
-          spec.getEnableLocationNetwork() ? "+network" : "-network");
+          "location_providers_allowed", spec.getEnableLocationNetwork() ? "+network" : "-network");
     }
 
     // enable_heads_up_notifications
@@ -645,17 +641,17 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
 
     // animator_duration_scale
     if (spec.hasAnimatorDurationScale()) {
-      settings.global.add(Global.ANIMATOR_DURATION_SCALE, spec.getAnimatorDurationScale());
+      settings.global.add("animator_duration_scale", spec.getAnimatorDurationScale());
     }
 
     // transition_animation_scale
     if (spec.hasTransitionAnimationScale()) {
-      settings.global.add(Global.TRANSITION_ANIMATION_SCALE, spec.getTransitionAnimationScale());
+      settings.global.add("transition_animation_scale", spec.getTransitionAnimationScale());
     }
 
     // window_animation_scale
     if (spec.hasWindowAnimationScale()) {
-      settings.global.add(Global.WINDOW_ANIMATION_SCALE, spec.getWindowAnimationScale());
+      settings.global.add("window_animation_scale", spec.getWindowAnimationScale());
     }
 
     // bluetooth_on
@@ -664,7 +660,7 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
         commandsAfterSettings.svc.add(
             "bluetooth", spec.getEnableBluetooth() ? "enable" : "disable");
       } else {
-        settings.global.add(Global.BLUETOOTH_ON, toInt(spec.getEnableBluetooth()));
+        settings.global.add("bluetooth_on", toInt(spec.getEnableBluetooth()));
       }
     }
 
@@ -674,19 +670,19 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
       // If the date time on device is incorrect,
       // before setting auto_time to be 1, set it to be 0 first. (b/37777891)
       if (spec.getEnableAutoTime()) {
-        settings.global.add(Global.AUTO_TIME, 0);
+        settings.global.add("auto_time", 0);
       }
-      settings.global.add(Global.AUTO_TIME, toInt(spec.getEnableAutoTime()));
+      settings.global.add("auto_time", toInt(spec.getEnableAutoTime()));
     }
 
     // auto timezone
     if (spec.hasEnableAutoTimezone()) {
-      settings.global.add(Global.AUTO_TIME_ZONE, toInt(spec.getEnableAutoTimezone()));
+      settings.global.add("auto_time_zone", toInt(spec.getEnableAutoTimezone()));
     }
 
     // 12-24h time format
     if (spec.hasEnable24HTimeFormat()) {
-      settings.system.add(System.TIME_12_24, spec.getEnable24HTimeFormat() ? "24" : "12");
+      settings.system.add("time_12_24", spec.getEnable24HTimeFormat() ? "24" : "12");
     }
 
     if (spec.hasTimezone()) {
