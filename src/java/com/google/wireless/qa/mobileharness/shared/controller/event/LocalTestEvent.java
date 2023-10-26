@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.controller.event;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 
 /**
@@ -24,5 +26,14 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
  */
 public interface LocalTestEvent extends ControllerEvent {
 
-  Device getLocalDevice();
+  /**
+   * Returns all {@link Device}s of the test, whose key is {@link Device#getDeviceId()}, in the same
+   * order of the allocation.
+   */
+  ImmutableMap<String, Device> getLocalDevices();
+
+  /** Returns the <b>first</b> {@link Device} of the test. */
+  default Device getLocalDevice() {
+    return Iterables.get(getLocalDevices().values(), /* position= */ 0);
+  }
 }

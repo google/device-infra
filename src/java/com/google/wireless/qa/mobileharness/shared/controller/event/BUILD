@@ -51,13 +51,11 @@ java_library(
     deps = [
         ":base",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/util:device_info",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],

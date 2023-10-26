@@ -211,7 +211,7 @@ public class LocalDirectTestRunner
       @Nullable List<DeviceFeature> deviceFeatures,
       @Nullable Throwable testError) {
     return testFlow.createLocalTestEvent(
-        eventType, testInfo, devices.get(0), allocation, deviceInfos, deviceFeatures, testError);
+        eventType, testInfo, devices, allocation, deviceInfos, deviceFeatures, testError);
   }
 
   /**

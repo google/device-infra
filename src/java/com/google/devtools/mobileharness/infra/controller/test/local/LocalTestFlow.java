@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.infra.controller.test.local;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -25,6 +27,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
@@ -319,14 +322,16 @@ public class LocalTestFlow {
   Object createLocalTestEvent(
       Class<?> eventType,
       TestInfo testInfo,
-      Device device,
+      List<Device> devices,
       Allocation allocation,
       @Nullable List<DeviceInfo> deviceInfos,
       @Nullable List<DeviceFeature> deviceFeatures,
       @Nullable Throwable testError) {
+    ImmutableMap<String, Device> devicesById =
+        devices.stream().collect(toImmutableMap(Device::getDeviceId, identity()));
     if (eventType == TestStartingEvent.class || eventType == LocalTestStartingEvent.class) {
       return new LocalTestStartingEvent(
-          testInfo, device, allocation, checkNotNull(deviceInfos).get(0));
+          testInfo, devicesById, allocation, checkNotNull(deviceInfos).get(0));
     } else if (eventType
         == com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent.class) {
       DeviceFeature primaryDeviceFeature = checkNotNull(deviceFeatures).get(0);
@@ -348,10 +353,10 @@ public class LocalTestFlow {
       };
     } else if (eventType == TestStartEvent.class || eventType == LocalTestStartEvent.class) {
       return new LocalTestStartEvent(
-          testInfo, device, allocation, checkNotNull(deviceInfos).get(0));
+          testInfo, devicesById, allocation, checkNotNull(deviceInfos).get(0));
     } else if (eventType == TestStartedEvent.class || eventType == LocalTestStartedEvent.class) {
       return new LocalTestStartedEvent(
-          testInfo, device, allocation, checkNotNull(deviceInfos).get(0));
+          testInfo, devicesById, allocation, checkNotNull(deviceInfos).get(0));
     } else if (eventType
         == com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class) {
       DeviceFeature primaryDeviceFeature = checkNotNull(deviceFeatures).get(0);
@@ -373,11 +378,15 @@ public class LocalTestFlow {
       };
     } else if (eventType == TestEndingEvent.class || eventType == LocalTestEndingEvent.class) {
       return new LocalTestEndingEvent(
-          testInfo, device, allocation, deviceInfos == null ? null : deviceInfos.get(0), testError);
+          testInfo,
+          devicesById,
+          allocation,
+          deviceInfos == null ? null : deviceInfos.get(0),
+          testError);
     } else if (eventType == TestEndedEvent.class || eventType == LocalTestEndedEvent.class) {
       return new LocalTestEndedEvent(
           testInfo,
-          device,
+          devicesById,
           allocation,
           deviceInfos == null ? null : deviceInfos.get(0),
           /* shouldRebootDevice= */ false,

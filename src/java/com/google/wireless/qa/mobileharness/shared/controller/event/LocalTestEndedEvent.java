@@ -17,14 +17,12 @@
 package com.google.wireless.qa.mobileharness.shared.controller.event;
 
 import com.google.common.annotations.Beta;
-import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
+import com.google.common.collect.ImmutableMap;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.util.EventInjectionScope;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
-import com.google.wireless.qa.mobileharness.shared.util.DeviceInfoUtil;
 import javax.annotation.Nullable;
 
 /**
@@ -34,7 +32,7 @@ import javax.annotation.Nullable;
  */
 public class LocalTestEndedEvent extends TestEndedEvent implements LocalTestEvent {
 
-  private final Device localDevice;
+  private final ImmutableMap<String, Device> localDevices;
 
   /**
    * NOTE: Do NOT instantiate it in tests of your plugin and use mocked object instead.
@@ -42,37 +40,21 @@ public class LocalTestEndedEvent extends TestEndedEvent implements LocalTestEven
    * <p>TODO: Uses factory to prevent instantiating out of MH infrastructure.
    */
   @Beta
+  @SuppressWarnings("NonApiType")
   public LocalTestEndedEvent(
       TestInfo testInfo,
-      Device localDevice,
+      ImmutableMap<String, Device> localDevices,
       Allocation allocation,
       @Nullable DeviceInfo deviceInfo,
       @SuppressWarnings("unused") boolean shouldRebootDevice,
       @Nullable Throwable testError) {
     super(testInfo, allocation, deviceInfo, shouldRebootDevice, testError);
-    this.localDevice = localDevice;
-  }
-
-  public LocalTestEndedEvent(
-      TestInfo testInfo,
-      Device localDevice,
-      @SuppressWarnings("unused") boolean shouldRebootDevice,
-      @Nullable Throwable testError) {
-    super(
-        testInfo,
-        new Allocation(
-            testInfo.locator(),
-            new DeviceLocator(localDevice.getDeviceId()),
-            StrPairUtil.convertCollectionToMultimap(localDevice.getDimensions())),
-        DeviceInfoUtil.getDeviceInfoForCurrentTest(localDevice, testInfo),
-        shouldRebootDevice,
-        testError);
-    this.localDevice = localDevice;
+    this.localDevices = localDevices;
   }
 
   @Override
-  public Device getLocalDevice() {
-    return localDevice;
+  public ImmutableMap<String, Device> getLocalDevices() {
+    return localDevices;
   }
 
   @Override
