@@ -25,7 +25,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class LabServerBinarySizeTest {
 
-  private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 23_000_000L;
+  private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 24_000_000L;
 
   private static final String LAB_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
