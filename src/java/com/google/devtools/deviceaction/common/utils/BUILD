@@ -41,6 +41,7 @@ LIB_SRCS = [
     "ResourceHelper.java",
     "ResourceUtil.java",
     "SimpleResolver.java",
+    "Verify.java",
 ]
 
 java_library(

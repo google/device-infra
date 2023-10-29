@@ -178,7 +178,8 @@ public class ModulePusher implements Operation {
     Conditions.checkArgument(
         !onDevice.files().isEmpty(),
         ErrorType.INFRA_ISSUE,
-        String.format("The package %s doesn't have files!", onDevice));
+        "The package %s doesn't have files!",
+        onDevice);
     String packageName = onDevice.info().packageName();
     if (onDevice.info().isApex()) {
       if (onDevice.files().size() == 1

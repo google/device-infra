@@ -177,7 +177,8 @@ public final class FlagParser {
       Conditions.checkArgument(
           isKey(leftOver.get(i)),
           ErrorType.CUSTOMER_ISSUE,
-          leftOver.get(i) + " should start with --.");
+          "Flag %s should start with --.",
+          leftOver.get(i));
       if (isValue(leftOver, /* index= */ i + 1)) {
         if (consumer.parseKeyValue(leftOver.get(i), leftOver.get(i + 1))) {
           leftOver.remove(i);

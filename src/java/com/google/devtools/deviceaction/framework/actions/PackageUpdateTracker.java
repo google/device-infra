@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.deviceaction.common.utils.Constants.APEX_SUFFIX;
 import static com.google.devtools.deviceaction.common.utils.Constants.APKS_SUFFIX;
 import static com.google.devtools.deviceaction.common.utils.Constants.APK_SUFFIX;
+import static com.google.devtools.deviceaction.common.utils.Verify.verify;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNullElse;
 
@@ -51,7 +52,7 @@ import java.util.function.Predicate;
 class PackageUpdateTracker {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String ACTIVATED_APEX_SOURCEDIR_PREFIX = "/data";
+  private static final String ACTIVATED_APEX_SOURCE_DIR_PREFIX = "/data";
 
   private static final ImmutableSet<String> PACKAGES_WITH_INVALID_DUMP_INFO =
       ImmutableSet.of("com.google.mainline.primary.libs");
@@ -158,19 +159,18 @@ class PackageUpdateTracker {
       }
       long expectedVersion = androidPackage.info().versionCode();
       PackageInfo installed = onDeviceMap.get(packageName);
-      Conditions.checkState(
-          installed != null, ErrorType.INFRA_ISSUE, "Module " + packageName + " is not installed!");
+      verify(installed != null, "Module %s is not installed!", packageName);
       long actualVersion = installed.versionCode();
       logger.atInfo().log(
-          "The expected version for %s is %d and the actural is %d",
+          "The expected version for %s is %d and the actual is %d",
           packageName, expectedVersion, actualVersion);
-      Conditions.checkState(
-          expectedVersion == actualVersion, ErrorType.INFRA_ISSUE, "Module is not updated!");
+      verify(expectedVersion == actualVersion, "Module is not updated!");
       if (checkSourceDir) {
         Conditions.checkState(
-            installed.sourceDir().startsWith(ACTIVATED_APEX_SOURCEDIR_PREFIX),
+            installed.sourceDir().startsWith(ACTIVATED_APEX_SOURCE_DIR_PREFIX),
             ErrorType.INFRA_ISSUE,
-            "Module " + installed + " is not activated!");
+            "Module %s is not activated!",
+            installed);
       }
     }
   }

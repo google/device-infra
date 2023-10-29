@@ -135,7 +135,8 @@ public class ProtoHelper {
         Conditions.checkArgument(
             options.firstDevice() != null,
             ErrorType.CUSTOMER_ISSUE,
-            "Need to set the first device in " + options);
+            "Need to set the first device in %s",
+            options);
         InstallMainlineSpec installMainlineSpec =
             buildProtoByOptions(options.action(), InstallMainlineSpec.class);
         return getActionSpecForInstallMainline(installMainlineSpec, getUuid(options.firstDevice()));
@@ -143,7 +144,8 @@ public class ProtoHelper {
         Conditions.checkArgument(
             options.firstDevice() != null,
             ErrorType.CUSTOMER_ISSUE,
-            "Need to set the first device in " + options);
+            "Need to set the first device in %s",
+            options);
         ResetSpec resetSpec = buildProtoByOptions(options.action(), ResetSpec.class);
         return getActionSpecForReset(resetSpec, getUuid(options.firstDevice()));
       default:
