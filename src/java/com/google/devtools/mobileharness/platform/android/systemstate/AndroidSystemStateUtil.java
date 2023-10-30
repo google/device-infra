@@ -16,26 +16,40 @@
 
 package com.google.devtools.mobileharness.platform.android.systemstate;
 
+import static com.google.common.base.Verify.verify;
+import static com.google.common.io.Files.getFileExtension;
+import static com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy.exponentialBackoff;
+import static java.lang.String.format;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
+import com.google.common.base.VerifyException;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.IntentArgs;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.RebootMode;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.WaitArgs;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
+import java.io.File;
 import java.time.Clock;
 import java.time.Duration;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
@@ -67,6 +81,10 @@ public class AndroidSystemStateUtil {
 
   /** ADB arg for rebooting the device into recovery. */
   @VisibleForTesting static final String[] ADB_ARGS_REBOOT_TO_RECOVERY = {"reboot", "recovery"};
+
+  private static final String ADB_ARG_GET_STATE = "get-state";
+
+  private static final String ADB_ARG_SIDELOAD = "sideload";
 
   @VisibleForTesting
   static final String ADB_SHELL_ENABLE_TEST_HARNESS_MODE = "cmd testharness enable";
@@ -106,11 +124,19 @@ public class AndroidSystemStateUtil {
 
   private static final Duration FACTORY_RESET_WAIT_TIME = Duration.ofSeconds(30);
 
+  // Defaults to 10m: assuming USB 2.0 transfer speed, concurrency and some buffer
+  private static final Duration MININAL_SIDELOAD_EXECUTION_TIME = Duration.ofMinutes(10);
+
+  private static final Duration SIDELOAD_WAIT_TIME = Duration.ofSeconds(5);
+
   /** Output signal of "adb root" command if device becomes rooted. */
   @VisibleForTesting static final String OUTPUT_BECAME_ROOTED = "restarting adbd as root";
 
   @VisibleForTesting
   static final String OUTPUT_BROKEN_PIPE = "Failure calling service activity: Broken pipe";
+
+  @VisibleForTesting
+  static final String OUTPUT_GET_STATE_ERROR = "error: no devices/emulators found";
 
   /** Output of "adb shell am broadcast" when a device is rebooting after flashed. */
   @VisibleForTesting static final String OUTPUT_DEVICE_BOOTING = "before boot completed";
@@ -174,6 +200,10 @@ public class AndroidSystemStateUtil {
   @VisibleForTesting
   static final String RESET_VIA_TEST_HARNESS_SCREEN_LOCKED_ERROR = "there is a lock screen";
 
+  private static final String OTA_PACKAGE_EXTENSION = "zip";
+  private static final RetryStrategy RETRY_STRATEGY =
+      exponentialBackoff(Duration.ofSeconds(3), /* multiplier= */ 1, /* numAttempts= */ 10);
+
   private final Adb adb;
 
   /** {@code Clock} for getting current system time. */
@@ -233,7 +263,7 @@ public class AndroidSystemStateUtil {
             serial, "service.adb.root", "0", /* ignoreError= */ false, CHECK_ROOT_TIMEOUT);
         adbUtil.setProperty(
             serial, "ctl.restart", "adbd", /* ignoreError= */ false, CHECK_ROOT_TIMEOUT);
-        waitForDevice(serial, CHECK_ROOT_TIMEOUT);
+        waitForState(serial, DeviceConnectionState.DEVICE, CHECK_ROOT_TIMEOUT);
 
         // Check again if device is non-root now.
         if (isDeviceNonRoot(serial, output)) {
@@ -361,7 +391,7 @@ public class AndroidSystemStateUtil {
       if (e.getMessage().contains(RESET_VIA_TEST_HARNESS_SCREEN_LOCKED_ERROR)) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_SYSTEM_STATE_FACTORY_RESET_VIA_TEST_HARNESS_SCREEN_LOCKED_ERROR,
-            String.format(
+            format(
                 "Failed to factory reset device %s via Test Harness Mode as device screen seems"
                     + " locked.",
                 serial),
@@ -370,7 +400,7 @@ public class AndroidSystemStateUtil {
 
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_SYSTEM_STATE_FACTORY_RESET_VIA_TEST_HARNESS_ERROR,
-          String.format(
+          format(
               "Failed to factory reset device %s via Test Harness Mode; command \"%s\" failed",
               serial, ADB_SHELL_ENABLE_TEST_HARNESS_MODE),
           e);
@@ -435,12 +465,10 @@ public class AndroidSystemStateUtil {
           || message.contains(OUTPUT_EXIT_CODE_139)) {
         if (rateLimitLog) {
           logger.atInfo().atMostEvery(2, SECONDS).log(
-              "Device %s is not online yet%s",
-              serial, silent ? "." : String.format(": [%s]", message));
+              "Device %s is not online yet%s", serial, silent ? "." : format(": [%s]", message));
         } else {
           logger.atInfo().log(
-              "Device %s is not online yet%s",
-              serial, silent ? "." : String.format(": [%s]", message));
+              "Device %s is not online yet%s", serial, silent ? "." : format(": [%s]", message));
         }
         return false;
       } else {
@@ -497,11 +525,37 @@ public class AndroidSystemStateUtil {
    * @throws InterruptedException if the thread executing the commands is interrupted
    */
   public void reboot(String serial) throws MobileHarnessException, InterruptedException {
+    reboot(serial, RebootMode.SYSTEM_IMAGE);
+  }
+
+  /**
+   * Reboots the device into specified mode.
+   *
+   * <p>Executes the adb reboot command and returns immediately. No check of the completeness.
+   *
+   * @param serial id of the device.
+   * @param mode of reboot.
+   * @throws MobileHarnessException if fails to execute the commands or timeout
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public void reboot(String serial, RebootMode mode)
+      throws InterruptedException, MobileHarnessException {
     try {
-      String unused = adb.run(serial, new String[] {ADB_ARG_REBOOT});
+      // No output expected.
+      String unused = adb.run(serial, mode.getRebootArgs());
     } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_SYSTEM_STATE_REBOOT_ERROR, e.getMessage(), e);
+      AndroidErrorId id;
+      switch (mode) {
+        case BOOTLOADER:
+          id = AndroidErrorId.ANDROID_SYSTEM_STATE_REBOOT_TO_BOOTLOADER_ERROR;
+          break;
+        case RECOVERY:
+          id = AndroidErrorId.ANDROID_SYSTEM_STATE_REBOOT_TO_RECOVERY_ERROR;
+          break;
+        default:
+          id = AndroidErrorId.ANDROID_SYSTEM_STATE_REBOOT_ERROR;
+      }
+      throw new MobileHarnessException(id, e.getMessage(), e);
     }
   }
 
@@ -511,15 +565,13 @@ public class AndroidSystemStateUtil {
    * @param serial serial number of the device
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
+   * @deprecated Prefer {@code reboot(serial, RebootMode.BOOTLOADER)}.
    */
+  // TODO: b/307912207 - Inline the method.
+  @Deprecated
   public void rebootToBootloader(String serial)
       throws MobileHarnessException, InterruptedException {
-    try {
-      String unused = adb.run(serial, new String[] {ADB_ARG_REBOOT_TO_BOOTLOADER});
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_SYSTEM_STATE_REBOOT_TO_BOOTLOADER_ERROR, e.getMessage(), e);
-    }
+    reboot(serial, RebootMode.BOOTLOADER);
   }
 
   /**
@@ -528,14 +580,12 @@ public class AndroidSystemStateUtil {
    * @param serial serial number of the device
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if the thread executing the commands is interrupted
+   * @deprecated Prefer {@code reboot(serial, RebootMode.RECOVERY)}.
    */
+  // TODO: b/307912207 - Inline the method.
+  @Deprecated
   public void rebootToRecovery(String serial) throws MobileHarnessException, InterruptedException {
-    try {
-      String unused = adb.run(serial, ADB_ARGS_REBOOT_TO_RECOVERY);
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_SYSTEM_STATE_REBOOT_TO_RECOVERY_ERROR, e.getMessage(), e);
-    }
+    reboot(serial, RebootMode.RECOVERY);
   }
 
   /**
@@ -572,21 +622,129 @@ public class AndroidSystemStateUtil {
   }
 
   /**
+   * Gets the state of the device.
+   *
+   * <p>Executes the adb get-state. Will retry until a valid state is obtained or timeout in 30s.
+   *
+   * @param serial id of the device.
+   * @return a valid {@link DeviceConnectionState}.
+   * @throws MobileHarnessException if fails to execute adb command, getting unexpected output, or
+   *     timeout.
+   */
+  public DeviceConnectionState getState(String serial) throws MobileHarnessException {
+    RetryingCallable<String> getStateCallable =
+        RetryingCallable.newBuilder(
+                () -> {
+                  String output = adb.run(serial, new String[] {ADB_ARG_GET_STATE}).trim();
+                  verify(
+                      !output.equals(OUTPUT_GET_STATE_ERROR),
+                      "Device %s is not ready. Retry.",
+                      serial);
+                  return output;
+                },
+                RETRY_STRATEGY)
+            .setPredicate(e -> e instanceof VerifyException)
+            .build();
+    try {
+      String output = getStateCallable.call();
+      return DeviceConnectionState.of(output)
+          .orElseThrow(
+              () ->
+                  new MobileHarnessException(
+                      AndroidErrorId.ANDROID_SYSTEM_STATE_GET_STATE_ERROR,
+                      format(
+                          "Unexpected output of adb get-state for device %s: %s", serial, output)));
+    } catch (RetryException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_SYSTEM_STATE_GET_STATE_ERROR, e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Waits for the device to get into a specific state.
+   *
+   * <p>Executes adb wait-for-STATE commands until return and then verify the state is expected.
+   *
+   * @param serial id of the device.
+   * @param state the expected state to wait for.
+   * @param timeout max wait time.
+   * @throws MobileHarnessException if fails to execute the commands or timeout
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public void waitForState(String serial, DeviceConnectionState state, Duration timeout)
+      throws InterruptedException, MobileHarnessException {
+    try {
+      // No output expected.
+      String unused = adb.run(serial, new String[] {state.getWaitForArg()}, timeout);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_SYSTEM_STATE_WAIT_FOR_STATE_ERROR, e.getMessage(), e);
+    }
+    if (!state.equals(DeviceConnectionState.DISCONNECT)) {
+      DeviceConnectionState finalState = getState(serial);
+      MobileHarnessExceptions.check(
+          Objects.equals(state, finalState),
+          AndroidErrorId.ANDROID_SYSTEM_STATE_WAIT_FOR_STATE_ERROR,
+          () -> "Get unexpected state " + finalState + " after " + state.getWaitForArg());
+    }
+  }
+
+  /**
+   * Sideloads the OTA package to device.
+   *
+   * @param serial id of the device
+   * @param otaPackage to sideload
+   * @param timeout of the whole command
+   * @param waitTime extra wait for the state transition
+   * @throws MobileHarnessException if fails to execute the commands or timeout
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  public void sideload(
+      String serial, File otaPackage, Duration timeout, @Nullable Duration waitTime)
+      throws MobileHarnessException, InterruptedException {
+    MobileHarnessExceptions.check(
+        otaPackage.isFile()
+            && Objects.equals(getFileExtension(otaPackage.getName()), OTA_PACKAGE_EXTENSION),
+        AndroidErrorId.ANDROID_SYSTEM_STATE_SIDELOAD_INVALID_OTA_PACKAGE,
+        () -> "Invalid OTA package: " + otaPackage.getAbsolutePath());
+    Duration wait = Optional.ofNullable(waitTime).orElse(SIDELOAD_WAIT_TIME);
+    Duration cmdTimeout = timeout.minus(wait);
+    MobileHarnessExceptions.check(
+        cmdTimeout.compareTo(MININAL_SIDELOAD_EXECUTION_TIME) > 0,
+        AndroidErrorId.ANDROID_SYSTEM_STATE_SIDELOAD_INVALID_TIMEOUT,
+        () ->
+            format(
+                "Timeout %s should be larger than waitTime %s + minimal sideload execution time %s",
+                timeout, wait, MININAL_SIDELOAD_EXECUTION_TIME));
+    try {
+      String output =
+          adb.run(serial, new String[] {ADB_ARG_SIDELOAD, otaPackage.getAbsolutePath()}, cmdTimeout)
+              .trim();
+      logger.atInfo().log("Sideloading ...\n%s", output);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_SYSTEM_STATE_SIDELOAD_ERROR,
+          format("Failed to sideload %s to %s.", otaPackage, serial),
+          e);
+    }
+    // Sleep for command propagation.
+    sleeper.sleep(wait);
+  }
+
+  /**
    * Waits until adb connects to android device.
    *
    * @param serial serial number of the device
    * @param timeout max wait and retry time
    * @throws MobileHarnessException if fails to execute the commands or timeout
    * @throws InterruptedException if current thread is interrupted during this method
+   * @deprecated Prefer {@code waitForState(serial, DeviceConnectionState.DEVICE, timeout)}.
    */
+  // TODO: b/307912207 - Inline the method.
+  @Deprecated
   public void waitForDevice(String serial, Duration timeout)
       throws MobileHarnessException, InterruptedException {
-    try {
-      String unused = adb.run(serial, new String[] {ADB_ARG_WAIT_FOR_DEVICE}, timeout);
-    } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_SYSTEM_STATE_WAIT_FOR_DEVICE_CMD_ERROR, e.getMessage(), e);
-    }
+    waitForState(serial, DeviceConnectionState.DEVICE, timeout);
   }
 
   /**
@@ -636,7 +794,7 @@ public class AndroidSystemStateUtil {
         if (e.getMessage().contains(OUTPUT_BROKEN_PIPE)) {
           throw new MobileHarnessException(
               AndroidErrorId.ANDROID_SYSTEM_STATE_CHECK_DEVICE_ONLINE_BROKEN_PIPE_ERROR,
-              String.format(
+              format(
                   "Error when checking device %s online status. Device system services may not be"
                       + " ready yet.",
                   serial),
@@ -646,15 +804,15 @@ public class AndroidSystemStateUtil {
       }
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_SYSTEM_STATE_DEVICE_NOT_ONLINE_READY,
-          String.format(
+          format(
               "Device/emulator %s is still not online ready %d milliseconds!",
               serial, checkReadyTimeout.toMillis()),
           ex);
     }
 
-    // Does not try to become root and send key event at this point. Otherwise may put the device
+    // Does not try to become root and send key event at this point. Otherwise, may put the device
     // into a bad state. And the device will hang some adb commands such as input keyevent or
-    // enabling WIFI.
+    // enabling WI-FI.
   }
 
   private boolean isDeviceNonRoot(String serial, StringBuilder sb)

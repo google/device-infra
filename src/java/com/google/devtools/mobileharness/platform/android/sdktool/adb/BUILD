@@ -31,10 +31,12 @@ java_library(
         "AndroidSettings.java",
         "AndroidSvc.java",
         "AndroidVersion.java",
+        "DeviceConnectionState.java",
         "DeviceState.java",
         "DumpSysType.java",
         "KeyEvent.java",
         "LogCatPriority.java",
+        "RebootMode.java",
     ],
     visibility = DEFAULT_VISIBILITY + [
         "//src/java/com/google/devtools/atsconsole:__subpackages__",
