@@ -17,15 +17,21 @@ package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "local",
-    srcs = glob(["*.java"]),
+    srcs = [
+        "LocalDeviceManagerSchedulerSyncer.java",
+        "LocalDeviceQuerier.java",
+        "LocalMode.java",
+    ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
     deps = [
+        ":device_info_filter",
+        ":local_device_allocator",
+        ":local_device_verifier",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/devtools/mobileharness/api/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/infra/controller/test/local/utp/proto:incompatible_reason_java_proto",
         "//src/java/com/google/devtools/deviceinfra/infra/core/devicemanager",
@@ -33,7 +39,6 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
-        "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:schedule_unit",
@@ -65,13 +70,54 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/testing/mobileharness/shared/proto:device_query_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "device_info_filter",
+    srcs = ["DeviceInfoFilter.java"],
+    visibility = ["//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/ats:__pkg__"],
+    deps = [
+        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "local_device_allocator",
+    srcs = ["LocalDeviceAllocator.java"],
+    visibility = ["//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/ats:__pkg__"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:error_java_proto",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/api/model/allocation",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:allocation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "local_device_verifier",
+    srcs = ["LocalDeviceVerifier.java"],
+    deps = [
+        ":local_device_allocator",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_runner",
     ],
 )

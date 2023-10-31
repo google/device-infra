@@ -46,8 +46,6 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.CountDownLatch;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /** Device querier for retrieving the local device information. */
@@ -156,48 +154,7 @@ class LocalDeviceQuerier implements DeviceQuerier {
                       }
                       return builder.build();
                     })
-                .filter(
-                    deviceInfo ->
-                        deviceQueryFilter.getOwnerRegexList().stream()
-                                .allMatch(
-                                    ownerRegex ->
-                                        matchAttribute(
-                                            ownerRegex,
-                                            deviceInfo.getOwnerList().isEmpty()
-                                                ? Stream.of("public")
-                                                : deviceInfo.getOwnerList().stream()))
-                            && deviceQueryFilter.getTypeRegexList().stream()
-                                .allMatch(
-                                    typeRegex ->
-                                        matchAttribute(
-                                            typeRegex, deviceInfo.getTypeList().stream()))
-                            && deviceQueryFilter.getDriverRegexList().stream()
-                                .allMatch(
-                                    driverRegex ->
-                                        matchAttribute(
-                                            driverRegex, deviceInfo.getDriverList().stream()))
-                            && deviceQueryFilter.getDecoratorRegexList().stream()
-                                .allMatch(
-                                    decoratorRegex ->
-                                        matchAttribute(
-                                            decoratorRegex, deviceInfo.getDecoratorList().stream()))
-                            && (deviceQueryFilter.getStatusList().isEmpty()
-                                || deviceQueryFilter.getStatusList().stream()
-                                    .anyMatch(
-                                        status ->
-                                            Ascii.equalsIgnoreCase(status, deviceInfo.getStatus())))
-                            && deviceQueryFilter.getDimensionFilterList().stream()
-                                .allMatch(
-                                    dimensionFilter ->
-                                        matchAttribute(
-                                            dimensionFilter.getValueRegex(),
-                                            deviceInfo.getDimensionList().stream()
-                                                .filter(
-                                                    deviceDimension ->
-                                                        deviceDimension
-                                                            .getName()
-                                                            .equals(dimensionFilter.getName()))
-                                                .map(Dimension::getValue))))
+                .filter(new DeviceInfoFilter(deviceQueryFilter))
                 .collect(toImmutableList()))
         .build();
     // TODO: Supports job/test info.
@@ -224,11 +181,6 @@ class LocalDeviceQuerier implements DeviceQuerier {
   public ListenableFuture<DeviceQueryResult> queryDeviceAsync(DeviceQueryFilter deviceQueryFilter)
       throws MobileHarnessException, InterruptedException {
     return immediateFuture(queryDevice(deviceQueryFilter));
-  }
-
-  private boolean matchAttribute(String attributeRegex, Stream<String> attributes) {
-    Pattern attributePattern = Pattern.compile(attributeRegex);
-    return attributes.anyMatch(attribute -> attributePattern.matcher(attribute).matches());
   }
 
   private LocalDeviceManager getDeviceManager()

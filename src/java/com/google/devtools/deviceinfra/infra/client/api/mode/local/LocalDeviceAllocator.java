@@ -25,8 +25,6 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AbstractDeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -42,44 +40,27 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 /** For managing the local device resources and allocating devices for a single job. */
-class LocalDeviceAllocator extends AbstractDeviceAllocator {
+public class LocalDeviceAllocator extends AbstractDeviceAllocator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  /** Universal device manager for managing local devices. */
-  private final LocalDeviceManager deviceManager;
+  private final DeviceVerifier deviceVerifier;
 
   /** Universal scheduler for scheduling local devices for local tests. */
   private final ListenableFuture<AbstractScheduler> schedulerFuture;
 
   /** Allocations returned by scheduler, & haven't been retrieved by {@link #pollAllocations()}. */
-  private final ConcurrentLinkedQueue<Allocation> allocations;
+  private final ConcurrentLinkedQueue<Allocation> allocations = new ConcurrentLinkedQueue<>();
 
   /** Handlers for allocation events of the scheduler. */
-  private final Object allocationEventHandler;
+  private final AllocationEventHandler allocationEventHandler = new AllocationEventHandler();
 
   public LocalDeviceAllocator(
       final JobInfo jobInfo,
-      LocalDeviceManager deviceManager,
+      DeviceVerifier deviceVerifier,
       ListenableFuture<AbstractScheduler> schedulerFuture) {
     super(jobInfo);
-    this.deviceManager = deviceManager;
+    this.deviceVerifier = deviceVerifier;
     this.schedulerFuture = schedulerFuture;
-
-    allocations = new ConcurrentLinkedQueue<>();
-    allocationEventHandler =
-        new Object() {
-          @Subscribe
-          public void onAllocation(AllocationEvent event) {
-            Allocation allocation = event.getAllocation();
-            if (allocation.getTest().jobLocator().id().equals(jobInfo.locator().getId())) {
-              allocations.add(event.getAllocation());
-            }
-          }
-        };
-  }
-
-  public LocalDeviceManager getDeviceManager() {
-    return deviceManager;
   }
 
   @Override
@@ -99,7 +80,7 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
   public List<AllocationWithStats> pollAllocations()
       throws MobileHarnessException, InterruptedException {
     List<AllocationWithStats> results = new ArrayList<>();
-    Allocation allocation = null;
+    Allocation allocation;
     AbstractScheduler scheduler = getScheduler();
     while ((allocation = allocations.poll()) != null) {
       // Finds the TestInfo in the current job.
@@ -138,17 +119,9 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
       }
 
       String deviceSerial = allocation.getDevice().id();
-      LocalDeviceRunner deviceRunner = deviceManager.getLocalDeviceRunner(deviceSerial);
-      if (deviceRunner == null || !deviceRunner.isAvailable()) {
-        jobInfo
-            .errors()
-            .addAndLog(
-                ErrorCode.DEVICE_NOT_READY,
-                "Failed to reserve device "
-                    + allocation.getDevice()
-                    + " because device is "
-                    + (deviceRunner == null ? "disconnected" : "busy"),
-                logger);
+      Optional<String> verificationError = deviceVerifier.verifyDeviceForAllocation(deviceSerial);
+      if (verificationError.isPresent()) {
+        jobInfo.errors().addAndLog(ErrorCode.DEVICE_NOT_READY, verificationError.get(), logger);
         scheduler.unallocate(
             allocation,
             // Device is not active. Also removes it from scheduler.
@@ -179,19 +152,12 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
       throws MobileHarnessException, InterruptedException {
     DeviceLocator deviceLocator = allocation.getDevice();
     String deviceSerial = deviceLocator.id();
-    LocalDeviceRunner deviceRunner = deviceManager.getLocalDeviceRunner(deviceSerial);
     AbstractScheduler scheduler = getScheduler();
+    Optional<Boolean> deviceDirtyFromVerifier =
+        deviceVerifier.getDeviceDirtyForAllocationRelease(deviceSerial);
     try {
-      if (deviceRunner == null) {
-        logger.atInfo().log(
-            "Device runner of device %s not found. Mark the device as DIRTY", deviceSerial);
-        deviceDirty = true;
-      } else if (!deviceRunner.getDevice().canReboot()) {
-        logger.atInfo().log("Device %s not rebootable.", deviceSerial);
-        deviceDirty = false;
-      } else if (!deviceRunner.isAlive()) {
-        logger.atInfo().log("Device %s is not alive.", deviceSerial);
-        deviceDirty = true;
+      if (deviceDirtyFromVerifier.isPresent()) {
+        deviceDirty = deviceDirtyFromVerifier.get();
       }
     } finally {
       jobInfo
@@ -214,5 +180,44 @@ class LocalDeviceAllocator extends AbstractDeviceAllocator {
   private AbstractScheduler getScheduler() throws MobileHarnessException, InterruptedException {
     return MoreFutures.get(
         schedulerFuture, InfraErrorId.SCHEDULER_LOCAL_DEVICE_ALLOCATOR_SCHEDULER_INIT_ERROR);
+  }
+
+  private class AllocationEventHandler {
+
+    @Subscribe
+    private void onAllocation(AllocationEvent event) {
+      Allocation allocation = event.getAllocation();
+      if (allocation.getTest().jobLocator().id().equals(jobInfo.locator().getId())) {
+        allocations.add(event.getAllocation());
+      }
+    }
+  }
+
+  /**
+   * Device verifier for verifying a device allocation based on device status or getting device
+   * dirty status when releasing an allocation.
+   */
+  public interface DeviceVerifier {
+
+    /** Returns an error message if the device is invalid for a new created allocation. */
+    Optional<String> verifyDeviceForAllocation(String deviceId);
+
+    /** Returns whether the device is dirty (or empty for unknown) for an allocation release. */
+    Optional<Boolean> getDeviceDirtyForAllocationRelease(String deviceId)
+        throws InterruptedException;
+  }
+
+  /** An empty implementation for {@link DeviceVerifier}. */
+  public static class EmptyDeviceVerifier implements DeviceVerifier {
+
+    @Override
+    public Optional<String> verifyDeviceForAllocation(String deviceId) {
+      return Optional.empty();
+    }
+
+    @Override
+    public Optional<Boolean> getDeviceDirtyForAllocationRelease(String deviceId) {
+      return Optional.empty();
+    }
   }
 }

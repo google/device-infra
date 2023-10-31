@@ -153,7 +153,8 @@ public class LocalMode implements ExecMode {
   public DeviceAllocator createDeviceAllocator(JobInfo jobInfo, EventBus globalInternalBus)
       throws InterruptedException {
     initialize(globalInternalBus);
-    return new LocalDeviceAllocator(jobInfo, localDeviceManager, localSchedulerFuture);
+    return new LocalDeviceAllocator(
+        jobInfo, new LocalDeviceVerifier(localDeviceManager), localSchedulerFuture);
   }
 
   @Override
