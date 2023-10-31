@@ -18,20 +18,20 @@ package com.google.devtools.atsconsole.controller.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.XtsType;
 import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
-import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -46,6 +46,8 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -80,7 +82,7 @@ public final class RunCommandHandlerTest {
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder folder = new TemporaryFolder();
 
-  @Bind @Mock private AndroidAdbInternalUtil adbInternalUtil;
+  @Bind @Mock private DeviceQuerier deviceQuerier;
 
   @Inject private RunCommandHandler runCommandHandler;
 
@@ -93,8 +95,14 @@ public final class RunCommandHandlerTest {
 
   @Test
   public void createXtsTradefedTestJobConfig_pickOneDevice() throws Exception {
-    when(adbInternalUtil.getRealDeviceSerials(/* online= */ true))
-        .thenReturn(ImmutableSet.of("device_id_1", "device_id_2"));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
 
     Optional<JobConfig> jobConfigOpt =
         runCommandHandler.createXtsTradefedTestJobConfig(
@@ -117,8 +125,14 @@ public final class RunCommandHandlerTest {
 
   @Test
   public void createXtsTradefedTestJobConfig_shardCount2_pick2Devices() throws Exception {
-    when(adbInternalUtil.getRealDeviceSerials(/* online= */ true))
-        .thenReturn(ImmutableSet.of("device_id_1", "device_id_2"));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
 
     Optional<JobConfig> jobConfigOpt =
         runCommandHandler.createXtsTradefedTestJobConfig(
@@ -139,8 +153,14 @@ public final class RunCommandHandlerTest {
   @Test
   public void createXtsTradefedTestJobConfig_shardCount3_only2OnlineDevices_pick2Devices()
       throws Exception {
-    when(adbInternalUtil.getRealDeviceSerials(/* online= */ true))
-        .thenReturn(ImmutableSet.of("device_id_1", "device_id_2"));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
 
     Optional<JobConfig> jobConfigOpt =
         runCommandHandler.createXtsTradefedTestJobConfig(
@@ -160,7 +180,7 @@ public final class RunCommandHandlerTest {
 
   @Test
   public void createXtsTradefedTestJobConfig_noOnlineDevices_noJobConfig() throws Exception {
-    when(adbInternalUtil.getRealDeviceSerials(/* online= */ true)).thenReturn(ImmutableSet.of());
+    when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
 
     Optional<JobConfig> jobConfigOpt =
         runCommandHandler.createXtsTradefedTestJobConfig(
@@ -172,8 +192,14 @@ public final class RunCommandHandlerTest {
 
   @Test
   public void createXtsTradefedTestJobConfig_withGivenSerial() throws Exception {
-    when(adbInternalUtil.getRealDeviceSerials(/* online= */ true))
-        .thenReturn(ImmutableSet.of("device_id_1", "device_id_2"));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
 
     Optional<JobConfig> jobConfigOpt =
         runCommandHandler.createXtsTradefedTestJobConfig(
@@ -215,8 +241,16 @@ public final class RunCommandHandlerTest {
   @Test
   public void createXtsTradefedTestJobConfig_someGivenSerialsNotExist_pickExistingDevicesOnly()
       throws Exception {
-    when(adbInternalUtil.getRealDeviceSerials(/* online= */ true))
-        .thenReturn(ImmutableSet.of("device_id_1", "device_id_2", "device_id_3"));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
+                .build());
 
     Optional<JobConfig> jobConfigOpt =
         runCommandHandler.createXtsTradefedTestJobConfig(
@@ -245,8 +279,16 @@ public final class RunCommandHandlerTest {
   @Test
   public void createXtsTradefedTestJobConfig_allGivenSerialsNotExist_noJobConfig()
       throws Exception {
-    when(adbInternalUtil.getRealDeviceSerials(/* online= */ true))
-        .thenReturn(ImmutableSet.of("device_id_1", "device_id_2", "device_id_3"));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
+                .build());
 
     Optional<JobConfig> jobConfigOpt =
         runCommandHandler.createXtsTradefedTestJobConfig(

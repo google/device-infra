@@ -17,6 +17,7 @@
 package com.google.devtools.atsconsole.controller.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.min;
 
@@ -32,10 +33,10 @@ import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSes
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.XtsType;
-import com.google.devtools.deviceinfra.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
-import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
@@ -48,6 +49,9 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Timestamp;
@@ -70,12 +74,12 @@ class RunCommandHandler {
   private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
 
-  private final AndroidAdbInternalUtil adbInternalUtil;
+  private final DeviceQuerier deviceQuerier;
   private final LocalFileUtil localFileUtil;
 
   @Inject
-  RunCommandHandler(AndroidAdbInternalUtil adbInternalUtil, LocalFileUtil localFileUtil) {
-    this.adbInternalUtil = adbInternalUtil;
+  RunCommandHandler(DeviceQuerier deviceQuerier, LocalFileUtil localFileUtil) {
+    this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
   }
 
@@ -186,21 +190,16 @@ class RunCommandHandler {
   private ImmutableList<SubDeviceSpec> getSubDeviceSpecList(
       List<String> passedInDeviceSerials, int shardCount)
       throws MobileHarnessException, InterruptedException {
-    Set<String> allAndroidOnlineDevices;
-    if (Flags.instance().detectAdbDevice.getNonNull()) {
-      allAndroidOnlineDevices = adbInternalUtil.getRealDeviceSerials(/* online= */ true);
-    } else {
-      allAndroidOnlineDevices = ImmutableSet.of();
-    }
-    logger.atInfo().log("All online devices: %s", allAndroidOnlineDevices);
+    ImmutableSet<String> allAndroidDevices = getAllAndroidDevices();
+    logger.atInfo().log("All android devices: %s", allAndroidDevices);
     if (passedInDeviceSerials.isEmpty()) {
-      return pickAndroidOnlineDevices(allAndroidOnlineDevices, shardCount);
+      return pickAndroidOnlineDevices(allAndroidDevices, shardCount);
     }
 
     ArrayList<String> existingPassedInDeviceSerials = new ArrayList<>();
     passedInDeviceSerials.forEach(
         serial -> {
-          if (allAndroidOnlineDevices.contains(serial)) {
+          if (allAndroidDevices.contains(serial)) {
             existingPassedInDeviceSerials.add(serial);
           } else {
             logger.atInfo().log("Passed in device serial [%s] is not detected, skipped.", serial);
@@ -231,6 +230,24 @@ class RunCommandHandler {
       deviceSpecList.add(SubDeviceSpec.newBuilder().setType(ANDROID_REAL_DEVICE_TYPE).build());
     }
     return deviceSpecList.build();
+  }
+
+  private ImmutableSet<String> getAllAndroidDevices()
+      throws MobileHarnessException, InterruptedException {
+    DeviceQueryResult queryResult;
+    try {
+      queryResult = deviceQuerier.queryDevice(DeviceQueryFilter.getDefaultInstance());
+    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_COMMAND_QUERY_DEVICE_ERROR, "Failed to query device", e);
+    }
+    return queryResult.getDeviceInfoList().stream()
+        .filter(
+            deviceInfo ->
+                deviceInfo.getTypeList().stream()
+                    .anyMatch(deviceType -> deviceType.startsWith("Android")))
+        .map(DeviceInfo::getId)
+        .collect(toImmutableSet());
   }
 
   /**
