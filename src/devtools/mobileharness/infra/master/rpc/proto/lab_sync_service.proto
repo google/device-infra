@@ -52,10 +52,10 @@ message SignUpLabRequest {
     // Required: Device status on Lab Server side.
     mobileharness.api.model.DeviceStatus status = 3;
 
-    // Optional.
+    // Required.
     mobileharness.api.model.DeviceFeature feature = 4;
 
-    // Optional: Will be required after lab fully support uuid.
+    // Required.
     string uuid = 5;
 
     // TODO: remove after all lab server is newer than 4.201.0.

@@ -18,7 +18,11 @@ package com.google.wireless.qa.mobileharness.shared.controller.event;
 
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 
-/** Event to notify an allocation of devices for a test. */
+/**
+ * Event to notify an allocation of devices for a test.
+ *
+ * <p>Posting of this event should not be in an allocation lock.
+ */
 public class AllocationEvent implements ControllerEvent {
   private final Allocation allocation;
 

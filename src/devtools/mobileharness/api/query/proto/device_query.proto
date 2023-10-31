@@ -104,13 +104,13 @@ message DeviceInfo {
   repeated string decorator = 6;
   // Device dimensions.
   repeated Dimension dimension = 7;
-  // The job_id ruuning on this device.
+  // The job_id running on this device.
   string job_id = 8;
-  // The job_name ruuning on this device.
+  // The job_name running on this device.
   string job_name = 9;
-  // The test_id ruuning on this device.
+  // The test_id running on this device.
   string test_id = 10;
-  // The test_name ruuning on this device.
+  // The test_name running on this device.
   string test_name = 11;
   // Executors of the device.
   repeated string executor = 12;

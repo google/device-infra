@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.controller.scheduler.simple;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
@@ -46,6 +45,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.stream.Collectors;
 import javax.annotation.Nullable;
+import javax.inject.Inject;
 
 /**
  * Simple scheduler. It rotately assigns devices to waiting jobs. So a huge job won't blocking the
@@ -83,8 +83,8 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
     this(threadPool, Sleeper.defaultSleeper());
   }
 
-  @VisibleForTesting
-  public SimpleScheduler(ExecutorService threadPool, Sleeper sleeper) {
+  @Inject
+  SimpleScheduler(ExecutorService threadPool, Sleeper sleeper) {
     this.threadPool = threadPool;
     this.sleeper = sleeper;
   }

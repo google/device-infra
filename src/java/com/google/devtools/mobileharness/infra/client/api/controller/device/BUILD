@@ -16,30 +16,17 @@
 # Description:
 #   Device controllers for Mobile Harness Client API.
 
-DEFAULT_VISIBILITY = [
-    "//javatests/com/google/wireless/qa/mobileharness/client/api:__subpackages__",
-    "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
-    "//src/javatests/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
-]
-
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
+    default_visibility = ["//:deviceinfra_all_pkg"],
 )
 
 java_library(
     name = "querier",
     srcs = ["DeviceQuerier.java"],
-    visibility =
-        DEFAULT_VISIBILITY + [
-            "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:__subpackages__",
-            "//src/java/com/google/devtools/deviceinfra/infra/client/controller:__subpackages__",
-            "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
-            "//src/java/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
-            "//src/javatests/com/google/devtools/atsconsole/controller/sessionplugin:__subpackages__",
-            "//src/javatests/com/google/devtools/deviceinfra/infra/client/controller:__subpackages__",
-            "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-        ],
+    visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
     deps = [
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
@@ -57,8 +44,6 @@ java_library(
     srcs = [
         "CompositeDeviceQuerier.java",
     ],
-    visibility =
-        DEFAULT_VISIBILITY,
     deps = [
         ":querier",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",

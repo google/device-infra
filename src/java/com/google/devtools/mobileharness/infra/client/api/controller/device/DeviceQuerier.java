@@ -47,8 +47,10 @@ public interface DeviceQuerier {
    * @deprecated Use {@link #queryDevice(DeviceQueryFilter)} instead
    */
   @Deprecated
-  List<LabInfo> getDeviceInfos(@Nullable DeviceFilter deviceFilter)
-      throws MobileHarnessException, InterruptedException;
+  default List<LabInfo> getDeviceInfos(@Nullable DeviceFilter deviceFilter)
+      throws MobileHarnessException, InterruptedException {
+    throw new UnsupportedOperationException();
+  }
 
   /**
    * Queries device information.
@@ -77,7 +79,7 @@ public interface DeviceQuerier {
 
   /** Device results for a single lab host. */
   @AutoValue
-  public abstract static class LabQueryResult {
+  abstract class LabQueryResult {
     /** The hostname of the lab host this set of results is for. */
     public abstract String hostname();
 
