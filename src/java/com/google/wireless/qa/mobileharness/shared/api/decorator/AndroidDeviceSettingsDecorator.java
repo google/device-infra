@@ -811,8 +811,6 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
     if (spec.hasEnableInstantApp()) {
       commandsAfterSettings.gservice.add(
           "gms:wh:enable_westinghouse_support", spec.getEnableInstantApp());
-      commandsAfterSettings.gservice.add(
-          "instantapps:enable_supervisor", spec.getEnableInstantApp());
     }
 
     // wtf_is_fatal
