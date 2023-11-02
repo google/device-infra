@@ -22,6 +22,7 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//devtools/mobileharness/project:riemann_device_station",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
