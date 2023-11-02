@@ -28,6 +28,7 @@ java_library(
         "//src/java/com/google/devtools/deviceaction/framework:device_action_module",
         "//src/java/com/google/devtools/deviceaction/framework/actions",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/quota",
         "@maven//:com_google_inject_guice",
     ],
 )

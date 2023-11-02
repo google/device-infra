@@ -51,6 +51,8 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Package
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.RebootMode;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSetDmVerityDeviceOp;
@@ -83,7 +85,8 @@ public class AndroidPhone implements Device {
   private static final String LOCALHOST_PREFIX = "localhost:";
 
   @VisibleForTesting static final Duration DEFAULT_DEVICE_READY_TIMEOUT = Duration.ofMinutes(5);
-  private static final Duration DEFAULT_AWAIT_FOR_DISCONNECT = Duration.ofSeconds(30);
+  @VisibleForTesting static final Duration DEFAULT_AWAIT_FOR_DISCONNECT = Duration.ofSeconds(30);
+  @VisibleForTesting static final Duration DEFAULT_REBOOT_TIMEOUT = Duration.ofMinutes(2);
   private final AndroidAdbUtil androidAdbUtil;
   private final AndroidFileUtil androidFileUtil;
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
@@ -265,20 +268,31 @@ public class AndroidPhone implements Device {
     return needReboot(bundletoolUtil.installApksZip(uuid, train, extraArgs));
   }
 
+  /** Fully reboots the device until it gets ready. */
   public void reboot() throws DeviceActionException, InterruptedException {
+    reboot(rebootTimeout());
+  }
+
+  /** Fully reboots the device until it gets ready. */
+  public void reboot(Duration timeout) throws DeviceActionException, InterruptedException {
+    reboot(RebootMode.SYSTEM_IMAGE, timeout);
+  }
+
+  /** Reboots the device to a specific mode and waits of the completeness. */
+  public void reboot(RebootMode mode) throws DeviceActionException, InterruptedException {
+    reboot(mode, rebootTimeout());
+  }
+
+  /** Reboots the device to a specific mode and waits of the completeness. */
+  private void reboot(RebootMode mode, Duration timeout)
+      throws DeviceActionException, InterruptedException {
     try {
-      androidSystemStateUtil.reboot(uuid);
+      androidSystemStateUtil.reboot(uuid, mode);
     } catch (MobileHarnessException e) {
-      throw new DeviceActionException(e, "Failed to reboot.");
+      throw new DeviceActionException(e, "Failed to reboot %s to %s", uuid, mode);
     }
-    // Wait for the device to be disconnected after reboot command.
-    sleeper.sleep(positiveOrElse(rebootAwait(), DEFAULT_AWAIT_FOR_DISCONNECT));
-    try {
-      androidSystemStateUtil.waitUntilReady(
-          uuid, positiveOrElse(rebootTimeout(), DEFAULT_DEVICE_READY_TIMEOUT));
-    } catch (MobileHarnessException e) {
-      throw new DeviceActionException(e, "Missing device %s after reboot", uuid);
-    }
+    waitForDisconnect(rebootAwait());
+    waitUntilReady(mode, timeout);
   }
 
   public void enableTestharness() throws DeviceActionException, InterruptedException {
@@ -293,13 +307,7 @@ public class AndroidPhone implements Device {
     } catch (MobileHarnessException e) {
       throw new DeviceActionException(e, "Failed to enable testharness.");
     }
-    Duration deviceReadyTimeout =
-        positiveOrElse(testharnessBootTimeout(), DEFAULT_DEVICE_READY_TIMEOUT);
-    try {
-      androidSystemStateUtil.waitUntilReady(uuid, deviceReadyTimeout);
-    } catch (MobileHarnessException e) {
-      throw new DeviceActionException(e, "Missing device %s after test harness.", uuid);
-    }
+    waitUntilReady(testharnessBootTimeout());
   }
 
   /**
@@ -317,11 +325,51 @@ public class AndroidPhone implements Device {
     }
     // Wait for the device to be disconnected after reboot command.
     sleeper.sleep(positiveOrElse(rebootAwait(), DEFAULT_AWAIT_FOR_DISCONNECT));
+    waitUntilReady(rebootTimeout());
+  }
+
+  /** Sideloads the OTA package to the device. */
+  public void sideload(File otaPackage, Duration timeout, Duration waitTime)
+      throws DeviceActionException, InterruptedException {
     try {
-      androidSystemStateUtil.waitUntilReady(
-          uuid, positiveOrElse(rebootTimeout(), DEFAULT_DEVICE_READY_TIMEOUT));
+      androidSystemStateUtil.sideload(uuid, otaPackage, timeout, waitTime);
     } catch (MobileHarnessException e) {
-      throw new DeviceActionException(e, "Missing device %s after soft reboot.", uuid);
+      throw new DeviceActionException(e, "Failed to sideload %s to %s", otaPackage, uuid);
+    }
+  }
+
+  /** Waits for the device fully ready. */
+  public void waitUntilReady(Duration timeout) throws DeviceActionException, InterruptedException {
+    waitUntilReady(RebootMode.SYSTEM_IMAGE, timeout);
+  }
+
+  /**
+   * Waits for the reboot complete.
+   *
+   * <p>If the mode is {@link RebootMode.SYSTEM_IMAGE}, wait until the device is fully ready.
+   */
+  public void waitUntilReady(RebootMode mode, Duration timeout)
+      throws DeviceActionException, InterruptedException {
+    try {
+      switch (mode) {
+          // Handle bootloader case using fastboot.
+        case BOOTLOADER:
+          return;
+        case RECOVERY:
+        case SIDELOAD:
+        case SIDELOAD_AUTO_REBOOT:
+          androidSystemStateUtil.waitForState(
+              uuid, mode.getTargetState(), positiveOrElse(timeout, DEFAULT_REBOOT_TIMEOUT));
+          return;
+        case SYSTEM_IMAGE:
+          androidSystemStateUtil.waitForState(
+              uuid, mode.getTargetState(), positiveOrElse(timeout, DEFAULT_REBOOT_TIMEOUT));
+          androidSystemStateUtil.waitUntilReady(
+              uuid, positiveOrElse(timeout, DEFAULT_DEVICE_READY_TIMEOUT));
+          return;
+      }
+    } catch (MobileHarnessException e) {
+      throw new DeviceActionException(e, "Failed to reboot device %s to %s", uuid, mode);
     }
   }
 
@@ -452,6 +500,19 @@ public class AndroidPhone implements Device {
 
   private static boolean containsApex(Collection<String> values) {
     return values.stream().anyMatch(f -> f.endsWith(APEX_SUFFIX));
+  }
+
+  private void waitForDisconnect(Duration timeout)
+      throws InterruptedException, DeviceActionException {
+    // Wait for the device to be disconnected after reboot command.
+    try {
+      androidSystemStateUtil.waitForState(
+          uuid,
+          DeviceConnectionState.DISCONNECT,
+          positiveOrElse(timeout, DEFAULT_AWAIT_FOR_DISCONNECT));
+    } catch (MobileHarnessException e) {
+      throw new DeviceActionException(e, "Failed to detect disconnection of %s", uuid);
+    }
   }
 
   private String[] addArgsForInstallMultiApks(String[] extraArgs) throws DeviceActionException {

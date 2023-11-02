@@ -37,10 +37,11 @@ LIB_SRCS = [
     "LocalFileResolver.java",
     "ProtoHelper.java",
     "Resolver.java",
-    "StaticResourceHelper.java",
     "ResourceHelper.java",
     "ResourceUtil.java",
     "SimpleResolver.java",
+    "StaticResourceHelper.java",
+    "TimeoutMonitor.java",
     "Verify.java",
 ]
 

@@ -30,6 +30,7 @@ import com.google.devtools.deviceaction.common.utils.HelpUtil;
 import com.google.devtools.deviceaction.framework.ActionConfigurer;
 import com.google.devtools.deviceaction.framework.DeviceActionModule;
 import com.google.devtools.deviceaction.framework.actions.Actions;
+import com.google.devtools.mobileharness.shared.util.quota.QuotaManager;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.util.Objects;
@@ -65,8 +66,11 @@ public final class DeviceActionMain {
       throw e;
     }
 
+    // TODO:b/308534552 - Support using TF quota.
     Injector injector =
-        Guice.createInjector(new DeviceActionModule(FlagBasedResourceHelper.getInstance()));
+        Guice.createInjector(
+            new DeviceActionModule(
+                FlagBasedResourceHelper.getInstance(), QuotaManager.getInstance()));
 
     ActionConfig actionConfig =
         injector.getInstance(ActionConfigurer.class).createActionConfigure(actionOptions);

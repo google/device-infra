@@ -16,8 +16,10 @@
 
 package com.google.devtools.deviceaction.framework.actions;
 
+import static com.google.devtools.deviceaction.common.utils.Conditions.checkArgument;
 import static com.google.devtools.deviceaction.common.utils.Constants.APEX_SUFFIX;
 import static com.google.devtools.deviceaction.common.utils.Constants.APK_SUFFIX;
+import static com.google.devtools.deviceaction.common.utils.TimeUtils.fromProtoDuration;
 import static java.util.Arrays.asList;
 
 import com.google.common.collect.ImmutableMap;
@@ -32,11 +34,14 @@ import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.AndroidPackage;
 import com.google.devtools.deviceaction.common.utils.Conditions;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
+import com.google.devtools.deviceaction.framework.operations.ImageZipFlasher;
 import com.google.devtools.deviceaction.framework.operations.ModulePusher;
+import com.google.devtools.deviceaction.framework.operations.OtaSideloader;
 import com.google.devtools.deviceaction.framework.proto.action.ResetOption;
 import com.google.devtools.deviceaction.framework.proto.action.ResetSpec;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import java.io.File;
+import java.time.Duration;
 import java.util.Optional;
 
 /**
@@ -44,8 +49,6 @@ import java.util.Optional;
  *
  * <p>It applies different reset options to different device builds. The params are specified by
  * {@link ResetSpec}.
- *
- * <p>TODO: b/288065604 - Implements the class.
  */
 @Configurable(specType = ResetSpec.class)
 public class Reset implements Action {
@@ -54,9 +57,17 @@ public class Reset implements Action {
 
   private static final String TAG_RECOVERY_MODULES = "recovery_modules";
 
+  private static final String TAG_OTA_PACKAGE = "ota_package";
+
+  private static final String TAG_IMAGE_ZIP = "image_zip";
+
   private final PackageUpdateTracker packageUpdateTracker;
 
   private final ModulePusher modulePusher;
+
+  private final OtaSideloader otaSideloader;
+
+  private final ImageZipFlasher imageZipFlasher;
 
   private final AndroidPhone device;
 
@@ -67,11 +78,15 @@ public class Reset implements Action {
   Reset(
       PackageUpdateTracker packageUpdateTracker,
       ModulePusher modulePusher,
+      OtaSideloader otaSideloader,
+      ImageZipFlasher imageZipFlasher,
       ResetSpec spec,
       AndroidPhone device,
       ImmutableMultimap<String, File> localFiles) {
     this.packageUpdateTracker = packageUpdateTracker;
     this.modulePusher = modulePusher;
+    this.otaSideloader = otaSideloader;
+    this.imageZipFlasher = imageZipFlasher;
     this.spec = spec;
     this.device = device;
     this.localFiles = localFiles;
@@ -84,6 +99,16 @@ public class Reset implements Action {
     switch (resetOption()) {
       case TEST_HARNESS:
         device.enableTestharness();
+        break;
+      case OTA_SIDELOAD:
+        checkArgument(
+            otaPackage().isPresent(), ErrorType.CUSTOMER_ISSUE, "OTA package not provided.");
+        otaSideloader.sideload(otaPackage().get(), sideloadTimeout(), useAutoReboot());
+        break;
+      case FASTBOOT_WITH_PARTITION_IMAGES:
+        checkArgument(
+            imageZip().isPresent(), ErrorType.CUSTOMER_ISSUE, "Image zip file is not provided.");
+        imageZipFlasher.flashDevice(imageZip().get(), flashScript(), flashTimeout());
         break;
       default:
         throw new DeviceActionException(
@@ -119,6 +144,16 @@ public class Reset implements Action {
     return localFiles.get(TAG_RECOVERY_MODULES).stream().filter(File::isDirectory).findAny();
   }
 
+  @FilePath(tag = TAG_OTA_PACKAGE)
+  private Optional<File> otaPackage() {
+    return localFiles.get(TAG_OTA_PACKAGE).stream().filter(File::isFile).findAny();
+  }
+
+  @FilePath(tag = TAG_IMAGE_ZIP)
+  private Optional<File> imageZip() {
+    return localFiles.get(TAG_IMAGE_ZIP).stream().filter(File::isFile).findAny();
+  }
+
   @SpecValue(field = "reset_option")
   private ResetOption resetOption() {
     return spec.getResetOption();
@@ -127,5 +162,25 @@ public class Reset implements Action {
   @SpecValue(field = "need_preload_modules_recovery")
   private boolean needPreloadModulesRecovery() {
     return spec.getNeedPreloadModulesRecovery();
+  }
+
+  @SpecValue(field = "flash_script")
+  private String flashScript() {
+    return spec.getFlashScript();
+  }
+
+  @SpecValue(field = "flash_timeout")
+  public Duration flashTimeout() {
+    return fromProtoDuration(spec.getFlashTimeout());
+  }
+
+  @SpecValue(field = "sideload_timeout")
+  public Duration sideloadTimeout() {
+    return fromProtoDuration(spec.getSideloadTimeout());
+  }
+
+  @SpecValue(field = "use_auto_reboot")
+  public boolean useAutoReboot() {
+    return spec.getUseAutoReboot();
   }
 }

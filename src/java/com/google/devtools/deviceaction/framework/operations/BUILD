@@ -29,6 +29,7 @@ java_library(
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
+        "//src/devtools/mobileharness/shared/util/quota/proto:quota_java_proto",
         "//src/java/com/google/devtools/deviceaction/common/error",
         "//src/java/com/google/devtools/deviceaction/common/schemas",
         "//src/java/com/google/devtools/deviceaction/common/utils",
@@ -38,7 +39,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/quota",
         "@maven//:com_google_guava_guava",
     ],
 )

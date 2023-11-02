@@ -24,6 +24,7 @@ import com.google.devtools.deviceaction.common.utils.ResourceHelper;
 import com.google.devtools.deviceaction.framework.actions.Actions;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.quota.QuotaManager;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.util.Modules;
@@ -52,6 +53,7 @@ public final class DeviceActionModuleTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Mock private ResourceHelper mockHelper;
+  @Mock private QuotaManager quotaManager;
   @Mock private Adb adb;
   @Mock private Aapt aapt;
 
@@ -73,7 +75,8 @@ public final class DeviceActionModuleTest {
   public void injectsActions() {
     Injector injector =
         Guice.createInjector(
-            new DeviceActionModule(mockHelper), Modules.disableCircularProxiesModule());
+            new DeviceActionModule(mockHelper, quotaManager),
+            Modules.disableCircularProxiesModule());
 
     Actions actions = injector.getInstance(Actions.class);
     ActionConfigurer actionConfigurer = injector.getInstance(ActionConfigurer.class);

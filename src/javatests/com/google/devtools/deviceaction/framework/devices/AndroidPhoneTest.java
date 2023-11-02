@@ -18,7 +18,9 @@ package com.google.devtools.deviceaction.framework.devices;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
+import static com.google.devtools.deviceaction.framework.devices.AndroidPhone.DEFAULT_AWAIT_FOR_DISCONNECT;
 import static com.google.devtools.deviceaction.framework.devices.AndroidPhone.DEFAULT_DEVICE_READY_TIMEOUT;
+import static com.google.devtools.deviceaction.framework.devices.AndroidPhone.DEFAULT_REBOOT_TIMEOUT;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
@@ -49,6 +51,8 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleI
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.RebootMode;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSetDmVerityDeviceOp;
@@ -578,7 +582,7 @@ public class AndroidPhoneTest {
     device.reboot();
 
     ArgumentCaptor<Duration> durationArgumentCaptor = ArgumentCaptor.forClass(Duration.class);
-    verify(mockSystemStateUtil).reboot(UUID);
+    verify(mockSystemStateUtil).reboot(UUID, RebootMode.SYSTEM_IMAGE);
     verify(mockSystemStateUtil).waitUntilReady(eq(UUID), durationArgumentCaptor.capture());
     if (spec.hasRebootTimeout()) {
       assertThat(durationArgumentCaptor.getValue())
@@ -590,9 +594,50 @@ public class AndroidPhoneTest {
 
   @Test
   public void reboot_catchMobileHarnessException_throwsException() throws Exception {
-    doThrow(fakeMobileHarnessException()).when(mockSystemStateUtil).reboot(UUID);
+    doThrow(fakeMobileHarnessException())
+        .when(mockSystemStateUtil)
+        .reboot(UUID, RebootMode.SYSTEM_IMAGE);
 
     assertThrows(DeviceActionException.class, () -> device.reboot());
+  }
+
+  @Test
+  public void reboot_successInDifferentModes(@TestParameter RebootMode mode) throws Exception {
+    device.reboot(mode);
+
+    ArgumentCaptor<Duration> disconnectTimeCaptor = ArgumentCaptor.forClass(Duration.class);
+    ArgumentCaptor<Duration> waitTimeCaptor = ArgumentCaptor.forClass(Duration.class);
+    verify(mockSystemStateUtil).reboot(UUID, mode);
+    verify(mockSystemStateUtil)
+        .waitForState(
+            eq(UUID), eq(DeviceConnectionState.DISCONNECT), disconnectTimeCaptor.capture());
+    if (spec.hasRebootAwait()) {
+      assertThat(disconnectTimeCaptor.getValue())
+          .isEqualTo(Duration.ofSeconds(spec.getRebootAwait().getSeconds()));
+    } else {
+      assertThat(disconnectTimeCaptor.getValue()).isEqualTo(DEFAULT_AWAIT_FOR_DISCONNECT);
+    }
+    if (!mode.equals(RebootMode.BOOTLOADER)) {
+      verify(mockSystemStateUtil)
+          .waitForState(eq(UUID), eq(mode.getTargetState()), waitTimeCaptor.capture());
+      if (spec.hasRebootTimeout()) {
+        assertThat(waitTimeCaptor.getValue())
+            .isEqualTo(Duration.ofSeconds(spec.getRebootTimeout().getSeconds()));
+      } else {
+        assertThat(waitTimeCaptor.getValue()).isEqualTo(DEFAULT_REBOOT_TIMEOUT);
+      }
+    }
+    if (mode.equals(RebootMode.SYSTEM_IMAGE)) {
+      verify(mockSystemStateUtil).waitUntilReady(eq(UUID), waitTimeCaptor.capture());
+    }
+  }
+
+  @Test
+  public void reboot_inDifferentModes_throwsException(@TestParameter RebootMode mode)
+      throws Exception {
+    doThrow(fakeMobileHarnessException()).when(mockSystemStateUtil).reboot(UUID, mode);
+
+    assertThrows(DeviceActionException.class, () -> device.reboot(mode));
   }
 
   @Test
@@ -646,6 +691,41 @@ public class AndroidPhoneTest {
     doThrow(fakeMobileHarnessException()).when(mockSystemStateUtil).softReboot(anyString());
 
     assertThrows(DeviceActionException.class, () -> device.softReboot());
+  }
+
+  @Test
+  public void sideload_success() throws Exception {
+    File otaPackage = new File("fake.zip");
+
+    device.sideload(otaPackage, Duration.ofSeconds(10), Duration.ofSeconds(1));
+
+    verify(mockSystemStateUtil)
+        .sideload(UUID, otaPackage, Duration.ofSeconds(10), Duration.ofSeconds(1));
+  }
+
+  @Test
+  public void sideload_catchMobileHarnessException_throwException() throws Exception {
+    File otaPackage = new File("fake.zip");
+    doThrow(fakeMobileHarnessException())
+        .when(mockSystemStateUtil)
+        .sideload(UUID, otaPackage, Duration.ofSeconds(10), Duration.ofSeconds(1));
+
+    assertThrows(
+        DeviceActionException.class,
+        () -> device.sideload(otaPackage, Duration.ofSeconds(10), Duration.ofSeconds(1)));
+  }
+
+  @Test
+  public void waitUntilReady(@TestParameter RebootMode mode) throws Exception {
+    Duration timeout = Duration.ofSeconds(10);
+    device.waitUntilReady(mode, timeout);
+
+    if (!mode.equals(RebootMode.BOOTLOADER)) {
+      verify(mockSystemStateUtil).waitForState(UUID, mode.getTargetState(), timeout);
+    }
+    if (mode.equals(RebootMode.SYSTEM_IMAGE)) {
+      verify(mockSystemStateUtil).waitUntilReady(UUID, timeout);
+    }
   }
 
   @Test
@@ -706,7 +786,7 @@ public class AndroidPhoneTest {
     device.disableVerity();
 
     verify(mockSystemSettingUtil).setDmVerityChecking(UUID, false);
-    verify(mockSystemStateUtil).reboot(UUID);
+    verify(mockSystemStateUtil).reboot(UUID, RebootMode.SYSTEM_IMAGE);
   }
 
   @Test

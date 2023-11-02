@@ -60,6 +60,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/quota",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],

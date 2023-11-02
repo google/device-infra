@@ -36,6 +36,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/quota",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",

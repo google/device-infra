@@ -17,6 +17,7 @@
 package com.google.devtools.deviceaction.framework.actions;
 
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.util.concurrent.SimpleTimeLimiter;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.annotations.GuiceAnnotations.FileResolver;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
@@ -27,15 +28,20 @@ import com.google.devtools.deviceaction.common.utils.Resolver;
 import com.google.devtools.deviceaction.common.utils.ResourceHelper;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
 import com.google.devtools.deviceaction.framework.devices.Devices;
+import com.google.devtools.deviceaction.framework.operations.ImageZipFlasher;
 import com.google.devtools.deviceaction.framework.operations.ModuleCleaner;
 import com.google.devtools.deviceaction.framework.operations.ModuleInstaller;
 import com.google.devtools.deviceaction.framework.operations.ModulePusher;
+import com.google.devtools.deviceaction.framework.operations.OtaSideloader;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
 import com.google.devtools.deviceaction.framework.proto.action.ResetSpec;
 import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecorder;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.quota.QuotaManager;
 import java.io.File;
+import java.util.concurrent.Executors;
 
 /** A utility class for {@code Action}. */
 public class Actions {
@@ -48,17 +54,21 @@ public class Actions {
   private final Sleeper sleeper;
   private final CommandHistoryWriter writer;
 
+  private final QuotaManager quotaManager;
+
   public Actions(
       Devices devices,
       AaptUtil aaptUtil,
       ResourceHelper resourceHelper,
+      QuotaManager quotaManager,
       LocalFileUtil localFileUtil,
       @FileResolver Resolver resolver,
-      Sleeper sleeper,
-      CommandHistoryWriter writer) {
+      CommandHistoryWriter writer,
+      Sleeper sleeper) {
     this.devices = devices;
     this.aaptUtil = aaptUtil;
     this.resourceHelper = resourceHelper;
+    this.quotaManager = quotaManager;
     this.localFileUtil = localFileUtil;
     this.resolver = resolver;
     this.sleeper = sleeper;
@@ -122,6 +132,17 @@ public class Actions {
     return new Reset(
         packageUpdateTracker,
         new ModulePusher(androidPhone, localFileUtil, resourceHelper),
+        new OtaSideloader(
+            androidPhone,
+            quotaManager,
+            SimpleTimeLimiter.create(Executors.newSingleThreadScheduledExecutor())),
+        new ImageZipFlasher(
+            androidPhone,
+            localFileUtil,
+            resourceHelper,
+            quotaManager,
+            new CommandExecutor(),
+            SimpleTimeLimiter.create(Executors.newSingleThreadScheduledExecutor())),
         spec,
         androidPhone,
         resolvedFiles);

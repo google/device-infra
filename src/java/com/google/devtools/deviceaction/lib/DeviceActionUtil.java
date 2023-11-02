@@ -36,6 +36,7 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
+import com.google.devtools.mobileharness.shared.util.quota.QuotaManager;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
@@ -73,7 +74,8 @@ public class DeviceActionUtil {
     try {
       ResourceHelper resourceHelper =
           factory.create(tmpFileDir, genFileDir, bundletoolJar, credFile);
-      Injector injector = Guice.createInjector(new DeviceActionModule(resourceHelper));
+      Injector injector =
+          Guice.createInjector(new DeviceActionModule(resourceHelper, QuotaManager.getInstance()));
       actionConfigurer = injector.getInstance(ActionConfigurer.class);
       actions = injector.getInstance(Actions.class);
     } catch (DeviceActionException e) {

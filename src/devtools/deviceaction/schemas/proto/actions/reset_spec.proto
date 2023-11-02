@@ -18,6 +18,7 @@ syntax = "proto2";
 
 package devtools.deviceaction.schemas.proto.action;
 
+import "google/protobuf/duration.proto";
 import "src/devtools/deviceaction/schemas/proto/base_spec.proto";
 import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
 
@@ -46,7 +47,16 @@ message ResetSpec {
     optional ResetSpec decorator_ext = 1001;
   }
   // Use tag recovery_modules to provide recovery modules.
+  // Tag ota_package to provide ota package.
+  // Tag image_zip to provide image zip.
   repeated FileSpec files = 1;
   optional ResetOption reset_option = 2;
   optional bool need_preload_modules_recovery = 3 [default = false];
+  optional string flash_script = 4 [default = "flash-all.sh"];
+  // The timeout may depend on the size of image file.
+  optional google.protobuf.Duration flash_timeout = 5;
+  // The timeout may depend on the size of ota package. It is usually > 10 min
+  optional google.protobuf.Duration sideload_timeout = 6;
+  // Use auto-reboot in side.
+  optional bool use_auto_reboot = 7 [default = false];
 }

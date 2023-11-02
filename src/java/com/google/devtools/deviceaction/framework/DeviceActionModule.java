@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.quota.QuotaManager;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import javax.inject.Singleton;
@@ -41,9 +42,11 @@ import javax.inject.Singleton;
 public final class DeviceActionModule extends AbstractModule {
 
   private final ResourceHelper resourceHelper;
+  private final QuotaManager quotaManager;
 
-  public DeviceActionModule(ResourceHelper resourceHelper) {
+  public DeviceActionModule(ResourceHelper resourceHelper, QuotaManager quotaManager) {
     this.resourceHelper = resourceHelper;
+    this.quotaManager = quotaManager;
   }
 
   @Override
@@ -83,11 +86,11 @@ public final class DeviceActionModule extends AbstractModule {
   Actions provideActions(
       Devices devices,
       AaptUtil aaptUtil,
-      ResourceHelper resourceHelper,
       LocalFileUtil localFileUtil,
       @FileResolver Resolver resolver,
       Sleeper sleeper,
       CommandHistoryWriter writer) {
-    return new Actions(devices, aaptUtil, resourceHelper, localFileUtil, resolver, sleeper, writer);
+    return new Actions(
+        devices, aaptUtil, resourceHelper, quotaManager, localFileUtil, resolver, writer, sleeper);
   }
 }
