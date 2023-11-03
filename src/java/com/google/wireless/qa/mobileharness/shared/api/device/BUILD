@@ -17,9 +17,6 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
-        "//java/com/google/wireless/android/wear/tools:__subpackages__",
-        "//javatests/com/google/devtools/vinson/mobileharness:__subpackages__",
-        "//javatests/com/google/wireless/android/wear/tools:__subpackages__",
     ],
 )
 
