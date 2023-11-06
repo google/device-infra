@@ -36,8 +36,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:exit_code",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:base",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
-        "@io_grpc_grpc_java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],
