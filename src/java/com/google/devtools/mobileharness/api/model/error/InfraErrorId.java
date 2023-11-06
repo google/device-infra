@@ -307,7 +307,10 @@ public enum InfraErrorId implements ErrorId {
   RBE_EXECUTOR_DEVICES_SETUP_TIMEOUT(50_503, ErrorType.INFRA_ISSUE),
   RBE_CLIENT_START_REPROXY_ERROR(50_504, ErrorType.INFRA_ISSUE),
 
-  // ID space here:52_601 ~ 60_000
+  // Config Pusher 52_601 ~ 52_700
+  CONFIG_PUSHER_CL_NUMBER_NOT_MATCH(52_601, ErrorType.INFRA_ISSUE),
+
+  // ID space here:52_701 ~ 60_000
   PLACE_HOLDER_TO_BE_RENAMED(60_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = BasicErrorId.MAX_CODE + 1;
