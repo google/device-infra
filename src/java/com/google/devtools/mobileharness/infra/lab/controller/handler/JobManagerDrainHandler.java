@@ -34,7 +34,9 @@ public class JobManagerDrainHandler implements DrainHandler {
 
   @Override
   public boolean hasDrained() {
-    logger.atInfo().log("Check if TestManager has drained.");
-    return jobManager.isAllTestClientPostRunDone();
+    logger.atInfo().log("Check if JobManager has drained.");
+    boolean hasDrained = jobManager.isAllTestClientPostRunDone();
+    logger.atInfo().log("JobManager has drained: %s", hasDrained);
+    return hasDrained;
   }
 }

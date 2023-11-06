@@ -35,6 +35,8 @@ public class TestManagerDrainHandler implements DrainHandler {
   @Override
   public boolean hasDrained() {
     logger.atInfo().log("Check if TestManager has drained.");
-    return testManager.getRunningTestIds().isEmpty();
+    boolean hasDrained = testManager.getRunningTestIds().isEmpty();
+    logger.atInfo().log("TestManager has drained: %s", hasDrained);
+    return hasDrained;
   }
 }

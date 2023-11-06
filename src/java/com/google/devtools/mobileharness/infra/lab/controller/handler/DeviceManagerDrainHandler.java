@@ -36,16 +36,20 @@ public class DeviceManagerDrainHandler implements DrainHandler {
   @Override
   public boolean hasDrained() {
     logger.atInfo().log("Check if LocalDeviceManager has drained.");
+    boolean hasDrained = false;
     try {
       // Note here we only check if device is not busy.
-      return deviceManager.getAllDeviceStatus(false).entrySet().stream()
-          .noneMatch(
-              x -> (x.getValue().getDeviceStatusWithTimestamp().getStatus() == DeviceStatus.BUSY));
+      hasDrained =
+          deviceManager.getAllDeviceStatus(false).entrySet().stream()
+              .noneMatch(
+                  x ->
+                      (x.getValue().getDeviceStatusWithTimestamp().getStatus()
+                          == DeviceStatus.BUSY));
     } catch (InterruptedException ie) {
       logger.atInfo().log("Ignored interrupted exception when check device status.");
     }
-
-    return false;
+    logger.atInfo().log("LocalDeviceManager has drained: %s", hasDrained);
+    return hasDrained;
   }
 
   @Override
