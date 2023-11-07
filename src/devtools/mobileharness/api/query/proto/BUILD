@@ -32,3 +32,18 @@ java_proto_library(
     name = "device_query_java_proto",
     deps = [":device_query_proto"],
 )
+
+proto_library(
+    name = "lab_query_proto",
+    srcs = ["lab_query.proto"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_proto",
+        "//src/devtools/mobileharness/api/model/proto:lab_proto",
+        "@com_google_protobuf//:timestamp_proto",
+    ],
+)
+
+java_proto_library(
+    name = "lab_query_java_proto",
+    deps = [":lab_query_proto"],
+)

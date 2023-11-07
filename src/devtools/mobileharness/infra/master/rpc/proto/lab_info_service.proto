@@ -1,0 +1,42 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.master.rpc;
+
+import "src/devtools/mobileharness/api/query/proto/lab_query.proto";
+
+option java_package = "com.google.devtools.mobileharness.infra.master.rpc.proto";
+option java_outer_classname = "LabInfoServiceProto";
+
+service LabInfoService {
+  // Gets lab and device information.
+  rpc GetLabInfo(GetLabInfoRequest) returns (GetLabInfoResponse);
+}
+
+message GetLabInfoRequest {
+  // Optional.
+  mobileharness.api.query.LabQuery lab_query = 1;
+
+  // Optional.
+  mobileharness.api.query.Page page = 2;
+}
+
+message GetLabInfoResponse {
+  // Required.
+  mobileharness.api.query.LabQueryResult lab_query_result = 1;
+}

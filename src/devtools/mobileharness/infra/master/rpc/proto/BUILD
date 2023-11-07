@@ -95,6 +95,25 @@ java_grpc_library(
 )
 
 proto_library(
+    name = "lab_info_service_proto",
+    srcs = ["lab_info_service.proto"],
+    deps = [
+        "//src/devtools/mobileharness/api/query/proto:lab_query_proto",
+    ],
+)
+
+java_proto_library(
+    name = "lab_info_service_java_proto",
+    deps = [":lab_info_service_proto"],
+)
+
+java_grpc_library(
+    name = "lab_info_service_java_grpc_proto",
+    srcs = [":lab_info_service_proto"],
+    deps = [":lab_info_service_java_proto"],
+)
+
+proto_library(
     name = "lab_sync_service_proto",
     srcs = ["lab_sync_service.proto"],
     deps = [

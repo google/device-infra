@@ -1,0 +1,315 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.api.query;
+
+import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/api/model/proto/device.proto";
+import "src/devtools/mobileharness/api/model/proto/lab.proto";
+
+option java_package = "com.google.devtools.mobileharness.api.query.proto";
+option java_outer_classname = "LabQueryProto";
+
+// A query for querying information of labs and devices.
+message LabQuery {
+  // Filter for filtering labs/devices from result.
+  message Filter {
+    // Lab filter for filtering labs and their devices from result.
+    message LabFilter {
+      // TODO: Supports lab filters.
+    }
+
+    // Optional.
+    LabFilter lab_filter = 1;
+
+    // Device filter for filter devices from result.
+    message DeviceFilter {
+      // TODO: Supports device filters.
+    }
+
+    // Optional.
+    DeviceFilter device_filter = 2;
+  }
+
+  // Optional.
+  //
+  // If not present, returns all labs/devices.
+  Filter filter = 1;
+
+  // Mask for removing fields/dimensions from a lab/device.
+  message Mask {
+    // Mask for mobileharness.api.query.LabInfo.
+    //
+    // If all fields are removed, LabInfo won't be in result.
+    message LabInfoMask {
+      // TODO: Supports mask.
+    }
+
+    // Optional.
+    //
+    // If not present, returns all fields of LabInfo.
+    LabInfoMask lab_info_mask = 1;
+
+    // Mask for mobileharness.api.query.DeviceInfo.
+    //
+    // If all fields are removed, DeviceInfo won't be in result.
+    message DeviceInfoMask {
+      // TODO: Supports field mask and dimension mask.
+    }
+
+    // Optional.
+    //
+    // If not present, returns all fields of DeviceInfo.
+    DeviceInfoMask device_info_mask = 2;
+  }
+
+  // Optional.
+  //
+  // If not present, returns all fields of LabInfo/DeviceInfo.
+  Mask mask = 2;
+
+  // Order of labs/devices in result.
+  message Order {
+    message LabOrder {
+      // TODO: Supports lab order.
+    }
+
+    // Optional.
+    LabOrder lab_order = 1;
+
+    message DeviceOrder {
+      // TODO: Supports device order.
+    }
+
+    // Optional.
+    DeviceOrder device_order = 2;
+  }
+
+  // Optional.
+  //
+  // If not present, uses the default lab/device order.
+  Order order = 3;
+
+  // Results will be grouped as a lab->device tree.
+  message LabViewRequest {}
+
+  // Results will be grouped as a device group tree.
+  //
+  // In the tree, a leaf node is a device list. Each element in
+  // device_group_operation will add a layer to the tree, and a non-leaf node is
+  // a group operation result.
+  //
+  // If no group operation, the tree will only contain one node (a DeviceList).
+  message DeviceViewRequest {
+    message DeviceGroupCondition {
+      // TODO: Supports more group conditions, e.g., composite
+      // condition, dimension value set.
+
+      // Each group represents a single dimension value X. A device appears in
+      // the group if its dimensions multimap contains <dimension_name, X>. A
+      // device may appear in multiple groups.
+      message SingleDimensionValue {
+        // Required.
+        string dimension_name = 1;
+      }
+
+      oneof condition {
+        SingleDimensionValue single_dimension_value = 1;
+      }
+    }
+
+    message DeviceGroupOperation {
+      // Required.
+      DeviceGroupCondition device_group_condition = 1;
+
+      // Optional.
+      //
+      // Limit of groups in a group result.
+      //
+      // O to represent no limit.
+      int32 group_limit = 2;
+    }
+
+    // Optional.
+    //
+    // Groups devices by the first request, then groups devices in each group by
+    // the second request, etc.
+    repeated DeviceGroupOperation device_group_operation = 1;
+
+    // Optional.
+    //
+    // Limit of devices in a DeviceList (of a group, or of the whole result if
+    // no group operation).
+    //
+    // O to represent no limit.
+    int32 device_limit = 2;
+  }
+
+  // How labs/devices are grouped in result.
+  //
+  // If not present, uses lab_view_request.
+  oneof view_request {
+    LabViewRequest lab_view_request = 4;
+    DeviceViewRequest device_view_request = 5;
+  }
+}
+
+// Paging information to return a sub list of the result.
+//
+// For a lab->device tree or a device group tree, the page information is
+// applied to the top level repeated elements.
+message Page {
+  // Required.
+  int32 offset = 1;
+
+  // Required.
+  //
+  // 0 to represent no limit.
+  int32 limit = 2;
+}
+
+// Result of a lab query.
+message LabQueryResult {
+  // Required.
+  //
+  // Timestamp when the result snapshot is generated.
+  google.protobuf.Timestamp timestamp = 1;
+
+  message LabView {
+    // Required.
+    repeated LabData lab_data = 1;
+
+    // Required.
+    //
+    // Lab count regardless of Page setting. It may be larger than the size of
+    // lab_data.
+    int32 lab_count = 2;
+  }
+
+  message DeviceView {
+    // Required.
+    GroupedDevices grouped_devices = 1;
+  }
+
+  oneof view {
+    // Required if lab_view_request is present.
+    LabView lab_view = 2;
+
+    // Required if device_view_request is present.
+    DeviceView device_view = 3;
+  }
+}
+
+message LabData {
+  // Required.
+  LabInfo lab_info = 1;
+
+  // Required.
+  DeviceList device_list = 2;
+}
+
+// All information of a lab server.
+message LabInfo {
+  // Optional.
+  mobileharness.api.model.LabLocator lab_locator = 1;
+
+  // Optional.
+  mobileharness.api.model.LabServerSetting lab_server_setting = 2;
+
+  // Optional.
+  mobileharness.api.model.LabServerFeature lab_server_feature = 3;
+
+  // TODO: Adds more fields.
+}
+
+// All information of a device.
+message DeviceInfo {
+  // Optional.
+  mobileharness.api.model.DeviceLocator device_locator = 1;
+
+  // Optional.
+  string device_uuid = 2;
+
+  // Optional.
+  mobileharness.api.model.DeviceStatus device_status = 3;
+
+  // Optional.
+  mobileharness.api.model.DeviceFeature device_feature = 4;
+
+  // TODO: Adds more fields.
+}
+
+message GroupedDevices {
+  oneof type {
+    // Devices in a plain list.
+    DeviceList device_list = 1;
+
+    // Devices are grouped by a group operation.
+    DeviceGroupResult device_group_result = 2;
+  }
+}
+
+message DeviceList {
+  // Required.
+  //
+  // Device count regardless of Page setting and device_limit setting.
+  int32 device_count = 1;
+
+  // Required.
+  repeated DeviceInfo device_info = 2;
+}
+
+message DeviceGroupResult {
+  // Required.
+  //
+  // Device group count regardless of Page setting and group_limit setting.
+  int32 device_group_count = 1;
+
+  // Required.
+  repeated DeviceGroup device_group = 2;
+
+  // Required.
+  LabQuery.DeviceViewRequest.DeviceGroupOperation device_group_operation = 3;
+}
+
+message DeviceGroup {
+  // Required.
+  DeviceGroupKey device_group_key = 1;
+
+  // Required.
+  GroupedDevices grouped_devices = 2;
+}
+
+message DeviceGroupKey {
+  // TODO: Supports more group conditions.
+
+  // Devices in the group have dimensions multimap containing <dimension_name,
+  // dimension_value>.
+  message HasDimensionValue {
+    // Required.
+    string dimension_name = 1;
+
+    // Required.
+    string dimension_value = 2;
+  }
+
+  oneof key {
+    // Required if single_dimension_value is present.
+    HasDimensionValue has_dimension_value = 1;
+  }
+}
