@@ -339,8 +339,18 @@ public class AndroidPhone implements Device {
   }
 
   /** Waits for the device fully ready. */
+  public void waitUntilReady() throws DeviceActionException, InterruptedException {
+    waitUntilReady(rebootTimeout());
+  }
+
+  /** Waits for the device fully ready. */
   public void waitUntilReady(Duration timeout) throws DeviceActionException, InterruptedException {
     waitUntilReady(RebootMode.SYSTEM_IMAGE, timeout);
+  }
+
+  /** Waits for the reboot complete. */
+  public void waitUntilReady(RebootMode mode) throws DeviceActionException, InterruptedException {
+    waitUntilReady(mode, rebootTimeout());
   }
 
   /**

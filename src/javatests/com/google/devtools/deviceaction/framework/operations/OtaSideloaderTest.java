@@ -23,10 +23,10 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.util.concurrent.FakeTimeLimiter;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
@@ -49,6 +49,8 @@ import org.mockito.junit.MockitoRule;
 @RunWith(TestParameterInjector.class)
 public final class OtaSideloaderTest {
 
+  private static final Duration EXTRA_WAIT = Duration.ofMillis(200);
+
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
@@ -65,7 +67,7 @@ public final class OtaSideloaderTest {
     otaPackage = tmpFolder.newFile("ota.zip");
     when(mockDevice.getUuid()).thenReturn("id");
     when(mockManager.acquire(any(), anyInt())).thenReturn(lease);
-    sideloader = new OtaSideloader(mockDevice, mockManager, new FakeTimeLimiter());
+    sideloader = new OtaSideloader(mockDevice, mockManager, EXTRA_WAIT);
   }
 
   @Test
@@ -74,7 +76,7 @@ public final class OtaSideloaderTest {
 
     verify(mockDevice).reboot(RebootMode.SIDELOAD_AUTO_REBOOT);
     verify(mockDevice).sideload(eq(otaPackage), any(Duration.class), any(Duration.class));
-    verify(mockDevice).waitUntilReady(any(Duration.class));
+    verify(mockDevice).waitUntilReady();
   }
 
   @Test
@@ -83,8 +85,79 @@ public final class OtaSideloaderTest {
 
     verify(mockDevice).reboot(RebootMode.SIDELOAD);
     verify(mockDevice).sideload(eq(otaPackage), any(Duration.class), any(Duration.class));
-    verify(mockDevice).waitUntilReady(eq(RebootMode.RECOVERY), any(Duration.class));
-    verify(mockDevice).reboot(any(Duration.class));
+    verify(mockDevice).waitUntilReady(eq(RebootMode.RECOVERY));
+    verify(mockDevice).reboot();
+  }
+
+  @Test
+  public void sideload_prepareSideFail(@TestParameter boolean autoReboot) throws Exception {
+    doThrow(new DeviceActionException("FAKE", ErrorType.UNDETERMINED, ""))
+        .when(mockDevice)
+        .reboot(any(RebootMode.class));
+
+    DeviceActionException t =
+        assertThrows(
+            DeviceActionException.class,
+            () -> sideloader.sideload(otaPackage, Duration.ofMillis(100), autoReboot));
+    assertThat(t.getErrorId().name()).isEqualTo("FAKE");
+    verify(mockDevice).reboot();
+  }
+
+  @Test
+  public void sideload_prepareSideTimeout(@TestParameter boolean autoReboot) throws Exception {
+    doAnswer(
+            invocation -> {
+              Thread.sleep(1000);
+              return null;
+            })
+        .when(mockDevice)
+        .reboot(any(RebootMode.class));
+
+    DeviceActionException t =
+        assertThrows(
+            DeviceActionException.class,
+            () -> sideloader.sideload(otaPackage, Duration.ofMillis(10), autoReboot));
+    assertThat(t.getErrorId().name()).isEqualTo("TIMEOUT");
+    verify(mockDevice).reboot();
+  }
+
+  @Test
+  public void sideload_acquireQuotaTimeout(@TestParameter boolean autoReboot) throws Exception {
+    // 200 millis < 500 millis < timeout (500) + 200 millis
+    when(mockManager.acquire(any(), anyInt()))
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(500);
+              return lease;
+            });
+
+    DeviceActionException t =
+        assertThrows(
+            DeviceActionException.class,
+            () -> sideloader.sideload(otaPackage, Duration.ofMillis(500), autoReboot));
+    assertThat(t.getErrorId().name()).isEqualTo("VERIFICATION_FAILED");
+    verify(mockDevice, never()).waitUntilReady();
+    verify(mockDevice, never()).waitUntilReady(any(RebootMode.class));
+  }
+
+  @Test
+  public void flashDevice_acquireQuotaLongerThanTotalTimeout(@TestParameter boolean autoReboot)
+      throws Exception {
+    // 1000 millis > timeout (500) + 200 millis
+    when(mockManager.acquire(any(), anyInt()))
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(1000);
+              return lease;
+            });
+
+    DeviceActionException t =
+        assertThrows(
+            DeviceActionException.class,
+            () -> sideloader.sideload(otaPackage, Duration.ofMillis(500), autoReboot));
+    assertThat(t.getErrorId().name()).isEqualTo("TIMEOUT");
+    verify(mockDevice, never()).waitUntilReady();
+    verify(mockDevice, never()).waitUntilReady(any(RebootMode.class));
   }
 
   @Test
@@ -98,22 +171,7 @@ public final class OtaSideloaderTest {
             DeviceActionException.class,
             () -> sideloader.sideload(otaPackage, Duration.ofMillis(10), autoReboot));
     assertThat(t.getErrorId().name()).isEqualTo("FAKE");
-  }
-
-  @Test
-  public void sideload_timeout(@TestParameter boolean autoReboot) throws Exception {
-    doAnswer(
-            invocation -> {
-              Thread.sleep(20);
-              return null;
-            })
-        .when(mockDevice)
-        .sideload(eq(otaPackage), any(Duration.class), any(Duration.class));
-
-    DeviceActionException t =
-        assertThrows(
-            DeviceActionException.class,
-            () -> sideloader.sideload(otaPackage, Duration.ofMillis(10), autoReboot));
-    assertThat(t.getErrorId().name()).isEqualTo("TIMEOUT");
+    verify(mockDevice, never()).waitUntilReady();
+    verify(mockDevice, never()).waitUntilReady(any(RebootMode.class));
   }
 }

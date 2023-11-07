@@ -17,7 +17,6 @@
 package com.google.devtools.deviceaction.framework.actions;
 
 import com.google.common.collect.ImmutableMultimap;
-import com.google.common.util.concurrent.SimpleTimeLimiter;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.annotations.GuiceAnnotations.FileResolver;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
@@ -41,7 +40,6 @@ import com.google.devtools.mobileharness.shared.util.command.history.CommandReco
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.quota.QuotaManager;
 import java.io.File;
-import java.util.concurrent.Executors;
 
 /** A utility class for {@code Action}. */
 public class Actions {
@@ -132,17 +130,9 @@ public class Actions {
     return new Reset(
         packageUpdateTracker,
         new ModulePusher(androidPhone, localFileUtil, resourceHelper),
-        new OtaSideloader(
-            androidPhone,
-            quotaManager,
-            SimpleTimeLimiter.create(Executors.newSingleThreadScheduledExecutor())),
+        new OtaSideloader(androidPhone, quotaManager),
         new ImageZipFlasher(
-            androidPhone,
-            localFileUtil,
-            resourceHelper,
-            quotaManager,
-            new CommandExecutor(),
-            SimpleTimeLimiter.create(Executors.newSingleThreadScheduledExecutor())),
+            androidPhone, localFileUtil, resourceHelper, quotaManager, new CommandExecutor()),
         spec,
         androidPhone,
         resolvedFiles);

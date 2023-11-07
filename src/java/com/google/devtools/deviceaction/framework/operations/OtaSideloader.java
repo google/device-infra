@@ -17,9 +17,10 @@
 package com.google.devtools.deviceaction.framework.operations;
 
 import static com.google.devtools.deviceaction.common.utils.Conditions.checkArgument;
+import static com.google.devtools.deviceaction.common.utils.Verify.verify;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.TimeLimiter;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.utils.TimeoutMonitor;
@@ -30,23 +31,29 @@ import com.google.devtools.mobileharness.shared.util.quota.QuotaManager.Lease;
 import com.google.devtools.mobileharness.shared.util.quota.proto.Quota.QuotaKey;
 import java.io.File;
 import java.time.Duration;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 /** An {@link Operation} to sideload ota package. */
 public class OtaSideloader implements Operation {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  // Includes booting to sideload and acquiring quota.
+  private static final Duration EXTRA_WAIT_NEEDED = Duration.ofMinutes(15);
+
+  private final Duration extraWaitNeeded;
+
   private final AndroidPhone device;
 
   private final QuotaManager quotaManager;
 
-  private final TimeLimiter timeLimiter;
+  public OtaSideloader(AndroidPhone device, QuotaManager quotaManager) {
+    this(device, quotaManager, EXTRA_WAIT_NEEDED);
+  }
 
-  public OtaSideloader(AndroidPhone device, QuotaManager quotaManager, TimeLimiter timeLimiter) {
+  @VisibleForTesting
+  OtaSideloader(AndroidPhone device, QuotaManager quotaManager, Duration extraWaitNeeded) {
     this.device = device;
     this.quotaManager = quotaManager;
-    this.timeLimiter = timeLimiter;
+    this.extraWaitNeeded = extraWaitNeeded;
   }
 
   /** Sideloads an OTA package. */
@@ -57,44 +64,56 @@ public class OtaSideloader implements Operation {
         ErrorType.CUSTOMER_ISSUE,
         "The OTA package file %s is missing or invalid.",
         otaPackage.getAbsolutePath());
-    try {
-      timeLimiter.callWithTimeout(
-          () -> {
-            try (TimeoutMonitor timeoutMonitor = TimeoutMonitor.createAndStart(timeout)) {
-              if (useAutoReboot) {
-                device.reboot(RebootMode.SIDELOAD_AUTO_REBOOT);
-              } else {
-                device.reboot(RebootMode.SIDELOAD);
-              }
-
-              try (Lease ignored = quotaManager.acquire(QuotaKey.FASTBOOT_FLASH_DEVICE, 1)) {
-                device.sideload(
-                    otaPackage, timeoutMonitor.getRemainingTimeout(), Duration.ofSeconds(2));
-              }
-
-              if (useAutoReboot) {
-                device.waitUntilReady(timeoutMonitor.getRemainingTimeout());
-              } else {
-                // After sideloading package, device should transition to recovery mode.
-                device.waitUntilReady(RebootMode.RECOVERY, timeoutMonitor.getRemainingTimeout());
-                logger.atInfo().log(
-                    "Sideloading completed on %s, rebooting and waiting for boot complete.",
-                    device.getUuid());
-                // Now reboot to userspace
-                device.reboot(timeoutMonitor.getRemainingTimeout());
-              }
-            }
-            return null;
-          },
-          timeout);
-    } catch (ExecutionException e) {
-      if (e.getCause() instanceof DeviceActionException) {
-        throw (DeviceActionException) e.getCause();
+    try (TimeoutMonitor timeoutMonitor =
+        TimeoutMonitor.createAndStart(timeout.plus(extraWaitNeeded))) {
+      try {
+        prepareSideload(useAutoReboot);
+        logger.atInfo().log(
+            "Reboot to sideload on %s within %d sec",
+            device.getUuid(), timeoutMonitor.getElapsedSinceLastCheck().toSeconds());
+      } catch (DeviceActionException e) {
+        device.reboot();
+        throw e;
       }
-      throw new DeviceActionException(
-          "UNKNOWN_EXECUTION_ERROR", ErrorType.UNDETERMINED, "Unknown error.", e);
-    } catch (TimeoutException e) {
-      throw new DeviceActionException("TIMEOUT", ErrorType.UNDETERMINED, "TIMEOUT!", e);
+      try (Lease ignored = quotaManager.acquire(QuotaKey.FASTBOOT_FLASH_DEVICE, 1)) {
+        logger.atInfo().log(
+            "Get quota after %d sec", timeoutMonitor.getElapsedSinceLastCheck().toSeconds());
+        verify(
+            timeoutMonitor.getRemainingTimeout().compareTo(timeout) > 0,
+            "Not enough time to sideload. Abort");
+
+        logger.atInfo().log("Sideloading package %s to %s", otaPackage, device.getUuid());
+        device.sideload(otaPackage, timeout, Duration.ofSeconds(2));
+        logger.atInfo().log(
+            "Sideloaded package %s to %s within %d sec",
+            otaPackage,
+            device.getUuid(),
+            timeoutMonitor.getElapsedSinceLastCheckSafely().toSeconds());
+      }
+      recoverDevice(useAutoReboot);
+    }
+  }
+
+  private void prepareSideload(boolean useAutoReboot)
+      throws DeviceActionException, InterruptedException {
+    logger.atInfo().log("Start sideloading %s", device.getUuid());
+    if (useAutoReboot) {
+      device.reboot(RebootMode.SIDELOAD_AUTO_REBOOT);
+    } else {
+      device.reboot(RebootMode.SIDELOAD);
+    }
+  }
+
+  private void recoverDevice(boolean useAutoReboot)
+      throws DeviceActionException, InterruptedException {
+    logger.atInfo().log("Wait for device %s recover.", device.getUuid());
+    if (useAutoReboot) {
+      device.waitUntilReady();
+    } else {
+      // After sideloading package, device should transition to recovery mode.
+      device.waitUntilReady(RebootMode.RECOVERY);
+      logger.atInfo().log("Wait for %s reboot to userspace.", device.getUuid());
+      device.reboot();
     }
   }
 }

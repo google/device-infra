@@ -19,7 +19,8 @@ package com.google.devtools.deviceaction.framework.operations;
 import static com.google.devtools.deviceaction.common.utils.Conditions.checkState;
 import static com.google.devtools.deviceaction.common.utils.Verify.verify;
 
-import com.google.common.util.concurrent.TimeLimiter;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.utils.ResourceHelper;
@@ -38,13 +39,16 @@ import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 
 /** An {@link Operation} to flash the device with image zip files. */
 public class ImageZipFlasher implements Operation {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String ANDROID_SERIAL_ENV = "ANDROID_SERIAL";
+
+  private static final Duration QUOTA_WAIT_TIMEOUT = Duration.ofMinutes(10);
+
+  private final Duration qutaWaitTimeout;
 
   private final AndroidPhone device;
 
@@ -56,21 +60,29 @@ public class ImageZipFlasher implements Operation {
 
   private final CommandExecutor executor;
 
-  private final TimeLimiter timeLimiter;
-
   public ImageZipFlasher(
       AndroidPhone device,
       LocalFileUtil fileUtil,
       ResourceHelper resourceHelper,
       QuotaManager quotaManager,
+      CommandExecutor executor) {
+    this(device, fileUtil, resourceHelper, quotaManager, executor, QUOTA_WAIT_TIMEOUT);
+  }
+
+  @VisibleForTesting
+  ImageZipFlasher(
+      AndroidPhone device,
+      LocalFileUtil fileUtil,
+      ResourceHelper resourceHelper,
+      QuotaManager quotaManager,
       CommandExecutor executor,
-      TimeLimiter timeLimiter) {
+      Duration quotaWaitTimeout) {
     this.device = device;
     this.fileUtil = fileUtil;
     this.resourceHelper = resourceHelper;
     this.quotaManager = quotaManager;
     this.executor = executor;
-    this.timeLimiter = timeLimiter;
+    this.qutaWaitTimeout = quotaWaitTimeout;
   }
 
   /** Flashes the device with zipped image. */
@@ -82,37 +94,35 @@ public class ImageZipFlasher implements Operation {
         flashingScript.toFile().exists(),
         ErrorType.CUSTOMER_ISSUE,
         "Missing flashing script in zip image.");
-    try {
-      timeLimiter.callWithTimeout(
-          () -> {
-            try (TimeoutMonitor timeoutMonitor = TimeoutMonitor.createAndStart(timeout);
-                Lease ignored = quotaManager.acquire(QuotaKey.FASTBOOT_FLASH_DEVICE, 1)) {
-              Command command =
-                  Command.of("bash", "-x", flashingScript.toString())
-                      .extraEnv(ANDROID_SERIAL_ENV, device.getUuid())
-                      .workDir(unzipDir)
-                      .timeout(timeoutMonitor.getRemainingTimeout());
-              try {
-                CommandResult result = executor.exec(command);
-                verify(result.exitCode() == 0, "Failed to flash the device: %s.", result.stdout());
-              } catch (CommandException e) {
-                throw new DeviceActionException(
-                    e, "Failed to execute the flash script %s", command);
-              }
-              device.waitUntilReady(timeoutMonitor.getRemainingTimeout());
-            }
-            return null;
-          },
-          timeout);
-    } catch (ExecutionException e) {
-      if (e.getCause() instanceof DeviceActionException) {
-        throw (DeviceActionException) e.getCause();
+    try (TimeoutMonitor timeoutMonitor =
+            TimeoutMonitor.createAndStart(timeout.plus(qutaWaitTimeout));
+        Lease ignored = quotaManager.acquire(QuotaKey.FASTBOOT_FLASH_DEVICE, 1)) {
+      Duration waitForQuota = timeoutMonitor.getElapsedSinceLastCheck();
+      verify(
+          waitForQuota.compareTo(qutaWaitTimeout) <= 0,
+          "Get quota after %d sec, not enough time to flash the device.",
+          waitForQuota.toSeconds());
+      Command command =
+          Command.of("bash", "-x", flashingScript.toString())
+              .extraEnv(ANDROID_SERIAL_ENV, device.getUuid())
+              .workDir(unzipDir)
+              .timeout(timeout);
+      logger.atInfo().log(
+          "Start flashing %s with command %s", device.getUuid(), command.getCommand());
+      try {
+        CommandResult result = executor.exec(command);
+        verify(result.exitCode() == 0, "Failed to flash the device: %s.", result.stdout());
+      } catch (CommandException e) {
+        throw new DeviceActionException(e, "Failed to execute the flash script %s", command);
       }
-      throw new DeviceActionException(
-          "UNKNOWN_EXECUTION_ERROR", ErrorType.UNDETERMINED, "Unknown error.", e);
-    } catch (TimeoutException e) {
-      throw new DeviceActionException("TIMEOUT", ErrorType.UNDETERMINED, "TIMEOUT!", e);
+      logger.atInfo().log(
+          "Cost %s to execute the flash script", timeoutMonitor.getElapsedSinceLastCheckSafely());
     }
+    recoverDevice();
+  }
+
+  private void recoverDevice() throws DeviceActionException, InterruptedException {
+    device.waitUntilReady();
   }
 
   private Path unzipImage(File imageInZip) throws DeviceActionException, InterruptedException {

@@ -22,9 +22,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.util.concurrent.FakeTimeLimiter;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.utils.ResourceHelper;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
@@ -89,7 +90,7 @@ public final class ImageZipFlasherTest {
     when(mockManager.acquire(any(), anyInt())).thenReturn(lease);
     flasher =
         new ImageZipFlasher(
-            mockDevice, mockFileUtil, mockHelper, mockManager, executor, new FakeTimeLimiter());
+            mockDevice, mockFileUtil, mockHelper, mockManager, executor, Duration.ofMillis(200));
   }
 
   @Test
@@ -102,6 +103,8 @@ public final class ImageZipFlasherTest {
             });
 
     flasher.flashDevice(zipFile, "script", Duration.ofSeconds(2));
+
+    verify(mockDevice).waitUntilReady();
   }
 
   @Test
@@ -118,21 +121,44 @@ public final class ImageZipFlasherTest {
             DeviceActionException.class,
             () -> flasher.flashDevice(zipFile, "script", Duration.ofSeconds(2)));
     assertThat(t.getErrorId().name()).isEqualTo("VERIFICATION_FAILED");
+    verify(mockDevice, never()).waitUntilReady();
   }
 
   @Test
-  public void flashDevice_timeout() throws Exception {
-    when(executor.exec(any(Command.class)))
+  public void flashDevice_acquireQuotaTimeout() throws Exception {
+    // 200 millis < 500 millis < timeout (500) + 200 millis
+    when(mockManager.acquire(any(), anyInt()))
         .thenAnswer(
             invocation -> {
-              Thread.sleep(2000);
-              return SUCCESS;
+              Thread.sleep(500);
+              return lease;
             });
 
     DeviceActionException t =
         assertThrows(
             DeviceActionException.class,
-            () -> flasher.flashDevice(zipFile, "script", Duration.ofSeconds(1)));
+            () -> flasher.flashDevice(zipFile, "script", Duration.ofMillis(500)));
+    assertThat(t.getErrorId().name()).isEqualTo("VERIFICATION_FAILED");
+    verify(executor, never()).exec(any(Command.class));
+    verify(mockDevice, never()).waitUntilReady();
+  }
+
+  @Test
+  public void flashDevice_acquireQuotaLongerThanTotalTimeout() throws Exception {
+    // 1000 millis > timeout (500) + 200 millis
+    when(mockManager.acquire(any(), anyInt()))
+        .thenAnswer(
+            invocation -> {
+              Thread.sleep(1000);
+              return lease;
+            });
+
+    DeviceActionException t =
+        assertThrows(
+            DeviceActionException.class,
+            () -> flasher.flashDevice(zipFile, "script", Duration.ofMillis(500)));
     assertThat(t.getErrorId().name()).isEqualTo("TIMEOUT");
+    verify(executor, never()).exec(any(Command.class));
+    verify(mockDevice, never()).waitUntilReady();
   }
 }

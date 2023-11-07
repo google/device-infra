@@ -29,29 +29,53 @@ import org.junit.runners.JUnit4;
 public final class TimeoutMonitorTest {
 
   @Test
-  public void getRemainingTimeout() throws Exception {
-    try (TimeoutMonitor monitor = TimeoutMonitor.createAndStart(Duration.ofSeconds(3))) {
-      Thread.sleep(/* millis= */ 1001);
-      Duration remain1 = monitor.getRemainingTimeout();
-      Thread.sleep(/* millis= */ 1001);
-      Duration remain2 = monitor.getRemainingTimeout();
-
-      assertThat(remain1.compareTo(Duration.ofSeconds(2))).isLessThan(0);
-      assertThat(remain2.compareTo(Duration.ofSeconds(1))).isLessThan(0);
+  public void createAndStart_success() throws Exception {
+    try (TimeoutMonitor monitor = TimeoutMonitor.createAndStart(Duration.ofMillis(300))) {
+      // The compare precision is < 100 millis.
+      Thread.sleep(/* millis= */ 101);
+      assertThat(monitor.getElapsedSinceLastCheck().toMillis()).isGreaterThan(100);
+      assertThat(monitor.getRemainingTimeout().toMillis()).isLessThan(200);
+      assertThat(monitor.getCheckedNum()).isEqualTo(2);
+      Thread.sleep(/* millis= */ 101);
+      assertThat(monitor.getElapsedSinceLastCheck().toMillis()).isGreaterThan(100);
+      assertThat(monitor.getRemainingTimeout().toMillis()).isLessThan(100);
+      assertThat(monitor.getCheckedNum()).isEqualTo(4);
     }
   }
 
   @Test
-  public void createAndStart_throwExceptionIfTimeout() {
+  public void getRemainingTimeout_throwExceptionAfterTimeout() {
     DeviceActionException t =
         assertThrows(
             DeviceActionException.class,
             () -> {
-              try (TimeoutMonitor monitor = TimeoutMonitor.createAndStart(Duration.ofSeconds(1))) {
-                Thread.sleep(/* millis= */ 2000);
+              try (TimeoutMonitor monitor = TimeoutMonitor.createAndStart(Duration.ofMillis(100))) {
+                Thread.sleep(/* millis= */ 200);
                 monitor.getRemainingTimeout();
               }
             });
     assertThat(t.getErrorId().name()).isEqualTo("TIMEOUT");
+  }
+
+  @Test
+  public void getElapsedSinceLastCheck_throwExceptionAfterTimeout() {
+    DeviceActionException t =
+        assertThrows(
+            DeviceActionException.class,
+            () -> {
+              try (TimeoutMonitor monitor = TimeoutMonitor.createAndStart(Duration.ofMillis(100))) {
+                Thread.sleep(/* millis= */ 200);
+                monitor.getElapsedSinceLastCheck();
+              }
+            });
+    assertThat(t.getErrorId().name()).isEqualTo("TIMEOUT");
+  }
+
+  @Test
+  public void getElapsedSinceLastCheckSafely_noExceptionAfterTimeout() throws Exception {
+    try (TimeoutMonitor monitor = TimeoutMonitor.createAndStart(Duration.ofMillis(100))) {
+      Thread.sleep(/* millis= */ 200);
+      Duration unused = monitor.getElapsedSinceLastCheckSafely();
+    }
   }
 }

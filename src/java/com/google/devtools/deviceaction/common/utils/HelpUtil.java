@@ -152,6 +152,20 @@ public final class HelpUtil {
           .setDescription("Preloaded modules to recover the device.")
           .addExampleValues("gcs:project id&gs://bucket/uri")
           .build();
+  private static final OptionDescription OTA_PACKAGE_FLAG =
+      OptionDescription.builder()
+          .setFlag("action")
+          .setKey("file_ota_package")
+          .setDescription("OTA package to sideload.")
+          .addExampleValues("gcs:project id&gs://bucket/uri/ota.zip")
+          .build();
+  private static final OptionDescription IMAGE_ZIP_FLAG =
+      OptionDescription.builder()
+          .setFlag("action")
+          .setKey("file_image_zip")
+          .setDescription("Zip file of partition images to flash.")
+          .addExampleValues("gcs:project id&gs://bucket/uri/image.zip")
+          .build();
   private static final OptionDescription RESET_OPTION_FLAG =
       OptionDescription.builder()
           .setFlag("action")
@@ -165,6 +179,30 @@ public final class HelpUtil {
           .setFlag("action")
           .setKey("need_preload_modules_recovery")
           .setDescription("Optional flag to push recovery modules.")
+          .build();
+  private static final OptionDescription FLASH_SCRIPT_FLAG =
+      OptionDescription.builder()
+          .setFlag("action")
+          .setKey("flash_script")
+          .setDescription("Script to flash partition images.")
+          .build();
+  private static final OptionDescription FLASH_TIMEOUT_FLAG =
+      OptionDescription.builder()
+          .setFlag("action")
+          .setKey("flash_timeout")
+          .setDescription("Timeout to flash partition images.")
+          .build();
+  private static final OptionDescription SIDELOAD_TIMEOUT_FLAG =
+      OptionDescription.builder()
+          .setFlag("action")
+          .setKey("sideload_timeout")
+          .setDescription("Timeout to sideload an ota package.")
+          .build();
+  private static final OptionDescription USE_AUTO_REBOOT_FLAG =
+      OptionDescription.builder()
+          .setFlag("action")
+          .setKey("use_auto_reboot")
+          .setDescription("Auto reboot after sideload.")
           .build();
   private static final CommandHelp HELP =
       CommandHelp.builder()
@@ -227,8 +265,14 @@ public final class HelpUtil {
           .addFlag("serial", SERIAL_FLAG)
           .addFlag("device-config", DEVICE_CONFIG_FLAG)
           .addFlag("files", RECOVERY_MODULES_FLAG)
+          .addFlag("flash_files", OTA_PACKAGE_FLAG)
+          .addFlag("flash_files", IMAGE_ZIP_FLAG)
           .addFlag("reset_option", RESET_OPTION_FLAG)
           .addFlag("need_preload_modules_recovery", NEED_PRELOAD_MODULES_RECOVERY_FLAG)
+          .addFlag("flash_script", FLASH_SCRIPT_FLAG)
+          .addFlag("flash_timeout", FLASH_TIMEOUT_FLAG)
+          .addFlag("sideload_timeout", SIDELOAD_TIMEOUT_FLAG)
+          .addFlag("use_auto_reboot", USE_AUTO_REBOOT_FLAG)
           .build();
   private static final ImmutableList<CommandHelp> COMMAND_HELPS =
       ImmutableList.of(INSTALL_MAINLINE_HELP, RESET_HELP);
