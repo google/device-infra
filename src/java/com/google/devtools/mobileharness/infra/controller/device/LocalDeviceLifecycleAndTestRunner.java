@@ -255,8 +255,13 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
             needReboot = true;
           }
         } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
-          logger.atWarning().withCause(e).log(
-              "Failed to reserve device %s or run test.", device.getDeviceId());
+          // Need to quit the loop when it's draining; Otherwise, just log the warning.
+          if (e.getErrorId() == InfraErrorId.LAB_EXTERNAL_DEVICE_MANAGER_RESERVE_FAIL_WHEN_DRAIN) {
+            throw e;
+          } else {
+            logger.atWarning().withCause(e).log(
+                "Failed to reserve device %s or run test.", device.getDeviceId());
+          }
         } finally {
           device.info().properties().remove(DEVICE_PROPERTY_RESERVATION_ID);
         }
