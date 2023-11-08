@@ -49,7 +49,7 @@ import org.mockito.junit.MockitoRule;
 @RunWith(TestParameterInjector.class)
 public final class OtaSideloaderTest {
 
-  private static final Duration EXTRA_WAIT = Duration.ofMillis(200);
+  private static final Duration EXTRA_WAIT = Duration.ofSeconds(1);
 
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
@@ -98,7 +98,7 @@ public final class OtaSideloaderTest {
     DeviceActionException t =
         assertThrows(
             DeviceActionException.class,
-            () -> sideloader.sideload(otaPackage, Duration.ofMillis(100), autoReboot));
+            () -> sideloader.sideload(otaPackage, Duration.ofSeconds(1), autoReboot));
     assertThat(t.getErrorId().name()).isEqualTo("FAKE");
     verify(mockDevice).reboot();
   }
@@ -107,7 +107,7 @@ public final class OtaSideloaderTest {
   public void sideload_prepareSideTimeout(@TestParameter boolean autoReboot) throws Exception {
     doAnswer(
             invocation -> {
-              Thread.sleep(1000);
+              Thread.sleep(2000);
               return null;
             })
         .when(mockDevice)
@@ -123,18 +123,18 @@ public final class OtaSideloaderTest {
 
   @Test
   public void sideload_acquireQuotaTimeout(@TestParameter boolean autoReboot) throws Exception {
-    // 200 millis < 500 millis < timeout (500) + 200 millis
+    // 1000 millis < 1500 millis < timeout (1000) + 1000 millis
     when(mockManager.acquire(any(), anyInt()))
         .thenAnswer(
             invocation -> {
-              Thread.sleep(500);
+              Thread.sleep(1500);
               return lease;
             });
 
     DeviceActionException t =
         assertThrows(
             DeviceActionException.class,
-            () -> sideloader.sideload(otaPackage, Duration.ofMillis(500), autoReboot));
+            () -> sideloader.sideload(otaPackage, Duration.ofSeconds(1), autoReboot));
     assertThat(t.getErrorId().name()).isEqualTo("VERIFICATION_FAILED");
     verify(mockDevice, never()).waitUntilReady();
     verify(mockDevice, never()).waitUntilReady(any(RebootMode.class));
@@ -143,11 +143,11 @@ public final class OtaSideloaderTest {
   @Test
   public void flashDevice_acquireQuotaLongerThanTotalTimeout(@TestParameter boolean autoReboot)
       throws Exception {
-    // 1000 millis > timeout (500) + 200 millis
+    // 2000 millis > timeout (500) + 1000 millis
     when(mockManager.acquire(any(), anyInt()))
         .thenAnswer(
             invocation -> {
-              Thread.sleep(1000);
+              Thread.sleep(2000);
               return lease;
             });
 
