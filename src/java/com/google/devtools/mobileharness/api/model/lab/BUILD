@@ -16,25 +16,11 @@
 # Description:
 #   Shared data models for Mobile Harness labs and devices.
 
-DEFAULT_VISIBILITY = [
-    "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
-    "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
-    "//src/java/com/google/devtools/mobileharness/api:__subpackages__",
-    "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
-    "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:__subpackages__",
-    "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
-    "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-    "//src/java/com/google/devtools/mobileharness/infra/shared/api:__subpackages__",
-    "//src/java/com/google/wireless/qa/mobileharness/shared/model:__subpackages__",
-    "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
-    "//src/javatests/com/google/devtools/mobileharness/api/devicemanager:__subpackages__",
-    "//src/javatests/com/google/devtools/mobileharness/infra/controller/scheduler:__subpackages__",
-    "//src/javatests/com/google/devtools/mobileharness/infra/shared/api:__subpackages__",
-]
-
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
 )
 
 java_library(
@@ -42,8 +28,6 @@ java_library(
     srcs = [
         "DeviceLocator.java",
         "LabLocator.java",
-    ],
-    visibility = DEFAULT_VISIBILITY + [
     ],
     exports = [
         "//src/java/com/google/devtools/mobileharness/api/model/lab/in:ports",
@@ -76,7 +60,6 @@ java_library(
 java_library(
     name = "device_id_descriptor",
     srcs = ["DeviceId.java"],
-    visibility = DEFAULT_VISIBILITY,
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
     ],
@@ -86,9 +69,6 @@ java_library(
     name = "device_info",
     srcs = [
         "DeviceInfo.java",
-    ],
-    visibility = DEFAULT_VISIBILITY + [
-        "//:deviceinfra_pkg",
     ],
     deps = [
         ":device_id_descriptor",

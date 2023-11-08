@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.client.api.mode.ats;
+package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;

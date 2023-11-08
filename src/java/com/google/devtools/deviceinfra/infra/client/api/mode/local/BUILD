@@ -82,7 +82,7 @@ java_library(
 java_library(
     name = "device_info_filter",
     srcs = ["DeviceInfoFilter.java"],
-    visibility = ["//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/ats:__pkg__"],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__"],
     deps = [
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "@maven//:com_google_guava_guava",
@@ -92,7 +92,7 @@ java_library(
 java_library(
     name = "local_device_allocator",
     srcs = ["LocalDeviceAllocator.java"],
-    visibility = ["//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/ats:__pkg__"],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__pkg__"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:error_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
