@@ -66,7 +66,7 @@ java_library(
         "TestRunner.java",
     ],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
@@ -86,7 +86,7 @@ java_library(
     ],
     visibility = [
         "//java/com/google/devtools/mobileharness/rbe:__subpackages__",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",

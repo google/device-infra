@@ -29,8 +29,11 @@ public final class ExecModeUtil {
   /** Suffix of the class name of the exec modes. */
   private static final String EXEC_MODE_CLASS_SUFFIX = "Mode";
 
-  private static final String ALTERNATIVE_PACKAGE_NAME =
+  private static final String EXEC_MODE_PACKAGE_NAME_PRIMARY =
       "com.google.wireless.qa.mobileharness.client.api.mode";
+
+  private static final String EXEC_MODE_PACKAGE_NAME_SECONDARY =
+      "com.google.devtools.mobileharness.infra.client.api.mode";
 
   /**
    * Creates {@code ExecMode} instance according to the exec mode name. Supposes exec mode name is
@@ -40,11 +43,11 @@ public final class ExecModeUtil {
    * to create instance in alternative package, example
    * com.google.wireless.qa.mobileharness.client.api.mode.xxx.yyy.XxxYyyMode.
    *
-   * @throws mobileharnessException if {@code ExecMode} instance cannot be created.
+   * @throws MobileHarnessException if {@code ExecMode} instance cannot be created.
    */
   public static ExecMode createInstance(String modeName) throws MobileHarnessException {
-    StringBuilder packageName = new StringBuilder(ExecMode.class.getPackage().getName());
-    StringBuilder alternativePackageName = new StringBuilder(ALTERNATIVE_PACKAGE_NAME);
+    StringBuilder packageName = new StringBuilder(EXEC_MODE_PACKAGE_NAME_PRIMARY);
+    StringBuilder alternativePackageName = new StringBuilder(EXEC_MODE_PACKAGE_NAME_SECONDARY);
     StringBuilder className = new StringBuilder();
     boolean newPackage = true;
     for (char ch : modeName.toCharArray()) {

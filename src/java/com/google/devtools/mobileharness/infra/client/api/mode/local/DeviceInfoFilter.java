@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.client.api.mode.local;
+package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
 import com.google.common.base.Ascii;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;

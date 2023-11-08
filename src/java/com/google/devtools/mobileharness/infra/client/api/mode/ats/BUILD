@@ -25,11 +25,11 @@ java_library(
     srcs = ["AtsMode.java"],
     deps = [
         ":remote_device_manager",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:local_device_allocator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:local_device_allocator",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",
@@ -61,8 +61,8 @@ java_library(
     deps = [
         ":remote_device_manager",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:device_info_filter",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:device_info_filter",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",

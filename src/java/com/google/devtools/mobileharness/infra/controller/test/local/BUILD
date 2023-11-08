@@ -20,7 +20,7 @@ java_library(
     ],
     visibility = [
         "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
     ],
     deps = [

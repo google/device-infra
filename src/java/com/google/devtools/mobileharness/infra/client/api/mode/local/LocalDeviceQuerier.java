@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.client.api.mode.local;
+package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFuture;

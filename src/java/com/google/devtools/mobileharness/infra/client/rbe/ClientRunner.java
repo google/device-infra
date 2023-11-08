@@ -18,8 +18,8 @@ package com.google.devtools.mobileharness.infra.client.rbe;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.infra.client.api.ClientApi;
-import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;

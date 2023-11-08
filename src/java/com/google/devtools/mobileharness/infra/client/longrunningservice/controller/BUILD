@@ -82,10 +82,10 @@ java_library(
     srcs = ["SessionJobRunner.java"],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/infra/client/api",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local",
         "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",

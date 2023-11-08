@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.client.api.mode.local;
+package com.google.devtools.mobileharness.infra.client.api.mode.local;
 
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
+import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
 import java.util.Optional;

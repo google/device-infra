@@ -20,13 +20,13 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalDeviceAllocator;
-import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
-import com.google.devtools.deviceinfra.infra.client.api.mode.local.LocalDeviceAllocator.EmptyDeviceVerifier;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator;
+import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
+import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.EmptyDeviceVerifier;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;

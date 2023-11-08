@@ -21,7 +21,7 @@ package(
     default_visibility = [
         "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
         "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
     ],
 )
