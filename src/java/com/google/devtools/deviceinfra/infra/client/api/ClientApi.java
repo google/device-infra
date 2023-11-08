@@ -17,6 +17,7 @@
 package com.google.devtools.deviceinfra.infra.client.api;
 
 import com.google.common.base.Ascii;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
@@ -36,6 +37,7 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecModeUtil;
 import com.google.devtools.mobileharness.infra.client.api.util.lister.TestLister;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
+import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -44,6 +46,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Future;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -55,6 +58,8 @@ public class ClientApi {
 
   /** Job manager which manages all the running jobs. */
   private final JobManagerCore jobManager;
+
+  private final Supplier<String> clientHostnameSupplier;
 
   /**
    * EventBus for all {@link
@@ -71,7 +76,8 @@ public class ClientApi {
       @ExtraGlobalInternalPlugins ImmutableList<Object> extraGlobalInternalPlugins,
       @ExtraJobInternalPlugins ImmutableList<Object> extraJobInternalPlugins,
       @ShutdownJobThreadWhenShutdownProcess boolean shutdownJobThreadWhenShutdownProcess,
-      @GlobalInternalEventBus EventBus globalInternalEventBus) {
+      @GlobalInternalEventBus EventBus globalInternalEventBus,
+      NetworkUtil networkUtil) {
     jobManager =
         jobManagerCoreFactory.create(
             jobThreadPool, globalInternalEventBus, extraJobInternalPlugins);
@@ -92,6 +98,18 @@ public class ClientApi {
                     envThreadPool.shutdownNow();
                   }));
     }
+
+    clientHostnameSupplier =
+        Suppliers.memoize(
+            () -> {
+              try {
+                // This may take seconds.
+                return networkUtil.getLocalHostName();
+              } catch (MobileHarnessException e) {
+                logger.atWarning().withCause(e).log("Failed to get local hostname");
+                return "unknown";
+              }
+            });
   }
 
   /**
@@ -112,12 +130,8 @@ public class ClientApi {
   public void startJob(
       JobInfo jobInfo, ExecMode execMode, @Nullable Collection<Object> jobSpecificEventHandlers)
       throws MobileHarnessException, InterruptedException {
+    addCommonJobProperties(jobInfo, execMode);
     try {
-      jobInfo
-          .properties()
-          .add(Job.EXEC_MODE, Ascii.toLowerCase(ExecModeUtil.getModeName(execMode)));
-      jobInfo.log().atInfo().alsoTo(logger).log("%s", jobInfo.toString());
-
       // Prepares job plugins.
       List<Object> jobPlugins = new ArrayList<>();
       if (jobSpecificEventHandlers != null) {
@@ -168,5 +182,10 @@ public class ClientApi {
   /** Gets the test message poster by the test id. */
   public Optional<TestMessagePoster> getTestMessagePoster(String testId) {
     return jobManager.getTestMessagePoster(testId);
+  }
+
+  private void addCommonJobProperties(JobInfo jobInfo, ExecMode execMode) {
+    jobInfo.properties().add(Job.EXEC_MODE, Ascii.toLowerCase(ExecModeUtil.getModeName(execMode)));
+    jobInfo.properties().add(Job.MH_CLIENT_HOSTNAME, clientHostnameSupplier.get());
   }
 }

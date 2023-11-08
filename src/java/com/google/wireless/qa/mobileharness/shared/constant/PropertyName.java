@@ -50,6 +50,8 @@ public interface PropertyName {
 
     MH_CLIENT_VERSION,
 
+    MH_CLIENT_HOSTNAME,
+
     /** The MHFE link for the job. */
     JOB_LINK_IN_MHFE,
 

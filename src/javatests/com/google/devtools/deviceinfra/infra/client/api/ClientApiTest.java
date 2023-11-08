@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
@@ -90,6 +91,10 @@ public class ClientApiTest {
 
     try {
       clientApi.startJob(jobInfo, new LocalMode());
+
+      assertThat(jobInfo.properties().get(Job.MH_CLIENT_HOSTNAME)).isNotNull();
+      assertThat(jobInfo.properties().get(Job.EXEC_MODE)).isNotNull();
+
       clientApi.waitForJob(jobInfo.locator().getId());
 
       assertThat(jobInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);

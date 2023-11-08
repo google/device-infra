@@ -34,6 +34,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/infra/client/api:module",
         "//src/java/com/google/devtools/deviceinfra/infra/client/api/mode/local",
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
