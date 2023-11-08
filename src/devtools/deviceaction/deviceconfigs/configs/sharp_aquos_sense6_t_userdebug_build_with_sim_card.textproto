@@ -1,0 +1,21 @@
+# proto-file: third_party/deviceinfra/src/devtools/deviceaction/schemas/proto/base_spec.proto
+# proto-message: DeviceConfig
+
+device_spec {
+  android_phone_spec {
+    brand: "SHARP"
+    reboot_await: { seconds: 60 }
+    reboot_timeout: { seconds: 300 }
+    testharness_boot_await: { seconds: 60 }
+    testharness_boot_timeout: { seconds: 300 }
+    staged_ready_timeout: { seconds: 120 }
+  }
+}
+[devtools.deviceaction.schemas.proto.action.InstallMainlineSpec.install_mainline_spec] {
+  clean_up_sessions: false
+  skip_check_version_after_push: true
+  soft_reboot_after_push: true
+}
+[devtools.deviceaction.schemas.proto.action.ResetSpec.reset_spec] {
+  reset_option: TEST_HARNESS
+}
