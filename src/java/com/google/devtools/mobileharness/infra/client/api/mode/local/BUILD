@@ -73,7 +73,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
-        "//src/testing/mobileharness/shared/proto:device_query_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:device_query_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],

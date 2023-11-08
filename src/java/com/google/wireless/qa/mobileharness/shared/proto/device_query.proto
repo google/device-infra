@@ -18,7 +18,7 @@ syntax = "proto2";
 
 package mobileharness.shared;
 
-import "src/testing/mobileharness/shared/proto/lab_query.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/lab_query.proto";
 
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
 option java_outer_classname = "DeviceQuery";

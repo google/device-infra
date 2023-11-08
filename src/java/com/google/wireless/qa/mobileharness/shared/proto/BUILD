@@ -20,10 +20,29 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
+# If you want to reference custom_apk_install to generate APK manifest, please
+# whitelist your packages here.
+package_group(
+    name = "custom_apk_install_manifest_builder",
+    includes = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
+
 exports_files([
     "common.proto",
     "job.proto",
 ])
+
+proto_library(
+    name = "common_proto",
+    srcs = ["common.proto"],
+)
+
+java_proto_library(
+    name = "common_java_proto",
+    deps = [":common_proto"],
+)
 
 proto_library(
     name = "communication_proto",
@@ -36,13 +55,14 @@ java_proto_library(
 )
 
 proto_library(
-    name = "common_proto",
-    srcs = ["common.proto"],
+    name = "device_query_proto",
+    srcs = ["device_query.proto"],
+    deps = [":lab_query_proto"],
 )
 
 java_proto_library(
-    name = "common_java_proto",
-    deps = [":common_proto"],
+    name = "device_query_java_proto",
+    deps = [":device_query_proto"],
 )
 
 proto_library(
@@ -75,13 +95,9 @@ java_proto_library(
     deps = [":job_config_proto"],
 )
 
-# If you want to reference custom_apk_install to generate APK manifest, please
-# whitelist your packages here.
-package_group(
-    name = "custom_apk_install_manifest_builder",
-    includes = [
-        "//:deviceinfra_all_pkg",
-    ],
+proto_library(
+    name = "lab_query_proto",
+    srcs = ["lab_query.proto"],
 )
 
 proto_library(
@@ -92,12 +108,6 @@ proto_library(
     visibility = [":custom_apk_install_manifest_builder"],
 )
 
-java_lite_proto_library(
-    name = "android_device_spec_java_proto_lite",
-    visibility = [":custom_apk_install_manifest_builder"],
-    deps = [":android_device_spec"],
-)
-
 cc_proto_library(
     name = "android_device_spec_cc_proto",
     visibility = [":custom_apk_install_manifest_builder"],
@@ -106,6 +116,12 @@ cc_proto_library(
 
 java_proto_library(
     name = "android_device_spec_java_proto",
+    visibility = [":custom_apk_install_manifest_builder"],
+    deps = [":android_device_spec"],
+)
+
+java_lite_proto_library(
+    name = "android_device_spec_java_proto_lite",
     visibility = [":custom_apk_install_manifest_builder"],
     deps = [":android_device_spec"],
 )
