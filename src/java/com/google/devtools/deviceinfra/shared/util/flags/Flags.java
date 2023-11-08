@@ -236,6 +236,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAteDualStack = enableAteDualStackDefault;
 
+  private static final Flag<Boolean> enableCloudMetricsDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_cloud_metrics",
+      description =
+          "Whether to enable sending metrics to Google Cloud. It should only be enabled when"
+              + " deploying in Google Cloud.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableCloudMetrics = enableCloudMetricsDefault;
+
   private static final Flag<Boolean> enableAtsConsoleOlcServerDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
