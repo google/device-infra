@@ -27,7 +27,6 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.constant.DeviceProperty;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -45,6 +44,7 @@ import com.google.devtools.mobileharness.infra.controller.test.event.TestExecuti
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.RetainDeviceInfoAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;

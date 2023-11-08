@@ -64,7 +64,6 @@ java_library(
     ],
     deps = [
         ":device_daemon_apk_info",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/connectivity:android_connectivity_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller",
@@ -73,6 +72,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/process:android_process_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/log",

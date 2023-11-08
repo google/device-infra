@@ -28,12 +28,12 @@ java_library(
     srcs = glob(["*ScheduleUnit.java"]),
     deps = [
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out:timing",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:device_requirements",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:job_timer",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",

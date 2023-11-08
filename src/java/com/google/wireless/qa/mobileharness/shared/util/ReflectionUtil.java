@@ -26,8 +26,8 @@ import java.lang.reflect.InvocationTargetException;
 /** Util for using reflection to get classes or create instances. */
 public final class ReflectionUtil {
 
-  private static final com.google.devtools.deviceinfra.shared.util.reflection.ReflectionUtil
-      newUtil = new com.google.devtools.deviceinfra.shared.util.reflection.ReflectionUtil();
+  private static final com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil
+      newUtil = new com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil();
 
   /** Returns the non-mock superclass of the given class. */
   public static <T> Class<? super T> getNonMockBaseClass(Class<? super T> clazz) {

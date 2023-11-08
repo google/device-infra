@@ -16,8 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.lab;
 
-import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.BinarySizeChecker;
+import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;

@@ -36,8 +36,8 @@ java_library(
         "MobileHarnessCallable.java",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:tag",
         "@maven//:com_google_guava_guava",
     ],
@@ -47,9 +47,9 @@ java_library(
     name = "more_futures",
     srcs = ["MoreFutures.java"],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
@@ -59,7 +59,7 @@ java_library(
     name = "thread_factory_util",
     srcs = ["ThreadFactoryUtil.java"],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )

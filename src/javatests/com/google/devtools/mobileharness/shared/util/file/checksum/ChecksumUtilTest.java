@@ -20,9 +20,9 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.apache.commons.lang3.CharEncoding.UTF_8;
 
 import com.google.common.hash.Hashing;
-import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;

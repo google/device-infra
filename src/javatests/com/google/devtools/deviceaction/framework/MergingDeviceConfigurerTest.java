@@ -41,7 +41,7 @@ import com.google.devtools.deviceaction.framework.proto.GCSFile;
 import com.google.devtools.deviceaction.framework.proto.Operand;
 import com.google.devtools.deviceaction.framework.proto.Unary;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
-import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;

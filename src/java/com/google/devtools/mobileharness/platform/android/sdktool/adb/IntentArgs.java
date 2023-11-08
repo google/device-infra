@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 
-import static com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.shellEscape;
+import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.shellEscape;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;

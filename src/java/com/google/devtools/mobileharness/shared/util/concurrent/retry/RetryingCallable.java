@@ -18,7 +18,7 @@ package com.google.devtools.mobileharness.shared.util.concurrent.retry;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Clock;
 import java.time.Duration;

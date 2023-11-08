@@ -16,7 +16,7 @@
 
 package com.google.devtools.atsconsole.util;
 
-import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 
 /** Util to handle test runfiles (like test data files) for unit tests. */
 public final class TestRunfilesUtil {

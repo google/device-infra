@@ -34,7 +34,6 @@ import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.andr
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Enums.FastbootProperty;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
-import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -70,6 +69,7 @@ import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.android.RuntimeChargingUtil;

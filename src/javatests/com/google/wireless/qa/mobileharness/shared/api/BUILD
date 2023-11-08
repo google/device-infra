@@ -27,8 +27,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:all_drivers_and_decorators_for_unit_tests",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:constraints_for_testing",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",

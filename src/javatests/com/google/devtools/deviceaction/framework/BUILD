@@ -43,7 +43,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/quota",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
-        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_inject_guice",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",

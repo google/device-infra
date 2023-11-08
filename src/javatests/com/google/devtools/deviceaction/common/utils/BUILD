@@ -36,7 +36,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/command/testing",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
-        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_apis_google_api_services_storage",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_truth_extensions_truth_proto_extension",

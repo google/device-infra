@@ -25,7 +25,6 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device:base_device_helper",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
         "//src/java/com/google/devtools/mobileharness/platform/android/app:activity",
@@ -38,6 +37,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:android_packages",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:sqlite",

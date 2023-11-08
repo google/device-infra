@@ -29,7 +29,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
-import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -38,6 +37,7 @@ import com.google.devtools.mobileharness.platform.android.systemspec.AndroidSyst
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import java.time.Duration;
 import java.util.Map;
 import org.junit.Before;

@@ -59,7 +59,7 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/dimension:value_comparator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/dimension:value_comparator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",

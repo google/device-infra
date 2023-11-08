@@ -35,12 +35,12 @@ import com.google.devtools.deviceinfra.shared.commandhistory.proto.CommandRecord
 import com.google.devtools.deviceinfra.shared.commandhistory.proto.CommandRecordProto.LocalCommandRecords;
 import com.google.devtools.deviceinfra.shared.commandhistory.renderer.CommandHistoryRenderer;
 import com.google.devtools.deviceinfra.shared.subprocess.proto.AgentConfigProto.UdclusterAgentConfig;
-import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
+import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.protobuf.ExtensionRegistry;
 import com.google.protobuf.TextFormat;

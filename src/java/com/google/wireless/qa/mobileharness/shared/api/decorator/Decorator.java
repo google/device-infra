@@ -52,7 +52,7 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
  *                   com.google.common.util.concurrent.ListeningExecutorService
  *                   ListeningExecutorService}
  *               <li>Sleeper ({@linkplain com.google.common.time.Sleeper Guava} / {@linkplain
- *                   com.google.devtools.deviceinfra.shared.util.time.Sleeper deviceinfra})
+ *                   com.google.devtools.mobileharness.shared.util.time.Sleeper deviceinfra})
  *               <li>{@linkplain com.google.common.base.Ticker Ticker}
  *               <li>{@linkplain com.google.common.time.TimeSource TimeSource}
  *             </ul>

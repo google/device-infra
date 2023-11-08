@@ -18,8 +18,8 @@ package com.google.devtools.mobileharness.infra.lab.controller.handler;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.host.daemon.health.handler.DrainHandler;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Inject;
 import java.time.Duration;
 

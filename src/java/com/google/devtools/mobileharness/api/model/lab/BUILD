@@ -35,8 +35,8 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/api/model/lab/in:ports",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
@@ -61,7 +61,7 @@ java_library(
     name = "device_id_descriptor",
     srcs = ["DeviceId.java"],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
     ],
 )
 
@@ -72,10 +72,10 @@ java_library(
     ],
     deps = [
         ":device_id_descriptor",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/api/model/lab/in",
         "//src/java/com/google/devtools/mobileharness/api/model/lab/in:dimension",
         "//src/java/com/google/devtools/mobileharness/api/model/lab/out:property",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
     ],
 )
 

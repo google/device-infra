@@ -41,7 +41,6 @@ import com.google.devtools.deviceaction.common.utils.LazyCached;
 import com.google.devtools.deviceaction.common.utils.TimeUtils;
 import com.google.devtools.deviceaction.framework.proto.AndroidPhoneSpec;
 import com.google.devtools.deviceaction.framework.proto.DeviceType;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
@@ -57,6 +56,7 @@ import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilA
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSetDmVerityDeviceOp;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;

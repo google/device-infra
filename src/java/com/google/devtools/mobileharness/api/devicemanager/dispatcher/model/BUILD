@@ -29,8 +29,8 @@ java_library(
         "//:deviceinfra_pkg",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",

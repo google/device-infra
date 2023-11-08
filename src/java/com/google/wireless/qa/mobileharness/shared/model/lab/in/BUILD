@@ -27,7 +27,7 @@ java_library(
     name = "in",
     srcs = glob(["*.java"]),
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/dimension:value_comparator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/dimension:value_comparator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
         "@maven//:com_google_errorprone_error_prone_annotations",

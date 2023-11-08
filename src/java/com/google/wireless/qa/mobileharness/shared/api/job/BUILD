@@ -28,7 +28,7 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:builder_adapter",
@@ -45,8 +45,8 @@ java_library(
     name = "job_type_util",
     srcs = ["JobTypeUtil.java"],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
     ],

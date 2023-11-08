@@ -56,8 +56,8 @@ public interface ExitCode {
     }
 
     @Override
-    public com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode toNewExitCode() {
-      return com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode.Shared.valueOf(
+    public com.google.devtools.mobileharness.shared.util.system.constant.ExitCode toNewExitCode() {
+      return com.google.devtools.mobileharness.shared.util.system.constant.ExitCode.Shared.valueOf(
           this.name());
     }
   }
@@ -83,8 +83,8 @@ public interface ExitCode {
     }
 
     @Override
-    public com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode toNewExitCode() {
-      return com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode.Lab.valueOf(
+    public com.google.devtools.mobileharness.shared.util.system.constant.ExitCode toNewExitCode() {
+      return com.google.devtools.mobileharness.shared.util.system.constant.ExitCode.Lab.valueOf(
           this.name());
     }
   }
@@ -110,8 +110,8 @@ public interface ExitCode {
     }
 
     @Override
-    public com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode toNewExitCode() {
-      return com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode.Client.valueOf(
+    public com.google.devtools.mobileharness.shared.util.system.constant.ExitCode toNewExitCode() {
+      return com.google.devtools.mobileharness.shared.util.system.constant.ExitCode.Client.valueOf(
           this.name());
     }
   }
@@ -137,8 +137,8 @@ public interface ExitCode {
     }
 
     @Override
-    public com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode toNewExitCode() {
-      return com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode.Daemon.valueOf(
+    public com.google.devtools.mobileharness.shared.util.system.constant.ExitCode toNewExitCode() {
+      return com.google.devtools.mobileharness.shared.util.system.constant.ExitCode.Daemon.valueOf(
           this.name());
     }
   }
@@ -159,8 +159,8 @@ public interface ExitCode {
     }
 
     @Override
-    public com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode toNewExitCode() {
-      return com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode.Integration
+    public com.google.devtools.mobileharness.shared.util.system.constant.ExitCode toNewExitCode() {
+      return com.google.devtools.mobileharness.shared.util.system.constant.ExitCode.Integration
           .valueOf(this.name());
     }
   }
@@ -181,8 +181,8 @@ public interface ExitCode {
     }
 
     @Override
-    public com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode toNewExitCode() {
-      return com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode.Release.valueOf(
+    public com.google.devtools.mobileharness.shared.util.system.constant.ExitCode toNewExitCode() {
+      return com.google.devtools.mobileharness.shared.util.system.constant.ExitCode.Release.valueOf(
           this.name());
     }
   }
@@ -194,7 +194,7 @@ public interface ExitCode {
   String name();
 
   /**
-   * Converts to new {@link com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode}
+   * Converts to new {@link com.google.devtools.mobileharness.shared.util.system.constant.ExitCode}
    */
-  com.google.devtools.deviceinfra.shared.util.system.constant.ExitCode toNewExitCode();
+  com.google.devtools.mobileharness.shared.util.system.constant.ExitCode toNewExitCode();
 }

@@ -28,7 +28,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.AndroidPackage;
 import com.google.devtools.deviceaction.framework.devices.AndroidPhone;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.io.File;
 import java.time.Duration;
 import java.util.Collection;

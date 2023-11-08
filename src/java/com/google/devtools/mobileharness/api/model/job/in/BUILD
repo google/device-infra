@@ -41,8 +41,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:__pkg__",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
@@ -60,8 +60,8 @@ java_library(
         ":decorators",
         ":dimensions",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/model/job/in:device_requirements",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
@@ -100,10 +100,10 @@ java_library(
     visibility = [
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out:touchable_timing",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
@@ -134,8 +134,8 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )

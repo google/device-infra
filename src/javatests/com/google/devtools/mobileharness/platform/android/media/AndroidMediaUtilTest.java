@@ -27,7 +27,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.base.Optional;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
@@ -36,6 +35,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidCon
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Duration;

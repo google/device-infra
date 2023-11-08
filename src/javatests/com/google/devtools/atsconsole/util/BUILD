@@ -23,6 +23,6 @@ java_library(
     srcs = ["TestRunfilesUtil.java"],
     visibility = ["//src/javatests/com/google/devtools/atsconsole:__subpackages__"],
     deps = [
-        "//src/javatests/com/google/devtools/deviceinfra/shared/util/runfiles:runfiles_util",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
     ],
 )

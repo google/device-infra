@@ -29,9 +29,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/testbed:__subpackages__",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "@maven//:com_google_guava_guava",
         "@maven//:org_json_json",

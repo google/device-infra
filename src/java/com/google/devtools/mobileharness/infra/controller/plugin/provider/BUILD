@@ -27,7 +27,7 @@ java_library(
     ],
     visibility = ["//src/java/com/google/devtools/mobileharness/infra/controller/plugin:__subpackages__"],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",

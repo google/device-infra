@@ -24,9 +24,9 @@ java_library(
     name = "shared_pool_util",
     srcs = ["SharedPoolJobUtil.java"],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in:dimensions",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:schedule_unit",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",

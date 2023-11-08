@@ -27,9 +27,9 @@ java_library(
     deps = [
         ":configuration_xml_parser",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )

@@ -23,8 +23,8 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",
     ],

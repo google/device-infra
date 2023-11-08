@@ -44,7 +44,7 @@ import com.google.devtools.deviceaction.framework.proto.Unary;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
 import com.google.devtools.deviceaction.framework.proto.action.ResetOption;
 import com.google.devtools.deviceaction.framework.proto.action.ResetSpec;
-import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;

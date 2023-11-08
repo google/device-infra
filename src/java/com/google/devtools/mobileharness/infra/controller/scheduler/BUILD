@@ -43,8 +43,8 @@ java_library(
     name = "adhoc_testbed_scheduling_util",
     srcs = ["AdhocTestbedSchedulingUtil.java"],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:schedule_unit",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:schedule_unit",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
         "@maven//:com_google_guava_guava",

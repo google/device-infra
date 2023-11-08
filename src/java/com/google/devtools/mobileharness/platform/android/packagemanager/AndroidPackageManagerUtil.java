@@ -29,7 +29,6 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
@@ -47,6 +46,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
@@ -184,7 +184,7 @@ public class AndroidPackageManagerUtil {
   /** Output when the install app failed by invalid apk. */
   public static final String OUTPUT_INSTALL_FAILED_INVALID_APK = "INSTALL_FAILED_INVALID_APK";
 
-  /** Output when the install app failed by duplicate permssion. */
+  /** Output when the install app failed by duplicate permission. */
   public static final String OUTPUT_INSTALL_FAILED_DUPLICATE_PERMISSION =
       "INSTALL_FAILED_DUPLICATE_PERMISSION";
 

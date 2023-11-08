@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.BaseDeviceHelper;
-import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.api.model.lab.LiteDeviceInfoFactory;
@@ -37,6 +36,7 @@ import com.google.devtools.mobileharness.infra.container.annotation.ProcessIncom
 import com.google.devtools.mobileharness.infra.controller.device.DeviceInfoManager;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;

@@ -27,8 +27,8 @@ java_library(
     deps = [
         ":mobly_doc_entry",
         "//src/devtools/atsconsole/result/proto:result_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
         "@maven//:org_yaml_snakeyaml",
     ],
@@ -47,7 +47,7 @@ java_library(
     ],
     deps = [
         "//src/devtools/atsconsole/result/proto:result_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",
     ],
 )

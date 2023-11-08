@@ -25,7 +25,7 @@ java_library(
         ":fastboot_initialize_template",
         ":fastboot_initialize_template_impl",
         ":fastboot_param",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -50,10 +50,10 @@ java_library(
     deps = [
         ":fastboot_initialize_template",
         ":fastboot_param",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -64,5 +64,5 @@ java_library(
     visibility = [
         "//:deviceinfra_api_users",
     ],
-    deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value"],
+    deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
 )

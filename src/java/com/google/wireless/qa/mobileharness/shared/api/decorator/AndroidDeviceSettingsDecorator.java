@@ -18,7 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.decorator;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Streams.stream;
-import static com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.shellEscape;
+import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.shellEscape;
 import static java.util.Comparator.naturalOrder;
 
 import com.google.common.annotations.VisibleForTesting;

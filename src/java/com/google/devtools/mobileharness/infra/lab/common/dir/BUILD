@@ -27,7 +27,7 @@ java_library(
     name = "dir",
     srcs = glob(["*.java"]),
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
     ],
 )

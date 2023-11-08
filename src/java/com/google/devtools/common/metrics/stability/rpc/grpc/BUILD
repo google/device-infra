@@ -34,8 +34,8 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
         "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
         "//src/java/com/google/devtools/common/metrics/stability/rpc:rpc_error_util",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@com_google_protobuf//:protobuf_java",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//protobuf",
@@ -61,7 +61,7 @@ java_library(
     srcs = ["GrpcServiceUtil.java"],
     deps = [
         ":grpc",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",
         "@maven//:com_google_code_findbugs_jsr305",

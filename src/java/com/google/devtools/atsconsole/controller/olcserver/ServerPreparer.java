@@ -28,7 +28,6 @@ import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerBin
 import com.google.devtools.atsconsole.controller.olcserver.Annotations.ServerStub;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.deviceinfra.shared.util.flags.Flags;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
@@ -42,6 +41,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandStartExcepti
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import io.grpc.Status.Code;
 import java.nio.file.Path;
 import java.time.Duration;

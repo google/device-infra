@@ -29,7 +29,7 @@ java_library(
         "//src/javatests/com/google/devtools/deviceaction/common/utils:__pkg__",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/command:command_results",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
@@ -50,7 +50,7 @@ java_library(
     ],
     deps = [
         ":history",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/command:command_results",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
     ],
 )

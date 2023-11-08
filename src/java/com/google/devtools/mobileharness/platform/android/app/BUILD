@@ -21,8 +21,8 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -33,5 +33,5 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/apkinstaller:__pkg__",
     ],
-    deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value"],
+    deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
 )

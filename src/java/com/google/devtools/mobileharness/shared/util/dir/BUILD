@@ -22,7 +22,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:__subpackages__",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:base",
     ],
 )

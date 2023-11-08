@@ -29,16 +29,16 @@ java_library(
     ],
     deps = [
         ":exception",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
@@ -56,11 +56,11 @@ java_library(
     ],
     deps = [
         ":manager",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_to_direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
     ],
 )
 
@@ -80,7 +80,6 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:proxy_test_runner",
@@ -90,6 +89,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_direct_test_runner_holder",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller/util:lab_file_notifier",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
 )

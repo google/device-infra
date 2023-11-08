@@ -56,5 +56,5 @@ java_library(
 java_library(
     name = "exit_code",
     srcs = ["ExitCode.java"],
-    deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/system/constant:exit_code"],
+    deps = ["//src/java/com/google/devtools/mobileharness/shared/util/system/constant:exit_code"],
 )

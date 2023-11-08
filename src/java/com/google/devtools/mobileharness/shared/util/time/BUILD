@@ -16,6 +16,18 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
+    name = "time",
+    srcs = [
+        "Sleeper.java",
+        "Sleepers.java",
+    ],
+    visibility = ["//:deviceinfra_all_pkg"],
+    deps = [
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "count_down_timer",
     srcs = ["CountDownTimer.java"],
     visibility = [

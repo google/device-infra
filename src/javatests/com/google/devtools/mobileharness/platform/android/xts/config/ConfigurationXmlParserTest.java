@@ -19,10 +19,10 @@ package com.google.devtools.mobileharness.platform.android.xts.config;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static org.junit.Assert.assertThrows;
 
-import com.google.devtools.deviceinfra.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.protobuf.TextFormat;
 import java.io.File;
 import java.nio.file.Path;

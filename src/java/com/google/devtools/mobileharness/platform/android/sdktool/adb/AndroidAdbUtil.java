@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 
 import static com.google.common.base.Predicates.not;
-import static com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.tokenize;
+import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.tokenize;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -29,8 +29,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
-import com.google.devtools.deviceinfra.shared.util.shell.ShellUtils.TokenizationException;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
@@ -41,6 +39,8 @@ import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.ScanSignalOutputCallback;
+import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
 import java.time.Clock;
 import java.time.Duration;

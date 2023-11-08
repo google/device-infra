@@ -17,9 +17,9 @@
 package com.google.devtools.mobileharness.infra.lab.controller;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import java.net.URI;

@@ -31,7 +31,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
         "//src/java/com/google/devtools/deviceinfra/api/error:exception_generator",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",

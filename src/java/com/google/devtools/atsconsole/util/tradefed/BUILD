@@ -30,9 +30,9 @@ java_library(
     deps = [
         ":test_record_proto_util",
         "//src/devtools/atsconsole/tradefed/proto:record_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_guava_guava",

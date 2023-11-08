@@ -34,11 +34,11 @@ import com.google.devtools.deviceaction.framework.operations.ModulePusher;
 import com.google.devtools.deviceaction.framework.operations.OtaSideloader;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
 import com.google.devtools.deviceaction.framework.proto.action.ResetSpec;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecorder;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.quota.QuotaManager;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.io.File;
 
 /** A utility class for {@code Action}. */

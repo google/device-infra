@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.dir;
 
-import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
 
 /** Utility for calculating test dir paths. */

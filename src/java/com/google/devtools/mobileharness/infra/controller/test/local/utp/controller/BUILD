@@ -22,9 +22,9 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/infra/controller/test/local/utp/proto:basic_flow_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -41,10 +41,10 @@ java_library(
     deps = [
         ":test_flow_converter",
         "//src/devtools/mobileharness/infra/controller/test/local/utp/proto:incompatible_reason_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/common:incompatible_reasons",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/common:test_flows",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],

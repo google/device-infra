@@ -27,8 +27,8 @@ java_library(
     name = "spec",
     srcs = glob(["*.java"]),
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:base_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_java_proto",
         "@com_google_protobuf//:protobuf_java",

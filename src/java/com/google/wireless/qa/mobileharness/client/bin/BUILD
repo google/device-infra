@@ -31,9 +31,9 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver/job:job_file_resolver_constants",
         "//src/java/com/google/devtools/mobileharness/shared/util/jobconfig:job_info_creator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:exit_code",

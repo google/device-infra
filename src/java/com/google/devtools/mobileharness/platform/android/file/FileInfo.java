@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.file;
 
 import com.google.auto.value.AutoValue;
-import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import java.util.Optional;
 
 /** An abstract representation of file and directory pathnames on Android device. */

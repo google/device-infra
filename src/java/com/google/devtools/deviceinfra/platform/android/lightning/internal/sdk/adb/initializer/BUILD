@@ -26,7 +26,7 @@ java_library(
         ":adb_initialize_template_impl",
         "//src/devtools/mobileharness/platform/android/sdktool/proto:adb_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -38,10 +38,10 @@ java_library(
         "//src/javatests/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb/initializer:__pkg__",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
     ],
 )
@@ -54,7 +54,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/platform/android/sdktool/proto:adb_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -68,11 +68,11 @@ java_library(
     deps = [
         ":adb_initialize_template",
         ":adb_initializer_helper",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "@maven//:com_google_guava_guava",
     ],

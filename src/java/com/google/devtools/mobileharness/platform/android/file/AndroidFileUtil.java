@@ -23,8 +23,6 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
-import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
-import com.google.devtools.deviceinfra.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
@@ -36,6 +34,8 @@ import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.io.IOException;
@@ -816,7 +816,7 @@ public class AndroidFileUtil {
    * separator on SDK>23. It's callers' responsibility to parse it correctly.
    *
    * @param serial serial number of the device
-   * @param srcFileOrDirOnDevice source file path on the deivce, could be a file or directory
+   * @param srcFileOrDirOnDevice source file path on the device, could be a file or directory
    * @param desFileOrDirOnHost destination file path on lab server host machine
    * @return log message
    * @throws MobileHarnessException

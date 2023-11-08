@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 
 import com.google.auto.value.AutoValue;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Optional;

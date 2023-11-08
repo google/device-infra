@@ -22,7 +22,6 @@ import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.utils.BundletoolUtil;
 import com.google.devtools.deviceaction.framework.proto.AndroidPhoneSpec;
 import com.google.devtools.deviceaction.framework.proto.Operand;
-import com.google.devtools.deviceinfra.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
@@ -31,6 +30,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidPro
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 
 /** A utility class for {@link Device}. */
 public class Devices {

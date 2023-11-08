@@ -20,7 +20,7 @@ import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.collect.SetMultimap;
-import com.google.devtools.deviceinfra.shared.util.dimension.ValueComparator;
+import com.google.devtools.mobileharness.shared.util.dimension.ValueComparator;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.util.HashMap;
 import java.util.Map;

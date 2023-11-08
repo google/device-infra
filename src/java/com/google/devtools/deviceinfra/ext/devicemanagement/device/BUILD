@@ -23,7 +23,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",

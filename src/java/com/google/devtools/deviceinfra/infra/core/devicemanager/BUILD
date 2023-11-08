@@ -24,8 +24,8 @@ java_library(
         "//src/javatests/com/google/devtools/deviceinfra/infra/core/devicemanager:__subpackages__",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],

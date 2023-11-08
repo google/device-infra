@@ -18,7 +18,7 @@ package com.google.devtools.deviceinfra.ext.devicemanagement.device;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.Multimap;
-import com.google.devtools.deviceinfra.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;

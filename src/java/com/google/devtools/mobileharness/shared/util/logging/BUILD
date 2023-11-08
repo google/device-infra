@@ -16,6 +16,15 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
+    name = "google_logger",
+    visibility = ["//:deviceinfra_all_pkg"],
+    exports = [
+        "@maven//:com_google_flogger_flogger",
+        "@maven//:com_google_flogger_flogger_system_backend",
+    ],
+)
+
+java_library(
     name = "formatter",
     srcs = ["MobileHarnessLogFormatter.java"],
     visibility = [

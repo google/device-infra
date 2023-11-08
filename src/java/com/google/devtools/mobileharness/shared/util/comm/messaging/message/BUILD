@@ -26,7 +26,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:__subpackages__",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",
     ],
 )

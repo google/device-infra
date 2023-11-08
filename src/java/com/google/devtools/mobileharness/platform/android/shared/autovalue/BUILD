@@ -26,6 +26,6 @@ java_library(
         "//:deviceinfra_all_pkg",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
     ],
 )

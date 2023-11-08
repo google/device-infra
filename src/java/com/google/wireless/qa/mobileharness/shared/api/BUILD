@@ -128,9 +128,9 @@ java_library(
     name = "class_util",
     srcs = ["ClassUtil.java"],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/annotation",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
@@ -147,9 +147,9 @@ java_library(
     name = "common_library_module",
     srcs = ["CommonLibraryModule.java"],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/time",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],

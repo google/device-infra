@@ -76,7 +76,7 @@ java_library(
         "ScreenResolution.java",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
     ],
 )
 
@@ -85,9 +85,9 @@ java_library(
     srcs = ["NetUtil.java"],
     deps = [
         ":device",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/network",
         "//src/java/com/google/devtools/mobileharness/shared/util/network/localhost",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
@@ -104,8 +104,8 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/deviceinfra/api/error:exception",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/reflection:reflection_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
+        "//src/java/com/google/devtools/mobileharness/shared/util/reflection:reflection_util",
     ],
 )

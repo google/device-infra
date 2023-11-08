@@ -27,10 +27,10 @@ java_library(
     ],
     deps = [
         ":install_mobly_test_deps_args",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
@@ -76,5 +76,5 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
-    deps = ["//src/java/com/google/devtools/deviceinfra/shared/util/auto:auto_value"],
+    deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
 )
