@@ -48,9 +48,12 @@ public interface PropertyName {
     /** Sponge link of test. */
     SPONGE_LINK_OF_TEST,
 
-    MH_CLIENT_VERSION,
+    CLIENT_VERSION,
 
-    MH_CLIENT_HOSTNAME,
+    CLIENT_HOSTNAME,
+
+    /** Client type. Examples: moscar_native_executor, mobile_test_bin. */
+    CLIENT_TYPE,
 
     /** The MHFE link for the job. */
     JOB_LINK_IN_MHFE,
@@ -69,7 +72,7 @@ public interface PropertyName {
 
     /**
      * Whether it is a resumed job from a previous interrupted one
-     * (http://go/mh-longevity-short-term-design).
+     * (http://go/mh-longevity-short-term-desi
      */
     _IS_RESUMED_JOB,
 
@@ -78,12 +81,6 @@ public interface PropertyName {
 
     /** The parameters to be recorded from mobile_test macro to the job creation. */
     _PARAM_STATS,
-
-    /** The client entry point of the job, e.g. ait, legacy_bin. */
-    _CLIENT_TYPE,
-
-    /** The MH client. */
-    MH_CLIENT_NAME,
 
     /** Whether upload runfiles to CNS. */
     UPLOAD_RUNFILES,

@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ExecModeUtil;
 import com.google.devtools.mobileharness.infra.client.api.util.lister.TestLister;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
+import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -186,6 +187,7 @@ public class ClientApi {
 
   private void addCommonJobProperties(JobInfo jobInfo, ExecMode execMode) {
     jobInfo.properties().add(Job.EXEC_MODE, Ascii.toLowerCase(ExecModeUtil.getModeName(execMode)));
-    jobInfo.properties().add(Job.MH_CLIENT_HOSTNAME, clientHostnameSupplier.get());
+    jobInfo.properties().add(Job.CLIENT_HOSTNAME, clientHostnameSupplier.get());
+    jobInfo.properties().add(Job.CLIENT_VERSION, Version.CLIENT_VERSION.toString());
   }
 }

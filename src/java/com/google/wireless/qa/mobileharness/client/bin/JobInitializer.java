@@ -99,7 +99,7 @@ public final class JobInitializer {
                   PropertyName.Job._PARAM_STATS,
                   StringMap.newBuilder().putAllContent(paramStats).build().toString());
         }
-        jobInfo.properties().add(PropertyName.Job._CLIENT_TYPE, clientType);
+        jobInfo.properties().add(PropertyName.Job.CLIENT_TYPE, clientType);
 
         // Logs down jobConfig and the final value of params, subDeviceSpecs and files
         JobConfigBuilder jobConfigBuilder = JobConfigBuilder.fromProto(jobConfig);

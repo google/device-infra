@@ -71,7 +71,6 @@ import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberExceptionContext;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
-import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.inject.AbstractModule;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
@@ -825,9 +824,6 @@ public class JobRunnerCore implements Runnable {
     Stopwatch stopwatch = Stopwatch.createStarted();
     boolean skipJob = false;
     try {
-      jobInfo
-          .properties()
-          .add(PropertyName.Job.MH_CLIENT_VERSION, Version.CLIENT_VERSION.toString());
       addTracePropertiesToJob(jobInfo);
       // TODO: Not do validation check for ait-triggered test to reduce binary size.
       // Explicitly disable job validation for ACID jobs as we don't want to introduce driver deps

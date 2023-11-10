@@ -92,8 +92,9 @@ public class ClientApiTest {
     try {
       clientApi.startJob(jobInfo, new LocalMode());
 
-      assertThat(jobInfo.properties().get(Job.MH_CLIENT_HOSTNAME)).isNotNull();
       assertThat(jobInfo.properties().get(Job.EXEC_MODE)).isNotNull();
+      assertThat(jobInfo.properties().get(Job.CLIENT_HOSTNAME)).isNotNull();
+      assertThat(jobInfo.properties().get(Job.CLIENT_VERSION)).isNotNull();
 
       clientApi.waitForJob(jobInfo.locator().getId());
 
