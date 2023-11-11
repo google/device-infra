@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("//tools/build_defs/proto/cpp:cc_proto_library.bzl", "cc_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -26,6 +28,11 @@ proto_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_proto",
     ],
+)
+
+cc_proto_library(
+    name = "device_query_cc_proto",
+    deps = [":device_query_proto"],
 )
 
 java_proto_library(
