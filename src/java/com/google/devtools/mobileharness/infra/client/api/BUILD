@@ -20,18 +20,18 @@ java_library(
     srcs = ["ClientApi.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/rbe:__pkg__",
     ],
     deps = [
         ":annotations",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/controller:job_core",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/controller:job_factory",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/plugin:job_reporter",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:job_core",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:job_factory",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:util",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:job_reporter",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/lister",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -42,6 +42,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -52,11 +53,11 @@ java_library(
     srcs = ["ClientApiModule.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
     ],
     deps = [
         ":annotations",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/controller:job_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:job_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
@@ -70,7 +71,7 @@ java_library(
     visibility = [
         "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
     ],
     deps = [
         "@maven//:javax_inject_jsr330_api",

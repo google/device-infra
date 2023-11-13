@@ -24,8 +24,8 @@ java_library(
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
     ],
     deps = [
         ":device_info_filter",
@@ -34,7 +34,6 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/infra/controller/test/local/utp/proto:incompatible_reason_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/infra/core/devicemanager",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -46,6 +45,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:base_detector_dispatcher_picker",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:dispatcher_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",

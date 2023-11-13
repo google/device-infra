@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.client.controller;
+package com.google.devtools.mobileharness.infra.client.api.controller.job;
 
 import static com.google.common.collect.Comparators.min;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -71,6 +71,7 @@ import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberEx
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.AbstractModule;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
@@ -1477,6 +1478,7 @@ public class JobRunnerCore implements Runnable {
   }
 
   /** Generates diagnostic report if no report is generated before. */
+  @CanIgnoreReturnValue
   private Optional<Report> diagnose(boolean noPerfectCandidate) throws InterruptedException {
     diagnosticTimes++;
     try {
@@ -1535,6 +1537,7 @@ public class JobRunnerCore implements Runnable {
    * @param postRunJob if it is in post-run-job stage. If so, ignore job skipping and give warnings.
    * @return if the job should be skipped
    */
+  @CanIgnoreReturnValue
   private boolean checkPluginExceptions(boolean postRunJob) {
     List<SubscriberExceptionContext> internalPluginExceptions =
         internalPluginExceptionHandler.pollExceptions();

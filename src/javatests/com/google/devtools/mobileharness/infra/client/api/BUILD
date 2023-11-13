@@ -29,9 +29,9 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api:annotations",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api:module",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:module",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",

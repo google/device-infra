@@ -18,9 +18,7 @@
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra:__subpackages__",
-    ],
+    default_visibility = ["//:deviceinfra_all_pkg"],
 )
 
 java_library(

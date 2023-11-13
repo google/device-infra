@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.client.controller;
+package com.google.devtools.mobileharness.infra.client.api.controller.job;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;

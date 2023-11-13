@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.client.api;
+package com.google.devtools.mobileharness.infra.client.api;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

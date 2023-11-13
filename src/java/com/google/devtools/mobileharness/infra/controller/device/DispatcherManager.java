@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.core.devicemanager;
+package com.google.devtools.mobileharness.infra.controller.device;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 

@@ -29,9 +29,9 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api:annotations",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api:module",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:module",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",

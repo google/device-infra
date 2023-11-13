@@ -36,7 +36,7 @@ java_library(
     name = "util",
     srcs = ["ExecModeUtil.java"],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
     ],
     deps = [
         ":mode",

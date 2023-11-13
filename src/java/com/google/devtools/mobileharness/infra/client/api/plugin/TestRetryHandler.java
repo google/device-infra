@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.client.plugin;
+package com.google.devtools.mobileharness.infra.client.api.plugin;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;

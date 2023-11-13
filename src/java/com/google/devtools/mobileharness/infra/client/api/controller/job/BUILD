@@ -16,8 +16,8 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
 )
 
@@ -33,7 +33,6 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/infra/client/plugin:test_retry_handler",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
@@ -45,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:exception",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:test_retry_handler",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/result:client_alloc_error_util",
         "//src/java/com/google/devtools/mobileharness/infra/controller/plugin:loader",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
@@ -78,6 +78,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/util:result_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],

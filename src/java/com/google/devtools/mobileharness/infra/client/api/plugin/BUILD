@@ -19,7 +19,7 @@ java_library(
     name = "job_reporter",
     srcs = ["JobReporter.java"],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/client/api:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
     ],
     runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",
@@ -37,8 +37,8 @@ java_library(
     name = "test_retry_handler",
     srcs = ["TestRetryHandler.java"],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/client/controller:__pkg__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client/plugin:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/plugin:__pkg__",
     ],
     runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",

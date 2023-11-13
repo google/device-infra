@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.client.api;
+package com.google.devtools.mobileharness.infra.client.api;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.Suppliers;
@@ -22,23 +22,24 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.deviceinfra.infra.client.api.Annotations.EnvThreadPool;
-import com.google.devtools.deviceinfra.infra.client.api.Annotations.ExtraGlobalInternalPlugins;
-import com.google.devtools.deviceinfra.infra.client.api.Annotations.ExtraJobInternalPlugins;
-import com.google.devtools.deviceinfra.infra.client.api.Annotations.GlobalInternalEventBus;
-import com.google.devtools.deviceinfra.infra.client.api.Annotations.JobThreadPool;
-import com.google.devtools.deviceinfra.infra.client.api.Annotations.ShutdownJobThreadWhenShutdownProcess;
-import com.google.devtools.deviceinfra.infra.client.controller.JobManagerCore;
-import com.google.devtools.deviceinfra.infra.client.controller.JobManagerCoreFactory;
-import com.google.devtools.deviceinfra.infra.client.plugin.JobReporter;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.client.api.Annotations.EnvThreadPool;
+import com.google.devtools.mobileharness.infra.client.api.Annotations.ExtraGlobalInternalPlugins;
+import com.google.devtools.mobileharness.infra.client.api.Annotations.ExtraJobInternalPlugins;
+import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
+import com.google.devtools.mobileharness.infra.client.api.Annotations.JobThreadPool;
+import com.google.devtools.mobileharness.infra.client.api.Annotations.ShutdownJobThreadWhenShutdownProcess;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManagerCore;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManagerCoreFactory;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecModeUtil;
+import com.google.devtools.mobileharness.infra.client.api.plugin.JobReporter;
 import com.google.devtools.mobileharness.infra.client.api.util.lister.TestLister;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Job;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -171,6 +172,7 @@ public class ClientApi {
    *
    * @return whether the job is done
    */
+  @CanIgnoreReturnValue
   public boolean waitForJob(String jobId) {
     return jobManager.waitForJob(jobId);
   }

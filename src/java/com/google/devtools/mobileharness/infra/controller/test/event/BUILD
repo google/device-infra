@@ -19,11 +19,11 @@ java_library(
         "TestExecutionEndedEvent.java",
     ],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",

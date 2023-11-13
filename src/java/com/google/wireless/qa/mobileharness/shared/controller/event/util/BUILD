@@ -38,7 +38,7 @@ java_library(
     name = "skip_information_handler",
     srcs = ["SkipInformationHandler.java"],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
     ],
     deps = [

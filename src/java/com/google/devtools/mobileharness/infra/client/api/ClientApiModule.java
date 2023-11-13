@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.client.api;
+package com.google.devtools.mobileharness.infra.client.api;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.devtools.deviceinfra.infra.client.api.Annotations.EnvThreadPool;
-import com.google.devtools.deviceinfra.infra.client.api.Annotations.ExtraGlobalInternalPlugins;
-import com.google.devtools.deviceinfra.infra.client.api.Annotations.ExtraJobInternalPlugins;
-import com.google.devtools.deviceinfra.infra.client.api.Annotations.JobThreadPool;
-import com.google.devtools.deviceinfra.infra.client.api.Annotations.ShutdownJobThreadWhenShutdownProcess;
-import com.google.devtools.deviceinfra.infra.client.controller.JobManagerCoreFactory;
-import com.google.devtools.deviceinfra.infra.client.controller.JobManagerCoreFactory.DefaultJobManagerCoreFactory;
+import com.google.devtools.mobileharness.infra.client.api.Annotations.EnvThreadPool;
+import com.google.devtools.mobileharness.infra.client.api.Annotations.ExtraGlobalInternalPlugins;
+import com.google.devtools.mobileharness.infra.client.api.Annotations.ExtraJobInternalPlugins;
+import com.google.devtools.mobileharness.infra.client.api.Annotations.JobThreadPool;
+import com.google.devtools.mobileharness.infra.client.api.Annotations.ShutdownJobThreadWhenShutdownProcess;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManagerCoreFactory;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManagerCoreFactory.DefaultJobManagerCoreFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;

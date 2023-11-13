@@ -20,9 +20,9 @@ java_library(
     ],
     visibility = [
         "//src/java/com/google/devtools/deviceinfra/host/utrs/service:__pkg__",
-        "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__subpackages__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
     exports = [
         ":exception",

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.infra.client.controller;
+package com.google.devtools.mobileharness.infra.client.api.controller.job;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Joiner;
@@ -22,10 +22,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceinfra.infra.client.controller.JobRunnerCore.EventScope;
-import com.google.devtools.deviceinfra.infra.client.plugin.TestRetryHandler;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.JobRunnerCore.EventScope;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.api.plugin.TestRetryHandler;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;

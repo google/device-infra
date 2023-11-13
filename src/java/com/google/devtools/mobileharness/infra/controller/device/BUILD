@@ -24,6 +24,7 @@ package(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
     ],
 )
 
@@ -31,13 +32,13 @@ java_library(
     name = "base_detector_dispatcher_picker",
     srcs = ["BaseDetectorDispatcherPicker.java"],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/infra/core/devicemanager",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base_adb",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:no_op",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_real_device",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:no_op_device",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:dispatcher_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
@@ -176,6 +177,22 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "dispatcher_manager",
+    srcs = ["DispatcherManager.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )

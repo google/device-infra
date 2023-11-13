@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.controller.device;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceinfra.infra.core.devicemanager.DispatcherManager;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.NoOpDeviceDetector;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.AndroidRealDeviceDispatcher;

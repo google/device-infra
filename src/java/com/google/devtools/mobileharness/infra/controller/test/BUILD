@@ -20,14 +20,14 @@ java_library(
         "PluginLoadingResult.java",
     ],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/container/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/launcher:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
-        "//src/javatests/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
     deps = [
         ":test_runner",
@@ -45,7 +45,7 @@ java_library(
         "DirectTestRunnerSetting.java",
     ],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/client:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
