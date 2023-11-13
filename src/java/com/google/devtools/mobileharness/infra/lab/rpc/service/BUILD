@@ -125,9 +125,9 @@ java_library(
     srcs = ["StatServiceImpl.java"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:stat_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/lab/proto:stat_serv_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat",

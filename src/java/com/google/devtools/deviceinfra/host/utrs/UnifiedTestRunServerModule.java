@@ -22,7 +22,6 @@ import com.google.devtools.deviceinfra.host.utrs.Annotations.MainThreadPool;
 import com.google.devtools.deviceinfra.host.utrs.Annotations.RpcPort;
 import com.google.devtools.deviceinfra.host.utrs.service.Annotations.GlobalEventBus;
 import com.google.devtools.deviceinfra.host.utrs.service.TestRunBaseModule;
-import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceHelperFactory;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
@@ -33,6 +32,7 @@ import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunne
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.devtools.mobileharness.shared.file.resolver.AbstractFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;

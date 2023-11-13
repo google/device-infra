@@ -37,7 +37,7 @@ java_library(
     ],
     deps = [
         ":fastboot_param",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
     ],
 )
 

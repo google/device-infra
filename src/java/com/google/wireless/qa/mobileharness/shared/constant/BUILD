@@ -26,7 +26,7 @@ java_library(
     srcs = ["DirCommon.java"],
     deps = [
         ":gen_dir",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
     ],
 )
 

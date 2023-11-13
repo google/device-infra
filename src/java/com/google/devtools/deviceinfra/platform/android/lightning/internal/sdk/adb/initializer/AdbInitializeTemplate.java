@@ -21,8 +21,8 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.platform.android.sdktool.proto.Adb.AdbParam;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.util.Optional;
 
 /**

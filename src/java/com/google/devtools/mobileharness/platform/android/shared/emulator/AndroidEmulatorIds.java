@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.shared.emulator;
 
-import com.google.devtools.deviceinfra.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 
 /** Utility about Android emulator IDs. */
 public class AndroidEmulatorIds {

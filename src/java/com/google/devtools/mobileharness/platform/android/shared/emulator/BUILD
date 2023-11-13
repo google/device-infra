@@ -23,6 +23,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android:__subpackages__",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
     ],
 )

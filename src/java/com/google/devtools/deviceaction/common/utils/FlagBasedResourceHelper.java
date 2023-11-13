@@ -23,8 +23,8 @@ import static com.google.devtools.deviceaction.common.utils.ResourceUtil.getExis
 import com.google.common.base.Suppliers;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
-import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import java.nio.file.Path;
 import java.util.Optional;

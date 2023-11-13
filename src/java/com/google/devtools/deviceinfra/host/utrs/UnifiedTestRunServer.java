@@ -39,7 +39,6 @@ import com.google.devtools.deviceinfra.host.utrs.Annotations.MainThreadPool;
 import com.google.devtools.deviceinfra.host.utrs.Annotations.RpcPort;
 import com.google.devtools.deviceinfra.host.utrs.service.Annotations.GlobalEventBus;
 import com.google.devtools.deviceinfra.host.utrs.service.Annotations.ServViaStubby;
-import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
@@ -61,6 +60,7 @@ import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.LabSyncHelper
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.devtools.mobileharness.shared.version.Version;

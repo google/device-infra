@@ -17,10 +17,10 @@
 package com.google.devtools.mobileharness.api.devicemanager.detector;
 
 import com.google.common.base.Strings;
-import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult.DetectionType;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;

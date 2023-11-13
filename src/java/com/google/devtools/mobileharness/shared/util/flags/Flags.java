@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.shared.util.flags;
+package com.google.devtools.mobileharness.shared.util.flags;
 
 import static java.util.Arrays.stream;
 

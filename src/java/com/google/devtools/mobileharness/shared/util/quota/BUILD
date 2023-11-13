@@ -56,7 +56,7 @@ java_library(
     deps = [
         ":quota_manager_interface_only",
         "//src/devtools/mobileharness/shared/util/quota/proto:quota_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",

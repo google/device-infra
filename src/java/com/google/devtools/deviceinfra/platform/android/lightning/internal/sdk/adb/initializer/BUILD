@@ -25,7 +25,7 @@ java_library(
         ":adb_initialize_template",
         ":adb_initialize_template_impl",
         "//src/devtools/mobileharness/platform/android/sdktool/proto:adb_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
@@ -53,7 +53,7 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/platform/android/sdktool/proto:adb_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],

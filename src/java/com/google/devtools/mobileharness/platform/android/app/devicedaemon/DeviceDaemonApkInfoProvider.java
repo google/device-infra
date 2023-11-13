@@ -16,9 +16,9 @@
 
 package com.google.devtools.mobileharness.platform.android.app.devicedaemon;
 
-import com.google.devtools.deviceinfra.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.impl.DeviceDaemonApkInfoImplV1;
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.impl.DeviceDaemonApkInfoImplV2;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 
 /** Provider for instance of {@link DeviceDaemonApkInfo}. */
 public class DeviceDaemonApkInfoProvider {

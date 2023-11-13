@@ -29,7 +29,7 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/atsconsole:ats_console_lib",
         "//src/java/com/google/devtools/atsconsole:ats_console_module",
-        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
         "//src/java/com/google/devtools/mobileharness/shared/util/time",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",

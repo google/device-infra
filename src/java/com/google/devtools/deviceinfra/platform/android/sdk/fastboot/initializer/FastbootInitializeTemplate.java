@@ -16,7 +16,7 @@
 
 package com.google.devtools.deviceinfra.platform.android.sdk.fastboot.initializer;
 
-import com.google.devtools.deviceinfra.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 
 /**
  * A template defines the fastboot initialization steps.

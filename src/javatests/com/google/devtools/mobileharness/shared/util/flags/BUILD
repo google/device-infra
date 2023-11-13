@@ -24,7 +24,7 @@ java_library(
     name = "flags",
     srcs = glob(["*.java"]),
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:junit_junit",
     ],

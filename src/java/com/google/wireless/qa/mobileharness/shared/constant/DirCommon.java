@@ -16,7 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.constant;
 
-import com.google.devtools.deviceinfra.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 
 /** Definition of the common file directories. */
 public final class DirCommon {
