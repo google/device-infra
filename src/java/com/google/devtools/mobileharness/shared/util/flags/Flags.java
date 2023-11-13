@@ -588,6 +588,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> realTimeJob = realTimeJobDefault;
 
+  private static final Flag<Boolean> quitAfterTestDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--quit_after_test",
+      description = "If this flag is true, Lab Server will kill itself after any tests.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> quitAfterTest = quitAfterTestDefault;
+
   private static final Flag<Boolean> removeJobGenFilesWhenFinishedDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

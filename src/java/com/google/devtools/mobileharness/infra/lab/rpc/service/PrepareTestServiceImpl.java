@@ -79,6 +79,7 @@ import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.Resol
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -86,6 +87,7 @@ import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersi
 import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 import java.time.Clock;
@@ -325,6 +327,10 @@ public class PrepareTestServiceImpl {
       logger.atWarning().withCause(e).log("Failed to close test %s", req.getTestId());
     } finally {
       testManager.closeTest(req.getTestId());
+    }
+
+    if (Flags.instance().quitAfterTest.getNonNull()) {
+      new SystemUtil().exit(ExitCode.Shared.OK);
     }
 
     return response.build();
