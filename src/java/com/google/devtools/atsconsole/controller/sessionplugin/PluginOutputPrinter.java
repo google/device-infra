@@ -26,9 +26,8 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.devtools.atsconsole.ConsoleUtil;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.RunCommandState;
-import com.google.devtools.deviceaction.common.utils.TimeUtils;
 import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
-import com.google.devtools.mobileharness.shared.util.time.TimeUtil;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import java.time.Instant;
@@ -105,9 +104,9 @@ public class PluginOutputPrinter {
   private static ImmutableList<String> formatRunCommandState(RunCommandState runCommandState) {
     return ImmutableList.of(
         runCommandState.getCommandId(),
-        TimeUtil.readableDuration(
+        TimeUtils.toReadableDurationString(
             Duration.between(
-                TimeUtils.fromProtoInstant(runCommandState.getStartTime()), Instant.now())),
+                TimeUtils.toJavaInstant(runCommandState.getStartTime()), Instant.now())),
         runCommandState.getDeviceIdList().stream().collect(joining(", ", "[", "]")),
         runCommandState.getStateSummary());
   }

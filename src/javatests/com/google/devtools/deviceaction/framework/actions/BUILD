@@ -36,7 +36,7 @@ java_library(
         "//src/java/com/google/devtools/deviceaction/framework/operations",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_testparameterinjector_test_parameter_injector",

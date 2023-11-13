@@ -21,38 +21,35 @@ package(
     ],
 )
 
-LIB_SRCS = [
-    "AaptUtil.java",
-    "BundletoolUtil.java",
-    "CommandHistoryWriter.java",
-    "CompositeResolver.java",
-    "Conditions.java",
-    "Constants.java",
-    "FlagBasedResourceHelper.java",
-    "FlagParser.java",
-    "GCSResolver.java",
-    "GCSUtil.java",
-    "HelpUtil.java",
-    "LazyCached.java",
-    "LocalFileResolver.java",
-    "ProtoHelper.java",
-    "Resolver.java",
-    "ResourceHelper.java",
-    "ResourceUtil.java",
-    "SimpleResolver.java",
-    "StaticResourceHelper.java",
-    "TimeoutMonitor.java",
-    "Verify.java",
-]
-
 java_library(
     name = "utils",
-    srcs = LIB_SRCS,
+    srcs = [
+        "AaptUtil.java",
+        "BundletoolUtil.java",
+        "CommandHistoryWriter.java",
+        "CompositeResolver.java",
+        "Conditions.java",
+        "Constants.java",
+        "FlagBasedResourceHelper.java",
+        "FlagParser.java",
+        "GCSResolver.java",
+        "GCSUtil.java",
+        "HelpUtil.java",
+        "LazyCached.java",
+        "LocalFileResolver.java",
+        "ProtoHelper.java",
+        "Resolver.java",
+        "ResourceHelper.java",
+        "ResourceUtil.java",
+        "SimpleResolver.java",
+        "StaticResourceHelper.java",
+        "TimeoutMonitor.java",
+        "Verify.java",
+    ],
     exports = [
-        ":time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
     ],
     deps = [
-        ":time",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/deviceaction/schemas/proto:base_spec_java_proto",
         "//src/devtools/deviceaction/schemas/proto/actions:install_mainline_spec_java_proto",
@@ -68,6 +65,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_api_client_google_api_client",
@@ -78,19 +76,6 @@ java_library(
         "@maven//:com_google_http_client_google_http_client",
         "@maven//:com_google_http_client_google_http_client_gson",
         "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
-    name = "time",
-    srcs = ["TimeUtils.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
-    deps = [
-        "@com_google_protobuf//:protobuf_java_util",
-        "@com_google_protobuf_protobuf_java",
-        "@maven//:com_google_guava_guava",
     ],
 )
 

@@ -40,6 +40,7 @@ import com.google.devtools.deviceaction.framework.proto.Operand;
 import com.google.devtools.deviceaction.framework.proto.Unary;
 import com.google.devtools.deviceaction.framework.proto.action.InstallMainlineSpec;
 import com.google.devtools.deviceaction.framework.proto.action.ResetSpec;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.EnumDescriptor;
 import com.google.protobuf.Descriptors.EnumValueDescriptor;

@@ -13,18 +13,9 @@
 # limitations under the License.
 #
 
-package(default_applicable_licenses = ["//:license"])
-
-java_library(
-    name = "time",
-    srcs = [
-        "Sleeper.java",
-        "Sleepers.java",
-    ],
-    visibility = ["//:deviceinfra_all_pkg"],
-    deps = [
-        "@maven//:com_google_guava_guava",
-    ],
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = ["//:deviceinfra_all_pkg"],
 )
 
 java_library(
@@ -39,9 +30,22 @@ java_library(
 )
 
 java_library(
-    name = "time_util",
-    srcs = ["TimeUtil.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
+    name = "sleeper",
+    srcs = [
+        "Sleeper.java",
+        "Sleepers.java",
+    ],
+    deps = [
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "time_utils",
+    srcs = ["TimeUtils.java"],
+    deps = [
+        "@com_google_protobuf//:protobuf_java_util",
+        "@com_google_protobuf_protobuf_java",
+        "@maven//:com_google_guava_guava",
     ],
 )

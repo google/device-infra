@@ -19,7 +19,7 @@ package com.google.devtools.deviceaction.framework.operations;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.Multimaps.toMultimap;
 import static com.google.devtools.deviceaction.common.utils.Constants.APKS_SUFFIX;
-import static com.google.devtools.deviceaction.common.utils.TimeUtils.isPositive;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.isDurationPositive;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
@@ -113,7 +113,7 @@ public class ModuleInstaller implements Operation {
   private void activateStagedInstall() throws DeviceActionException, InterruptedException {
     logger.atInfo().log("Activate the staged installation.");
     Duration extraWaitForStaging = device.extraWaitForStaging();
-    if (isPositive(extraWaitForStaging)) {
+    if (isDurationPositive(extraWaitForStaging)) {
       sleeper.sleep(extraWaitForStaging);
     }
     device.reboot();

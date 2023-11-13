@@ -86,7 +86,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

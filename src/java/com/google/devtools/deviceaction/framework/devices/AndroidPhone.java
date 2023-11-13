@@ -18,8 +18,8 @@ package com.google.devtools.deviceaction.framework.devices;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.deviceaction.common.utils.Constants.APEX_SUFFIX;
-import static com.google.devtools.deviceaction.common.utils.TimeUtils.fromProtoDuration;
-import static com.google.devtools.deviceaction.common.utils.TimeUtils.isPositive;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.isDurationPositive;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static java.util.stream.Stream.concat;
 import static org.apache.commons.lang3.ArrayUtils.nullToEmpty;
 
@@ -38,7 +38,6 @@ import com.google.devtools.deviceaction.common.annotations.Annotations.SpecValue
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.utils.BundletoolUtil;
 import com.google.devtools.deviceaction.common.utils.LazyCached;
-import com.google.devtools.deviceaction.common.utils.TimeUtils;
 import com.google.devtools.deviceaction.framework.proto.AndroidPhoneSpec;
 import com.google.devtools.deviceaction.framework.proto.DeviceType;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -57,6 +56,7 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSetDmVerityDeviceOp;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -235,7 +235,7 @@ public class AndroidPhone implements Device {
       extraArgsBuilder.add(STAGED);
     }
     Duration stagedReady = stageReadyTimeout();
-    if (TimeUtils.isPositive(stagedReady)) {
+    if (isDurationPositive(stagedReady)) {
       extraArgsBuilder.add(STAGED_READY_TIMEOUT, String.valueOf(stagedReady.toMillis()));
     }
     InstallCmdArgs installCmdArgs =
@@ -301,7 +301,7 @@ public class AndroidPhone implements Device {
       androidSystemStateUtil.factoryResetViaTestHarness(uuid, awaitTime);
       // We also do the extra wait for a local emulator, although it is unnecessary because we don't
       // have a good way to tell the proxy mode from a local emulator.
-      if (isProxyModeOrLocalEmulator() && isPositive(extraWaitForProxyMode())) {
+      if (isProxyModeOrLocalEmulator() && isDurationPositive(extraWaitForProxyMode())) {
         sleeper.sleep(extraWaitForProxyMode());
       }
     } catch (MobileHarnessException e) {
@@ -455,37 +455,37 @@ public class AndroidPhone implements Device {
 
   @SpecValue(field = "reboot_await")
   public Duration rebootAwait() {
-    return fromProtoDuration(spec.getRebootAwait());
+    return toJavaDuration(spec.getRebootAwait());
   }
 
   @SpecValue(field = "reboot_timeout")
   public Duration rebootTimeout() {
-    return fromProtoDuration(spec.getRebootTimeout());
+    return toJavaDuration(spec.getRebootTimeout());
   }
 
   @SpecValue(field = "testharness_boot_await")
   public Duration testharnessBootAwait() {
-    return fromProtoDuration(spec.getTestharnessBootAwait());
+    return toJavaDuration(spec.getTestharnessBootAwait());
   }
 
   @SpecValue(field = "testharness_boot_timeout")
   public Duration testharnessBootTimeout() {
-    return fromProtoDuration(spec.getTestharnessBootTimeout());
+    return toJavaDuration(spec.getTestharnessBootTimeout());
   }
 
   @SpecValue(field = "stage_ready_timeout")
   public Duration stageReadyTimeout() {
-    return fromProtoDuration(spec.getStagedReadyTimeout());
+    return toJavaDuration(spec.getStagedReadyTimeout());
   }
 
   @SpecValue(field = "extra_wait_for_staging")
   public Duration extraWaitForStaging() {
-    return fromProtoDuration(spec.getExtraWaitForStaging());
+    return toJavaDuration(spec.getExtraWaitForStaging());
   }
 
   @SpecValue(field = "extra_wait_for_proxy_mode")
   public Duration extraWaitForProxyMode() {
-    return fromProtoDuration(spec.getExtraWaitForProxyMode());
+    return toJavaDuration(spec.getExtraWaitForProxyMode());
   }
 
   @SpecValue(field = "need_disable_package_cache")
@@ -505,7 +505,7 @@ public class AndroidPhone implements Device {
 
   @Nullable
   private static Duration positiveOrElse(Duration duration, @Nullable Duration elseValue) {
-    return Optional.of(duration).filter(TimeUtils::isPositive).orElse(elseValue);
+    return Optional.of(duration).filter(TimeUtils::isDurationPositive).orElse(elseValue);
   }
 
   private static boolean containsApex(Collection<String> values) {
@@ -528,7 +528,7 @@ public class AndroidPhone implements Device {
   private String[] addArgsForInstallMultiApks(String[] extraArgs) throws DeviceActionException {
     extraArgs = ArrayUtils.insert(extraArgs.length, extraArgs, STAGED);
     // Flag --timeout-millis applies to Android 12+
-    if (TimeUtils.isPositive(stageReadyTimeout())
+    if (isDurationPositive(stageReadyTimeout())
         && getSdkVersion() >= AndroidVersion.ANDROID_12.getStartSdkVersion()) {
       extraArgs =
           ArrayUtils.insert(

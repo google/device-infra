@@ -19,7 +19,7 @@ package com.google.devtools.deviceaction.framework.actions;
 import static com.google.devtools.deviceaction.common.utils.Conditions.checkArgument;
 import static com.google.devtools.deviceaction.common.utils.Constants.APEX_SUFFIX;
 import static com.google.devtools.deviceaction.common.utils.Constants.APK_SUFFIX;
-import static com.google.devtools.deviceaction.common.utils.TimeUtils.fromProtoDuration;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static java.util.Arrays.asList;
 
 import com.google.common.collect.ImmutableMap;
@@ -171,12 +171,12 @@ public class Reset implements Action {
 
   @SpecValue(field = "flash_timeout")
   public Duration flashTimeout() {
-    return fromProtoDuration(spec.getFlashTimeout());
+    return toJavaDuration(spec.getFlashTimeout());
   }
 
   @SpecValue(field = "sideload_timeout")
   public Duration sideloadTimeout() {
-    return fromProtoDuration(spec.getSideloadTimeout());
+    return toJavaDuration(spec.getSideloadTimeout());
   }
 
   @SpecValue(field = "use_auto_reboot")

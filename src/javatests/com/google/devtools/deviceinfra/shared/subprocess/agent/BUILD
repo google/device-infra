@@ -57,7 +57,7 @@ java_binary(
     main_class = "com.google.devtools.deviceinfra.shared.subprocess.agent.FakeProgram",
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],

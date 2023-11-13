@@ -31,7 +31,7 @@ java_library(
         "//src/java/com/google/devtools/atsconsole:ats_console_module",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_guava_guava",

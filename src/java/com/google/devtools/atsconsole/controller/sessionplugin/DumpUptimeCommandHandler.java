@@ -20,7 +20,7 @@ import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSes
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.atsconsole.controller.proto.SessionPluginProto.DumpUptimeCommand;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
-import com.google.devtools.mobileharness.shared.util.time.TimeUtil;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import java.time.Duration;
 import java.time.Instant;
 import javax.inject.Inject;
@@ -38,7 +38,8 @@ class DumpUptimeCommandHandler {
   AtsSessionPluginOutput handle(@SuppressWarnings("unused") DumpUptimeCommand dumpUptimeCommand) {
     Duration elapsedTime = Duration.between(serverStartTime, Instant.now());
     String result =
-        String.format("OLC server has been running for %s", TimeUtil.readableDuration(elapsedTime));
+        String.format(
+            "OLC server has been running for %s", TimeUtils.toReadableDurationString(elapsedTime));
     return AtsSessionPluginOutput.newBuilder()
         .setSuccess(Success.newBuilder().setOutputMessage(result))
         .build();

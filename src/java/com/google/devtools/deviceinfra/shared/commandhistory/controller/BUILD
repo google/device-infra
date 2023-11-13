@@ -24,7 +24,7 @@ java_library(
     ],
     deps = [
         "//src/devtools/deviceinfra/shared/commandhistory/proto:command_record_java_proto",
-        "//src/java/com/google/devtools/deviceaction/common/utils:time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
@@ -41,11 +41,11 @@ java_library(
         ":local_command_history_manager",
         "//src/devtools/deviceinfra/shared/commandhistory/proto:command_record_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",
-        "//src/java/com/google/devtools/deviceaction/common/utils:time",
         "//src/java/com/google/devtools/deviceinfra/shared/subprocess/transformer:process_builder_listener",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@com_google_protobuf//:protobuf_java_util",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",

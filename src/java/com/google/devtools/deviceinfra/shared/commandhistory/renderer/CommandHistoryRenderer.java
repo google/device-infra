@@ -17,7 +17,7 @@
 package com.google.devtools.deviceinfra.shared.commandhistory.renderer;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.devtools.deviceaction.common.utils.TimeUtils.fromProtoDuration;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
@@ -56,7 +56,7 @@ public class CommandHistoryRenderer {
 
   public String renderCommandHistory(
       LocalCommandRecords commandHistory, List<CommandShortener> commandShorteners) {
-    Duration processStartTime = fromProtoDuration(commandHistory.getLocalStartElapsedTime());
+    Duration processStartTime = toJavaDuration(commandHistory.getLocalStartElapsedTime());
 
     // Groups the records by command sequence number and renders each single command.
     Set<CommandShorteningNote> commandShorteningHistory = new HashSet<>();
@@ -102,10 +102,10 @@ public class CommandHistoryRenderer {
     // Calculates relative command start/end time.
     Optional<Duration> startTime =
         commandStarted.map(
-            started -> fromProtoDuration(started.getLocalElapsedTime()).minus(processStartTime));
+            started -> toJavaDuration(started.getLocalElapsedTime()).minus(processStartTime));
     Optional<Duration> endTime =
         commandEnded.map(
-            ended -> fromProtoDuration(ended.getLocalElapsedTime()).minus(processStartTime));
+            ended -> toJavaDuration(ended.getLocalElapsedTime()).minus(processStartTime));
     Optional<Duration> diffTime = startTime.flatMap(start -> endTime.map(end -> end.minus(start)));
 
     return String.format(

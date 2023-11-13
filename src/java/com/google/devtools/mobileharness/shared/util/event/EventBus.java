@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.shared.util.event;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceaction.common.utils.TimeUtils;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethod;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethodSearchResult;
 import com.google.devtools.mobileharness.shared.util.event.proto.EventBusProto;
@@ -27,6 +26,7 @@ import com.google.devtools.mobileharness.shared.util.event.proto.EventBusProto.E
 import com.google.devtools.mobileharness.shared.util.event.proto.EventBusProto.EventStatistics;
 import com.google.devtools.mobileharness.shared.util.event.proto.EventBusProto.ObjectSummary;
 import com.google.devtools.mobileharness.shared.util.event.proto.EventBusProto.TimingInfo;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.lang.reflect.Method;
 import java.time.Instant;

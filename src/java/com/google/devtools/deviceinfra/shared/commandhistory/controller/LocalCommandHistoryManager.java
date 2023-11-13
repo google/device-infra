@@ -16,8 +16,8 @@
 
 package com.google.devtools.deviceinfra.shared.commandhistory.controller;
 
-import static com.google.devtools.deviceaction.common.utils.TimeUtils.toProtoDuration;
-import static com.google.devtools.deviceaction.common.utils.TimeUtils.toProtoTimestamp;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 
 import com.google.devtools.deviceinfra.shared.commandhistory.proto.CommandRecordProto.LocalCommandRecord;
 import com.google.devtools.deviceinfra.shared.commandhistory.proto.CommandRecordProto.LocalCommandRecords;

@@ -39,7 +39,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/autovalue:util_args",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@com_google_protobuf//:protobuf_java_util",
         "@maven//:com_google_guava_guava",

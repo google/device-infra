@@ -26,8 +26,8 @@ java_library(
     ],
     deps = [
         "//src/devtools/deviceinfra/shared/commandhistory/proto:command_record_java_proto",
-        "//src/java/com/google/devtools/deviceaction/common/utils:time",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_google_guava_guava",
     ],
 )

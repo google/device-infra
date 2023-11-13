@@ -41,7 +41,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/log",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",

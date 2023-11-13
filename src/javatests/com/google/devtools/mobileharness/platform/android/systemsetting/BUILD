@@ -29,7 +29,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/autovalue:util_args",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:android_device_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:resolution",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",

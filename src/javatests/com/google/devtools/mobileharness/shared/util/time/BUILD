@@ -24,7 +24,7 @@ java_library(
     name = "time",
     srcs = glob(["*.java"]),
     deps = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",

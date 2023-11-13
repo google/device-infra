@@ -33,7 +33,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/shared/autovalue:util_args",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:android_device_spec_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:resolution",
         "@maven//:com_google_code_findbugs_jsr305",

@@ -19,7 +19,7 @@ package com.google.devtools.deviceaction.common.utils;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.devtools.deviceaction.common.utils.Constants.DEVICE_CONFIG_KEY;
-import static com.google.devtools.deviceaction.common.utils.TimeUtils.toProtoDuration;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;

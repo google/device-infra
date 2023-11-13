@@ -49,7 +49,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/file/local:binary_size_checker",

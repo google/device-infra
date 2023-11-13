@@ -16,8 +16,8 @@
 
 package com.google.devtools.deviceinfra.shared.commandhistory.controller;
 
-import static com.google.devtools.deviceaction.common.utils.TimeUtils.toProtoTimestamp;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;

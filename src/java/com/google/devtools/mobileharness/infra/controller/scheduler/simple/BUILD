@@ -35,7 +35,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:adhoc_testbed_scheduling_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:allocation",

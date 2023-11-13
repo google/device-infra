@@ -38,7 +38,7 @@ import com.google.devtools.mobileharness.infra.controller.test.model.JobExecutio
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionUnit;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
-import com.google.devtools.mobileharness.shared.util.time.TimeUtil;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import java.time.Clock;
@@ -412,7 +412,7 @@ public class TestManager<T extends TestRunner> implements Runnable {
             .append("\nJob Driver: ")
             .append(job.driver())
             .append("\nJob Create Time: ")
-            .append(TimeUtil.toLocalDate(job.timing().getCreateTime()))
+            .append(TimeUtils.toDateString(job.timing().getCreateTime()))
             .append("\nJob Timeout: ")
             .append(job.timeout().jobTimeout())
             .append("ms")
@@ -433,7 +433,7 @@ public class TestManager<T extends TestRunner> implements Runnable {
               .append(testExecutionUnit.locator().name())
               .append("\nTest Start Time: ")
               .append(
-                  TimeUtil.toLocalDate(
+                  TimeUtils.toDateString(
                       testExecutionUnit.timing().getStartTime().orElse(Instant.EPOCH)))
               .append("\nDevice(s): ")
               .append(testRunner.getAllocation().getAllDevices())
@@ -443,7 +443,7 @@ public class TestManager<T extends TestRunner> implements Runnable {
       }
       content
           .append("\n=========================================\n")
-          .append(TimeUtil.currentLocalDate());
+          .append(TimeUtils.toDateString(Clock.systemUTC().instant()));
 
       logger.atInfo().log("Zombie tests summary:\n%s", content);
       lastZombieTestAlertTime = Instant.now();

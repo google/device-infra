@@ -40,7 +40,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:base",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",

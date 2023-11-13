@@ -33,7 +33,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:master_syncer_for_job",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:exec_test",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "@maven//:com_google_inject_guice",
     ],
