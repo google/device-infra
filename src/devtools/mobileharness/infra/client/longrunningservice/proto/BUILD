@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("//net/grpc/python:py_grpc_library.bzl", "py_grpc_library")
+load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 
 package(
@@ -93,6 +95,19 @@ java_grpc_library(
     name = "session_service_java_grpc",
     srcs = [":session_service_proto"],
     deps = [":session_service_java_proto"],
+)
+
+py_proto_library(
+    name = "session_service_py_proto",
+    has_services = 1,
+    api_version = 2,
+    deps = [":session_service_proto"],
+)
+
+py_grpc_library(
+    name = "session_service_py_grpc",
+    srcs = [":session_service_proto"],
+    deps = [":session_service_py_proto"],
 )
 
 proto_library(
