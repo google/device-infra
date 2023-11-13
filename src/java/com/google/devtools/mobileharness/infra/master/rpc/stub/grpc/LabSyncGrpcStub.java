@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.grpc.ClientInterceptors;
 import javax.inject.Inject;
 
@@ -50,6 +51,7 @@ public class LabSyncGrpcStub implements LabSyncStub {
             ClientInterceptors.intercept(helper.getChannel(), helper.getInterceptors()));
   }
 
+  @CanIgnoreReturnValue
   @Override
   public SignUpLabResponse signUpLab(SignUpLabRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
@@ -59,6 +61,7 @@ public class LabSyncGrpcStub implements LabSyncStub {
         String.format("Failed to sign up lab %s", request.getLabHostName()));
   }
 
+  @CanIgnoreReturnValue
   @Override
   public HeartbeatLabResponse heartbeatLab(HeartbeatLabRequest request)
       throws GrpcExceptionWithErrorId {

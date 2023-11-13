@@ -24,13 +24,16 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 
 /** RPC stub for talking to Master LabSyncService. */
 public interface LabSyncStub extends AutoCloseable {
   /** Sends full information of the lab and its devices to master. */
+  @CanIgnoreReturnValue
   SignUpLabResponse signUpLab(SignUpLabRequest request) throws RpcExceptionWithErrorId;
 
   /** Signals that the lab and devices are alive. */
+  @CanIgnoreReturnValue
   HeartbeatLabResponse heartbeatLab(HeartbeatLabRequest request) throws RpcExceptionWithErrorId;
 
   /** Signs out device. No effect if the device does not exist. */

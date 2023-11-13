@@ -106,7 +106,7 @@ public class AtsModeTest {
                   .setServiceVersion(Version.MASTER_V5_VERSION.toString()))
           .build();
 
-  @Bind MasterGrpcStubHelper masterGrpcStubHelper;
+  @Bind private MasterGrpcStubHelper masterGrpcStubHelper;
 
   @Inject private AtsMode atsMode;
   @Inject private LabSyncGrpcStub labSyncGrpcStub;

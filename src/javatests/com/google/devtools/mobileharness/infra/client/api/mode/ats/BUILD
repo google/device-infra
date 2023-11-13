@@ -28,6 +28,8 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/devtools/mobileharness/infra/master/rpc/proto:lab_info_service_java_proto",
         "//src/devtools/mobileharness/infra/master/rpc/proto:lab_sync_service_java_proto",
         "//src/devtools/mobileharness/shared/version/proto:version_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
@@ -35,7 +37,10 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:ats_mode",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:lab_info_service",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:module",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:remote_device_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_sync",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:master_grpc_stub_helper",
@@ -51,6 +56,7 @@ java_library(
         "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 

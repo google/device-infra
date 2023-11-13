@@ -17,12 +17,15 @@
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -38,6 +41,14 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerSetting;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceGrpc;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabRequest;
@@ -55,7 +66,7 @@ import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersi
 import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
-import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import io.grpc.netty.NettyServerBuilder;
 import io.grpc.stub.StreamObserver;
@@ -68,6 +79,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -80,7 +92,8 @@ class RemoteDeviceManager {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final Duration DEVICE_CLEANUP_INTERVAL = Duration.ofMinutes(1L);
+  private static final Duration LAB_AND_DEVICE_CLEANUP_INTERVAL = Duration.ofMinutes(2L);
+  private static final Duration LAB_REMOVAL_TIME = Duration.ofHours(1L);
   private static final Duration DEVICE_REMOVAL_TIME = Duration.ofMinutes(10L);
 
   private final ServiceSideVersionChecker versionChecker =
@@ -90,6 +103,9 @@ class RemoteDeviceManager {
   private final ListeningScheduledExecutorService scheduledThreadPool;
 
   private final Object lock = new Object();
+
+  @GuardedBy("lock")
+  private final Map<LabKey, LabData> labs = new HashMap<>();
 
   @GuardedBy("lock")
   private final Map<DeviceKey, DeviceData> devices = new HashMap<>();
@@ -127,14 +143,15 @@ class RemoteDeviceManager {
           e);
     }
 
-    // Starts device cleaner.
+    // Starts lab/device cleaner.
     logFailure(
         scheduledThreadPool.scheduleWithFixedDelay(
-            threadRenaming(this::cleanUpDevices, () -> "remote-device-manager-device-cleaner"),
-            DEVICE_CLEANUP_INTERVAL,
-            DEVICE_CLEANUP_INTERVAL),
+            threadRenaming(
+                this::cleanUpLabsAndDevices, () -> "remote-device-manager-lab-and-device-cleaner"),
+            LAB_AND_DEVICE_CLEANUP_INTERVAL,
+            LAB_AND_DEVICE_CLEANUP_INTERVAL),
         Level.WARNING,
-        "Error when cleaning up devices");
+        "Error when cleaning up labs and devices");
 
     // Starts first device awaiter.
     logFailure(
@@ -149,10 +166,55 @@ class RemoteDeviceManager {
     logger.atInfo().log("Remote device manager started, grpc_port=%s", grpcPort);
   }
 
-  ImmutableList<DeviceInfo> getDeviceInfos() {
+  ImmutableList<DeviceQuery.DeviceInfo> getDeviceInfos() {
     synchronized (lock) {
-      return devices.values().stream().map(DeviceData::toDeviceInfo).collect(toImmutableList());
+      return devices.values().stream()
+          .map(DeviceData::toDeviceQueryDeviceInfo)
+          .collect(toImmutableList());
     }
+  }
+
+  LabQueryResult.LabView getLabInfo(LabQuery.Filter filter) {
+    ImmutableMap<LabKey, LabQueryProto.LabData.Builder> filteredLabs;
+    Instant timestamp = Instant.now();
+    synchronized (lock) {
+      // Filters labs.
+      filteredLabs =
+          labs.entrySet().stream()
+              .filter(new LabPredicate(filter.getLabFilter()))
+              .collect(
+                  toImmutableMap(
+                      Entry::getKey,
+                      entry ->
+                          LabQueryProto.LabData.newBuilder()
+                              .setLabInfo(entry.getValue().createLabInfo())));
+
+      // Filters devices.
+      DevicePredicate devicePredicate = new DevicePredicate(filter.getDeviceFilter());
+      for (DeviceData deviceData : devices.values()) {
+        LabQueryProto.LabData.Builder labBuilder = filteredLabs.get(deviceData.deviceKey.labKey());
+        if (labBuilder != null && devicePredicate.test(deviceData)) {
+          labBuilder.getDeviceListBuilder().addDeviceInfo(deviceData.toLabQueryDeviceInfo());
+        }
+      }
+    }
+    Duration queryTime = Duration.between(timestamp, Instant.now());
+    logger.atInfo().log(
+        "Get lab info, filter=[%s], time_used=%s", shortDebugString(filter), queryTime);
+
+    // Builds proto.
+    return LabView.newBuilder()
+        .setLabTotalCount(filteredLabs.size())
+        .addAllLabData(
+            filteredLabs.values().stream()
+                .map(
+                    labBuilder -> {
+                      DeviceList.Builder deviceList = labBuilder.getDeviceListBuilder();
+                      deviceList.setDeviceTotalCount(deviceList.getDeviceInfoCount());
+                      return labBuilder.build();
+                    })
+                .collect(toImmutableList()))
+        .build();
   }
 
   /**
@@ -198,10 +260,21 @@ class RemoteDeviceManager {
       LabLocator labLocator = LabLocator.of(request.getLabIp(), request.getLabHostName());
       labLocator.ports().addAll(request.getLabServerSetting().getPortList());
 
-      // TODO: Handles lab_server_feature.
-
       List<String> duplicatedUuids = new ArrayList<>();
       synchronized (lock) {
+        // Handles information of the lab.
+        LabKey labKey = LabKey.of(labLocator.hostName());
+        if (labs.containsKey(labKey)) {
+          // Updates lab data.
+          LabData labData = labs.get(labKey);
+          labData.updateBySignUp(request);
+        } else {
+          // Adds lab data.
+          LabData labData = new LabData(labLocator, request);
+          labs.put(labKey, labData);
+        }
+
+        // Handles information of each device.
         for (SignUpLabRequest.Device device : request.getDeviceList()) {
           DeviceKey deviceKey = DeviceKey.of(labLocator.hostName(), device.getControlId());
 
@@ -253,8 +326,19 @@ class RemoteDeviceManager {
 
       List<String> outdatedDeviceIds = new ArrayList<>();
       synchronized (lock) {
+        // Handles heartbeat of the lab.
+        LabKey labKey = LabKey.of(request.getLabHostName());
+        if (labs.containsKey(labKey)) {
+          // Updates lab data.
+          LabData labData = labs.get(labKey);
+          labData.updateByHeartbeat();
+        } else {
+          logger.atWarning().log("Lab hasn't been signed up yet, lab=%s", labKey);
+        }
+
+        // Handles heartbeat of each device.
         for (HeartbeatLabRequest.Device device : request.getDeviceList()) {
-          DeviceKey deviceKey = DeviceKey.of(request.getLabHostName(), device.getId());
+          DeviceKey deviceKey = DeviceKey.of(labKey.labHostName(), device.getId());
 
           if (!devices.containsKey(deviceKey)) {
             logger.atInfo().log("Device hasn't been signed up yet, device=%s", deviceKey);
@@ -389,15 +473,16 @@ class RemoteDeviceManager {
   }
 
   /**
-   * Clean up devices that have no heartbeat for a while.
+   * Clean up labs and devices that have no heartbeat for a while.
    *
    * @throws IllegalStateException if interrupted
    */
-  private void cleanUpDevices() {
-    logger.atInfo().log("Cleaning up devices");
+  private void cleanUpLabsAndDevices() {
+    logger.atInfo().log("Cleaning up lab and devices");
     Instant timestamp = Instant.now();
     // TODO: Uses fine-grained lock.
     synchronized (lock) {
+      // Cleans up devices.
       for (Iterator<Entry<DeviceKey, DeviceData>> iterator = devices.entrySet().iterator();
           iterator.hasNext(); ) {
         Entry<DeviceKey, DeviceData> entry = iterator.next();
@@ -421,9 +506,35 @@ class RemoteDeviceManager {
           deviceUuids.remove(deviceData.uuid);
         }
       }
+
+      // Cleans up labs.
+      for (Iterator<Entry<LabKey, LabData>> iterator = labs.entrySet().iterator();
+          iterator.hasNext(); ) {
+        Entry<LabKey, LabData> entry = iterator.next();
+        LabKey labKey = entry.getKey();
+        LabData labData = entry.getValue();
+
+        if (labData.updateFromLabLocalTimestamp.plus(LAB_REMOVAL_TIME).isBefore(timestamp)) {
+          logger.atInfo().log(
+              "Remove lab, lab=%s, last_update_from_lab=%s",
+              labKey, labData.updateFromLabLocalTimestamp);
+          iterator.remove();
+        }
+      }
     }
     Duration cleanupTime = Duration.between(timestamp, Instant.now());
-    logger.atInfo().log("Devices cleanup finished, time_used=%s", cleanupTime);
+    logger.atInfo().log("Labs/devices cleanup finished, time_used=%s", cleanupTime);
+  }
+
+  /** Devices are indexed by host_name. */
+  @AutoValue
+  abstract static class LabKey {
+
+    abstract String labHostName();
+
+    private static LabKey of(String labHostName) {
+      return new AutoValue_RemoteDeviceManager_LabKey(labHostName);
+    }
   }
 
   /** Devices are indexed by (host_name + control_id). */
@@ -436,6 +547,50 @@ class RemoteDeviceManager {
 
     private static DeviceKey of(String labHostName, String deviceControlId) {
       return new AutoValue_RemoteDeviceManager_DeviceKey(labHostName, deviceControlId);
+    }
+
+    @Memoized
+    LabKey labKey() {
+      return LabKey.of(labHostName());
+    }
+  }
+
+  /** All access to this class must be guarded by {@link #lock}. */
+  private static class LabData {
+
+    private final LabLocator labLocator;
+
+    private LabServerSetting labServerSetting;
+
+    private LabServerFeature labServerFeature;
+
+    /**
+     * Latest local timestamp that the lab sent any rpc to update this lab (even if the update was
+     * rejected).
+     */
+    private Instant updateFromLabLocalTimestamp;
+
+    private LabData(LabLocator labLocator, SignUpLabRequest lab) {
+      this.labLocator = labLocator;
+      updateBySignUp(lab);
+    }
+
+    private void updateBySignUp(SignUpLabRequest lab) {
+      labServerSetting = lab.getLabServerSetting();
+      labServerFeature = lab.getLabServerFeature();
+      updateFromLabLocalTimestamp = Instant.now();
+    }
+
+    private void updateByHeartbeat() {
+      updateFromLabLocalTimestamp = Instant.now();
+    }
+
+    private LabInfo createLabInfo() {
+      return LabInfo.newBuilder()
+          .setLabLocator(labLocator.toProto())
+          .setLabServerSetting(labServerSetting)
+          .setLabServerFeature(labServerFeature)
+          .build();
     }
   }
 
@@ -562,9 +717,18 @@ class RemoteDeviceManager {
       latestAllocationFromScheduler = allocation;
     }
 
-    private DeviceInfo toDeviceInfo() {
-      DeviceInfo.Builder deviceInfo =
-          DeviceInfo.newBuilder()
+    private LabQueryProto.DeviceInfo toLabQueryDeviceInfo() {
+      return LabQueryProto.DeviceInfo.newBuilder()
+          .setDeviceLocator(dataFromLab.locator().toProto())
+          .setDeviceUuid(uuid)
+          .setDeviceStatus(statusFromLab)
+          .setDeviceFeature(dataFromLab.toFeature())
+          .build();
+    }
+
+    private DeviceQuery.DeviceInfo toDeviceQueryDeviceInfo() {
+      DeviceQuery.DeviceInfo.Builder deviceInfo =
+          DeviceQuery.DeviceInfo.newBuilder()
               .setId(dataFromLab.locator().id())
               .setStatus(statusFromLab.name())
               .addAllOwner(dataFromLab.owners().getAll())
@@ -599,6 +763,40 @@ class RemoteDeviceManager {
       }
 
       return deviceInfo.build();
+    }
+  }
+
+  /** All access to this class must be guarded by {@link #lock}. */
+  private static class LabPredicate implements Predicate<Entry<LabKey, LabData>> {
+
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private final LabQuery.Filter.LabFilter labFilter;
+
+    private LabPredicate(LabQuery.Filter.LabFilter labFilter) {
+      this.labFilter = labFilter;
+    }
+
+    @Override
+    public boolean test(Entry<LabKey, LabData> entry) {
+      // TODO: Filters labs here.
+      return true;
+    }
+  }
+
+  /** All access to this class must be guarded by {@link #lock}. */
+  private static class DevicePredicate implements Predicate<DeviceData> {
+
+    @SuppressWarnings({"FieldCanBeLocal", "unused"})
+    private final LabQuery.Filter.DeviceFilter deviceFilter;
+
+    private DevicePredicate(LabQuery.Filter.DeviceFilter deviceFilter) {
+      this.deviceFilter = deviceFilter;
+    }
+
+    @Override
+    public boolean test(DeviceData deviceData) {
+      // TODO: Filters devices here.
+      return true;
     }
   }
 }

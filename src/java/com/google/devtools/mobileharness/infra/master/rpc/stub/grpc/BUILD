@@ -61,6 +61,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub:lab_sync",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:master_grpc_stub_helper",
         "@io_grpc_grpc_java//core",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
