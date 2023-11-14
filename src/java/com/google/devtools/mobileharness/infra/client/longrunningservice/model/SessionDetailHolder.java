@@ -48,6 +48,9 @@ public class SessionDetailHolder {
   @GuardedBy("itself")
   private final List<JobInfo> jobs;
 
+  @GuardedBy("jobs")
+  private int lastPollJobsIndex;
+
   /**
    * {@link SessionDetail} without {@link SessionOutput#getSessionPropertyMap()}, {@link
    * SessionOutput#getSessionPluginErrorList()} and {@link
@@ -86,9 +89,19 @@ public class SessionDetailHolder {
     }
   }
 
-  public List<JobInfo> getAllJobs() {
+  public ImmutableList<JobInfo> getAllJobs() {
     synchronized (jobs) {
       return ImmutableList.copyOf(jobs);
+    }
+  }
+
+  /** Gets all new added jobs since last poll. */
+  public ImmutableList<JobInfo> pollJobs() {
+    synchronized (jobs) {
+      int size = jobs.size();
+      ImmutableList<JobInfo> result = ImmutableList.copyOf(jobs.subList(lastPollJobsIndex, size));
+      lastPollJobsIndex = size;
+      return result;
     }
   }
 

@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.List;
 import javax.inject.Inject;
 
@@ -52,37 +53,44 @@ public class SessionJobRunner {
 
   public void runJobs(SessionDetailHolder sessionDetailHolder, List<Object> sessionPlugins)
       throws MobileHarnessException, InterruptedException {
-    List<JobInfo> jobs = sessionDetailHolder.getAllJobs();
-    ImmutableList<String> jobIds =
-        jobs.stream().map(JobInfo::locator).map(JobLocator::getId).collect(toImmutableList());
+    List<String> allJobIds = new ArrayList<>();
+
     try {
-      // Starts all jobs.
-      for (JobInfo jobInfo : jobs) {
-        logger.atInfo().log(
-            "Starting job %s of session %s",
-            jobInfo.locator().getId(), sessionDetailHolder.getSessionId());
-        clientApi.startJob(jobInfo, localMode, sessionPlugins);
+      while (true) {
+        // Polls new jobs.
+        ImmutableList<JobInfo> newJobs = sessionDetailHolder.pollJobs();
+        allJobIds.addAll(
+            newJobs.stream()
+                .map(JobInfo::locator)
+                .map(JobLocator::getId)
+                .collect(toImmutableList()));
+
+        // Starts new jobs.
+        for (JobInfo jobInfo : newJobs) {
+          logger.atInfo().log(
+              "Starting job %s of session %s",
+              jobInfo.locator().getId(), sessionDetailHolder.getSessionId());
+          clientApi.startJob(jobInfo, localMode, sessionPlugins);
+        }
+
+        // Waits until all jobs finish.
+        if (allJobIds.stream().allMatch(clientApi::isJobDone)) {
+          break;
+        }
+
+        sleeper.sleep(WAIT_FOR_JOB_INTERNAL);
       }
-
-      // Wait until all jobs finish.
-      waitForJobs(jobIds);
-      logger.atInfo().log("All jobs of session %s finished", sessionDetailHolder.getSessionId());
-
-      // TODO: Adds job information to SessionOutput.
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
       // Kills all jobs if an error occurs.
       logger.atWarning().log(
           "Error occurred during job running of session %s, killing all jobs",
           sessionDetailHolder.getSessionId());
-      killJobs(jobIds);
+      killJobs(allJobIds);
       throw e;
     }
-  }
 
-  private void waitForJobs(List<String> jobIds) throws InterruptedException {
-    do {
-      sleeper.sleep(WAIT_FOR_JOB_INTERNAL);
-    } while (!jobIds.stream().allMatch(clientApi::isJobDone));
+    logger.atInfo().log("All jobs of session %s finished", sessionDetailHolder.getSessionId());
+    // TODO: Adds job information to SessionOutput.
   }
 
   private void killJobs(List<String> jobIds) {

@@ -69,8 +69,9 @@ public class SessionInfo {
   /**
    * Adds a job to the session.
    *
-   * <p>Note that the job will be started only if this method is called before the session runner
-   * starts all jobs of it (e.g., in {@code SessionStartingEvent}).
+   * <p>Note that the job will be started only if this method is called in {@code
+   * SessionStartingEvent}, or this method is called when at least another job of the session is
+   * running.
    */
   public void addJob(JobInfo jobInfo) {
     sessionDetailHolder.addJob(jobInfo);
