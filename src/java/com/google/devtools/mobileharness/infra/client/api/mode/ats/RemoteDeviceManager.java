@@ -29,12 +29,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
@@ -68,9 +66,8 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.controller.event.AllocationEvent;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
-import io.grpc.netty.NettyServerBuilder;
+import io.grpc.BindableService;
 import io.grpc.stub.StreamObserver;
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -98,8 +95,8 @@ class RemoteDeviceManager {
 
   private final ServiceSideVersionChecker versionChecker =
       new ServiceSideVersionChecker(Version.MASTER_V5_VERSION, Version.MIN_LAB_VERSION);
+  private final LabSyncService labSyncService = new LabSyncService();
   private final AbstractScheduler scheduler;
-  private final ListeningExecutorService threadPool;
   private final ListeningScheduledExecutorService scheduledThreadPool;
 
   private final Object lock = new Object();
@@ -117,31 +114,18 @@ class RemoteDeviceManager {
 
   @Inject
   RemoteDeviceManager(
-      AbstractScheduler scheduler,
-      ListeningExecutorService threadPool,
-      ListeningScheduledExecutorService scheduledThreadPool) {
+      AbstractScheduler scheduler, ListeningScheduledExecutorService scheduledThreadPool) {
     this.scheduler = scheduler;
-    this.threadPool = threadPool;
     this.scheduledThreadPool = scheduledThreadPool;
   }
 
-  void start(int grpcPort) throws MobileHarnessException {
+  BindableService getLabSyncService() {
+    return labSyncService;
+  }
+
+  void start() {
     // Registers AllocationEventHandler.
     scheduler.registerEventHandler(new AllocationEventHandler());
-
-    // Starts gRPC server.
-    try {
-      NettyServerBuilder.forPort(grpcPort)
-          .addService(new LabSyncService())
-          .executor(threadPool)
-          .build()
-          .start();
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.CLIENT_ATS_MODE_START_REMOTE_DEVICE_MANAGER_ERROR,
-          String.format("Failed to start remote device manager with port [%s]", grpcPort),
-          e);
-    }
 
     // Starts lab/device cleaner.
     logFailure(
@@ -162,8 +146,6 @@ class RemoteDeviceManager {
             Duration.ofSeconds(10L)),
         Level.WARNING,
         "Error when marking timeout for awaiting first device");
-
-    logger.atInfo().log("Remote device manager started, grpc_port=%s", grpcPort);
   }
 
   ImmutableList<DeviceQuery.DeviceInfo> getDeviceInfos() {

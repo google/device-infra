@@ -19,7 +19,9 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
 import com.google.common.eventbus.EventBus;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
@@ -31,6 +33,8 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractSche
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import io.grpc.netty.NettyServerBuilder;
+import java.io.IOException;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -42,24 +46,50 @@ import javax.inject.Singleton;
 @Singleton
 public class AtsMode implements ExecMode {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   private final RemoteDeviceManager remoteDeviceManager;
   private final DeviceQuerier deviceQuerier;
   private final AbstractScheduler scheduler;
+  private final LabInfoService labInfoService;
+  private final ListeningExecutorService threadPool;
   private final DeviceVerifier deviceVerifier = new EmptyDeviceVerifier();
 
   @Inject
   AtsMode(
       RemoteDeviceManager remoteDeviceManager,
       DeviceQuerier deviceQuerier,
-      AbstractScheduler scheduler) {
+      AbstractScheduler scheduler,
+      LabInfoService labInfoService,
+      ListeningExecutorService threadPool) {
     this.remoteDeviceManager = remoteDeviceManager;
     this.deviceQuerier = deviceQuerier;
     this.scheduler = scheduler;
+    this.labInfoService = labInfoService;
+    this.threadPool = threadPool;
   }
 
   public void initialize(int grpcPort) throws MobileHarnessException {
-    remoteDeviceManager.start(grpcPort);
+    // Starts gRPC server.
+    try {
+      NettyServerBuilder.forPort(grpcPort)
+          .addService(remoteDeviceManager.getLabSyncService())
+          .addService(labInfoService)
+          .executor(threadPool)
+          .build()
+          .start();
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.CLIENT_ATS_MODE_START_GRPC_SERVER_ERROR,
+          String.format("Failed to start ATS mode gRPC server on port [%s]", grpcPort),
+          e);
+    }
+
+    // Starts remote device manager and scheduler.
+    remoteDeviceManager.start();
     scheduler.start();
+
+    logger.atInfo().log("ATS mode started, grpc_port=%s", grpcPort);
   }
 
   @Override

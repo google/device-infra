@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
@@ -50,6 +49,7 @@ import com.google.devtools.mobileharness.shared.version.proto.Version.VersionChe
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import io.grpc.netty.NettyServerBuilder;
 import java.util.concurrent.Executors;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -67,7 +67,6 @@ public class RemoteDeviceManagerTest {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
   @Bind @Mock private AbstractScheduler scheduler;
-  @Bind private ListeningExecutorService threadPool;
   @Bind private ListeningScheduledExecutorService scheduledThreadPool;
   @Bind private MasterGrpcStubHelper masterGrpcStubHelper;
 
@@ -77,14 +76,17 @@ public class RemoteDeviceManagerTest {
   @Before
   public void setUp() throws Exception {
     int grpcPort = PortProber.pickUnusedPort();
-    threadPool = MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
     scheduledThreadPool = MoreExecutors.listeningDecorator(Executors.newScheduledThreadPool(5));
     masterGrpcStubHelper =
         new MasterGrpcStubHelper(ChannelFactory.createLocalChannel(grpcPort, directExecutor()));
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
-    remoteDeviceManager.start(grpcPort);
+    NettyServerBuilder.forPort(grpcPort)
+        .addService(remoteDeviceManager.getLabSyncService())
+        .build()
+        .start();
+    remoteDeviceManager.start();
   }
 
   @Test
