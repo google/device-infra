@@ -569,6 +569,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidCrashMonitorDecorator");
     device.addSupportedDecorator("AndroidDeviceFeaturesCheckDecorator");
     device.addSupportedDecorator("AndroidDisableAppsDecorator");
+    device.addSupportedDecorator("AndroidDiskUsageMonitorDecorator");
     device.addSupportedDecorator("AndroidDumpSysDecorator");
     device.addSupportedDecorator("AndroidFilePullerDecorator");
     device.addSupportedDecorator("AndroidFilePusherDecorator");
