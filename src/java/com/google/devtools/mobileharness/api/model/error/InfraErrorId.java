@@ -313,6 +313,7 @@ public enum InfraErrorId implements ErrorId {
 
   // Config Pusher 52_601 ~ 52_700
   CONFIG_PUSHER_CL_NUMBER_NOT_MATCH(52_601, ErrorType.INFRA_ISSUE),
+  CONFIG_PUSHER_YAML_PARSE_ERROR(52_602, ErrorType.UNDETERMINED),
 
   // ID space here:52_701 ~ 60_000
   PLACE_HOLDER_TO_BE_RENAMED(60_000, ErrorType.UNDETERMINED);
