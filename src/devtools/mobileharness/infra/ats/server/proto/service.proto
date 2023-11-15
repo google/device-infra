@@ -1,0 +1,144 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.ats.server;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.google.devtools.mobileharness.infra.ats.server.proto";
+option java_outer_classname = "ServiceProto";
+
+// Test request sent to session service to start a test request.
+message NewMultiCommandRequest {
+  optional string user_id = 1;
+  repeated CommandInfo commands = 2;
+  optional google.protobuf.Duration queue_timeout = 3;
+  optional int64 max_retry_on_test_failures = 4;
+  optional int64 max_concurrent_tasks = 5;
+
+  optional TestEnvironment test_environment = 6;
+  repeated TestResource test_resources = 7;
+}
+
+// Command information of a test request.
+message CommandInfo {
+  optional string name = 1;
+  string command_line = 2;
+  optional int64 run_count = 3;
+  optional int64 shard_count = 4;
+
+  // Each entry correspond to a device. The most common key value pair is
+  // "serial" and "<serial_id>".
+  map<string, string> device_dimensions = 5;
+}
+
+message TestResource {
+  optional string url = 1;
+  optional string name = 2;
+  optional string path = 3;
+  optional bool decompress = 4;
+  optional string decompress_dir = 5;
+  optional bool mount_zip = 6;
+  optional TestResourceParameters params = 7;
+}
+
+message TestResourceParameters {
+  repeated string decompress_files = 1;
+}
+
+message TestEnvironment {
+  map<string, string> env_vars = 1;
+  repeated string setup_scripts = 2;
+  repeated string otuput_file_patterns = 3;
+  optional string output_file_upload_url = 4;
+  optional bool use_subprocess_reporting = 5;
+  optional google.protobuf.Duration invocation_timeout = 6;
+  optional google.protobuf.Duration output_idle_timeout = 7;
+  repeated string jvm_options = 8;
+  map<string, string> java_properties = 9;
+  optional string context_file_pattern = 10;
+  repeated string extra_context_files = 11;
+  optional string retry_command_line = 12;
+
+  enum LogLevel {
+    UNKNOWN = 0;
+    VERBOSE = 1;
+    DEBUG = 2;
+    INFO = 3;
+    WARNING = 4;
+    ERROR = 5;
+  }
+
+  optional LogLevel log_level = 13;
+}
+
+// Command detail returned by session service.
+message CommandDetail {
+  string id = 1;
+  string request_id = 2;
+  string command_line = 3;
+}
+
+message CommandAttemptDetail {
+  string id = 1;
+  string request_id = 2;
+  string command_id = 3;
+  string task_id = 4;
+
+  optional string host_name = 5;
+  optional string device_serial = 6;
+  optional google.protobuf.Timestamp start_time = 7;
+  optional google.protobuf.Timestamp end_time = 8;
+  optional google.protobuf.Timestamp create_time = 9;
+  optional google.protobuf.Timestamp update_time = 10;
+}
+
+// Request detail returned by session service.
+message RequestDetail {
+  string id = 1;
+  string user = 2;
+  repeated CommandInfo command_infos = 3;
+  optional int64 priority = 4;
+  optional google.protobuf.Duration queue_timeout = 5;
+  optional int64 max_retry_on_test_failures = 6;
+  optional int64 max_concurrent_tasks = 7;
+
+  enum RequestState {
+    UNKNOWN = 0;  // Pending (Scheduling)
+    QUEUED = 1;
+    RUNNING = 2;
+    CANCELED = 3;
+    COMPLETED = 4;
+    ERROR = 5;
+  }
+
+  optional RequestState state = 8;
+  optional google.protobuf.Timestamp start_time = 9;
+  optional google.protobuf.Timestamp end_time = 10;
+  optional google.protobuf.Timestamp create_time = 11;
+  optional google.protobuf.Timestamp update_time = 12;
+  optional string api_module_version = 13;
+  repeated CommandDetail command_details = 14;
+  repeated CommandAttemptDetail command_attempt_details = 15;
+
+  optional string cluster = 16;
+  optional string run_target = 17;
+  optional int64 run_count = 18;
+  optional int64 shard_count = 19;
+}
