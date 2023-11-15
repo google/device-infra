@@ -44,9 +44,11 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandHistorySaver;
+import com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader.MctsDynamicDownloadPlugin;
 import com.google.devtools.mobileharness.platform.testbed.adhoc.controller.AdhocTestbedDriverFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.SubTask;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -123,7 +125,10 @@ public class LocalTestFlow {
     this.testThreadPool = threadPool;
     this.driverFactory = driverFactory;
     this.adhocTestbedDriverFactory = adhocTestbedDriverFactory;
-    this.builtinPlugins = ImmutableList.of(new TestCommandHistorySaver());
+    this.builtinPlugins =
+        isXtsDynamicDownloaderEnabled()
+            ? ImmutableList.of(new TestCommandHistorySaver(), new MctsDynamicDownloadPlugin())
+            : ImmutableList.of(new TestCommandHistorySaver());
     this.pluginLoaderFactory = new CommonPluginLoaderFactory();
     this.testFlowConverter = testFlowConverter;
   }
@@ -675,5 +680,10 @@ public class LocalTestFlow {
       }
     }
     return dimensionValuesByKey;
+  }
+
+  /** Returns {@code true} if xts dynamic downloader is enabled. */
+  private static boolean isXtsDynamicDownloaderEnabled() {
+    return Flags.instance().enableXtsDynamicDownloader.get();
   }
 }
