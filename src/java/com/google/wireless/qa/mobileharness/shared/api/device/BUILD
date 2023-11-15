@@ -13,11 +13,13 @@
 # limitations under the License.
 #
 
+DEFAULT_VISIBILITY = [
+    "//:deviceinfra_all_pkg",
+]
+
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    default_visibility = DEFAULT_VISIBILITY,
 )
 
 ################################################################################
@@ -72,6 +74,7 @@ java_library(
 java_library(
     name = "device",
     srcs = ["Device.java"],
+    visibility = DEFAULT_VISIBILITY + ["//devtools/mobileharness/project:android_tv_team"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
