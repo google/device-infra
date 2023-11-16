@@ -116,14 +116,23 @@ public class AndroidRealDeviceConstants {
   /** The disk free percentage threshold of disk alert. */
   public static final double DISK_ALERT_FREE_PERCENTAGE = 0.1;
 
+  /** The features used for check gmscore compatibility. */
+  public static final ImmutableList<String> GMSCORE_FEATURES_PATTERNS =
+      ImmutableList.of(
+          "android\\.hardware\\.type\\.watch",
+          "android\\.software\\.leanback",
+          "android\\.hardware\\.type\\.automotive",
+          "android\\.hardware\\.ram\\.low",
+          "com\\.google\\.android\\.play\\.feature\\.HPE_EXPERIENCE",
+          "android\\.software\\.xr\\.immersive");
+
   /** The keywords whitelist of features on device. Could be extended. */
   public static final ImmutableList<String> FEATURES_KEYWORDS =
-      ImmutableList.of(
-          "PIXEL_EXPERIENCE",
-          "android\\.hardware\\.nfc$",
-          "android\\.hardware\\.ram\\.low",
-          "android\\.hardware\\.type\\.watch",
-          "android\\.software\\.leanback");
+      ImmutableList.<String>builder()
+          .addAll(GMSCORE_FEATURES_PATTERNS)
+          .add("PIXEL_EXPERIENCE")
+          .add("android\\.hardware\\.nfc$")
+          .build();
 
   /** The free external storage space threshold of alert. */
   public static final int FREE_EXTERNAL_STORAGE_ALERT_MB = 200;
