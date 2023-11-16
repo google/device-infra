@@ -160,8 +160,8 @@ java_library(
     srcs = ["MoblyAospPackageTestValidator.java"],
     deps = [
         ":base_validator",
-        "//src/java/com/google/devtools/atsconsole/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_package_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",

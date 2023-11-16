@@ -1,0 +1,133 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.ats.console.controller;
+
+import "google/protobuf/timestamp.proto";
+
+option java_package = "com.google.devtools.mobileharness.infra.ats.console.controller.proto";
+option java_outer_classname = "SessionPluginProto";
+
+message AtsSessionPluginConfig {
+  oneof command {
+    RunCommand run_command = 1;
+    ListCommand list_command = 2;
+    DumpCommand dump_command = 3;
+  }
+}
+
+message AtsSessionPluginOutput {
+  oneof result {
+    Success success = 1;
+
+    Failure failure = 2;
+  }
+
+  message Success {
+    // Required.
+    string output_message = 1;
+  }
+
+  message Failure {
+    // Required.
+    string error_message = 1;
+  }
+
+  // Optional.
+  RunCommandState run_command_state = 3;
+}
+
+message RunCommand {
+  // Required.
+  //
+  // Example: "cts".
+  string test_plan = 1;
+
+  // Required.
+  string xts_root_dir = 2;
+
+  // Optional.
+  repeated string device_serial = 3;
+
+  // Optional.
+  repeated string module_name = 4;
+
+  // Optional.
+  optional int32 shard_count = 5;
+
+  // Optional.
+  repeated string extra_arg = 6;
+
+  // Required for XtsTradefedTest
+  XtsType xts_type = 7;
+
+  // Optional.
+  optional string python_pkg_index_url = 8;
+}
+
+message RunCommandState {
+  // Required.
+  string command_id = 1;
+
+  // Required.
+  google.protobuf.Timestamp start_time = 2;
+
+  // Required.
+  repeated string device_id = 3;
+
+  // Required.
+  //
+  // Example: "running cts on build(s) 'DeviceBuildInfo{bid=123, serial=12345}'"
+  string state_summary = 4;
+}
+
+message ListCommand {
+  oneof command {
+    ListDevicesCommand list_devices_command = 1;
+    ListModulesCommand list_modules_command = 2;
+  }
+}
+
+message ListDevicesCommand {
+  // Whether to list all devices including placeholders.
+  bool list_all_devices = 1;
+}
+
+message ListModulesCommand {
+  // Required.
+  string xts_root_dir = 1;
+}
+
+message DumpCommand {
+  oneof command {
+    DumpStackTraceCommand dump_stack_trace_command = 1;
+    DumpEnvVarCommand dump_env_var_command = 2;
+    DumpUptimeCommand dump_uptime_command = 3;
+  }
+}
+
+message DumpStackTraceCommand {}
+
+message DumpEnvVarCommand {}
+
+message DumpUptimeCommand {}
+
+enum XtsType {
+  XTS_TYPE_UNSPECIFIED = 0;
+  CTS = 1;
+}

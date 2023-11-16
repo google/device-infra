@@ -18,8 +18,8 @@ package com.google.wireless.qa.mobileharness.shared.api.validator;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
-import com.google.devtools.atsconsole.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.wireless.qa.mobileharness.shared.api.driver.MoblyAospPackageTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.ArrayList;

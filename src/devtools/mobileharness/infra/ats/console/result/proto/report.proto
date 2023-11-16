@@ -1,0 +1,170 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.ats.console.result;
+
+option java_package = "com.google.devtools.mobileharness.infra.ats.console.result.proto";
+option java_outer_classname = "ReportProto";
+
+// Stores info for the <Result> element in the compatibility report.
+message Result {
+  // Required. The child element <Build> in the <Result> element.
+  BuildInfo build = 1;
+  // The child element <RunHistory> in the <Result> element.
+  optional RunHistory run_history = 2;
+  // Required. The child element <Summary> in the <Result> element.
+  Summary summary = 3;
+  // List of the child elements <Module> in the <Result> element.
+  repeated Module module_info = 4;
+  // Extra attributes in the <Result> element.
+  repeated Attribute attribute = 5;
+}
+
+// Stores info for the <Build> element in the compatibility report.
+message BuildInfo {
+  string build_fingerprint = 1;
+  // Attributes in the <Build> element.
+  repeated Attribute attribute = 2;
+}
+
+// Stores info for the <RunHistory> element in the <Result> element
+message RunHistory {
+  // List of the child elements <Run> in the <RunHistory> element.
+  repeated Run run = 1;
+}
+
+// Stores info for the <Run> element in the <RunHistory> element
+message Run {
+  optional int64 start_time_millis = 1;
+  optional int64 end_time_millis = 2;
+  optional int64 passed_tests = 3;
+  optional int64 failed_tests = 4;
+  optional string command_line_args = 5;
+  optional string host_name = 6;
+}
+
+// Stores info for the <Summary> element in the <Result> element.
+message Summary {
+  optional int64 passed = 1;
+  optional int64 failed = 2;
+  optional int32 modules_done = 3;
+  optional int32 modules_total = 4;
+}
+
+// Stores info for the <Module> element in the <Result> element.
+message Module {
+  // Required. Name of the module.
+  string name = 1;
+  // Optional. Device ABI.
+  optional string abi = 2;
+  // Optional. Time spent on running the module. Epoch milliseconds.
+  optional int64 runtime_millis = 3;
+  // Optional. Whether the module finishes without interruption.
+  optional bool done = 4;
+  // Optional. Number of passed tests in the module.
+  optional int32 passed = 5;
+  // Optional. Number of total tests in the module.
+  optional int32 total_tests = 6;
+  // Optional. The module not done reason.
+  optional Reason reason = 7;
+  // List of detailed info for the executed test classes in the module.
+  repeated TestCase test_case = 8;
+}
+
+// Stores the info for the module not done reason
+message Reason {
+  // Required.
+  string msg = 1;
+  // Error name.
+  optional string error_name = 2;
+  // Error code.
+  optional string error_code = 3;
+}
+
+// Stores the info for <TestCase> element in the <Module> element. It maps to
+// test class level.
+message TestCase {
+  // Required. Name of the test case. It's the test class name.
+  string name = 1;
+  // List of test elements belong to the test class.
+  repeated Test test = 2;
+}
+
+// Stores info for the <Test> element in the <TestCase> element.
+message Test {
+  // Required. Test result.
+  string result = 1;
+  // Required. Name of the test. It's the test method name in the test class.
+  string name = 2;
+  // Full name of the test, prepended with the test class name.
+  optional string full_name = 3;
+  // Whether the test is skipped.
+  optional bool skipped = 4;
+  // Test failure info.
+  optional TestFailure failure = 5;
+  // Logged file for the bug report for this test.
+  optional LoggedFile bug_report = 6;
+  // Logged file for the device logcat for this test.
+  optional LoggedFile logcat = 7;
+  // List of logged files for the screenshot for this test.
+  repeated LoggedFile screenshot = 8;
+  // List of test metrics.
+  repeated Metric metric = 9;
+}
+
+// Stores the info for the <Failure> element in the <Test> element.
+message TestFailure {
+  // Required.
+  string msg = 1;
+  // Error name.
+  optional string error_name = 2;
+  // Error code.
+  optional string error_code = 3;
+  // Failure stack trace.
+  optional StackTrace stack_trace = 4;
+}
+
+// Stores the info for the <StackTrace> element in the <Failure> element.
+message StackTrace {
+  string content = 1;
+}
+
+// Stores the info for the <BugReport>, <Logcat>, <Screenshot> elements in the
+// <Test> element.
+// BugReport, Logcat, Screenshot(PNG, JPEG)
+message LoggedFile {
+  string file_name = 1;
+  string content = 2;
+}
+
+// Stores the info for the <Metric> element in the <Test> element.
+message Metric {
+  string key = 1;
+  string content = 2;
+}
+
+message Attribute {
+  // Required.
+  string key = 1;
+  // Optional.
+  optional string value = 2;
+}
+
+message AttributeList {
+  repeated Attribute attribute = 1;
+}

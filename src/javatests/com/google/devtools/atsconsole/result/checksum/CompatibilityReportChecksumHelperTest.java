@@ -18,11 +18,11 @@ package com.google.devtools.atsconsole.result.checksum;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.devtools.atsconsole.result.proto.ReportProto.Module;
-import com.google.devtools.atsconsole.result.proto.ReportProto.Result;
-import com.google.devtools.atsconsole.result.proto.ReportProto.StackTrace;
-import com.google.devtools.atsconsole.result.proto.ReportProto.TestCase;
-import com.google.devtools.atsconsole.result.proto.ReportProto.TestFailure;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.StackTrace;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -47,7 +47,8 @@ public final class CompatibilityReportChecksumHelperTest {
               TestCase.newBuilder()
                   .setName("android.cts.Dummy1Test")
                   .addTest(
-                      com.google.devtools.atsconsole.result.proto.ReportProto.Test.newBuilder()
+                      com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                          .Test.newBuilder()
                           .setResult("fail")
                           .setName("testMethod1")
                           .setFailure(
@@ -56,18 +57,21 @@ public final class CompatibilityReportChecksumHelperTest {
                                       StackTrace.newBuilder()
                                           .setContent("Test error stack trace."))))
                   .addTest(
-                      com.google.devtools.atsconsole.result.proto.ReportProto.Test.newBuilder()
+                      com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                          .Test.newBuilder()
                           .setResult("pass")
                           .setName("testMethod2")))
           .addTestCase(
               TestCase.newBuilder()
                   .setName("android.cts.Dummy2Test")
                   .addTest(
-                      com.google.devtools.atsconsole.result.proto.ReportProto.Test.newBuilder()
+                      com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                          .Test.newBuilder()
                           .setResult("pass")
                           .setName("testMethod1"))
                   .addTest(
-                      com.google.devtools.atsconsole.result.proto.ReportProto.Test.newBuilder()
+                      com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                          .Test.newBuilder()
                           .setResult("pass")
                           .setName("testMethod2")))
           .build();
@@ -81,14 +85,16 @@ public final class CompatibilityReportChecksumHelperTest {
               TestCase.newBuilder()
                   .setName("android.cts.Hello1Test")
                   .addTest(
-                      com.google.devtools.atsconsole.result.proto.ReportProto.Test.newBuilder()
+                      com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                          .Test.newBuilder()
                           .setResult("pass")
                           .setName("testMethod1")))
           .addTestCase(
               TestCase.newBuilder()
                   .setName("android.cts.Hello2Test")
                   .addTest(
-                      com.google.devtools.atsconsole.result.proto.ReportProto.Test.newBuilder()
+                      com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto
+                          .Test.newBuilder()
                           .setResult("pass")
                           .setName("testMethod1")))
           .build();
@@ -124,7 +130,7 @@ public final class CompatibilityReportChecksumHelperTest {
 
     // Checks tests in MODULE1
     for (TestCase testCase : MODULE1.getTestCaseList()) {
-      for (com.google.devtools.atsconsole.result.proto.ReportProto.Test test :
+      for (com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test test :
           testCase.getTestList()) {
         assertThat(checksumHelper.containsTestResult(MODULE1, testCase, test, BUILD_FINGERPRINT))
             .isTrue();
@@ -133,7 +139,7 @@ public final class CompatibilityReportChecksumHelperTest {
 
     // Checks tests in MODULE2
     for (TestCase testCase : MODULE2.getTestCaseList()) {
-      for (com.google.devtools.atsconsole.result.proto.ReportProto.Test test :
+      for (com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test test :
           testCase.getTestList()) {
         assertThat(checksumHelper.containsTestResult(MODULE2, testCase, test, BUILD_FINGERPRINT))
             .isTrue();

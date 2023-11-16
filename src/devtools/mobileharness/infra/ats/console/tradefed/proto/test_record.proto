@@ -1,0 +1,152 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package android_test_record;
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/infra/ats/console/tradefed/proto/metric_measurement.proto";
+
+option java_package = "com.android.tradefed.result.proto";
+option java_outer_classname = "TestRecordProto";
+
+// A record containing the status, logs, and other information associated with a
+// particular test execution.
+message TestRecord {
+  // The UUID of this TestRecord.
+  string test_record_id = 1;
+
+  // The UUID of this TestRecord's parent. Unset if this is a top-level record.
+  string parent_test_record_id = 2;
+
+  // References to any finer-grained TestRecords that were generated as part of
+  // this test.
+  repeated ChildReference children = 3;
+
+  // The number of children this TestRecord was expected to have. Unset if not
+  // known in advance.
+  int64 num_expected_children = 4;
+
+  // The result status (Pass, Fail, etc) of this test unit.
+  TestStatus status = 5;
+
+  // Extra debugging information.
+  DebugInfo debug_info = 6;
+
+  // The time at which this test started executing.
+  google.protobuf.Timestamp start_time = 7;
+
+  // The time at which this test finished executing.
+  google.protobuf.Timestamp end_time = 8;
+
+  // Any artifact files associated with this test.
+  map<string, google.protobuf.Any> artifacts = 9;
+
+  // Any metrics or measurements associated with this test.
+  map<string, tradefed.metric.Metric> metrics = 10;
+
+  // Metadata describing the test that was run.
+  google.protobuf.Any description = 11;
+
+  // The attempt number of a target if the target ran several times. First
+  // attempt is 0 (Default value).
+  int64 attempt_id = 12;
+}
+
+// A reference to a finer-grained TestRecord.
+message ChildReference {
+  oneof reference {
+    // The UUID of the TestRecord.
+    string test_record_id = 1;
+
+    // An inlined TestRecord.
+    TestRecord inline_test_record = 2;
+  }
+}
+
+// The overall pass / fail status for a particular TestRecord.
+enum TestStatus {
+  UNKNOWN = 0;
+  PASS = 1;
+  FAIL = 2;
+  IGNORED = 3;
+  ASSUMPTION_FAILURE = 4;
+}
+
+// Associated debugging information to accompany a TestStatus.
+message DebugInfo {
+  // An error message.
+  string error_message = 1;
+
+  // A stacktrace.
+  string trace = 2;
+
+  // A more detailed failure status description.
+  FailureStatus failure_status = 3;
+
+  // Optional context to the failure
+  DebugInfoContext debug_info_context = 4;
+}
+
+// A Fail TestStatus can be associated with a more granular failure status that
+// helps understanding the context.
+enum FailureStatus {
+  UNSET = 0;
+  // The test in progress was the reason for the failure.
+  TEST_FAILURE = 1;
+  // A timeout condition on the operation in progress occurred.
+  TIMED_OUT = 2;
+  // The test in progress was cancelled.
+  CANCELLED = 3;
+  // A failure attributed to something not functioning properly.
+  INFRA_FAILURE = 10;
+  // System under test crashed and caused the test to fail.
+  SYSTEM_UNDER_TEST_CRASHED = 20;
+  // The test was expected to run but did not.
+  NOT_EXECUTED = 30;
+  // System under test became unavailable and never came back available again.
+  LOST_SYSTEM_UNDER_TEST = 35;
+  // Represent an error caused by an unmet dependency that the current infra
+  // depends on. For example: Unfound resources, Device error, Hardware issue
+  // (lab host, device wear), Underlying tools
+  DEPENDENCY_ISSUE = 40;
+  // Represent an error caused by the input from the end user. For example:
+  // Unexpected option combination, Configuration error, Bad flags
+  CUSTOMER_ISSUE = 41;
+}
+
+// A context to DebugInfo that allows to optionally specify some debugging
+// context.
+message DebugInfoContext {
+  // Category of the action that was in progress during the failure
+  string action_in_progress = 1;
+
+  // A free-formed text that can help debugging the issue at hand.
+  string debug_help_message = 10;
+
+  // The fully-qualified name of the exception class associated with the error.
+  string error_type = 20;
+
+  // Error Identifiers
+  // The name identifying the error
+  string error_name = 30;
+  // The class that raised the error
+  string origin = 31;
+  // The error code associated with the error_name
+  int64 error_code = 32;
+}

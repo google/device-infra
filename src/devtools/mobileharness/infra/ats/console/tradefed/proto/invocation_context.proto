@@ -1,0 +1,40 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package tradefed.invoker;
+
+import public "src/devtools/mobileharness/infra/ats/console/tradefed/proto/build_info.proto";
+import public "src/devtools/mobileharness/infra/ats/console/tradefed/proto/configuration_description.proto";
+
+option java_package = "com.android.tradefed.invoker.proto";
+option java_outer_classname = "InvocationContext";
+
+// Representation of a Tradefed Invocation Context in proto.
+message Context {
+  // The invocation test tag to identify it.
+  string test_tag = 1;
+  // Map of the configured device name to the build info associated. The device
+  // name can be found in the Tradefed configuration xml of the test.
+  map<string, tradefed.build.BuildInfo> name_build_info = 2;
+  // A list of Metadata representing the invocation attributes
+  repeated tradefed.config.Metadata metadata = 3;
+  // The configuration description associated with the test configuration.
+  tradefed.config.Descriptor configuration_description = 4;
+  // Optional, a context under the invocation representing a module.
+  Context module_context = 5;
+}

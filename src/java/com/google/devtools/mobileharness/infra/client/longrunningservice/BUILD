@@ -19,7 +19,7 @@ java_library(
     name = "annotations",
     srcs = ["Annotations.java"],
     visibility = [
-        "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__subpackages__",
     ],
@@ -32,7 +32,7 @@ java_library(
     name = "olc_server",
     srcs = ["OlcServer.java"],
     visibility = [
-        "//src/java/com/google/devtools/atsconsole/controller:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
     deps = [

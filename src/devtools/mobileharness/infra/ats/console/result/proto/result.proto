@@ -1,0 +1,103 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.ats.console.result;
+
+option java_package = "com.google.devtools.mobileharness.infra.ats.console.result.proto";
+option java_outer_classname = "ResultProto";
+
+// Data class for <Result> element in the CTS test result xml file.
+message ResultElement {
+  // Required. The child element <Build> in the <Result> element.
+  BuildElement build_element = 1;
+  // Required. The child element <Summary> in the <Result> element.
+  SummaryElement summary_element = 2;
+  // List of the child elements <Module> in the <Result> element.
+  repeated ModuleElement module_element = 3;
+  // Attributes in the <Result> element.
+  repeated ElementAttribute attribute = 4;
+}
+
+// Data class for <Build> element in the CTS test result xml file.
+message BuildElement {
+  // Attributes in the <Build> element.
+  repeated ElementAttribute attribute = 1;
+}
+
+// Data class for <Summary> element in the CTS test result xml file.
+message SummaryElement {
+  // Attributes in the <Summary> element.
+  repeated ElementAttribute attribute = 1;
+}
+
+//  Data class for <Module> element in the CTS test result xml file.
+message ModuleElement {
+  // Required. Name of the module. It's the name of the Mobly executable.
+  string name = 1;
+  // Optional. Device ABI.
+  optional string abi = 2;
+  // Optional. Time spent on running the Mobly executable. Epoch milliseconds.
+  optional int64 runtime_millis = 3;
+  // Optional. Whether the Mobly executable finishes without interruption.
+  optional bool done = 4;
+  // Optional. Number of passed tests in the executed Mobly executable.
+  optional int32 passed = 5;
+  // Optional. Number of failed tests in the executed Mobly executable.
+  optional int32 failed = 6;
+  // Optional. Number of total tests in the executed Mobly executable.
+  optional int32 total_tests = 7;
+  // List of detailed info for the executed test classes in the Mobly
+  // executable.
+  repeated TestCaseElement test_case = 8;
+}
+
+// Data class for <TestCase> element in the CTS test result xml file. It maps to
+// test class level.
+message TestCaseElement {
+  // Required. Name of the test case. It's the test class name.
+  string name = 1;
+  // List of test elements belong to the test class.
+  repeated TestElement test = 2;
+}
+
+// Data class for <Test> element in the CTS test result xml file.
+message TestElement {
+  // Required. Test result.
+  MoblyResult result = 1;
+  // Required. Name of the test. It's the test method name in the test class.
+  string name = 2;
+  // Required. Full name of the test, prepended with the test class name.
+  string full_name = 3;
+}
+
+message ElementAttribute {
+  // Required.
+  string key = 1;
+  // Optional.
+  string value = 2;
+}
+
+// Enum of all the possible Mobly results.
+enum MoblyResult {
+  MOBLYRESULT_UNSPECIFIED = 0;
+  PASS = 1;
+  FAIL = 2;
+  ERROR = 3;
+  SKIP = 4;
+  NULL = 5;
+}

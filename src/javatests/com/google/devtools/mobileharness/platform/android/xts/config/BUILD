@@ -18,7 +18,7 @@ load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suite
 filegroup(
     name = "testdata",
     srcs = glob(["testdata/**/*"]),
-    visibility = ["//src/javatests/com/google/devtools/atsconsole:__subpackages__"],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__"],
 )
 
 java_library(

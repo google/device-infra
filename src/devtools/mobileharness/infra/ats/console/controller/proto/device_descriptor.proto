@@ -1,0 +1,44 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.ats.console.controller;
+
+option java_package = "com.google.devtools.mobileharness.infra.ats.console.controller.proto";
+option java_outer_classname = "DeviceDescriptorProto";
+
+// See com.android.tradefed.command.remote.DeviceDescriptor.
+message DeviceDescriptor {
+  string serial = 1;
+  // Optional.
+  string display_serial = 2;
+  // com.android.ddmlib.IDevice.DeviceState.toString():
+  // BOOTLOADER/FASTBOOTD/OFFLINE/ONLINE/RECOVERY/SIDELOAD/UNAUTHORIZED/DISCONNECTED
+  string device_state = 3;
+  // com.android.tradefed.device.DeviceAllocationState.toString():
+  // Unknown/Ignored/Available/Unavailable/Allocated/Checking_Availability
+  string allocation_state = 4;
+  string product = 5;
+  string product_variant = 6;
+  string build_id = 7;
+  string battery_level = 8;
+  string device_class = 9;
+  // com.android.tradefed.device.TestDeviceState.toString():
+  // FASTBOOT/FASTBOOTD/ONLINE/RECOVERY/SIDELOAD/NOT_AVAILABLE
+  string test_device_state = 10;
+  bool is_stub_device = 11;
+}

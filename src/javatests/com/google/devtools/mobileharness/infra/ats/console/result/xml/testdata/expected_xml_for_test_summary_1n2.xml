@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no' ?>
+<Result result_attr1="result_attr1_value" result_attr2="result_attr2_value">
+  <Build build_attr1="build_attr1_value" build_attr2="build_attr2_value" />
+  <Summary pass="5" failed="1" modules_done="2" modules_total="2" />
+  <Module name="mobly_test_module_1" runtime="12099" done="true" pass="4" total_tests="4">
+    <TestCase name="HelloWorldTest1">
+      <Test result="pass" name="HelloWorldTest1.test_hello_world1_1" />
+      <Test result="pass" name="HelloWorldTest1.test_hello_world1_2" />
+    </TestCase>
+    <TestCase name="HelloWorldTest2">
+      <Test result="pass" name="HelloWorldTest2.test_hello_world2_1" />
+      <Test result="pass" name="HelloWorldTest2.test_hello_world2_2" />
+    </TestCase>
+  </Module>
+  <Module name="mobly_test_module_2" runtime="6053" done="true" pass="1" total_tests="2">
+    <TestCase name="HelloWorldTest3">
+      <Test result="fail" name="HelloWorldTest3.test_hello_world3_1" />
+      <Test result="pass" name="HelloWorldTest3.test_hello_world3_2" />
+    </TestCase>
+  </Module>
+</Result>

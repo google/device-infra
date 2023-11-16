@@ -98,7 +98,7 @@ java_library(
     name = "android_real_device_constants",
     srcs = ["AndroidRealDeviceConstants.java"],
     visibility = [
-        "//src/java/com/google/devtools/atsconsole/controller/sessionplugin:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__subpackages__",
     ],
     deps = [

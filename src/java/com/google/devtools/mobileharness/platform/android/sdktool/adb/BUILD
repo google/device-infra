@@ -39,10 +39,10 @@ java_library(
         "RebootMode.java",
     ],
     visibility = DEFAULT_VISIBILITY + [
-        "//src/java/com/google/devtools/atsconsole:__subpackages__",
         "//src/java/com/google/devtools/deviceaction:__subpackages__",
-        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/javatests/com/google/devtools/deviceaction:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
@@ -70,12 +70,12 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_devicemanagement_pkg",
-        "//src/java/com/google/devtools/atsconsole:__subpackages__",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
-        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/sdktool/adb:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
     ],
@@ -104,8 +104,8 @@ java_library(
         "WaitArgs.java",
     ],
     visibility = DEFAULT_VISIBILITY + [
-        "//src/java/com/google/devtools/atsconsole:__subpackages__",
-        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
     ],
     deps = [
         ":adb_internal_util",

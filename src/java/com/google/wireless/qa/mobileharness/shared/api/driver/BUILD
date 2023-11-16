@@ -76,10 +76,10 @@ java_library(
     srcs = ["MoblyAospPackageTest.java"],
     deps = [
         ":mobly_generic_test",
-        "//src/java/com/google/devtools/atsconsole/result/report:certification_suite_info",
-        "//src/java/com/google/devtools/atsconsole/result/report:certification_suite_info_factory",
-        "//src/java/com/google/devtools/atsconsole/result/report:mobly_report_helper",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_helper",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:install_mobly_test_deps_args",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_aosp_test_setup_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",

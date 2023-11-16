@@ -16,8 +16,8 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/devtools/atsconsole/controller:__subpackages__",
-        "//src/javatests/com/google/devtools/atsconsole/controller:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
 )
@@ -26,9 +26,9 @@ java_library(
     name = "control_stub",
     srcs = ["ControlStub.java"],
     visibility = [
-        "//src/java/com/google/devtools/atsconsole/command:__pkg__",
-        "//src/java/com/google/devtools/atsconsole/controller:__subpackages__",
-        "//src/javatests/com/google/devtools/atsconsole/controller:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
     deps = [

@@ -1,0 +1,6 @@
+TestBeds:
+  - Name: SampleTestBed
+    Controllers:
+        AndroidDevice:
+          - serial: xyz
+            label: target

@@ -18,9 +18,9 @@ load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/devtools/atsconsole:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/message:__subpackages__",
     ],
@@ -53,7 +53,7 @@ proto_library(
 java_proto_library(
     name = "log_java_proto",
     visibility = [
-        "//src/java/com/google/devtools/atsconsole:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
@@ -103,9 +103,9 @@ proto_library(
 java_proto_library(
     name = "version_service_java_proto",
     visibility = [
-        "//src/java/com/google/devtools/atsconsole:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-        "//src/javatests/com/google/devtools/atsconsole:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/message:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/lab:__pkg__",

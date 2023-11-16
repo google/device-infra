@@ -22,7 +22,7 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
-        "//src/devtools/atsconsole/result/proto:report_java_proto",
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/atsconsole/result/checksum:compatibility_report_checksum_helper",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:junit_junit",

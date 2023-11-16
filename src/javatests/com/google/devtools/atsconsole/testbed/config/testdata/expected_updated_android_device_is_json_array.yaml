@@ -1,5 +1,0 @@
-TestBeds:
-- Name: SampleTestBed
-  Controllers:
-    AndroidDevice:
-    - {serial: 11191FDD4002M4, label: target}
