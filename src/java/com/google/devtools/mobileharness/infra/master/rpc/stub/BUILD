@@ -35,7 +35,7 @@ java_library(
     srcs = ["DebugStub.java"],
     deps = [
         "//src/devtools/mobileharness/infra/master/rpc/proto:debug_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/model/error:rpc_exception",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
     ],
 )
 

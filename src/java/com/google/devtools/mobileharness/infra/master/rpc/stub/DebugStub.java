@@ -16,18 +16,18 @@
 
 package com.google.devtools.mobileharness.infra.master.rpc.stub;
 
+import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DebugServiceProto.GetConfigRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DebugServiceProto.GetConfigResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DebugServiceProto.RecycleExpiredLabsRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DebugServiceProto.RecycleExpiredLabsResponse;
-import com.google.devtools.mobileharness.shared.model.error.MobileHarnessRpcException;
 
 /** RPC stub for talking to Master DebugService. */
 public interface DebugStub extends AutoCloseable {
   /** Force recycles the expired labs and devices. */
   RecycleExpiredLabsResponse recycleExpiredLabs(RecycleExpiredLabsRequest request)
-      throws MobileHarnessRpcException;
+      throws RpcExceptionWithErrorId;
 
   /** Gets the Master internal config. */
-  GetConfigResponse getConfig(GetConfigRequest request) throws MobileHarnessRpcException;
+  GetConfigResponse getConfig(GetConfigRequest request) throws RpcExceptionWithErrorId;
 }
