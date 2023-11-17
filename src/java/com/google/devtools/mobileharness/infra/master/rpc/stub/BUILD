@@ -44,7 +44,7 @@ java_library(
     srcs = ["DeviceAllocationStub.java"],
     deps = [
         "//src/devtools/mobileharness/infra/master/rpc/proto:device_allocation_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
         "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
@@ -54,7 +54,7 @@ java_library(
     srcs = ["DeviceInfoStub.java"],
     deps = [
         "//src/devtools/mobileharness/infra/master/rpc/proto:device_info_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
     ],
 )
 

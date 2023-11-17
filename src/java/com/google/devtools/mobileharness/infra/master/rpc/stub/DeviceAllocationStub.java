@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.master.rpc.stub;
 
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceAllocationServiceProto.AllocationRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceAllocationServiceProto.AllocationResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceAllocationServiceProto.DeallocationRequest;
@@ -27,12 +27,12 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 /** RPC stub for talking to Master DeviceAllocationService. */
 public interface DeviceAllocationStub extends AutoCloseable {
   /** Allocates devices. */
-  AllocationResponse allocate(AllocationRequest request) throws MobileHarnessException;
+  AllocationResponse allocate(AllocationRequest request) throws RpcExceptionWithErrorId;
 
   /** Deallocates devices. */
   @CanIgnoreReturnValue
-  DeallocationResponse deallocate(DeallocationRequest request) throws MobileHarnessException;
+  DeallocationResponse deallocate(DeallocationRequest request) throws RpcExceptionWithErrorId;
 
   /** Gets the available devices. */
-  GetAvailableDevicesResponse getAvailableDevices() throws MobileHarnessException;
+  GetAvailableDevicesResponse getAvailableDevices() throws RpcExceptionWithErrorId;
 }

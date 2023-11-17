@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.master.rpc.stub;
 
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceInfoServiceProto.GetDeviceSummariesRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.DeviceInfoServiceProto.GetDeviceSummariesResponse;
 
@@ -25,5 +25,5 @@ public interface DeviceInfoStub {
 
   /** Gets the summaries of all devices. */
   GetDeviceSummariesResponse getDeviceSummaries(GetDeviceSummariesRequest request)
-      throws MobileHarnessException;
+      throws RpcExceptionWithErrorId;
 }
