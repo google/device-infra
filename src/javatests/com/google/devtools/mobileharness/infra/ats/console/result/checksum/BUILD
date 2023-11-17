@@ -13,16 +13,26 @@
 # limitations under the License.
 #
 
+load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
+
+package(default_applicable_licenses = ["//:license"])
+
 java_library(
-    name = "compatibility_report_checksum_helper",
-    srcs = ["CompatibilityReportChecksumHelper.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
-        "//src/javatests/com/google/devtools/atsconsole/result/checksum:__pkg__",
-    ],
+    name = "checksum",
+    testonly = 1,
+    srcs = glob(["*.java"]),
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/checksum:compatibility_report_checksum_helper",
+        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "@maven//:junit_junit",
     ],
+)
+
+junit_test_suites(
+    name = "tests",
+    sizes = [
+        "small",
+    ],
+    deps = [":checksum"],
 )

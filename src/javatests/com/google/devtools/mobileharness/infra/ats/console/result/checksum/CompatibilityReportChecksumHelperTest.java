@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.atsconsole.result.checksum;
+package com.google.devtools.mobileharness.infra.ats.console.result.checksum;
 
 import static com.google.common.truth.Truth.assertThat;
 

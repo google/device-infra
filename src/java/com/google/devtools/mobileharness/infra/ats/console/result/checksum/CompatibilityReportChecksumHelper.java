@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.atsconsole.result.checksum;
+package com.google.devtools.mobileharness.infra.ats.console.result.checksum;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.hash.BloomFilter;
