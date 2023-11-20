@@ -16,7 +16,6 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/javatests/com/google/devtools/deviceaction:deviceaction_javatests_pkg",
     ],
 )
 
