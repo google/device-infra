@@ -1,0 +1,121 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.shared.commandhistory;
+
+import "google/protobuf/duration.proto";
+import "google/protobuf/timestamp.proto";
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
+
+option java_package = "com.google.devtools.mobileharness.shared.commandhistory.proto";
+option java_outer_classname = "CommandRecordProto";
+
+message LocalCommandRecords {
+  repeated LocalCommandRecord record = 1;
+
+  // Required.
+  //
+  // Ticker.systemTicker().read() of the start time of the process which runs
+  // the subprocess.
+  google.protobuf.Duration local_start_elapsed_time = 4;
+
+  // Required.
+  //
+  // TimeSource.now() of the start time of the process which runs the
+  // subprocess.
+  google.protobuf.Timestamp local_start_timestamp = 5;
+}
+
+// A record of a command (subprocess) started/ended event in a process.
+message LocalCommandRecord {
+  // Required.
+  //
+  // Unique for one subprocess in a process. Multiple records of one subprocess
+  // should have the same sequence number.
+  int64 local_command_sequence_number = 1;
+
+  // Indicates a command has started successfully (a subprocess is created) or
+  // unsuccessfully (no subprocess is created).
+  message CommandStartedEvent {
+    // Required.
+    repeated string command = 1;
+
+    // Indicates a command has started successfully (a subprocess is created).
+    message CommandStartSuccess {
+      // Required.
+      //
+      // PID of the subprocess.
+      int64 pid = 1;
+    }
+
+    // Indicates a command has started unsuccessfully (no subprocess is
+    // created).
+    message CommandStartFailure {
+      // Optional.
+      stability.model.ExceptionDetail exception = 1;
+    }
+
+    oneof start_result {
+      CommandStartSuccess start_success = 2;
+
+      CommandStartFailure start_failure = 3;
+    }
+
+    message InvocationInfo {
+      int64 thread_id = 1;
+
+      string thread_name = 2;
+
+      // Optional.
+      //
+      // Stack trace which calls ProcessBuilder.start() (exclusive).
+      stability.model.StackTrace stack_trace = 3;
+    }
+
+    // Required.
+    InvocationInfo invocation_info = 4;
+  }
+
+  // Indicates a subprocess has exited.
+  //
+  // If a command starts unsuccessfully (no subprocess is created), there will
+  // be no corresponding CommandEndedEvent.
+  message CommandEndedEvent {
+    // Required.
+    //
+    // Exit code of the subprocess.
+    int32 exit_code = 1;
+  }
+
+  oneof event {
+    CommandStartedEvent command_started_event = 2;
+
+    CommandEndedEvent command_ended_event = 3;
+  }
+
+  // Required.
+  //
+  // Ticker.systemTicker().read() of the event in the process which runs the
+  // subprocess.
+  google.protobuf.Duration local_elapsed_time = 4;
+
+  // Required.
+  //
+  // TimeSource.now() of the event in the process which runs the subprocess.
+  google.protobuf.Timestamp local_timestamp = 5;
+}
