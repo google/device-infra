@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.host.utrs.service;
+package com.google.devtools.mobileharness.infra.lab;
 
 import com.google.common.eventbus.EventBus;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.CloudRpcDnsAddress;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.CloudRpcShardName;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.DeviceRunner;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.GlobalEventBus;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.LabRpcPort;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.ServViaCloudRpc;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunnerProvider;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
+import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcDnsAddress;
+import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcShardName;
+import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceRunner;
+import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
+import com.google.devtools.mobileharness.infra.lab.Annotations.LabRpcPort;
+import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaCloudRpc;
+import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.controller.JobManager;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServiceImpl;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;

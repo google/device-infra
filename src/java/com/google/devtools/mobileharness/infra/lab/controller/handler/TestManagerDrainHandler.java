@@ -17,8 +17,8 @@
 package com.google.devtools.mobileharness.infra.lab.controller.handler;
 
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceinfra.host.daemon.health.handler.DrainHandler;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
+import com.google.devtools.mobileharness.infra.daemon.health.handler.DrainHandler;
 import com.google.inject.Inject;
 
 /** Drain handler for TestManager. */

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.host.utrs.common.env;
+package com.google.devtools.mobileharness.infra.lab.common.env;
 
 /** Static environments variables shared for UTRS. */
 public final class UtrsEnvironments {

@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.external;
 
-import com.google.devtools.deviceinfra.host.daemon.health.handler.DrainHandler;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.daemon.health.handler.DrainHandler;
 import java.time.Duration;
 
 /**

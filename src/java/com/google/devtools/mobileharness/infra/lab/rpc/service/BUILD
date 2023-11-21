@@ -21,7 +21,6 @@ package(
         "//java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//javatests/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
 )
@@ -82,7 +81,6 @@ java_library(
     srcs = ["ExecTestServiceImpl.java"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/host/utrs/common/env",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_helper_factory",
@@ -90,6 +88,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/exception",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/common/env",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:file_publisher",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:forwarding_test_message_buffer",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_direct_test_runner_holder",

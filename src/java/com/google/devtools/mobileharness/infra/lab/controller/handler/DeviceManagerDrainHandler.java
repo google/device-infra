@@ -17,9 +17,9 @@
 package com.google.devtools.mobileharness.infra.lab.controller.handler;
 
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceinfra.host.daemon.health.handler.DrainHandler;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
+import com.google.devtools.mobileharness.infra.daemon.health.handler.DrainHandler;
 import com.google.inject.Inject;
 
 /** Drain handler for LocalDeviceManager. */

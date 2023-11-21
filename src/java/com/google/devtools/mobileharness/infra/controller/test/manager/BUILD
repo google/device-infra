@@ -19,9 +19,8 @@ java_library(
         "TestManager.java",
     ],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/host/utrs/service:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
     exports = [
@@ -52,7 +51,7 @@ java_library(
     srcs = ["TestMessagePosterUtil.java"],
     visibility = [
         "//java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
-        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
         ":manager",
@@ -72,7 +71,7 @@ java_library(
         "//javatests/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/infra/controller/test/manager:__subpackages__",
         "//javatests/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
     ],
     exports = [

@@ -20,9 +20,9 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
-        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
 )
 
@@ -32,8 +32,8 @@ java_library(
         "ExternalDeviceManager.java",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/host/daemon/health/handler:drain_handler",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/daemon/health/handler:drain_handler",
     ],
 )
 

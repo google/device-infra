@@ -21,13 +21,13 @@ java_library(
     name = "drain_handler",
     srcs = glob(["*.java"]),
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/host/daemon/health/handler:drain_handler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager",
+        "//src/java/com/google/devtools/mobileharness/infra/daemon/health/handler:drain_handler",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:job_manager",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:master_syncer_for_device",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:master_syncer_for_job",

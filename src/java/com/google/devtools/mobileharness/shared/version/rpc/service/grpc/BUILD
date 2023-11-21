@@ -17,7 +17,7 @@ java_library(
     name = "grpc",
     srcs = ["VersionGrpcImpl.java"],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/host/utrs:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/shared/version/proto:version_service_grpc",

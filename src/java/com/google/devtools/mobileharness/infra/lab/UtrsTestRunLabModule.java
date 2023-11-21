@@ -14,23 +14,22 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.host.utrs;
+package com.google.devtools.mobileharness.infra.lab;
 
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.DeviceManagerThreadPool;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.CloudRpcDnsAddress;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.CloudRpcShardName;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.DeviceRunner;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.LabRpcPort;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.ServViaCloudRpc;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.ServViaStubby;
-import com.google.devtools.deviceinfra.host.utrs.service.TestRunModule;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceHelperFactory;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunnerProvider;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
+import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcDnsAddress;
+import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcShardName;
+import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceManagerThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceRunner;
+import com.google.devtools.mobileharness.infra.lab.Annotations.LabRpcPort;
+import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaCloudRpc;
+import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;

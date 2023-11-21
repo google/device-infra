@@ -21,7 +21,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.deviceinfra.host.utrs.common.env.UtrsEnvironments;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
@@ -32,6 +31,7 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.exception.TestRunnerLauncherConnectedException;
+import com.google.devtools.mobileharness.infra.lab.common.env.UtrsEnvironments;
 import com.google.devtools.mobileharness.infra.lab.controller.FilePublisher;
 import com.google.devtools.mobileharness.infra.lab.controller.ForwardingTestMessageBuffer;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunnerHolder;

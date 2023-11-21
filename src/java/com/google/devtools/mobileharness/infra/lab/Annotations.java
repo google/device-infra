@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.host.utrs;
+package com.google.devtools.mobileharness.infra.lab;
 
 import com.google.inject.BindingAnnotation;
 import java.lang.annotation.ElementType;
@@ -68,4 +68,52 @@ class Annotations {
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
   @BindingAnnotation
   @interface RpcPort {}
+
+  /** Annotation for binding GlobalInternalBus. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface GlobalEventBus {}
+
+  /** Annotation for binding SandboxUtil. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface Sandbox {}
+
+  /** Annotation for binding cloud rpc DNS address. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface CloudRpcDnsAddress {}
+
+  /** Annotation for binding cloud rpc shard name. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface CloudRpcShardName {}
+
+  /** Annotation for binding lab rpc port. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface LabRpcPort {}
+
+  /** Annotation for binding flag for enable/disable stubby rpc. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface ServViaStubby {}
+
+  /** Annotation for binding flag for enable/disable cloud rpc. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface ServViaCloudRpc {}
+
+  /** Annotation for binding device runner. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface DeviceRunner {}
 }

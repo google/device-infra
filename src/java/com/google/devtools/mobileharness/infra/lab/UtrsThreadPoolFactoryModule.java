@@ -14,29 +14,24 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.host.utrs;
+package com.google.devtools.mobileharness.infra.lab;
 
-import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.DebugThreadPool;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.DeviceManagerThreadPool;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.FileResolverThreadPool;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.LabServerRpcThreadPool;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.LocalGrpcThreadPool;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.MainThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceManagerThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.FileResolverThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.LabServerRpcThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.LocalGrpcThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.MainThreadPool;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadFactory;
 
 /** Module class that instantiates all thread factories used by UTRS. */
 public class UtrsThreadPoolFactoryModule extends AbstractModule {
-
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @Override
   protected void configure() {
@@ -58,33 +53,16 @@ public class UtrsThreadPoolFactoryModule extends AbstractModule {
         .toInstance(
             MoreExecutors.listeningDecorator(
                 new ScheduledThreadPoolExecutor(
-                    1, createThreadFactory("mh-lab-server-debug-random-exit-task"))));
+                    1,
+                    ThreadFactoryUtil.createThreadFactory(
+                        "mh-lab-server-debug-random-exit-task"))));
     bind(ListeningExecutorService.class)
         .annotatedWith(FileResolverThreadPool.class)
-        .toInstance(
-            MoreExecutors.listeningDecorator(
-                Executors.newCachedThreadPool(createThreadFactory("file-resolver-thread"))));
+        .toInstance(createThreadPool("file-resolver-thread"));
   }
 
   private static ListeningExecutorService createThreadPool(String threadNamePrefix) {
     return MoreExecutors.listeningDecorator(
         Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory(threadNamePrefix)));
-  }
-
-  /**
-   * Returns a {@link ThreadFactory} which {@link Thread#setDefaultUncaughtExceptionHandler} with a
-   * logging handler and does not {@link Thread#setDaemon} with {@code true}.
-   *
-   * @param threadNamePrefix e.g., "mh-lab-server-main-thread" will generate thread names like
-   *     "mh-lab-server-main-thread-1", "mh-lab-server-main-thread-2", etc.
-   */
-  private static ThreadFactory createThreadFactory(String threadNamePrefix) {
-    return new ThreadFactoryBuilder()
-        .setNameFormat(threadNamePrefix + "-%d")
-        .setUncaughtExceptionHandler(
-            (thread, throwable) ->
-                logger.atSevere().withCause(throwable).log(
-                    "Uncaught exception from thread [%s]", thread.getName()))
-        .build();
   }
 }

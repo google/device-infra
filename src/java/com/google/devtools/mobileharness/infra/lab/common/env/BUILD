@@ -16,7 +16,7 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__subpackages__",
+        "//:deviceinfra_all_pkg",
     ],
 )
 

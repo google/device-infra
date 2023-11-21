@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.host.utrs;
+package com.google.devtools.mobileharness.infra.lab;
 
 import static com.google.common.base.StandardSystemProperty.OS_NAME;
 import static com.google.common.base.StandardSystemProperty.OS_VERSION;
@@ -31,20 +31,20 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.DebugThreadPool;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.DeviceManagerThreadPool;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.LabServerRpcThreadPool;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.LocalGrpcThreadPool;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.MainThreadPool;
-import com.google.devtools.deviceinfra.host.utrs.Annotations.RpcPort;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.GlobalEventBus;
-import com.google.devtools.deviceinfra.host.utrs.service.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
+import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceManagerThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
+import com.google.devtools.mobileharness.infra.lab.Annotations.LabServerRpcThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.LocalGrpcThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.MainThreadPool;
+import com.google.devtools.mobileharness.infra.lab.Annotations.RpcPort;
+import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.infra.lab.controller.JobManager;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDimensionManager;
