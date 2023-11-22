@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.platform.testbed.adhoc;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.testbed.config.BaseTestbedConfig;
 import com.google.devtools.mobileharness.platform.testbed.config.SubDeviceInfo;
@@ -64,11 +65,16 @@ public class AdhocTestbedConfig extends BaseTestbedConfig {
 
       String deviceId = device.getDeviceId();
       SubDeviceKey key = SubDeviceKey.create(deviceId, device.getClass());
+      ImmutableSet<StrPair> allDimensions =
+          ImmutableSet.<StrPair>builder()
+              .addAll(device.getDimensions())
+              .addAll(device.getRequiredDimensions())
+              .build();
       SubDeviceInfo value =
           new AdhocSubDeviceInfo(
               deviceId,
               device.getClass(),
-              getDimensionsMap(device.getDimensions()),
+              getDimensionsMap(allDimensions),
               ImmutableMap.copyOf(device.getProperties()));
       deviceInfos.put(key, value);
     }
