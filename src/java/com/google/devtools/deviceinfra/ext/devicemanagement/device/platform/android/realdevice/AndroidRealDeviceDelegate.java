@@ -73,7 +73,6 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.android.RuntimeChargingUtil;
-import com.google.wireless.qa.mobileharness.shared.android.SerialConsole;
 import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
@@ -306,9 +305,6 @@ public abstract class AndroidRealDeviceDelegate {
       device.addSupportedDecorator("AndroidFlashstationDecorator");
       device.addSupportedDecorator("AndroidAutomotiveFlashDecorator");
       addFastbootCommunication(deviceId);
-      if (!device.getDimension(SerialConsole.DIMENSION_SERIAL_CONSOLE_ID).isEmpty()) {
-        device.addSupportedDecorator("AndroidSerialConsoleLoggerDecorator");
-      }
 
       // TODO: update this to support any amlogic devices without hardcoding them in
       if ("atom".equals(hardware)
@@ -609,7 +605,6 @@ public abstract class AndroidRealDeviceDelegate {
 
     if (isRooted()) {
       device.addSupportedDecorator("AndroidMonsoonVideoDecorator");
-      device.addSupportedDecorator("AndroidSerialConsoleLoggerDecorator");
     }
   }
 
