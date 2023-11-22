@@ -38,6 +38,7 @@ java_library(
     deps = [
         ":server_module",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_manager",
@@ -51,6 +52,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared:log",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//netty",

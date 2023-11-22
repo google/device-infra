@@ -24,6 +24,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
+import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
@@ -35,6 +36,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
+import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import io.grpc.Server;
 import io.grpc.netty.NettyServerBuilder;
@@ -69,6 +71,7 @@ public class OlcServer {
   private final LocalMode localMode;
   private final EventBus globalInternalEventBus;
   private final LogManager<GetLogResponse> logManager;
+  private final ClientApi clientApi;
 
   @Inject
   OlcServer(
@@ -78,7 +81,8 @@ public class OlcServer {
       ListeningExecutorService threadPool,
       LocalMode localMode,
       @GlobalInternalEventBus EventBus globalInternalEventBus,
-      LogManager<GetLogResponse> logManager) {
+      LogManager<GetLogResponse> logManager,
+      ClientApi clientApi) {
     this.sessionService = sessionService;
     this.versionService = versionService;
     this.controlService = controlService;
@@ -86,6 +90,7 @@ public class OlcServer {
     this.localMode = localMode;
     this.globalInternalEventBus = globalInternalEventBus;
     this.logManager = logManager;
+    this.clientApi = clientApi;
   }
 
   private void run(List<String> args) throws IOException, InterruptedException {
@@ -95,6 +100,9 @@ public class OlcServer {
         ImmutableList.of(logManager.getLogHandler()));
 
     logger.atInfo().log("Arguments: %s", args);
+
+    // Initializes TestMessageManager.
+    TestMessageManager.createInstance(clientApi::getTestMessagePoster);
 
     // Starts log manager.
     logManager.start();
