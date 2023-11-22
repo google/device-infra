@@ -16,10 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.util;
 
-import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 
@@ -80,8 +78,6 @@ public final class ReflectionUtil {
     String classCanonicalName = packageName + "." + classSimpleName;
     try {
       return newUtil.loadClass(classCanonicalName, baseClassOrInterface, classLoader);
-    } catch (DeviceInfraException e) {
-      throw ErrorModelConverter.toOldException(e);
     } catch (ClassNotFoundException e) {
       throw new MobileHarnessException(
           BasicErrorId.REFLECTION_CLASS_NOT_FOUND,

@@ -120,7 +120,6 @@ java_library(
     srcs = ["SessionPluginLoader.java"],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",

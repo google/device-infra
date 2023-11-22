@@ -20,7 +20,6 @@ import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
@@ -136,7 +135,7 @@ public class SessionPluginLoader {
           InfraErrorId.OLCS_BUILTIN_SESSION_PLUGIN_NOT_FOUND,
           String.format("No builtin session plugin class [%s]", pluginClassName),
           e);
-    } catch (DeviceInfraException e) {
+    } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           InfraErrorId.OLCS_LOAD_BUILTIN_SESSION_PLUGIN_CLASS_ERROR,
           String.format("Failed to load builtin session plugin class [%s]", pluginClassName),

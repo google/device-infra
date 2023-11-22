@@ -16,26 +16,27 @@
 
 package com.google.devtools.mobileharness.shared.util.reflection;
 
-import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
-import com.google.devtools.deviceinfra.api.error.id.defined.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 
 /** Utility for reflection operations. */
 public class ReflectionUtil {
 
   @SuppressWarnings("unchecked")
   public <T> Class<? extends T> loadClass(String className, Class<T> type, ClassLoader classLoader)
-      throws DeviceInfraException, ClassNotFoundException {
+      throws MobileHarnessException, ClassNotFoundException {
     Class<?> clazz;
     try {
       clazz = Class.forName(className, /* initialize= */ true, classLoader);
     } catch (RuntimeException e) {
-      throw BasicErrorId.REFLECTION_LOAD_CLASS_ERROR.toException(
-          "Failed to load class: " + className, e);
+      throw new MobileHarnessException(
+          BasicErrorId.REFLECTION_CLASS_LOAD_ERROR, "Failed to load class: " + className, e);
     }
     if (type.isAssignableFrom(clazz)) {
       return (Class<? extends T>) clazz;
     } else {
-      throw BasicErrorId.REFLECTION_LOAD_CLASS_TYPE_MISMATCH.toException(
+      throw new MobileHarnessException(
+          BasicErrorId.REFLECTION_CLASS_TYPE_NOT_MATCHED,
           String.format("%s is not assignable from %s", type.getName(), clazz.getName()));
     }
   }

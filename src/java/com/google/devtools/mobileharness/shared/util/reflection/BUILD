@@ -19,12 +19,7 @@ java_library(
     name = "reflection_util",
     srcs = ["ReflectionUtil.java"],
     visibility = [
-        "//src/java/com/google/devtools/deviceinfra/infra/core/testrunner:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__subpackages__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/util:__subpackages__",
+        "//:deviceinfra_all_pkg",
     ],
-    deps = [
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception",
-        "//src/java/com/google/devtools/deviceinfra/api/error/id/defined",
-    ],
+    deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
 )

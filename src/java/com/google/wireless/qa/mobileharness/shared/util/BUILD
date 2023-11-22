@@ -103,9 +103,7 @@ java_library(
         "//:deviceinfra_all_pkg",
     ],
     deps = [
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
         "//src/java/com/google/devtools/mobileharness/shared/util/reflection:reflection_util",
     ],
 )
