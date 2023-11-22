@@ -167,7 +167,6 @@ public final class AtsConsoleTest {
 
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(15L));
 
-    assertThat(consoleErrOutputStream.toString(UTF_8))
-        .contains("Not able to create a job info per the run command");
+    assertThat(consoleErrOutputStream.toString(UTF_8)).contains(" No tradefed jobs created");
   }
 }

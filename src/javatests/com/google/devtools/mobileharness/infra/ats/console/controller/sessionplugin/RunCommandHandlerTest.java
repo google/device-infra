@@ -21,8 +21,12 @@ import static com.google.common.truth.Truth8.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.XtsType;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
@@ -31,6 +35,11 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
+import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
+import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.gson.Gson;
@@ -83,6 +92,9 @@ public final class RunCommandHandlerTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
+  @Bind @Mock private LocalFileUtil localFileUtil;
+  @Bind @Mock private ModuleConfigurationHelper moduleConfigurationHelper;
+  @Bind @Mock private ConfigurationUtil configurationUtil;
 
   @Inject private RunCommandHandler runCommandHandler;
 
@@ -106,8 +118,12 @@ public final class RunCommandHandlerTest {
 
     Optional<JobConfig> jobConfigOpt =
         runCommandHandler.createXtsTradefedTestJobConfig(
-            RunCommand.newBuilder().setTestPlan("cts").setXtsRootDir(XTS_ROOT_DIR_PATH).build(),
-            /* xtsType= */ "CTS");
+            RunCommand.newBuilder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .build(),
+            ImmutableList.of());
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
@@ -138,10 +154,11 @@ public final class RunCommandHandlerTest {
         runCommandHandler.createXtsTradefedTestJobConfig(
             RunCommand.newBuilder()
                 .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setShardCount(2)
                 .build(),
-            /* xtsType= */ "CTS");
+            ImmutableList.of());
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
@@ -166,10 +183,11 @@ public final class RunCommandHandlerTest {
         runCommandHandler.createXtsTradefedTestJobConfig(
             RunCommand.newBuilder()
                 .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setShardCount(3)
                 .build(),
-            /* xtsType= */ "CTS");
+            ImmutableList.of());
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
@@ -184,8 +202,12 @@ public final class RunCommandHandlerTest {
 
     Optional<JobConfig> jobConfigOpt =
         runCommandHandler.createXtsTradefedTestJobConfig(
-            RunCommand.newBuilder().setTestPlan("cts").setXtsRootDir(XTS_ROOT_DIR_PATH).build(),
-            /* xtsType= */ "CTS");
+            RunCommand.newBuilder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .build(),
+            ImmutableList.of());
 
     assertThat(jobConfigOpt).isEmpty();
   }
@@ -205,13 +227,14 @@ public final class RunCommandHandlerTest {
         runCommandHandler.createXtsTradefedTestJobConfig(
             RunCommand.newBuilder()
                 .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .addDeviceSerial("device_id_1")
                 .addModuleName("module1")
                 .setShardCount(2)
                 .addExtraArg("--logcat-on-failure")
                 .build(),
-            /* xtsType= */ "CTS");
+            ImmutableList.of("module1"));
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
@@ -256,12 +279,13 @@ public final class RunCommandHandlerTest {
         runCommandHandler.createXtsTradefedTestJobConfig(
             RunCommand.newBuilder()
                 .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .addDeviceSerial("device_id_1")
                 .addDeviceSerial("not_exist_device")
                 .addDeviceSerial("device_id_3")
                 .build(),
-            /* xtsType= */ "CTS");
+            ImmutableList.of());
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
@@ -294,17 +318,136 @@ public final class RunCommandHandlerTest {
         runCommandHandler.createXtsTradefedTestJobConfig(
             RunCommand.newBuilder()
                 .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .addDeviceSerial("device_id_4")
                 .addDeviceSerial("device_id_5")
                 .build(),
-            /* xtsType= */ "CTS");
+            ImmutableList.of());
 
     assertThat(jobConfigOpt).isEmpty();
   }
 
   @Test
+  public void createXtsNonTradefedJobs() throws Exception {
+    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(
+            ImmutableMap.of(
+                "/path/to/config1",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build(),
+                "/path/to/config2",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build()));
+
+    ImmutableList<JobInfo> jobInfos =
+        runCommandHandler.createXtsNonTradefedJobs(
+            RunCommand.newBuilder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .build());
+
+    assertThat(jobInfos).hasSize(2);
+    verify(moduleConfigurationHelper, times(2)).updateJobInfo(any(), any(), any());
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_noMatchedNonTradefedModules() throws Exception {
+    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(
+            ImmutableMap.of(
+                "/path/to/config1",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build(),
+                "/path/to/config2",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build()));
+
+    ImmutableList<JobInfo> jobInfos =
+        runCommandHandler.createXtsNonTradefedJobs(
+            RunCommand.newBuilder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .addModuleName("TfModule1")
+                .build());
+
+    assertThat(jobInfos).isEmpty();
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_partialMatchedNonTradefedModules() throws Exception {
+    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(
+            ImmutableMap.of(
+                "/path/to/config1",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build(),
+                "/path/to/config2",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build()));
+
+    ImmutableList<JobInfo> jobInfos =
+        runCommandHandler.createXtsNonTradefedJobs(
+            RunCommand.newBuilder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .addModuleName("TfModule1")
+                .addModuleName("module2")
+                .build());
+
+    assertThat(jobInfos).hasSize(1);
+  }
+
+  @Test
   public void handleResultProcessing_copyResultsAndLogsIntoXtsRootDir() throws Exception {
+    runCommandHandler =
+        spy(
+            new RunCommandHandler(
+                deviceQuerier, new LocalFileUtil(), moduleConfigurationHelper, configurationUtil));
+    doReturn(TIMESTAMP_DIR_NAME).when(runCommandHandler).getTimestampDirName();
+
     File xtsRootDir = folder.newFolder(XTS_ROOT_DIR_NAME);
     RunCommand command =
         RunCommand.newBuilder()

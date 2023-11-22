@@ -629,6 +629,9 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDriver("AndroidChromedriver");
     device.addSupportedDriver("MoblyAospTest");
 
+    // For OSS
+    device.addSupportedDriver("MoblyAospPackageTest");
+
     // More Decorators.
     device.addSupportedDecorator("AndroidCreateWorkProfileDecorator");
   }

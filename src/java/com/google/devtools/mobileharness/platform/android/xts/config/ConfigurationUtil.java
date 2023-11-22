@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.platform.android.xts.config;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static java.util.Arrays.stream;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -40,7 +39,10 @@ public class ConfigurationUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String[] CONFIG_FILE_EXTENSIONS = {".config", ".xml"};
+  private static final ImmutableList<String> CONFIG_FILE_EXTENSIONS =
+      ImmutableList.of(".config", ".xml");
+  private static final ImmutableList<String> CONFIG_V2_FILE_EXTENSIONS =
+      ImmutableList.of(".configv2");
   private static final int CLASS_SEPARATOR = '.';
 
   private final LocalFileUtil localFileUtil;
@@ -69,6 +71,25 @@ public class ConfigurationUtil {
   }
 
   /**
+   * Gets the test configurations v2 from given directories.
+   *
+   * @param dirs a list of {@link File} of extra directories to search for test configurations
+   * @return a map from absolute paths to the configuration proto
+   */
+  public ImmutableMap<String, Configuration> getConfigsV2FromDirs(List<File> dirs) {
+    ImmutableMap.Builder<String, Configuration> configs = ImmutableMap.builder();
+    Set<File> configFiles = getConfigFilesFromDirsByExt(dirs, CONFIG_V2_FILE_EXTENSIONS);
+    for (File configFile : configFiles) {
+      try {
+        configs.put(configFile.getAbsolutePath(), ConfigurationXmlParser.parse(configFile));
+      } catch (MobileHarnessException e) {
+        logger.atInfo().withCause(e).log("Failed to parse %s", configFile.getAbsolutePath());
+      }
+    }
+    return configs.buildOrThrow();
+  }
+
+  /**
    * Gets the test config file paths from given directories.
    *
    * @param dirs a list of {@link File} of extra directories to search for test configurations
@@ -86,17 +107,26 @@ public class ConfigurationUtil {
    * @return the set of {@link File} that were found.
    */
   public Set<File> getConfigFilesFromDirs(List<File> dirs) {
+    return getConfigFilesFromDirsByExt(dirs, CONFIG_FILE_EXTENSIONS);
+  }
+
+  /**
+   * Gets the test config files from given directories filtering by given config file extensions.
+   *
+   * @param dirs A list of {@link File} of extra directories to search for test configs
+   * @param configFileExtensions An array of file extensions to filter config files
+   * @return the set of {@link File} that were found.
+   */
+  public Set<File> getConfigFilesFromDirsByExt(List<File> dirs, List<String> configFileExtensions) {
     FileFilter configFileFilter =
-        (file) -> {
-          return stream(CONFIG_FILE_EXTENSIONS)
-              .anyMatch(extension -> file.getName().endsWith(extension));
-        };
+        (file) ->
+            configFileExtensions.stream().anyMatch(extension -> file.getName().endsWith(extension));
 
     return getConfigFilesFromDirs(dirs, configFileFilter);
   }
 
   /**
-   * Search a particular pattern of in the given directories.
+   * Searches a particular pattern of in the given directories.
    *
    * @param dirs A list of {@link File} of extra directories to search for test configs
    * @param configFileFilter filters out configuration files

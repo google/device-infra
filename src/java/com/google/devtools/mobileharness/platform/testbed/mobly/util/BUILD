@@ -62,6 +62,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:simple_composite_device",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:org_json_json",

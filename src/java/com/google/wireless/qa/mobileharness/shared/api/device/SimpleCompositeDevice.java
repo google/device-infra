@@ -16,21 +16,21 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
-import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.ImmutableSet;
 import java.util.List;
 
 /** A simple {@link CompositeDevice}. */
 public class SimpleCompositeDevice extends BaseDevice implements CompositeDevice {
 
-  private final ImmutableSortedSet<Device> subDevices;
+  private final ImmutableSet<Device> subDevices;
 
   public SimpleCompositeDevice(String deviceId, List<Device> subDevices) {
     super(deviceId, /* managedDeviceInfo= */ false);
-    this.subDevices = ImmutableSortedSet.copyOf(subDevices);
+    this.subDevices = ImmutableSet.copyOf(subDevices);
   }
 
   @Override
-  public ImmutableSortedSet<Device> getManagedDevices() {
+  public ImmutableSet<Device> getManagedDevices() {
     return subDevices;
   }
 }

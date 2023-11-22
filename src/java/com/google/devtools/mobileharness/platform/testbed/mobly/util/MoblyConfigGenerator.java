@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant;
 import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant.ConfigKey;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.api.device.SimpleCompositeDevice;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map.Entry;
@@ -60,11 +61,21 @@ public class MoblyConfigGenerator {
    */
   public static JSONObject getLocalMoblyConfig(Device device) throws MobileHarnessException {
     // TODO: Support static Testbed device.
-    // Create a temporary AdhocTestbedConfig object with a prefix because a testbed subdevice
-    // cannot have the same is as the testbed itself.
-    String testbedName = TESTBED_PREFIX + sanitizeTestbedName(device.getDeviceId());
-    return buildLocalMoblyConfig(
-        testbedName, AdhocTestbedConfig.create(testbedName, Arrays.asList(device)));
+    if (device instanceof SimpleCompositeDevice) {
+      SimpleCompositeDevice simpleCompositeDevice = (SimpleCompositeDevice) device;
+      return buildLocalMoblyConfig(
+          simpleCompositeDevice.getDeviceId(),
+          AdhocTestbedConfig.create(
+              simpleCompositeDevice.getDeviceId(),
+              simpleCompositeDevice.getManagedDevices().asList()));
+    } else {
+      // If not a testbed device (i.e, a single physical device), create a temporary
+      // AdhocTestbedConfig object with a prefix because a testbed subdevice cannot have the same is
+      // as the testbed itself.
+      String testbedName = TESTBED_PREFIX + sanitizeTestbedName(device.getDeviceId());
+      return buildLocalMoblyConfig(
+          testbedName, AdhocTestbedConfig.create(testbedName, Arrays.asList(device)));
+    }
   }
 
   /**

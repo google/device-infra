@@ -487,7 +487,7 @@ public class MoblyGenericTest extends BaseDriver {
               .onStdout(
                   LineCallback.does(
                       line -> {
-                        testInfo.log().atInfo().log("[Mobly] %s", line);
+                        testInfo.log().atInfo().alsoTo(logger).log("[Mobly] %s", line);
                         try {
                           writer.write(line + "\n");
                         } catch (IOException e) {

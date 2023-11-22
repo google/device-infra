@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 
 import static com.google.protobuf.TextFormat.shortDebugString;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -32,12 +33,21 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
+import java.util.HashMap;
+import java.util.Map;
+import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
 /** OmniLab long-running client session plugin for ATS 2.0. */
 public class AtsSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private final Object tradefedJobsLock = new Object();
+
+  @GuardedBy("tradefedJobsLock")
+  private final Map<String, Boolean> runningTradefedJobs = new HashMap<>();
 
   private final SessionInfo sessionInfo;
   private final DumpEnvVarCommandHandler dumpEnvVarCommandHandler;
@@ -83,7 +93,20 @@ public class AtsSessionPlugin {
 
   private void onSessionStarting() throws MobileHarnessException, InterruptedException {
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
-      runCommandHandler.handle(config.getRunCommand(), sessionInfo);
+      ImmutableList<String> tradefedJobIds =
+          runCommandHandler.addTradefedJobs(config.getRunCommand(), sessionInfo);
+      synchronized (tradefedJobsLock) {
+        for (String tradefedJobId : tradefedJobIds) {
+          runningTradefedJobs.putIfAbsent(tradefedJobId, true);
+        }
+      }
+      if (tradefedJobIds.isEmpty()) {
+        logger.atInfo().log(
+            "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
+                + " needed.",
+            sessionInfo.getSessionId());
+        runCommandHandler.addNonTradefedJobs(config.getRunCommand(), sessionInfo);
+      }
       return;
     } else if (config.getCommandCase().equals(CommandCase.LIST_COMMAND)) {
       ListCommand listCommand = config.getListCommand();
@@ -142,6 +165,23 @@ public class AtsSessionPlugin {
 
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
       runCommandHandler.handleResultProcessing(config.getRunCommand(), sessionInfo);
+    }
+  }
+
+  @Subscribe
+  public void onJobEnd(JobEndEvent jobEndEvent)
+      throws MobileHarnessException, InterruptedException {
+    synchronized (tradefedJobsLock) {
+      String jobId = jobEndEvent.getJob().locator().getId();
+      if (!runningTradefedJobs.containsKey(jobId)) {
+        return;
+      }
+      runningTradefedJobs.put(jobId, false);
+      if (runningTradefedJobs.values().stream().allMatch(running -> !running)) {
+        logger.atInfo().log(
+            "All added tradefed jobs have been done, try add non-tradefed jobs if needed.");
+        runCommandHandler.addNonTradefedJobs(config.getRunCommand(), sessionInfo);
+      }
     }
   }
 

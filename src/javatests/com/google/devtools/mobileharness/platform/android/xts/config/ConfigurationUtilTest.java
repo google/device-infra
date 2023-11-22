@@ -122,6 +122,14 @@ public class ConfigurationUtilTest {
   }
 
   @Test
+  public void getConfigsV2FromDirs_returnsConfigs() throws Exception {
+    String testConfigDir = RunfilesUtil.getRunfilesLocation(TEST_CONFIG_DIR);
+    ImmutableMap<String, Configuration> configs =
+        configurationUtil.getConfigsV2FromDirs(ImmutableList.of(Paths.get(testConfigDir).toFile()));
+    assertThat(configs).hasSize(1);
+  }
+
+  @Test
   public void getSimpleClassName() {
     assertThat(
             ConfigurationUtil.getSimpleClassName(

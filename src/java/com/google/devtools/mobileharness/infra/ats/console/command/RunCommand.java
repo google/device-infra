@@ -65,6 +65,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.inject.Inject;
@@ -98,6 +99,8 @@ import picocli.CommandLine.Spec;
 final class RunCommand implements Callable<Integer> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final AtomicInteger RUN_CMD_COUNT = new AtomicInteger(0);
 
   @Parameters(
       index = "0",
@@ -365,6 +368,7 @@ final class RunCommand implements Callable<Integer> {
         atsSessionStub.runSession(
             RUN_COMMAND_SESSION_NAME,
             AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build());
+    RUN_CMD_COUNT.incrementAndGet();
     addCallback(
         atsRunSessionFuture, new PrintPluginOutputFutureCallback(consoleUtil), directExecutor());
     addCallback(
@@ -649,7 +653,10 @@ final class RunCommand implements Callable<Integer> {
 
     private void disableServerLogPrinter() {
       try {
-        serverLogPrinter.enable(false);
+        // Only disable server log printer when there is no in-process run commands.
+        if (RUN_CMD_COUNT.decrementAndGet() == 0) {
+          serverLogPrinter.enable(false);
+        }
       } catch (MobileHarnessException | InterruptedException e) {
         logger.atWarning().withCause(e).log("Failed to disable server log printer");
         if (e instanceof InterruptedException) {
