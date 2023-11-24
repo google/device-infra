@@ -188,6 +188,10 @@ public class AndroidPackageManagerUtil {
   public static final String OUTPUT_INSTALL_FAILED_DUPLICATE_PERMISSION =
       "INSTALL_FAILED_DUPLICATE_PERMISSION";
 
+  /** Output when the install app failed by duplicate permission. */
+  public static final String OUTPUT_INSTALL_FAILED_INVALID_APK_SPLIT_NULL =
+      "INSTALL_FAILED_INVALID_APK: Split null was defined multiple times";
+
   /** Output when the install app failed by older sdk. */
   public static final String OUTPUT_INSTALL_FAILED_OLDER_SDK = "INSTALL_FAILED_OLDER_SDK";
 
@@ -1288,6 +1292,15 @@ public class AndroidPackageManagerUtil {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_VERSION_DOWNGRADE,
             String.format("install-multi-package error: %s", output));
+      }
+      if (output.contains(OUTPUT_INSTALL_FAILED_INVALID_APK_SPLIT_NULL)) {
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_INVALID_APK_SPLIT_NULL,
+            String.format(
+                "install-multi-package error: %s. See"
+                    + " go/omnilab-faqs#how-to-fix-android-pkg-mngr-util-installation-invalid-apk-split-null"
+                    + " for more details.",
+                output));
       }
       throwInstallationError(
           "Failed to install packages:\n" + packageMap + '\n' + output, /* cause= */ null);
