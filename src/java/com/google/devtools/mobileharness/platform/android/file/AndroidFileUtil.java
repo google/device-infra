@@ -1012,7 +1012,7 @@ public class AndroidFileUtil {
       // b/296730927, sometimes the exit code is 11 instead of 0, which is also an indication
       // of success run.
       if (e.getErrorId().equals(AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE)
-          && output.contains(ADB_REMOUNT_REBOOT_INDICATOR)
+          && e.getMessage().contains(ADB_REMOUNT_REBOOT_INDICATOR)
           && e.getMessage().contains(ADB_REMOUNT_EXIT_CODE_INDICATOR)) {
         logger.atWarning().log(
             "Needs to reboot device %s to make remount effective because [%s].",
