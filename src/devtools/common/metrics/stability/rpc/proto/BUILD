@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -30,6 +32,13 @@ java_proto_library(
     deps = [":rpc_error_proto"],
 )
 
+py_proto_library(
+    name = "rpc_error_py_proto",
+    srcs = [
+        "rpc_error.proto",
+    ],
+)
+
 proto_library(
     name = "rpc_error_payload_proto",
     srcs = ["rpc_error_payload.proto"],
@@ -41,4 +50,14 @@ proto_library(
 java_proto_library(
     name = "rpc_error_payload_java_proto",
     deps = [":rpc_error_payload_proto"],
+)
+
+py_proto_library(
+    name = "rpc_error_payload_py_proto",
+    srcs = [
+        "rpc_error_payload.proto",
+    ],
+    deps = [
+        ":rpc_error_py_proto",
+    ],
 )

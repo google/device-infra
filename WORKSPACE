@@ -23,12 +23,25 @@ http_archive(
 # Proto library target in bazel.
 http_archive(
     name = "rules_proto",
-    sha256 = "e017528fd1c91c5a33f15493e3a398181a9e821a804eb7ff5acdd1d2d6c2b18d",
-    strip_prefix = "rules_proto-4.0.0-3.20.0",
-    urls = [
-        "https://github.com/bazelbuild/rules_proto/archive/refs/tags/4.0.0-3.20.0.tar.gz",
-    ],
+    sha256 = "dc3fb206a2cb3441b485eb1e423165b231235a1ea9b031b4433cf7bc1fa460dd",
+    strip_prefix = "rules_proto-5.3.0-21.7",
+    url = "https://github.com/bazelbuild/rules_proto/archive/refs/tags/5.3.0-21.7.tar.gz",
 )
+
+# Python rules.
+http_archive(
+    name = "rules_python",
+    sha256 = "9d04041ac92a0985e344235f5d946f71ac543f1b1565f2cdbc9a2aaee8adf55b",
+    strip_prefix = "rules_python-0.26.0",
+    url = "https://github.com/bazelbuild/rules_python/releases/download/0.26.0/rules_python-0.26.0.tar.gz",
+)
+
+load(
+    "@rules_python//python:repositories.bzl",
+    "py_repositories",
+)
+py_repositories()
+
 
 load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
 
@@ -55,6 +68,7 @@ http_archive(
 
 # Gazelle and Go rules
 
+
 http_archive(
     name = "io_bazel_rules_go",
     sha256 = "6dc2da7ab4cf5d7bfc7c949776b1b7c733f05e56edc4bcd9022bb249d2e2a996",
@@ -63,6 +77,33 @@ http_archive(
         "https://github.com/bazelbuild/rules_go/releases/download/v0.39.1/rules_go-v0.39.1.zip",
     ],
 )
+
+load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
+
+go_rules_dependencies()
+
+go_register_toolchains(version = "1.20.5")
+
+http_archive(
+    name = "com_google_absl",
+    sha256 = "81311c17599b3712069ded20cca09a62ab0bf2a89dfa16993786c8782b7ed145",
+    strip_prefix = "abseil-cpp-20230125.1",
+    # Committed on Jan 25, 2023.
+    urls = [
+        "https://github.com/abseil/abseil-cpp/archive/20230125.1.tar.gz",
+    ],
+)
+
+http_archive(
+    name = "com_github_grpc_grpc",
+    urls = ["https://github.com/grpc/grpc/archive/v1.54.1.zip"],
+    sha256 = "8f01dac5a32104acbb76db1e6b447dc5b3dc738cb9bceeee01843d9d01d1d788",
+    strip_prefix = "grpc-1.54.1",
+)
+
+load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
+
+grpc_deps()
 
 http_archive(
     name = "bazel_gazelle",
@@ -74,12 +115,6 @@ http_archive(
 )
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
-load("@io_bazel_rules_go//go:deps.bzl", "go_register_toolchains", "go_rules_dependencies")
-
-go_rules_dependencies()
-
-go_register_toolchains(version = "1.20.5")
-
 gazelle_dependencies()
 
 # Needed for the googleapis protos used by com_github_bazelbuild_remote_apis below.
@@ -154,6 +189,35 @@ load("@rules_jvm_external//:setup.bzl", "rules_jvm_external_setup")
 rules_jvm_external_setup()
 
 load("@rules_jvm_external//:defs.bzl", "maven_install")
+
+http_archive(
+    name = "com_google_absl_py",
+    sha256 = "a96b4fae80ccb6d393f1344dc47452dc4b557cc8f2e70483c3908d74999290f1",
+    strip_prefix = "abseil-py-c5c609cf04ea3f46eb620eb1b948ee2294645c4a",
+    url = "https://github.com/abseil/abseil-py/archive/c5c609cf04ea3f46eb620eb1b948ee2294645c4a.zip",
+)
+
+http_archive(
+    name = "build_bazel_rules_swift",
+    sha256 = "bf2861de6bf75115288468f340b0c4609cc99cc1ccc7668f0f71adfd853eedb3",
+    url = "https://github.com/bazelbuild/rules_swift/releases/download/1.7.1/rules_swift.1.7.1.tar.gz",
+)
+
+http_archive(
+    name = "com_google_googleapis",
+    sha256 = "70cdef593fbfe340d558ca10c6858b5c0410a54576381c422dc3b9158a12ba03",
+    strip_prefix = "googleapis-18becb1d1426feb7399db144d7beeb3284f1ccb0",
+    urls = ["https://github.com/googleapis/googleapis/archive/18becb1d1426feb7399db144d7beeb3284f1ccb0.tar.gz"],
+)
+load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
+
+# Initialize Google APIs with only C++ and Python targets
+switched_rules_by_language(
+    name = "com_google_googleapis_imports",
+    cc = True,
+    grpc = True,
+    python = True,
+)
 
 maven_install(
     artifacts = [
