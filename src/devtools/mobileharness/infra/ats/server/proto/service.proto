@@ -24,6 +24,12 @@ import "google/protobuf/timestamp.proto";
 option java_package = "com.google.devtools.mobileharness.infra.ats.server.proto";
 option java_outer_classname = "ServiceProto";
 
+message SessionRequest {
+  oneof request {
+    NewMultiCommandRequest new_multi_command_request = 1;
+  }
+}
+
 // Test request sent to session service to start a test request.
 message NewMultiCommandRequest {
   optional string user_id = 1;
@@ -40,8 +46,8 @@ message NewMultiCommandRequest {
 message CommandInfo {
   optional string name = 1;
   string command_line = 2;
-  optional int64 run_count = 3;
-  optional int64 shard_count = 4;
+  optional int32 run_count = 3;
+  optional int32 shard_count = 4;
 
   // Each entry correspond to a device. The most common key value pair is
   // "serial" and "<serial_id>".
@@ -93,6 +99,35 @@ message CommandDetail {
   string id = 1;
   string request_id = 2;
   string command_line = 3;
+  optional CommandState state = 4;
+  optional CancelReason cancel_reason = 5;
+  optional ErrorReason error_reason = 6;
+}
+
+enum CommandState {
+  UNKNOWN_STATE = 0;  // Pending (Scheduling)
+  QUEUED = 1;
+  RUNNING = 2;
+  CANCELED = 3;
+  COMPLETED = 4;
+  ERROR = 5;
+  FATAL = 6;
+}
+
+enum CancelReason {
+  UNKNOWN_CANCEL_REASON = 0;
+  QUEUE_TIMEOUT = 1;
+  REQUEST_API = 2;
+  COMMAND_ALREADY_CANCELED = 3;
+  REQUEST_ALREADY_CANCELED = 4;
+  COMMAND_NOT_EXECUTABLE = 5;
+  INVALID_REQUEST = 6;
+  COMMAND_NOT_AVAILABLE = 7;
+}
+
+enum ErrorReason {
+  UNKNOWN_REASON = 0;
+  TOO_MANY_LOST_DEVICES = 1;
 }
 
 message CommandAttemptDetail {
@@ -107,6 +142,8 @@ message CommandAttemptDetail {
   optional google.protobuf.Timestamp end_time = 8;
   optional google.protobuf.Timestamp create_time = 9;
   optional google.protobuf.Timestamp update_time = 10;
+
+  optional CommandState state = 11;
 }
 
 // Request detail returned by session service.
@@ -141,4 +178,6 @@ message RequestDetail {
   optional string run_target = 17;
   optional int64 run_count = 18;
   optional int64 shard_count = 19;
+
+  optional CancelReason cancel_reason = 20;
 }
