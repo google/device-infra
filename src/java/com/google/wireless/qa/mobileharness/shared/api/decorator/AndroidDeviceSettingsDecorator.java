@@ -524,8 +524,14 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
 
     // enable_cast_broadcast
     if (spec.hasEnableCastBroadcast()) {
-      commandsAfterSettings.gservice.add(
-          "gms:cast:mdns_device_scanner:is_enabled", toInt(spec.getEnableCastBroadcast()));
+      commandsAfterSettings.add(
+          "am broadcast -a com.google.android.gms.phenotype.FLAG_OVERRIDE",
+          "--es package com.google.android.gms.cast",
+          "--es user \\*",
+          "--esa flags mdns_device_scanner:is_enabled",
+          "--esa values " + (spec.getEnableCastBroadcast() ? "true" : "false"),
+          "--esa types boolean",
+          "com.google.android.gms");
     }
 
     // enable_icing_download
