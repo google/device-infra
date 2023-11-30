@@ -104,6 +104,7 @@ java_library(
         "WaitArgs.java",
     ],
     visibility = DEFAULT_VISIBILITY + [
+        "//devtools/deviceinfra/accessibility:acuiti",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
     ],
