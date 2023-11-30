@@ -363,8 +363,7 @@ public abstract class AndroidDeviceDelegate {
    * Adds all the system properties to its dimensions. If a property not found, will not add the
    * property the dimensions.
    */
-  @VisibleForTesting
-  boolean updateAndroidPropertyDimensions(String deviceId)
+  public boolean updateAndroidPropertyDimensions(String deviceId)
       throws MobileHarnessException, InterruptedException {
     boolean isDimensionChanged = false;
     for (AndroidProperty key : AndroidProperty.values()) {

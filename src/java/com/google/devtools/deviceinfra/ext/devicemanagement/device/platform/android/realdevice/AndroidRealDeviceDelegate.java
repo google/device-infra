@@ -57,6 +57,7 @@ import com.google.devtools.mobileharness.platform.android.process.AndroidProcess
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceConnectionState;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.UsbDeviceLocator;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
@@ -730,12 +731,49 @@ public abstract class AndroidRealDeviceDelegate {
     }
   }
 
-  private void setUpRecoveryModeDevice() throws MobileHarnessException {
-    logger.atInfo().log("Setting up recovery mode device for device %s", deviceId);
-    AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
-    throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-        AndroidErrorId.ANDROID_REAL_DEVICE_MISS_RECOVERY_DIMENSION_ERROR,
-        String.format("Device %s doesn't support fast recovery, reboot device later.", deviceId));
+  private void setUpRecoveryModeDevice() throws MobileHarnessException, InterruptedException {
+    try {
+      logger.atInfo().log("Try to reboot the recovery device %s", deviceId);
+      // Cache for reboot the device.
+      DeviceCache.getInstance()
+          .cache(
+              deviceId,
+              getClass().getSimpleName(),
+              AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
+      systemStateUtil.reboot(deviceId);
+      systemStateUtil.waitForState(
+          deviceId,
+          DeviceConnectionState.DEVICE,
+          AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
+      systemStateUtil.waitUntilReady(deviceId);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log("Failed to reboot the recovery device %s", deviceId);
+      // If the device is still on recovery mode, update its configuration
+      if (androidAdbInternalUtil.getDeviceSerialsByState(DeviceState.RECOVERY).contains(deviceId)) {
+        configureRecoveryDevice();
+        return;
+      }
+    } finally {
+      DeviceCache.getInstance().invalidateCache(deviceId);
+    }
+
+    // Recovery device is rebooted to normal mode
+    if (androidAdbInternalUtil.getRealDeviceSerials(/* online= */ true).contains(deviceId)) {
+      setUpOnlineModeDevice();
+    } else {
+      AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
+      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+          AndroidErrorId.ANDROID_REAL_DEVICE_RECOVER_RECOVERY_DEVICE_FAILED,
+          String.format("Failed to recover recovery device %s, reboot device later.", deviceId));
+    }
+  }
+
+  private void configureRecoveryDevice() throws MobileHarnessException, InterruptedException {
+    device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_RECOVERY_DEVICE);
+    device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_FLASHABLE_DEVICE);
+    device.addSupportedDriver(AndroidRealDeviceConstants.NO_OP_DRIVER);
+    device.addSupportedDecorator("AndroidFlashstationDecorator");
+    androidDeviceDelegate.updateAndroidPropertyDimensions(deviceId);
   }
 
   public boolean checkDevice() throws MobileHarnessException, InterruptedException {

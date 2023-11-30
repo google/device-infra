@@ -49,6 +49,9 @@ public class AndroidRealDeviceConstants {
   /** Name of the dimension whose indicates Android device could be flashed. */
   public static final String ANDROID_FLASHABLE_DEVICE = "AndroidFlashableDevice";
 
+  /** Name of the device type whose indicates Android device in recovery mode. */
+  public static final String ANDROID_RECOVERY_DEVICE = "AndroidRecoveryDevice";
+
   /** Default user id for system user. */
   public static final int DEFAULT_SYSTEM_USER = 0;
 
