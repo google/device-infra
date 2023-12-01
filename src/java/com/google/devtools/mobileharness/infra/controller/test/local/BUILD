@@ -56,6 +56,7 @@ java_library(
     visibility = [
     ],
     deps = [
+        "//java/com/google/devtools/mobileharness/platform/android/atetradefed:quit_after_test_lab_plugin",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
