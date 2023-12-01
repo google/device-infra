@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.service.grpc;
 
+import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.StatServiceImpl;
-import com.google.devtools.mobileharness.shared.util.comm.service.GrpcServiceUtil;
 import com.google.wireless.qa.mobileharness.lab.proto.StatServ.GetDeviceStatRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.StatServ.GetDeviceStatResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.StatServ.GetLabStatRequest;
@@ -30,7 +30,6 @@ import io.grpc.stub.StreamObserver;
 public class StatGrpcImpl extends StatServiceImplBase {
 
   private final StatServiceImpl base;
-  private final GrpcServiceUtil grpcServiceUtil = new GrpcServiceUtil();
 
   public StatGrpcImpl() {
     base = new StatServiceImpl();
@@ -39,7 +38,7 @@ public class StatGrpcImpl extends StatServiceImplBase {
   @Override
   public void getLabStat(
       GetLabStatRequest req, StreamObserver<GetLabStatResponse> responseObserver) {
-    grpcServiceUtil.invoke(
+    GrpcServiceUtil.invoke(
         req,
         responseObserver,
         base::getLabStat,
@@ -50,7 +49,7 @@ public class StatGrpcImpl extends StatServiceImplBase {
   @Override
   public void getDeviceStat(
       GetDeviceStatRequest req, StreamObserver<GetDeviceStatResponse> responseObserver) {
-    grpcServiceUtil.invoke(
+    GrpcServiceUtil.invoke(
         req,
         responseObserver,
         base::getDeviceStat,

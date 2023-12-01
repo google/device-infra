@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.service.grpc;
 
+import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceGrpc;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CloseTestRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.CloseTestResponse;
@@ -26,24 +27,21 @@ import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineRequest;
 import com.google.devtools.mobileharness.infra.lab.proto.PrepareTestServiceProto.StartTestEngineResponse;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServiceImpl;
-import com.google.devtools.mobileharness.shared.util.comm.service.GrpcServiceUtil;
 import io.grpc.stub.StreamObserver;
 
 /** gRPC implementation for {@code PrepareTestService}. */
 public class PrepareTestGrpcImpl extends PrepareTestServiceGrpc.PrepareTestServiceImplBase {
 
   private final PrepareTestServiceImpl impl;
-  private final GrpcServiceUtil grpcServiceUtil;
 
   public PrepareTestGrpcImpl(PrepareTestServiceImpl impl) {
     this.impl = impl;
-    this.grpcServiceUtil = new GrpcServiceUtil();
   }
 
   @Override
   public void createTest(
       CreateTestRequest req, StreamObserver<CreateTestResponse> responseObserver) {
-    grpcServiceUtil.invoke(
+    GrpcServiceUtil.invoke(
         req,
         responseObserver,
         impl::createTest,
@@ -55,7 +53,7 @@ public class PrepareTestGrpcImpl extends PrepareTestServiceGrpc.PrepareTestServi
   public void getTestEngineStatus(
       GetTestEngineStatusRequest req,
       StreamObserver<GetTestEngineStatusResponse> responseObserver) {
-    grpcServiceUtil.invoke(
+    GrpcServiceUtil.invoke(
         req,
         responseObserver,
         impl::getTestEngineStatus,
@@ -66,7 +64,7 @@ public class PrepareTestGrpcImpl extends PrepareTestServiceGrpc.PrepareTestServi
   @Override
   public void startTestEngine(
       StartTestEngineRequest req, StreamObserver<StartTestEngineResponse> responseObserver) {
-    grpcServiceUtil.invoke(
+    GrpcServiceUtil.invoke(
         req,
         responseObserver,
         impl::startTestEngine,
@@ -76,7 +74,7 @@ public class PrepareTestGrpcImpl extends PrepareTestServiceGrpc.PrepareTestServi
 
   @Override
   public void closeTest(CloseTestRequest req, StreamObserver<CloseTestResponse> responseObserver) {
-    grpcServiceUtil.invoke(
+    GrpcServiceUtil.invoke(
         req,
         responseObserver,
         impl::closeTest,

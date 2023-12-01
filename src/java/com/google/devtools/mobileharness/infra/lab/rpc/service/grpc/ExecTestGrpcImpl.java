@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.service.grpc;
 
+import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
-import com.google.devtools.mobileharness.shared.util.comm.service.GrpcServiceUtil;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.ForwardTestMessageRequest;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.ForwardTestMessageResponse;
 import com.google.wireless.qa.mobileharness.lab.proto.ExecTestServ.GetTestDetailRequest;
@@ -36,7 +36,6 @@ import io.grpc.stub.StreamObserver;
 public class ExecTestGrpcImpl extends ExecTestServiceImplBase {
 
   private final ExecTestServiceImpl base;
-  private final GrpcServiceUtil grpcServiceUtil = new GrpcServiceUtil();
 
   public ExecTestGrpcImpl(ExecTestServiceImpl service) {
     base = service;
@@ -45,7 +44,7 @@ public class ExecTestGrpcImpl extends ExecTestServiceImplBase {
   @Override
   public void kickOffTest(
       KickOffTestRequest req, StreamObserver<KickOffTestResponse> responseObserver) {
-    grpcServiceUtil.invoke(
+    GrpcServiceUtil.invoke(
         req,
         responseObserver,
         base::kickOffTest,
@@ -56,7 +55,7 @@ public class ExecTestGrpcImpl extends ExecTestServiceImplBase {
   @Override
   public void getTestStatus(
       GetTestStatusRequest req, StreamObserver<GetTestStatusResponse> responseObserver) {
-    grpcServiceUtil.invoke(
+    GrpcServiceUtil.invoke(
         req,
         responseObserver,
         base::getTestStatus,
@@ -67,7 +66,7 @@ public class ExecTestGrpcImpl extends ExecTestServiceImplBase {
   @Override
   public void getTestDetail(
       GetTestDetailRequest req, StreamObserver<GetTestDetailResponse> responseObserver) {
-    grpcServiceUtil.invoke(
+    GrpcServiceUtil.invoke(
         req,
         responseObserver,
         base::getTestDetail,
@@ -78,7 +77,7 @@ public class ExecTestGrpcImpl extends ExecTestServiceImplBase {
   @Override
   public void getTestGenData(
       GetTestGenDataRequest req, StreamObserver<GetTestGenDataResponse> responseObserver) {
-    grpcServiceUtil.invoke(
+    GrpcServiceUtil.invoke(
         req,
         responseObserver,
         request -> base.getTestGenData(request, /* encodeFilePath= */ false),
@@ -89,7 +88,7 @@ public class ExecTestGrpcImpl extends ExecTestServiceImplBase {
   @Override
   public void forwardTestMessage(
       ForwardTestMessageRequest req, StreamObserver<ForwardTestMessageResponse> responseObserver) {
-    grpcServiceUtil.invoke(
+    GrpcServiceUtil.invoke(
         req,
         responseObserver,
         base::forwardTestMessage,
