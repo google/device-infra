@@ -57,8 +57,8 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.JobCancelledException;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
-import com.google.devtools.mobileharness.infra.controller.plugin.CommonPluginLoaderFactory;
-import com.google.devtools.mobileharness.infra.controller.plugin.PluginLoader;
+import com.google.devtools.mobileharness.infra.controller.plugin.CommonPluginCreatorFactory;
+import com.google.devtools.mobileharness.infra.controller.plugin.PluginCreator;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
@@ -241,7 +241,7 @@ public class JobRunnerCore implements Runnable {
   /** Validator for validating the job config. */
   private final JobValidator jobValidator;
 
-  private final PluginLoader.Factory pluginLoaderFactory;
+  private final PluginCreator.Factory pluginLoaderFactory;
 
   private final DeviceQuerier deviceQuerier;
 
@@ -275,7 +275,7 @@ public class JobRunnerCore implements Runnable {
         Clock.systemUTC(),
         Sleeper.defaultSleeper(),
         new JobValidator(),
-        new CommonPluginLoaderFactory(),
+        new CommonPluginCreatorFactory(),
         globalInternalBus);
   }
 
@@ -289,7 +289,7 @@ public class JobRunnerCore implements Runnable {
       Clock clock,
       Sleeper sleeper,
       JobValidator jobValidator,
-      PluginLoader.Factory pluginLoaderFactory,
+      PluginCreator.Factory pluginLoaderFactory,
       @Nullable EventBus globalInternalBus)
       throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
           InterruptedException {
@@ -839,7 +839,7 @@ public class JobRunnerCore implements Runnable {
           .atInfo()
           .alsoTo(logger)
           .log("Loading client jar plugins for job %s", jobInfo.locator().getId());
-      final PluginLoader loader =
+      final PluginCreator loader =
           pluginLoaderFactory.create(
               jobInfo.files().get(JobInfo.TAG_CLIENT_PLUGIN),
               jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN, null),
@@ -1050,7 +1050,7 @@ public class JobRunnerCore implements Runnable {
             EventScope.GLOBAL_INTERNAL,
 
             // Event handlers in CLASS_INTERNAL:
-            // 1) Close PluginLoader: run after JAR_PLUGIN/GLOBAL_INTERNAL to make sure all client
+            // 1) Close PluginCreator: run after JAR_PLUGIN/GLOBAL_INTERNAL to make sure all client
             //    plugins are done. Otherwise, client plugins won't be able to load classes.
             EventScope.CLASS_INTERNAL);
         checkPluginExceptions(true /* postRunJob */);

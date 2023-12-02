@@ -31,11 +31,11 @@ import java.util.Collection;
 import javax.annotation.Nullable;
 import org.apache.commons.lang3.ArrayUtils;
 
-/** {@link PluginLoader.Factory} that will load in common resources for plugins on load. */
-public class CommonPluginLoaderFactory extends PluginLoader.Factory {
+/** {@link PluginCreator.Factory} that will load in common resources for plugins on load. */
+public class CommonPluginCreatorFactory implements PluginCreator.Factory {
 
   @Override
-  public PluginLoader create(
+  public PluginCreator create(
       Collection<String> jarPaths,
       @Nullable Collection<String> classNames,
       @Nullable Collection<String> moduleClassNames,
@@ -43,7 +43,7 @@ public class CommonPluginLoaderFactory extends PluginLoader.Factory {
       PluginType pluginType,
       @Nullable LogCollector<?> log,
       Module... systemModules) {
-    return super.create(
+    return new PluginCreator(
         jarPaths,
         classNames,
         moduleClassNames,

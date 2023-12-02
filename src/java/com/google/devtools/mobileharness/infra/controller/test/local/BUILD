@@ -61,7 +61,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/plugin:loader",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/plugin:plugin_creator",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:test_flow_converter",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:test_command_history_saver",

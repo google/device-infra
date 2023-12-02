@@ -14,15 +14,16 @@
 #
 
 java_library(
-    name = "loader",
+    name = "plugin_creator",
     srcs = [
-        "CommonPluginLoaderFactory.java",
-        "PluginLoader.java",
+        "CommonPluginCreatorFactory.java",
+        "PluginCreator.java",
     ],
     visibility = [
         "//:deviceinfra_all_pkg",
     ],
     deps = [
+        ":plugin_loader",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/plugin/provider:plugin_class_provider",
@@ -36,9 +37,24 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:org_apache_commons_commons_lang3",
         "@maven//:org_reflections_reflections",
+    ],
+)
+
+java_library(
+    name = "plugin_loader",
+    srcs = ["PluginLoader.java"],
+    visibility = [
+        "//java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
     ],
 )

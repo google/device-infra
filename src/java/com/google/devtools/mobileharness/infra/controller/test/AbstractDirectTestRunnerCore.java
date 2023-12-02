@@ -790,7 +790,7 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
       // 3) MossUploader: should run after API_PLUGIN to catch changes in client.
       // 4) StreamzStats: reports metric values to Streamz
       // Event handlers in CLASS_INTERNAL:
-      // 1) LocalTestRunner closes PluginLoader: Must after all lab/client plugins are done.
+      // 1) LocalTestRunner closes PluginCreator: Must after all lab/client plugins are done.
       //    Otherwise, plugins won't be able to load classes.
       // 2) Client JobRunner releases allocation: Must do it at the every end of the
       //    TestRunner. Otherwise, it may cause:

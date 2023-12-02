@@ -37,8 +37,8 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
-import com.google.devtools.mobileharness.infra.controller.plugin.CommonPluginLoaderFactory;
-import com.google.devtools.mobileharness.infra.controller.plugin.PluginLoader;
+import com.google.devtools.mobileharness.infra.controller.plugin.CommonPluginCreatorFactory;
+import com.google.devtools.mobileharness.infra.controller.plugin.PluginCreator;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.EventScope;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
@@ -97,7 +97,7 @@ public class LocalTestFlow {
 
   private final ImmutableList<Object> builtinPlugins;
 
-  private final PluginLoader.Factory pluginLoaderFactory;
+  private final PluginCreator.Factory pluginLoaderFactory;
 
   private final ListeningExecutorService testThreadPool;
 
@@ -124,7 +124,7 @@ public class LocalTestFlow {
     this.driverFactory = driverFactory;
     this.adhocTestbedDriverFactory = adhocTestbedDriverFactory;
     this.builtinPlugins = ImmutableList.of(new TestCommandHistorySaver());
-    this.pluginLoaderFactory = new CommonPluginLoaderFactory();
+    this.pluginLoaderFactory = new CommonPluginCreatorFactory();
     this.testFlowConverter = testFlowConverter;
   }
 
@@ -162,7 +162,7 @@ public class LocalTestFlow {
 
     // Always create a new ClassLoader for the lab plugin of a new test, and close it when test
     // ends.
-    PluginLoader loader =
+    PluginCreator loader =
         pluginLoaderFactory.create(
             labPluginPaths,
             labPluginClasses,
