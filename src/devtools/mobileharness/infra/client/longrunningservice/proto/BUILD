@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@com_github_grpc_grpc//bazel:python_rules.bzl", "py_grpc_library")
+load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
 load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
 
 package(
@@ -75,6 +77,17 @@ java_proto_library(
     deps = [":session_proto"],
 )
 
+py_proto_library(
+    name = "session_py_proto",
+    srcs = [
+        "session.proto",
+    ],
+    deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_py_proto",
+        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+    ],
+)
+
 proto_library(
     name = "session_service_proto",
     srcs = ["session_service.proto"],
@@ -93,6 +106,23 @@ java_grpc_library(
     name = "session_service_java_grpc",
     srcs = [":session_service_proto"],
     deps = [":session_service_java_proto"],
+)
+
+py_proto_library(
+    name = "session_service_py_proto",
+    srcs = [
+        "session_service.proto",
+    ],
+    deps = [
+        ":session_py_proto",
+        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+    ],
+)
+
+py_grpc_library(
+    name = "session_service_py_grpc",
+    srcs = [":session_service_proto"],
+    deps = [":session_service_py_proto"],
 )
 
 proto_library(
