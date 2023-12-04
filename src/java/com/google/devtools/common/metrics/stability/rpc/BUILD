@@ -13,11 +13,13 @@
 # limitations under the License.
 #
 
+DEFAULT_VISIBILITY = [
+    "//:deviceinfra_pkg",
+]
+
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//:deviceinfra_pkg",
-    ],
+    default_visibility = DEFAULT_VISIBILITY,
 )
 
 java_library(
@@ -36,6 +38,8 @@ java_library(
 java_library(
     name = "exception",
     srcs = ["RpcExceptionWithErrorId.java"],
+    visibility = DEFAULT_VISIBILITY + [
+    ],
     deps = [
         "//src/java/com/google/devtools/common/metrics/stability/converter:deserialized_exception",
         "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
