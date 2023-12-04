@@ -162,6 +162,14 @@ public class JobInfo extends JobScheduleUnit {
               + " supports tests triggered by gateway.")
   public static final String PARAM_REPORT_ERROR_AS_TOOL_FAILED = "report_error_as_tool_failed";
 
+  @ParamAnnotation(
+      required = false,
+      help =
+          "If this flag is true, the udeclared_output.zip won't be uploaded to Sponge. Only works"
+              + " if the job is triggered via gateway. This param is only for PMW temperally usage,"
+              + " and will be removed in early 2024.")
+  public static final String PARAM_SKIP_UPLOAD_UNDECLARED_OUTPUT = "skip_upload_undeclared_output";
+
   /** Input files of the job. */
   private final Files files;
 
