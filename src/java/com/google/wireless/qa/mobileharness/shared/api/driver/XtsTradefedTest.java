@@ -48,6 +48,7 @@ import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.LineCallbackException;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -149,7 +150,7 @@ public class XtsTradefedTest extends BaseDriver
     Path tmpXtsRootDir = null;
     try {
       tmpXtsRootDir = prepareXtsWorkDir(xtsType);
-      setUpXtsWorkDir(getXtsRootDir(spec), tmpXtsRootDir, xtsType, isRunRetry);
+      setUpXtsWorkDir(getXtsRootDir(spec, testInfo), tmpXtsRootDir, xtsType, isRunRetry);
       logger.atInfo().log("xTS Tradefed temp working root directory is %s", tmpXtsRootDir);
 
       boolean xtsRunCommandSuccess = runXtsCommand(testInfo, spec, tmpXtsRootDir, xtsType);
@@ -402,7 +403,7 @@ public class XtsTradefedTest extends BaseDriver
       for (String leadingJar : leadingJarsSet) {
         result.addAll(foundLeadingJars.get(leadingJar));
       }
-      result.addAll(restOfJars.build());
+      result.addAll(ImmutableList.sortedCopyOf(restOfJars.build()));
 
       return Joiner.on(':').join(result.build());
     } catch (IOException e) {
@@ -425,12 +426,30 @@ public class XtsTradefedTest extends BaseDriver
     return Path.of(path.toString().replaceFirst(currentPrefix.toString(), newPrefix.toString()));
   }
 
-  private Path getXtsRootDir(XtsTradefedTestDriverSpec spec) {
+  private Path getXtsRootDir(XtsTradefedTestDriverSpec spec, TestInfo testInfo)
+      throws MobileHarnessException {
     if (spec.hasXtsRootDir()) {
       return Paths.get(spec.getXtsRootDir());
+    } else if (spec.hasAndroidXtsZip()) {
+      // Unzip android-xts zip file and return the xts root dir
+      Path androidXtsZip = Paths.get(spec.getAndroidXtsZip());
+      try {
+        String unzippedPath =
+            PathUtil.join(
+                testInfo.getTmpFileDir(), androidXtsZip.toString().replace('.', '_') + "_unzipped");
+        localFileUtil.prepareDir(unzippedPath);
+        // TODO: cache the unzip result to reduce lab disk usage.
+        localFileUtil.unzipFile(androidXtsZip.toString(), unzippedPath);
+        return Path.of(unzippedPath);
+      } catch (MobileHarnessException | InterruptedException e) {
+        if (e instanceof InterruptedException) {
+          Thread.currentThread().interrupt();
+        }
+        logger.atWarning().withCause(e).log("Failed to unzip %s", androidXtsZip);
+      }
     }
-    // TODO: Unzip android-xts zip file and return the xts root dir
-    return null;
+    throw new MobileHarnessException(
+        AndroidErrorId.XTS_TRADEFED_GET_XTS_ROOT_DIR_ERROR, "Failed to get the xts root dir.");
   }
 
   private Path getXtsJdkDir(Path xtsRootDir, XtsType xtsType) {
