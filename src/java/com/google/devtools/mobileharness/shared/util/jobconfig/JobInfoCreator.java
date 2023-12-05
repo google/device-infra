@@ -743,7 +743,7 @@ public final class JobInfoCreator {
       throw new MobileHarnessException(
           BasicErrorId.JOB_SPEC_INVALID_JOB_TYPE_ERROR,
           String.format(
-              "Failed to get namespace and scopedspecs for decorator [%s] with params: %s\n"
+              "Failed to get namespace and scopedspecs for driver [%s] with params: %s\n"
                   + " Error: %s",
               driver.getName(), driver.getParam(), e.getMessage()));
     }
