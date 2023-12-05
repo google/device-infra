@@ -32,6 +32,7 @@ java_library(
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
     ],
     exports = [
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:annotation",

@@ -1093,6 +1093,7 @@ public class LocalFileUtil {
   /**
    * Gets the absolute paths of all files under the given directory that satisfy the specified
    * filter. The same as {@link #listFilePaths(String, boolean, FileFilter)}, but uses java.nio.
+   * This doesn't support listing files within symlink dir or subdir.
    *
    * @param dir the directory path
    * @param recursively whether to scan the sub-directories recursively
