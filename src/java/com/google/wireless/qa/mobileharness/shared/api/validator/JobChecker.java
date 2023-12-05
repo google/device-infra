@@ -22,7 +22,6 @@ import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.ValidatorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ValidatorAnnotation.Type;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -37,20 +36,20 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
-/** Validator for checking the job information. */
-public class JobValidator {
+/** Checker for validating the job information. */
+public class JobChecker {
   /** The logger. */
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Factory for creating {@link Validator} instances. */
   private final ValidatorFactory validatorFactory;
 
-  public JobValidator() {
+  public JobChecker() {
     this(new ValidatorFactory());
   }
 
   @VisibleForTesting
-  JobValidator(ValidatorFactory validatorFactory) {
+  JobChecker(ValidatorFactory validatorFactory) {
     this.validatorFactory = validatorFactory;
   }
 

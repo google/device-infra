@@ -75,7 +75,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.AbstractModule;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
-import com.google.wireless.qa.mobileharness.shared.api.validator.JobValidator;
+import com.google.wireless.qa.mobileharness.shared.api.validator.JobChecker;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Value;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
@@ -238,8 +238,8 @@ public class JobRunnerCore implements Runnable {
   private final ListMultimap<EventScope, Object> scopeEventSubscribers =
       LinkedListMultimap.create();
 
-  /** Validator for validating the job config. */
-  private final JobValidator jobValidator;
+  /** Checker for validating the job config. */
+  private final JobChecker jobChecker;
 
   private final PluginCreator.Factory pluginLoaderFactory;
 
@@ -274,7 +274,7 @@ public class JobRunnerCore implements Runnable {
         new LocalFileUtil(),
         Clock.systemUTC(),
         Sleeper.defaultSleeper(),
-        new JobValidator(),
+        new JobChecker(),
         new CommonPluginCreatorFactory(),
         globalInternalBus);
   }
@@ -288,7 +288,7 @@ public class JobRunnerCore implements Runnable {
       LocalFileUtil fileUtil,
       Clock clock,
       Sleeper sleeper,
-      JobValidator jobValidator,
+      JobChecker jobChecker,
       PluginCreator.Factory pluginLoaderFactory,
       @Nullable EventBus globalInternalBus)
       throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
@@ -324,7 +324,7 @@ public class JobRunnerCore implements Runnable {
     jarPluginExceptionHandler =
         new SubscriberExceptionLoggingHandler(/* saveException= */ true, /* isUserPlugin= */ true);
     scopedEventBus.add(EventScope.JAR_PLUGIN, new EventBus(jarPluginExceptionHandler));
-    this.jobValidator = jobValidator;
+    this.jobChecker = jobChecker;
     this.pluginLoaderFactory = pluginLoaderFactory;
     switch (jobInfo.setting().getAllocationExitStrategy()) {
       case FAIL_FAST_NO_IDLE:
@@ -809,7 +809,7 @@ public class JobRunnerCore implements Runnable {
    *
    * <ol>
    *   <li>updates job properties
-   *   <li>validates job
+   *   <li>checks job
    *   <li>resolves non-local files
    *   <li>registers client plugin
    *   <li>posts {@link JobStartEvent}
@@ -830,7 +830,7 @@ public class JobRunnerCore implements Runnable {
       // Explicitly disable job validation for ACID jobs as we don't want to introduce driver deps
       // in the acid frontend binary.
       if (!"ait".equals(jobInfo.properties().get("client")) && !jobInfo.params().has("acid_id")) {
-        jobValidator.validateJob(jobInfo);
+        jobChecker.validateJob(jobInfo);
       }
       resolveJobFiles(jobInfo);
 

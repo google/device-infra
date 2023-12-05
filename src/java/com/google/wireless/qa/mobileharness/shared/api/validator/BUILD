@@ -47,8 +47,8 @@ java_library(
 )
 
 java_library(
-    name = "job_validator",
-    srcs = ["JobValidator.java"],
+    name = "job_checker",
+    srcs = ["JobChecker.java"],
     deps = [
         ":validator",
         ":validator_factory",

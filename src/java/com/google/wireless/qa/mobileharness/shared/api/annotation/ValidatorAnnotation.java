@@ -54,12 +54,12 @@ public @interface ValidatorAnnotation {
      * }
      * </pre>
      *
-     * <p>{@linkplain com.google.wireless.qa.mobileharness.shared.api.validator.JobValidator
-     * #validateJobByValidatorMethods JobValidator.validateJobByValidatorMethods} could be used for
+     * <p>{@linkplain com.google.wireless.qa.mobileharness.shared.api.validator.JobChecker
+     * #validateJobByValidatorMethods JobChecker.validateJobByValidatorMethods} could be used for
      * testing a job validator method.
      *
      * @see
-     *     com.google.wireless.qa.mobileharness.shared.api.validator.JobValidator#validateJobByValidatorMethods
+     *     com.google.wireless.qa.mobileharness.shared.api.validator.JobChecker#validateJobByValidatorMethods
      */
     JOB,
 
