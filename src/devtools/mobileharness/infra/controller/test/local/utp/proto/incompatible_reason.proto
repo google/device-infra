@@ -132,6 +132,7 @@ enum InfraIncompatibleReason {
   IOS_DRIVER_UNSUPPORTED = 15;
   INTEGRATION_OR_STAGING = 16;
   ATS2 = 17;
+  UTP_TEST_RUNNER_NOT_FOUND = 18;
 }
 
 // MH infra-related reasons that a converter does not support hybrid UTP mode.
