@@ -46,6 +46,7 @@ import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberEx
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.comm.message.CacheableTestMessageHandler;
 import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
@@ -89,7 +90,7 @@ import javax.annotation.Nullable;
  *   <li>trace.* that may cause the library to crash.
  * </ul>
  */
-public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestRunnerCore<T>>
+public abstract class AbstractDirectTestRunner<T extends AbstractDirectTestRunner<T>>
     extends AbstractTestRunner<T> implements DirectTestRunner {
 
   /** Logger for this instance. */
@@ -138,7 +139,7 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
    */
   protected final ImmutableList<PluginItem<?>> initialPluginItems;
 
-  protected AbstractDirectTestRunnerCore(
+  protected AbstractDirectTestRunner(
       TestRunnerLauncher<? super T> launcher, DirectTestRunnerSetting setting)
       throws TestRunnerLauncherConnectedException {
     this(
@@ -156,7 +157,7 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
   }
 
   @VisibleForTesting
-  AbstractDirectTestRunnerCore(
+  AbstractDirectTestRunner(
       TestRunnerLauncher<? super T> launcher,
       DirectTestRunnerSetting setting,
       ExecutorService testMessagePosterExecutorService)
@@ -598,23 +599,27 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
   protected abstract PostTestDeviceOp postRunTest(TestInfo testInfo, Allocation allocation)
       throws MobileHarnessException, InterruptedException;
 
-  /** Gets the span to be used in test execution logic, empty by default. */
-  protected MobileHarnessAutoCloseable getExecuteSpan() {
+  /** Gets the span to be used in test execution logic. */
+  @SuppressWarnings("MustBeClosedChecker")
+  private MobileHarnessAutoCloseable getExecuteSpan() {
     return new MobileHarnessAutoCloseable();
   }
 
-  /** Gets the span to be used in pre run test logic, empty by default. */
-  protected MobileHarnessAutoCloseable getPreRunTestSpan() {
+  /** Gets the span to be used in pre run test logic. */
+  @SuppressWarnings("MustBeClosedChecker")
+  private MobileHarnessAutoCloseable getPreRunTestSpan() {
     return new MobileHarnessAutoCloseable();
   }
 
-  /** Gets the span to be used in run test logic, empty by default. */
-  protected MobileHarnessAutoCloseable getRunTestSpan() {
+  /** Gets the span to be used in run test logic. */
+  @SuppressWarnings("MustBeClosedChecker")
+  private MobileHarnessAutoCloseable getRunTestSpan() {
     return new MobileHarnessAutoCloseable();
   }
 
-  /** Gets the span to be used in post run test logic, empty by default. */
-  protected MobileHarnessAutoCloseable getPostRunTestSpan() {
+  /** Gets the span to be used in post run test logic. */
+  @SuppressWarnings("MustBeClosedChecker")
+  private MobileHarnessAutoCloseable getPostRunTestSpan() {
     return new MobileHarnessAutoCloseable();
   }
 
@@ -920,6 +925,7 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
    *
    * @return whether plugins want to skip running the test
    */
+  @CanIgnoreReturnValue
   private boolean postTestEndedEvent(Object testEvents) {
     List<Object> events = Arrays.asList(testEvents);
     try {
@@ -947,6 +953,7 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
    *     scope should be reversed.
    * @return whether plugins want to skip running the test
    */
+  @CanIgnoreReturnValue
   protected final boolean postTestEvent(
       String eventType, boolean afterDriverExecution, Object... testEvents) {
     List<Object> events = Arrays.asList(testEvents);

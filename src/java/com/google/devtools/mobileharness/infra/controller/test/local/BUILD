@@ -29,7 +29,7 @@ java_library(
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_direct_test_runner_core",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",

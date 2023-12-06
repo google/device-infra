@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDecorato
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDecoratorPreForwardEvent;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverEndedEvent;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent;
+import com.google.devtools.mobileharness.infra.controller.test.AbstractDirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
@@ -56,9 +57,8 @@ import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** For executing a single test locally. */
-public class LocalDirectTestRunner
-    extends com.google.devtools.mobileharness.infra.controller.test.AbstractDirectTestRunnerCore<
-        LocalDirectTestRunner> {
+public class LocalDirectTestRunner extends AbstractDirectTestRunner<LocalDirectTestRunner> {
+
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final ImmutableList<Device> devices;

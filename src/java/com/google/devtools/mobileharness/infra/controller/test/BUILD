@@ -109,8 +109,8 @@ java_library(
 )
 
 java_library(
-    name = "abstract_direct_test_runner_core",
-    srcs = ["AbstractDirectTestRunnerCore.java"],
+    name = "abstract_direct_test_runner",
+    srcs = ["AbstractDirectTestRunner.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
     ],
@@ -158,6 +158,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:device_info",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )
