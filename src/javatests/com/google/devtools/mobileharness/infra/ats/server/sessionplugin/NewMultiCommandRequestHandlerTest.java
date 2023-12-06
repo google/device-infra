@@ -16,13 +16,16 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -38,6 +41,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
@@ -66,6 +70,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Mock private SessionInfo sessionInfo;
   @Captor private ArgumentCaptor<UnaryOperator<RequestDetail>> unaryOperatorCaptor;
+  @Captor private ArgumentCaptor<JobInfo> jobInfoCaptor;
 
   @Inject private NewMultiCommandRequestHandler newMultiCommandRequestHandler;
 
@@ -73,6 +78,56 @@ public final class NewMultiCommandRequestHandlerTest {
   public void setup() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionInfo.getSessionId()).thenReturn("session_id");
+  }
+
+  @Test
+  public void handle_success() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
+    CommandInfo commandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("cts -m module1 --logcat-on-failure")
+            .putDeviceDimensions("device_serial", "device_id_1")
+            .build();
+    NewMultiCommandRequest request =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(commandInfo)
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl(ANDROID_XTS_ZIP)
+                    .setName("android-cts.zip")
+                    .build())
+            .build();
+    newMultiCommandRequestHandler.handle(request, sessionInfo);
+    verify(sessionInfo, times(2))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    ImmutableList<RequestDetail> requestDetails =
+        unaryOperatorCaptor.getAllValues().stream()
+            .map(e -> e.apply(null))
+            .collect(toImmutableList());
+
+    assertThat(requestDetails.get(0).getId()).isEqualTo("session_id");
+    assertThat(requestDetails.get(0).getState()).isEqualTo(RequestState.RUNNING);
+    assertThat(requestDetails.get(0).getCommandInfosList()).containsExactly(commandInfo);
+
+    assertThat(requestDetails.get(1).getId()).isEqualTo("session_id");
+    assertThat(requestDetails.get(1).getCommandDetailsCount()).isEqualTo(1);
+    String jobId = requestDetails.get(1).getCommandDetailsMap().keySet().iterator().next();
+    CommandDetail commandDetail =
+        requestDetails.get(1).getCommandDetailsMap().values().iterator().next();
+    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(commandDetail.getId()).isEqualTo(jobId);
+
+    verify(sessionInfo).addJob(jobInfoCaptor.capture());
+    assertThat(jobInfoCaptor.getValue().locator().getId()).isEqualTo(jobId);
   }
 
   @Test
@@ -153,19 +208,28 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
 
     newMultiCommandRequestHandler.handle(request, sessionInfo);
-    verify(sessionInfo)
+    verify(sessionInfo, times(2))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
-    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
+
+    ImmutableList<RequestDetail> requestDetails =
+        unaryOperatorCaptor.getAllValues().stream()
+            .map(e -> e.apply(null))
+            .collect(toImmutableList());
+
+    assertThat(requestDetails.get(0).getId()).isEqualTo("session_id");
+    assertThat(requestDetails.get(0).getState()).isEqualTo(RequestState.RUNNING);
+    assertThat(requestDetails.get(0).getCommandInfosList()).containsExactly(commandInfo);
 
     // Verify request detail.
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
-    assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+    assertThat(requestDetails.get(1).getId()).isEqualTo("session_id");
+    assertThat(requestDetails.get(1).getCommandInfosList()).containsExactly(commandInfo);
+    assertThat(requestDetails.get(1).getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
+    assertThat(requestDetails.get(1).getState()).isEqualTo(RequestState.CANCELED);
 
     // Verify command detail.
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    CommandDetail commandDetail = requestDetail.getCommandDetails(0);
+    assertThat(requestDetails.get(1).getCommandDetailsCount()).isEqualTo(1);
+    CommandDetail commandDetail =
+        requestDetails.get(1).getCommandDetailsOrThrow("UNKNOWN_" + commandInfo.getCommandLine());
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.CANCELED);
     assertThat(commandDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
@@ -192,13 +256,22 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
 
     newMultiCommandRequestHandler.handle(request, sessionInfo);
-    verify(sessionInfo)
+    verify(sessionInfo, times(2))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
-    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
+
+    ImmutableList<RequestDetail> requestDetails =
+        unaryOperatorCaptor.getAllValues().stream()
+            .map(e -> e.apply(null))
+            .collect(toImmutableList());
+
+    assertThat(requestDetails.get(0).getId()).isEqualTo("session_id");
+    assertThat(requestDetails.get(0).getState()).isEqualTo(RequestState.RUNNING);
+    assertThat(requestDetails.get(0).getCommandInfosList()).isEmpty();
 
     // Verify request detail.
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.COMMAND_NOT_AVAILABLE);
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+    assertThat(requestDetails.get(1).getId()).isEqualTo("session_id");
+    assertThat(requestDetails.get(1).getCancelReason())
+        .isEqualTo(CancelReason.COMMAND_NOT_AVAILABLE);
+    assertThat(requestDetails.get(1).getState()).isEqualTo(RequestState.CANCELED);
   }
 }

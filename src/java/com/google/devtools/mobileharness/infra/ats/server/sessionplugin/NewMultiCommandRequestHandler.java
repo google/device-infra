@@ -72,6 +72,14 @@ final class NewMultiCommandRequestHandler {
 
   void handle(NewMultiCommandRequest request, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
+    sessionInfo.setSessionPluginOutput(
+        empty ->
+            RequestDetail.newBuilder()
+                .setId(sessionInfo.getSessionId())
+                .setState(RequestState.RUNNING)
+                .addAllCommandInfos(request.getCommandsList())
+                .build(),
+        RequestDetail.class);
     if (request.getCommandsList().isEmpty()) {
       sessionInfo.setSessionPluginOutput(
           oldOutput ->
@@ -98,9 +106,9 @@ final class NewMultiCommandRequestHandler {
                 (oldOutput == null ? RequestDetail.newBuilder() : oldOutput.toBuilder())
                     .setId(sessionInfo.getSessionId())
                     .addAllCommandInfos(request.getCommandsList())
-                    .addCommandDetails(commandDetail)
                     .setCancelReason(CancelReason.INVALID_REQUEST)
                     .setState(RequestState.CANCELED)
+                    .putCommandDetails("UNKNOWN_" + commandInfo.getCommandLine(), commandDetail)
                     .build(),
             RequestDetail.class);
         return;
@@ -110,6 +118,20 @@ final class NewMultiCommandRequestHandler {
       logger.atInfo().log(
           "Added job[%s] to the session %s",
           jobInfo.get().locator().getId(), sessionInfo.getSessionId());
+
+      // Update session output to contain the added job.
+      CommandDetail commandDetail =
+          CommandDetail.newBuilder()
+              .setCommandLine(commandInfo.getCommandLine())
+              .setId(jobInfo.get().locator().getId())
+              .build();
+      sessionInfo.setSessionPluginOutput(
+          oldOutput ->
+              (oldOutput == null ? RequestDetail.newBuilder() : oldOutput.toBuilder())
+                  .setId(sessionInfo.getSessionId())
+                  .putCommandDetails(jobInfo.get().locator().getId(), commandDetail)
+                  .build(),
+          RequestDetail.class);
     }
   }
 

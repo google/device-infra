@@ -21,11 +21,18 @@ import static com.google.protobuf.TextFormat.shortDebugString;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest.RequestCase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** */
@@ -56,5 +63,50 @@ final class AtsServerSessionPlugin {
     if (request.getRequestCase().equals(RequestCase.NEW_MULTI_COMMAND_REQUEST)) {
       newMultiCommandRequestHandler.handle(request.getNewMultiCommandRequest(), sessionInfo);
     }
+  }
+
+  @Subscribe
+  public void onJobEnded(JobEndEvent jobEndEvent) {
+    updateCommandDetail(jobEndEvent.getJobInfo().toNewJobInfo());
+
+    // TODO: create mobly job after all tradefed jobs are done.
+  }
+
+  private void updateCommandDetail(JobInfo jobInfo) {
+    Optional<RequestDetail> requestDetail = sessionInfo.getSessionPluginOutput(RequestDetail.class);
+    if (requestDetail.isEmpty()
+        || !requestDetail.get().containsCommandDetails(jobInfo.locator().getId())) {
+      return;
+    }
+    CommandDetail oldCommandDetail =
+        requestDetail.get().getCommandDetailsOrThrow(jobInfo.locator().getId());
+    CommandDetail newCommandDetail =
+        oldCommandDetail.toBuilder().setState(convertJobStatusToCommandState(jobInfo)).build();
+    sessionInfo.setSessionPluginOutput(
+        oldOutput ->
+            (oldOutput == null ? RequestDetail.newBuilder() : oldOutput.toBuilder())
+                .putCommandDetails(jobInfo.locator().getId(), newCommandDetail)
+                .build(),
+        RequestDetail.class);
+  }
+
+  private CommandState convertJobStatusToCommandState(JobInfo jobInfo) {
+    switch (jobInfo.status().get()) {
+      case NEW:
+        return CommandState.UNKNOWN_STATE;
+      case ASSIGNED:
+        return CommandState.QUEUED;
+      case RUNNING:
+        return CommandState.RUNNING;
+      case DONE:
+        if (jobInfo.result().get().equals(TestResult.PASS)) {
+          return CommandState.COMPLETED;
+        } else {
+          return CommandState.ERROR;
+        }
+      case SUSPENDED:
+        return CommandState.CANCELED;
+    }
+    return CommandState.UNKNOWN_STATE;
   }
 }

@@ -171,7 +171,7 @@ message RequestDetail {
   optional google.protobuf.Timestamp create_time = 11;
   optional google.protobuf.Timestamp update_time = 12;
   optional string api_module_version = 13;
-  repeated CommandDetail command_details = 14;
+  map<string, CommandDetail> command_details = 14;
   repeated CommandAttemptDetail command_attempt_details = 15;
 
   optional string cluster = 16;
