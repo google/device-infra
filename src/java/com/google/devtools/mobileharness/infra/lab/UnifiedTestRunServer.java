@@ -55,10 +55,12 @@ import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServic
 import com.google.devtools.mobileharness.infra.lab.rpc.service.grpc.ExecTestGrpcImpl;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.grpc.PrepareTestGrpcImpl;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.grpc.StatGrpcImpl;
-import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.JobSyncHelper;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.LabSyncHelper;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
+import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
+import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -171,18 +173,22 @@ public class UnifiedTestRunServer {
       JobSyncStub jobSyncStub = null;
 
       if (Flags.instance().enableMasterSyncer.getNonNull()) {
-        // TODO: Create labSyncStub and jobSyncStub.
+        MasterGrpcStubHelper helper =
+            new MasterGrpcStubHelper(
+                ChannelFactory.createLocalChannel(
+                    Flags.instance().masterPort.getNonNull(), rpcThreadPool));
+        labSyncStub = new LabSyncGrpcStub(helper);
       }
 
-      if ((labSyncStub != null || jobSyncStub != null)) {
-
+      if (labSyncStub != null) {
         LabSyncHelper labSyncHelper =
-            new LabSyncHelper(labSyncStub, rpcPort, Flags.instance().socketPort.getNonNull());
-        JobSyncHelper jobSyncHelper = new JobSyncHelper(jobSyncStub);
+            new LabSyncHelper(
+                labSyncStub,
+                rpcPort,
+                Flags.instance().socketPort.getNonNull(),
+                Flags.instance().grpcPort.getNonNull());
         masterSyncerForDevice = new MasterSyncerForDevice(deviceManager, labSyncHelper);
-        masterSyncerForJob = new MasterSyncerForJob(jobManager, jobSyncHelper, deviceManager);
         globalInternalBus.register(masterSyncerForDevice);
-        globalInternalBus.register(masterSyncerForJob);
         apiConfig.addObserver(masterSyncerForDevice);
       }
 

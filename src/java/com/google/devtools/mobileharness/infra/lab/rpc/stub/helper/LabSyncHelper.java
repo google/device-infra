@@ -109,7 +109,9 @@ public class LabSyncHelper {
    * <p>Following j/c/g/wireless/qa/mobileharness/lab/rpc/stub/MasterServiceStub.java. We still need
    * this for FileTransferClient in trident test.
    */
-  @Deprecated private final int labSocketPort;
+  private final int labSocketPort;
+
+  private final int labGrpcPort;
 
   /** All optional configurations of the lab server and the devices. */
   private final ApiConfig apiConfig;
@@ -124,8 +126,15 @@ public class LabSyncHelper {
    * @param labRpcPort RPC port of the Stubby services of this lab server
    * @param labSocketPort socket port for receiving file of this lab server
    */
-  public LabSyncHelper(LabSyncStub labSyncStub, int labRpcPort, int labSocketPort) {
-    this(labSyncStub, labRpcPort, labSocketPort, ApiConfig.getInstance(), new NetUtil());
+  public LabSyncHelper(
+      LabSyncStub labSyncStub, int labRpcPort, int labSocketPort, int labGrpcPort) {
+    this(
+        labSyncStub,
+        labRpcPort,
+        labSocketPort,
+        labGrpcPort,
+        ApiConfig.getInstance(),
+        new NetUtil());
   }
 
   @VisibleForTesting
@@ -133,11 +142,13 @@ public class LabSyncHelper {
       LabSyncStub labSyncStub,
       int labRpcPort,
       int labSocketPort,
+      int labGrpcPort,
       ApiConfig config,
       NetUtil netUtil) {
     this.labSyncStub = labSyncStub;
     this.labRpcPort = labRpcPort;
     this.labSocketPort = labSocketPort;
+    this.labGrpcPort = labGrpcPort;
     this.apiConfig = config;
     this.netUtil = netUtil;
   }
@@ -170,6 +181,11 @@ public class LabSyncHelper {
                         LabPort.newBuilder()
                             .setType(PortType.LAB_SERVER_SOCKET)
                             .setNum(labSocketPort)
+                            .build())
+                    .addPort(
+                        LabPort.newBuilder()
+                            .setType(PortType.LAB_SERVER_GRPC)
+                            .setNum(labGrpcPort)
                             .build())
                     .build())
             .setLabServerFeature(getLabServerFeature());

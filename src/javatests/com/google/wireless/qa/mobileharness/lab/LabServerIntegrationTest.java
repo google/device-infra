@@ -16,19 +16,32 @@
 
 package com.google.wireless.qa.mobileharness.lab;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.truth.Correspondence.transforming;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.devtools.mobileharness.shared.util.command.LineCallback.does;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.allocation.Allocation;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
+import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
+import com.google.devtools.mobileharness.api.model.proto.Lab.PortType;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.AllocationWithStats;
+import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsModeModule;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
-import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
+import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -37,10 +50,17 @@ import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub;
+import com.google.inject.Guice;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import io.grpc.ManagedChannel;
 import java.time.Duration;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.inject.Inject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -96,16 +116,25 @@ public class LabServerIntegrationTest {
   private AtomicBoolean labServerStartedSuccessfully;
   private CountDownLatch labServerFoundDevice;
 
+  private int masterPort;
+  private int labServerGrpcPort;
+  private int labServerRpcPort;
+  private int labServerSocketPort;
   private Command labServerCommand;
 
   private CommandProcess labServerProcess;
   private ManagedChannel labServerChannel;
 
+  @Inject private AtsMode atsMode;
+
   @Before
   public void setUp() throws Exception {
-    int labServerGrpcPort = PortProber.pickUnusedPort();
-    int labServerRpcPort = PortProber.pickUnusedPort();
-    int labServerSocketPort = PortProber.pickUnusedPort();
+    Guice.createInjector(new AtsModeModule()).injectMembers(this);
+
+    masterPort = PortProber.pickUnusedPort();
+    labServerGrpcPort = PortProber.pickUnusedPort();
+    labServerRpcPort = PortProber.pickUnusedPort();
+    labServerSocketPort = PortProber.pickUnusedPort();
 
     String labServerPublicDirPath = tmpFolder.newFolder("lab_server_public_dir").toString();
     String labServerTmpDirPath = tmpFolder.newFolder("lab_server_tmp_dir").toString();
@@ -125,12 +154,14 @@ public class LabServerIntegrationTest {
                         LAB_SERVER_FILE_PATH,
                         ImmutableList.of(
                             "--detect_adb_device=false",
+                            "--enable_api_config=false",
                             "--enable_cloud_logging=false",
                             "--enable_emulator_detection=false",
+                            "--enable_external_master_server=true",
                             "--enable_file_cleaner=false",
-                            "--enable_master_syncer=false",
                             "--enable_stubby_rpc_server=false",
                             "--grpc_port=" + labServerGrpcPort,
+                            "--master_port=" + masterPort,
                             "--no_op_device_num=1",
                             "--public_dir=" + labServerPublicDirPath,
                             "--rpc_port=" + labServerRpcPort,
@@ -177,7 +208,7 @@ public class LabServerIntegrationTest {
 
   @Test
   public void getVersion() throws Exception {
-    startLabServerAndWaitUntilReady();
+    startServersAndWaitUntilReady();
 
     GetVersionResponse getVersionResponse =
         new VersionGrpcStub(labServerChannel).getVersion(GetVersionRequest.getDefaultInstance());
@@ -189,7 +220,7 @@ public class LabServerIntegrationTest {
 
   @Test
   public void checkLabServerLog() throws Exception {
-    startLabServerAndWaitUntilReady();
+    startServersAndWaitUntilReady();
 
     logger.atInfo().log("Running lab server for a while...");
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(10L));
@@ -202,8 +233,64 @@ public class LabServerIntegrationTest {
         .doesNotContain("\tat ");
   }
 
-  private void startLabServerAndWaitUntilReady()
-      throws CommandStartException, InterruptedException {
+  @Test
+  public void allocateDevice() throws Exception {
+    startServersAndWaitUntilReady();
+
+    // Creates JobInfo and TestInfo.
+    JobInfo jobInfo =
+        JobInfo.newBuilder()
+            .setLocator(new JobLocator("fake_job_id", "fake_job_name"))
+            .setType(
+                JobType.newBuilder()
+                    .setDevice("NoOpDevice")
+                    .setDriver("NoOpDriver")
+                    .addDecorator("NoOpDecorator")
+                    .build())
+            .setJobUser(JobUser.newBuilder().setRunAs("fake_owner").build())
+            .build();
+    jobInfo.tests().add("fake_test_id", "fake_test_name");
+
+    // Creates DeviceAllocator.
+    DeviceAllocator deviceAllocator =
+        atsMode.createDeviceAllocator(jobInfo, /* globalInternalBus= */ null);
+    Optional<ExceptionDetail> setUpError = deviceAllocator.setUp();
+    if (setUpError.isPresent()) {
+      throw ErrorModelConverter.toMobileHarnessException(setUpError.get());
+    }
+
+    // Polls allocations.
+    List<AllocationWithStats> allocations;
+    int count = 0;
+    while (true) {
+      allocations = deviceAllocator.pollAllocations();
+      count++;
+      if (!allocations.isEmpty() || count > 20) {
+        break;
+      }
+      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1L));
+    }
+
+    // Checks the allocation.
+    assertThat(allocations.stream().map(AllocationWithStats::allocation).collect(toImmutableList()))
+        .<Allocation, String>comparingElementsUsing(
+            transforming(
+                allocation -> requireNonNull(allocation).getDevice().id(), "has a device ID of"))
+        .containsExactly("NoOpDevice-0");
+    assertThat(allocations.get(0).allocation().getDevice().labLocator().ports().getAll())
+        .containsExactly(
+            PortType.LAB_SERVER_RPC,
+            labServerRpcPort,
+            PortType.LAB_SERVER_SOCKET,
+            labServerSocketPort,
+            PortType.LAB_SERVER_GRPC,
+            labServerGrpcPort);
+  }
+
+  private void startServersAndWaitUntilReady() throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("Starting AtsMode, port=%s", masterPort);
+    atsMode.initialize(masterPort);
+
     logger.atInfo().log("Starting lab server, command=%s", labServerCommand);
     labServerProcess = new CommandExecutor().start(labServerCommand);
 

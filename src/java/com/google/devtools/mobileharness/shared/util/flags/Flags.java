@@ -228,6 +228,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> disableCellBroadcastReceiver = disableCellBroadcastReceiverDefault;
 
+  private static final Flag<Boolean> enableApiConfigDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_api_config",
+      description = "Whether to enable ApiConfig in lab server. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableApiConfig = enableApiConfigDefault;
+
   private static final Flag<Boolean> enableAteDualStackDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -235,16 +243,6 @@ public class Flags {
       description = "Whether to enable ATE dual stack mode, which runs tests from both MH and TFC.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAteDualStack = enableAteDualStackDefault;
-
-  private static final Flag<Boolean> enableCloudMetricsDefault = Flag.value(false);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_cloud_metrics",
-      description =
-          "Whether to enable sending metrics to Google Cloud. It should only be enabled when"
-              + " deploying in Google Cloud.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableCloudMetrics = enableCloudMetricsDefault;
 
   private static final Flag<Boolean> enableAtsConsoleOlcServerDefault = Flag.value(false);
 
@@ -272,6 +270,16 @@ public class Flags {
       description = "Whether to enable cloud logging.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableCloudLogging = enableCloudLoggingDefault;
+
+  private static final Flag<Boolean> enableCloudMetricsDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_cloud_metrics",
+      description =
+          "Whether to enable sending metrics to Google Cloud. It should only be enabled when"
+              + " deploying in Google Cloud.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableCloudMetrics = enableCloudMetricsDefault;
 
   private static final Flag<Boolean> enableDebugModeDefault = Flag.value(false);
 
@@ -308,6 +316,14 @@ public class Flags {
               + " it to false in remote labs. Default is true.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableEmulatorDetection = enableEmulatorDetectionDefault;
+
+  private static final Flag<Boolean> enableExternalMasterServerDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_external_master_server",
+      description = "Whether to enable external master server. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableExternalMasterServer = enableExternalMasterServerDefault;
 
   private static final Flag<Boolean> createFailedDeviceDefault = Flag.value(true);
 
@@ -395,7 +411,7 @@ public class Flags {
 
   @com.beust.jcommander.Parameter(
       names = "--grpc_port",
-      description = "Port of server local gRPC services. Default is 9994.",
+      description = "Port of server gRPC services. Default is 9994.",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> grpcPort = grpcPortDefault;
 
@@ -446,6 +462,14 @@ public class Flags {
       description = "Max number of the rotated log files. Max size of each file is 10 MB.",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> logFileNum = logFileNumDefault;
+
+  private static final Flag<Integer> masterPortDefault = Flag.value(9990);
+
+  @com.beust.jcommander.Parameter(
+      names = "--master_port",
+      description = "Port of master server",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> masterPort = masterPortDefault;
 
   private static final Flag<Integer> maxConcurrentAdbPushLargeFileDefault = Flag.value(4);
 

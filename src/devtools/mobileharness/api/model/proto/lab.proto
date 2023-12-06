@@ -23,9 +23,11 @@ option java_outer_classname = "Lab";
 
 // Port types of a lab.
 enum PortType {
-  LAB_SERVER_RPC = 0;     // Lab server rpc port.
-  LAB_SERVER_SOCKET = 1;  // Lab server socket port.
-  LAB_SERVER_HTTP = 4;    // Lab server http port.
+  reserved 2, 3;
+  LAB_SERVER_RPC = 0;     // Lab server Stubby port.
+  LAB_SERVER_SOCKET = 1;  // Lab server Socket port.
+  LAB_SERVER_HTTP = 4;    // Lab server HTTP port.
+  LAB_SERVER_GRPC = 5;    // Lab server gRPC port.
 }
 
 // Lab port type and number.
