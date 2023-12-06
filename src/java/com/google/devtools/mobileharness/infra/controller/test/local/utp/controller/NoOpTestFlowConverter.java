@@ -46,6 +46,6 @@ public class NoOpTestFlowConverter implements TestFlowConverter {
     incompatibleReasons.addReason(reason);
     incompatibleReasons.addToTestProperties(testInfo.properties());
 
-    return Result.of(TestFlows.getOriginalFlow(testInfo), null /* utpDriver */);
+    return Result.of(TestFlows.getOriginalFlow(testInfo), /* utpDriver= */ null);
   }
 }

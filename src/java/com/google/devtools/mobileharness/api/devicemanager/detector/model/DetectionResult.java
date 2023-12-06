@@ -24,7 +24,7 @@ import javax.annotation.Nullable;
 @AutoValue
 public abstract class DetectionResult {
   public static DetectionResult of(String deviceControlId, DetectionType detectionType) {
-    return of(deviceControlId, detectionType, null /* detectionDetail */);
+    return of(deviceControlId, detectionType, /* detectionDetail= */ null);
   }
 
   public static DetectionResult of(

@@ -117,7 +117,7 @@ public class Warnings {
   @CanIgnoreReturnValue
   public Warnings addAndLog(ExceptionDetail exceptionDetail, @Nullable FluentLogger logger) {
     add(exceptionDetail);
-    log(ErrorModelConverter.toDeserializedException(exceptionDetail), logger, null /* errorId */);
+    log(ErrorModelConverter.toDeserializedException(exceptionDetail), logger, /* errorId= */ null);
     return this;
   }
 
@@ -131,7 +131,7 @@ public class Warnings {
   @CanIgnoreReturnValue
   public Warnings addAndLog(MobileHarnessException e, @Nullable FluentLogger logger) {
     add(ErrorModelConverter.toExceptionDetail(e));
-    log(e, logger, null /* errorId */);
+    log(e, logger, /* errorId= */ null);
     return this;
   }
 

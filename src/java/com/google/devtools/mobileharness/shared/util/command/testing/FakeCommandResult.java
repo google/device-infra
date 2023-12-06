@@ -24,7 +24,7 @@ public class FakeCommandResult {
 
   public static CommandResult of(String stdout, String stderr, int exitCode) {
     return CommandResults.of(
-        stdout, stderr, exitCode, false /* isTimeout */, false /* isStopped */);
+        stdout, stderr, exitCode, /* isTimeout= */ false, /* isStopped= */ false);
   }
 
   public static CommandResult of(

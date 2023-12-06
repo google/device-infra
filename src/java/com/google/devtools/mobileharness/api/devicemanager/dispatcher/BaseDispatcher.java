@@ -35,7 +35,7 @@ public abstract class BaseDispatcher implements Dispatcher {
   @Nullable private final Object detectionDetail;
 
   public BaseDispatcher(DetectionType detectionType) {
-    this(detectionType, null /* detectionDetail */);
+    this(detectionType, /* detectionDetail= */ null);
   }
 
   public BaseDispatcher(DetectionType detectionType, @Nullable Object detectionDetail) {

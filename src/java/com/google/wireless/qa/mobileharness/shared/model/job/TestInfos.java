@@ -61,7 +61,7 @@ public class TestInfos {
    * instance of this.
    */
   TestInfos(JobInfo jobInfo) {
-    this(jobInfo, null /*parentTest*/);
+    this(jobInfo, /* parentTest= */ null);
   }
 
   /**

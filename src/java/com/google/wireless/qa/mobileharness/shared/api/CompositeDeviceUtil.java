@@ -40,7 +40,7 @@ public final class CompositeDeviceUtil {
             subDevice.getClass().getSimpleName(),
             subDevice.getDeviceId(),
             cacheTimeoutMs,
-            false /* autoDelete */);
+            /* autoDelete= */ false);
       }
     }
     if (!(device instanceof CompositeDevice)) {

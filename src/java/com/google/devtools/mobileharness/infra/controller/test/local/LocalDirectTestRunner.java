@@ -308,7 +308,8 @@ public class LocalDirectTestRunner
               return allocation;
             }
           };
-      return postTestEvent("driver event" /* eventType */, false /* afterDriverExecution */, event);
+      return postTestEvent(
+          /* eventType= */ "driver event", /* afterDriverExecution= */ false, event);
     }
 
     /** Returns whether to skip running the test */
@@ -355,7 +356,8 @@ public class LocalDirectTestRunner
               return allocation;
             }
           };
-      return postTestEvent("driver event" /* eventType */, true /* afterDriverExecution */, event);
+      return postTestEvent(
+          /* eventType= */ "driver event", /* afterDriverExecution= */ true, event);
     }
   }
 
@@ -447,7 +449,7 @@ public class LocalDirectTestRunner
             }
           };
       return postTestEvent(
-          "decorator event" /* eventType */, false /* afterDriverExecution */, event);
+          /* eventType= */ "decorator event", /* afterDriverExecution= */ false, event);
     }
 
     /** Returns whether to skip running the test */
@@ -496,7 +498,7 @@ public class LocalDirectTestRunner
             }
           };
       return postTestEvent(
-          "decorator event" /* eventType */, true /* afterDriverExecution */, event);
+          /* eventType= */ "decorator event", /* afterDriverExecution= */ true, event);
     }
   }
 }

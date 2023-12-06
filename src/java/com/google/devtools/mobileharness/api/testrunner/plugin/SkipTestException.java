@@ -110,7 +110,7 @@ public class SkipTestException extends Exception {
    */
   @Deprecated
   public SkipTestException(String reason, boolean pass) {
-    this(reason, pass, null /* cause */);
+    this(reason, pass, /* cause= */ null);
   }
 
   /**
@@ -134,7 +134,7 @@ public class SkipTestException extends Exception {
    */
   @Deprecated
   public SkipTestException(String reason, DesiredTestResult desiredTestResult) {
-    this(reason, desiredTestResult, null /* cause */);
+    this(reason, desiredTestResult, /* cause= */ null);
   }
 
   /**

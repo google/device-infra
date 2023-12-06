@@ -195,7 +195,7 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
     // there are only a few users doing this, set the isUserPlugin=false here. Further breaking down
     // the plugin type would be helpful for further breaking down the error types.
     apiPluginExceptionHandler =
-        new SubscriberExceptionLoggingHandler(true /* saveException */, false /*isUserPlugin */);
+        new SubscriberExceptionLoggingHandler(/* saveException= */ true, /* isUserPlugin= */ false);
     scopedEventBus.add(EventScope.API_PLUGIN, new EventBus(apiPluginExceptionHandler));
     setting
         .apiPluginSubscribers()
@@ -209,7 +209,7 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
                     }));
 
     jarPluginExceptionHandler =
-        new SubscriberExceptionLoggingHandler(true /* saveException */, true /*isUserPlugin*/);
+        new SubscriberExceptionLoggingHandler(/* saveException= */ true, /* isUserPlugin= */ true);
     scopedEventBus.add(EventScope.JAR_PLUGIN, new EventBus(jarPluginExceptionHandler));
     setting
         .jarPluginSubscribers()
@@ -653,8 +653,8 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
     // 2) Lab plugins from "lab_plugin_jar" on Lab side.
     isTestSkipped =
         postTestEvent(
-            "test starting event" /* eventType */,
-            false /* afterDriverExecution */,
+            /* eventType= */ "test starting event",
+            /* afterDriverExecution= */ false,
             createTestEvent(
                 com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent.class,
                 testInfo,
@@ -682,8 +682,8 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
     // 2) Lab plugins from "lab_plugin_jar" on Lab side.
     isTestSkipped |=
         postTestEvent(
-            "test started event" /* eventType */,
-            false /* afterDriverExecution */,
+            /* eventType= */ "test started event",
+            /* afterDriverExecution= */ false,
             createTestEvent(
                 TestStartEvent.class, testInfo, allocation, deviceInfos, deviceFeatures, null),
             createTestEvent(
@@ -730,8 +730,8 @@ public abstract class AbstractDirectTestRunnerCore<T extends AbstractDirectTestR
     // Event handlers in CLASS_INTERNAL:
     // 1) TestCommandHistorySaver on lab side.
     postTestEvent(
-        "test ending event" /* eventType */,
-        true /* afterDriverExecution */,
+        /* eventType= */ "test ending event",
+        /* afterDriverExecution= */ true,
         createTestEvent(
             com.google.devtools.mobileharness.api.testrunner.event.test.TestEndingEvent.class,
             testInfo,

@@ -89,7 +89,7 @@ public class SkipJobException extends Exception {
    */
   public static SkipJobException create(
       String reason, DesiredJobResult desiredJobResult, ErrorId errorId) {
-    return new SkipJobException(reason, desiredJobResult.toProto(), errorId, null /* cause */);
+    return new SkipJobException(reason, desiredJobResult.toProto(), errorId, /* cause= */ null);
   }
 
   /**
@@ -99,7 +99,7 @@ public class SkipJobException extends Exception {
    */
   @Deprecated
   public SkipJobException(String reason, boolean pass) {
-    this(reason, pass, null /* cause */);
+    this(reason, pass, /* cause= */ null);
   }
 
   /**
@@ -118,7 +118,7 @@ public class SkipJobException extends Exception {
    */
   @Deprecated
   public SkipJobException(String reason, DesiredJobResult desiredJobResult) {
-    this(reason, desiredJobResult, null /* cause */);
+    this(reason, desiredJobResult, /* cause= */ null);
   }
 
   /**

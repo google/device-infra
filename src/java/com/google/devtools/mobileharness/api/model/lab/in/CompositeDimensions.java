@@ -78,8 +78,8 @@ public class CompositeDimensions {
    * dimensions are also satisfied by the job dimensions.
    */
   public boolean supportAndSatisfied(Map<String, String> jobDimensions) {
-    return getUnsupportedJobDimensions(jobDimensions, true /*failFast*/).isEmpty()
-        && getUnsatisfiedDeviceDimensions(jobDimensions, true /*failFast*/).isEmpty();
+    return getUnsupportedJobDimensions(jobDimensions, /* failFast= */ true).isEmpty()
+        && getUnsatisfiedDeviceDimensions(jobDimensions, /* failFast= */ true).isEmpty();
   }
 
   /**
