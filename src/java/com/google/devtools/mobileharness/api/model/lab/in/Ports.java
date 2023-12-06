@@ -97,12 +97,7 @@ public class Ports {
   // Does not memorize this. Lab ports can be added afterwards.
   public synchronized List<LabPort> toProtos() {
     return ports.entrySet().stream()
-        .map(
-            e ->
-                Lab.LabPort.newBuilder()
-                    .setType(PortType.forNumber(e.getKey().getNumber()))
-                    .setNum(e.getValue())
-                    .build())
+        .map(e -> Lab.LabPort.newBuilder().setType(e.getKey()).setNum(e.getValue()).build())
         .collect(toImmutableList());
   }
 }
