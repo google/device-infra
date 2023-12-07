@@ -1,0 +1,25 @@
+# proto-file: third_party/deviceinfra/src/devtools/deviceaction/schemas/proto/base_spec.proto
+# proto-message: DeviceConfig
+
+device_spec {
+  android_phone_spec {
+    brand: "REDMI"
+    reboot_await: { seconds: 30 }
+    reboot_timeout: { seconds: 300 }
+    testharness_boot_await: { seconds: 60 }
+    testharness_boot_timeout: { seconds: 600 }
+    staged_ready_timeout: { seconds: 150 }
+    #module_dir_on_device { key: "com.google.android.captiveportallogin" value: "/mnt/vendor/mi_ext/system/app/CaptivePortalLoginGoogle" }
+    module_dir_on_device { key: "com.google.android.networkstack" value: "/mnt/vendor/mi_ext/system/priv-app/NetworkStackGoogle" }
+    module_dir_on_device { key: "com.google.android.documentsui" value: "/mnt/vendor/mi_ext/system/priv-app/DocumentsUIGoogle" }
+  }
+}
+[devtools.deviceaction.schemas.proto.action.InstallMainlineSpec.install_mainline_spec] {
+  clean_up_sessions: false
+  skip_check_version_after_push: true
+  soft_reboot_after_push: true
+}
+[devtools.deviceaction.schemas.proto.action.ResetSpec.reset_spec] {
+  reset_option: TEST_HARNESS
+  need_preload_modules_recovery: false
+}
