@@ -31,37 +31,18 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /** Thread pool test runner launcher which uses an {@link ExecutorService} to launch the test. */
-public class ThreadPoolTestRunnerLauncherCore<T extends TestRunner> extends TestRunnerLauncher<T> {
+public class ThreadPoolTestRunnerLauncher<T extends TestRunner> extends TestRunnerLauncher<T> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private class TestTask implements Runnable {
-
-    @Override
-    public void run() {
-      TestExecutionResult result =
-          TestExecutionResult.create(TestResult.UNKNOWN, PostTestDeviceOp.REBOOT);
-      try {
-        result = executeTest();
-      } catch (InterruptedException e) {
-        logger.atWarning().withCause(e).log(
-            "Test [%s] interrupted", getTestRunner().getTestExecutionUnit().locator().id());
-      } finally {
-        boolean needReboot = PostTestDeviceOp.REBOOT.equals(result.postTestDeviceOp());
-        postTestExecutionEndedEvent(
-            getTestRunner().getAllocation(), result.testResult(), needReboot);
-      }
-    }
-  }
-
-  protected final ExecutorService threadPool;
+  private final ExecutorService threadPool;
   @Nullable private final EventBus globalInternalEventBus;
-  protected final TestTask testTask = new TestTask();
+  private final TestTask testTask = new TestTask();
 
   @GuardedBy("testTask")
-  protected volatile Future<Void> testFuture;
+  private volatile Future<Void> testFuture;
 
-  public ThreadPoolTestRunnerLauncherCore(
+  public ThreadPoolTestRunnerLauncher(
       ExecutorService threadPool, @Nullable EventBus globalInternalEventBus) {
     this.threadPool = threadPool;
     this.globalInternalEventBus = globalInternalEventBus;
@@ -70,7 +51,7 @@ public class ThreadPoolTestRunnerLauncherCore<T extends TestRunner> extends Test
   @Override
   protected void asyncLaunchTest() {
     synchronized (testTask) {
-      testFuture = threadPool.submit(testTask, null /* result */);
+      testFuture = threadPool.submit(testTask, /* result= */ null);
     }
   }
 
@@ -79,7 +60,7 @@ public class ThreadPoolTestRunnerLauncherCore<T extends TestRunner> extends Test
   protected void killTest() {
     synchronized (testTask) {
       if (testFuture != null) {
-        testFuture.cancel(true /* mayInterruptIfRunning */);
+        testFuture.cancel(/* mayInterruptIfRunning= */ true);
       }
     }
   }
@@ -122,6 +103,25 @@ public class ThreadPoolTestRunnerLauncherCore<T extends TestRunner> extends Test
               return needReboot;
             }
           });
+    }
+  }
+
+  private class TestTask implements Runnable {
+
+    @Override
+    public void run() {
+      TestExecutionResult result =
+          TestExecutionResult.create(TestResult.UNKNOWN, PostTestDeviceOp.REBOOT);
+      try {
+        result = executeTest();
+      } catch (InterruptedException e) {
+        logger.atWarning().withCause(e).log(
+            "Test [%s] interrupted", getTestRunner().getTestExecutionUnit().locator().id());
+      } finally {
+        boolean needReboot = result.postTestDeviceOp().equals(PostTestDeviceOp.REBOOT);
+        postTestExecutionEndedEvent(
+            getTestRunner().getAllocation(), result.testResult(), needReboot);
+      }
     }
   }
 }

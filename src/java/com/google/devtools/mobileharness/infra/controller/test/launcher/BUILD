@@ -36,9 +36,10 @@ java_library(
 )
 
 java_library(
-    name = "thread_pool_test_runner_launcher_core",
-    srcs = ["ThreadPoolTestRunnerLauncherCore.java"],
+    name = "thread_pool_test_runner_launcher",
+    srcs = ["ThreadPoolTestRunnerLauncher.java"],
     visibility = [
+        "//java/com/google/devtools/mobileharness/infra/container/testengine/controller:__pkg__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
