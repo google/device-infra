@@ -22,9 +22,10 @@ import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.ValidatorAnnotation.Type;
+import com.google.wireless.qa.mobileharness.shared.api.annotation.ValidatorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
+import com.google.wireless.qa.mobileharness.shared.api.validator.job.JobValidator;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
@@ -57,37 +58,53 @@ public class JobChecker {
   public void validateJob(JobInfo jobInfo) throws MobileHarnessException, InterruptedException {
     JobType jobType = jobInfo.type();
     List<Class<? extends Validator>> validatorClasses = new ArrayList<>();
+    List<Class<? extends JobValidator>> jobValidatorClasses = new ArrayList<>();
     Set<Class<?>> annotationValidatorClasses = new HashSet<>();
 
     // Checks the driver type.
     String driverName = jobType.getDriver();
-    Optional<Class<? extends Validator>> validatorClass = ClassUtil.getValidatorClass(driverName);
-    validatorClass.ifPresent(validatorClasses::add);
-
-    try {
-      Class<? extends Driver> driverClass = ClassUtil.getDriverClass(driverName);
-      ClassUtil.getClassesWithAllSteps(driverClass, annotationValidatorClasses);
-    } catch (MobileHarnessException e) {
-      logger.atWarning().withCause(e).log(
-          "Failed to load the step validators for %s. Skipped.", driverName);
+    Optional<Class<? extends JobValidator>> jobValidatorClass =
+        ClassUtil.getJobValidatorClass(driverName);
+    if (jobValidatorClass.isPresent()) {
+      jobValidatorClasses.add(jobValidatorClass.get());
+    } else {
+      Optional<Class<? extends Validator>> validatorClass = ClassUtil.getValidatorClass(driverName);
+      validatorClass.ifPresent(validatorClasses::add);
+      try {
+        Class<? extends Driver> driverClass = ClassUtil.getDriverClass(driverName);
+        ClassUtil.getClassesWithAllSteps(driverClass, annotationValidatorClasses);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to load the step validators for %s. Skipped.", driverName);
+      }
     }
 
     // Checks the decorator type.
     for (String decoratorName : jobType.getDecoratorList()) {
-      validatorClass = ClassUtil.getValidatorClass(decoratorName);
-      validatorClass.ifPresent(validatorClasses::add);
-
-      try {
-        Class<? extends Decorator> decoratorClass = ClassUtil.getDecoratorClass(decoratorName);
-        ClassUtil.getClassesWithAllSteps(decoratorClass, annotationValidatorClasses);
-      } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to load the step validators for %s. Skipped.", decoratorName);
+      jobValidatorClass = ClassUtil.getJobValidatorClass(decoratorName);
+      if (jobValidatorClass.isPresent()) {
+        jobValidatorClasses.add(jobValidatorClass.get());
+      } else {
+        Optional<Class<? extends Validator>> validatorClass =
+            ClassUtil.getValidatorClass(decoratorName);
+        validatorClass.ifPresent(validatorClasses::add);
+        try {
+          Class<? extends Decorator> decoratorClass = ClassUtil.getDecoratorClass(decoratorName);
+          ClassUtil.getClassesWithAllSteps(decoratorClass, annotationValidatorClasses);
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to load the step validators for %s. Skipped.", decoratorName);
+        }
       }
     }
 
-    // Runs the validators.
+    // Runs the job validators.
     List<String> errors = Lists.newLinkedList();
+    for (JobValidator jobValidator : validatorFactory.createJobValidators(jobValidatorClasses)) {
+      errors.addAll(jobValidator.validate(jobInfo));
+    }
+
+    // Runs the legacy validators.
     for (Validator validator : validatorFactory.createValidators(validatorClasses)) {
       errors.addAll(validator.validateJob(jobInfo));
     }
@@ -123,7 +140,7 @@ public class JobChecker {
       throws MobileHarnessException, InterruptedException {
     List<String> result = new ArrayList<>();
     for (Method method : clazz.getDeclaredMethods()) {
-      if (ClassUtil.isValidatorMethod(method, Type.JOB)) {
+      if (ClassUtil.isValidatorMethod(method, ValidatorAnnotation.Type.JOB)) {
         logger.atInfo().log("Job validator method: %s", method);
         method.setAccessible(true);
         try {

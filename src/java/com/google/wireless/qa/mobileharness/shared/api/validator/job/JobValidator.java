@@ -14,29 +14,17 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.shared.api.validator;
+package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.common.collect.ImmutableList;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.List;
 
 /**
- * Validates whether a driver/decorator is supported by the current system environment, and whether
- * a job contains the info required by the driver. Each validator class is associated with one
- * driver/decorator class.
+ * Validates whether a job contains the info required by the driver/decorator. Each job validator
+ * class is associated with one driver/decorator class.
  */
-public interface Validator {
-  /**
-   * Whether the driver/decorator is supported by the current system environment.
-   *
-   * @param device the device to load this driver/decorator
-   * @throws MobileHarnessException if the env is not valid
-   * @throws InterruptedException if the current thread or its sub-thread is {@linkplain
-   *     Thread#interrupt() interrupted} by another thread
-   */
-  void validateEnv(Device device) throws MobileHarnessException, InterruptedException;
-
+public interface JobValidator {
   /**
    * Validates the job and tests information.
    *
@@ -47,5 +35,8 @@ public interface Validator {
    * @param job the {@code JobInfo} to be validated
    * @return a list of error messages, or an <b>empty</b> list if no error found
    */
-  List<String> validateJob(JobInfo job) throws InterruptedException;
+  default List<String> validate(JobInfo job) throws InterruptedException {
+    // Does nothing.
+    return ImmutableList.of();
+  }
 }

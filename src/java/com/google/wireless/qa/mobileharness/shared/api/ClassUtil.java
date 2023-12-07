@@ -27,6 +27,8 @@ import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.lister.Lister;
 import com.google.wireless.qa.mobileharness.shared.api.validator.Validator;
+import com.google.wireless.qa.mobileharness.shared.api.validator.env.EnvValidator;
+import com.google.wireless.qa.mobileharness.shared.api.validator.job.JobValidator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.util.ReflectionUtil;
 import java.lang.reflect.Field;
@@ -38,6 +40,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
@@ -158,14 +161,63 @@ public final class ClassUtil {
   }
 
   /**
+   * Gets the env validator class of the given driver or decorator. The validator class should be a
+   * subclass of {@link EnvValidator} and in package {@link
+   * com.google.wireless.qa.mobileharness.shared.api.validator.env}.
+   *
+   * @return the validator class for the given driver, or null if can not find the test validator
+   *     class
+   */
+  public static Optional<Class<? extends EnvValidator>> getEnvValidatorClass(
+      String driverOrDecoratorSimpleClassName) {
+    try {
+      return Optional.of(
+          ReflectionUtil.getClass(
+              driverOrDecoratorSimpleClassName + EnvValidator.class.getSimpleName(),
+              EnvValidator.class,
+              ClassUtil.class.getPackage().getName() + ".validator.env"));
+    } catch (MobileHarnessException e) {
+      logger.atInfo().log(
+          "No env validator for driver/decorator \"%s\" (expected class with name %s)",
+          driverOrDecoratorSimpleClassName,
+          driverOrDecoratorSimpleClassName + EnvValidator.class.getSimpleName());
+      return Optional.empty();
+    }
+  }
+
+  /**
+   * Gets the job validator class of the given driver or decorator. The validator class should be a
+   * subclass of {@link JobValidator} and in package {@link
+   * com.google.wireless.qa.mobileharness.shared.api.validator.job}.
+   *
+   * @return the validator class for the given driver, or null if can not find the test validator
+   *     class
+   */
+  public static Optional<Class<? extends JobValidator>> getJobValidatorClass(
+      String driverOrDecoratorSimpleClassName) {
+    try {
+      return Optional.of(
+          ReflectionUtil.getClass(
+              driverOrDecoratorSimpleClassName + JobValidator.class.getSimpleName(),
+              JobValidator.class,
+              ClassUtil.class.getPackage().getName() + ".validator.job"));
+    } catch (MobileHarnessException e) {
+      logger.atInfo().log(
+          "No job validator for driver/decorator \"%s\" (expected class with name %s)",
+          driverOrDecoratorSimpleClassName,
+          driverOrDecoratorSimpleClassName + JobValidator.class.getSimpleName());
+      return Optional.empty();
+    }
+  }
+
+  /**
    * Gets the validator class of the given driver or decorator. The validator class should be a
-   * sub-class of {@link Validator} and in package {@link
+   * subclass of {@link Validator} and in package {@link
    * com.google.wireless.qa.mobileharness.shared.api.validator}.
    *
    * @return the validator class for the given driver, or null if can not find the test validator
    *     class
    */
-  @Nullable
   public static Optional<Class<? extends Validator>> getValidatorClass(
       String driverOrDecoratorSimpleClassName) {
     try {
@@ -284,7 +336,7 @@ public final class ClassUtil {
     }
 
     // Checks the declaration of the method.
-    if (ValidatorAnnotation.Type.JOB.equals(type)) {
+    if (Objects.equals(type, ValidatorAnnotation.Type.JOB)) {
       // A job validator method.
       // Checks the modifiers include static.
       if (!Modifier.isStatic(method.getModifiers())) {
