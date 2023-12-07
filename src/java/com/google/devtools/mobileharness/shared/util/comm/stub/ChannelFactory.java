@@ -25,10 +25,20 @@ import java.util.concurrent.Executor;
 public class ChannelFactory {
 
   public static ManagedChannel createLocalChannel(int port, Executor executor) {
-    return NettyChannelBuilder.forAddress("localhost", port)
-        .negotiationType(NegotiationType.PLAINTEXT)
-        .executor(executor)
-        .build();
+    return createChannel(NettyChannelBuilder.forAddress("localhost", port), executor);
+  }
+
+  /**
+   * See {@link io.grpc.ManagedChannelBuilder#forTarget(String)} about all valid formats of {@code
+   * target}.
+   */
+  public static ManagedChannel createChannel(String target, Executor executor) {
+    return createChannel(NettyChannelBuilder.forTarget(target), executor);
+  }
+
+  private static ManagedChannel createChannel(
+      NettyChannelBuilder channelBuilder, Executor executor) {
+    return channelBuilder.negotiationType(NegotiationType.PLAINTEXT).executor(executor).build();
   }
 
   private ChannelFactory() {}

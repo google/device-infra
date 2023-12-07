@@ -463,13 +463,15 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> logFileNum = logFileNumDefault;
 
-  private static final Flag<Integer> masterPortDefault = Flag.value(9990);
+  private static final Flag<String> masterGrpcTargetDefault = Flag.value("localhost:9990");
 
   @com.beust.jcommander.Parameter(
-      names = "--master_port",
-      description = "Port of master server",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> masterPort = masterPortDefault;
+      names = "--master_grpc_target",
+      description =
+          "gRPC target string of master server. Default is localhost:9990. See"
+              + " ManagedChannelBuilder.forTarget().",
+      converter = Flag.StringConverter.class)
+  public Flag<String> masterGrpcTarget = masterGrpcTargetDefault;
 
   private static final Flag<Integer> maxConcurrentAdbPushLargeFileDefault = Flag.value(4);
 

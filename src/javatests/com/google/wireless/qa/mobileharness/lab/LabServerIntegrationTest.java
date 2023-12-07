@@ -161,7 +161,7 @@ public class LabServerIntegrationTest {
                             "--enable_file_cleaner=false",
                             "--enable_stubby_rpc_server=false",
                             "--grpc_port=" + labServerGrpcPort,
-                            "--master_port=" + masterPort,
+                            "--master_grpc_target=localhost:" + masterPort,
                             "--no_op_device_num=1",
                             "--public_dir=" + labServerPublicDirPath,
                             "--rpc_port=" + labServerRpcPort,

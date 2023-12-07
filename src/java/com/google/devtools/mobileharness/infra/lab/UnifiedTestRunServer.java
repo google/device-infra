@@ -175,8 +175,8 @@ public class UnifiedTestRunServer {
       if (Flags.instance().enableMasterSyncer.getNonNull()) {
         MasterGrpcStubHelper helper =
             new MasterGrpcStubHelper(
-                ChannelFactory.createLocalChannel(
-                    Flags.instance().masterPort.getNonNull(), rpcThreadPool));
+                ChannelFactory.createChannel(
+                    Flags.instance().masterGrpcTarget.getNonNull(), rpcThreadPool));
         labSyncStub = new LabSyncGrpcStub(helper);
       }
 
