@@ -57,7 +57,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/launcher:local_device_test_runner_launcher",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:local_direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:local_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:no_op_test_flow_converter",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",

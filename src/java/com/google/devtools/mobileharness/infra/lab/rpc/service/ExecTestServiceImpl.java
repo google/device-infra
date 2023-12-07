@@ -35,7 +35,7 @@ import com.google.devtools.mobileharness.infra.lab.common.env.UtrsEnvironments;
 import com.google.devtools.mobileharness.infra.lab.controller.FilePublisher;
 import com.google.devtools.mobileharness.infra.lab.controller.ForwardingTestMessageBuffer;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunnerHolder;
-import com.google.devtools.mobileharness.infra.lab.controller.LabLocalDirectTestRunner;
+import com.google.devtools.mobileharness.infra.lab.controller.LabLocalTestRunner;
 import com.google.devtools.mobileharness.infra.lab.controller.util.LabFileNotifier;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.util.LabResponseProtoGenerator;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.util.TestInfoCreator;
@@ -210,7 +210,7 @@ public class ExecTestServiceImpl {
     DirectTestRunner testRunner;
     try {
       testRunner =
-          new LabLocalDirectTestRunner(
+          new LabLocalTestRunner(
               connectorTestRunnerLauncher, setting, devices, threadPool, labFileNotifier);
     } catch (TestRunnerLauncherConnectedException e) {
       logger.atSevere().log(

@@ -14,9 +14,9 @@
 #
 
 java_library(
-    name = "local_direct_test_runner",
+    name = "local_test_runner",
     srcs = [
-        "LocalDirectTestRunner.java",
+        "LocalTestRunner.java",
     ],
     visibility = [
         "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
@@ -29,8 +29,8 @@ java_library(
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:base_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/annotation",

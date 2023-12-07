@@ -91,13 +91,13 @@ java_library(
 )
 
 java_library(
-    name = "lab_local_direct_test_runner",
-    srcs = ["LabLocalDirectTestRunner.java"],
+    name = "lab_local_test_runner",
+    srcs = ["LabLocalTestRunner.java"],
     deps = [
         "//src/devtools/mobileharness/infra/controller/test/local/utp/proto:incompatible_reason_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:abstract_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:local_direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:local_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:no_op_test_flow_converter",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:test_flow_converter",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller/util:lab_file_notifier",

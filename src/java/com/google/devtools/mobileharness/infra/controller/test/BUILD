@@ -109,8 +109,8 @@ java_library(
 )
 
 java_library(
-    name = "abstract_direct_test_runner",
-    srcs = ["AbstractDirectTestRunner.java"],
+    name = "base_test_runner",
+    srcs = ["BaseTestRunner.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
     ],

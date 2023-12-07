@@ -27,9 +27,8 @@ import java.lang.annotation.Target;
  * driver or decorator} does not want to subscribe any MH test events.
  *
  * <p>It is for MH internal use only, such as <tt>DriverEventGenerator/DecoratorEventGenerator</tt>
- * in {@linkplain
- * com.google.devtools.mobileharness.infra.controller.test.local.LocalDirectTestRunner
- * LocalDirectTestRunner} which need to inherit from {@linkplain
+ * in {@linkplain com.google.devtools.mobileharness.infra.controller.test.local.LocalTestRunner
+ * LocalTestRunner} which need to inherit from {@linkplain
  * com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator Decorator} but actually they
  * are not MH decorators.
  */

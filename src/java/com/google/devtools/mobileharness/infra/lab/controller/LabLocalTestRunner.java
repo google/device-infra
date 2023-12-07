@@ -20,7 +20,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.exception.TestRunnerLauncherConnectedException;
-import com.google.devtools.mobileharness.infra.controller.test.local.LocalDirectTestRunner;
+import com.google.devtools.mobileharness.infra.controller.test.local.LocalTestRunner;
 import com.google.devtools.mobileharness.infra.lab.controller.util.LabFileNotifier;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -28,13 +28,13 @@ import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.List;
 
-/** {@link LocalDirectTestRunner} which runs in lab server or test engine. */
-public class LabLocalDirectTestRunner extends LocalDirectTestRunner {
+/** {@link LocalTestRunner} which runs in lab server or test engine. */
+public class LabLocalTestRunner extends LocalTestRunner {
 
   private final LabFileNotifier labFileNotifier;
 
-  public LabLocalDirectTestRunner(
-      TestRunnerLauncher<? super LocalDirectTestRunner> launcher,
+  public LabLocalTestRunner(
+      TestRunnerLauncher<? super LocalTestRunner> launcher,
       DirectTestRunnerSetting setting,
       List<Device> devices,
       ListeningExecutorService threadPool,

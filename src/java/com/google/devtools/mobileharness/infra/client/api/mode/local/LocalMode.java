@@ -44,7 +44,7 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerS
 import com.google.devtools.mobileharness.infra.controller.test.TestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceTestRunnerLauncher;
-import com.google.devtools.mobileharness.infra.controller.test.local.LocalDirectTestRunner;
+import com.google.devtools.mobileharness.infra.controller.test.local.LocalTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.NoOpTestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
@@ -199,7 +199,7 @@ public class LocalMode implements ExecMode {
       List<Device> devices,
       ListeningExecutorService testThreadPool)
       throws MobileHarnessException {
-    return new LocalDirectTestRunner(
+    return new LocalTestRunner(
         launcher,
         setting,
         devices,

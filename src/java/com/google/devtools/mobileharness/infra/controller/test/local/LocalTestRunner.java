@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.local;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -27,7 +29,7 @@ import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDecorato
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDecoratorPreForwardEvent;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverEndedEvent;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent;
-import com.google.devtools.mobileharness.infra.controller.test.AbstractDirectTestRunner;
+import com.google.devtools.mobileharness.infra.controller.test.BaseTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
@@ -53,11 +55,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import javax.annotation.Nullable;
 
 /** For executing a single test locally. */
-public class LocalDirectTestRunner extends AbstractDirectTestRunner<LocalDirectTestRunner> {
+public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -67,8 +68,8 @@ public class LocalDirectTestRunner extends AbstractDirectTestRunner<LocalDirectT
   private final SettableFuture<PluginLoadingResult> pluginLoadingResultFuture =
       SettableFuture.create();
 
-  public LocalDirectTestRunner(
-      TestRunnerLauncher<? super LocalDirectTestRunner> launcher,
+  public LocalTestRunner(
+      TestRunnerLauncher<? super LocalTestRunner> launcher,
       DirectTestRunnerSetting setting,
       List<Device> devices,
       ListeningExecutorService threadPool,
@@ -107,7 +108,7 @@ public class LocalDirectTestRunner extends AbstractDirectTestRunner<LocalDirectT
   }
 
   @Override
-  protected LocalDirectTestRunner self() {
+  protected LocalTestRunner self() {
     return this;
   }
 
@@ -141,7 +142,7 @@ public class LocalDirectTestRunner extends AbstractDirectTestRunner<LocalDirectT
   @Override
   protected List<DeviceFeature> checkDevice(TestInfo testInfo, Allocation allocation)
       throws MobileHarnessException, InterruptedException {
-    return devices.stream().map(testFlow::checkDevice).collect(Collectors.toList());
+    return devices.stream().map(testFlow::checkDevice).collect(toImmutableList());
   }
 
   @Override
@@ -313,7 +314,7 @@ public class LocalDirectTestRunner extends AbstractDirectTestRunner<LocalDirectT
     }
 
     /** Returns whether to skip running the test */
-    private boolean postLocalDriverEndedEvent(@Nullable Throwable error) {
+    private void postLocalDriverEndedEvent(@Nullable Throwable error) {
       testInfo
           .log()
           .atInfo()
@@ -356,8 +357,7 @@ public class LocalDirectTestRunner extends AbstractDirectTestRunner<LocalDirectT
               return allocation;
             }
           };
-      return postTestEvent(
-          /* eventType= */ "driver event", /* afterDriverExecution= */ true, event);
+      postTestEvent(/* eventType= */ "driver event", /* afterDriverExecution= */ true, event);
     }
   }
 
@@ -453,7 +453,7 @@ public class LocalDirectTestRunner extends AbstractDirectTestRunner<LocalDirectT
     }
 
     /** Returns whether to skip running the test */
-    private boolean postLocalDecoratorPostForwardEvent(@Nullable Throwable error) {
+    private void postLocalDecoratorPostForwardEvent(@Nullable Throwable error) {
       String decoratorName = decoratorClass.getSimpleName();
       testInfo
           .log()
@@ -497,8 +497,7 @@ public class LocalDirectTestRunner extends AbstractDirectTestRunner<LocalDirectT
               return allocation;
             }
           };
-      return postTestEvent(
-          /* eventType= */ "decorator event", /* afterDriverExecution= */ true, event);
+      postTestEvent(/* eventType= */ "decorator event", /* afterDriverExecution= */ true, event);
     }
   }
 }

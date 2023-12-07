@@ -92,7 +92,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:file_publisher",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:forwarding_test_message_buffer",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_direct_test_runner_holder",
-        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_local_direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:lab_local_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller/util:lab_file_notifier",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service/util:lab_response_proto_generator",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service/util:test_info_creator",

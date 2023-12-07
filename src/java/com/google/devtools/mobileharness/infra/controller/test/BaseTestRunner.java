@@ -83,15 +83,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.annotation.Nullable;
 
-/**
- * For executing a single test with multiple devices.
- *
- * <ul>
- *   <li>trace.* that may cause the library to crash.
- * </ul>
- */
-public abstract class AbstractDirectTestRunner<T extends AbstractDirectTestRunner<T>>
-    extends AbstractTestRunner<T> implements DirectTestRunner {
+/** For executing a single test with multiple devices. */
+public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends AbstractTestRunner<T>
+    implements DirectTestRunner {
 
   /** Logger for this instance. */
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -139,8 +133,7 @@ public abstract class AbstractDirectTestRunner<T extends AbstractDirectTestRunne
    */
   protected final ImmutableList<PluginItem<?>> initialPluginItems;
 
-  protected AbstractDirectTestRunner(
-      TestRunnerLauncher<? super T> launcher, DirectTestRunnerSetting setting)
+  protected BaseTestRunner(TestRunnerLauncher<? super T> launcher, DirectTestRunnerSetting setting)
       throws TestRunnerLauncherConnectedException {
     this(
         launcher,
@@ -157,7 +150,7 @@ public abstract class AbstractDirectTestRunner<T extends AbstractDirectTestRunne
   }
 
   @VisibleForTesting
-  AbstractDirectTestRunner(
+  BaseTestRunner(
       TestRunnerLauncher<? super T> launcher,
       DirectTestRunnerSetting setting,
       ExecutorService testMessagePosterExecutorService)
@@ -705,10 +698,9 @@ public abstract class AbstractDirectTestRunner<T extends AbstractDirectTestRunne
 
   /**
    * {@link AbstractTestRunner} holds new allocation:
-   * com.google.devtools.mobileharness.api.model.allocation.Allocation {@link
-   * AbstractDirectTestRunner} holds old allocation:
-   * com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation This function returns
-   * the old allocation and is designed only for test.
+   * com.google.devtools.mobileharness.api.model.allocation.Allocation {@link BaseTestRunner} holds
+   * old allocation: com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation This
+   * function returns the old allocation and is designed only for test.
    */
   @VisibleForTesting
   Allocation getOldAllocation() {
