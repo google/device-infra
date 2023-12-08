@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
@@ -79,15 +80,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import javax.annotation.Nullable;
 
 /** For executing a single test with multiple devices. */
 public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends AbstractTestRunner<T>
     implements DirectTestRunner {
 
-  /** Logger for this instance. */
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String DIMENSION_POOL =
@@ -133,27 +131,10 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
    */
   protected final ImmutableList<PluginItem<?>> initialPluginItems;
 
-  protected BaseTestRunner(TestRunnerLauncher<? super T> launcher, DirectTestRunnerSetting setting)
-      throws TestRunnerLauncherConnectedException {
-    this(
-        launcher,
-        setting,
-        Executors.newSingleThreadExecutor(
-            runnable -> {
-              Thread thread =
-                  new Thread(
-                      runnable,
-                      "cacheable-test-message-poster-" + setting.testInfo().locator().getId());
-              thread.setDaemon(true);
-              return thread;
-            }));
-  }
-
-  @VisibleForTesting
-  BaseTestRunner(
+  protected BaseTestRunner(
       TestRunnerLauncher<? super T> launcher,
       DirectTestRunnerSetting setting,
-      ExecutorService testMessagePosterExecutorService)
+      ListeningExecutorService threadPool)
       throws TestRunnerLauncherConnectedException {
     super(
         launcher, setting.testInfo().toTestExecutionUnit(), setting.allocation().toNewAllocation());
@@ -219,7 +200,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     initialPluginItems = initialPluginItemsBuilder.build();
     scopedEventBus.add(EventScope.TEST_MESSAGE);
 
-    testMessagePoster = new CacheableTestMessagePoster(testMessagePosterExecutorService);
+    testMessagePoster = new CacheableTestMessagePoster(threadPool);
   }
 
   @Override
@@ -919,7 +900,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
    */
   @CanIgnoreReturnValue
   private boolean postTestEndedEvent(Object testEvents) {
-    List<Object> events = Arrays.asList(testEvents);
+    ImmutableList<Object> events = ImmutableList.of(testEvents);
     try {
       scopedEventBus.post(events, EventScope.JAR_PLUGIN, EventScope.API_PLUGIN);
       getTestInfo().timing().end();
@@ -997,7 +978,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
                 apiPluginExceptions.stream(),
                 jarPluginExceptions.stream())
             .map(SkipInformationHandler::convertIfSkipTestRunning)
-            .flatMap(Streams::stream)
+            .flatMap(Optional::stream)
             .collect(toImmutableList());
     if (skipInfos.isEmpty()) {
       return false;
@@ -1045,8 +1026,8 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
   private class CacheableTestMessagePoster extends CacheableTestMessageHandler
       implements TestMessagePoster {
 
-    private CacheableTestMessagePoster(ExecutorService executorService) {
-      super(executorService);
+    private CacheableTestMessagePoster(ListeningExecutorService threadPool) {
+      super(threadPool, "cacheable-test-message-poster-" + testInfo.locator().getId());
     }
 
     @Override

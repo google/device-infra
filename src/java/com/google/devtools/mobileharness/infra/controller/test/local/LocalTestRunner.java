@@ -75,7 +75,7 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
       ListeningExecutorService threadPool,
       TestFlowConverter testFlowConverter)
       throws TestRunnerLauncherConnectedException {
-    super(launcher, setting);
+    super(launcher, setting, threadPool);
     this.devices = ImmutableList.copyOf(devices);
     this.testFlow = new LocalTestFlow(threadPool, testFlowConverter);
   }

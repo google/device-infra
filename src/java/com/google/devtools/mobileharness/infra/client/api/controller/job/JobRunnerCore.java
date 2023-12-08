@@ -205,7 +205,7 @@ public class JobRunnerCore implements Runnable {
   protected final TestManager<DirectTestRunner> testManager;
 
   /** Test manager and runner thread pool. */
-  private final ListeningExecutorService testManagerThreadPool;
+  private final ListeningExecutorService threadPool;
 
   /** Whether the current thread is running. */
   private volatile boolean running = false;
@@ -270,7 +270,8 @@ public class JobRunnerCore implements Runnable {
         new TestManager<>(),
         MoreExecutors.listeningDecorator(
             Executors.newCachedThreadPool(
-                ThreadFactoryUtil.createThreadFactory("test-manager-thread"))),
+                ThreadFactoryUtil.createThreadFactory(
+                    "job-runner-thread-pool", /* daemon= */ true))),
         new LocalFileUtil(),
         Clock.systemUTC(),
         Sleeper.defaultSleeper(),
@@ -284,7 +285,7 @@ public class JobRunnerCore implements Runnable {
       DeviceAllocator deviceAllocator,
       ExecMode execMode,
       TestManager<DirectTestRunner> testManager,
-      ListeningExecutorService testManagerThreadPool,
+      ListeningExecutorService threadPool,
       LocalFileUtil fileUtil,
       Clock clock,
       Sleeper sleeper,
@@ -300,12 +301,9 @@ public class JobRunnerCore implements Runnable {
     this.clock = clock;
     this.sleeper = sleeper;
     this.deviceQuerier = execMode.createDeviceQuerier();
-    this.testManagerThreadPool = testManagerThreadPool;
+    this.threadPool = threadPool;
     this.testManager = testManager;
-    logFailure(
-        this.testManagerThreadPool.submit(testManager),
-        Level.SEVERE,
-        "Fatal error in test manager");
+    logFailure(this.threadPool.submit(testManager), Level.SEVERE, "Fatal error in test manager");
     scopedEventBus = new ScopedEventBus<>(EventScope.class);
     scopedEventBus.add(EventScope.CLASS_INTERNAL);
     scopedEventBus.add(EventScope.GLOBAL_INTERNAL, globalInternalBus);
@@ -595,8 +593,7 @@ public class JobRunnerCore implements Runnable {
                           scopeEventSubscribers.get(EventScope.INTERNAL_PLUGIN),
                           scopeEventSubscribers.get(EventScope.API_PLUGIN),
                           scopeEventSubscribers.get(EventScope.JAR_PLUGIN));
-                  DirectTestRunner testRunner =
-                      execMode.createTestRunner(setting, testManagerThreadPool);
+                  DirectTestRunner testRunner = execMode.createTestRunner(setting, threadPool);
 
                   // Subscribes test messages of the test.
                   synchronized (testMessageSubscribers) {
@@ -925,7 +922,7 @@ public class JobRunnerCore implements Runnable {
             // Event handlers in JAR_PLUGIN:
             // 1) Client plugins specified via "client_plugin_jar" file.
             EventScope.JAR_PLUGIN);
-        skipJob = checkPluginExceptions(false /* postRunJob */);
+        skipJob = checkPluginExceptions(/* postRunJob= */ false);
       } else {
         logger.atInfo().log("Skip sending JobStartEvent because it is a resumed job");
       }
@@ -978,8 +975,8 @@ public class JobRunnerCore implements Runnable {
       // executed. It is OK to swallow InterruptedException here, the job thread is ending soon.
       logger.atInfo().log("Shutdown test thread pool");
       try {
-        testManagerThreadPool.shutdownNow();
-        testManagerThreadPool.awaitTermination(TERMINATE_TEST_TIMEOUT_MS, MILLISECONDS);
+        threadPool.shutdownNow();
+        threadPool.awaitTermination(TERMINATE_TEST_TIMEOUT_MS, MILLISECONDS);
       } catch (InterruptedException e) {
         jobInfo
             .errors()
@@ -1053,7 +1050,7 @@ public class JobRunnerCore implements Runnable {
             // 1) Close PluginCreator: run after JAR_PLUGIN/GLOBAL_INTERNAL to make sure all client
             //    plugins are done. Otherwise, client plugins won't be able to load classes.
             EventScope.CLASS_INTERNAL);
-        checkPluginExceptions(true /* postRunJob */);
+        checkPluginExceptions(/* postRunJob= */ true);
       } catch (RuntimeException e) {
         String errorMessage = "Failed to post JobEndEvent";
         logger.atWarning().withCause(e).log("%s", errorMessage);

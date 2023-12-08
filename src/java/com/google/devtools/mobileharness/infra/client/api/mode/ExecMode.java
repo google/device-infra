@@ -36,8 +36,7 @@ public interface ExecMode {
       throws MobileHarnessException, InterruptedException;
 
   /** Creates reserver for reserve devices. */
-  default DeviceReserver createDeviceReserver()
-      throws MobileHarnessException, InterruptedException {
+  default DeviceReserver createDeviceReserver() {
     return new DeviceReserver() {};
   }
 
@@ -46,6 +45,6 @@ public interface ExecMode {
 
   /** Creates a test runner for executing the given test on the given device. */
   DirectTestRunner createTestRunner(
-      DirectTestRunnerSetting setting, ListeningExecutorService testThreadPool)
+      DirectTestRunnerSetting setting, ListeningExecutorService threadPool)
       throws MobileHarnessException, InterruptedException;
 }

@@ -104,7 +104,7 @@ public class AtsMode implements ExecMode {
 
   @Override
   public DirectTestRunner createTestRunner(
-      DirectTestRunnerSetting setting, ListeningExecutorService testThreadPool) {
+      DirectTestRunnerSetting setting, ListeningExecutorService threadPool) {
     // TODO: Implements it.
     throw new UnsupportedOperationException();
   }

@@ -164,7 +164,7 @@ public class LocalMode implements ExecMode {
 
   @Override
   public DirectTestRunner createTestRunner(
-      DirectTestRunnerSetting setting, ListeningExecutorService testThreadPool)
+      DirectTestRunnerSetting setting, ListeningExecutorService threadPool)
       throws MobileHarnessException, InterruptedException {
     initialize(
         setting
@@ -190,20 +190,20 @@ public class LocalMode implements ExecMode {
         new LocalDeviceTestRunnerLauncher(primaryDeviceRunner, secondaryDeviceRunners);
     ImmutableList<Device> devices =
         deviceRunners.stream().map(LocalDeviceTestRunner::getDevice).collect(toImmutableList());
-    return doCreateTestRunner(launcher, setting, devices, testThreadPool);
+    return doCreateTestRunner(launcher, setting, devices, threadPool);
   }
 
   protected DirectTestRunner doCreateTestRunner(
       TestRunnerLauncher<TestRunner> launcher,
       DirectTestRunnerSetting setting,
       List<Device> devices,
-      ListeningExecutorService testThreadPool)
+      ListeningExecutorService threadPool)
       throws MobileHarnessException {
     return new LocalTestRunner(
         launcher,
         setting,
         devices,
-        testThreadPool,
+        threadPool,
         new NoOpTestFlowConverter(
             IncompatibleReasonProto.InfraIncompatibleReason.ATS2, "ATS2 uses classic mode"));
   }

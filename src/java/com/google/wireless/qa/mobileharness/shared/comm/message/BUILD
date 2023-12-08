@@ -35,6 +35,8 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:mobile_harness_auto_closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
