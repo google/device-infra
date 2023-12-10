@@ -42,26 +42,22 @@ import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.ValidatorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
 import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.api.validator.Validator;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
+import com.google.wireless.qa.mobileharness.shared.api.validator.env.EnvValidator;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.CommunicationTypeValue;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Communication;
 import com.google.wireless.qa.mobileharness.shared.proto.CommunicationList;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import javax.annotation.Nullable;
 
 /**
@@ -489,15 +485,19 @@ public abstract class BaseDevice implements Device {
       return;
     }
     try {
-      // Runs the validator.
-      Optional<Class<? extends Validator>> validatorClass =
-          ClassUtil.getValidatorClass(driverClass.getSimpleName());
-      if (validatorClass.isPresent()) {
-        validatorFactory.createValidator(validatorClass.get()).validateEnv(this);
+      Optional<Class<? extends EnvValidator>> envValidatorClass =
+          ClassUtil.getEnvValidatorClass(driverClass.getSimpleName());
+      if (envValidatorClass.isPresent()) {
+        // Runs the env validator.
+        validatorFactory.createEnvValidator(envValidatorClass.get()).validate(this);
+      } else {
+        // Runs the legacy validator.
+        Optional<Class<? extends Validator>> validatorClass =
+            ClassUtil.getValidatorClass(driverClass.getSimpleName());
+        if (validatorClass.isPresent()) {
+          validatorFactory.createValidator(validatorClass.get()).validateEnv(this);
+        }
       }
-
-      // Runs the validator methods.
-      validateEnvByAllValidatorMethods(driverClass);
     } catch (MobileHarnessException e) {
       logger.atInfo().log(
           "Driver %s not supported: %s", driverClass.getSimpleName(), e.getMessage());
@@ -559,16 +559,20 @@ public abstract class BaseDevice implements Device {
       return;
     }
     try {
-      // Runs the validator.
-      Optional<Class<? extends Validator>> validatorClass =
-          ClassUtil.getValidatorClass(decoratorClass.getSimpleName());
-      // If there is no Validator for the given decorator type, will skip the validation.
-      if (validatorClass.isPresent()) {
-        validatorFactory.createValidator(validatorClass.get()).validateEnv(this);
+      Optional<Class<? extends EnvValidator>> envValidatorClass =
+          ClassUtil.getEnvValidatorClass(decoratorClass.getSimpleName());
+      if (envValidatorClass.isPresent()) {
+        // Runs the env validator.
+        validatorFactory.createEnvValidator(envValidatorClass.get()).validate(this);
+      } else {
+        // Runs the legacy validator.
+        Optional<Class<? extends Validator>> validatorClass =
+            ClassUtil.getValidatorClass(decoratorClass.getSimpleName());
+        // If there is no Validator for the given decorator type, will skip the validation.
+        if (validatorClass.isPresent()) {
+          validatorFactory.createValidator(validatorClass.get()).validateEnv(this);
+        }
       }
-
-      // Runs the validator methods.
-      validateEnvByAllValidatorMethods(decoratorClass);
     } catch (MobileHarnessException e) {
       logger.atInfo().log("%s not supported: %s", decoratorClass.getSimpleName(), e.getMessage());
       return;
@@ -605,63 +609,6 @@ public abstract class BaseDevice implements Device {
   /** Set general file directory. */
   public static void setGenFileDirRoot(String genFileRootDir) {
     BaseDevice.genFileDirRoot = genFileRootDir;
-  }
-
-  /**
-   * Validates the environment of the given device by all environment validator methods declared in
-   * the given class.
-   *
-   * <p>The method could be used for testing environment validator methods.
-   *
-   * @param device the device
-   * @param clazz the class in which the environment validator methods declared will be invoked
-   * @throws MobileHarnessException if the environment is invalid, the given class has an invalid
-   *     environment validator method, failed to run an environment validator method or an invoked
-   *     environment validator method throws an unchecked exception
-   * @throws InterruptedException if an invoked environment validator method throws it
-   * @see ValidatorAnnotation
-   */
-  @VisibleForTesting
-  public static void validateEnvByValidatorMethods(Device device, Class<?> clazz)
-      throws MobileHarnessException, InterruptedException {
-    for (Method method : clazz.getDeclaredMethods()) {
-      if (ClassUtil.isValidatorMethod(method, ValidatorAnnotation.Type.ENVIRONMENT)) {
-        logger.atInfo().log("Validate env for %s with method: %s", clazz, method);
-        method.setAccessible(true);
-        try {
-          method.invoke(/* obj= */ null, device);
-        } catch (IllegalAccessException | IllegalArgumentException e) {
-          throw new MobileHarnessException(
-              ErrorCode.DEVICE_ENVIRONMENT_VALIDATE_ERROR,
-              String.format("Failed to run environment validator %s: %s", method, e),
-              e);
-        } catch (InvocationTargetException e) {
-          Throwable targetException = e.getTargetException();
-          if (targetException instanceof InterruptedException) {
-            throw (InterruptedException) targetException;
-          }
-          if (targetException instanceof MobileHarnessException) {
-            throw (MobileHarnessException) targetException;
-          }
-          throw new MobileHarnessException(
-              ErrorCode.DEVICE_ENVIRONMENT_VALIDATE_ERROR,
-              String.format(
-                  "Exception thrown by environment validator %s: %s", method, targetException),
-              targetException);
-        }
-      }
-    }
-  }
-
-  /** Validates the environment for a driver or decorator with its all validator methods. */
-  private void validateEnvByAllValidatorMethods(Class<?> clazz)
-      throws MobileHarnessException, InterruptedException {
-    Set<Class<?>> annotationValidatorClasses = new HashSet<>();
-    ClassUtil.getClassesWithAllSteps(clazz, annotationValidatorClasses);
-
-    for (Class<?> c : annotationValidatorClasses) {
-      validateEnvByValidatorMethods(this, c);
-    }
   }
 
   @Override

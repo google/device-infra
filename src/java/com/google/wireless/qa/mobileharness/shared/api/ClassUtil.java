@@ -372,29 +372,6 @@ public final class ClassUtil {
             BasicErrorId.CLASS_ILLEGAL_VALIDATOR_METHOD,
             "Parameter of job validator should be JobInfo: " + method);
       }
-    } else if (ValidatorAnnotation.Type.ENVIRONMENT.equals(type)) {
-      // A environment validator method.
-      // Checks the modifiers include static.
-      if (!Modifier.isStatic(method.getModifiers())) {
-        throw new MobileHarnessException(
-            BasicErrorId.CLASS_ILLEGAL_VALIDATOR_METHOD,
-            "Environment validator should be a static method: " + method);
-      }
-
-      // Checks the return type is void.
-      if (!method.getReturnType().equals(Void.TYPE)) {
-        throw new MobileHarnessException(
-            BasicErrorId.CLASS_ILLEGAL_VALIDATOR_METHOD,
-            "Return type of environment validator should be void: " + method);
-      }
-
-      // Checks the parameters are [Device].
-      Type[] parameterTypes = method.getGenericParameterTypes();
-      if (parameterTypes.length != 1 || !parameterTypes[0].equals(Device.class)) {
-        throw new MobileHarnessException(
-            BasicErrorId.CLASS_ILLEGAL_VALIDATOR_METHOD,
-            "Parameter of environment validator should be Device: " + method);
-      }
     }
 
     return true;

@@ -62,28 +62,6 @@ public @interface ValidatorAnnotation {
      *     com.google.wireless.qa.mobileharness.shared.api.validator.JobChecker#validateJobByValidatorMethods
      */
     JOB,
-
-    /**
-     * A environment validator.
-     *
-     * <p>The annotated method should be like the following:
-     *
-     * <pre>
-     * <b>&#064;ValidatorAnnotation(type = Type.ENVIRONMENT)</b>
-     * private <b>static</b> <b>void</b> validateEnv(<b>Device</b> device)
-     *     throws <b>MobileHarnessException</b>, ... {
-     *   ... // If the environment is valid, returns, or throws a MobileHarnessException.
-     * }
-     * </pre>
-     *
-     * <p>{@linkplain com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice
-     * #validateEnvByValidatorMethods BaseDevice.validateEnvByValidatorMethods} could be used for
-     * testing an environment validator method.
-     *
-     * @see
-     *     com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice#validateEnvByValidatorMethods
-     */
-    ENVIRONMENT,
   }
 
   /** The validator type. */
