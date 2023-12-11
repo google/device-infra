@@ -58,6 +58,7 @@ java_library(
     deps = [
         ":annotations",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:job_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:gen_file_handler",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",

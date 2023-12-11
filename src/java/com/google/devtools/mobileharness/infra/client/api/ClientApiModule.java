@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.client.api.Annotations.JobThreadP
 import com.google.devtools.mobileharness.infra.client.api.Annotations.ShutdownJobThreadWhenShutdownProcess;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManagerCoreFactory;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManagerCoreFactory.DefaultJobManagerCoreFactory;
+import com.google.devtools.mobileharness.infra.client.api.plugin.GenFileHandler;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -59,7 +60,7 @@ public class ClientApiModule extends AbstractModule {
   @Provides
   @ExtraGlobalInternalPlugins
   ImmutableList<Object> provideExtraGlobalInternalPlugins() {
-    return ImmutableList.of();
+    return ImmutableList.of(new GenFileHandler());
   }
 
   @Provides

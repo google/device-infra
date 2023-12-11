@@ -34,6 +34,30 @@ java_library(
 )
 
 java_library(
+    name = "gen_file_handler",
+    srcs = ["GenFileHandler.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api/plugin:__pkg__",
+    ],
+    runtime_deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "test_retry_handler",
     srcs = ["TestRetryHandler.java"],
     visibility = [
