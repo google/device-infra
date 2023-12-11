@@ -30,6 +30,7 @@ java_library(
     srcs = ["CacheableTestMessageHandler.java"],
     visibility = [
         # Do not make it public.
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__pkg__",
     ],
     deps = [
