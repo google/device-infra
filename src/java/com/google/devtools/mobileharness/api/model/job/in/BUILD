@@ -130,7 +130,6 @@ java_library(
     name = "timeout",
     srcs = ["Timeout.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
