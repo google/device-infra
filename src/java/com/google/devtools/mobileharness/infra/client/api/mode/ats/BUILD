@@ -51,7 +51,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/simple",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",

@@ -83,6 +83,7 @@ java_library(
     srcs = ["SessionPlugin.java"],
     deps = [
         ":session_info",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus_backend",
     ],

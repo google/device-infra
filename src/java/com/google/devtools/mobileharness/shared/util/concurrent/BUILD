@@ -63,3 +63,12 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "thread_pools",
+    srcs = ["ThreadPools.java"],
+    deps = [
+        ":thread_factory_util",
+        "@maven//:com_google_guava_guava",
+    ],
+)

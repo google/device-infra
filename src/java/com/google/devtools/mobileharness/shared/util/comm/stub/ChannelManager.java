@@ -22,8 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import io.grpc.Channel;
 import io.grpc.ManagedChannel;
 import java.lang.ref.Reference;
@@ -34,7 +33,6 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.logging.Level;
@@ -73,14 +71,9 @@ public class ChannelManager {
   private ChannelManager() {
     this(
         CHANNEL_EXPIRATION_TIME,
-        MoreExecutors.listeningDecorator(
-            Executors.newSingleThreadExecutor(
-                ThreadFactoryUtil.createThreadFactory("grpc-stub-cleaner", /* daemon= */ true))),
-        MoreExecutors.listeningDecorator(
-            Executors.newScheduledThreadPool(
-                /* corePoolSize= */ 1,
-                ThreadFactoryUtil.createThreadFactory(
-                    "grpc-channel-cleaner", /* daemon= */ true))));
+        ThreadPools.createStandardThreadPool("grpc-stub-cleaner"),
+        ThreadPools.createStandardScheduledThreadPool(
+            "grpc-channel-cleaner", /* corePoolSize= */ 1));
   }
 
   @VisibleForTesting

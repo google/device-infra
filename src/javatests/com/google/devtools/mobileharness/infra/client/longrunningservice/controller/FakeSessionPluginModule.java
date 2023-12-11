@@ -14,20 +14,17 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console.util.tradefed;
+package com.google.devtools.mobileharness.infra.client.longrunningservice.controller;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.FakeSessionPlugin.IntegerParameter;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
-import javax.inject.Singleton;
 
-/** Test Guice bindings. */
-final class TestModule extends AbstractModule {
+class FakeSessionPluginModule extends AbstractModule {
 
   @Provides
-  @Singleton
-  ListeningExecutorService provideThreadPool() {
-    return ThreadPools.createStandardThreadPool("test-thread-pool");
+  @IntegerParameter
+  int provideIntegerParameter() {
+    return 123;
   }
 }

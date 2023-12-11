@@ -34,7 +34,7 @@ java_library(
     srcs = ["ChannelManager.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_code_findbugs_jsr305",

@@ -18,16 +18,14 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import javax.inject.Singleton;
 
 /** Module for {@code AtsMode}. */
@@ -42,9 +40,7 @@ public class AtsModeModule extends AbstractModule {
   @Provides
   @Singleton
   ListeningExecutorService provideListeningExecutorService() {
-    return MoreExecutors.listeningDecorator(
-        Executors.newCachedThreadPool(
-            ThreadFactoryUtil.createThreadFactory("ats-mode-thread-pool", /* daemon= */ true)));
+    return ThreadPools.createStandardThreadPool("ats-mode-thread-pool");
   }
 
   @Provides
@@ -55,11 +51,8 @@ public class AtsModeModule extends AbstractModule {
   @Provides
   @Singleton
   ListeningScheduledExecutorService provideListeningScheduledExecutorService() {
-    return MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(
-            /* corePoolSize= */ 5,
-            ThreadFactoryUtil.createThreadFactory(
-                "ats-mode-scheduled-thread-pool", /* daemon= */ true)));
+    return ThreadPools.createStandardScheduledThreadPool(
+        "ats-mode-scheduled-thread-pool", /* corePoolSize= */ 5);
   }
 
   @Provides

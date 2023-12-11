@@ -16,19 +16,17 @@
 
 package com.google.devtools.mobileharness.infra.client.api.util.stub;
 
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.ExecTestGrpcStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.grpc.PrepareTestGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelManager;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.grpc.VersionGrpcStub;
 import io.grpc.ManagedChannel;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 /** gRPC stub manager for creating stubs and caching {@link ManagedChannel}s automatically. */
@@ -37,10 +35,7 @@ public class GrpcStubManager {
   private static final GrpcStubManager INSTANCE =
       new GrpcStubManager(
           ChannelManager.getInstance(),
-          MoreExecutors.listeningDecorator(
-              Executors.newCachedThreadPool(
-                  ThreadFactoryUtil.createThreadFactory(
-                      "grpc-channel-executor", /* daemon= */ true))));
+          ThreadPools.createStandardThreadPool("grpc-channel-executor"));
 
   public static GrpcStubManager getInstance() {
     return INSTANCE;

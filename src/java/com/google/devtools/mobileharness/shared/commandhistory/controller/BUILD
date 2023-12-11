@@ -43,7 +43,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/mobileharness/shared/subprocess/listener:process_builder_listener",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@com_google_protobuf//:protobuf_java_util",

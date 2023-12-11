@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
+import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.inject.assistedinject.Assisted;
 import com.google.protobuf.FieldMask;
 import java.util.concurrent.Callable;
@@ -84,6 +85,11 @@ public class SessionRunner implements Callable<Void> {
     } finally {
       // Calls sessionPlugin.onEnded().
       sessionPluginRunner.onSessionEnded(sessionError);
+
+      // Closes session plugin resources.
+      sessionPlugins.stream()
+          .map(SessionPlugin::closeableResource)
+          .forEach(NonThrowingAutoCloseable::close);
     }
 
     return null;

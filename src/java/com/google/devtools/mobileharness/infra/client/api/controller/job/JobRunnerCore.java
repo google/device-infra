@@ -34,7 +34,6 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
@@ -65,7 +64,7 @@ import com.google.devtools.mobileharness.infra.controller.test.manager.TestManag
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.event.EventBus.SubscriberExceptionContext;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -103,7 +102,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
 
@@ -268,10 +266,7 @@ public class JobRunnerCore implements Runnable {
         deviceAllocator,
         execMode,
         new TestManager<>(),
-        MoreExecutors.listeningDecorator(
-            Executors.newCachedThreadPool(
-                ThreadFactoryUtil.createThreadFactory(
-                    "job-runner-thread-pool", /* daemon= */ true))),
+        ThreadPools.createStandardThreadPool("job-runner-thread-pool"),
         new LocalFileUtil(),
         Clock.systemUTC(),
         Sleeper.defaultSleeper(),

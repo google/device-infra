@@ -18,17 +18,15 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.nio.file.Path;
-import java.util.concurrent.Executors;
 
 /** Console command module for testing. */
 public class ConsoleCommandTestModule extends AbstractModule {
@@ -58,8 +56,7 @@ public class ConsoleCommandTestModule extends AbstractModule {
 
   @Provides
   ListeningExecutorService provideThreadPool() {
-    return MoreExecutors.listeningDecorator(
-        Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory("main-thread")));
+    return ThreadPools.createStandardThreadPool("main-thread");
   }
 
   @Provides

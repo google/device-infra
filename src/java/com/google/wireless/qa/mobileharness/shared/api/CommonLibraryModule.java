@@ -19,16 +19,14 @@ package com.google.wireless.qa.mobileharness.shared.api;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Ticker;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.time.Clock;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 
 /** Module for binding common libraries for Driver/Decorator. */
@@ -73,8 +71,6 @@ public class CommonLibraryModule extends AbstractModule {
   }
 
   private static ListeningExecutorService createThreadPool() {
-    return MoreExecutors.listeningDecorator(
-        Executors.newCachedThreadPool(
-            ThreadFactoryUtil.createThreadFactory("mh-driver-thread-pool", /* daemon= */ true)));
+    return ThreadPools.createStandardThreadPool("mh-driver-thread-pool");
   }
 }

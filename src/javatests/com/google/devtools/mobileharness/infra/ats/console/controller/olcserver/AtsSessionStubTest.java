@@ -26,7 +26,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
@@ -37,7 +36,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -47,7 +46,6 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.io.PrintStream;
 import java.nio.file.Path;
-import java.util.concurrent.Executors;
 import javax.inject.Inject;
 import org.junit.After;
 import org.junit.Before;
@@ -102,9 +100,7 @@ public class AtsSessionStubTest {
     Flags.parse(deviceInfraServiceFlags.toArray(new String[0]));
 
     sleeper = Sleeper.defaultSleeper();
-    threadPool =
-        MoreExecutors.listeningDecorator(
-            Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory("main-thread")));
+    threadPool = ThreadPools.createStandardThreadPool("main-thread");
 
     outPrintStream = System.out;
     errPrintStream = System.err;

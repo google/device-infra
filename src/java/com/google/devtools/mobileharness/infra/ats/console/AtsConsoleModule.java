@@ -21,7 +21,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.DeviceInfraServiceFlags;
@@ -29,7 +28,7 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -38,7 +37,6 @@ import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 import org.jline.reader.LineReader;
@@ -135,9 +133,7 @@ public class AtsConsoleModule extends AbstractModule {
   @Provides
   @Singleton
   ListeningExecutorService provideThreadPool() {
-    return MoreExecutors.listeningDecorator(
-        Executors.newCachedThreadPool(
-            ThreadFactoryUtil.createThreadFactory("ats-console-thread-pool", /* daemon= */ true)));
+    return ThreadPools.createStandardThreadPool("ats-console-thread-pool");
   }
 
   @Provides

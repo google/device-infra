@@ -37,7 +37,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",

@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ticker;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.commandhistory.proto.CommandRecordProto.LocalCommandRecord;
 import com.google.devtools.mobileharness.shared.commandhistory.proto.CommandRecordProto.LocalCommandRecord.CommandEndedEvent;
@@ -32,12 +31,11 @@ import com.google.devtools.mobileharness.shared.commandhistory.proto.CommandReco
 import com.google.devtools.mobileharness.shared.commandhistory.proto.CommandRecordProto.LocalCommandRecord.CommandStartedEvent.CommandStartSuccess;
 import com.google.devtools.mobileharness.shared.commandhistory.proto.CommandRecordProto.LocalCommandRecord.CommandStartedEvent.InvocationInfo;
 import com.google.devtools.mobileharness.shared.subprocess.listener.ProcessBuilderListener;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.protobuf.util.Durations;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
@@ -66,9 +64,7 @@ public class LocalCommandHistoryRecorder implements ProcessBuilderListener.Handl
   private LocalCommandHistoryRecorder() {
     this(
         LocalCommandHistoryManager.getInstance(),
-        MoreExecutors.listeningDecorator(
-            Executors.newCachedThreadPool(
-                ThreadFactoryUtil.createThreadFactory("subprocess-listener", /* daemon= */ true))),
+        ThreadPools.createStandardThreadPool("subprocess-listener"),
         Ticker.systemTicker(),
         Clock.systemUTC());
   }
