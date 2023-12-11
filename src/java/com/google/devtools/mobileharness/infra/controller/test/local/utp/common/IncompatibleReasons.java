@@ -51,7 +51,7 @@ public class IncompatibleReasons {
 
   /** Adds a new MH infra-related hybrid UTP mode incompatible reason to the test. */
   public void addReason(InfraIncompatibleReason reason) {
-    addReason(reason, null /* detail */);
+    addReason(reason, /* detail= */ null);
   }
 
   /** Adds a new MH infra-related hybrid UTP mode incompatible reason to the test. */
@@ -62,9 +62,9 @@ public class IncompatibleReasons {
       incompatibleReason.setDetail(detail);
     }
     addIncompatibleReasons(
-        null /* converterNamePrefix */,
+        /* converterNamePrefix= */ null,
         ImmutableList.of(incompatibleReason.build()),
-        true /* fatal */);
+        /* fatal= */ true);
   }
 
   /**
@@ -112,7 +112,7 @@ public class IncompatibleReasons {
       if (!overallReasons.isEmpty()) {
         result.put(
             Ascii.toLowerCase(PropertyName.Test.HYBRID_UTP_SUMMARY_INCOMPATIBLE_REASON.toString()),
-            formatReasons(overallReasons, true /* withContext */));
+            formatReasons(overallReasons, /* withContext= */ true));
       }
 
       converterReasons.forEach(
@@ -120,7 +120,7 @@ public class IncompatibleReasons {
               result.put(
                   Ascii.toLowerCase(Test.PREFIX_HYBRID_UTP_DETAILED_INCOMPATIBLE_REASON)
                       + converterNamePrefix,
-                  formatReasons(reasons, false /* withContext */)));
+                  formatReasons(reasons, /* withContext= */ false)));
     }
     testProperties.addAll(result);
   }
