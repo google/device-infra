@@ -179,6 +179,10 @@ public class XtsTradefedTest extends BaseDriver
     }
     // Copies xTS TF generated logs and results for this invocation in the test's gen file dir, so
     // they will be transferred to the client side.
+    // The result file structure will look like:
+    // test_gen_dir/android-<xts>-gen-files/
+    // |---- results/YYYY.MM.DD_HH.MM.SS/
+    // |---- logs/YYYY.MM.DD_HH.MM.SS/
     try {
       Path xtsGenFileDir =
           Paths.get(

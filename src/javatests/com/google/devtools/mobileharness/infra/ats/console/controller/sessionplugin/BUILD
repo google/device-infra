@@ -38,6 +38,8 @@ java_library(
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:list_devices_command_handler",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:run_command_handler",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",

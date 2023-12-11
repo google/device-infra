@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Certifi
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportHelper;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -70,6 +71,7 @@ public final class MoblyAospPackageTestTest {
   @Mock private EmptyDevice emptyDevice;
   @Mock private CompositeDevice compositeDevice;
   @Mock private File configFile;
+  @Mock private AndroidAdbUtil androidAdbUtil;
   @Mock private MoblyAospTestSetupUtil setupUtil;
   @Mock private LocalFileUtil localFileUtil;
   @Mock private MoblyReportHelper moblyReportHelper;
@@ -118,6 +120,7 @@ public final class MoblyAospPackageTestTest {
             testInfo,
             new CommandExecutor(),
             Clock.systemUTC(),
+            androidAdbUtil,
             setupUtil,
             localFileUtil,
             moblyReportHelper,
@@ -157,6 +160,8 @@ public final class MoblyAospPackageTestTest {
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(certificationSuiteInfoFactory.createSuiteInfo(SuiteType.CTS, "cts-plan"))
         .thenReturn(certificationSuiteInfo);
+    when(androidAdbUtil.getProperty(SERIAL, ImmutableList.of("ro.build.fingerprint")))
+        .thenReturn("");
 
     MoblyAospPackageTest moblyAospPackageTest =
         new MoblyAospPackageTest(
@@ -164,6 +169,7 @@ public final class MoblyAospPackageTestTest {
             testInfo,
             new CommandExecutor(),
             Clock.systemUTC(),
+            androidAdbUtil,
             setupUtil,
             localFileUtil,
             moblyReportHelper,
@@ -198,6 +204,7 @@ public final class MoblyAospPackageTestTest {
             testInfo,
             new CommandExecutor(),
             Clock.systemUTC(),
+            androidAdbUtil,
             setupUtil,
             localFileUtil,
             moblyReportHelper,
@@ -228,6 +235,7 @@ public final class MoblyAospPackageTestTest {
             testInfo,
             new CommandExecutor(),
             Clock.systemUTC(),
+            androidAdbUtil,
             setupUtil,
             localFileUtil,
             moblyReportHelper,

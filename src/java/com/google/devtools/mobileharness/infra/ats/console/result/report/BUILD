@@ -44,6 +44,8 @@ java_library(
     name = "compatibility_report_merger",
     srcs = ["CompatibilityReportMerger.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     deps = [
@@ -64,6 +66,7 @@ java_library(
     srcs = ["CompatibilityReportModule.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
@@ -77,6 +80,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report/res:compatibility_res",
     ],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     runtime_deps = [
@@ -109,6 +114,7 @@ java_library(
     name = "mobly_report_parser",
     srcs = ["MoblyReportParser.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     deps = [

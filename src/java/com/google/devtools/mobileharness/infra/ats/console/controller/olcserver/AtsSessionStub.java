@@ -76,6 +76,9 @@ public class AtsSessionStub {
   private static final String SESSION_PLUGIN_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.ats.console."
           + "controller.sessionplugin.AtsSessionPlugin";
+  private static final String SESSION_PLUGIN_MODULE_CLASS_NAME =
+      "com.google.devtools.mobileharness.infra.ats.console."
+          + "controller.sessionplugin.AtsSessionPluginModule";
   private static final FieldMask GET_SESSION_STATUS_FIELD_MASK =
       FieldMask.newBuilder()
           .addPaths(
@@ -266,7 +269,8 @@ public class AtsSessionStub {
                     SessionPluginConfig.newBuilder()
                         .setLoadingConfig(
                             SessionPluginLoadingConfig.newBuilder()
-                                .setPluginClassName(SESSION_PLUGIN_CLASS_NAME))
+                                .setPluginClassName(SESSION_PLUGIN_CLASS_NAME)
+                                .setPluginModuleClassName(SESSION_PLUGIN_MODULE_CLASS_NAME))
                         .setExecutionConfig(
                             SessionPluginExecutionConfig.newBuilder().setConfig(Any.pack(config)))
                         .setExplicitLabel(

@@ -17,10 +17,18 @@ package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "ats_session_plugin",
-    srcs = ["AtsSessionPlugin.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
     ],
+    runtime_deps = [
+        ":ats_session_plugin_lib",
+        ":ats_session_plugin_module",
+    ],
+)
+
+java_library(
+    name = "ats_session_plugin_lib",
+    srcs = ["AtsSessionPlugin.java"],
     deps = [
         ":dump_env_var_command_handler",
         ":dump_stack_trace_command_handler",
@@ -38,6 +46,15 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "ats_session_plugin_module",
+    srcs = ["AtsSessionPluginModule.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
+        "@maven//:com_google_inject_guice",
     ],
 )
 
@@ -109,13 +126,18 @@ java_library(
     visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__"],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:create_job_config_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_parser",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/jobconfig:job_info_creator",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

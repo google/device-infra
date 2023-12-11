@@ -1,0 +1,108 @@
+attribute {
+  key: "build_abi"
+  value: "arm64-v8a"
+}
+attribute {
+  key: "build_abi2"
+  value: ""
+}
+attribute {
+  key: "build_abis"
+  value: "arm64-v8a,armeabi-v7a,armeabi"
+}
+attribute {
+  key: "build_abis_32"
+  value: "armeabi-v7a,armeabi"
+}
+attribute {
+  key: "build_abis_64"
+  value: "arm64-v8a"
+}
+attribute {
+  key: "build_board"
+  value: "redfin"
+}
+attribute {
+  key: "build_bootimage_fingerprint"
+  value: "google/redfin/redfin:12/SQ3A.220705.003.A1/8672226:userdebug/dev-keys"
+}
+attribute {
+  key: "build_brand"
+  value: "google"
+}
+attribute {
+  key: "build_device"
+  value: "redfin"
+}
+attribute {
+  key: "build_fingerprint"
+  value: "google/redfin/redfin:12/SQ3A.220705.003.A1/8672226:userdebug/dev-keys"
+}
+attribute {
+  key: "build_id"
+  value: "SQ3A.220705.003.A1"
+}
+attribute {
+  key: "build_manufacturer"
+  value: "Google"
+}
+attribute {
+  key: "build_model"
+  value: "Pixel 5"
+}
+attribute {
+  key: "build_product"
+  value: "redfin"
+}
+attribute {
+  key: "build_reference_fingerprint"
+  value: ""
+}
+attribute {
+  key: "build_serial"
+  value: "12241FDD4002Z6"
+}
+attribute {
+  key: "build_tags"
+  value: "dev-keys"
+}
+attribute {
+  key: "build_type"
+  value: "userdebug"
+}
+attribute {
+  key: "build_vendor_fingerprint"
+  value: "google/redfin/redfin:12/SQ3A.220705.003.A1/8672226:userdebug/dev-keys"
+}
+attribute {
+  key: "build_version_base_os"
+  value: ""
+}
+attribute {
+  key: "build_version_incremental"
+  value: "8672226"
+}
+attribute {
+  key: "build_version_release"
+  value: "12"
+}
+attribute {
+  key: "build_version_sdk"
+  value: "32"
+}
+attribute {
+  key: "build_version_security_patch"
+  value: "2022-07-05"
+}
+attribute {
+  key: "system_img_info"
+  value: "google/redfin/redfin:12/SQ3A.220705.003.A1/8672226:userdebug/dev-keys"
+}
+attribute {
+  key: "vendor_img_info"
+  value: "google/redfin/redfin:12/SQ3A.220705.003.A1/8672226:userdebug/dev-keys"
+}
+attribute {
+  key: "device_kernel_info"
+  value: "Linux localhost 4.19.224-g9e23c2625924-ab8577203 #1 SMP PREEMPT Thu May 12 05:21:57 UTC 2022 aarch64"
+}

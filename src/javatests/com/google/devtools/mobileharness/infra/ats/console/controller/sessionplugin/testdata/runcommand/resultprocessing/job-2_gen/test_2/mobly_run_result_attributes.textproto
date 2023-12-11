@@ -1,0 +1,68 @@
+attribute {
+  key: "start"
+  value: "1701921812994"
+}
+attribute {
+  key: "end"
+  value: "1701921828385"
+}
+attribute {
+  key: "start_display"
+  value: "Thu Dec 07 12:03:32 CST 2023"
+}
+attribute {
+  key: "end_display"
+  value: "Thu Dec 07 12:03:48 CST 2023"
+}
+attribute {
+  key: "suite_name"
+  value: "CTS"
+}
+attribute {
+  key: "suite_variant"
+  value: "CTS"
+}
+attribute {
+  key: "suite_version"
+  value: "13.0_r3"
+}
+attribute {
+  key: "suite_plan"
+  value: ""
+}
+attribute {
+  key: "suite_build_number"
+  value: "0"
+}
+attribute {
+  key: "report_version"
+  value: "5.0"
+}
+attribute {
+  key: "devices"
+  value: "12241FDD4002Z6,0A031FDD4004FA"
+}
+attribute {
+  key: "host_name"
+  value: "abc.com"
+}
+attribute {
+  key: "os_name"
+  value: "Linux"
+}
+attribute {
+  key: "os_version"
+  value: "6.5.6-1rodete4-amd64"
+}
+attribute {
+  key: "os_arch"
+  value: "amd64"
+}
+attribute {
+  key: "java_vendor"
+  value: "Google Inc."
+}
+attribute {
+  key: "java_version"
+  value: "21.0.1"
+}

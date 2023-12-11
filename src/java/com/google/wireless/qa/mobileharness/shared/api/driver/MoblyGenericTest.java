@@ -159,7 +159,7 @@ public class MoblyGenericTest extends BaseDriver {
   }
 
   protected void postMoblyCommandExec(Instant testStartTime, Instant testEndTime)
-      throws InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     // Do nothing by default.
   }
 

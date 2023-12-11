@@ -17,9 +17,11 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
@@ -34,6 +36,10 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.XtsType;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
@@ -63,7 +69,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.function.Function;
 import javax.inject.Inject;
 
 /** Handler for "run" commands. */
@@ -74,22 +82,36 @@ class RunCommandHandler {
   private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
   @VisibleForTesting static final String XTS_NON_TF_JOB_PROP = "xts-non-tradefed-job";
+  @VisibleForTesting static final String XTS_MODULE_NAME_PROP = "xts-module-name";
+  private static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
+  private static final ImmutableSet<String> MOBLY_TEST_RESULT_FILE_NAMES =
+      ImmutableSet.of(
+          "test_summary.yaml",
+          "device_build_fingerprint.txt",
+          "mobly_run_build_attributes.textproto",
+          "mobly_run_result_attributes.textproto");
 
   private final CreateJobConfigUtil createJobConfigUtil;
   private final LocalFileUtil localFileUtil;
   private final ModuleConfigurationHelper moduleConfigurationHelper;
   private final ConfigurationUtil configurationUtil;
+  private final CompatibilityReportMerger compatibilityReportMerger;
+  private final CompatibilityReportCreator reportCreator;
 
   @Inject
   RunCommandHandler(
       DeviceQuerier deviceQuerier,
       LocalFileUtil localFileUtil,
       ModuleConfigurationHelper moduleConfigurationHelper,
-      ConfigurationUtil configurationUtil) {
+      ConfigurationUtil configurationUtil,
+      CompatibilityReportMerger compatibilityReportMerger,
+      CompatibilityReportCreator reportCreator) {
     this.createJobConfigUtil = new CreateJobConfigUtil(deviceQuerier);
     this.localFileUtil = localFileUtil;
     this.moduleConfigurationHelper = moduleConfigurationHelper;
     this.configurationUtil = configurationUtil;
+    this.compatibilityReportMerger = compatibilityReportMerger;
+    this.reportCreator = reportCreator;
   }
 
   /**
@@ -292,7 +314,7 @@ class RunCommandHandler {
           || givenMatchedNonTfModules.contains(configModuleName)) {
         Optional<JobInfo> jobInfoOpt =
             createXtsNonTradefedJob(
-                Path.of(xtsRootDir), xtsType, Path.of(entry.getKey()), entry.getValue());
+                Path.of(xtsRootDir), xtsType, testPlan, Path.of(entry.getKey()), entry.getValue());
         if (jobInfoOpt.isPresent()) {
           JobInfo jobInfo = jobInfoOpt.get();
           if (!androidDeviceSerials.isEmpty()) {
@@ -322,7 +344,11 @@ class RunCommandHandler {
   }
 
   private Optional<JobInfo> createXtsNonTradefedJob(
-      Path xtsRootDir, XtsType xtsType, Path moduleConfigPath, Configuration moduleConfig)
+      Path xtsRootDir,
+      XtsType xtsType,
+      String testPlan,
+      Path moduleConfigPath,
+      Configuration moduleConfig)
       throws MobileHarnessException, InterruptedException {
     Optional<JobInfo> jobInfoOpt = createBaseXtsNonTradefedJob(moduleConfig);
     if (jobInfoOpt.isEmpty()) {
@@ -337,6 +363,8 @@ class RunCommandHandler {
     JobInfo jobInfo = jobInfoOpt.get();
     moduleConfigurationHelper.updateJobInfo(jobInfo, moduleConfig, fileDepDirs);
     jobInfo.properties().add(XTS_NON_TF_JOB_PROP, "true");
+    jobInfo.properties().add(XTS_MODULE_NAME_PROP, moduleConfig.getMetadata().getXtsModule());
+    jobInfo.params().add("xts_test_plan", testPlan);
     return Optional.of(jobInfo);
   }
 
@@ -383,7 +411,8 @@ class RunCommandHandler {
   }
 
   /**
-   * Copies xTS tradefed generated logs/results into proper locations within the given xts root dir.
+   * Copies xTS tradefed and non-tradefed generated logs/results into proper locations within the
+   * given xts root dir.
    */
   void handleResultProcessing(RunCommand command, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
@@ -395,91 +424,101 @@ class RunCommandHandler {
       }
 
       Path xtsRootDir = Path.of(command.getXtsRootDir());
-      Optional<JobInfo> job =
+
+      ImmutableMap<JobInfo, Optional<TestInfo>> tradefedTests =
           sessionInfo.getAllJobs().stream()
               .filter(jobInfo -> jobInfo.properties().has(XTS_TF_JOB_PROP))
-              .findFirst();
-      if (job.isEmpty()) {
-        logger.atInfo().log("Found no job, skip processing result.");
-        return;
-      }
-      Optional<TestInfo> test = job.get().tests().getAll().values().stream().findFirst();
-      if (test.isEmpty()) {
-        logger.atInfo().log("Found no test, skip processing result.");
-        return;
-      }
+              .collect(
+                  toImmutableMap(
+                      Function.identity(),
+                      jobInfo -> jobInfo.tests().getAll().values().stream().findFirst()));
 
-      String testGenFileDir = test.get().getGenFileDir();
-      List<Path> genFiles = localFileUtil.listFilesOrDirs(Paths.get(testGenFileDir), path -> true);
-      if (genFiles.isEmpty()) {
-        logger.atInfo().log("Found no gen files, skip processing result.");
-        return;
-      }
+      ImmutableMap<JobInfo, Optional<TestInfo>> nonTradefedTests =
+          sessionInfo.getAllJobs().stream()
+              .filter(jobInfo -> jobInfo.properties().has(XTS_NON_TF_JOB_PROP))
+              .collect(
+                  toImmutableMap(
+                      Function.identity(),
+                      jobInfo -> jobInfo.tests().getAll().values().stream().findFirst()));
 
       XtsType xtsType = command.getXtsType();
       String timestampDirName = getTimestampDirName();
       Path resultDir = getResultDir(xtsRootDir, xtsType, timestampDirName);
+      Path tradefedTestResultsDir = resultDir.resolve("tradefed_results");
+      Path nonTradefedTestResultsDir = resultDir.resolve("non-tradefed_results");
       Path logDir = getLogDir(xtsRootDir, xtsType, timestampDirName);
-      Path tfLogDir = logDir.resolve("tradefed_log");
-      Path atsLogDir = logDir.resolve("ats_log");
+      Path tradefedTestLogsDir = logDir.resolve("tradefed_logs");
+      Path nonTradefedTestLogsDir = logDir.resolve("non-tradefed_logs");
 
-      for (Path genFile : genFiles) {
-        if (genFile.getFileName().toString().endsWith("gen-files")) {
-          Path logsDir = genFile.resolve("logs");
-          if (logsDir.toFile().exists()) {
-            localFileUtil.prepareDir(tfLogDir);
-            List<Path> logsSubDirs = localFileUtil.listDirs(logsDir);
-            for (Path logsSubDir : logsSubDirs) {
-              logger.atInfo().log("Copying dir [%s] into dir [%s]", logsSubDir, tfLogDir);
-              localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                  logsSubDir, tfLogDir, ImmutableList.of("-rf"));
-            }
-          }
-          Path genFileResultsDir = genFile.resolve("results");
-          if (genFileResultsDir.toFile().exists()) {
-            localFileUtil.prepareDir(resultDir);
-            List<Path> resultsSubFilesOrDirs =
-                localFileUtil.listFilesOrDirs(
-                    genFileResultsDir,
-                    filePath -> !filePath.getFileName().toString().equals("latest"));
-            for (Path resultsSubFileOrDir : resultsSubFilesOrDirs) {
-              if (resultsSubFileOrDir.toFile().isDirectory()) {
-                // If it's a dir, copy its content into the new result dir.
-                List<Path> resultFilesOrDirs =
-                    localFileUtil.listFilesOrDirs(resultsSubFileOrDir, path -> true);
-                for (Path resultFileOrDir : resultFilesOrDirs) {
-                  logger.atInfo().log(
-                      "Copying file/dir [%s] into dir [%s]", resultFileOrDir, resultDir);
-                  localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                      resultFileOrDir, resultDir, ImmutableList.of("-rf"));
-                }
-              } else if (resultsSubFileOrDir.getFileName().toString().endsWith(".zip")) {
-                // If it's a zip file, copy it as a sibling file as the new result dir and rename it
-                // as "<new_result_dir_name>.zip"
-                logger.atInfo().log(
-                    "Copying file/dir [%s] into dir [%s]", resultsSubFileOrDir, resultDir);
-                localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                    resultsSubFileOrDir,
-                    resultDir.resolveSibling(String.format("%s.zip", resultDir.getFileName())),
-                    ImmutableList.of("-rf"));
-              } else {
-                logger.atInfo().log(
-                    "Copying file/dir [%s] into dir [%s]", resultsSubFileOrDir, resultDir);
-                localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                    resultsSubFileOrDir, resultDir, ImmutableList.of("-rf"));
-              }
-            }
-          }
-        } else {
-          if (!atsLogDir.toFile().exists()) {
-            localFileUtil.prepareDir(atsLogDir);
-          }
-          logger.atInfo().log("Copying file/dir [%s] into dir [%s]", genFile, atsLogDir);
-          localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-              genFile, atsLogDir, ImmutableList.of("-rf"));
+      List<Path> tradefedTestResultXmlFiles = new ArrayList<>();
+      // Copies tradefed test relevant log and result files to dedicated locations
+      for (Entry<JobInfo, Optional<TestInfo>> testEntry : tradefedTests.entrySet()) {
+        if (testEntry.getValue().isEmpty()) {
+          logger.atInfo().log(
+              "Found no test in tradefed job [%s], skip it.", testEntry.getKey().locator().getId());
+          continue;
         }
+
+        TestInfo test = testEntry.getValue().get();
+
+        copyTradefedTestLogFiles(test, tradefedTestLogsDir);
+        Optional<Path> tradefedTestResultXmlFile =
+            copyTradefedTestResultFiles(test, tradefedTestResultsDir);
+        tradefedTestResultXmlFile.ifPresent(tradefedTestResultXmlFiles::add);
+      }
+
+      List<MoblyReportInfo> moblyReportInfos = new ArrayList<>();
+      // Copies non-tradefed test relevant log and result files to dedicated locations
+      for (Entry<JobInfo, Optional<TestInfo>> testEntry : nonTradefedTests.entrySet()) {
+        if (testEntry.getValue().isEmpty()) {
+          logger.atInfo().log(
+              "Found no test in non-tradefed job [%s], skip it.",
+              testEntry.getKey().locator().getId());
+          continue;
+        }
+        TestInfo test = testEntry.getValue().get();
+
+        copyNonTradefedTestLogFiles(test, nonTradefedTestLogsDir);
+        Optional<NonTradefedTestResult> nonTradefedTestResult =
+            copyNonTradefedTestResultFiles(
+                test,
+                nonTradefedTestResultsDir,
+                testEntry.getKey().properties().get(XTS_MODULE_NAME_PROP));
+        nonTradefedTestResult.ifPresent(
+            res ->
+                moblyReportInfos.add(
+                    MoblyReportInfo.of(
+                        res.moduleName(),
+                        res.testSummaryFile(),
+                        res.resultAttributesFile(),
+                        res.deviceBuildFingerprint(),
+                        res.buildAttributesFile())));
+      }
+
+      Optional<Result> mergedTradefedReport = Optional.empty();
+      if (!tradefedTestResultXmlFiles.isEmpty()) {
+        mergedTradefedReport =
+            compatibilityReportMerger.mergeXmlReports(tradefedTestResultXmlFiles);
+      }
+
+      Optional<Result> mergedNonTradefedReport = Optional.empty();
+      if (!moblyReportInfos.isEmpty()) {
+        mergedNonTradefedReport = compatibilityReportMerger.mergeMoblyReports(moblyReportInfos);
+      }
+
+      List<Result> reportList = new ArrayList<>();
+      mergedTradefedReport.ifPresent(reportList::add);
+      mergedNonTradefedReport.ifPresent(reportList::add);
+
+      Optional<Result> finalReport =
+          compatibilityReportMerger.mergeReports(reportList, /* validateReports= */ true);
+      if (finalReport.isEmpty()) {
+        logger.atWarning().log("Failed to merge reports.");
+      } else {
+        reportCreator.createReport(finalReport.get(), resultDir, null);
       }
     } finally {
+      cleanUpJobGenDirs(sessionInfo.getAllJobs());
       sessionInfo.setSessionPluginOutput(
           oldOutput ->
               (oldOutput == null ? AtsSessionPluginOutput.newBuilder() : oldOutput.toBuilder())
@@ -490,6 +529,258 @@ class RunCommandHandler {
                                   "run_command session [%s] ended", sessionInfo.getSessionId())))
                   .build(),
           AtsSessionPluginOutput.class);
+    }
+  }
+
+  /**
+   * Copies tradefed test relevant log files to directory {@code logDir} for the given tradefed
+   * test.
+   *
+   * <p>The destination log files structure looks like:
+   *
+   * <pre>
+   * .../android-<xts>/logs/YYYY.MM.DD_HH.mm.ss/
+   *    tradefed_logs/
+   *      <driver>_test_<test_id>/
+   *        command_history.txt
+   *        xts_tf_output.log
+   *        raw_tradefed_log/
+   *    non-tradefed_logs/
+   *      <driver>_test_<test_id>/
+   *        command_history.txt
+   *        mobly_command_output.log
+   *        mobly_run_build_attributes.textproto
+   *        mobly_run_result_attrubutes.textproto
+   *        ...
+   *        raw_mobly_logs/
+   * </pre>
+   */
+  private void copyTradefedTestLogFiles(TestInfo tradefedTestInfo, Path logDir)
+      throws MobileHarnessException, InterruptedException {
+    Path testLogDir = prepareLogOrResultDirForTest(tradefedTestInfo, logDir);
+
+    String testGenFileDir = tradefedTestInfo.getGenFileDir();
+    List<Path> genFiles = localFileUtil.listFilesOrDirs(Paths.get(testGenFileDir), path -> true);
+
+    for (Path genFile : genFiles) {
+      if (genFile.getFileName().toString().endsWith("gen-files")) {
+        Path logsDir = genFile.resolve("logs");
+        if (logsDir.toFile().exists()) {
+          List<Path> logsSubFilesOrDirs =
+              localFileUtil.listFilesOrDirs(
+                  logsDir, filePath -> !filePath.getFileName().toString().equals("latest"));
+          for (Path logsSubFileOrDir : logsSubFilesOrDirs) {
+            if (logsSubFileOrDir.toFile().isDirectory()) {
+              // If it's a dir, copy its content into the new log dir.
+              List<Path> logFilesOrDirs =
+                  localFileUtil.listFilesOrDirs(logsSubFileOrDir, path -> true);
+              for (Path logFileOrDir : logFilesOrDirs) {
+                logger.atInfo().log(
+                    "Copying tradefed test log relevant file/dir [%s] into dir [%s]",
+                    logFileOrDir, testLogDir);
+                localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                    logFileOrDir, testLogDir, ImmutableList.of("-rf"));
+              }
+            }
+          }
+        }
+      } else {
+        logger.atInfo().log(
+            "Copying tradefed test log relevant file/dir [%s] into dir [%s]", genFile, testLogDir);
+        localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+            genFile, testLogDir, ImmutableList.of("-rf"));
+      }
+    }
+  }
+
+  /**
+   * Copies tradefed test relevant result files to directory {@code resultDir} for the given
+   * tradefed test.
+   *
+   * <p>The destination result files structure looks like:
+   *
+   * <pre>
+   * .../android-<xts>/results/YYYY.MM.DD_HH.mm.ss/
+   *    the merged report relevant files (test_result.xml, html, checksum-suite.data, etc)
+   *    tradefed_results/
+   *      <driver>_test_<test_id>/
+   *        test_result.xml
+   *        test_result.html
+   *        ...
+   *    non-tradefed_results/
+   *      <driver>_test_<test_id>/
+   *        test_summary.yaml
+   *        mobly_run_build_attributes.textproto
+   *        mobly_run_result_attributes.textproto
+   *        ...
+   * </pre>
+   *
+   * @return the path to the tradefed test result xml file if any
+   */
+  @CanIgnoreReturnValue
+  private Optional<Path> copyTradefedTestResultFiles(TestInfo tradefedTestInfo, Path resultDir)
+      throws MobileHarnessException, InterruptedException {
+    Path testResultDir = prepareLogOrResultDirForTest(tradefedTestInfo, resultDir);
+
+    String testGenFileDir = tradefedTestInfo.getGenFileDir();
+    List<Path> genFiles = localFileUtil.listFilesOrDirs(Paths.get(testGenFileDir), path -> true);
+
+    for (Path genFile : genFiles) {
+      if (genFile.getFileName().toString().endsWith("gen-files")) {
+        Path genFileResultsDir = genFile.resolve("results");
+        if (genFileResultsDir.toFile().exists()) {
+          List<Path> resultsSubFilesOrDirs =
+              localFileUtil.listFilesOrDirs(
+                  genFileResultsDir,
+                  filePath -> !filePath.getFileName().toString().equals("latest"));
+          for (Path resultsSubFileOrDir : resultsSubFilesOrDirs) {
+            if (resultsSubFileOrDir.toFile().isDirectory()) {
+              // If it's a dir, copy its content into the new result dir.
+              List<Path> resultFilesOrDirs =
+                  localFileUtil.listFilesOrDirs(resultsSubFileOrDir, path -> true);
+              for (Path resultFileOrDir : resultFilesOrDirs) {
+                logger.atInfo().log(
+                    "Copying tradefed test result relevant file/dir [%s] into dir [%s]",
+                    resultFileOrDir, testResultDir);
+                localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                    resultFileOrDir, testResultDir, ImmutableList.of("-rf"));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    List<Path> testResultXmlFiles =
+        localFileUtil.listFilePaths(
+            testResultDir,
+            /* recursively= */ false,
+            path -> path.getFileName().toString().equals(TEST_RESULT_XML_FILE_NAME));
+
+    return testResultXmlFiles.stream().findFirst();
+  }
+
+  /**
+   * Copies non-tradefed test relevant log files to directory {@code logDir} for the given
+   * non-tradefed test.
+   *
+   * <p>The destination log files structure looks like:
+   *
+   * <pre>
+   * .../android-<xts>/logs/YYYY.MM.DD_HH.mm.ss/
+   *    tradefed_logs/
+   *      <driver>_test_<test_id>/
+   *        command_history.txt
+   *        xts_tf_output.log
+   *        raw_tradefed_log/
+   *    non-tradefed_logs/
+   *      <driver>_test_<test_id>/
+   *        command_history.txt
+   *        mobly_command_output.log
+   *        mobly_run_build_attributes.textproto
+   *        mobly_run_result_attrubutes.textproto
+   *        ...
+   *        raw_mobly_logs/
+   * </pre>
+   */
+  private void copyNonTradefedTestLogFiles(TestInfo nonTradefedTestInfo, Path logDir)
+      throws MobileHarnessException, InterruptedException {
+    Path testLogDir = prepareLogOrResultDirForTest(nonTradefedTestInfo, logDir);
+
+    String testGenFileDir = nonTradefedTestInfo.getGenFileDir();
+    List<Path> genFiles = localFileUtil.listFilesOrDirs(Paths.get(testGenFileDir), path -> true);
+
+    for (Path genFile : genFiles) {
+      logger.atInfo().log(
+          "Copying non-tradefed test log relevant file/dir [%s] into dir [%s]",
+          genFile, testLogDir);
+      localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+          genFile, testLogDir, ImmutableList.of("-rf"));
+    }
+  }
+
+  /**
+   * Copies non-tradefed test relevant result files to directory {@code resultDir} for the given
+   * non-tradefed test.
+   *
+   * <p>The destination result files structure looks like:
+   *
+   * <pre>
+   * .../android-<xts>/results/YYYY.MM.DD_HH.mm.ss/
+   *    the merged report relevant files (test_result.xml, html, checksum-suite.data, etc)
+   *    tradefed_results/
+   *      <driver>_test_<test_id>/
+   *        test_result.xml
+   *        test_result.html
+   *        ...
+   *    non-tradefed_results/
+   *      <driver>_test_<test_id>/
+   *        test_summary.yaml
+   *        mobly_run_build_attributes.textproto
+   *        mobly_run_result_attributes.textproto
+   *        ...
+   * </pre>
+   *
+   * @param moduleName the xts module name
+   * @return {@code NonTradefedTestResult} if any
+   */
+  @CanIgnoreReturnValue
+  private Optional<NonTradefedTestResult> copyNonTradefedTestResultFiles(
+      TestInfo nonTradefedTestInfo, Path resultDir, String moduleName)
+      throws MobileHarnessException, InterruptedException {
+    Path testResultDir = prepareLogOrResultDirForTest(nonTradefedTestInfo, resultDir);
+
+    NonTradefedTestResult.Builder nonTradefedTestResultBuilder =
+        NonTradefedTestResult.builder().setModuleName(moduleName);
+    String testGenFileDir = nonTradefedTestInfo.getGenFileDir();
+    List<Path> moblyTestResultFiles =
+        localFileUtil.listFilePaths(
+            Paths.get(testGenFileDir),
+            /* recursively= */ true,
+            path -> MOBLY_TEST_RESULT_FILE_NAMES.contains(path.getFileName().toString()));
+
+    for (Path moblyTestResultFile : moblyTestResultFiles) {
+      logger.atInfo().log(
+          "Copying non-tradefed test result relevant file [%s] into dir [%s]",
+          moblyTestResultFile, testResultDir);
+      localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+          moblyTestResultFile, testResultDir, ImmutableList.of("-rf"));
+      updateNonTradefedTestResult(
+          nonTradefedTestResultBuilder,
+          moblyTestResultFile.getFileName().toString(),
+          moblyTestResultFile);
+    }
+
+    return Optional.of(nonTradefedTestResultBuilder.build());
+  }
+
+  private Path prepareLogOrResultDirForTest(TestInfo test, Path parentDir)
+      throws MobileHarnessException {
+    Path targetDir =
+        parentDir.resolve(
+            String.format("%s_test_%s", test.jobInfo().type().getDriver(), test.locator().getId()));
+    localFileUtil.prepareDir(targetDir);
+    return targetDir;
+  }
+
+  private void updateNonTradefedTestResult(
+      NonTradefedTestResult.Builder resultBuilder, String fileName, Path filePath)
+      throws MobileHarnessException {
+    switch (fileName) {
+      case "test_summary.yaml":
+        resultBuilder.setTestSummaryFile(filePath);
+        break;
+      case "device_build_fingerprint.txt":
+        resultBuilder.setDeviceBuildFingerprint(localFileUtil.readFile(filePath).trim());
+        break;
+      case "mobly_run_result_attributes.textproto":
+        resultBuilder.setResultAttributesFile(filePath);
+        break;
+      case "mobly_run_build_attributes.textproto":
+        resultBuilder.setBuildAttributesFile(filePath);
+        break;
+      default:
+        break;
     }
   }
 
@@ -519,5 +810,67 @@ class RunCommandHandler {
   private Path getXtsTestCasesDir(Path xtsRootDir, XtsType xtsType) {
     return xtsRootDir.resolve(
         String.format("android-%s/testcases", Ascii.toLowerCase(xtsType.name())));
+  }
+
+  @VisibleForTesting
+  void cleanUpJobGenDirs(List<JobInfo> jobInfoList)
+      throws MobileHarnessException, InterruptedException {
+    for (JobInfo jobInfo : jobInfoList) {
+      if (jobInfo.setting().hasGenFileDir()) {
+        logger.atInfo().log(
+            "Cleaning up job [%s] gen dir [%s]",
+            jobInfo.locator().getId(), jobInfo.setting().getGenFileDir());
+        localFileUtil.removeFileOrDir(jobInfo.setting().getGenFileDir());
+      }
+    }
+  }
+
+  /** Data class for the non-tradefed test result. */
+  @AutoValue
+  public abstract static class NonTradefedTestResult {
+
+    /** The xTS module name. */
+    public abstract String moduleName();
+
+    /**
+     * The build fingerprint for the major device on which the test run, it's used to identify the
+     * generated report.
+     */
+    public abstract String deviceBuildFingerprint();
+
+    /** The path of the test summary file being parsed. */
+    public abstract Path testSummaryFile();
+
+    /**
+     * The path of the text proto file that stores {@link AttributeList} which will be set in the
+     * {@link Result}.{@code attribute}.
+     */
+    public abstract Path resultAttributesFile();
+
+    /**
+     * The path of the text proto file that stores {@link AttributeList} which will be set in the
+     * {@link BuildInfo}.{@code attribute}.
+     */
+    public abstract Path buildAttributesFile();
+
+    public static Builder builder() {
+      return new AutoValue_RunCommandHandler_NonTradefedTestResult.Builder();
+    }
+
+    /** Builder for {@link NonTradefedTestResult}. */
+    @AutoValue.Builder
+    public abstract static class Builder {
+      public abstract Builder setModuleName(String moduleName);
+
+      public abstract Builder setDeviceBuildFingerprint(String deviceBuildFingerprint);
+
+      public abstract Builder setTestSummaryFile(Path testSummaryFile);
+
+      public abstract Builder setResultAttributesFile(Path resultAttributesFile);
+
+      public abstract Builder setBuildAttributesFile(Path buildAttributesFile);
+
+      public abstract NonTradefedTestResult build();
+    }
   }
 }

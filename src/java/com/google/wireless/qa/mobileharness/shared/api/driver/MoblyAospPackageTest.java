@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Certifi
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportHelper;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -89,6 +90,7 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
 
   private static final String MOBLY_CONFIG_KEY_PREFIX_MH = "mh_";
 
+  private final AndroidAdbUtil androidAdbUtil;
   private final MoblyAospTestSetupUtil setupUtil;
   private final LocalFileUtil localFileUtil;
   private final MoblyReportHelper moblyReportHelper;
@@ -100,11 +102,13 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
       TestInfo testInfo,
       CommandExecutor executor,
       Clock clock,
+      AndroidAdbUtil androidAdbUtil,
       MoblyAospTestSetupUtil setupUtil,
       LocalFileUtil localFileUtil,
       MoblyReportHelper moblyReportHelper,
       CertificationSuiteInfoFactory certificationSuiteInfoFactory) {
     super(device, testInfo, executor, clock);
+    this.androidAdbUtil = androidAdbUtil;
     this.setupUtil = setupUtil;
     this.localFileUtil = localFileUtil;
     this.moblyReportHelper = moblyReportHelper;
@@ -191,7 +195,7 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
 
   @Override
   protected void postMoblyCommandExec(Instant testStartTime, Instant testEndTime)
-      throws InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = getTest();
     String suiteType = testInfo.jobInfo().params().get(PARAM_CERTIFICATION_SUITE_TYPE, "");
     // If certification suite type is not defined, it means this is not a xTS Mobly test.
@@ -223,6 +227,16 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
           "Failed to generate build attributes file for xTS Mobly run: %s",
           MoreThrowables.shortDebugString(e, 0));
     }
+
+    // Writes first device build fingerprint to a file for post processing
+    localFileUtil.writeToFile(
+        Paths.get(testInfo.getGenFileDir())
+            .resolve("device_build_fingerprint.txt")
+            .toAbsolutePath()
+            .toString(),
+        androidAdbUtil
+            .getProperty(deviceIds.get(0), ImmutableList.of("ro.build.fingerprint"))
+            .trim());
   }
 
   private ImmutableList<String> getDeviceIds() {
