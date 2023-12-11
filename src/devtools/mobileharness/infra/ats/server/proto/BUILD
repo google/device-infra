@@ -14,11 +14,13 @@
 #
 
 # Session Plugin messages used for serving ATS server and ATS Web UI.
+load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
+        "//third_party/py/multitest_transport/util:__subpackages__",
     ],
 )
 
@@ -28,6 +30,16 @@ proto_library(
     deps = [
         "@com_google_protobuf//:duration_proto",
         "@com_google_protobuf//:timestamp_proto",
+    ],
+)
+
+py_proto_library(
+    name = "service_py_proto",
+    srcs = [
+        "service.proto",
+    ],
+    deps = [
+        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
     ],
 )
 

@@ -71,7 +71,7 @@ message TestResourceParameters {
 message TestEnvironment {
   map<string, string> env_vars = 1;
   repeated string setup_scripts = 2;
-  repeated string otuput_file_patterns = 3;
+  repeated string output_file_patterns = 3;
   optional string output_file_upload_url = 4;
   optional bool use_subprocess_reporting = 5;
   optional google.protobuf.Duration invocation_timeout = 6;
