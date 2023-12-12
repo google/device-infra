@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.shared.util.command.backend;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,7 +28,6 @@ import java.lang.ProcessBuilder.Redirect;
 import java.lang.reflect.Field;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 
 /** An implementation of {@link CommandProcess} that runs natively on the OS. */
@@ -36,8 +35,7 @@ final class NativeProcess extends CommandProcess {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   static final ExecutorService EXECUTOR_SERVICE =
-      Executors.newCachedThreadPool(
-          new ThreadFactoryBuilder().setDaemon(true).setNameFormat("native-process-%d").build());
+      ThreadPools.createStandardThreadPool("native-process");
 
   static final CommandExecutor EXECUTOR =
       new CommandExecutor() {

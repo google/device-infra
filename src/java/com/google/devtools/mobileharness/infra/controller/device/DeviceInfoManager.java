@@ -23,19 +23,17 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.flogger.StackSize;
 import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfoFactory;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
 import javax.annotation.Nullable;
 
 /**
@@ -55,9 +53,7 @@ public class DeviceInfoManager {
 
   private static final DeviceInfoManager INSTANCE = new DeviceInfoManager();
 
-  /**
-   * @return the singleton
-   */
+  /** Returns the singleton. */
   public static DeviceInfoManager getInstance() {
     return INSTANCE;
   }
@@ -74,10 +70,7 @@ public class DeviceInfoManager {
   final Map<String, ListenableScheduledFuture<?>> removalFutures = new ConcurrentHashMap<>();
 
   private DeviceInfoManager() {
-    this(
-        MoreExecutors.listeningDecorator(
-            Executors.newSingleThreadScheduledExecutor(
-                new ThreadFactoryBuilder().setNameFormat("device-info-manager-%d").build())));
+    this(ThreadPools.createStandardScheduledThreadPool("device-info-manager", 1));
   }
 
   @VisibleForTesting
@@ -107,6 +100,7 @@ public class DeviceInfoManager {
   }
 
   /** Do <b>not</b> make it public. */
+  @SuppressWarnings("Interruption")
   void add(DeviceId deviceId, @Nullable ApiConfig apiConfig, boolean retainDeviceInfo) {
     deviceInfos.compute(
         deviceId.controlId(),
@@ -138,6 +132,7 @@ public class DeviceInfoManager {
    * Removes DeviceInfo of specified device after the specified delay. If the DeviceInfo is reused
    * after removal is scheduled, the removal will be cancelled.
    */
+  @SuppressWarnings("Interruption")
   void removeDelayed(String deviceControlId, Duration delay) {
     ListenableScheduledFuture<?> future =
         threadPool.schedule(

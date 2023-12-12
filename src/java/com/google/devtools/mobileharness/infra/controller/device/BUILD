@@ -139,6 +139,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "@maven//:com_google_code_findbugs_jsr305",
