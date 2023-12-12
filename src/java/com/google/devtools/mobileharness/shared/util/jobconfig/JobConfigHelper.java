@@ -29,7 +29,7 @@ final class JobConfigHelper {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  /** */
+  /** Finalizes the timeout setting for MH Job/Test/Start. */
   public static Timeout.Builder finalizeTimeout(JobConfig jobConfig) {
     Duration finalizedJobTimeout = Duration.ofSeconds(jobConfig.getJobTimeoutSec());
     Duration finalizedTestTimeout = Duration.ofSeconds(jobConfig.getTestTimeoutSec());
