@@ -28,9 +28,11 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.DeviceInfraServiceFlags;
-import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
@@ -62,7 +64,7 @@ public class AtsSessionStubTest {
 
   @Bind private ListeningExecutorService threadPool;
   @Bind private Sleeper sleeper;
-  @Bind @DeviceInfraServiceFlags private ImmutableList<String> deviceInfraServiceFlags;
+  @Bind private ImmutableList<String> deviceInfraServiceFlags;
 
   @Bind
   @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM)
@@ -71,6 +73,8 @@ public class AtsSessionStubTest {
   @Bind
   @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM)
   private PrintStream errPrintStream;
+
+  @Bind private ServerLogger serverLogger;
 
   @Inject private ServerPreparer serverPreparer;
 
@@ -105,12 +109,16 @@ public class AtsSessionStubTest {
     outPrintStream = System.out;
     errPrintStream = System.err;
 
+    serverLogger = (format, args) -> {};
+
     Path serverBinary =
         Path.of(
             RunfilesUtil.getRunfilesLocation(
-                "java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver/ats_olc_server_deploy.jar"));
+                "java/com/google/devtools/mobileharness/infra/ats/common/olcserver/ats_olc_server_deploy.jar"));
 
-    Guice.createInjector(new OlcServerModule(() -> serverBinary), BoundFieldModule.of(this))
+    Guice.createInjector(
+            new OlcServerModule(() -> serverBinary, deviceInfraServiceFlags),
+            BoundFieldModule.of(this))
         .injectMembers(this);
   }
 

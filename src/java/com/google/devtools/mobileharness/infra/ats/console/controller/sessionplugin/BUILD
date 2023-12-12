@@ -18,6 +18,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "ats_session_plugin",
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
     ],
     runtime_deps = [

@@ -26,7 +26,7 @@ java_library(
     ),
     data = [
         ":testdata",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:ats_olc_server_deploy.jar",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/config:testdata",
     ],
     deps = [
@@ -67,9 +67,10 @@ java_library(
     name = "console_command_test_module",
     srcs = ["ConsoleCommandTestModule.java"],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:module",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:module",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",

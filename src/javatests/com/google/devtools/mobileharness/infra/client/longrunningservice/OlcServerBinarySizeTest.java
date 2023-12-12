@@ -39,7 +39,7 @@ public class OlcServerBinarySizeTest {
               + "/infra/client/longrunningservice/OlcServerWithAndroidDevice_deploy.jar");
   private static final String ATS_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
-          "java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver/ats_olc_server_deploy.jar");
+          "java/com/google/devtools/mobileharness/infra/ats/common/olcserver/ats_olc_server_deploy.jar");
 
   @Test
   public void checkBaseServerBinarySize() throws Exception {

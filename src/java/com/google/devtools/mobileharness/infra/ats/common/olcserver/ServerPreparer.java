@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console.controller.olcserver;
+package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.util.Objects.requireNonNull;
@@ -25,10 +25,9 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.DeviceInfraServiceFlags;
-import com.google.devtools.mobileharness.infra.ats.console.ConsoleUtil;
-import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.Annotations.ServerBinary;
-import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerBinary;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
@@ -42,6 +41,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.errorprone.annotations.FormatMethod;
 import io.grpc.Status.Code;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -58,7 +58,14 @@ public class ServerPreparer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final ConsoleUtil consoleUtil;
+  /** Logger for the OLC server. */
+  @FunctionalInterface
+  public interface ServerLogger {
+    @FormatMethod
+    void log(String format, Object... args);
+  }
+
+  private final ServerLogger serverLogger;
   private final CommandExecutor commandExecutor;
   private final Sleeper sleeper;
   private final SystemUtil systemUtil;
@@ -72,7 +79,7 @@ public class ServerPreparer {
 
   @Inject
   ServerPreparer(
-      ConsoleUtil consoleUtil,
+      ServerLogger serverLogger,
       CommandExecutor commandExecutor,
       Sleeper sleeper,
       SystemUtil systemUtil,
@@ -81,7 +88,7 @@ public class ServerPreparer {
       @ServerStub(ServerStub.Type.VERSION_SERVICE) VersionStub versionStub,
       @ServerBinary Provider<Path> serverBinary,
       @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags) {
-    this.consoleUtil = consoleUtil;
+    this.serverLogger = serverLogger;
     this.commandExecutor = commandExecutor;
     this.sleeper = sleeper;
     this.systemUtil = systemUtil;
@@ -110,17 +117,16 @@ public class ServerPreparer {
       }
     }
     if (version != null) {
-      consoleUtil.printlnStderr(
-          "Connected to existing OLC server, version=[%s]", shortDebugString(version));
+      serverLogger.log("Connected to existing OLC server, version=[%s]", shortDebugString(version));
 
       if (!needKillExistingServer(version) || !killExistingServer()) {
-        consoleUtil.printlnStderr("Using existing OLC server");
+        serverLogger.log("Using existing OLC server");
         return;
       }
     }
 
     // Starts a new server if not exists.
-    consoleUtil.printlnStderr("Starting new OLC server...");
+    serverLogger.log("Starting new OLC server...");
     String serverBinaryPath = requireNonNull(serverBinary.get()).toString();
     localFileUtil.checkFile(serverBinaryPath);
 
@@ -140,7 +146,7 @@ public class ServerPreparer {
                                 /* nativeArguments= */ ImmutableList.of()))
                     .onStderr(
                         new ServerStderrLineCallback(
-                            consoleUtil, serverStartedLatch, serverStartedSuccessfully))
+                            serverLogger, serverStartedLatch, serverStartedSuccessfully))
                     .onExit(result -> serverStartedLatch.countDown())
                     .timeout(ChronoUnit.YEARS.getDuration())
                     .redirectStderr(false)
@@ -166,12 +172,12 @@ public class ServerPreparer {
             "OLC server exited abnormally while initialization");
       }
       connectWithRetry();
-      consoleUtil.printlnStderr(
+      serverLogger.log(
           "OLC server started, port=%s, pid=%s",
           Flags.instance().olcServerPort.getNonNull(), serverProcess.getUnixPidIfAny().orElse(0));
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
       if (serverProcess != null && serverProcess.isAlive()) {
-        consoleUtil.printlnStderr("Killing OLC server");
+        serverLogger.log("Killing OLC server");
         serverProcess.kill();
       }
       throw e;
@@ -179,7 +185,7 @@ public class ServerPreparer {
   }
 
   private boolean killExistingServer() throws InterruptedException {
-    consoleUtil.printlnStderr("Killing existing OLC server...");
+    serverLogger.log("Killing existing OLC server...");
     KillServerResponse killServerResponse = null;
     try {
       killServerResponse = controlStub.killServer();
@@ -196,7 +202,7 @@ public class ServerPreparer {
       try {
         versionStub.getVersion();
       } catch (GrpcExceptionWithErrorId e) {
-        consoleUtil.printlnStderr("Existing OLC server killed");
+        serverLogger.log("Existing OLC server killed");
         return true;
       }
     }
@@ -239,22 +245,22 @@ public class ServerPreparer {
 
     private static final String SERVER_STARTED_SIGNAL = "OLC server started";
 
-    private final ConsoleUtil consoleUtil;
+    private final ServerLogger logger;
     private final CountDownLatch serverStartedLatch;
     private final AtomicBoolean serverStartedSuccessfully;
 
     private ServerStderrLineCallback(
-        ConsoleUtil consoleUtil,
+        ServerLogger logger,
         CountDownLatch serverStartedLatch,
         AtomicBoolean serverStartedSuccessfully) {
-      this.consoleUtil = consoleUtil;
+      this.logger = logger;
       this.serverStartedLatch = serverStartedLatch;
       this.serverStartedSuccessfully = serverStartedSuccessfully;
     }
 
     @Override
     public Response onLine(String stderrLine) {
-      consoleUtil.printlnStderr("olc_server_stderr: %s", stderrLine);
+      logger.log("olc_server_stderr: %s", stderrLine);
 
       if (stderrLine.contains(SERVER_STARTED_SIGNAL)) {
         serverStartedSuccessfully.set(true);

@@ -18,9 +18,10 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.DeviceInfraServiceFlags;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerLogger;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
-import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -39,19 +40,13 @@ public class ConsoleCommandTestModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    install(new OlcServerModule(() -> Path.of("")));
+    install(new OlcServerModule(() -> Path.of(""), ImmutableList.of()));
     install(new CompatibilityReportModule());
   }
 
   @Provides
   ConsoleInfo provideConsoleInfo() {
     return consoleInfo;
-  }
-
-  @Provides
-  @DeviceInfraServiceFlags
-  ImmutableList<String> provideDeviceInfraServiceFlags() {
-    return ImmutableList.of();
   }
 
   @Provides
@@ -62,5 +57,10 @@ public class ConsoleCommandTestModule extends AbstractModule {
   @Provides
   Sleeper provideSleeper() {
     return Sleeper.defaultSleeper();
+  }
+
+  @Provides
+  ServerLogger provideOlcServerLogger(ConsoleUtil consoleUtil) {
+    return consoleUtil::printlnStderr;
   }
 }

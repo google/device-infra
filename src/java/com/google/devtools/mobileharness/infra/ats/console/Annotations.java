@@ -30,10 +30,6 @@ public class Annotations {
 
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface DeviceInfraServiceFlags {}
-
-  @Qualifier
-  @Retention(RetentionPolicy.RUNTIME)
   public @interface MainArgs {}
 
   @Qualifier

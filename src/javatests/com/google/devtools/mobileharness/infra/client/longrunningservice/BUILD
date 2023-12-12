@@ -32,7 +32,7 @@ java_library(
     data = [
         ":OlcServerForTesting_deploy.jar",
         ":OlcServerWithAndroidDevice_deploy.jar",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:ats_olc_server_deploy.jar",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
     ],
     deps = [
         ":session_plugin_for_testing_java_proto",

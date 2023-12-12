@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console.controller.olcserver;
+package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.Annotations.ServerBinary;
-import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.Annotations.ServerChannel;
-import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerBinary;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerChannel;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
@@ -29,21 +31,30 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import io.grpc.ManagedChannel;
 import java.nio.file.Path;
+import java.util.List;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
-/** Module for ATS console OLC server. */
+/** Module for ATS OLC server. */
 public class OlcServerModule extends AbstractModule {
 
   private final Provider<Path> serverBinary;
+  private final ImmutableList<String> deviceInfraServiceFlags;
 
-  public OlcServerModule(Provider<Path> serverBinary) {
+  public OlcServerModule(Provider<Path> serverBinary, List<String> deviceInfraServiceFlags) {
     this.serverBinary = serverBinary;
+    this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
   }
 
   @Override
   protected void configure() {
     bind(Path.class).annotatedWith(ServerBinary.class).toProvider(serverBinary);
+  }
+
+  @Provides
+  @DeviceInfraServiceFlags
+  ImmutableList<String> provideDeviceInfraServiceFlags() {
+    return deviceInfraServiceFlags;
   }
 
   @Provides

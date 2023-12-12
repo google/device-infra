@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console.controller.olcserver;
+package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import javax.inject.Qualifier;
 
-/** Annotations for ATS console OLC server. */
+/** Annotations for ATS OLC server. */
 public class Annotations {
 
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   @interface ServerChannel {}
 
-  /** OLC server stub for ATS console. */
+  /** OLC server stub for ATS. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   public @interface ServerStub {
@@ -45,6 +45,11 @@ public class Annotations {
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   @interface ServerBinary {}
+
+  /** Flags for OLC server. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  @interface DeviceInfraServiceFlags {}
 
   private Annotations() {}
 }

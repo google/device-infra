@@ -21,12 +21,12 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
-import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -72,14 +72,8 @@ public class AtsConsoleModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    install(new OlcServerModule(olcServerBinary));
+    install(new OlcServerModule(olcServerBinary, deviceInfraServiceFlags));
     install(new CompatibilityReportModule());
-  }
-
-  @Provides
-  @DeviceInfraServiceFlags
-  ImmutableList<String> provideDeviceInfraServiceFlags() {
-    return deviceInfraServiceFlags;
   }
 
   @Provides
@@ -139,5 +133,10 @@ public class AtsConsoleModule extends AbstractModule {
   @Provides
   Sleeper provideSleeper() {
     return Sleeper.defaultSleeper();
+  }
+
+  @Provides
+  ServerLogger provideOlcServerLogger(ConsoleUtil consoleUtil) {
+    return consoleUtil::printlnStderr;
   }
 }
