@@ -107,6 +107,12 @@ java_proto_library(
     deps = [":lab_info_service_proto"],
 )
 
+java_stubby_library(
+    name = "lab_info_service_java_stubby",
+    srcs = [":lab_info_service_proto"],
+    deps = [":lab_info_service_java_proto"],
+)
+
 java_grpc_library(
     name = "lab_info_service_java_grpc_proto",
     srcs = [":lab_info_service_proto"],
