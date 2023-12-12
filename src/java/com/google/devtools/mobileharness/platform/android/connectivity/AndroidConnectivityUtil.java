@@ -36,7 +36,6 @@ import com.google.devtools.mobileharness.platform.android.lightning.shared.Share
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageType;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
-import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidSvc;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysType;
@@ -143,11 +142,9 @@ public class AndroidConnectivityUtil {
   /** The old pattern of network SSID (Android < 3.2.1, but not sure about 3.0 or 3.1 actually). */
   private static final Pattern PATTERN_NETWORK_SSID_OLD = Pattern.compile("SSID: (?<ssid>[^,]*),");
 
-  /** The pattern of network SSID for S and above. */
-  private static final Pattern PATTERN_NETWORK_SSID_S_AND_ABOVE =
+  /** The pattern of network SSID with double quotes around the <ssid>. */
+  private static final Pattern PATTERN_NETWORK_SSID_WITH_QUOTES =
       Pattern.compile("SSID: \"(?<ssid>[^,]*)\",");
-
-  private static final String CODENAME_S = "S";
 
   /** The pattern of looking for PSK in wifi config xml, for API from 26 to 29. */
   private static final Pattern PATTERN_PSK_IN_WIFI_CONFIG_XML =
@@ -1010,11 +1007,12 @@ public class AndroidConnectivityUtil {
           || (line.startsWith("mWifiInfo SSID:")
               && line.contains("state: COMPLETED")) /* Android P */) {
         log.append('\n').append(line);
-        Matcher matcher =
-            isBuildSOrAbove(serial)
-                ? PATTERN_NETWORK_SSID_S_AND_ABOVE.matcher(line)
-                : PATTERN_NETWORK_SSID_OLD.matcher(line);
+        Matcher matcher = PATTERN_NETWORK_SSID_WITH_QUOTES.matcher(line);
         result = matcher.find() ? Strings.nullToEmpty(matcher.group("ssid")) : "";
+        if (result.isEmpty()) {
+          matcher = PATTERN_NETWORK_SSID_OLD.matcher(line);
+          result = matcher.find() ? Strings.nullToEmpty(matcher.group("ssid")) : "";
+        }
         resultList.add(result);
       }
     }
@@ -1023,23 +1021,6 @@ public class AndroidConnectivityUtil {
     }
 
     return resultList;
-  }
-
-  private boolean isBuildSOrAbove(String serial) {
-    try {
-      int sdkVersion = adbUtil.getIntProperty(serial, AndroidProperty.SDK_VERSION);
-      return sdkVersion > AndroidVersion.ANDROID_11.getEndSdkVersion()
-          || (sdkVersion == AndroidVersion.ANDROID_11.getEndSdkVersion()
-              && adbUtil.getProperty(serial, AndroidProperty.CODENAME).equals(CODENAME_S));
-    } catch (MobileHarnessException | InterruptedException e) {
-      if (e instanceof InterruptedException) {
-        Thread.currentThread().interrupt();
-      }
-      logger.atWarning().log(
-          "Failed to check if the build on device %s is S or above: %s",
-          serial, MoreThrowables.shortDebugString(e, 0));
-      return false;
-    }
   }
 
   /** Parse saved network SSIDs and PSKs from wifi configure file on device. */
