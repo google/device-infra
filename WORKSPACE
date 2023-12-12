@@ -40,8 +40,8 @@ load(
     "@rules_python//python:repositories.bzl",
     "py_repositories",
 )
-py_repositories()
 
+py_repositories()
 
 load("@rules_proto//proto:repositories.bzl", "rules_proto_dependencies", "rules_proto_toolchains")
 
@@ -67,7 +67,6 @@ http_archive(
 )
 
 # Gazelle and Go rules
-
 
 http_archive(
     name = "io_bazel_rules_go",
@@ -96,9 +95,9 @@ http_archive(
 
 http_archive(
     name = "com_github_grpc_grpc",
-    urls = ["https://github.com/grpc/grpc/archive/v1.54.1.zip"],
     sha256 = "8f01dac5a32104acbb76db1e6b447dc5b3dc738cb9bceeee01843d9d01d1d788",
     strip_prefix = "grpc-1.54.1",
+    urls = ["https://github.com/grpc/grpc/archive/v1.54.1.zip"],
 )
 
 load("@com_github_grpc_grpc//bazel:grpc_deps.bzl", "grpc_deps")
@@ -115,6 +114,7 @@ http_archive(
 )
 
 load("@bazel_gazelle//:deps.bzl", "gazelle_dependencies")
+
 gazelle_dependencies()
 
 # Needed for the googleapis protos used by com_github_bazelbuild_remote_apis below.
@@ -163,9 +163,9 @@ android_ndk_repository(
 # gRPC
 http_archive(
     name = "io_grpc_grpc_java",
-    sha256 = "b1d2db800d3cce5a219ce75433eff3f195245902fd67b15a59e35f459c2ee90a",
-    strip_prefix = "grpc-java-1.55.1",
-    url = "https://github.com/grpc/grpc-java/archive/v1.55.1.zip",
+    sha256 = "468faf564245021d896040595c1b5d41baaea939ae0382882cbe37884d79974a",
+    strip_prefix = "grpc-java-1.60.0",
+    url = "https://github.com/grpc/grpc-java/archive/v1.60.0.zip",
 )
 
 load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS", "grpc_java_repositories")
@@ -209,6 +209,7 @@ http_archive(
     strip_prefix = "googleapis-18becb1d1426feb7399db144d7beeb3284f1ccb0",
     urls = ["https://github.com/googleapis/googleapis/archive/18becb1d1426feb7399db144d7beeb3284f1ccb0.tar.gz"],
 )
+
 load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
 
 # Initialize Google APIs with only C++ and Python targets
@@ -226,14 +227,14 @@ maven_install(
         "com.beust:jcommander:1.82",
         "com.google.api-client:google-api-client:1.35.2",
         "com.google.apis:google-api-services-storage:v1-rev20211201-1.32.1",
-        "com.google.auto.value:auto-value:1.9",
-        "com.google.auto.value:auto-value-annotations:1.9",
+        "com.google.auto.value:auto-value:1.10.2",
+        "com.google.auto.value:auto-value-annotations:1.10.2",
         "com.google.code.findbugs:jsr305:3.0.2",
-        "com.google.code.gson:gson:2.9.1",
-        "com.google.errorprone:error_prone_annotations:2.11.0",
+        "com.google.code.gson:gson:2.10.1",
+        "com.google.errorprone:error_prone_annotations:2.20.0",
         "com.google.flogger:flogger-system-backend:0.7.4",
         "com.google.flogger:flogger:0.7.4",
-        "com.google.guava:guava:31.1-jre",
+        "com.google.guava:guava:32.1.3-jre",
         "com.google.http-client:google-http-client:1.43.0",
         "com.google.http-client:google-http-client-gson:1.43.0",
         "com.google.inject.extensions:guice-assistedinject:5.1.0",
@@ -242,11 +243,11 @@ maven_install(
         "com.google.testparameterinjector:test-parameter-injector:1.10",
         "com.google.truth.extensions:truth-proto-extension:1.1.3",
         "com.google.truth.extensions:truth-java8-extension:1.1.3",
-        "com.google.truth:truth:1.1.3",
+        "com.google.truth:truth:1.1.5",
         "commons-io:commons-io:2.11.0",
         "info.picocli:picocli:4.1.4",
         "javax.inject:jsr330-api:0.9",
-        "junit:junit:4.13",
+        "junit:junit:4.13.2",
         "net.bytebuddy:byte-buddy:1.14.8",
         "net.sf.kxml:kxml2:2.3.0",
         "org.apache.commons:commons-lang3:3.6",
