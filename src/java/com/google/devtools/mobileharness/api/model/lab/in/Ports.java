@@ -18,18 +18,23 @@ package com.google.devtools.mobileharness.api.model.lab.in;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.proto.Lab;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabPort;
 import com.google.devtools.mobileharness.api.model.proto.Lab.PortType;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import javax.annotation.concurrent.GuardedBy;
 
 /** Server port information for locating a Mobile Harness lab. */
 public class Ports {
-  private final EnumMap<PortType, Integer> ports = new EnumMap<>(PortType.class);
+
+  @GuardedBy("this")
+  private final Map<PortType, Integer> ports = new HashMap<>();
 
   /** Sets the port number for the given type. */
   @CanIgnoreReturnValue
@@ -40,7 +45,7 @@ public class Ports {
 
   /** Sets all the given ports. */
   @CanIgnoreReturnValue
-  public synchronized Ports addAll(EnumMap<PortType, Integer> ports) {
+  public synchronized Ports addAll(Map<PortType, Integer> ports) {
     this.ports.putAll(ports);
     return this;
   }
@@ -53,12 +58,12 @@ public class Ports {
   }
 
   /** Returns whether the port map is empty. */
-  public boolean isEmpty() {
+  public synchronized boolean isEmpty() {
     return ports.isEmpty();
   }
 
   /** Returns the number of ports. */
-  public int size() {
+  public synchronized int size() {
     return ports.size();
   }
 
@@ -73,8 +78,8 @@ public class Ports {
   }
 
   /** Gets all the ports of this lab. */
-  public synchronized EnumMap<PortType, Integer> getAll() {
-    return new EnumMap<>(ports);
+  public synchronized Map<PortType, Integer> getAll() {
+    return ImmutableMap.copyOf(ports);
   }
 
   @Override
@@ -86,11 +91,11 @@ public class Ports {
       return false;
     }
     Ports that = (Ports) obj;
-    return ports.equals(that.ports);
+    return getAll().equals(that.getAll());
   }
 
   @Override
-  public int hashCode() {
+  public synchronized int hashCode() {
     return Objects.hashCode(ports);
   }
 

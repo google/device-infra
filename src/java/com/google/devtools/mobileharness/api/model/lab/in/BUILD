@@ -19,7 +19,7 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//:deviceinfra_pkg",
+        "//:deviceinfra_all_pkg",
     ],
 )
 
@@ -28,6 +28,7 @@ java_library(
     srcs = ["Ports.java"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
