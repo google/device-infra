@@ -80,6 +80,9 @@ public class SystemUtil {
   /** The JVM environment variable which specifies the test components directory. */
   public static final String ENV_TEST_COMPONENTS_DIR = "TEST_COMPONENTS_DIR";
 
+  /** The JVM environment variable which specifies the Blaze test output file name. */
+  public static final String ENV_XML_OUTPUT_FILE_NAME = "XML_OUTPUT_FILE";
+
   /** Error message that no matching process when running "killall xxx" on Mac. */
   @VisibleForTesting static final String ERROR_MSG_NO_MATCHING_PROCESSES = "No matching processes";
 
@@ -229,6 +232,12 @@ public class SystemUtil {
     }
 
     return USER_NAME.value();
+  }
+
+  /** Returns whether it is in a Blaze test. */
+  public boolean isBlazeTest() {
+    // See https://bazel.build/reference/test-encyclopedia
+    return !Strings.isNullOrEmpty(System.getenv(ENV_XML_OUTPUT_FILE_NAME));
   }
 
   /** Returns true if the current program is running as root. */

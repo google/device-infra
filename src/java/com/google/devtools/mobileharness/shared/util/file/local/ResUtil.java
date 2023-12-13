@@ -53,19 +53,26 @@ public class ResUtil {
     private static final String RES_DIR;
 
     static {
-      RES_DIR = PathUtil.join(DirCommon.getTempDirRoot(), Flags.instance().resDirName.getNonNull());
-      logger.atInfo().log("Running on Lab server, use %s as RES_DIR.", RES_DIR);
-      LocalFileUtil fileUtil = new LocalFileUtil();
-      // Cleans up the res dir. Otherwise, the lab server may fail to extract the adb binary
-      // because it failed to overwrite adb under use. See b/11909086.
-      logger.atInfo().log("Clean res dir: %s", RES_DIR);
-      try {
-        fileUtil.removeFileOrDir(RES_DIR);
-      } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log("Failed to clean up res dir: %s", RES_DIR);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        logger.atWarning().log("Interrupted: %s", e.getMessage());
+      if (systemUtil.isBlazeTest()) {
+        RES_DIR = PathUtil.join(getBazelTestTmpDir(), Flags.instance().resDirName.getNonNull());
+        String location = "Bazel test";
+        logger.atInfo().log("Running on %s, use %s as RES_DIR.", location, RES_DIR);
+      } else {
+        RES_DIR =
+            PathUtil.join(DirCommon.getTempDirRoot(), Flags.instance().resDirName.getNonNull());
+        logger.atInfo().log("Running on Lab server, use %s as RES_DIR.", RES_DIR);
+        LocalFileUtil fileUtil = new LocalFileUtil();
+        // Cleans up the res dir. Otherwise, the lab server may fail to extract the adb binary
+        // because it failed to overwrite adb under use. See b/11909086.
+        logger.atInfo().log("Clean res dir: %s", RES_DIR);
+        try {
+          fileUtil.removeFileOrDir(RES_DIR);
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log("Failed to clean up res dir: %s", RES_DIR);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          logger.atWarning().log("Interrupted: %s", e.getMessage());
+        }
       }
     }
   }
@@ -130,7 +137,7 @@ public class ResUtil {
             BasicErrorId.JAR_RES_COPY_ERROR,
             String.format("Failed to get resource URL from %s", resPathInJar));
       }
-      URLConnection connection = null;
+      URLConnection connection;
       try {
         connection = url.openConnection();
       } catch (IOException e) {
@@ -184,5 +191,10 @@ public class ResUtil {
   /** Gets path of default resource directory. */
   public static String getResDir() {
     return ResDirHolder.RES_DIR;
+  }
+
+  private static String getBazelTestTmpDir() {
+    String tmpDir = System.getenv("TEST_TMPDIR");
+    return tmpDir == null ? "/tmp" : tmpDir;
   }
 }
