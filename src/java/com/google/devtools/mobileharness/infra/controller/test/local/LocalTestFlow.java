@@ -44,9 +44,11 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandHistorySaver;
+import com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader.MctsDynamicDownloadPlugin;
 import com.google.devtools.mobileharness.platform.testbed.adhoc.controller.AdhocTestbedDriverFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.SubTask;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -84,6 +86,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /** The workflow of executing a single test locally. */
@@ -94,8 +97,6 @@ public class LocalTestFlow {
   private final DriverFactory driverFactory;
 
   private final AdhocTestbedDriverFactory adhocTestbedDriverFactory;
-
-  private final ImmutableList<Object> builtinPlugins;
 
   private final PluginCreator.Factory pluginLoaderFactory;
 
@@ -123,7 +124,6 @@ public class LocalTestFlow {
     this.testThreadPool = threadPool;
     this.driverFactory = driverFactory;
     this.adhocTestbedDriverFactory = adhocTestbedDriverFactory;
-    this.builtinPlugins = ImmutableList.of(new TestCommandHistorySaver());
     this.pluginLoaderFactory = new CommonPluginCreatorFactory();
     this.testFlowConverter = testFlowConverter;
   }
@@ -135,6 +135,13 @@ public class LocalTestFlow {
    */
   ImmutableList<PluginItem<?>> loadBuiltInPlugin(DirectTestRunner testRunner) {
     // Loads built-in plugins.
+    ImmutableList<Object> builtinPlugins =
+        Stream.concat(
+                isXtsDynamicDownloaderEnabled()
+                    ? Stream.of(new MctsDynamicDownloadPlugin())
+                    : Stream.empty(),
+                Stream.of(new TestCommandHistorySaver()))
+            .collect(toImmutableList());
     for (Object plugin : builtinPlugins) {
       testRunner.registerTestEventSubscriber(plugin, EventScope.CLASS_INTERNAL);
       testRunner.registerTestEventSubscriber(plugin, EventScope.TEST_MESSAGE);
@@ -675,5 +682,10 @@ public class LocalTestFlow {
       }
     }
     return dimensionValuesByKey;
+  }
+
+  /** Returns {@code true} if xts dynamic downloader is enabled. */
+  private static boolean isXtsDynamicDownloaderEnabled() {
+    return Flags.instance().enableXtsDynamicDownloader.getNonNull();
   }
 }

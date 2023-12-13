@@ -1,0 +1,263 @@
+# proto-file: third_party/deviceinfra/src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/proto/xts_dynamic_download.proto
+# proto-message: ModuleInfoMap
+
+# Q-introduced modules
+module_package_to_module_info: {
+  key: "com.google.android.captiveportallogin"
+  value: "android-mcts-networking"
+}
+module_package_to_module_info: {
+  key: "com.google.android.conscrypt"
+  value: "android-mcts-conscrypt"
+}
+module_package_to_module_info: {
+  key: "com.google.android.documentsui"
+  value: "android-mcts-documentsui"
+}
+module_package_to_module_info: {
+  key: "com.google.android.media"
+  value: "android-mcts-media"
+}
+module_package_to_module_info: {
+  key: "com.google.android.media.swcodec"
+  value: "android-mcts-media"
+}
+module_package_to_module_info: {
+  key: "com.google.android.networkstack"
+  value: "android-mcts-networking"
+}
+module_package_to_module_info: {
+  key: "com.google.android.resolv"
+  value: "android-mcts-dnsresolver"
+}
+
+# R-introduced modules
+module_package_to_module_info: {
+  key: "com.google.android.adbd"
+  value: "android-mcts-adbd"
+}
+module_package_to_module_info: {
+  key: "com.google.android.cellbroadcast"
+  value: "android-mcts-cellbroadcast"
+}
+module_package_to_module_info: {
+  key: "com.google.android.ext.services"
+  value: "android-mcts-extservices"
+}
+module_package_to_module_info: {
+  key: "com.google.android.extservices"
+  value: "android-mcts-extservices"
+}
+module_package_to_module_info: {
+  key: "com.google.android.ipsec"
+  value: "android-mcts-ipsec"
+}
+module_package_to_module_info: {
+  key: "com.google.android.mediaprovider"
+  value: "android-mcts-mediaprovider"
+}
+module_package_to_module_info: {
+  key: "com.google.android.neuralnetworks"
+  value: "android-mcts-neuralnetworks"
+}
+module_package_to_module_info: {
+  key: "com.google.android.os.statsd"
+  value: "android-mcts-statsd"
+}
+module_package_to_module_info: {
+  key: "com.google.android.permission"
+  value: "android-mcts-permission"
+}
+module_package_to_module_info: {
+  key: "com.google.android.sdkext"
+  value: "android-mcts-sdkextensions"
+}
+module_package_to_module_info: {
+  key: "com.google.android.tethering"
+  value: "android-mcts-tethering"
+}
+module_package_to_module_info: {
+  key: "com.google.android.wifi"
+  value: "android-mcts-wifi"
+}
+module_package_to_module_info: {
+  key: "com.google.android.tzdata2"
+  value: "android-mcts-tzdata"
+}
+
+# S-introduced modules
+module_package_to_module_info: {
+  key: "com.google.android.art"
+  value: "android-mcts-art"
+}
+module_package_to_module_info: {
+  key: "com.google.android.scheduling"
+  value: "android-mcts-scheduling"
+}
+module_package_to_module_info: {
+  key: "com.google.android.tzdata3"
+  value: "android-mcts-tzdata"
+}
+
+# T-introduced modules
+module_package_to_module_info: {
+  key: "com.google.android.adservices"
+  value: "android-mcts-adservices"
+}
+module_package_to_module_info: {
+  key: "com.google.android.appsearch"
+  value: "android-mcts-appsearch"
+}
+module_package_to_module_info: {
+  key: "com.google.android.btservices"
+  value: "android-mcts-bluetooth"
+}
+module_package_to_module_info: {
+  key: "com.google.android.ondevicepersonalization"
+  value: "android-mcts-ondevicepersonalization"
+}
+module_package_to_module_info: {
+  key: "com.google.android.uwb"
+  value: "android-mcts-uwb"
+}
+module_package_to_module_info: {
+  key: "com.google.android.tzdata4"
+  value: "android-mcts-tzdata"
+}
+
+# U-introduced modules
+module_package_to_module_info: {
+  key: "com.google.android.configinfrastructure"
+  value: "android-mcts-configinfrastructure"
+}
+module_package_to_module_info: {
+  key: "com.google.android.healthfitness"
+  value: "android-mcts-healthfitness"
+}
+module_package_to_module_info: {
+  key: "com.google.android.rkpd"
+  value: "android-mcts-rkpd"
+}
+module_package_to_module_info: {
+  key: "com.google.android.tzdata5"
+  value: "android-mcts-tzdata"
+}
+
+# Go modules
+module_package_to_module_info: {
+  key: "com.google.android.go.adbd"
+  value: "android-mcts-adbd"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.adservices"
+  value: "android-mcts-adservices"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.appsearch"
+  value: "android-mcts-appsearch"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.art"
+  value: "android-mcts-art"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.captiveportallogin"
+  value: "android-mcts-networking"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.cellbroadcast"
+  value: "android-mcts-cellbroadcast"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.conscrypt"
+  value: "android-mcts-conscrypt"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.documentsui"
+  value: "android-mcts-documentsui"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.extservices"
+  value: "android-mcts-extservices"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.ipsec"
+  value: "android-mcts-ipsec"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.media"
+  value: "android-mcts-media"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.media.swcodec"
+  value: "android-mcts-media"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.mediaprovider"
+  value: "android-mcts-mediaprovider"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.networkstack"
+  value: "android-mcts-networking"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.neuralnetworks"
+  value: "android-mcts-neuralnetworks"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.ondevicepersonalization"
+  value: "android-mcts-ondevicepersonalization"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.os.statsd"
+  value: "android-mcts-statsd"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.permission"
+  value: "android-mcts-permission"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.resolv"
+  value: "android-mcts-dnsresolver"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.scheduling"
+  value: "android-mcts-scheduling"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.sdkext"
+  value: "android-mcts-sdkextensions"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.tethering"
+  value: "android-mcts-tethering"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.tzdata4"
+  value: "android-mcts-tzdata"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.uwb"
+  value: "android-mcts-uwb"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.wifi"
+  value: "android-mcts-wifi"
+}
+# U-introduced modules
+module_package_to_module_info: {
+  key: "com.google.android.go.configinfrastructure"
+  value: "android-mcts-configinfrastructure"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.healthfitness"
+  value: "android-mcts-healthfitness"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.rkpd"
+  value: "android-mcts-rkpd"
+}
+module_package_to_module_info: {
+  key: "com.google.android.go.tzdata5"
+  value: "android-mcts-tzdata"
+}

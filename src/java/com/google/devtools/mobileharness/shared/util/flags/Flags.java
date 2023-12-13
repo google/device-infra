@@ -377,6 +377,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableStubbyRpcServer = enableStubbyRpcServerDefault;
 
+  private static final Flag<Boolean> enableXtsDynamicDownloaderDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_xts_dynamic_downloader",
+      description = "Whether to enable xts dynamic downloader. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableXtsDynamicDownloader = enableXtsDynamicDownloaderDefault;
+
   private static final Flag<Boolean> enforceSafeDischargeDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

@@ -25,7 +25,7 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class OlcServerBinarySizeTest {
 
-  private static final long MAX_BASE_SERVER_BINARY_SIZE_BYTE = 23_500_000L;
+  private static final long MAX_BASE_SERVER_BINARY_SIZE_BYTE = 23_600_000L;
   private static final long MAX_ANDROID_SERVER_BINARY_SIZE_BYTE = 26_000_000L;
   private static final long MAX_ATS_SERVER_BINARY_SIZE_BYTE = 27_000_000L;
 

@@ -48,6 +48,7 @@ import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.LineCallbackException;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
@@ -86,6 +87,10 @@ public class XtsTradefedTest extends BaseDriver
       "com.android.compatibility.common.tradefed.command.CompatibilityConsole";
 
   private static final String XTS_TF_LOG = "xts_tf_output.log";
+
+  // MctsDynamicDownloadPlugin.java set the property of xts_dynamic_download_path which is a subdir
+  // under testInfo.getTmpFileDir().
+  private static final String XTS_DYNAMIC_DOWNLOAD_PATH_KEY = "xts_dynamic_download_path";
 
   private static final ImmutableSet<String> EXCLUDED_JAR_FILES =
       ImmutableSet.of("ats_olc_server_deploy.jar", "ats_console_deploy.jar");
@@ -150,7 +155,7 @@ public class XtsTradefedTest extends BaseDriver
     Path tmpXtsRootDir = null;
     try {
       tmpXtsRootDir = prepareXtsWorkDir(xtsType);
-      setUpXtsWorkDir(getXtsRootDir(spec, testInfo), tmpXtsRootDir, xtsType, isRunRetry);
+      setUpXtsWorkDir(getXtsRootDir(spec, testInfo), tmpXtsRootDir, xtsType, isRunRetry, testInfo);
       logger.atInfo().log("xTS Tradefed temp working root directory is %s", tmpXtsRootDir);
 
       boolean xtsRunCommandSuccess = runXtsCommand(testInfo, spec, tmpXtsRootDir, xtsType);
@@ -387,21 +392,26 @@ public class XtsTradefedTest extends BaseDriver
                   restOfJars.add(newJarPath);
                 }
               });
-      localFileUtil
-          .listFilePaths(
-              linkXtsTestcasesDirRealPath,
-              /* recursively= */ true,
-              path -> path.getFileName().toString().endsWith(".jar"))
-          .forEach(
-              jar -> {
-                Path newJarPath =
-                    replacePathPrefix(jar, linkXtsTestcasesDirRealPath, linkXtsTestcasesDir);
-                if (leadingJarsSet.contains(jar.getFileName().toString())) {
-                  foundLeadingJars.put(jar.getFileName().toString(), newJarPath);
-                } else {
-                  restOfJars.add(newJarPath);
-                }
-              });
+      List<Path> linkXtsTestcasesSubDirPaths = localFileUtil.listDirs(linkXtsTestcasesDirRealPath);
+      for (Path linkXtsTestcasesSubDirPath : linkXtsTestcasesSubDirPaths) {
+        Path linkXtsTestcasesSubDirRealPath = linkXtsTestcasesSubDirPath.toRealPath();
+        localFileUtil
+            .listFilePaths(
+                linkXtsTestcasesSubDirRealPath,
+                /* recursively= */ true,
+                path -> path.getFileName().toString().endsWith(".jar"))
+            .forEach(
+                jar -> {
+                  Path newJarPath =
+                      replacePathPrefix(
+                          jar, linkXtsTestcasesSubDirRealPath.getParent(), linkXtsTestcasesDir);
+                  if (leadingJarsSet.contains(jar.getFileName().toString())) {
+                    foundLeadingJars.put(jar.getFileName().toString(), newJarPath);
+                  } else {
+                    restOfJars.add(newJarPath);
+                  }
+                });
+      }
 
       ImmutableList.Builder<Path> result = ImmutableList.<Path>builder();
       for (String leadingJar : leadingJarsSet) {
@@ -597,7 +607,9 @@ public class XtsTradefedTest extends BaseDriver
               JAVA_IO_TMPDIR.value(),
               String.format("xts-root-dir-%s", UUID.randomUUID()),
               String.format("android-%s", Ascii.toLowerCase(xtsType.name())));
-      localFileUtil.prepareDir(dir);
+      // We need to preparer /xts-root-dir/android-xts/testcases since we create symlink to all the
+      // sub test case directories.
+      localFileUtil.prepareDir(Paths.get(dir.toString(), "testcases"));
       localFileUtil.grantFileOrDirFullAccess(dir.getParent());
       return dir.getParent();
     } catch (MobileHarnessException e) {
@@ -607,7 +619,11 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   private void setUpXtsWorkDir(
-      Path sourceXtsRootDir, Path tmpXtsWorkDir, XtsType xtsType, boolean isRunRetry)
+      Path sourceXtsRootDir,
+      Path tmpXtsWorkDir,
+      XtsType xtsType,
+      boolean isRunRetry,
+      TestInfo testInfo)
       throws MobileHarnessException {
     Path sourceXtsBundledJdkDir = getXtsJdkDir(sourceXtsRootDir, xtsType);
     Path sourceXtsBundledTestcasesDir = getXtsTestcasesDir(sourceXtsRootDir, xtsType);
@@ -621,9 +637,20 @@ public class XtsTradefedTest extends BaseDriver
     Path linkLibDir = getXtsLibDir(tmpXtsWorkDir, xtsType);
 
     createSymlink(linkJdkDir, sourceXtsBundledJdkDir);
-    createSymlink(linkTestcasesDir, sourceXtsBundledTestcasesDir);
+    createSymlinksForTestCases(
+        linkTestcasesDir, sourceXtsBundledTestcasesDir, /* isDynamicDownload= */ false);
     createSymlink(linkToolsDir, sourceXtsBundledToolsDir);
     createSymlink(linkLibDir, sourceXtsBundledLibDir);
+
+    if (Flags.instance().enableXtsDynamicDownloader.getNonNull()
+        && testInfo.properties().has(XTS_DYNAMIC_DOWNLOAD_PATH_KEY)) {
+      // Integrates the dynamic downloaded test cases with the temp XTS workspace.
+      createSymlinksForTestCases(
+          linkTestcasesDir,
+          Paths.get(
+              testInfo.getTmpFileDir() + testInfo.properties().get(XTS_DYNAMIC_DOWNLOAD_PATH_KEY)),
+          /* isDynamicDownload= */ true);
+    }
 
     if (isRunRetry && localFileUtil.isDirExist(sourceXtsBundledResultsDir)) {
       // For "run retry", TF looks for the corresponding previous result dir per given session id.
@@ -671,6 +698,31 @@ public class XtsTradefedTest extends BaseDriver
           uoe);
     }
     return link;
+  }
+
+  private void createSymlinksForTestCases(Path link, Path target, boolean isDynamicDownload)
+      throws MobileHarnessException {
+    try {
+      localFileUtil.checkFileOrDir(target);
+    } catch (MobileHarnessException e) {
+      // File does not exist, no need to integrate.
+      logger.atWarning().log("%s does not exist.", target);
+      return;
+    }
+
+    // Only create symlink to the immediate subdirectories of the xts test cases, which are
+    // /android-xts/testcases/<test module A>, <test module B>, ...
+    List<String> subTestCases = localFileUtil.listFileOrDirPaths(target.toString());
+    for (String subTestCase : subTestCases) {
+      Path subTestCasePath = Paths.get(subTestCase);
+      Path tmpXtsTestcasePath = link.resolve(subTestCasePath.getFileName().toString());
+      if ((Files.exists(tmpXtsTestcasePath) && Files.isDirectory(tmpXtsTestcasePath))
+          || !isDynamicDownload) {
+        createSymlink(tmpXtsTestcasePath, subTestCasePath);
+      }
+    }
+    logger.atInfo().log(
+        "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
   }
 
   /** Type for xTS. */
