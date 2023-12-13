@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -46,4 +48,16 @@ proto_library(
 java_proto_library(
     name = "lab_query_java_proto",
     deps = [":lab_query_proto"],
+)
+
+py_proto_library(
+    name = "lab_query_py_proto",
+    srcs = [
+        "lab_query.proto",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_py_pb2",
+        "//src/devtools/mobileharness/api/model/proto:lab_py_proto",
+        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+    ],
 )

@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -28,6 +30,17 @@ proto_library(
     deps = [
         ":lab_proto",
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
+    ],
+)
+
+py_proto_library(
+    name = "device_py_pb2",
+    srcs = [
+        "device.proto",
+    ],
+    deps = [
+        ":lab_py_proto",
+        "//src/devtools/common/metrics/stability/model/proto:error_py_proto",
     ],
 )
 
@@ -65,6 +78,13 @@ proto_library(
 java_proto_library(
     name = "lab_java_proto",
     deps = [":lab_proto"],
+)
+
+py_proto_library(
+    name = "lab_py_proto",
+    srcs = [
+        "lab.proto",
+    ],
 )
 
 proto_library(
