@@ -280,6 +280,13 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
         Throwable testException = null;
         testInfo.status().set(TestStatus.RUNNING);
         PostTestDeviceOp postTestDeviceOp;
+        testInfo
+            .properties()
+            .add(
+                PropertyName.Test.TEST_LINK_IN_MHFE,
+                String.format(
+                    "http://mobileharness-fe/testdetailview/%s/%s",
+                    jobInfo.locator().getId(), testInfo.locator().getId()));
         try {
           testInfo
               .log()
