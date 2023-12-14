@@ -12,6 +12,8 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
+	repb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"google.golang.org/protobuf/proto"
 )
 
 // fileLoader is the common interface to load content of files
@@ -57,7 +59,10 @@ func (du *DirUploader) DoUpload() (digest.Digest, error) {
 		return digest.Digest{}, fmt.Errorf("failed to compute merkle tree: %v", err)
 	}
 	printEntriesStats(uploadEntries, "all entries in the directory")
-	du.exportEntriesInfo(uploadEntries)
+	err = du.exportUploadFilesDetails(rootDigest, uploadEntries)
+	if err != nil {
+		log.Warningf("failed to export upload files info: %v", err)
+	}
 
 	// Check with CAS service to find out all files that do not exist remotely, and only load these
 	// files from local disk.
@@ -142,34 +147,65 @@ type uploadEntryInfo struct {
 	Size   int64  `json:"size"`
 }
 
-// exportEntriesInfo outputs the information of upload entries to the file path specified in `dumpFileDetails`
-func (du *DirUploader) exportEntriesInfo(entries []*uploadinfo.Entry) {
+// exportUploadFilesInfo outputs the detail information of upload files to the file specified in `dumpFileDetails`
+func (du *DirUploader) exportUploadFilesDetails(root digest.Digest, entries []*uploadinfo.Entry) error {
 	path := du.dumpFileDetails
 	if path == "" {
-		return
-	}
-	var infoList []uploadEntryInfo
-	for _, entry := range entries {
-		// Skip directories
-		if entry.Path == "" {
-			continue
-		}
-		relPath, _ := filepath.Rel(du.dirPath, entry.Path)
-		infoList = append(infoList, uploadEntryInfo{
-			Path:   relPath,
-			Digest: entry.Digest.Hash,
-			Size:   entry.Digest.Size,
-		})
-	}
-	outputContent, err := json.MarshalIndent(infoList, "", "  ")
-	if err != nil {
-		log.Warningf("failed to export upload entries info: %v", err)
-		return
+		return fmt.Errorf("the path of dumpFileDetails is empty")
 	}
 
-	log.Infof("exporting file digests to %s", path)
-	err = ioutil.WriteFile(path, outputContent, 0644)
-	if err != nil {
-		log.Warningf("failed to export upload entries info to %s: %v", path, err)
+	blobMap := make(map[string]*uploadinfo.Entry)
+	for _, entry := range entries {
+		if entry.IsBlob() {
+			blobMap[entry.Digest.Hash] = entry
+		}
 	}
+	rootEntry, ok := blobMap[root.Hash]
+	if !ok {
+		return fmt.Errorf("cannot to find the root entry of digest %s", rootEntry.Digest)
+	}
+
+	type uploadEntryTuple struct {
+		Path  string
+		Entry *uploadinfo.Entry
+	}
+	queue := []uploadEntryTuple{uploadEntryTuple{"", rootEntry}}
+	files := []uploadEntryInfo{}
+	for len(queue) > 0 {
+		currPath := queue[0].Path
+		currEntry := queue[0].Entry
+		queue = queue[1:]
+		var dir = repb.Directory{}
+		if err := proto.Unmarshal(currEntry.Contents, &dir); err != nil {
+			return fmt.Errorf("failed to unmarshal blob content of digest %s: %v", currEntry.Digest, err)
+		}
+		for _, fileNode := range dir.GetFiles() {
+			files = append(files, uploadEntryInfo{
+				Path:   filepath.Join(currPath, fileNode.GetName()),
+				Digest: fileNode.GetDigest().GetHash(),
+				Size:   fileNode.GetDigest().GetSizeBytes(),
+			})
+		}
+		for _, dirNode := range dir.GetDirectories() {
+			entry, ok := blobMap[dirNode.GetDigest().GetHash()]
+			if !ok {
+				return fmt.Errorf("cannot find the entry of digest %s", dirNode.GetDigest().GetHash())
+			}
+			queue = append(queue, uploadEntryTuple{
+				Path:  filepath.Join(currPath, dirNode.GetName()),
+				Entry: entry,
+			})
+		}
+	}
+
+	outputContent, err := json.MarshalIndent(files, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to export upload entries info: %v", err)
+	}
+
+	if err = ioutil.WriteFile(path, outputContent, 0644); err != nil {
+		return fmt.Errorf("failed to export upload entries info to %s: %v", path, err)
+	}
+	log.Infof("exported file digests to %s, size of files: %d", path, len(files))
+	return nil
 }

@@ -18,7 +18,7 @@ import (
 	"github.com/google/device-infra/src/devtools/rbe/rbeclient"
 )
 
-const version = "1.0"
+const version = "1.1"
 
 // multiStringFlag is a slice of strings for parsing command flags into a string list.
 type multiStringFlag []string

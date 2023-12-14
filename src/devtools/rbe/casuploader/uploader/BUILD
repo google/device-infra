@@ -29,6 +29,7 @@ go_library(
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casuploader/uploader",
     deps = [
+        "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/command",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
@@ -37,5 +38,6 @@ go_library(
         "@com_github_golang_glog//:glog",
         "@com_github_google_uuid//:uuid",
         "@com_github_pkg_xattr//:xattr",
+        "@org_golang_google_protobuf//proto",
     ],
 )
