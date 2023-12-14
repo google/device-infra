@@ -423,6 +423,15 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> fastbootPathFromUser = fastbootPathFromUserDefault;
 
+  private static final Flag<Duration> getTestStatusRpcCallIntervalDefault =
+      DurationFlag.value(Duration.ofSeconds(5L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--get_test_status_rpc_call_interval",
+      description = "Default RPC call interval when getting the test result.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> getTestStatusRpcCallInterval = getTestStatusRpcCallIntervalDefault;
+
   private static final Flag<Integer> grpcPortDefault = Flag.value(9994);
 
   @com.beust.jcommander.Parameter(
@@ -517,6 +526,18 @@ public class Flags {
       description = "Maximum number of concurrent large file unzipping",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> maxConcurrentUnzipLargeFile = maxConcurrentUnzipLargeFileDefault;
+
+  private static final Flag<Duration> maxConsecutiveGetTestStatusErrorDurationDefault =
+      DurationFlag.value(Duration.ofSeconds(1L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--max_consecutive_get_test_status_error_duration",
+      description =
+          "How long we can wait for the next successful RPC call before marking the test as ERROR"
+              + " when the RPC fails.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> maxConsecutiveGetTestStatusErrorDuration =
+      maxConsecutiveGetTestStatusErrorDurationDefault;
 
   private static final Flag<Boolean> defaultAdbCommandRedirectStderrDefault = Flag.value(true);
 
@@ -629,6 +650,14 @@ public class Flags {
       description = "If this flag is true, all submitted jobs will run as real-time jobs.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> realTimeJob = realTimeJobDefault;
+
+  private static final Flag<Boolean> realTimeTestDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--real_time_test",
+      description = "If this flag is true, all tests will run as real-time tests.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> realTimeTest = realTimeTestDefault;
 
   private static final Flag<Boolean> removeJobGenFilesWhenFinishedDefault = Flag.value(false);
 
