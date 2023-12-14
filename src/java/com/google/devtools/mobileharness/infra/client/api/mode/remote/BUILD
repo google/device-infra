@@ -17,6 +17,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/client:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
 )
@@ -26,5 +27,16 @@ java_library(
     srcs = ["JobCancelledException.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+    ],
+)
+
+java_library(
+    name = "lab_server_locator",
+    srcs = ["LabServerLocator.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
     ],
 )

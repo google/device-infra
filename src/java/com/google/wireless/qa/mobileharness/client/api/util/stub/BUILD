@@ -16,21 +16,20 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "grpc_stub_manager",
-    srcs = ["GrpcStubManager.java"],
+    name = "stub",
+    srcs = ["StubManager.java"],
     visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/client/api/util/stub:__pkg__",
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
+        "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:lab_server_locator",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/stub:grpc_stub_manager",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:exec_test",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:prepare_test",
-        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/grpc:exec_test_grpc_stub",
-        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/grpc:prepare_test_grpc_stub",
-        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
-        "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_manager",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/environment",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub",
-        "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub/grpc",
-        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_guava_guava",
     ],
 )

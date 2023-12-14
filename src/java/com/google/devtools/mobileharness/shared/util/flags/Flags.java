@@ -27,7 +27,7 @@ import java.time.Duration;
  * <p>Remember to sort all flags by @FlagSpec.name.
  */
 @com.beust.jcommander.Parameters(separators = "=")
-@SuppressWarnings({"NonPrivateFlag", "UnnecessarilyFullyQualified"})
+@SuppressWarnings({"NonPrivateFlag", "UnnecessarilyFullyQualified", "unused"})
 public class Flags {
 
   private static final Flag<String> aaptPathDefault = Flag.value("");
@@ -344,6 +344,14 @@ public class Flags {
       description = "Whether to enable file cleaner.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableFileCleaner = enableFileCleanerDefault;
+
+  private static final Flag<Boolean> enableGrpcLabServerDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_grpc_lab_server",
+      description = "Whether to enable gRPC connection to lab server. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableGrpcLabServer = enableGrpcLabServerDefault;
 
   private static final Flag<Boolean> enableMasterSyncerDefault = Flag.value(true);
 
