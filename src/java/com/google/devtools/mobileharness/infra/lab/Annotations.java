@@ -99,6 +99,11 @@ class Annotations {
   @BindingAnnotation
   public @interface LabRpcPort {}
 
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+  @BindingAnnotation
+  public @interface LabGrpcPort {}
+
   /** Annotation for binding flag for enable/disable stubby rpc. */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})

@@ -48,6 +48,7 @@ import com.google.devtools.mobileharness.api.model.proto.Job.JobFeature;
 import com.google.devtools.mobileharness.infra.container.controller.ProxyTestRunner;
 import com.google.devtools.mobileharness.infra.container.controller.ProxyToDirectTestRunner;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator;
+import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.GrpcLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineLocator.StubbyLocator;
 import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEngineStatus;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunnerProvider;
@@ -119,6 +120,7 @@ public class PrepareTestServiceImpl {
   private final SystemUtil systemUtil;
   private final boolean servViaStubby;
   private final int labRpcPort;
+  private final int labGrpcPort;
   private final boolean servViaCloudRpc;
   private final String cloudRpcDnsName;
   private final String cloudRpcShardName;
@@ -136,6 +138,7 @@ public class PrepareTestServiceImpl {
       FileResolver fileResolver,
       boolean servViaStubby,
       int labRpcPort,
+      int labGrpcPort,
       boolean servViaCloudRpc,
       String cloudRpcDnsName,
       String cloudRpcShardName,
@@ -148,6 +151,7 @@ public class PrepareTestServiceImpl {
     this.systemUtil = systemUtil;
     this.servViaStubby = servViaStubby;
     this.labRpcPort = labRpcPort;
+    this.labGrpcPort = labGrpcPort;
     this.servViaCloudRpc = servViaCloudRpc;
     this.cloudRpcDnsName = cloudRpcDnsName;
     this.cloudRpcShardName = cloudRpcShardName;
@@ -441,13 +445,16 @@ public class PrepareTestServiceImpl {
   private TestEngineLocator getProxiedTestEngineLocator() throws MobileHarnessException {
     TestEngineLocator.Builder builder = TestEngineLocator.newBuilder();
     String labHostName = netUtil.getLocalHostName();
-
     if (servViaStubby) {
       StubbyLocator.Builder stubbyLocator =
           StubbyLocator.newBuilder().setHostName(labHostName).setPort(labRpcPort);
       netUtil.getUniqueHostIpOrEmpty().ifPresent(stubbyLocator::setIp);
       builder.setEnableStubby(true).setStubbyLocator(stubbyLocator);
     }
+    builder.setGrpcLocator(
+        GrpcLocator.newBuilder()
+            .setGrpcTarget(String.format("dns:///%s:%s", labHostName, labGrpcPort)));
+    builder.setEnableGrpc(true);
 
     return builder.build();
   }

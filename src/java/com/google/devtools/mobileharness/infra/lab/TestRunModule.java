@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcDnsAddres
 import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcShardName;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceRunner;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
+import com.google.devtools.mobileharness.infra.lab.Annotations.LabGrpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LabRpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaCloudRpc;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
@@ -53,6 +54,7 @@ public final class TestRunModule extends AbstractModule {
       @CloudRpcDnsAddress String cloudRpcDnsAddress,
       @CloudRpcShardName String cloudRpcShardName,
       @LabRpcPort int labRpcPort,
+      @LabGrpcPort int labGrpcPort,
       @ServViaStubby boolean servViaStubby,
       @ServViaCloudRpc boolean servViaCloudRpc) {
     return new PrepareTestServiceImpl(
@@ -65,6 +67,7 @@ public final class TestRunModule extends AbstractModule {
         fileResolver,
         servViaStubby,
         labRpcPort,
+        labGrpcPort,
         servViaCloudRpc,
         cloudRpcDnsAddress,
         cloudRpcShardName,

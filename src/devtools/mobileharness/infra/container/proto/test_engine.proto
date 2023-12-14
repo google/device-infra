@@ -28,6 +28,9 @@ message TestEngineLocator {
   StubbyLocator stubby_locator = 3;
   bool enable_stubby = 4;
 
+  GrpcLocator grpc_locator = 5;
+  bool enable_grpc = 6;
+
   message StubbyLocator {
     // Optional. A test engine may report no or more than one IPs. If so, client
     // should use the IP of the lab server (which is detected by MH master)
@@ -37,6 +40,11 @@ message TestEngineLocator {
     string host_name = 2;
     // Required.
     int32 port = 3;
+  }
+
+  message GrpcLocator {
+    // A target string that io.grpc.ManagedChannelBuilder.forTarget() accepts.
+    string grpc_target = 1;
   }
 }
 

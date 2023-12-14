@@ -65,6 +65,7 @@ public class UnifiedTestRunServerModule extends AbstractModule {
             cloudRpcDnsName,
             shardName,
             Flags.instance().rpcPort.getNonNull(),
+            Flags.instance().grpcPort.getNonNull(),
             enableStubbyRpcServer(),
             Flags.instance().servViaCloudRpc.getNonNull(),
             globalInternalBus));

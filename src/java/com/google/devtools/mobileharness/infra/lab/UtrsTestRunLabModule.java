@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcDnsAddres
 import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcShardName;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceManagerThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceRunner;
+import com.google.devtools.mobileharness.infra.lab.Annotations.LabGrpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LabRpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaCloudRpc;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
@@ -45,7 +46,8 @@ class UtrsTestRunLabModule extends AbstractModule {
 
   private final String cloudRpcDnsAddress;
   private final String cloudRpcShardName;
-  private final int port;
+  private final int rpcPort;
+  private final int grpcPort;
   private final boolean servViaStubby;
   private final boolean servViaCloudRpc;
   private final EventBus globalInternalBus;
@@ -53,13 +55,15 @@ class UtrsTestRunLabModule extends AbstractModule {
   UtrsTestRunLabModule(
       String cloudRpcDnsAddress,
       String cloudRpcShardName,
-      int port,
+      int rpcPort,
+      int grpcPort,
       boolean servViaStubby,
       boolean servViaCloudRpc,
       EventBus globalInternalBus) {
     this.cloudRpcDnsAddress = cloudRpcDnsAddress;
     this.cloudRpcShardName = cloudRpcShardName;
-    this.port = port;
+    this.rpcPort = rpcPort;
+    this.grpcPort = grpcPort;
     this.servViaStubby = servViaStubby;
     this.servViaCloudRpc = servViaCloudRpc;
     this.globalInternalBus = globalInternalBus;
@@ -72,7 +76,8 @@ class UtrsTestRunLabModule extends AbstractModule {
 
     bind(String.class).annotatedWith(CloudRpcDnsAddress.class).toInstance(cloudRpcDnsAddress);
     bind(String.class).annotatedWith(CloudRpcShardName.class).toInstance(cloudRpcShardName);
-    bind(Integer.class).annotatedWith(LabRpcPort.class).toInstance(port);
+    bind(Integer.class).annotatedWith(LabRpcPort.class).toInstance(rpcPort);
+    bind(Integer.class).annotatedWith(LabGrpcPort.class).toInstance(grpcPort);
     bind(Boolean.class).annotatedWith(ServViaCloudRpc.class).toInstance(servViaCloudRpc);
     bind(Boolean.class).annotatedWith(ServViaStubby.class).toInstance(servViaStubby);
     bind(LocalDeviceRunnerProvider.class)
