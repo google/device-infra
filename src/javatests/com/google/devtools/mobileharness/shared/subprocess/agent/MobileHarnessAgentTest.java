@@ -161,6 +161,7 @@ public class MobileHarnessAgentTest {
         .inOrder();
   }
 
+  @org.junit.Ignore("Covered by internal")
   @Test
   public void stressTest() throws Exception {
     int subprocessNum = 500;
