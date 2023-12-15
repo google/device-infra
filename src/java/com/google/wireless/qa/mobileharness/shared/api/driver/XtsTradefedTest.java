@@ -637,8 +637,7 @@ public class XtsTradefedTest extends BaseDriver
     Path linkLibDir = getXtsLibDir(tmpXtsWorkDir, xtsType);
 
     createSymlink(linkJdkDir, sourceXtsBundledJdkDir);
-    createSymlinksForTestCases(
-        linkTestcasesDir, sourceXtsBundledTestcasesDir, /* isDynamicDownload= */ false);
+    createSymlinksForTestCases(linkTestcasesDir, sourceXtsBundledTestcasesDir);
     createSymlink(linkToolsDir, sourceXtsBundledToolsDir);
     createSymlink(linkLibDir, sourceXtsBundledLibDir);
 
@@ -648,8 +647,7 @@ public class XtsTradefedTest extends BaseDriver
       createSymlinksForTestCases(
           linkTestcasesDir,
           Paths.get(
-              testInfo.getTmpFileDir() + testInfo.properties().get(XTS_DYNAMIC_DOWNLOAD_PATH_KEY)),
-          /* isDynamicDownload= */ true);
+              testInfo.getTmpFileDir() + testInfo.properties().get(XTS_DYNAMIC_DOWNLOAD_PATH_KEY)));
     }
 
     if (isRunRetry && localFileUtil.isDirExist(sourceXtsBundledResultsDir)) {
@@ -700,8 +698,7 @@ public class XtsTradefedTest extends BaseDriver
     return link;
   }
 
-  private void createSymlinksForTestCases(Path link, Path target, boolean isDynamicDownload)
-      throws MobileHarnessException {
+  private void createSymlinksForTestCases(Path link, Path target) throws MobileHarnessException {
     try {
       localFileUtil.checkFileOrDir(target);
     } catch (MobileHarnessException e) {
@@ -716,10 +713,7 @@ public class XtsTradefedTest extends BaseDriver
     for (String subTestCase : subTestCases) {
       Path subTestCasePath = Paths.get(subTestCase);
       Path tmpXtsTestcasePath = link.resolve(subTestCasePath.getFileName().toString());
-      if ((Files.exists(tmpXtsTestcasePath) && Files.isDirectory(tmpXtsTestcasePath))
-          || !isDynamicDownload) {
-        createSymlink(tmpXtsTestcasePath, subTestCasePath);
-      }
+      createSymlink(tmpXtsTestcasePath, subTestCasePath);
     }
     logger.atInfo().log(
         "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
