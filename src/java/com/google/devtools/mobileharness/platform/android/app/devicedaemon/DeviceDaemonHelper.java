@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.PackageType;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
+import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.errorprone.annotations.FormatMethod;
@@ -167,7 +168,7 @@ public class DeviceDaemonHelper {
       if ("android.permission.CHANGE_CONFIGURATION".equals(permission) && sdkVersion < 17) {
         continue;
       }
-      grantPermission(deviceId, deviceDaemonApkInfo.getPackageName(), permission);
+      grantPermission(deviceId, sdkVersion, deviceDaemonApkInfo.getPackageName(), permission);
     }
 
     try {
@@ -258,10 +259,14 @@ public class DeviceDaemonHelper {
     }
   }
 
-  private void grantPermission(String deviceId, String packageName, String permission)
+  private void grantPermission(
+      String deviceId, int sdkVersion, String packageName, String permission)
       throws MobileHarnessException, InterruptedException {
     try {
-      androidPackageManagerUtil.grantPermission(deviceId, packageName, permission);
+      androidPackageManagerUtil.grantPermission(
+          UtilArgs.builder().setSerial(deviceId).setSdkVersion(sdkVersion).build(),
+          packageName,
+          permission);
     } catch (MobileHarnessException e) {
       if (e.getMessage().contains(GRANT_PERMISSION_CHANGE_CONFIGURATION_WARNING)) {
         logger.atWarning().withCause(e).log("%s", e.getMessage());

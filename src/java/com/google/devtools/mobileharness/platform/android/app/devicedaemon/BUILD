@@ -70,6 +70,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:enums",
         "//src/java/com/google/devtools/mobileharness/platform/android/process:android_process_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/autovalue:util_args",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

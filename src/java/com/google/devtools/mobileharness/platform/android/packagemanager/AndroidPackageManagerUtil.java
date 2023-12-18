@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.DumpSysTyp
 import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilArgs;
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
+import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
@@ -241,6 +242,8 @@ public class AndroidPackageManagerUtil {
 
   private final AndroidFileUtil androidFileUtil;
 
+  private final AndroidUserUtil androidUserUtil;
+
   private final Sleeper sleeper;
 
   /** An auxiliary class to process lines in stdout. */
@@ -268,6 +271,7 @@ public class AndroidPackageManagerUtil {
         new Aapt(),
         new AndroidAdbUtil(),
         new AndroidFileUtil(),
+        new AndroidUserUtil(),
         Sleeper.defaultSleeper());
   }
 
@@ -276,11 +280,13 @@ public class AndroidPackageManagerUtil {
       Aapt aapt,
       AndroidAdbUtil adbUtil,
       AndroidFileUtil androidFileUtil,
+      AndroidUserUtil androidUserUtil,
       Sleeper sleeper) {
     this.adb = adb;
     this.aapt = aapt;
     this.adbUtil = adbUtil;
     this.androidFileUtil = androidFileUtil;
+    this.androidUserUtil = androidUserUtil;
     this.sleeper = sleeper;
   }
 
@@ -776,7 +782,11 @@ public class AndroidPackageManagerUtil {
     String output = "";
     Exception exception = null;
     String serial = utilArgs.serial();
+    int sdkVersion = utilArgs.sdkVersion().orElse(0);
     String user = utilArgs.userId().isPresent() ? "--user " + utilArgs.userId().get() : null;
+    if (utilArgs.userId().isEmpty() && sdkVersion >= AndroidVersion.ANDROID_14.getEndSdkVersion()) {
+      user = "--user " + androidUserUtil.getCurrentUser(serial, sdkVersion);
+    }
     String command =
         Joiner.on(' ')
             .skipNulls()
