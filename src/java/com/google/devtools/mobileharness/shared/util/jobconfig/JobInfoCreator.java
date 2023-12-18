@@ -103,7 +103,7 @@ public final class JobInfoCreator {
       ImmutableSet.of("IosXcTest", "IosXcuiTest");
 
   private static final ImmutableSet<String> IOS_PERFORMANCE_DECORATORS =
-      ImmutableSet.of("IosPowerMonitorMonsoonDecorator", "IosPerformanceDecorator");
+      ImmutableSet.of("IosPerformanceDecorator");
 
   private static final String SYSLOG_DECORATOR_SUFFIX = "SysLogDecorator";
 
@@ -486,8 +486,7 @@ public final class JobInfoCreator {
 
   /**
    * Returns whether the test needs SysLogDecorator. By default, all iOS tests without performance
-   * related decorators: {@code IosPowerMonitorMonsoonDecorator} and {@code IosPerformanceDecorator}
-   * need SysLogDecorator.
+   * related decorators: {@code IosPerformanceDecorator} need SysLogDecorator.
    */
   private static boolean needSysLogDecorator(JobType type) {
     if (!IOS_DRIVERS_NEED_SYSLOG.contains(type.getDriver())) {
