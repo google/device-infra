@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.truth.Truth.assertThat;
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.util.Arrays.stream;
 import static java.util.function.Predicate.not;
@@ -45,11 +46,18 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.DriverDecoratorSpecMapper;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -64,6 +72,11 @@ import org.mockito.junit.MockitoRule;
 public class InstantiationTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final String DRIVER_DECORATOR_SPEC_MAPPER_PATH =
+      "google3/third_party/deviceinfra/src/java/com/google/wireless/qa/mobileharness"
+          + "/shared/model/job/in/spec/DriverDecoratorSpecMapper.java";
+  private static final List<Class<? extends Driver>> driverClasses = new ArrayList<>();
+  private static final List<Class<? extends Decorator>> decoratorClasses = new ArrayList<>();
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
@@ -79,6 +92,14 @@ public class InstantiationTest {
   private Device device;
 
   @Inject private DriverFactory driverFactory;
+
+  @BeforeClass
+  public static void fetchDriverDecorator() throws Exception {
+    driverClasses.addAll(
+        listClasses("com.google.wireless.qa.mobileharness.shared.api.driver", Driver.class));
+    decoratorClasses.addAll(
+        listClasses("com.google.wireless.qa.mobileharness.shared.api.decorator", Decorator.class));
+  }
 
   @Before
   public void setUp() throws Exception {
@@ -98,9 +119,6 @@ public class InstantiationTest {
 
   @Test
   public void instantiateDrivers() throws Exception {
-    ImmutableList<Class<? extends Driver>> driverClasses =
-        listClasses("com.google.wireless.qa.mobileharness.shared.api.driver", Driver.class);
-
     for (Class<? extends Driver> driverClass : driverClasses) {
       if (mockDataModel(driverClass)) {
         try {
@@ -115,9 +133,6 @@ public class InstantiationTest {
 
   @Test
   public void instantiateDecorators() throws Exception {
-    ImmutableList<Class<? extends Decorator>> decoratorClasses =
-        listClasses("com.google.wireless.qa.mobileharness.shared.api.decorator", Decorator.class);
-
     for (Class<? extends Decorator> decoratorClass : decoratorClasses) {
       if (mockDataModel(decoratorClass)) {
         try {
@@ -132,6 +147,31 @@ public class InstantiationTest {
         }
       }
       cleanupMockedDataModel();
+    }
+  }
+
+  @Test
+  public void checkDriverDecoratorSpec() throws Exception {
+    Map<String, String> driverDecoratorSpecMapFromReflection = new HashMap<>();
+    for (Class<? extends Decorator> decoratorClass : decoratorClasses) {
+      if (JobSpecHelper.isSpecConfigable(decoratorClass)) {
+        driverDecoratorSpecMapFromReflection.put(
+            decoratorClass.getSimpleName(),
+            JobSpecHelper.getSpecClass(decoratorClass).getSimpleName());
+      }
+    }
+    for (Class<? extends Driver> driverClass : driverClasses) {
+      if (JobSpecHelper.isSpecConfigable(driverClass)) {
+        driverDecoratorSpecMapFromReflection.put(
+            driverClass.getSimpleName(), JobSpecHelper.getSpecClass(driverClass).getSimpleName());
+      }
+    }
+
+    try {
+      assertThat(driverDecoratorSpecMapFromReflection)
+          .isEqualTo(DriverDecoratorSpecMapper.getDriverDecoratorSpecMap());
+    } catch (Throwable e) {
+      throw addSpecMismatchHelp(e);
     }
   }
 
@@ -212,6 +252,19 @@ public class InstantiationTest {
                 "Failed to instantiate class %s. Please check its constructor or its module, or add"
                     + " @ConstraintsForTesting to its constructor. See the cause for more details.",
                 driverClass.getSimpleName()),
+            e);
+    result.setStackTrace(new StackTraceElement[0]);
+    return result;
+  }
+
+  private static IllegalStateException addSpecMismatchHelp(Throwable e) {
+    IllegalStateException result =
+        new IllegalStateException(
+            String.format(
+                "If you add/edit/remove a Driver/Decorator which implements the SpecConfigable"
+                    + " interface, please make corresponding modifications in the static config"
+                    + " file, file address %s",
+                DRIVER_DECORATOR_SPEC_MAPPER_PATH),
             e);
     result.setStackTrace(new StackTraceElement[0]);
     return result;
