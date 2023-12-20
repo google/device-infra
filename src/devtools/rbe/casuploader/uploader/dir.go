@@ -187,6 +187,12 @@ func (du *DirUploader) exportUploadFilesDetails(root digest.Digest, entries []*u
 			})
 		}
 		for _, dirNode := range dir.GetDirectories() {
+			// Skip the empty directory. Both an empty directory and an empty file have the same digest,
+			// therefore, if there is an empty file exists in the file tree, the `uploadinfo.Entry` of an
+			// empty directory may be omitted.
+			if dirNode.GetDigest().GetSizeBytes() == 0 {
+				continue
+			}
 			entry, ok := blobMap[dirNode.GetDigest().GetHash()]
 			if !ok {
 				return fmt.Errorf("cannot find the entry of digest %s", dirNode.GetDigest().GetHash())
