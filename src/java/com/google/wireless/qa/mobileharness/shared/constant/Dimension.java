@@ -238,6 +238,8 @@ public final class Dimension {
     ICCID,
     /** A comma-separated string containing the ICCID of each SIM on the device. */
     ICCIDS,
+    /** The iOS simulator id */
+    IOS_SIMULATOR_ID,
 
     // lab server level
     /** The disk usable size of the host. */
