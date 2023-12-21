@@ -112,8 +112,9 @@ public class ModuleConfigurationHelperTest {
     jobInfo.subDeviceSpecs().addSubDevice("NoOpDevice");
     jobInfo.subDeviceSpecs().addSubDevice("AndroidRealDevice");
     Path file1 = tempDirPath.resolve("file1");
-    Path file2 = tempDirPath.resolve("dir").resolve("file2");
-    Path file3 = tempDirPath.resolve("dir").resolve("file3");
+    Path dir = tempDirPath.resolve("dir");
+    Path file2 = dir.resolve("file2");
+    Path file3 = dir.resolve("file3");
     localFileUtil.writeToFile(file1.toString(), "content");
     localFileUtil.writeToFile(file2.toString(), "content");
     localFileUtil.writeToFile(file3.toString(), "content");
@@ -156,7 +157,7 @@ public class ModuleConfigurationHelperTest {
             .build();
 
     moduleConfigurationHelper.updateJobInfo(
-        jobInfo, config, ImmutableList.of(tempDirPath.toFile()));
+        jobInfo, config, ImmutableList.of(file1.toFile(), dir.toFile()));
 
     checkSubDeviceSpec(
         jobInfo.subDeviceSpecs().getSubDevice(0),

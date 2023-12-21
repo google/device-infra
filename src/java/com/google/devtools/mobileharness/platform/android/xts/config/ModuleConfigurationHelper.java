@@ -63,25 +63,25 @@ public class ModuleConfigurationHelper {
    *
    * @param jobInfo the {@link JobInfo} to update. The type of driver and device need to be correct.
    * @param moduleConfig the {@link Configuration} for the module.
-   * @param dependencyDirs the list of {@link File} for directories that contain dependency files.
-   *     Search files in these directories in order.
+   * @param dependencies the list of {@link File} for files and directories that contain dependency
+   *     files. Search files in directories in order.
    */
-  public void updateJobInfo(JobInfo jobInfo, Configuration moduleConfig, List<File> dependencyDirs)
+  public void updateJobInfo(JobInfo jobInfo, Configuration moduleConfig, List<File> dependencies)
       throws MobileHarnessException, InterruptedException {
     for (Option option : moduleConfig.getOptionsList()) {
       if (option.getKey().equals(FILE_KEY)) {
-        jobInfo.files().add(option.getName(), resolveFilePath(option.getValue(), dependencyDirs));
+        jobInfo.files().add(option.getName(), resolveFilePath(option.getValue(), dependencies));
       } else {
         jobInfo.params().add(option.getName(), option.getValue());
       }
     }
 
-    Visitor fileResolver = getFileResolver(dependencyDirs);
+    Visitor fileResolver = getFileResolver(dependencies);
     updateDriverSpecs(moduleConfig.getTest(), jobInfo, fileResolver);
     updateDeviceSpecs(moduleConfig.getDevicesList(), jobInfo.subDeviceSpecs(), fileResolver);
   }
 
-  private Visitor getFileResolver(List<File> dependencyDirs) {
+  private Visitor getFileResolver(List<File> dependencies) {
     return new JobSpecWalker.Visitor() {
       @Override
       public void visitPrimitiveFileField(Message.Builder builder, FieldDescriptor field)
@@ -95,11 +95,10 @@ public class ModuleConfigurationHelper {
             builder.setRepeatedField(
                 field,
                 i,
-                resolveFilePath((String) builder.getRepeatedField(field, i), dependencyDirs));
+                resolveFilePath((String) builder.getRepeatedField(field, i), dependencies));
           }
         } else {
-          builder.setField(
-              field, resolveFilePath((String) builder.getField(field), dependencyDirs));
+          builder.setField(field, resolveFilePath((String) builder.getField(field), dependencies));
         }
       }
     };
@@ -153,11 +152,18 @@ public class ModuleConfigurationHelper {
     }
   }
 
-  private String resolveFilePath(String fileName, List<File> dirs) throws MobileHarnessException {
-    for (File dir : dirs) {
-      Optional<File> file = configurationUtil.getFileInDir(fileName, dir);
-      if (file.isPresent()) {
-        return file.get().getAbsolutePath();
+  private String resolveFilePath(String fileName, List<File> dependencies)
+      throws MobileHarnessException {
+    for (File dependency : dependencies) {
+      if (dependency.isFile()) {
+        if (dependency.getName().equals(fileName)) {
+          return dependency.getAbsolutePath();
+        }
+      } else {
+        Optional<File> file = configurationUtil.getFileInDir(fileName, dependency);
+        if (file.isPresent()) {
+          return file.get().getAbsolutePath();
+        }
       }
     }
     throw new MobileHarnessException(
