@@ -19,7 +19,9 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
 )
@@ -27,6 +29,7 @@ package(
 olc_server_binary(
     name = "ats_olc_server",
     extra_runtime_deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/local/sessionplugin:ats_local_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:ats_session_plugin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:ats_test",
     ],

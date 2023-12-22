@@ -20,6 +20,7 @@ import static java.util.Arrays.stream;
 
 import java.lang.reflect.Modifier;
 import java.time.Duration;
+import java.util.List;
 
 /**
  * All Device Infra flags.
@@ -91,6 +92,40 @@ public class Flags {
       description = "Start the adb server with flag ADB_LIBUSB=1.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> adbLibusb = adbLibusbDefault;
+
+  private static final Flag<List<String>> alrArtifactsDefault = Flag.stringList();
+
+  @com.beust.jcommander.Parameter(
+      names = "--alr_artifact",
+      description =
+          "Paths to test artifacts for the ATS local runner. Both directory paths and file paths"
+              + " are supported.",
+      converter = Flag.StringListConverter.class)
+  public Flag<List<String>> alrArtifacts = alrArtifactsDefault;
+
+  private static final Flag<String> alrOlcServerPathDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--alr_olc_server_path",
+      description = "Path of OLC server for ATS local runner.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> alrOlcServerPath = alrOlcServerPathDefault;
+
+  private static final Flag<List<String>> alrSerialsDefault = Flag.stringList();
+
+  @com.beust.jcommander.Parameter(
+      names = "--alr_serials",
+      description = "Comma separated serials to specify devices for ATS local runner.",
+      converter = Flag.StringListConverter.class)
+  public Flag<List<String>> alrSerials = alrSerialsDefault;
+
+  private static final Flag<String> alrTestConfigDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--alr_test_config",
+      description = "Path to the test configuration for ATS local runner.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> alrTestConfig = alrTestConfigDefault;
 
   private static final Flag<Boolean> enableDaemonDefault = Flag.value(true);
 

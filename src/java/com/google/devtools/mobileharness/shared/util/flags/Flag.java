@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.shared.util.flags;
 
 import com.beust.jcommander.IStringConverter;
+import com.google.common.collect.ImmutableList;
+import java.util.List;
 import java.util.Objects;
 import javax.annotation.Nullable;
 
@@ -48,6 +50,18 @@ public class Flag<T> {
     public Flag<String> convert(String value) {
       return value(value);
     }
+  }
+
+  /** Converter for creating string list flag from JCommander. */
+  public static class StringListConverter implements IStringConverter<Flag<List<String>>> {
+    @Override
+    public Flag<List<String>> convert(String value) {
+      return value(ImmutableList.copyOf(value.split(",")));
+    }
+  }
+
+  static Flag<List<String>> stringList(String... defaultValues) {
+    return value(ImmutableList.copyOf(defaultValues));
   }
 
   static <T> Flag<T> value(@Nullable T defaultValue) {

@@ -13,17 +13,18 @@
 # limitations under the License.
 #
 
-# Shared util classes for ats server and ats console plugins.
+# Shared util classes for ats components.
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+    ],
+)
 
 java_library(
     name = "create_job_config_util",
     srcs = ["CreateJobConfigUtil.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
-    ],
     deps = [
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -31,6 +32,17 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "device_infra_service_util",
+    srcs = ["DeviceInfraServiceUtil.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "@maven//:com_google_guava_guava",
     ],
 )

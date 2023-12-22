@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<configuration description="Test XML">
+  <device name="NoOpDevice" />
+  <device name="NoOpDevice" />
+  <test class="NoOpDriver" />
+</configuration>

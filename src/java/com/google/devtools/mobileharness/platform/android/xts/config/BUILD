@@ -17,6 +17,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
         "//src/javatests/com/google/devtools:__subpackages__",
     ],
 )

@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.console;
 
-import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
@@ -28,8 +27,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
@@ -38,7 +37,6 @@ import com.google.devtools.mobileharness.infra.ats.console.command.RootCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleReaderOutputStream;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
@@ -51,7 +49,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
@@ -67,13 +64,8 @@ import picocli.CommandLine;
 /** ATS Console. */
 public class AtsConsole implements Callable<Void> {
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
   private static final String APPNAME = "AtsConsole";
   private static final String HELP_PATTERN = "h|help";
-
-  private static final String DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY =
-      "DEVICE_INFRA_SERVICE_FLAGS";
 
   public static void main(String[] args) throws IOException {
     MobileHarnessLogger.init();
@@ -84,7 +76,11 @@ public class AtsConsole implements Callable<Void> {
             .collect(toImmutableMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
 
     // Parses flags.
-    ImmutableList<String> deviceInfraServiceFlags = parseFlags(systemProperties);
+    ImmutableList<String> deviceInfraServiceFlags =
+        DeviceInfraServiceUtil.parseDeviceInfraServiceFlagsFromSystemProperty();
+    if (!deviceInfraServiceFlags.isEmpty()) {
+      DeviceInfraServiceUtil.parseFlags(deviceInfraServiceFlags);
+    }
 
     // Initializes line reader and stdout/stderr.
     LineReader lineReader = initializeLineReaderAndStdout();
@@ -234,27 +230,6 @@ public class AtsConsole implements Callable<Void> {
 
   private static Path getOlcServerBinary() {
     return Path.of(Flags.instance().atsConsoleOlcServerPath.getNonNull());
-  }
-
-  private static ImmutableList<String> parseFlags(Map<String, String> systemProperties) {
-    List<String> deviceInfraServiceFlags = new ArrayList<>();
-    String deviceInfraServiceFlagsProperty =
-        systemProperties.get(DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY);
-    if (!isNullOrEmpty(deviceInfraServiceFlagsProperty)) {
-      try {
-        ShellUtils.tokenize(deviceInfraServiceFlags, deviceInfraServiceFlagsProperty);
-      } catch (TokenizationException e) {
-        logger.atSevere().withCause(e).log(
-            "Failed to parse flags for device infra service: [%s]",
-            deviceInfraServiceFlagsProperty);
-      }
-      if (!deviceInfraServiceFlags.isEmpty()) {
-        logger.atInfo().log("Device infra service flags: %s", deviceInfraServiceFlags);
-        String[] deviceInfraServiceFlagsArray = deviceInfraServiceFlags.toArray(new String[0]);
-        Flags.parse(deviceInfraServiceFlagsArray);
-      }
-    }
-    return ImmutableList.copyOf(deviceInfraServiceFlags);
   }
 
   /** Initializes line reader and stdout/stderr. */

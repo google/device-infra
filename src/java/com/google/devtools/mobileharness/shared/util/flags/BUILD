@@ -38,6 +38,7 @@ java_library(
     deps = [
         "@maven//:com_beust_jcommander",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

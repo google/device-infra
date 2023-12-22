@@ -22,6 +22,7 @@ package(
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
@@ -57,6 +58,7 @@ java_proto_library(
     name = "log_java_proto",
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",

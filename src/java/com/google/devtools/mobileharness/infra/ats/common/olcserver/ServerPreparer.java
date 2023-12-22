@@ -184,7 +184,7 @@ public class ServerPreparer {
     }
   }
 
-  private boolean killExistingServer() throws InterruptedException {
+  public boolean killExistingServer() throws InterruptedException {
     serverLogger.log("Killing existing OLC server...");
     KillServerResponse killServerResponse = null;
     try {
