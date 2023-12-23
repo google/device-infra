@@ -19,7 +19,6 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
