@@ -16,6 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.lab;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.shared.util.file.local.BinarySizeChecker;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import org.junit.Test;
@@ -25,7 +26,11 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class LabServerBinarySizeTest {
 
+  private static final ImmutableSet<String> LAB_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST =
+      ImmutableSet.of();
+
   private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 27_000_000L;
+  private static final long MAX_LAB_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE = 1_000_000L;
 
   private static final String LAB_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
@@ -34,6 +39,19 @@ public class LabServerBinarySizeTest {
   @Test
   public void checkLabServerBinarySize() throws Exception {
     BinarySizeChecker.checkBinarySize(
-        "OmniLab lab server", MAX_LAB_SERVER_BINARY_SIZE_BYTE, LAB_SERVER_BINARY_FILE_PATH);
+        "lab_server_oss_deploy.jar", MAX_LAB_SERVER_BINARY_SIZE_BYTE, LAB_SERVER_BINARY_FILE_PATH);
+  }
+
+  @Test
+  public void checkLabServerBinaryLargeResources() throws Exception {
+    BinarySizeChecker.checkBinaryLargeResourceFiles(
+        "lab_server_oss_deploy.jar",
+        LAB_SERVER_BINARY_FILE_PATH,
+        MAX_LAB_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE,
+        LAB_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST,
+        "google3/third_party/deviceinfra/src/java/com/google/wireless/qa/mobileharness"
+            + "/lab:lab_server_oss_deploy.jar",
+        "google3/third_party/deviceinfra/src/javatests/com/google/wireless/qa/mobileharness"
+            + "/lab/LabServerBinarySizeTest.java#LAB_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST");
   }
 }
