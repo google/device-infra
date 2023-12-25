@@ -25,6 +25,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
@@ -50,10 +51,14 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.V
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabInfoServiceGrpc;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabInfoServiceGrpc.LabInfoServiceBlockingStub;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
+import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -63,6 +68,7 @@ import com.google.protobuf.Any;
 import com.google.protobuf.FieldMask;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
+import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -71,6 +77,8 @@ import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.rules.TestWatcher;
+import org.junit.runner.Description;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
@@ -78,8 +86,27 @@ import org.junit.runners.JUnit4;
 public class OlcServerIntegrationTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private final StringBuilder serverStdoutBuilder = new StringBuilder();
+  private final StringBuilder serverStderrBuilder = new StringBuilder();
 
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
+
+  @Rule
+  public TestWatcher testWatcher =
+      new TestWatcher() {
+
+        @Override
+        protected void failed(Throwable e, Description description) {
+          // Adds lab server stdout/stderr to a failed test.
+          Exception labServerOutput =
+              new IllegalStateException(
+                  String.format(
+                      "lab_server_stdout=[%s], lab_server_stderr=[%s]",
+                      serverStdoutBuilder, serverStderrBuilder));
+          labServerOutput.setStackTrace(new StackTraceElement[0]);
+          e.addSuppressed(labServerOutput);
+        }
+      };
 
   private static final String SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
@@ -96,201 +123,129 @@ public class OlcServerIntegrationTest {
   }
 
   @Test
-  public void noOpTest() throws Exception {
+  public void noOpTest_localMode() throws Exception {
     int serverPort = PortProber.pickUnusedPort();
-    String serverPublicDirPath = tmpFolder.newFolder("olc_server_public_dir").toString();
-
-    StringBuilder serverStdoutBuilder = new StringBuilder();
-    StringBuilder serverStderrBuilder = new StringBuilder();
     StringBuilder serverLogBuilder = new StringBuilder();
 
-    CountDownLatch serverStartedLatch = new CountDownLatch(1);
-    AtomicBoolean serverStartedSuccessfully = new AtomicBoolean();
-    CountDownLatch deviceFound = new CountDownLatch(1);
+    startAtsServer(false, serverPort, serverStdoutBuilder, serverStderrBuilder);
+    ManagedChannel channel = ChannelFactory.createLocalChannel(serverPort, directExecutor());
 
-    try {
-      // Starts the server.
-      Command serverCommand =
-          Command.of(
-                  new SystemUtil()
-                      .getJavaCommandCreator()
-                      .createJavaCommand(
-                          SERVER_FILE_PATH,
-                          ImmutableList.of(
-                              "--olc_server_port=" + serverPort,
-                              "--no_op_device_num=1",
-                              "--detect_adb_device=false",
-                              "--public_dir=" + serverPublicDirPath),
-                          ImmutableList.of()))
-              .onStdout(
-                  does(
-                      stdout -> {
-                        System.out.printf("server_stdout %s\n", stdout);
-                        serverStdoutBuilder.append(stdout).append('\n');
-                      }))
-              .onStderr(
-                  does(
-                      stderr -> {
-                        System.err.printf("server_stderr %s\n", stderr);
-                        serverStderrBuilder.append(stderr).append('\n');
+    // Checks the server version.
+    VersionStub versionStub = new VersionStub(channel);
+    assertThat(versionStub.getVersion())
+        .isEqualTo(
+            GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
 
-                        if (stderr.contains("OLC server started")) {
-                          serverStartedSuccessfully.set(true);
-                          serverStartedLatch.countDown();
-                        } else if (stderr.contains("New device NoOpDevice-0")) {
-                          deviceFound.countDown();
-                        }
-                      }))
-              .onExit(result -> serverStartedLatch.countDown())
-              .redirectStderr(false)
-              .needStdoutInResult(false)
-              .needStderrInResult(false);
-      logger.atInfo().log("Starting server, command=%s", serverCommand);
-      serverProcess = new CommandExecutor().start(serverCommand);
+    // Gets the server log.
+    ControlStub controlStub = new ControlStub(channel);
+    StreamObserver<GetLogRequest> requestObserver =
+        controlStub.getLog(
+            new StreamObserver<GetLogResponse>() {
+              @Override
+              public void onNext(GetLogResponse response) {
+                response.getLogRecords().getLogRecordList().stream()
+                    .map(LogRecord::getFormattedLogRecord)
+                    .forEach(serverLogBuilder::append);
+              }
 
-      // Waits until the server starts successfully.
-      assertWithMessage("The server has not started in 15 seconds")
-          .that(serverStartedLatch.await(15L, SECONDS))
-          .isTrue();
-      assertWithMessage("The server does not start successfully")
-          .that(serverStartedSuccessfully.get())
-          .isTrue();
+              @Override
+              public void onError(Throwable e) {
+                logger.atWarning().withCause(e).log("Failed to get log from server");
+              }
 
-      // Verifies the local device manager starts successfully.
-      assertWithMessage("The local device manager has not started in 5 seconds")
-          .that(deviceFound.await(15L, SECONDS))
-          .isTrue();
+              @Override
+              public void onCompleted() {
+                logger.atInfo().log("Completed to get log from server");
+              }
+            });
+    requestObserver.onNext(GetLogRequest.newBuilder().setEnable(true).build());
 
-      ManagedChannel channel = ChannelFactory.createLocalChannel(serverPort, directExecutor());
+    // Creates a session.
+    SessionStub sessionStub = new SessionStub(channel);
+    String pluginClassName =
+        "com.google.devtools.mobileharness.infra.client.longrunningservice"
+            + ".SessionPluginForTesting";
+    CreateSessionRequest createSessionRequest =
+        CreateSessionRequest.newBuilder()
+            .setSessionConfig(
+                SessionConfig.newBuilder()
+                    .setSessionName("session_with_no_op_test")
+                    .setSessionPluginConfigs(
+                        SessionPluginConfigs.newBuilder()
+                            .addSessionPluginConfig(
+                                SessionPluginConfig.newBuilder()
+                                    .setLoadingConfig(
+                                        SessionPluginLoadingConfig.newBuilder()
+                                            .setPluginClassName(pluginClassName))
+                                    .setExecutionConfig(
+                                        SessionPluginExecutionConfig.newBuilder()
+                                            .setConfig(
+                                                Any.pack(
+                                                    SessionPluginForTestingConfig.newBuilder()
+                                                        .setNoOpDriverSleepTimeSec(2)
+                                                        .build()))
+                                            .build()))))
+            .build();
+    CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
+    SessionId sessionId = createSessionResponse.getSessionId();
 
-      // Checks the server version.
-      VersionStub versionStub = new VersionStub(channel);
-      assertThat(versionStub.getVersion())
-          .isEqualTo(
-              GetVersionResponse.newBuilder()
-                  .setLabVersion(Version.LAB_VERSION.toString())
-                  .build());
+    // Verifies the server cannot be killed.
+    KillServerResponse killServerResponse = controlStub.killServer();
+    assertThat(killServerResponse)
+        .isEqualTo(KillServerResponse.newBuilder().setSuccessful(false).build());
 
-      // Gets the server log.
-      ControlStub controlStub = new ControlStub(channel);
-      StreamObserver<GetLogRequest> requestObserver =
-          controlStub.getLog(
-              new StreamObserver<>() {
-                @Override
-                public void onNext(GetLogResponse response) {
-                  response.getLogRecords().getLogRecordList().stream()
-                      .map(LogRecord::getFormattedLogRecord)
-                      .forEach(serverLogBuilder::append);
-                }
-
-                @Override
-                public void onError(Throwable e) {
-                  logger.atWarning().withCause(e).log("Failed to get log from server");
-                }
-
-                @Override
-                public void onCompleted() {
-                  logger.atInfo().log("Completed to get log from server");
-                }
-              });
-      requestObserver.onNext(GetLogRequest.newBuilder().setEnable(true).build());
-
-      // Creates a session.
-      SessionStub sessionStub = new SessionStub(channel);
-      String pluginClassName =
-          "com.google.devtools.mobileharness.infra.client.longrunningservice"
-              + ".SessionPluginForTesting";
-      CreateSessionRequest createSessionRequest =
-          CreateSessionRequest.newBuilder()
-              .setSessionConfig(
-                  SessionConfig.newBuilder()
-                      .setSessionName("session_with_no_op_test")
-                      .setSessionPluginConfigs(
-                          SessionPluginConfigs.newBuilder()
-                              .addSessionPluginConfig(
-                                  SessionPluginConfig.newBuilder()
-                                      .setLoadingConfig(
-                                          SessionPluginLoadingConfig.newBuilder()
-                                              .setPluginClassName(pluginClassName))
-                                      .setExecutionConfig(
-                                          SessionPluginExecutionConfig.newBuilder()
-                                              .setConfig(
-                                                  Any.pack(
-                                                      SessionPluginForTestingConfig.newBuilder()
-                                                          .setNoOpDriverSleepTimeSec(2)
-                                                          .build()))
-                                              .build()))))
-              .build();
-      CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
-      SessionId sessionId = createSessionResponse.getSessionId();
-
-      // Verifies the server cannot be killed.
-      KillServerResponse killServerResponse = controlStub.killServer();
-      assertThat(killServerResponse)
-          .isEqualTo(KillServerResponse.newBuilder().setSuccessful(false).build());
-
-      // Waits until the session finishes.
-      GetSessionResponse getSessionResponse;
-      do {
-        Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1L));
-        getSessionResponse =
-            sessionStub.getSession(
-                GetSessionRequest.newBuilder()
-                    .setSessionId(sessionId)
-                    .setFieldMask(FieldMask.newBuilder().addPaths("session_detail.session_status"))
-                    .build());
-      } while (!getSessionResponse
-          .getSessionDetail()
-          .getSessionStatus()
-          .equals(SessionStatus.SESSION_FINISHED));
-
-      // Checks the session output.
+    // Waits until the session finishes.
+    GetSessionResponse getSessionResponse;
+    do {
+      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1L));
       getSessionResponse =
-          sessionStub.getSession(GetSessionRequest.newBuilder().setSessionId(sessionId).build());
-      assertThat(getSessionResponse)
-          .comparingExpectedFieldsOnly()
-          .isEqualTo(
-              GetSessionResponse.newBuilder()
-                  .setSessionDetail(
-                      SessionDetail.newBuilder()
-                          .setSessionOutput(
-                              SessionOutput.newBuilder()
-                                  .putSessionProperty("job_result", "PASS")
-                                  .putSessionProperty("job_result_from_job_event", "PASS")
-                                  .putSessionPluginOutput(
-                                      pluginClassName,
-                                      SessionPluginOutput.newBuilder()
-                                          .setOutput(
-                                              Any.pack(
-                                                  SessionPluginForTestingOutput.newBuilder()
-                                                      .setJobResultTypeName("PASS")
-                                                      .build()))
-                                          .build())))
+          sessionStub.getSession(
+              GetSessionRequest.newBuilder()
+                  .setSessionId(sessionId)
+                  .setFieldMask(FieldMask.newBuilder().addPaths("session_detail.session_status"))
                   .build());
+    } while (!getSessionResponse
+        .getSessionDetail()
+        .getSessionStatus()
+        .equals(SessionStatus.SESSION_FINISHED));
 
-      List<SessionDetail> allSessions =
-          sessionStub
-              .getAllSessions(GetAllSessionsRequest.getDefaultInstance())
-              .getSessionDetailList();
-      assertThat(allSessions).containsExactly(getSessionResponse.getSessionDetail());
+    // Checks the session output.
+    getSessionResponse =
+        sessionStub.getSession(GetSessionRequest.newBuilder().setSessionId(sessionId).build());
+    assertThat(getSessionResponse)
+        .comparingExpectedFieldsOnly()
+        .isEqualTo(
+            GetSessionResponse.newBuilder()
+                .setSessionDetail(
+                    SessionDetail.newBuilder()
+                        .setSessionOutput(
+                            SessionOutput.newBuilder()
+                                .putSessionProperty("job_result", "PASS")
+                                .putSessionProperty("job_result_from_job_event", "PASS")
+                                .putSessionPluginOutput(
+                                    pluginClassName,
+                                    SessionPluginOutput.newBuilder()
+                                        .setOutput(
+                                            Any.pack(
+                                                SessionPluginForTestingOutput.newBuilder()
+                                                    .setJobResultTypeName("PASS")
+                                                    .build()))
+                                        .build())))
+                .build());
 
-      // Verifies the server is killed.
-      assertThat(serverProcess.isAlive()).isTrue();
-      killServerResponse = controlStub.killServer();
-      assertThat(killServerResponse)
-          .isEqualTo(KillServerResponse.newBuilder().setSuccessful(true).build());
-      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
-      assertThat(serverProcess.isAlive()).isFalse();
-    } catch (
-        @SuppressWarnings("InterruptedExceptionSwallowed")
-        Throwable e) {
-      e.addSuppressed(
-          new IllegalStateException(
-              String.format(
-                  "server_stdout=[%s], server_stderr=[%s]",
-                  serverStdoutBuilder, serverStderrBuilder)));
-      throw e;
-    }
+    List<SessionDetail> allSessions =
+        sessionStub
+            .getAllSessions(GetAllSessionsRequest.getDefaultInstance())
+            .getSessionDetailList();
+    assertThat(allSessions).containsExactly(getSessionResponse.getSessionDetail());
+
+    // Verifies the server is killed.
+    assertThat(serverProcess.isAlive()).isTrue();
+    killServerResponse = controlStub.killServer();
+    assertThat(killServerResponse)
+        .isEqualTo(KillServerResponse.newBuilder().setSuccessful(true).build());
+    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
+    assertThat(serverProcess.isAlive()).isFalse();
 
     String serverStderr = serverStderrBuilder.toString();
 
@@ -308,5 +263,94 @@ public class OlcServerIntegrationTest {
     // Checks the server log.
     String serverLog = serverLogBuilder.toString();
     assertWithMessage("server log").that(serverLog).contains("Sleep for 2 seconds");
+  }
+
+  @Test
+  public void queryLabInfoService_atsMode() throws Exception {
+    int serverPort = PortProber.pickUnusedPort();
+    StringBuilder serverStdoutBuilder = new StringBuilder();
+    StringBuilder serverStderrBuilder = new StringBuilder();
+    startAtsServer(true, serverPort, serverStdoutBuilder, serverStderrBuilder);
+    ManagedChannel channel = ChannelFactory.createLocalChannel(serverPort, directExecutor());
+    // Checks the server version.
+    VersionStub versionStub = new VersionStub(channel);
+    assertThat(versionStub.getVersion())
+        .isEqualTo(
+            GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
+
+    LabInfoServiceBlockingStub labInfoServiceStub = LabInfoServiceGrpc.newBlockingStub(channel);
+    assertThat(
+            labInfoServiceStub
+                .getLabInfo(GetLabInfoRequest.newBuilder().build())
+                .getLabQueryResult()
+                .getLabView())
+        .isEqualTo(LabView.getDefaultInstance());
+  }
+
+  private void startAtsServer(
+      boolean isAtsMode,
+      int serverPort,
+      StringBuilder serverStdoutBuilder,
+      StringBuilder serverStderrBuilder)
+      throws IOException, CommandStartException, InterruptedException {
+    String serverPublicDirPath = tmpFolder.newFolder("olc_server_public_dir").toString();
+
+    CountDownLatch serverStartedLatch = new CountDownLatch(1);
+    AtomicBoolean serverStartedSuccessfully = new AtomicBoolean();
+    CountDownLatch deviceFound = new CountDownLatch(1);
+    // Starts the server.
+    Command serverCommand =
+        Command.of(
+                new SystemUtil()
+                    .getJavaCommandCreator()
+                    .createJavaCommand(
+                        SERVER_FILE_PATH,
+                        ImmutableList.of(
+                            "--enable_ats_mode=" + isAtsMode,
+                            "--olc_server_port=" + serverPort,
+                            "--no_op_device_num=1",
+                            "--detect_adb_device=false",
+                            "--public_dir=" + serverPublicDirPath),
+                        ImmutableList.of()))
+            .onStdout(
+                does(
+                    stdout -> {
+                      System.out.printf("server_stdout %s\n", stdout);
+                      serverStdoutBuilder.append(stdout).append('\n');
+                    }))
+            .onStderr(
+                does(
+                    stderr -> {
+                      System.err.printf("server_stderr %s\n", stderr);
+                      serverStderrBuilder.append(stderr).append('\n');
+
+                      if (stderr.contains("OLC server started")) {
+                        serverStartedSuccessfully.set(true);
+                        serverStartedLatch.countDown();
+                      } else if (stderr.contains("New device NoOpDevice-0")) {
+                        deviceFound.countDown();
+                      }
+                    }))
+            .onExit(result -> serverStartedLatch.countDown())
+            .redirectStderr(false)
+            .needStdoutInResult(false)
+            .needStderrInResult(false);
+    logger.atInfo().log("Starting server, command=%s", serverCommand);
+    serverProcess = new CommandExecutor().start(serverCommand);
+
+    // Waits until the server starts successfully.
+    assertWithMessage("The server has not started in 15 seconds")
+        .that(serverStartedLatch.await(15L, SECONDS))
+        .isTrue();
+    assertWithMessage("The server does not start successfully")
+        .that(serverStartedSuccessfully.get())
+        .isTrue();
+
+    if (!isAtsMode) {
+      // Verifies the local device manager starts successfully.
+      assertWithMessage("The local device manager has not started in 5 seconds")
+          .that(deviceFound.await(15L, SECONDS))
+          .isTrue();
+    }
   }
 }

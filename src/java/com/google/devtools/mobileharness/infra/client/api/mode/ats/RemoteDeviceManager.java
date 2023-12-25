@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceGrpc;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabRequest;
@@ -114,7 +115,8 @@ class RemoteDeviceManager {
 
   @Inject
   RemoteDeviceManager(
-      AbstractScheduler scheduler, ListeningScheduledExecutorService scheduledThreadPool) {
+      @AtsModeAbstractScheduler AbstractScheduler scheduler,
+      ListeningScheduledExecutorService scheduledThreadPool) {
     this.scheduler = scheduler;
     this.scheduledThreadPool = scheduledThreadPool;
   }

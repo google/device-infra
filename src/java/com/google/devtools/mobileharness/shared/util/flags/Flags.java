@@ -298,6 +298,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAtsConsoleOlcServerLog = enableAtsConsoleOlcServerLogDefault;
 
+  private static final Flag<Boolean> enableAtsModeDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_ats_mode",
+      description = "Enable ATS mode if it's true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableAtsMode = enableAtsModeDefault;
+
   private static final Flag<Boolean> enableCloudLoggingDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

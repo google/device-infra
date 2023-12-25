@@ -31,6 +31,11 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
  * environments or labs.
  */
 public interface ExecMode {
+
+  /** Initializes the exec mode. */
+  default void initialize(EventBus globalInternalBus) throws InterruptedException {}
+  ;
+
   /** Creates allocator for allocating devices of the given job. */
   DeviceAllocator createDeviceAllocator(JobInfo jobInfo, EventBus globalInternalBus)
       throws MobileHarnessException, InterruptedException;
@@ -41,7 +46,7 @@ public interface ExecMode {
   }
 
   /** Creates a querier to query the information of the available devices/labs. */
-  DeviceQuerier createDeviceQuerier() throws MobileHarnessException, InterruptedException;
+  DeviceQuerier createDeviceQuerier();
 
   /** Creates a test runner for executing the given test on the given device. */
   DirectTestRunner createTestRunner(

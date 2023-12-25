@@ -18,14 +18,14 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
-import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeDeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.EmptyDeviceVerifier;
@@ -33,8 +33,7 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractSche
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import io.grpc.netty.NettyServerBuilder;
-import java.io.IOException;
+import io.grpc.BindableService;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -42,54 +41,35 @@ import javax.inject.Singleton;
  * ATS mode which supports allocating devices from multiple hosts in an in-memory scheduler.
  *
  * <p>The {@link #initialize} method much be called before it is used.
+ *
+ * <p>The returned services in {@link #getExtraServices} should also be added in the rpc server.
  */
 @Singleton
 public class AtsMode implements ExecMode {
-
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final RemoteDeviceManager remoteDeviceManager;
   private final DeviceQuerier deviceQuerier;
   private final AbstractScheduler scheduler;
   private final LabInfoService labInfoService;
-  private final ListeningExecutorService threadPool;
   private final DeviceVerifier deviceVerifier = new EmptyDeviceVerifier();
 
   @Inject
   AtsMode(
       RemoteDeviceManager remoteDeviceManager,
-      DeviceQuerier deviceQuerier,
-      AbstractScheduler scheduler,
-      LabInfoService labInfoService,
-      ListeningExecutorService threadPool) {
+      @AtsModeDeviceQuerier DeviceQuerier deviceQuerier,
+      @AtsModeAbstractScheduler AbstractScheduler scheduler,
+      LabInfoService labInfoService) {
     this.remoteDeviceManager = remoteDeviceManager;
     this.deviceQuerier = deviceQuerier;
     this.scheduler = scheduler;
     this.labInfoService = labInfoService;
-    this.threadPool = threadPool;
   }
 
-  public void initialize(int grpcPort) throws MobileHarnessException {
-    // Starts gRPC server.
-    try {
-      NettyServerBuilder.forPort(grpcPort)
-          .addService(remoteDeviceManager.getLabSyncService())
-          .addService(labInfoService)
-          .executor(threadPool)
-          .build()
-          .start();
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.CLIENT_ATS_MODE_START_GRPC_SERVER_ERROR,
-          String.format("Failed to start ATS mode gRPC server on port [%s]", grpcPort),
-          e);
-    }
-
+  @Override
+  public void initialize(EventBus globalInternalBus) {
     // Starts remote device manager and scheduler.
     remoteDeviceManager.start();
     scheduler.start();
-
-    logger.atInfo().log("ATS mode started, grpc_port=%s", grpcPort);
   }
 
   @Override
@@ -107,5 +87,10 @@ public class AtsMode implements ExecMode {
       DirectTestRunnerSetting setting, ListeningExecutorService threadPool) {
     // TODO: Implements it.
     throw new UnsupportedOperationException();
+  }
+
+  /** Returns the services to be installed in rpc server. */
+  public ImmutableList<BindableService> getExtraServices() {
+    return ImmutableList.of(labInfoService, remoteDeviceManager.getLabSyncService());
   }
 }

@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest.Device;
@@ -66,8 +67,10 @@ public class RemoteDeviceManagerTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
-  @Bind @Mock private AbstractScheduler scheduler;
+  @Bind @Mock @AtsModeAbstractScheduler private AbstractScheduler scheduler;
+
   @Bind private ListeningScheduledExecutorService scheduledThreadPool;
+
   @Bind private MasterGrpcStubHelper masterGrpcStubHelper;
 
   @Inject private RemoteDeviceManager remoteDeviceManager;

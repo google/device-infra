@@ -23,6 +23,7 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutur
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
@@ -66,6 +67,7 @@ import java.util.logging.Level;
 
 /** Execution mode which run tests on local devices. */
 public class LocalMode implements ExecMode {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** LocalDeviceManager is singleton and shared by all LocalMode jobs in the same machine. */
   private static volatile LocalDeviceManager localDeviceManager;
@@ -91,10 +93,12 @@ public class LocalMode implements ExecMode {
   private static final Object LOCAL_ENV_LOCK = new Object();
 
   /** Starts the singleton local device manager and the local scheduler, if has not. */
+  @Override
   public void initialize(EventBus globalInternalBus) throws InterruptedException {
     if (localDeviceManager == null) {
       synchronized (LOCAL_ENV_LOCK) {
         if (localDeviceManager == null) {
+          logger.atInfo().log("Starting local device manager");
           final ListeningExecutorService localEnvThreadPool =
               MoreExecutors.listeningDecorator(
                   Executors.newCachedThreadPool(

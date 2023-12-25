@@ -24,6 +24,9 @@ import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInte
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsModeModule;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
@@ -36,7 +39,9 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import java.time.Instant;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import javax.inject.Singleton;
 
@@ -44,17 +49,21 @@ import javax.inject.Singleton;
 class ServerModule extends AbstractModule {
 
   private final Instant serverStartTime;
+  private final boolean isAtsMode;
 
-  ServerModule(Instant serverStartTime) {
+  ServerModule(boolean isAtsMode, Instant serverStartTime) {
     this.serverStartTime = serverStartTime;
+    this.isAtsMode = isAtsMode;
   }
 
   @Override
   protected void configure() {
     install(new ControllerModule());
     install(new ClientApiModule());
+    install(new AtsModeModule());
 
     bind(ClientApi.class).in(Scopes.SINGLETON);
+    bind(ExecMode.class).to(isAtsMode ? AtsMode.class : LocalMode.class).in(Scopes.SINGLETON);
   }
 
   @Provides
@@ -71,8 +80,9 @@ class ServerModule extends AbstractModule {
 
   @Provides
   @Singleton
-  DeviceQuerier provideDeviceQuerier(LocalMode localMode) {
-    return localMode.createDeviceQuerier();
+  DeviceQuerier provideDeviceQuerier(ExecMode execMode)
+      throws InterruptedException, MobileHarnessException {
+    return execMode.createDeviceQuerier();
   }
 
   @Provides
@@ -88,6 +98,11 @@ class ServerModule extends AbstractModule {
     return MoreExecutors.listeningDecorator(
         Executors.newScheduledThreadPool(
             /* corePoolSize= */ 10, ThreadFactoryUtil.createThreadFactory("main-thread")));
+  }
+
+  @Provides
+  ExecutorService provideExecutorService(ListeningExecutorService listeningExecutorService) {
+    return listeningExecutorService;
   }
 
   @Provides

@@ -25,7 +25,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
-import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
+import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
@@ -38,6 +39,7 @@ import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
+import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.netty.NettyServerBuilder;
 import java.io.IOException;
@@ -60,7 +62,9 @@ public class OlcServer {
     // Creates and runs the server.
     Instant serverStartTime = Instant.now();
     OlcServer server =
-        Guice.createInjector(new ServerModule(serverStartTime)).getInstance(OlcServer.class);
+        Guice.createInjector(
+                new ServerModule(Flags.instance().enableAtsMode.getNonNull(), serverStartTime))
+            .getInstance(OlcServer.class);
     server.run(Arrays.asList(args));
   }
 
@@ -68,7 +72,7 @@ public class OlcServer {
   private final VersionService versionService;
   private final ControlService controlService;
   private final ListeningExecutorService threadPool;
-  private final LocalMode localMode;
+  private final ExecMode execMode;
   private final EventBus globalInternalEventBus;
   private final LogManager<GetLogResponse> logManager;
   private final ClientApi clientApi;
@@ -79,7 +83,7 @@ public class OlcServer {
       VersionService versionService,
       ControlService controlService,
       ListeningExecutorService threadPool,
-      LocalMode localMode,
+      ExecMode execMode,
       @GlobalInternalEventBus EventBus globalInternalEventBus,
       LogManager<GetLogResponse> logManager,
       ClientApi clientApi) {
@@ -87,7 +91,7 @@ public class OlcServer {
     this.versionService = versionService;
     this.controlService = controlService;
     this.threadPool = threadPool;
-    this.localMode = localMode;
+    this.execMode = execMode;
     this.globalInternalEventBus = globalInternalEventBus;
     this.logManager = logManager;
     this.clientApi = clientApi;
@@ -110,23 +114,25 @@ public class OlcServer {
 
     // Starts RPC server.
     int port = Flags.instance().olcServerPort.getNonNull();
-    Server server =
+    ImmutableList<BindableService> extraServices =
+        execMode instanceof AtsMode ? ((AtsMode) execMode).getExtraServices() : ImmutableList.of();
+    NettyServerBuilder serverBuilder =
         NettyServerBuilder.forPort(port)
+            .executor(threadPool)
             .addService(controlService)
             .addService(sessionService)
-            .addService(versionService)
-            .executor(threadPool)
-            .build();
+            .addService(versionService);
+    extraServices.forEach(serverBuilder::addService);
+    Server server = serverBuilder.build();
     controlService.setServer(server);
     server.start();
 
-    // Starts local device manager.
-    logger.atInfo().log("Starting local device manager");
+    logger.atInfo().log("Starting %s exec mode", execMode.getClass().getSimpleName());
     logFailure(
-        threadPool.submit(
-            threadRenaming(new LocalModeInitializer(), () -> "local-mode-initializer")),
+        threadPool.submit(threadRenaming(new ExecModeInitializer(), () -> "exec-mode-initializer")),
         Level.SEVERE,
-        "Fatal error while initializing local mode");
+        "Fatal error while initializing %s exec mode",
+        execMode.getClass().getSimpleName());
 
     logger.atInfo().log("OLC server started, port=%s", port);
 
@@ -135,11 +141,11 @@ public class OlcServer {
     System.exit(0);
   }
 
-  private class LocalModeInitializer implements Callable<Void> {
+  private class ExecModeInitializer implements Callable<Void> {
 
     @Override
     public Void call() throws InterruptedException {
-      localMode.initialize(globalInternalEventBus);
+      execMode.initialize(globalInternalEventBus);
       return null;
     }
   }

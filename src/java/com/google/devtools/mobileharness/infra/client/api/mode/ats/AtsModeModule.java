@@ -16,16 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
-import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeDeviceQuerier;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
-import com.google.inject.Provides;
-import java.util.concurrent.ExecutorService;
 import javax.inject.Singleton;
 
 /** Module for {@code AtsMode}. */
@@ -33,30 +29,10 @@ public class AtsModeModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(DeviceQuerier.class).to(DeviceQuerierImpl.class);
-    bind(AbstractScheduler.class).to(SimpleScheduler.class).in(Singleton.class);
-  }
-
-  @Provides
-  @Singleton
-  ListeningExecutorService provideListeningExecutorService() {
-    return ThreadPools.createStandardThreadPool("ats-mode-thread-pool");
-  }
-
-  @Provides
-  ExecutorService provideExecutorService(ListeningExecutorService listeningExecutorService) {
-    return listeningExecutorService;
-  }
-
-  @Provides
-  @Singleton
-  ListeningScheduledExecutorService provideListeningScheduledExecutorService() {
-    return ThreadPools.createStandardScheduledThreadPool(
-        "ats-mode-scheduled-thread-pool", /* corePoolSize= */ 5);
-  }
-
-  @Provides
-  Sleeper provideSleeper() {
-    return Sleeper.defaultSleeper();
+    bind(DeviceQuerier.class).annotatedWith(AtsModeDeviceQuerier.class).to(DeviceQuerierImpl.class);
+    bind(AbstractScheduler.class)
+        .annotatedWith(AtsModeAbstractScheduler.class)
+        .to(SimpleScheduler.class)
+        .in(Singleton.class);
   }
 }

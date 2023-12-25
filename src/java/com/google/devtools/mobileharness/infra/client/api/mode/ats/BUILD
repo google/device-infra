@@ -16,18 +16,25 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/ats:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/lab:__subpackages__",
     ],
 )
 
 java_library(
+    name = "annotations",
+    srcs = ["Annotations.java"],
+    deps = ["@maven//:javax_inject_jsr330_api"],
+)
+
+java_library(
     name = "ats_mode",
     srcs = ["AtsMode.java"],
     deps = [
+        ":annotations",
         ":lab_info_service",
         ":remote_device_manager",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
@@ -35,26 +42,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@io_grpc_grpc_java//netty",
+        "@io_grpc_grpc_java//core",
         "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
-    name = "module",
-    srcs = ["AtsModeModule.java"],
-    deps = [
-        ":device_querier",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/simple",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
-        "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
@@ -96,9 +86,24 @@ java_library(
 )
 
 java_library(
+    name = "module",
+    srcs = ["AtsModeModule.java"],
+    deps = [
+        ":annotations",
+        ":device_querier",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler/simple",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "remote_device_manager",
     srcs = ["RemoteDeviceManager.java"],
     deps = [
+        ":annotations",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
