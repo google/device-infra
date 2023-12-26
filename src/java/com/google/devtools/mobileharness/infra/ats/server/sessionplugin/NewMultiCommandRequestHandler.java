@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.CreateJobConfigUtil;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -33,7 +33,6 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.New
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
-import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
@@ -63,11 +62,11 @@ final class NewMultiCommandRequestHandler {
       Pattern.compile("android-[a-z]+\\.zip");
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
 
-  private final CreateJobConfigUtil createJobConfigUtil;
+  private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
   @Inject
-  NewMultiCommandRequestHandler(DeviceQuerier deviceQuerier) {
-    this.createJobConfigUtil = new CreateJobConfigUtil(deviceQuerier);
+  NewMultiCommandRequestHandler(SessionRequestHandlerUtil sessionRequestHandlerUtil) {
+    this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
   }
 
   void handle(NewMultiCommandRequest request, SessionInfo sessionInfo)
@@ -173,7 +172,7 @@ final class NewMultiCommandRequestHandler {
     }
     int shardCount = commandInfo.getShardCount();
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
-        createJobConfigUtil.getSubDeviceSpecList(deviceSerials, shardCount);
+        sessionRequestHandlerUtil.getSubDeviceSpecList(deviceSerials, shardCount);
     if (subDeviceSpecList.isEmpty()) {
       logger.atInfo().log("Found no devices to create the job config.");
       return Optional.empty();

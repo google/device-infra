@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.protobuf.TextFormat.shortDebugString;
@@ -28,10 +27,9 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.CreateJobConfigUtil;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
@@ -40,7 +38,6 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
-import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
@@ -49,7 +46,6 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.gson.Gson;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
@@ -65,7 +61,6 @@ import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Clock;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -91,7 +86,7 @@ class RunCommandHandler {
           "mobly_run_build_attributes.textproto",
           "mobly_run_result_attributes.textproto");
 
-  private final CreateJobConfigUtil createJobConfigUtil;
+  private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final LocalFileUtil localFileUtil;
   private final ModuleConfigurationHelper moduleConfigurationHelper;
   private final ConfigurationUtil configurationUtil;
@@ -100,18 +95,18 @@ class RunCommandHandler {
 
   @Inject
   RunCommandHandler(
-      DeviceQuerier deviceQuerier,
       LocalFileUtil localFileUtil,
       ModuleConfigurationHelper moduleConfigurationHelper,
       ConfigurationUtil configurationUtil,
       CompatibilityReportMerger compatibilityReportMerger,
-      CompatibilityReportCreator reportCreator) {
-    this.createJobConfigUtil = new CreateJobConfigUtil(deviceQuerier);
+      CompatibilityReportCreator reportCreator,
+      SessionRequestHandlerUtil sessionRequestHandlerUtil) {
     this.localFileUtil = localFileUtil;
     this.moduleConfigurationHelper = moduleConfigurationHelper;
     this.configurationUtil = configurationUtil;
     this.compatibilityReportMerger = compatibilityReportMerger;
     this.reportCreator = reportCreator;
+    this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
   }
 
   /**
@@ -125,7 +120,8 @@ class RunCommandHandler {
   @CanIgnoreReturnValue
   ImmutableList<String> addTradefedJobs(RunCommand command, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
-    Optional<JobInfo> jobInfo = createXtsTradefedTestJob(command);
+    Optional<JobInfo> jobInfo =
+        sessionRequestHandlerUtil.createXtsTradefedTestJob(generateSessionRequestInfo(command));
     if (jobInfo.isEmpty()) {
       logger.atInfo().log(
           "No tradefed jobs created, double check device availability. The run command -> %s",
@@ -138,105 +134,6 @@ class RunCommandHandler {
     logger.atInfo().log(
         "Added tradefed job[%s] to the session %s", jobId, sessionInfo.getSessionId());
     return ImmutableList.of(jobId);
-  }
-
-  private Optional<JobInfo> createXtsTradefedTestJob(RunCommand runCommand)
-      throws MobileHarnessException, InterruptedException {
-    String xtsRootDir = runCommand.getXtsRootDir();
-    if (!localFileUtil.isDirExist(xtsRootDir)) {
-      logger.atInfo().log(
-          "xTS root dir [%s] doesn't exist, skip creating tradefed jobs.", xtsRootDir);
-      return Optional.empty();
-    }
-
-    XtsType xtsType = runCommand.getXtsType();
-    ImmutableMap<String, Configuration> configsMap =
-        configurationUtil.getConfigsFromDirs(
-            ImmutableList.of(getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
-
-    List<String> modules = runCommand.getModuleNameList();
-    ImmutableSet<String> allTfModules =
-        configsMap.values().stream()
-            .map(config -> config.getMetadata().getXtsModule())
-            .collect(toImmutableSet());
-    ImmutableList<String> givenMatchedTfModules =
-        modules.stream().filter(allTfModules::contains).collect(toImmutableList());
-    boolean noGivenModuleForTf = !modules.isEmpty() && givenMatchedTfModules.isEmpty();
-    if (noGivenModuleForTf) {
-      logger.atInfo().log(
-          "Skip creating tradefed jobs as none of given modules is for tradefed module: %s",
-          modules);
-      return Optional.empty();
-    }
-
-    Optional<JobConfig> jobConfig =
-        createXtsTradefedTestJobConfig(runCommand, givenMatchedTfModules);
-    if (jobConfig.isEmpty()) {
-      return Optional.empty();
-    }
-    return Optional.of(JobInfoCreator.createJobInfo(jobConfig.get(), ImmutableList.of(), null));
-  }
-
-  @VisibleForTesting
-  Optional<JobConfig> createXtsTradefedTestJobConfig(
-      RunCommand runCommand, ImmutableList<String> tfModules)
-      throws MobileHarnessException, InterruptedException {
-    String testPlan = runCommand.getTestPlan();
-    String xtsRootDir = runCommand.getXtsRootDir();
-    String xtsType = runCommand.getXtsType().name();
-    List<String> deviceSerials = runCommand.getDeviceSerialList();
-    int shardCount = runCommand.getShardCount();
-    List<String> extraArgs = runCommand.getExtraArgList();
-
-    ImmutableList<SubDeviceSpec> subDeviceSpecList =
-        createJobConfigUtil.getSubDeviceSpecList(deviceSerials, shardCount);
-    if (subDeviceSpecList.isEmpty()) {
-      logger.atInfo().log("Found no devices to create the job config.");
-      return Optional.empty();
-    }
-
-    JobConfig.Builder jobConfigBuilder =
-        JobConfig.newBuilder()
-            .setName("xts-tradefed-test-job")
-            .setExecMode("local")
-            .setJobTimeoutSec(3 * 24 * 60 * 60)
-            .setTestTimeoutSec(3 * 24 * 60 * 60)
-            .setStartTimeoutSec(5 * 60)
-            .setPriority(Priority.HIGH)
-            .setTestAttempts(1)
-            .setTests(
-                StringList.newBuilder()
-                    .addContent(String.format("xts-tradefed-test-%s", testPlan)));
-    jobConfigBuilder.setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList));
-
-    Map<String, String> driverParams = new HashMap<>();
-    driverParams.put("xts_type", xtsType);
-    driverParams.put("xts_root_dir", xtsRootDir);
-    driverParams.put("xts_test_plan", testPlan);
-
-    ImmutableList<String> shardCountArg =
-        shardCount > 0
-            ? ImmutableList.of(String.format("--shard-count %s", shardCount))
-            : ImmutableList.of();
-    String runCommandArgs =
-        Joiner.on(' ')
-            .join(
-                Streams.concat(
-                        tfModules.stream().map(module -> String.format("-m %s", module)),
-                        shardCountArg.stream(),
-                        extraArgs.stream())
-                    .collect(toImmutableList()));
-    if (!runCommandArgs.isEmpty()) {
-      driverParams.put("run_command_args", runCommandArgs);
-    }
-
-    jobConfigBuilder.setDriver(
-        Driver.newBuilder().setName("XtsTradefedTest").setParam(new Gson().toJson(driverParams)));
-
-    JobConfig jobConfig = jobConfigBuilder.build();
-    logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
-
-    return Optional.of(jobConfig);
   }
 
   /**
@@ -530,6 +427,27 @@ class RunCommandHandler {
                   .build(),
           AtsSessionPluginOutput.class);
     }
+  }
+
+  private SessionRequestHandlerUtil.SessionRequestInfo generateSessionRequestInfo(
+      RunCommand runCommand) {
+    SessionRequestHandlerUtil.SessionRequestInfo.Builder builder =
+        SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            .setTestPlan(runCommand.getTestPlan())
+            .setXtsRootDir(runCommand.getXtsRootDir())
+            .setXtsType(runCommand.getXtsType());
+
+    builder.setDeviceSerials(runCommand.getDeviceSerialList());
+    builder.setModuleNames(runCommand.getModuleNameList());
+    builder.setExtraArgs(runCommand.getExtraArgList());
+
+    if (runCommand.hasShardCount()) {
+      builder.setShardCount(runCommand.getShardCount());
+    }
+    if (runCommand.hasPythonPkgIndexUrl()) {
+      builder.setPythonPkgIndexUrl(runCommand.getPythonPkgIndexUrl());
+    }
+    return builder.build();
   }
 
   /**

@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
@@ -45,8 +46,6 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -55,17 +54,10 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
-import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -108,235 +100,13 @@ public final class RunCommandHandlerTest {
   @Bind @Mock private CompatibilityReportCreator reportCreator;
 
   @Inject private RunCommandHandler runCommandHandler;
+  @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     runCommandHandler = spy(runCommandHandler);
     doReturn(TIMESTAMP_DIR_NAME).when(runCommandHandler).getTimestampDirName();
-  }
-
-  @Test
-  public void createXtsTradefedTestJobConfig_pickOneDevice() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
-    Optional<JobConfig> jobConfigOpt =
-        runCommandHandler.createXtsTradefedTestJobConfig(
-            RunCommand.newBuilder()
-                .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .build(),
-            ImmutableList.of());
-
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
-
-    // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
-    Map<String, String> driverParamsMap =
-        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
-    assertThat(driverParamsMap)
-        .containsExactly(
-            "xts_type", "CTS", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
-  }
-
-  @Test
-  public void createXtsTradefedTestJobConfig_shardCount2_pick2Devices() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
-    Optional<JobConfig> jobConfigOpt =
-        runCommandHandler.createXtsTradefedTestJobConfig(
-            RunCommand.newBuilder()
-                .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setShardCount(2)
-                .build(),
-            ImmutableList.of());
-
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(
-            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build(),
-            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
-  }
-
-  @Test
-  public void createXtsTradefedTestJobConfig_shardCount3_only2OnlineDevices_pick2Devices()
-      throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
-    Optional<JobConfig> jobConfigOpt =
-        runCommandHandler.createXtsTradefedTestJobConfig(
-            RunCommand.newBuilder()
-                .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setShardCount(3)
-                .build(),
-            ImmutableList.of());
-
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(
-            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build(),
-            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
-  }
-
-  @Test
-  public void createXtsTradefedTestJobConfig_noOnlineDevices_noJobConfig() throws Exception {
-    when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
-
-    Optional<JobConfig> jobConfigOpt =
-        runCommandHandler.createXtsTradefedTestJobConfig(
-            RunCommand.newBuilder()
-                .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .build(),
-            ImmutableList.of());
-
-    assertThat(jobConfigOpt).isEmpty();
-  }
-
-  @Test
-  public void createXtsTradefedTestJobConfig_withGivenSerial() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
-    Optional<JobConfig> jobConfigOpt =
-        runCommandHandler.createXtsTradefedTestJobConfig(
-            RunCommand.newBuilder()
-                .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .addDeviceSerial("device_id_1")
-                .addModuleName("module1")
-                .setShardCount(2)
-                .addExtraArg("--logcat-on-failure")
-                .build(),
-            ImmutableList.of("module1"));
-
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidRealDevice")
-                .setDimensions(StringMap.newBuilder().putContent("serial", "device_id_1"))
-                .build());
-
-    // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
-    Map<String, String> driverParamsMap =
-        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
-    assertThat(driverParamsMap)
-        .containsExactly(
-            "xts_type",
-            "CTS",
-            "xts_root_dir",
-            XTS_ROOT_DIR_PATH,
-            "xts_test_plan",
-            "cts",
-            "run_command_args",
-            "-m module1 --shard-count 2 --logcat-on-failure");
-  }
-
-  @Test
-  public void createXtsTradefedTestJobConfig_someGivenSerialsNotExist_pickExistingDevicesOnly()
-      throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
-                .build());
-
-    Optional<JobConfig> jobConfigOpt =
-        runCommandHandler.createXtsTradefedTestJobConfig(
-            RunCommand.newBuilder()
-                .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .addDeviceSerial("device_id_1")
-                .addDeviceSerial("not_exist_device")
-                .addDeviceSerial("device_id_3")
-                .build(),
-            ImmutableList.of());
-
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidRealDevice")
-                .setDimensions(StringMap.newBuilder().putContent("serial", "device_id_1"))
-                .build(),
-            SubDeviceSpec.newBuilder()
-                .setType("AndroidRealDevice")
-                .setDimensions(StringMap.newBuilder().putContent("serial", "device_id_3"))
-                .build());
-  }
-
-  @Test
-  public void createXtsTradefedTestJobConfig_allGivenSerialsNotExist_noJobConfig()
-      throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
-                .build());
-
-    Optional<JobConfig> jobConfigOpt =
-        runCommandHandler.createXtsTradefedTestJobConfig(
-            RunCommand.newBuilder()
-                .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .addDeviceSerial("device_id_4")
-                .addDeviceSerial("device_id_5")
-                .build(),
-            ImmutableList.of());
-
-    assertThat(jobConfigOpt).isEmpty();
   }
 
   @Test
@@ -456,12 +226,12 @@ public final class RunCommandHandlerTest {
     runCommandHandler =
         spy(
             new RunCommandHandler(
-                deviceQuerier,
                 new LocalFileUtil(),
                 moduleConfigurationHelper,
                 configurationUtil,
                 compatibilityReportMerger,
-                reportCreator));
+                reportCreator,
+                sessionRequestHandlerUtil));
     doReturn(TIMESTAMP_DIR_NAME).when(runCommandHandler).getTimestampDirName();
     doNothing().when(runCommandHandler).cleanUpJobGenDirs(any());
 

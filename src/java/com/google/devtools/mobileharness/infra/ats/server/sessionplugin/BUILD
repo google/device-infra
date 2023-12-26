@@ -44,8 +44,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:create_job_config_util",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/shared/util/jobconfig:job_info_creator",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
