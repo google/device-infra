@@ -16,6 +16,7 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/lab:__subpackages__",
     ],
 )

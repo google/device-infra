@@ -25,6 +25,11 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
@@ -51,10 +56,11 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.V
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
-import com.google.devtools.mobileharness.infra.master.rpc.proto.LabInfoServiceGrpc;
-import com.google.devtools.mobileharness.infra.master.rpc.proto.LabInfoServiceGrpc.LabInfoServiceBlockingStub;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabInfoServiceProto.GetLabInfoRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabInfoServiceProto.GetLabInfoResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
+import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
@@ -64,6 +70,9 @@ import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.inject.Guice;
+import com.google.inject.testing.fieldbinder.Bind;
+import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Any;
 import com.google.protobuf.FieldMask;
 import io.grpc.ManagedChannel;
@@ -73,7 +82,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.inject.Inject;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -86,8 +97,6 @@ import org.junit.runners.JUnit4;
 public class OlcServerIntegrationTest {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-  private final StringBuilder serverStdoutBuilder = new StringBuilder();
-  private final StringBuilder serverStderrBuilder = new StringBuilder();
 
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
 
@@ -96,51 +105,111 @@ public class OlcServerIntegrationTest {
       new TestWatcher() {
 
         @Override
+        protected void starting(Description description) {
+          // Prints test name to help debug server output in test logs.
+          logger.atInfo().log(
+              "\n========================================\n"
+                  + "Starting test: %s\n"
+                  + "========================================\n",
+              description.getDisplayName());
+        }
+
+        @Override
         protected void failed(Throwable e, Description description) {
-          // Adds lab server stdout/stderr to a failed test.
-          Exception labServerOutput =
+          // Adds server stdout/stderr to a failed test.
+          Exception serverOutput =
               new IllegalStateException(
                   String.format(
-                      "lab_server_stdout=[%s], lab_server_stderr=[%s]",
-                      serverStdoutBuilder, serverStderrBuilder));
-          labServerOutput.setStackTrace(new StackTraceElement[0]);
-          e.addSuppressed(labServerOutput);
+                      "\nolc_server_stdout:\n"
+                          + "=====BEGIN===================================\n"
+                          + "%s\n"
+                          + "=====END=====================================\n"
+                          + "olc_server_stderr:\n"
+                          + "=====BEGIN===================================\n"
+                          + "%s\n"
+                          + "=====END=====================================\n"
+                          + "lab_server_stdout:\n"
+                          + "=====BEGIN===================================\n"
+                          + "%s\n"
+                          + "=====END=====================================\n"
+                          + "lab_server_stderr:\n"
+                          + "=====BEGIN===================================\n"
+                          + "%s\n"
+                          + "=====END=====================================\n",
+                      olcServerStdoutBuilder,
+                      olcServerStderrBuilder,
+                      labServerStdoutBuilder,
+                      labServerStderrBuilder));
+          serverOutput.setStackTrace(new StackTraceElement[0]);
+          e.addSuppressed(serverOutput);
         }
       };
 
-  private static final String SERVER_FILE_PATH =
+  private static final String OLC_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "javatests/com/google/devtools/mobileharness"
               + "/infra/client/longrunningservice/OlcServerForTesting_deploy.jar");
+  private static final String LAB_SERVER_FILE_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "java/com/google/wireless/qa/mobileharness/lab/lab_server_oss_deploy.jar");
 
-  private CommandProcess serverProcess;
+  private StringBuilder olcServerStdoutBuilder;
+  private StringBuilder olcServerStderrBuilder;
+
+  private StringBuilder labServerStdoutBuilder;
+  private StringBuilder labServerStderrBuilder;
+
+  private int olcServerPort;
+  private ManagedChannel olcServerChannel;
+  private CommandProcess olcServerProcess;
+
+  private CommandProcess labServerProcess;
+
+  @Bind private MasterGrpcStubHelper masterGrpcStubHelper;
+
+  @Inject private LabInfoGrpcStub labInfoGrpcStub;
+
+  @Before
+  public void setUp() throws Exception {
+    olcServerStdoutBuilder = new StringBuilder();
+    olcServerStderrBuilder = new StringBuilder();
+
+    labServerStdoutBuilder = new StringBuilder();
+    labServerStderrBuilder = new StringBuilder();
+
+    olcServerPort = PortProber.pickUnusedPort();
+    olcServerChannel = ChannelFactory.createLocalChannel(olcServerPort, directExecutor());
+    masterGrpcStubHelper = new MasterGrpcStubHelper(olcServerChannel);
+
+    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+  }
 
   @After
   public void tearDown() {
-    if (serverProcess != null) {
-      serverProcess.kill();
+    if (olcServerProcess != null) {
+      olcServerProcess.kill();
+    }
+    if (labServerProcess != null) {
+      labServerProcess.kill();
     }
   }
 
   @Test
   public void noOpTest_localMode() throws Exception {
-    int serverPort = PortProber.pickUnusedPort();
-    StringBuilder serverLogBuilder = new StringBuilder();
-
-    startAtsServer(false, serverPort, serverStdoutBuilder, serverStderrBuilder);
-    ManagedChannel channel = ChannelFactory.createLocalChannel(serverPort, directExecutor());
+    startServers(false);
 
     // Checks the server version.
-    VersionStub versionStub = new VersionStub(channel);
+    VersionStub versionStub = new VersionStub(olcServerChannel);
     assertThat(versionStub.getVersion())
         .isEqualTo(
             GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
 
     // Gets the server log.
-    ControlStub controlStub = new ControlStub(channel);
+    StringBuilder serverLogBuilder = new StringBuilder();
+    ControlStub controlStub = new ControlStub(olcServerChannel);
     StreamObserver<GetLogRequest> requestObserver =
         controlStub.getLog(
-            new StreamObserver<GetLogResponse>() {
+            new StreamObserver<>() {
               @Override
               public void onNext(GetLogResponse response) {
                 response.getLogRecords().getLogRecordList().stream()
@@ -161,7 +230,7 @@ public class OlcServerIntegrationTest {
     requestObserver.onNext(GetLogRequest.newBuilder().setEnable(true).build());
 
     // Creates a session.
-    SessionStub sessionStub = new SessionStub(channel);
+    SessionStub sessionStub = new SessionStub(olcServerChannel);
     String pluginClassName =
         "com.google.devtools.mobileharness.infra.client.longrunningservice"
             + ".SessionPluginForTesting";
@@ -240,14 +309,14 @@ public class OlcServerIntegrationTest {
     assertThat(allSessions).containsExactly(getSessionResponse.getSessionDetail());
 
     // Verifies the server is killed.
-    assertThat(serverProcess.isAlive()).isTrue();
+    assertThat(olcServerProcess.isAlive()).isTrue();
     killServerResponse = controlStub.killServer();
     assertThat(killServerResponse)
         .isEqualTo(KillServerResponse.newBuilder().setSuccessful(true).build());
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
-    assertThat(serverProcess.isAlive()).isFalse();
+    assertThat(olcServerProcess.isAlive()).isFalse();
 
-    String serverStderr = serverStderrBuilder.toString();
+    String serverStderr = olcServerStderrBuilder.toString();
 
     // Verifies the driver has run.
     assertWithMessage("server stderr").that(serverStderr).contains("Sleep for 2 seconds");
@@ -267,89 +336,179 @@ public class OlcServerIntegrationTest {
 
   @Test
   public void queryLabInfoService_atsMode() throws Exception {
-    int serverPort = PortProber.pickUnusedPort();
-    StringBuilder serverStdoutBuilder = new StringBuilder();
-    StringBuilder serverStderrBuilder = new StringBuilder();
-    startAtsServer(true, serverPort, serverStdoutBuilder, serverStderrBuilder);
-    ManagedChannel channel = ChannelFactory.createLocalChannel(serverPort, directExecutor());
+    startServers(true);
+
     // Checks the server version.
-    VersionStub versionStub = new VersionStub(channel);
+    VersionStub versionStub = new VersionStub(olcServerChannel);
     assertThat(versionStub.getVersion())
         .isEqualTo(
             GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
 
-    LabInfoServiceBlockingStub labInfoServiceStub = LabInfoServiceGrpc.newBlockingStub(channel);
-    assertThat(
-            labInfoServiceStub
-                .getLabInfo(GetLabInfoRequest.newBuilder().build())
-                .getLabQueryResult()
-                .getLabView())
-        .isEqualTo(LabView.getDefaultInstance());
+    // Checks the lab info service.
+    assertThat(labInfoGrpcStub.getLabInfo(GetLabInfoRequest.getDefaultInstance()))
+        .comparingExpectedFieldsOnly()
+        .isEqualTo(
+            GetLabInfoResponse.newBuilder()
+                .setLabQueryResult(
+                    LabQueryResult.newBuilder()
+                        .setLabView(
+                            LabView.newBuilder()
+                                .addLabData(
+                                    LabData.newBuilder()
+                                        .setDeviceList(
+                                            DeviceList.newBuilder()
+                                                .addDeviceInfo(
+                                                    DeviceInfo.newBuilder()
+                                                        .setDeviceLocator(
+                                                            DeviceLocator.newBuilder()
+                                                                .setId("NoOpDevice-0")))))))
+                .build());
   }
 
-  private void startAtsServer(
-      boolean isAtsMode,
-      int serverPort,
-      StringBuilder serverStdoutBuilder,
-      StringBuilder serverStderrBuilder)
+  private void startServers(boolean enableAtsMode)
       throws IOException, CommandStartException, InterruptedException {
-    String serverPublicDirPath = tmpFolder.newFolder("olc_server_public_dir").toString();
+    CommandExecutor commandExecutor = new CommandExecutor();
 
-    CountDownLatch serverStartedLatch = new CountDownLatch(1);
-    AtomicBoolean serverStartedSuccessfully = new AtomicBoolean();
-    CountDownLatch deviceFound = new CountDownLatch(1);
-    // Starts the server.
-    Command serverCommand =
+    // Starts the OLC server.
+    CountDownLatch olcServerStartedLatch = new CountDownLatch(1);
+    AtomicBoolean olcServerStartedSuccessfully = new AtomicBoolean();
+    CountDownLatch olcServerLocalDeviceFound = new CountDownLatch(1);
+    CountDownLatch olcServerRemoteDeviceFound = new CountDownLatch(1);
+
+    Command olcServerCommand =
         Command.of(
                 new SystemUtil()
                     .getJavaCommandCreator()
                     .createJavaCommand(
-                        SERVER_FILE_PATH,
+                        OLC_SERVER_FILE_PATH,
                         ImmutableList.of(
-                            "--enable_ats_mode=" + isAtsMode,
-                            "--olc_server_port=" + serverPort,
+                            "--enable_ats_mode=" + enableAtsMode,
+                            "--olc_server_port=" + olcServerPort,
                             "--no_op_device_num=1",
                             "--detect_adb_device=false",
-                            "--public_dir=" + serverPublicDirPath),
+                            "--public_dir="
+                                + tmpFolder.newFolder("olc_server_public_dir").toString()),
                         ImmutableList.of()))
             .onStdout(
                 does(
                     stdout -> {
-                      System.out.printf("server_stdout %s\n", stdout);
-                      serverStdoutBuilder.append(stdout).append('\n');
+                      System.out.printf("olc_server_stdout %s\n", stdout);
+                      olcServerStdoutBuilder.append(stdout).append('\n');
                     }))
             .onStderr(
                 does(
                     stderr -> {
-                      System.err.printf("server_stderr %s\n", stderr);
-                      serverStderrBuilder.append(stderr).append('\n');
+                      System.err.printf("olc_server_stderr %s\n", stderr);
+                      olcServerStderrBuilder.append(stderr).append('\n');
 
                       if (stderr.contains("OLC server started")) {
-                        serverStartedSuccessfully.set(true);
-                        serverStartedLatch.countDown();
+                        olcServerStartedSuccessfully.set(true);
+                        olcServerStartedLatch.countDown();
                       } else if (stderr.contains("New device NoOpDevice-0")) {
-                        deviceFound.countDown();
+                        olcServerLocalDeviceFound.countDown();
+                      } else if (stderr.contains("Sign up lab")
+                          && stderr.contains("NoOpDevice-0")) {
+                        olcServerRemoteDeviceFound.countDown();
                       }
                     }))
-            .onExit(result -> serverStartedLatch.countDown())
+            .onExit(result -> olcServerStartedLatch.countDown())
             .redirectStderr(false)
             .needStdoutInResult(false)
             .needStderrInResult(false);
-    logger.atInfo().log("Starting server, command=%s", serverCommand);
-    serverProcess = new CommandExecutor().start(serverCommand);
+    logger.atInfo().log("Starting OLC server, command=%s", olcServerCommand);
+    olcServerProcess = commandExecutor.start(olcServerCommand);
 
     // Waits until the server starts successfully.
-    assertWithMessage("The server has not started in 15 seconds")
-        .that(serverStartedLatch.await(15L, SECONDS))
+    assertWithMessage("The OLC server has not started in 15 seconds")
+        .that(olcServerStartedLatch.await(15L, SECONDS))
         .isTrue();
-    assertWithMessage("The server does not start successfully")
-        .that(serverStartedSuccessfully.get())
+    assertWithMessage("The OLC server does not start successfully")
+        .that(olcServerStartedSuccessfully.get())
         .isTrue();
 
-    if (!isAtsMode) {
+    // Starts the lab server.
+    if (enableAtsMode) {
+      CountDownLatch labServerStartedOrFailedToStart = new CountDownLatch(1);
+      AtomicBoolean labServerStartedSuccessfully = new AtomicBoolean();
+      CountDownLatch labServerLocalDeviceFound = new CountDownLatch(1);
+
+      int labServerGrpcPort = PortProber.pickUnusedPort();
+      int labServerRpcPort = PortProber.pickUnusedPort();
+      int labServerSocketPort = PortProber.pickUnusedPort();
+
+      Command labServerCommand =
+          Command.of(
+                  new SystemUtil()
+                      .getJavaCommandCreator()
+                      .createJavaCommand(
+                          LAB_SERVER_FILE_PATH,
+                          ImmutableList.of(
+                              "--detect_adb_device=false",
+                              "--enable_api_config=false",
+                              "--enable_cloud_logging=false",
+                              "--enable_emulator_detection=false",
+                              "--enable_external_master_server=true",
+                              "--enable_file_cleaner=false",
+                              "--enable_stubby_rpc_server=false",
+                              "--grpc_port=" + labServerGrpcPort,
+                              "--master_grpc_target=localhost:" + olcServerPort,
+                              "--no_op_device_num=1",
+                              "--public_dir="
+                                  + tmpFolder.newFolder("lab_server_public_dir").toString(),
+                              "--rpc_port=" + labServerRpcPort,
+                              "--serv_via_cloud_rpc=false",
+                              "--socket_port=" + labServerSocketPort,
+                              "--tmp_dir_root="
+                                  + tmpFolder.newFolder("lab_server_tmp_dir").toString()),
+                          ImmutableList.of()))
+              .onStdout(
+                  does(
+                      stdout -> {
+                        System.out.printf("lab_server_stdout %s\n", stdout);
+                        labServerStdoutBuilder.append(stdout).append('\n');
+                      }))
+              .onStderr(
+                  does(
+                      stderr -> {
+                        System.err.printf("lab_server_stderr %s\n", stderr);
+                        labServerStderrBuilder.append(stderr).append('\n');
+
+                        if (stderr.contains("UTRS successfully started")) {
+                          labServerStartedSuccessfully.set(true);
+                          labServerStartedOrFailedToStart.countDown();
+                        } else if (stderr.contains("New device NoOpDevice-0")) {
+                          labServerLocalDeviceFound.countDown();
+                        }
+                      }))
+              .onExit(result -> labServerStartedOrFailedToStart.countDown())
+              .redirectStderr(false)
+              .needStdoutInResult(false)
+              .needStderrInResult(false);
+
+      logger.atInfo().log("Starting lab server server, command=%s", labServerCommand);
+      labServerProcess = commandExecutor.start(labServerCommand);
+
+      // Waits until lab server starts and detects devices successfully.
+      assertWithMessage("Lab server didn't start in 60 seconds")
+          .that(labServerStartedOrFailedToStart.await(60L, SECONDS))
+          .isTrue();
+      assertWithMessage("Lab server didn't start successfully")
+          .that(labServerStartedSuccessfully.get())
+          .isTrue();
+      assertWithMessage("Lab server didn't detect devices in 15 seconds")
+          .that(labServerLocalDeviceFound.await(15L, SECONDS))
+          .isTrue();
+    }
+
+    if (enableAtsMode) {
+      // Verifies the remote device manager receives device signup successfully.
+      assertWithMessage("The remote device manager has not received device signup in 15 seconds")
+          .that(olcServerRemoteDeviceFound.await(15L, SECONDS))
+          .isTrue();
+    } else {
       // Verifies the local device manager starts successfully.
-      assertWithMessage("The local device manager has not started in 5 seconds")
-          .that(deviceFound.await(15L, SECONDS))
+      assertWithMessage("The local device manager has not started in 15 seconds")
+          .that(olcServerLocalDeviceFound.await(15L, SECONDS))
           .isTrue();
     }
   }
