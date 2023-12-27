@@ -306,6 +306,22 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAtsMode = enableAtsModeDefault;
 
+  private static final Flag<Boolean> enableClientExperimentManagerDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_client_experiment_manager",
+      description = "Whether to enable client experiment manager. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableClientExperimentManager = enableClientExperimentManagerDefault;
+
+  private static final Flag<Boolean> enableClientFileTransferDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_client_file_transfer",
+      description = "Whether to enable client file transfer. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableClientFileTransfer = enableClientFileTransferDefault;
+
   private static final Flag<Boolean> enableCloudLoggingDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -340,6 +356,14 @@ public class Flags {
           "Turn device airplane mode on or off. True is on, false is off. Default is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDeviceAirplaneMode = enableDeviceAirplaneModeDefault;
+
+  private static final Flag<Boolean> enableDeviceConfigManagerDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_device_config_manager",
+      description = "Whether to enable device config manager. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableDeviceConfigManager = enableDeviceConfigManagerDefault;
 
   private static final Flag<Boolean> enableDeviceResourceServiceDefault = Flag.value(false);
 
@@ -427,6 +451,14 @@ public class Flags {
       description = "Whether to enable stubby RPC server. default is true.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableStubbyRpcServer = enableStubbyRpcServerDefault;
+
+  private static final Flag<Boolean> enableTraceSpanProcessorDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_trace_span_processor",
+      description = "Whether to enable trace span processor. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableTraceSpanProcessor = enableTraceSpanProcessorDefault;
 
   private static final Flag<Boolean> enableXtsDynamicDownloaderDefault = Flag.value(false);
 

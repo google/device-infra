@@ -25,6 +25,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -79,6 +80,7 @@ import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -153,6 +155,48 @@ public class OlcServerIntegrationTest {
       RunfilesUtil.getRunfilesLocation(
           "java/com/google/wireless/qa/mobileharness/lab/lab_server_oss_deploy.jar");
 
+  private static final String PLUGIN_CLASS_NAME =
+      "com.google.devtools.mobileharness.infra.client.longrunningservice.SessionPluginForTesting";
+  private static final CreateSessionRequest CREATE_SESSION_REQUEST =
+      CreateSessionRequest.newBuilder()
+          .setSessionConfig(
+              SessionConfig.newBuilder()
+                  .setSessionName("session_with_no_op_test")
+                  .setSessionPluginConfigs(
+                      SessionPluginConfigs.newBuilder()
+                          .addSessionPluginConfig(
+                              SessionPluginConfig.newBuilder()
+                                  .setLoadingConfig(
+                                      SessionPluginLoadingConfig.newBuilder()
+                                          .setPluginClassName(PLUGIN_CLASS_NAME))
+                                  .setExecutionConfig(
+                                      SessionPluginExecutionConfig.newBuilder()
+                                          .setConfig(
+                                              Any.pack(
+                                                  SessionPluginForTestingConfig.newBuilder()
+                                                      .setNoOpDriverSleepTimeSec(2)
+                                                      .build()))
+                                          .build()))))
+          .build();
+  private static final GetSessionResponse GET_SESSION_RESPONSE =
+      GetSessionResponse.newBuilder()
+          .setSessionDetail(
+              SessionDetail.newBuilder()
+                  .setSessionOutput(
+                      SessionOutput.newBuilder()
+                          .putSessionProperty("job_result", "PASS")
+                          .putSessionProperty("job_result_from_job_event", "PASS")
+                          .putSessionPluginOutput(
+                              PLUGIN_CLASS_NAME,
+                              SessionPluginOutput.newBuilder()
+                                  .setOutput(
+                                      Any.pack(
+                                          SessionPluginForTestingOutput.newBuilder()
+                                              .setJobResultTypeName("PASS")
+                                              .build()))
+                                  .build())))
+          .build();
+
   private StringBuilder olcServerStdoutBuilder;
   private StringBuilder olcServerStderrBuilder;
 
@@ -205,7 +249,7 @@ public class OlcServerIntegrationTest {
             GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
 
     // Gets the server log.
-    StringBuilder serverLogBuilder = new StringBuilder();
+    StringBuilder olcServerLogBuilder = new StringBuilder();
     ControlStub controlStub = new ControlStub(olcServerChannel);
     StreamObserver<GetLogRequest> requestObserver =
         controlStub.getLog(
@@ -214,7 +258,7 @@ public class OlcServerIntegrationTest {
               public void onNext(GetLogResponse response) {
                 response.getLogRecords().getLogRecordList().stream()
                     .map(LogRecord::getFormattedLogRecord)
-                    .forEach(serverLogBuilder::append);
+                    .forEach(olcServerLogBuilder::append);
               }
 
               @Override
@@ -231,31 +275,7 @@ public class OlcServerIntegrationTest {
 
     // Creates a session.
     SessionStub sessionStub = new SessionStub(olcServerChannel);
-    String pluginClassName =
-        "com.google.devtools.mobileharness.infra.client.longrunningservice"
-            + ".SessionPluginForTesting";
-    CreateSessionRequest createSessionRequest =
-        CreateSessionRequest.newBuilder()
-            .setSessionConfig(
-                SessionConfig.newBuilder()
-                    .setSessionName("session_with_no_op_test")
-                    .setSessionPluginConfigs(
-                        SessionPluginConfigs.newBuilder()
-                            .addSessionPluginConfig(
-                                SessionPluginConfig.newBuilder()
-                                    .setLoadingConfig(
-                                        SessionPluginLoadingConfig.newBuilder()
-                                            .setPluginClassName(pluginClassName))
-                                    .setExecutionConfig(
-                                        SessionPluginExecutionConfig.newBuilder()
-                                            .setConfig(
-                                                Any.pack(
-                                                    SessionPluginForTestingConfig.newBuilder()
-                                                        .setNoOpDriverSleepTimeSec(2)
-                                                        .build()))
-                                            .build()))))
-            .build();
-    CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
+    CreateSessionResponse createSessionResponse = sessionStub.createSession(CREATE_SESSION_REQUEST);
     SessionId sessionId = createSessionResponse.getSessionId();
 
     // Verifies the server cannot be killed.
@@ -264,43 +284,11 @@ public class OlcServerIntegrationTest {
         .isEqualTo(KillServerResponse.newBuilder().setSuccessful(false).build());
 
     // Waits until the session finishes.
-    GetSessionResponse getSessionResponse;
-    do {
-      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1L));
-      getSessionResponse =
-          sessionStub.getSession(
-              GetSessionRequest.newBuilder()
-                  .setSessionId(sessionId)
-                  .setFieldMask(FieldMask.newBuilder().addPaths("session_detail.session_status"))
-                  .build());
-    } while (!getSessionResponse
-        .getSessionDetail()
-        .getSessionStatus()
-        .equals(SessionStatus.SESSION_FINISHED));
+    GetSessionResponse getSessionResponse =
+        waitUntilSessionFinish(sessionStub, sessionId, Duration.ofMinutes(1L));
 
     // Checks the session output.
-    getSessionResponse =
-        sessionStub.getSession(GetSessionRequest.newBuilder().setSessionId(sessionId).build());
-    assertThat(getSessionResponse)
-        .comparingExpectedFieldsOnly()
-        .isEqualTo(
-            GetSessionResponse.newBuilder()
-                .setSessionDetail(
-                    SessionDetail.newBuilder()
-                        .setSessionOutput(
-                            SessionOutput.newBuilder()
-                                .putSessionProperty("job_result", "PASS")
-                                .putSessionProperty("job_result_from_job_event", "PASS")
-                                .putSessionPluginOutput(
-                                    pluginClassName,
-                                    SessionPluginOutput.newBuilder()
-                                        .setOutput(
-                                            Any.pack(
-                                                SessionPluginForTestingOutput.newBuilder()
-                                                    .setJobResultTypeName("PASS")
-                                                    .build()))
-                                        .build())))
-                .build());
+    assertThat(getSessionResponse).comparingExpectedFieldsOnly().isEqualTo(GET_SESSION_RESPONSE);
 
     List<SessionDetail> allSessions =
         sessionStub
@@ -316,26 +304,26 @@ public class OlcServerIntegrationTest {
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
     assertThat(olcServerProcess.isAlive()).isFalse();
 
-    String serverStderr = olcServerStderrBuilder.toString();
+    String olcServerStderr = olcServerStderrBuilder.toString();
 
     // Verifies the driver has run.
-    assertWithMessage("server stderr").that(serverStderr).contains("Sleep for 2 seconds");
+    assertWithMessage("OLC server stderr").that(olcServerStderr).contains("Sleep for 2 seconds");
 
     // Checks warnings in log.
     assertWithMessage(
             "A successful test run should not print exception stack traces, which will confuse"
                 + " users and affect debuggability when debugging a failed one.\n"
-                + "server stderr")
-        .that(serverStderr)
+                + "OLC server stderr")
+        .that(olcServerStderr)
         .doesNotContain("\tat ");
 
-    // Checks the server log.
-    String serverLog = serverLogBuilder.toString();
-    assertWithMessage("server log").that(serverLog).contains("Sleep for 2 seconds");
+    // Checks the OLC server log.
+    String olcServerLog = olcServerLogBuilder.toString();
+    assertWithMessage("server log").that(olcServerLog).contains("Sleep for 2 seconds");
   }
 
   @Test
-  public void queryLabInfoService_atsMode() throws Exception {
+  public void noOpTest_atsMode() throws Exception {
     startServers(true);
 
     // Checks the server version.
@@ -363,6 +351,35 @@ public class OlcServerIntegrationTest {
                                                             DeviceLocator.newBuilder()
                                                                 .setId("NoOpDevice-0")))))))
                 .build());
+
+    // Creates a session.
+    SessionStub sessionStub = new SessionStub(olcServerChannel);
+    CreateSessionResponse createSessionResponse = sessionStub.createSession(CREATE_SESSION_REQUEST);
+    SessionId sessionId = createSessionResponse.getSessionId();
+
+    // Waits until the session finishes.
+    GetSessionResponse getSessionResponse =
+        waitUntilSessionFinish(sessionStub, sessionId, Duration.ofMinutes(1L));
+
+    // Checks the session output.
+    assertThat(getSessionResponse).comparingExpectedFieldsOnly().isEqualTo(GET_SESSION_RESPONSE);
+
+    String olcServerStderr = olcServerStderrBuilder.toString();
+    String labServerStderr = labServerStderrBuilder.toString();
+
+    // Verifies the driver has run.
+    assertWithMessage("lab server stderr").that(labServerStderr).contains("Sleep for 2 seconds");
+
+    // Checks warnings in log.
+    String errorMessagePrefix =
+        "A successful test run should not print exception stack traces, which will confuse"
+            + " users and affect debuggability when debugging a failed one.\n\n";
+    assertWithMessage(errorMessagePrefix + "OLC server stderr")
+        .that(olcServerStderr)
+        .doesNotContain("\tat ");
+    assertWithMessage(errorMessagePrefix + "lab server stderr")
+        .that(labServerStderr)
+        .doesNotContain("\tat ");
   }
 
   private void startServers(boolean enableAtsMode)
@@ -383,6 +400,9 @@ public class OlcServerIntegrationTest {
                         OLC_SERVER_FILE_PATH,
                         ImmutableList.of(
                             "--enable_ats_mode=" + enableAtsMode,
+                            "--enable_client_experiment_manager=false",
+                            "--enable_client_file_transfer=false",
+                            "--enable_grpc_lab_server=true",
                             "--olc_server_port=" + olcServerPort,
                             "--no_op_device_num=1",
                             "--detect_adb_device=false",
@@ -446,10 +466,12 @@ public class OlcServerIntegrationTest {
                               "--detect_adb_device=false",
                               "--enable_api_config=false",
                               "--enable_cloud_logging=false",
+                              "--enable_device_config_manager=false",
                               "--enable_emulator_detection=false",
                               "--enable_external_master_server=true",
                               "--enable_file_cleaner=false",
                               "--enable_stubby_rpc_server=false",
+                              "--enable_trace_span_processor=false",
                               "--grpc_port=" + labServerGrpcPort,
                               "--master_grpc_target=localhost:" + olcServerPort,
                               "--no_op_device_num=1",
@@ -511,5 +533,26 @@ public class OlcServerIntegrationTest {
           .that(olcServerLocalDeviceFound.await(15L, SECONDS))
           .isTrue();
     }
+  }
+
+  private static GetSessionResponse waitUntilSessionFinish(
+      SessionStub sessionStub, SessionId sessionId, Duration timeout)
+      throws GrpcExceptionWithErrorId, InterruptedException {
+    GetSessionResponse getSessionResponse;
+    Instant startTime = Instant.now();
+    do {
+      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1L));
+      getSessionResponse =
+          sessionStub.getSession(
+              GetSessionRequest.newBuilder()
+                  .setSessionId(sessionId)
+                  .setFieldMask(FieldMask.newBuilder().addPaths("session_detail.session_status"))
+                  .build());
+    } while (!getSessionResponse
+            .getSessionDetail()
+            .getSessionStatus()
+            .equals(SessionStatus.SESSION_FINISHED)
+        && Instant.now().isBefore(startTime.plus(timeout)));
+    return sessionStub.getSession(GetSessionRequest.newBuilder().setSessionId(sessionId).build());
   }
 }

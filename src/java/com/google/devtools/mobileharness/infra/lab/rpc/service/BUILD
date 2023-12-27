@@ -54,6 +54,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

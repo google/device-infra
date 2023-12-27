@@ -319,7 +319,9 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
               "Skip initializing file transfer client and sending files "
                   + "because the test has been skipped.");
     } else {
-      sendJobFiles(testInfo);
+      if (Flags.instance().enableClientFileTransfer.getNonNull()) {
+        sendJobFiles(testInfo);
+      }
     }
   }
 
@@ -342,7 +344,9 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     if (isResumedTest(testInfo)) {
       throw new UnsupportedOperationException("Resumed test is not supported in OSS");
     } else {
-      sendTestFiles(testInfo);
+      if (Flags.instance().enableClientFileTransfer.getNonNull()) {
+        sendTestFiles(testInfo);
+      }
 
       logger.atInfo().log("Waiting until test engine becomes ready...");
       try {
@@ -381,10 +385,14 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
     try {
       if (testKickedOff) {
-        updateTestEngineFileTransferClient(testInfo);
+        if (Flags.instance().enableClientFileTransfer.getNonNull()) {
+          updateTestEngineFileTransferClient(testInfo);
+        }
         getTestGenData(testInfo);
       }
-      setFileTransferProperties(testInfo);
+      if (Flags.instance().enableClientFileTransfer.getNonNull()) {
+        setFileTransferProperties(testInfo);
+      }
 
       testMessageForwarder.close();
 
@@ -919,8 +927,10 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             ? ""
             : String.format(" for sub_test %s(%s)", testInfo.locator().getName(), testId);
 
-    // Downloads test generated files.
-    downloadTestGeneratedFiles(resp, testInfo, subTestLogPostfix);
+    if (Flags.instance().enableClientFileTransfer.getNonNull()) {
+      // Downloads test generated files.
+      downloadTestGeneratedFiles(resp, testInfo, subTestLogPostfix);
+    }
 
     // Update sub-testInfo received requested and returned from lab server.
     Set<String> leftOverSubTestIds =

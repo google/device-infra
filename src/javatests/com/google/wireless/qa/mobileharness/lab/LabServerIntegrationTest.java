@@ -175,6 +175,7 @@ public class LabServerIntegrationTest {
                             "--detect_adb_device=false",
                             "--enable_api_config=false",
                             "--enable_cloud_logging=false",
+                            "--enable_device_config_manager=false",
                             "--enable_emulator_detection=false",
                             "--enable_external_master_server=true",
                             "--enable_file_cleaner=false",

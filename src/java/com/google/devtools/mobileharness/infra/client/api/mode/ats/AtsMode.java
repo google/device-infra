@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
@@ -29,9 +30,11 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.A
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.EmptyDeviceVerifier;
+import com.google.devtools.mobileharness.infra.client.api.mode.remote.RemoteTestRunner;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
+import com.google.devtools.mobileharness.shared.constant.environment.MobileHarnessServerEnvironment;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import io.grpc.BindableService;
 import javax.inject.Inject;
@@ -84,9 +87,13 @@ public class AtsMode implements ExecMode {
 
   @Override
   public DirectTestRunner createTestRunner(
-      DirectTestRunnerSetting setting, ListeningExecutorService threadPool) {
-    // TODO: Implements it.
-    throw new UnsupportedOperationException();
+      DirectTestRunnerSetting setting, ListeningExecutorService threadPool)
+      throws MobileHarnessException {
+    return new RemoteTestRunner(
+        setting,
+        threadPool,
+        MobileHarnessServerEnvironment.DEFAULT,
+        /* supportImpersonation= */ false);
   }
 
   /** Returns the services to be installed in rpc server. */

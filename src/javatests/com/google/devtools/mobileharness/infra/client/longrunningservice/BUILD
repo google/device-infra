@@ -44,6 +44,7 @@ java_library(
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",
         "//src/devtools/mobileharness/infra/master/rpc/proto:lab_info_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",

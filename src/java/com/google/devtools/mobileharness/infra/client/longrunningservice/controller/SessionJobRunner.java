@@ -22,7 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
-import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
+import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -41,13 +41,13 @@ public class SessionJobRunner {
   private static final Duration WAIT_FOR_JOB_INTERNAL = Duration.ofSeconds(2L);
 
   private final ClientApi clientApi;
-  private final LocalMode localMode;
+  private final ExecMode execMode;
   private final Sleeper sleeper;
 
   @Inject
-  SessionJobRunner(ClientApi clientApi, LocalMode localMode, Sleeper sleeper) {
+  SessionJobRunner(ClientApi clientApi, ExecMode execMode, Sleeper sleeper) {
     this.clientApi = clientApi;
-    this.localMode = localMode;
+    this.execMode = execMode;
     this.sleeper = sleeper;
   }
 
@@ -70,7 +70,7 @@ public class SessionJobRunner {
           logger.atInfo().log(
               "Starting job %s of session %s",
               jobInfo.locator().getId(), sessionDetailHolder.getSessionId());
-          clientApi.startJob(jobInfo, localMode, sessionPlugins);
+          clientApi.startJob(jobInfo, execMode, sessionPlugins);
         }
 
         // Waits until all jobs finish.
