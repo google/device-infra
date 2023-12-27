@@ -90,6 +90,8 @@ message HeartbeatLabRequest {
 
   message Device {
     // Required.
+    //
+    // Device UUID.
     string id = 1;
 
     // Required: Lab Server side timestamp.

@@ -322,14 +322,15 @@ class RemoteDeviceManager {
 
         // Handles heartbeat of each device.
         for (HeartbeatLabRequest.Device device : request.getDeviceList()) {
-          DeviceKey deviceKey = DeviceKey.of(labKey.labHostName(), device.getId());
-
-          if (!devices.containsKey(deviceKey)) {
-            logger.atInfo().log("Device hasn't been signed up yet, device=%s", deviceKey);
-            outdatedDeviceIds.add(device.getId());
+          String deviceUuid = device.getId();
+          if (!deviceUuids.containsKey(deviceUuid)) {
+            logger.atInfo().log(
+                "Device hasn't been signed up yet, device_uuid=%s, lab=%s", deviceUuid, labKey);
+            outdatedDeviceIds.add(deviceUuid);
             continue;
           }
 
+          DeviceKey deviceKey = deviceUuids.get(deviceUuid);
           DeviceData deviceData = devices.get(deviceKey);
           boolean needSignUp = deviceData.updateByHeartbeat(device);
 
