@@ -943,13 +943,11 @@ public class ApkInstaller {
       // Nexus One/DroidX(2.3) may failed to get the version info of the GmsCore on the device.
       SharedLogUtil.logMsg(
           logger,
-          Level.WARNING,
           log,
-          e,
           "Skip checking app version code because package (%s) info not found on device %s:%n%s",
           packageName,
           deviceId,
-          e.getMessage());
+          MoreThrowables.shortDebugString(e, 0));
     }
     if (deviceAppVersionCode != null) {
       SharedLogUtil.logMsg(
