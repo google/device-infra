@@ -23,7 +23,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device;
 /** For locating a local, or remote device. */
 @AutoValue
 public abstract class DeviceLocator {
-  /** Device ID. Unique within a lab, but may not be unique across labs. */
+  /** Device ID (or device UUID). Unique within a lab, but may not be unique across labs. */
   public abstract String id();
 
   /** Belong lab locator, or {@link LabLocator#LOCALHOST} for local device. */

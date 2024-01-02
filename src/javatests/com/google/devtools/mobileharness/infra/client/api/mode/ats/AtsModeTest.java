@@ -202,7 +202,7 @@ public class AtsModeTest {
                     "fake_job_id", "fake_job_name")));
     LabLocator labLocator = LabLocator.of("fake_lab_ip", "fake_lab_host_name");
     labLocator.ports().add(PortType.LAB_SERVER_RPC, 1234);
-    assertThat(allocation.getDevice()).isEqualTo(DeviceLocator.of("fake_control_id", labLocator));
+    assertThat(allocation.getDevice()).isEqualTo(DeviceLocator.of("fake_uuid", labLocator));
   }
 
   @Test
@@ -219,7 +219,7 @@ public class AtsModeTest {
             DeviceQueryResult.newBuilder()
                 .addDeviceInfo(
                     DeviceInfo.newBuilder()
-                        .setId("fake_control_id")
+                        .setId("fake_uuid")
                         .setStatus("IDLE")
                         .addOwner("fake_owner")
                         .addType("NoOpDevice")
@@ -266,7 +266,7 @@ public class AtsModeTest {
                                                     LabQueryProto.DeviceInfo.newBuilder()
                                                         .setDeviceLocator(
                                                             Device.DeviceLocator.newBuilder()
-                                                                .setId("fake_control_id"))
+                                                                .setId("fake_uuid"))
                                                         .setDeviceUuid("fake_uuid"))))))
                 .build());
   }

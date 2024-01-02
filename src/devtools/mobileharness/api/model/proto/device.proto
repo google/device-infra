@@ -72,10 +72,14 @@ message DeviceFeature {
   repeated string executor = 7;
 }
 
-// An equipvalant to
+// An equivalent to
 // j/c/g/devtools/mobileharness/api/model/lab/DeviceLocator.java
 message DeviceLocator {
-  string id = 1;                                        // Required
+  // Required.
+  //
+  // Device UUID.
+  string id = 1;
+
   .mobileharness.api.model.LabLocator lab_locator = 2;  // Required
 }
 

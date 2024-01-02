@@ -21,17 +21,15 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.devtools.mobileharness.shared.util.command.LineCallback.does;
+import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.truth.Correspondence;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
-import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
@@ -333,24 +331,22 @@ public class OlcServerIntegrationTest {
             GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
 
     // Checks the lab info service.
-    assertThat(labInfoGrpcStub.getLabInfo(GetLabInfoRequest.getDefaultInstance()))
-        .comparingExpectedFieldsOnly()
-        .isEqualTo(
-            GetLabInfoResponse.newBuilder()
-                .setLabQueryResult(
-                    LabQueryResult.newBuilder()
-                        .setLabView(
-                            LabView.newBuilder()
-                                .addLabData(
-                                    LabData.newBuilder()
-                                        .setDeviceList(
-                                            DeviceList.newBuilder()
-                                                .addDeviceInfo(
-                                                    DeviceInfo.newBuilder()
-                                                        .setDeviceLocator(
-                                                            DeviceLocator.newBuilder()
-                                                                .setId("NoOpDevice-0")))))))
-                .build());
+    GetLabInfoResponse getLabInfoResponse =
+        labInfoGrpcStub.getLabInfo(GetLabInfoRequest.getDefaultInstance());
+    List<LabData> labDataList =
+        getLabInfoResponse.getLabQueryResult().getLabView().getLabDataList();
+    assertWithMessage("getLabInfoResponse=[%s]", getLabInfoResponse).that(labDataList).hasSize(1);
+    assertWithMessage("getLabInfoResponse=[%s]", getLabInfoResponse)
+        .that(labDataList.get(0).getDeviceList().getDeviceInfoList())
+        .comparingElementsUsing(
+            Correspondence.from(
+                (DeviceInfo deviceInfo, String uuidSuffix) ->
+                    requireNonNull(deviceInfo)
+                        .getDeviceLocator()
+                        .getId()
+                        .endsWith(requireNonNull(uuidSuffix)),
+                "has a device UUID ending with"))
+        .containsExactly("NoOpDevice-0");
 
     // Creates a session.
     SessionStub sessionStub = new SessionStub(olcServerChannel);

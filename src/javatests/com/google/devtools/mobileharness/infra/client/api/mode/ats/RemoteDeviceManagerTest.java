@@ -156,7 +156,7 @@ public class RemoteDeviceManagerTest {
                                     DeviceInfo.newBuilder()
                                         .setDeviceLocator(
                                             DeviceLocator.newBuilder()
-                                                .setId("fake_control_id")
+                                                .setId("fake_uuid")
                                                 .setLabLocator(
                                                     LabLocator.newBuilder()
                                                         .setIp("fake_lab_ip")

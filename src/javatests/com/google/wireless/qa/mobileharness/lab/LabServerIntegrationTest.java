@@ -17,7 +17,6 @@
 package com.google.wireless.qa.mobileharness.lab;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.truth.Correspondence.transforming;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
@@ -28,6 +27,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.truth.Correspondence;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
@@ -293,9 +293,14 @@ public class LabServerIntegrationTest {
 
     // Checks the allocation.
     assertThat(allocations.stream().map(AllocationWithStats::allocation).collect(toImmutableList()))
-        .<Allocation, String>comparingElementsUsing(
-            transforming(
-                allocation -> requireNonNull(allocation).getDevice().id(), "has a device ID of"))
+        .comparingElementsUsing(
+            Correspondence.from(
+                (Allocation allocation, String uuidSuffix) ->
+                    requireNonNull(allocation)
+                        .getDevice()
+                        .id()
+                        .endsWith(requireNonNull(uuidSuffix)),
+                "has a device UUID ending with"))
         .containsExactly("NoOpDevice-0");
     assertThat(allocations.get(0).allocation().getDevice().labLocator().ports().getAll())
         .containsExactly(

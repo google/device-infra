@@ -260,7 +260,7 @@ class RemoteDeviceManager {
 
         // Handles information of each device.
         for (SignUpLabRequest.Device device : request.getDeviceList()) {
-          DeviceKey deviceKey = DeviceKey.of(labLocator.hostName(), device.getControlId());
+          DeviceKey deviceKey = DeviceKey.of(labKey.labHostName(), device.getUuid());
 
           // Checks empty UUID.
           if (device.getUuid().isEmpty()) {
@@ -290,7 +290,7 @@ class RemoteDeviceManager {
             // Adds device data.
             deviceData = new DeviceData(deviceKey, labLocator, device);
             devices.put(deviceKey, deviceData);
-            deviceUuids.put(deviceData.uuid, deviceKey);
+            deviceUuids.put(device.getUuid(), deviceKey);
             firstDeviceOrTimeoutFuture.set(null);
           }
 
@@ -322,20 +322,19 @@ class RemoteDeviceManager {
 
         // Handles heartbeat of each device.
         for (HeartbeatLabRequest.Device device : request.getDeviceList()) {
-          String deviceUuid = device.getId();
-          if (!deviceUuids.containsKey(deviceUuid)) {
-            logger.atInfo().log(
-                "Device hasn't been signed up yet, device_uuid=%s, lab=%s", deviceUuid, labKey);
-            outdatedDeviceIds.add(deviceUuid);
+          DeviceKey deviceKey = DeviceKey.of(request.getLabHostName(), device.getId());
+
+          if (!devices.containsKey(deviceKey)) {
+            logger.atInfo().log("Device hasn't been signed up yet, device=%s", deviceKey);
+            outdatedDeviceIds.add(device.getId());
             continue;
           }
 
-          DeviceKey deviceKey = deviceUuids.get(deviceUuid);
           DeviceData deviceData = devices.get(deviceKey);
           boolean needSignUp = deviceData.updateByHeartbeat(device);
 
           if (needSignUp) {
-            outdatedDeviceIds.add(deviceUuid);
+            outdatedDeviceIds.add(device.getId());
           }
 
           updateScheduler(deviceData);
@@ -350,20 +349,17 @@ class RemoteDeviceManager {
       logger.atInfo().log("Sign out device, req=[%s]", shortDebugString(request));
 
       synchronized (lock) {
-        String deviceUuid = request.getDeviceId();
-        if (deviceUuids.containsKey(deviceUuid)) {
-          DeviceKey deviceKey = deviceUuids.get(deviceUuid);
+        DeviceKey deviceKey = DeviceKey.of(request.getLabHostName(), request.getDeviceId());
+        if (devices.containsKey(deviceKey)) {
           DeviceData deviceData = devices.get(deviceKey);
 
           scheduler.unallocate(
               deviceData.dataFromLab.locator(), /* removeDevices= */ true, /* closeTest= */ true);
 
           devices.remove(deviceKey);
-          deviceUuids.remove(deviceData.uuid);
+          deviceUuids.remove(request.getDeviceId());
         } else {
-          logger.atWarning().log(
-              "Device to sign out not found, device_uuid=%s, req=[%s]",
-              deviceUuid, shortDebugString(request));
+          logger.atWarning().log("Device to sign out not found, device=%s", deviceKey);
         }
       }
 
@@ -491,7 +487,7 @@ class RemoteDeviceManager {
           }
 
           iterator.remove();
-          deviceUuids.remove(deviceData.uuid);
+          deviceUuids.remove(deviceKey.deviceUuid());
         }
       }
 
@@ -525,16 +521,16 @@ class RemoteDeviceManager {
     }
   }
 
-  /** Devices are indexed by (host_name + control_id). */
+  /** Devices are indexed by (lab_host_name + device_uuid). */
   @AutoValue
   abstract static class DeviceKey {
 
     abstract String labHostName();
 
-    abstract String deviceControlId();
+    abstract String deviceUuid();
 
-    private static DeviceKey of(String labHostName, String deviceControlId) {
-      return new AutoValue_RemoteDeviceManager_DeviceKey(labHostName, deviceControlId);
+    private static DeviceKey of(String labHostName, String deviceUuid) {
+      return new AutoValue_RemoteDeviceManager_DeviceKey(labHostName, deviceUuid);
     }
 
     @Memoized
@@ -587,8 +583,6 @@ class RemoteDeviceManager {
 
     private final DeviceKey deviceKey;
 
-    private final String uuid;
-
     private DeviceScheduleUnit dataFromLab;
 
     /** Lab-side timestamp that is corresponding to {@link #dataFromLab}. */
@@ -614,9 +608,7 @@ class RemoteDeviceManager {
     private DeviceData(DeviceKey deviceKey, LabLocator labLocator, SignUpLabRequest.Device device) {
       Instant timestamp = Instant.ofEpochMilli(device.getTimestampMs());
       this.deviceKey = deviceKey;
-      this.uuid = device.getUuid();
-      this.dataFromLab =
-          new DeviceScheduleUnit(DeviceLocator.of(device.getControlId(), labLocator));
+      this.dataFromLab = new DeviceScheduleUnit(DeviceLocator.of(device.getUuid(), labLocator));
       dataFromLab.addFeature(device.getFeature());
       this.dataFromLabTimestamp = timestamp;
       setStatusFromLab(device.getStatus(), timestamp);
@@ -708,7 +700,7 @@ class RemoteDeviceManager {
     private LabQueryProto.DeviceInfo toLabQueryDeviceInfo() {
       return LabQueryProto.DeviceInfo.newBuilder()
           .setDeviceLocator(dataFromLab.locator().toProto())
-          .setDeviceUuid(uuid)
+          .setDeviceUuid(deviceKey.deviceUuid())
           .setDeviceStatus(statusFromLab)
           .setDeviceFeature(dataFromLab.toFeature())
           .build();
