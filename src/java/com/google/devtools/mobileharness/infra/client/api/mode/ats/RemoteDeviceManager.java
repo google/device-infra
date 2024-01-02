@@ -335,7 +335,7 @@ class RemoteDeviceManager {
           boolean needSignUp = deviceData.updateByHeartbeat(device);
 
           if (needSignUp) {
-            outdatedDeviceIds.add(deviceKey.deviceControlId());
+            outdatedDeviceIds.add(deviceUuid);
           }
 
           updateScheduler(deviceData);
@@ -350,8 +350,9 @@ class RemoteDeviceManager {
       logger.atInfo().log("Sign out device, req=[%s]", shortDebugString(request));
 
       synchronized (lock) {
-        DeviceKey deviceKey = DeviceKey.of(request.getLabHostName(), request.getDeviceId());
-        if (devices.containsKey(deviceKey)) {
+        String deviceUuid = request.getDeviceId();
+        if (deviceUuids.containsKey(deviceUuid)) {
+          DeviceKey deviceKey = deviceUuids.get(deviceUuid);
           DeviceData deviceData = devices.get(deviceKey);
 
           scheduler.unallocate(
@@ -360,7 +361,9 @@ class RemoteDeviceManager {
           devices.remove(deviceKey);
           deviceUuids.remove(deviceData.uuid);
         } else {
-          logger.atWarning().log("Device to sign out not found, device=%s", deviceKey);
+          logger.atWarning().log(
+              "Device to sign out not found, device_uuid=%s, req=[%s]",
+              deviceUuid, shortDebugString(request));
         }
       }
 

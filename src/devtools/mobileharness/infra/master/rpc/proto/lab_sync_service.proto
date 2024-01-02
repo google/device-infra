@@ -109,12 +109,14 @@ message HeartbeatLabResponse {
   // needs to sign up the devices listed below in field device_id.
   bool sign_up_all = 1;
 
-  // Ids of the devices which need to sign up to update the information.
+  // UUIDs of the devices which need to sign up to update the information.
   repeated string outdated_device_id = 2;
 }
 
 message SignOutDeviceRequest {
   // Required.
+  //
+  // Device UUID.
   string device_id = 1;
 
   // Optional: If Lab Server only detects one IP, it will report it and Master
