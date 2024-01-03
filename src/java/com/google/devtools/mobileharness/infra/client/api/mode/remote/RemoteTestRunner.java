@@ -635,6 +635,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
   private ImmutableList<ResolveFileItem> getUnresolvedJobFiles(JobInfo jobInfo) {
     return jobInfo.files().getAll().entries().stream()
+        .filter(entry -> false)
         .map(
             entry ->
                 ResolveFileItem.newBuilder()

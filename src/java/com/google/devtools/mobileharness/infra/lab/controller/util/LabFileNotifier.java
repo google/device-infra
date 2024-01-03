@@ -93,6 +93,9 @@ public class LabFileNotifier {
       fileCache.forEach(this::addJobOrTestFile);
       fileCache.clear();
     }
+    logger.atInfo().log(
+        "Job/test files were handled, job_files=%s, test_files=%s",
+        testInfo.jobInfo().files().getAll().asMap(), testInfo.files().getAll().asMap());
   }
 
   /** Handles a job/test file if the test has already started, otherwise adds it to a cache. */

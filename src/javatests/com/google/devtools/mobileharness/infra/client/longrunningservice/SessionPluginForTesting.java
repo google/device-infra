@@ -21,6 +21,7 @@ import static com.google.protobuf.TextFormat.shortDebugString;
 import com.google.common.collect.Iterables;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
@@ -47,7 +48,8 @@ public class SessionPluginForTesting {
   }
 
   @Subscribe
-  public void onSessionStarting(SessionStartingEvent event) throws InvalidProtocolBufferException {
+  public void onSessionStarting(SessionStartingEvent event)
+      throws MobileHarnessException, InvalidProtocolBufferException {
     SessionPluginForTestingConfig config =
         sessionInfo
             .getSessionPluginExecutionConfig()
@@ -66,6 +68,7 @@ public class SessionPluginForTesting {
                     .build())
             .build();
     jobInfo.params().add("sleep_time_sec", Integer.toString(config.getNoOpDriverSleepTimeSec()));
+    jobInfo.files().addAll(config.getExtraJobFilesMap());
 
     sessionInfo.addJob(jobInfo);
     logger.atInfo().log("JobInfo added");

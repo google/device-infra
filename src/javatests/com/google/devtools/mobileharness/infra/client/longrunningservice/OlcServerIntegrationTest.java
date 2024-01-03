@@ -82,6 +82,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import org.junit.After;
 import org.junit.Before;
@@ -155,27 +156,6 @@ public class OlcServerIntegrationTest {
 
   private static final String PLUGIN_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.client.longrunningservice.SessionPluginForTesting";
-  private static final CreateSessionRequest CREATE_SESSION_REQUEST =
-      CreateSessionRequest.newBuilder()
-          .setSessionConfig(
-              SessionConfig.newBuilder()
-                  .setSessionName("session_with_no_op_test")
-                  .setSessionPluginConfigs(
-                      SessionPluginConfigs.newBuilder()
-                          .addSessionPluginConfig(
-                              SessionPluginConfig.newBuilder()
-                                  .setLoadingConfig(
-                                      SessionPluginLoadingConfig.newBuilder()
-                                          .setPluginClassName(PLUGIN_CLASS_NAME))
-                                  .setExecutionConfig(
-                                      SessionPluginExecutionConfig.newBuilder()
-                                          .setConfig(
-                                              Any.pack(
-                                                  SessionPluginForTestingConfig.newBuilder()
-                                                      .setNoOpDriverSleepTimeSec(2)
-                                                      .build()))
-                                          .build()))))
-          .build();
   private static final GetSessionResponse GET_SESSION_RESPONSE =
       GetSessionResponse.newBuilder()
           .setSessionDetail(
@@ -247,33 +227,17 @@ public class OlcServerIntegrationTest {
             GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
 
     // Gets the server log.
-    StringBuilder olcServerLogBuilder = new StringBuilder();
+    OlcServerLogCollector olcServerLogCollector = new OlcServerLogCollector();
     ControlStub controlStub = new ControlStub(olcServerChannel);
-    StreamObserver<GetLogRequest> requestObserver =
-        controlStub.getLog(
-            new StreamObserver<>() {
-              @Override
-              public void onNext(GetLogResponse response) {
-                response.getLogRecords().getLogRecordList().stream()
-                    .map(LogRecord::getFormattedLogRecord)
-                    .forEach(olcServerLogBuilder::append);
-              }
-
-              @Override
-              public void onError(Throwable e) {
-                logger.atWarning().withCause(e).log("Failed to get log from server");
-              }
-
-              @Override
-              public void onCompleted() {
-                logger.atInfo().log("Completed to get log from server");
-              }
-            });
+    StreamObserver<GetLogRequest> requestObserver = controlStub.getLog(olcServerLogCollector);
     requestObserver.onNext(GetLogRequest.newBuilder().setEnable(true).build());
 
     // Creates a session.
     SessionStub sessionStub = new SessionStub(olcServerChannel);
-    CreateSessionResponse createSessionResponse = sessionStub.createSession(CREATE_SESSION_REQUEST);
+    CreateSessionRequest createSessionRequest =
+        createCreateSessionRequest(
+            SessionPluginForTestingConfig.newBuilder().setNoOpDriverSleepTimeSec(2).build());
+    CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
     SessionId sessionId = createSessionResponse.getSessionId();
 
     // Verifies the server cannot be killed.
@@ -316,7 +280,7 @@ public class OlcServerIntegrationTest {
         .doesNotContain("\tat ");
 
     // Checks the OLC server log.
-    String olcServerLog = olcServerLogBuilder.toString();
+    String olcServerLog = olcServerLogCollector.getLog();
     assertWithMessage("server log").that(olcServerLog).contains("Sleep for 2 seconds");
   }
 
@@ -350,7 +314,13 @@ public class OlcServerIntegrationTest {
 
     // Creates a session.
     SessionStub sessionStub = new SessionStub(olcServerChannel);
-    CreateSessionResponse createSessionResponse = sessionStub.createSession(CREATE_SESSION_REQUEST);
+    CreateSessionRequest createSessionRequest =
+        createCreateSessionRequest(
+            SessionPluginForTestingConfig.newBuilder()
+                .setNoOpDriverSleepTimeSec(2)
+                .putExtraJobFiles("fake_job_file_tag", tmpFolder.newFile().getAbsolutePath())
+                .build());
+    CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
     SessionId sessionId = createSessionResponse.getSessionId();
 
     // Waits until the session finishes.
@@ -365,6 +335,11 @@ public class OlcServerIntegrationTest {
 
     // Verifies the driver has run.
     assertWithMessage("lab server stderr").that(labServerStderr).contains("Sleep for 2 seconds");
+
+    // Verifies job/test files have been transferred.
+    assertWithMessage("lab server stderr")
+        .that(labServerStderr)
+        .contains("Job/test files were handled, job_files={}, test_files={}");
 
     // Checks warnings in log.
     String errorMessagePrefix =
@@ -550,5 +525,56 @@ public class OlcServerIntegrationTest {
             .equals(SessionStatus.SESSION_FINISHED)
         && Instant.now().isBefore(startTime.plus(timeout)));
     return sessionStub.getSession(GetSessionRequest.newBuilder().setSessionId(sessionId).build());
+  }
+
+  private static CreateSessionRequest createCreateSessionRequest(
+      SessionPluginForTestingConfig sessionPluginConfig) {
+    return CreateSessionRequest.newBuilder()
+        .setSessionConfig(
+            SessionConfig.newBuilder()
+                .setSessionName("session_with_no_op_test")
+                .setSessionPluginConfigs(
+                    SessionPluginConfigs.newBuilder()
+                        .addSessionPluginConfig(
+                            SessionPluginConfig.newBuilder()
+                                .setLoadingConfig(
+                                    SessionPluginLoadingConfig.newBuilder()
+                                        .setPluginClassName(PLUGIN_CLASS_NAME))
+                                .setExecutionConfig(
+                                    SessionPluginExecutionConfig.newBuilder()
+                                        .setConfig(Any.pack(sessionPluginConfig))
+                                        .build()))))
+        .build();
+  }
+
+  private static class OlcServerLogCollector implements StreamObserver<GetLogResponse> {
+
+    @GuardedBy("itself")
+    private final StringBuilder logStringBuilder = new StringBuilder();
+
+    private String getLog() {
+      synchronized (logStringBuilder) {
+        return logStringBuilder.toString();
+      }
+    }
+
+    @Override
+    public void onNext(GetLogResponse response) {
+      synchronized (logStringBuilder) {
+        for (LogRecord logRecord : response.getLogRecords().getLogRecordList()) {
+          logStringBuilder.append(logRecord.getFormattedLogRecord());
+        }
+      }
+    }
+
+    @Override
+    public void onError(Throwable e) {
+      logger.atWarning().withCause(e).log("Failed to get log from server");
+    }
+
+    @Override
+    public void onCompleted() {
+      logger.atInfo().log("Completed to get log from server");
+    }
   }
 }

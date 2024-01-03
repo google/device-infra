@@ -36,7 +36,6 @@ java_library(
     ],
     deps = [
         ":session_plugin_for_testing_java_proto",
-        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
@@ -63,6 +62,7 @@ java_library(
         "@com_google_protobuf_protobuf_java",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",
         "@maven//:com_google_inject_guice",
@@ -86,7 +86,7 @@ java_library(
     deps = [
         ":session_plugin_for_testing_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
-        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_event",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
@@ -94,7 +94,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@com_google_protobuf//:protobuf_java",
-        "@com_google_protobuf_protobuf_java",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
