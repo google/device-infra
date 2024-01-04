@@ -633,9 +633,9 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     return response.getDeviceFeatureList();
   }
 
-  private ImmutableList<ResolveFileItem> getUnresolvedJobFiles(JobInfo jobInfo) {
+  private static ImmutableList<ResolveFileItem> getUnresolvedJobFiles(JobInfo jobInfo) {
     return jobInfo.files().getAll().entries().stream()
-        .filter(entry -> false)
+        .filter(entry -> !shouldSendFile(entry.getValue()))
         .map(
             entry ->
                 ResolveFileItem.newBuilder()
@@ -643,6 +643,15 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
                     .setFile(entry.getValue())
                     .build())
         .collect(toImmutableList());
+  }
+
+  /**
+   * Returns whether the client should send the given file to the lab (and also send the file
+   * metadata). If not, the client will only send the file metadata to the lab, and the lab will be
+   * responsible for resolving the file.
+   */
+  private static boolean shouldSendFile(String filePath) {
+    return true;
   }
 
   private TestEngineLocator waitUntilTestEngineReady(
