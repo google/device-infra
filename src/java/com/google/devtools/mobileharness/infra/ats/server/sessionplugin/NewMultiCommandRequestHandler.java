@@ -16,15 +16,16 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
-import static com.google.protobuf.TextFormat.shortDebugString;
-
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.io.Files;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -34,20 +35,17 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Req
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
-import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
-import com.google.gson.Gson;
+import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
+import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
+import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -57,16 +55,28 @@ import javax.inject.Inject;
 final class NewMultiCommandRequestHandler {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final String GEN_FILE_DIR = DirUtil.getPublicGenDir();
+  private static final String FILE_URL_PREFIX = "file://";
+
+  /** Timeout setting for slow commands. */
+  private static final Duration SLOW_CMD_TIMEOUT = Duration.ofMinutes(10);
 
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
       Pattern.compile("android-[a-z]+\\.zip");
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
+  private final LocalFileUtil localFileUtil;
+  private final CommandExecutor commandExecutor;
 
   @Inject
-  NewMultiCommandRequestHandler(SessionRequestHandlerUtil sessionRequestHandlerUtil) {
+  NewMultiCommandRequestHandler(
+      SessionRequestHandlerUtil sessionRequestHandlerUtil,
+      LocalFileUtil localFileUtil,
+      CommandExecutor commandExecutor) {
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
+    this.localFileUtil = localFileUtil;
+    this.commandExecutor = commandExecutor;
   }
 
   void handle(NewMultiCommandRequest request, SessionInfo sessionInfo)
@@ -92,7 +102,7 @@ final class NewMultiCommandRequestHandler {
       return;
     }
     for (CommandInfo commandInfo : request.getCommandsList()) {
-      Optional<JobInfo> jobInfo = createXtsTradefedTestJob(request, commandInfo);
+      Optional<JobInfo> jobInfo = createXtsTradefedTestJob(request, commandInfo, sessionInfo);
       if (jobInfo.isEmpty()) {
         CommandDetail commandDetail =
             CommandDetail.newBuilder()
@@ -135,17 +145,7 @@ final class NewMultiCommandRequestHandler {
   }
 
   private Optional<JobInfo> createXtsTradefedTestJob(
-      NewMultiCommandRequest request, CommandInfo commandInfo)
-      throws MobileHarnessException, InterruptedException {
-    Optional<JobConfig> jobConfig = createXtsTradefedTestJobConfig(request, commandInfo);
-    if (jobConfig.isEmpty()) {
-      return Optional.empty();
-    }
-    return Optional.of(JobInfoCreator.createJobInfo(jobConfig.get(), ImmutableList.of(), null));
-  }
-
-  Optional<JobConfig> createXtsTradefedTestJobConfig(
-      NewMultiCommandRequest request, CommandInfo commandInfo)
+      NewMultiCommandRequest request, CommandInfo commandInfo, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
     // TODO: need to handle sharding.
     List<String> deviceSerials = new ArrayList<>();
@@ -156,11 +156,10 @@ final class NewMultiCommandRequestHandler {
       // TODO: need to handle non device serial case.
     }
     String androidXtsZipPath = "";
-    String fileUrlPrefix = "file://";
     for (TestResource testResource : request.getTestResourcesList()) {
       if (ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()
-          && testResource.getUrl().startsWith(fileUrlPrefix)) {
-        androidXtsZipPath = testResource.getUrl();
+          && testResource.getUrl().startsWith(FILE_URL_PREFIX)) {
+        androidXtsZipPath = testResource.getUrl().substring(FILE_URL_PREFIX.length());
         break;
       }
     }
@@ -170,51 +169,63 @@ final class NewMultiCommandRequestHandler {
           request.getTestResourcesList());
       return Optional.empty();
     }
+    String xtsRootDir =
+        PathUtil.join(
+            GEN_FILE_DIR,
+            "session_" + sessionInfo.getSessionId(),
+            Files.getNameWithoutExtension(androidXtsZipPath));
+    localFileUtil.prepareDir(xtsRootDir);
+    mountZip(androidXtsZipPath, xtsRootDir);
     int shardCount = commandInfo.getShardCount();
-    ImmutableList<SubDeviceSpec> subDeviceSpecList =
-        sessionRequestHandlerUtil.getSubDeviceSpecList(deviceSerials, shardCount);
-    if (subDeviceSpecList.isEmpty()) {
-      logger.atInfo().log("Found no devices to create the job config.");
-      return Optional.empty();
-    }
     String xtsType = Iterables.get(Splitter.on(' ').split(commandInfo.getCommandLine()), 0);
     String testPlan = xtsType;
-    JobConfig.Builder jobConfigBuilder =
-        JobConfig.newBuilder()
-            .setName("xts-tradefed-test-job")
-            .setExecMode("local")
-            .setJobTimeoutSec(3 * 24 * 60 * 60)
-            .setTestTimeoutSec(3 * 24 * 60 * 60)
-            .setStartTimeoutSec(5 * 60)
-            .setPriority(Priority.HIGH)
-            .setTestAttempts(1)
-            .setTests(
-                StringList.newBuilder()
-                    .addContent(String.format("xts-tradefed-test-%s", testPlan)));
-    jobConfigBuilder.setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList));
+    SessionRequestHandlerUtil.SessionRequestInfo.Builder sessionRequestInfoBuilder =
+        SessionRequestHandlerUtil.SessionRequestInfo.builder();
+    sessionRequestInfoBuilder.setTestPlan(testPlan);
+    sessionRequestInfoBuilder.setXtsType(XtsType.valueOf(xtsType.toUpperCase(Locale.ROOT)));
+    sessionRequestInfoBuilder.setXtsRootDir(xtsRootDir);
+    sessionRequestInfoBuilder.setAndroidXtsZip(androidXtsZipPath);
+    sessionRequestInfoBuilder.setDeviceSerials(deviceSerials);
+    sessionRequestInfoBuilder.setShardCount(shardCount);
+    // TODO:add modules and extra args
+    sessionRequestInfoBuilder.setModuleNames(ImmutableList.of());
+    sessionRequestInfoBuilder.setExtraArgs(ImmutableList.of());
 
-    Map<String, String> driverParams = new HashMap<>();
-
-    driverParams.put("xts_type", xtsType.toUpperCase(Locale.ROOT));
-    driverParams.put("android_xts_zip", androidXtsZipPath);
-    driverParams.put("xts_test_plan", testPlan);
-
-    String commandArgs =
-        commandInfo.getCommandLine().substring(commandInfo.getCommandLine().indexOf(" ") + 1);
-    if (!commandArgs.isEmpty()) {
-      driverParams.put("run_command_args", commandArgs);
-    }
-
-    jobConfigBuilder.setDriver(
-        Driver.newBuilder().setName("XtsTradefedTest").setParam(new Gson().toJson(driverParams)));
-    JobConfig jobConfig = jobConfigBuilder.build();
-    logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
-
-    return Optional.of(jobConfig);
+    unmountZip(xtsRootDir);
+    return sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfoBuilder.build());
   }
 
   void handleResultProcessing(
       NewMultiCommandRequest newMultiCommandRequest, SessionInfo sessionInfo) {
     // TODO: To be implemented.
+  }
+
+  @CanIgnoreReturnValue
+  private String mountZip(String zipFilePath, String mountDirPath)
+      throws MobileHarnessException, InterruptedException {
+    Command command =
+        Command.of("fuse-zip", "-r", zipFilePath, mountDirPath).timeout(SLOW_CMD_TIMEOUT);
+    try {
+      return commandExecutor.run(command);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR,
+          String.format("Failed to mount zip %s into dir %s", zipFilePath, mountDirPath),
+          e);
+    }
+  }
+
+  @CanIgnoreReturnValue
+  private String unmountZip(String mountDirPath)
+      throws MobileHarnessException, InterruptedException {
+    Command command = Command.of("fusermount", "-u", mountDirPath).timeout(SLOW_CMD_TIMEOUT);
+    try {
+      return commandExecutor.run(command);
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_UNMOUNT_DIR_ERROR,
+          String.format("Failed to unmount dir %s", mountDirPath),
+          e);
+    }
   }
 }

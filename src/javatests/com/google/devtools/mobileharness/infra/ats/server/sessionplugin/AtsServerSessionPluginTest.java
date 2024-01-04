@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
@@ -37,12 +38,20 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Any;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
@@ -68,17 +77,24 @@ public final class AtsServerSessionPluginTest {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private SessionInfo sessionInfo;
+  @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
+  @Bind @Mock private LocalFileUtil localFileUtil;
+  @Bind @Mock private CommandExecutor commandExecutor;
+  @Mock private JobInfo jobInfo;
+  @Mock private Properties properties;
 
   @Captor private ArgumentCaptor<UnaryOperator<RequestDetail>> unaryOperatorCaptor;
-  @Captor private ArgumentCaptor<JobInfo> jobInfoCaptor;
-
   @Inject private AtsServerSessionPlugin plugin;
   RequestDetail requestDetail;
 
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionInfo.getSessionId()).thenReturn("session_id");
+    when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
+    when(jobInfo.properties()).thenReturn(properties);
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
     requestDetail = RequestDetail.getDefaultInstance();
     doAnswer(
             invocation -> {
@@ -173,8 +189,12 @@ public final class AtsServerSessionPluginTest {
                         SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
                 .build());
     plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
-    verify(sessionInfo).addJob(jobInfoCaptor.capture());
-    JobInfo jobInfo = jobInfoCaptor.getValue();
+    verify(sessionInfo).addJob(jobInfo);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    when(jobInfo.status()).thenReturn(new Status(timing).set(teststatus));
+    Result result = new Result(timing, new Params(timing)).set(testResult);
+    when(jobInfo.result()).thenReturn(result);
     jobInfo.status().set(teststatus);
     jobInfo.result().set(testResult);
 
