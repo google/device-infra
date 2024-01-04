@@ -19,19 +19,26 @@ package com.google.devtools.mobileharness.infra.ats.common;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.XtsType;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
@@ -322,5 +329,116 @@ public final class SessionRequestHandlerUtilTest {
             ImmutableList.of());
 
     assertThat(jobConfigOpt).isEmpty();
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs() throws Exception {
+    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(
+            ImmutableMap.of(
+                "/path/to/config1",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build(),
+                "/path/to/config2",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build()));
+
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .build());
+
+    assertThat(jobInfos).hasSize(2);
+    verify(moduleConfigurationHelper, times(2)).updateJobInfo(any(), any(), any());
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_noMatchedNonTradefedModules() throws Exception {
+    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(
+            ImmutableMap.of(
+                "/path/to/config1",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build(),
+                "/path/to/config2",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build()));
+
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setModuleNames(ImmutableList.of("TfModule1"))
+                .build());
+
+    assertThat(jobInfos).isEmpty();
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_partialMatchedNonTradefedModules() throws Exception {
+    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(
+            ImmutableMap.of(
+                "/path/to/config1",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build(),
+                "/path/to/config2",
+                Configuration.newBuilder()
+                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
+                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+                    .setTest(
+                        com.google.devtools.mobileharness.platform.android.xts.config.proto
+                            .ConfigurationProto.Test.newBuilder()
+                            .setClazz("Driver"))
+                    .build()));
+
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setModuleNames(ImmutableList.of("TfModule1", "module2"))
+                .build());
+
+    assertThat(jobInfos).hasSize(1);
   }
 }

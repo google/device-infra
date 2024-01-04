@@ -35,7 +35,9 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.XtsType;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
+import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
@@ -50,6 +52,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -63,19 +66,24 @@ import javax.inject.Inject;
 public class SessionRequestHandlerUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
+  @VisibleForTesting static final String XTS_NON_TF_JOB_PROP = "xts-non-tradefed-job";
+  @VisibleForTesting static final String XTS_MODULE_NAME_PROP = "xts-module-name";
 
   private final DeviceQuerier deviceQuerier;
   private final LocalFileUtil localFileUtil;
   private final ConfigurationUtil configurationUtil;
+  private final ModuleConfigurationHelper moduleConfigurationHelper;
 
   @Inject
   SessionRequestHandlerUtil(
       DeviceQuerier deviceQuerier,
       LocalFileUtil localFileUtil,
-      ConfigurationUtil configurationUtil) {
+      ConfigurationUtil configurationUtil,
+      ModuleConfigurationHelper moduleConfigurationHelper) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
+    this.moduleConfigurationHelper = moduleConfigurationHelper;
   }
 
   /**
@@ -304,6 +312,152 @@ public class SessionRequestHandlerUtil {
     logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
 
     return Optional.of(jobConfig);
+  }
+
+  /**
+   * Creates non-tradefed jobs based on the {@code SessionRequestInfo}.
+   *
+   * @return a list of added non-tradefed jobInfos.
+   */
+  public ImmutableList<JobInfo> createXtsNonTradefedJobs(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    String testPlan = sessionRequestInfo.testPlan();
+    // Currently only support CTS
+    if (!testPlan.equals("cts")) {
+      return ImmutableList.of();
+    }
+
+    String xtsRootDir = sessionRequestInfo.xtsRootDir();
+    if (!localFileUtil.isDirExist(xtsRootDir)) {
+      logger.atInfo().log(
+          "xTS root dir [%s] doesn't exist, skip creating non-tradefed jobs.", xtsRootDir);
+      return ImmutableList.of();
+    }
+
+    XtsType xtsType = sessionRequestInfo.xtsType();
+    ImmutableMap<String, Configuration> configsMap =
+        configurationUtil.getConfigsV2FromDirs(
+            ImmutableList.of(getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
+
+    ImmutableList<String> modules = sessionRequestInfo.moduleNames();
+    ImmutableSet<String> allNonTfModules =
+        configsMap.values().stream()
+            .map(config -> config.getMetadata().getXtsModule())
+            .collect(toImmutableSet());
+    ImmutableSet<String> givenMatchedNonTfModules =
+        modules.stream().filter(allNonTfModules::contains).collect(toImmutableSet());
+    boolean noGivenModuleForNonTf = !modules.isEmpty() && givenMatchedNonTfModules.isEmpty();
+    if (noGivenModuleForNonTf) {
+      logger.atInfo().log(
+          "Skip creating non-tradefed jobs as none of given modules is for non-tradefed module: %s",
+          modules);
+      return ImmutableList.of();
+    }
+
+    ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
+
+    ImmutableList<String> androidDeviceSerials = sessionRequestInfo.deviceSerials();
+
+    for (Map.Entry<String, Configuration> entry : configsMap.entrySet()) {
+      String configModuleName = entry.getValue().getMetadata().getXtsModule();
+      if (givenMatchedNonTfModules.isEmpty()
+          || givenMatchedNonTfModules.contains(configModuleName)) {
+        Optional<JobInfo> jobInfoOpt =
+            createXtsNonTradefedJob(
+                Path.of(xtsRootDir), xtsType, testPlan, Path.of(entry.getKey()), entry.getValue());
+        if (jobInfoOpt.isPresent()) {
+          JobInfo jobInfo = jobInfoOpt.get();
+          if (!androidDeviceSerials.isEmpty()) {
+            jobInfo
+                .subDeviceSpecs()
+                .getAllSubDevices()
+                .forEach(
+                    subDeviceSpec -> {
+                      if (!subDeviceSpec.type().equals(ANDROID_REAL_DEVICE_TYPE)) {
+                        return;
+                      }
+                      subDeviceSpec
+                          .deviceRequirement()
+                          .dimensions()
+                          .add(
+                              "serial",
+                              String.format(
+                                  "regex:(%s)", Joiner.on('|').join(androidDeviceSerials)));
+                    });
+          }
+          jobInfos.add(jobInfo);
+        }
+      }
+    }
+
+    return jobInfos.build();
+  }
+
+  private Optional<JobInfo> createXtsNonTradefedJob(
+      Path xtsRootDir,
+      XtsType xtsType,
+      String testPlan,
+      Path moduleConfigPath,
+      Configuration moduleConfig)
+      throws MobileHarnessException, InterruptedException {
+    Optional<JobInfo> jobInfoOpt = createBaseXtsNonTradefedJob(moduleConfig);
+    if (jobInfoOpt.isEmpty()) {
+      return Optional.empty();
+    }
+
+    ImmutableList<File> fileDepDirs =
+        ImmutableList.of(
+            moduleConfigPath.getParent().toFile(),
+            getXtsTestCasesDir(xtsRootDir, xtsType).toFile());
+
+    JobInfo jobInfo = jobInfoOpt.get();
+    moduleConfigurationHelper.updateJobInfo(jobInfo, moduleConfig, fileDepDirs);
+    jobInfo.properties().add(XTS_NON_TF_JOB_PROP, "true");
+    jobInfo.properties().add(XTS_MODULE_NAME_PROP, moduleConfig.getMetadata().getXtsModule());
+    jobInfo.params().add("xts_test_plan", testPlan);
+    return Optional.of(jobInfo);
+  }
+
+  private Optional<JobInfo> createBaseXtsNonTradefedJob(Configuration moduleConfig)
+      throws MobileHarnessException, InterruptedException {
+    String xtsModule = moduleConfig.getMetadata().getXtsModule();
+    List<Device> moduleDevices = moduleConfig.getDevicesList();
+    if (moduleDevices.isEmpty()) {
+      logger.atInfo().log(
+          "Found no devices to create the job config for xts non-tradefed job with module %s.",
+          xtsModule);
+      return Optional.empty();
+    }
+
+    List<SubDeviceSpec> subDeviceSpecList = new ArrayList<>();
+    for (Device device : moduleDevices) {
+      if (device.getName().isEmpty()) {
+        logger.atWarning().log("Device name is missing in a <device> in module %s", xtsModule);
+        return Optional.empty();
+      } else {
+        subDeviceSpecList.add(SubDeviceSpec.newBuilder().setType(device.getName()).build());
+      }
+    }
+
+    JobConfig.Builder jobConfigBuilder =
+        JobConfig.newBuilder()
+            .setName(String.format("xts-mobly-aosp-package-job-%s", xtsModule))
+            .setExecMode("local")
+            .setJobTimeoutSec(5 * 24 * 60 * 60)
+            .setTestTimeoutSec(5 * 24 * 60 * 60)
+            .setStartTimeoutSec(1 * 60 * 60)
+            .setPriority(Priority.HIGH)
+            .setTestAttempts(1)
+            .setTests(
+                StringList.newBuilder()
+                    .addContent(String.format("xts-mobly-aosp-package-test-%s", xtsModule)));
+    jobConfigBuilder.setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList));
+    jobConfigBuilder.setDriver(Driver.newBuilder().setName("MoblyAospPackageTest"));
+    JobConfig jobConfig = jobConfigBuilder.build();
+    logger.atInfo().log(
+        "Non-tradefed job base config for module %s: %s", xtsModule, shortDebugString(jobConfig));
+
+    return Optional.of(JobInfoCreator.createJobInfo(jobConfig, ImmutableList.of(), null));
   }
 
   private Path getXtsTestCasesDir(Path xtsRootDir, XtsType xtsType) {

@@ -22,12 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.XtsType;
@@ -39,11 +34,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
-import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
-import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
-import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
-import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
-import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.Guice;
@@ -72,7 +62,6 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class RunCommandHandlerTest {
 
-  private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
   private static final String XTS_ROOT_DIR_NAME = "xts_root_dir";
   private static final String TIMESTAMP_DIR_NAME = "2023.06.13_06.27.28";
 
@@ -94,8 +83,6 @@ public final class RunCommandHandlerTest {
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private LocalFileUtil localFileUtil;
-  @Bind @Mock private ModuleConfigurationHelper moduleConfigurationHelper;
-  @Bind @Mock private ConfigurationUtil configurationUtil;
   @Bind @Mock private CompatibilityReportMerger compatibilityReportMerger;
   @Bind @Mock private CompatibilityReportCreator reportCreator;
 
@@ -110,125 +97,11 @@ public final class RunCommandHandlerTest {
   }
 
   @Test
-  public void createXtsNonTradefedJobs() throws Exception {
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
-    when(configurationUtil.getConfigsV2FromDirs(any()))
-        .thenReturn(
-            ImmutableMap.of(
-                "/path/to/config1",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build(),
-                "/path/to/config2",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build()));
-
-    ImmutableList<JobInfo> jobInfos =
-        runCommandHandler.createXtsNonTradefedJobs(
-            RunCommand.newBuilder()
-                .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .build());
-
-    assertThat(jobInfos).hasSize(2);
-    verify(moduleConfigurationHelper, times(2)).updateJobInfo(any(), any(), any());
-  }
-
-  @Test
-  public void createXtsNonTradefedJobs_noMatchedNonTradefedModules() throws Exception {
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
-    when(configurationUtil.getConfigsV2FromDirs(any()))
-        .thenReturn(
-            ImmutableMap.of(
-                "/path/to/config1",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build(),
-                "/path/to/config2",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build()));
-
-    ImmutableList<JobInfo> jobInfos =
-        runCommandHandler.createXtsNonTradefedJobs(
-            RunCommand.newBuilder()
-                .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .addModuleName("TfModule1")
-                .build());
-
-    assertThat(jobInfos).isEmpty();
-  }
-
-  @Test
-  public void createXtsNonTradefedJobs_partialMatchedNonTradefedModules() throws Exception {
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
-    when(configurationUtil.getConfigsV2FromDirs(any()))
-        .thenReturn(
-            ImmutableMap.of(
-                "/path/to/config1",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build(),
-                "/path/to/config2",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build()));
-
-    ImmutableList<JobInfo> jobInfos =
-        runCommandHandler.createXtsNonTradefedJobs(
-            RunCommand.newBuilder()
-                .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .addModuleName("TfModule1")
-                .addModuleName("module2")
-                .build());
-
-    assertThat(jobInfos).hasSize(1);
-  }
-
-  @Test
   public void handleResultProcessing_copyResultsAndLogsIntoXtsRootDir() throws Exception {
     runCommandHandler =
         spy(
             new RunCommandHandler(
                 new LocalFileUtil(),
-                moduleConfigurationHelper,
-                configurationUtil,
                 compatibilityReportMerger,
                 reportCreator,
                 sessionRequestHandlerUtil));
