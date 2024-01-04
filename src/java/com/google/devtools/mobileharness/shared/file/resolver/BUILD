@@ -52,3 +52,17 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "local_file_resolver",
+    srcs = ["LocalFileResolver.java"],
+    deps = [
+        ":abstract_file_resolver",
+        ":file_resolver",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)

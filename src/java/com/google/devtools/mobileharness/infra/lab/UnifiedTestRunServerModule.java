@@ -18,19 +18,19 @@ package com.google.devtools.mobileharness.infra.lab;
 
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceHelperFactory;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestMessagePosterUtil;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
-import com.google.devtools.mobileharness.infra.lab.Annotations.MainThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.RpcPort;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunnerHolder;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.devtools.mobileharness.shared.file.resolver.AbstractFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
+import com.google.devtools.mobileharness.shared.file.resolver.LocalFileResolver;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -93,25 +93,11 @@ public class UnifiedTestRunServerModule extends AbstractModule {
 
   @Provides
   @Singleton
-  FileResolver provideFileResolver() {
-    return createFileResolver();
-  }
+  FileResolver provideFileResolver(
+      ListeningExecutorService threadPool, LocalFileUtil localFileUtil) {
+    AbstractFileResolver fileResolver = new LocalFileResolver(threadPool, localFileUtil);
 
-  @SuppressWarnings("unused")
-  private FileResolver createFileResolver() {
-    return new AbstractFileResolver(null) {
-      @Override
-      protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
-        return false;
-      }
-
-      @Override
-      protected ResolveResult actuallyResolve(ResolveSource resolveSource)
-          throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
-        throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-            BasicErrorId.RESOLVE_FILE_GENERIC_ERROR, "Should not run this method.");
-      }
-    };
+    return fileResolver;
   }
 
   @Provides
@@ -119,7 +105,7 @@ public class UnifiedTestRunServerModule extends AbstractModule {
   ExecTestServiceImpl provideExecTestService(
       ExecTestServiceImpl.ExecTestServiceImplFactory factory,
       ProxyTestManager testManager,
-      @MainThreadPool ListeningExecutorService mainThreadPool) {
+      ListeningExecutorService mainThreadPool) {
     // TestMessageManager is created for ExecTestServiceImpl to consume. It's a singleton that
     // requires testManager to be injected, hence it's initialization when ExecTestServiceImpl
     // object is provided.

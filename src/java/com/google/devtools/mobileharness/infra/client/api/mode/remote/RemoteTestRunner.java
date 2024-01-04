@@ -651,7 +651,11 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
    * responsible for resolving the file.
    */
   private static boolean shouldSendFile(String filePath) {
-    return true;
+    if (Flags.instance().enableClientFileTransfer.getNonNull()) {
+      return true;
+    } else {
+      return false;
+    }
   }
 
   private TestEngineLocator waitUntilTestEngineReady(

@@ -21,10 +21,8 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceManagerThreadPool;
-import com.google.devtools.mobileharness.infra.lab.Annotations.FileResolverThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LabServerRpcThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LocalGrpcThreadPool;
-import com.google.devtools.mobileharness.infra.lab.Annotations.MainThreadPool;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
 import java.util.concurrent.Executors;
@@ -35,9 +33,7 @@ public class UtrsThreadPoolFactoryModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(ListeningExecutorService.class)
-        .annotatedWith(MainThreadPool.class)
-        .toInstance(createThreadPool("mh-lab-server-main-thread"));
+    bind(ListeningExecutorService.class).toInstance(createThreadPool("mh-lab-server-main-thread"));
     bind(ListeningExecutorService.class)
         .annotatedWith(DeviceManagerThreadPool.class)
         .toInstance(createThreadPool("mh-device-manager-device-thread"));
@@ -56,9 +52,6 @@ public class UtrsThreadPoolFactoryModule extends AbstractModule {
                     1,
                     ThreadFactoryUtil.createThreadFactory(
                         "mh-lab-server-debug-random-exit-task"))));
-    bind(ListeningExecutorService.class)
-        .annotatedWith(FileResolverThreadPool.class)
-        .toInstance(createThreadPool("file-resolver-thread"));
   }
 
   private static ListeningExecutorService createThreadPool(String threadNamePrefix) {

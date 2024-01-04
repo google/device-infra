@@ -67,6 +67,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_sync",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:abstract_file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
+        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:local_file_resolver",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:master_grpc_stub_helper",

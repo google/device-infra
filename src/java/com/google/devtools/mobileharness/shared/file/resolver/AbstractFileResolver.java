@@ -73,7 +73,7 @@ public abstract class AbstractFileResolver implements FileResolver {
     return ImmutableSet.of();
   }
 
-  /** Resolve multiple files syncly. */
+  /** Resolve multiple files synchronously. */
   @Override
   public final List<Optional<ResolveResult>> resolve(List<ResolveSource> resolveSources)
       throws MobileHarnessException, InterruptedException {
@@ -93,7 +93,7 @@ public abstract class AbstractFileResolver implements FileResolver {
   }
 
   /**
-   * Resolves one file syncly.
+   * Resolves one file synchronously.
    *
    * @param resolveSource the resolve source, including file and parameters.
    * @return the resolved files and properties
@@ -115,13 +115,13 @@ public abstract class AbstractFileResolver implements FileResolver {
     return Optional.empty();
   }
 
-  /** Resolves one file asyncly. */
+  /** Resolves one file asynchronously. */
   @Override
   public final ListenableFuture<Optional<ResolveResult>> resolveAsync(ResolveSource resolveSource) {
     return executorService.submit(() -> resolve(resolveSource));
   }
 
-  /** Resolves multiple files asyncly. */
+  /** Resolves multiple files asynchronously. */
   @Override
   public final ListenableFuture<List<Optional<ResolveResult>>> resolveAsync(
       List<ResolveSource> resolveSources) {
@@ -171,7 +171,7 @@ public abstract class AbstractFileResolver implements FileResolver {
    * @param successor the next resolver
    */
   @CanIgnoreReturnValue
-  final AbstractFileResolver setSuccessor(AbstractFileResolver successor) {
+  public final AbstractFileResolver setSuccessor(AbstractFileResolver successor) {
     this.successor = successor;
     return this;
   }

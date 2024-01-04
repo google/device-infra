@@ -29,12 +29,12 @@ import javax.annotation.concurrent.ThreadSafe;
 @ThreadSafe
 public interface FileResolver {
 
-  /** Resolve multiple files syncly. */
+  /** Resolve multiple files synchronously. */
   List<Optional<ResolveResult>> resolve(List<ResolveSource> resolveSources)
       throws MobileHarnessException, InterruptedException;
 
   /**
-   * Resolves one file syncly.
+   * Resolves one file synchronously.
    *
    * @param resolveSource the resolve source, including file and parameters.
    * @return the resolved files and properties, or Optional.Empty() if the file is not supported by
@@ -44,10 +44,10 @@ public interface FileResolver {
   Optional<ResolveResult> resolve(ResolveSource resolveSource)
       throws MobileHarnessException, InterruptedException;
 
-  /** Resolves one file asyncly. */
+  /** Resolves one file asynchronously. */
   ListenableFuture<Optional<ResolveResult>> resolveAsync(ResolveSource resolveSource);
 
-  /** Resolves multiple files asyncly. */
+  /** Resolves multiple files asynchronously. */
   ListenableFuture<List<Optional<ResolveResult>>> resolveAsync(List<ResolveSource> resolveSources);
 
   /** Result of resolved file. */
@@ -70,7 +70,7 @@ public interface FileResolver {
 
   /** Source of files and parameters to be resolved. */
   @AutoValue
-  public abstract static class ResolveSource {
+  abstract class ResolveSource {
     public static ResolveSource create(
         String path, ImmutableMap<String, String> parameters, String targetDir, String tmpDir) {
       return new AutoValue_FileResolver_ResolveSource(path, "", parameters, targetDir, tmpDir);

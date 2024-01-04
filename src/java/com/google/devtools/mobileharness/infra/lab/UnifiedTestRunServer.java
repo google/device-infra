@@ -42,7 +42,6 @@ import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceManagerThre
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LabServerRpcThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LocalGrpcThreadPool;
-import com.google.devtools.mobileharness.infra.lab.Annotations.MainThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.RpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
@@ -126,7 +125,7 @@ public class UnifiedTestRunServer {
       ExternalDeviceManager externalDeviceManager,
       @GlobalEventBus EventBus globalInternalBus,
       @DeviceManagerThreadPool ListeningExecutorService deviceManagerThreadPool,
-      @MainThreadPool ListeningExecutorService mainThreadPool,
+      ListeningExecutorService mainThreadPool,
       @LabServerRpcThreadPool ListeningExecutorService rpcThreadPool,
       @LocalGrpcThreadPool ListeningExecutorService localGrpcThreadPool,
       @DebugThreadPool ListeningScheduledExecutorService debugExecutor,

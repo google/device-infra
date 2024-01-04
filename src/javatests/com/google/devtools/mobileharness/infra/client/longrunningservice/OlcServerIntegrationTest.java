@@ -314,11 +314,12 @@ public class OlcServerIntegrationTest {
 
     // Creates a session.
     SessionStub sessionStub = new SessionStub(olcServerChannel);
+    String fakeJobFilePath = tmpFolder.newFile().getAbsolutePath();
     CreateSessionRequest createSessionRequest =
         createCreateSessionRequest(
             SessionPluginForTestingConfig.newBuilder()
                 .setNoOpDriverSleepTimeSec(2)
-                .putExtraJobFiles("fake_job_file_tag", tmpFolder.newFile().getAbsolutePath())
+                .putExtraJobFiles("fake_job_file_tag", fakeJobFilePath)
                 .build());
     CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
     SessionId sessionId = createSessionResponse.getSessionId();
@@ -339,7 +340,10 @@ public class OlcServerIntegrationTest {
     // Verifies job/test files have been transferred.
     assertWithMessage("lab server stderr")
         .that(labServerStderr)
-        .contains("Job/test files were handled, job_files={}, test_files={}");
+        .contains(
+            String.format(
+                "Job/test files were handled, job_files={%s=[%s]}, test_files={}",
+                "fake_job_file_tag", fakeJobFilePath));
 
     // Checks warnings in log.
     String errorMessagePrefix =
