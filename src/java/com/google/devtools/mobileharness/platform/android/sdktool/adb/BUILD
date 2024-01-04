@@ -74,6 +74,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/lightning/systemstate:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemspec:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/sdktool/adb:__pkg__",

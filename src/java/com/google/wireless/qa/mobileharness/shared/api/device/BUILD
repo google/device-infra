@@ -132,6 +132,28 @@ java_library(
 )
 
 java_library(
+    name = "android_local_emulator",
+    srcs = ["AndroidLocalEmulator.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/version",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:validator_factory",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:communication_java_proto",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "android_real_device",
     srcs = ["AndroidRealDevice.java"],
     deps = [
