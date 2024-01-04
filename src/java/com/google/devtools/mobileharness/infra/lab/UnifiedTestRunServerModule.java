@@ -59,7 +59,7 @@ public class UnifiedTestRunServerModule extends AbstractModule {
     String shardName = getShardName();
 
     install(new TestRunBaseModule());
-    install(new UtrsThreadPoolFactoryModule());
+    install(new LabServerThreadPoolModule());
     install(
         new UtrsTestRunLabModule(
             cloudRpcDnsName,

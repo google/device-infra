@@ -24,10 +24,10 @@ package(
 java_library(
     name = "utrs",
     srcs = [
+        "LabServerThreadPoolModule.java",
         "UnifiedTestRunServer.java",
         "UnifiedTestRunServerModule.java",
         "UtrsTestRunLabModule.java",
-        "UtrsThreadPoolFactoryModule.java",
     ],
     deps = [
         ":annotations",
@@ -73,7 +73,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:master_grpc_stub_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history:recorder",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
-        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",

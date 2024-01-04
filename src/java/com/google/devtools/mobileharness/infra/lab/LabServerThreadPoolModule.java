@@ -16,46 +16,36 @@
 
 package com.google.devtools.mobileharness.infra.lab;
 
+import static com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools.createStandardScheduledThreadPool;
+import static com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools.createStandardThreadPool;
+
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceManagerThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LabServerRpcThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.LocalGrpcThreadPool;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
 
-/** Module class that instantiates all thread factories used by UTRS. */
-public class UtrsThreadPoolFactoryModule extends AbstractModule {
+/** Module class that instantiates all thread pools used by lab server. */
+class LabServerThreadPoolModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    bind(ListeningExecutorService.class).toInstance(createThreadPool("mh-lab-server-main-thread"));
+    bind(ListeningExecutorService.class)
+        .toInstance(createStandardThreadPool("mh-lab-server-main-thread"));
     bind(ListeningExecutorService.class)
         .annotatedWith(DeviceManagerThreadPool.class)
-        .toInstance(createThreadPool("mh-device-manager-device-thread"));
+        .toInstance(createStandardThreadPool("mh-device-manager-device-thread"));
     bind(ListeningExecutorService.class)
         .annotatedWith(LabServerRpcThreadPool.class)
-        .toInstance(createThreadPool("mh-lab-server-rpc-thread"));
+        .toInstance(createStandardThreadPool("mh-lab-server-rpc-thread"));
     bind(ListeningExecutorService.class)
         .annotatedWith(LocalGrpcThreadPool.class)
-        .toInstance(createThreadPool("mh-lab-server-local-grpc-thread"));
+        .toInstance(createStandardThreadPool("mh-lab-server-local-grpc-thread"));
 
     bind(ListeningScheduledExecutorService.class)
         .annotatedWith(DebugThreadPool.class)
-        .toInstance(
-            MoreExecutors.listeningDecorator(
-                new ScheduledThreadPoolExecutor(
-                    1,
-                    ThreadFactoryUtil.createThreadFactory(
-                        "mh-lab-server-debug-random-exit-task"))));
-  }
-
-  private static ListeningExecutorService createThreadPool(String threadNamePrefix) {
-    return MoreExecutors.listeningDecorator(
-        Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory(threadNamePrefix)));
+        .toInstance(createStandardScheduledThreadPool("mh-lab-server-debug-random-exit-task", 1));
   }
 }
