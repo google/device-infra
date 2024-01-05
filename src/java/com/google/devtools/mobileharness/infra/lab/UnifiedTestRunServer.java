@@ -38,10 +38,7 @@ import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfi
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
-import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceManagerThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
-import com.google.devtools.mobileharness.infra.lab.Annotations.LabServerRpcThreadPool;
-import com.google.devtools.mobileharness.infra.lab.Annotations.LocalGrpcThreadPool;
 import com.google.devtools.mobileharness.infra.lab.Annotations.RpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
@@ -87,7 +84,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import javax.inject.Inject;
 
-/** Unified Test Run Server. */
+/** Lab server. */
 public class UnifiedTestRunServer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -105,10 +102,7 @@ public class UnifiedTestRunServer {
   private final ExecTestServiceImpl execTestService;
   private final ExternalDeviceManager externalDeviceManager;
   private final EventBus globalInternalBus;
-  private final ListeningExecutorService deviceManagerThreadPool;
   private final ListeningExecutorService mainThreadPool;
-  private final ListeningExecutorService rpcThreadPool;
-  private final ListeningExecutorService localGrpcThreadPool;
   private final ListeningScheduledExecutorService debugExecutor;
   private final boolean enableStubbyRpcServer;
   private final int rpcPort;
@@ -124,10 +118,7 @@ public class UnifiedTestRunServer {
       ExecTestServiceImpl execTestService,
       ExternalDeviceManager externalDeviceManager,
       @GlobalEventBus EventBus globalInternalBus,
-      @DeviceManagerThreadPool ListeningExecutorService deviceManagerThreadPool,
       ListeningExecutorService mainThreadPool,
-      @LabServerRpcThreadPool ListeningExecutorService rpcThreadPool,
-      @LocalGrpcThreadPool ListeningExecutorService localGrpcThreadPool,
       @DebugThreadPool ListeningScheduledExecutorService debugExecutor,
       @ServViaStubby boolean enableStubbyRpcServer,
       @RpcPort int rpcPort) {
@@ -140,16 +131,13 @@ public class UnifiedTestRunServer {
     this.execTestService = execTestService;
     this.externalDeviceManager = externalDeviceManager;
     this.globalInternalBus = globalInternalBus;
-    this.deviceManagerThreadPool = deviceManagerThreadPool;
     this.mainThreadPool = mainThreadPool;
-    this.rpcThreadPool = rpcThreadPool;
-    this.localGrpcThreadPool = localGrpcThreadPool;
     this.debugExecutor = debugExecutor;
     this.enableStubbyRpcServer = enableStubbyRpcServer;
     this.rpcPort = rpcPort;
   }
 
-  /** Initializes and runs UTRS, and blocks until shutdown. */
+  /** Initializes and runs lab server, and blocks until shutdown. */
   public void run() throws MobileHarnessException, InterruptedException {
     try {
 
@@ -175,7 +163,7 @@ public class UnifiedTestRunServer {
         MasterGrpcStubHelper helper =
             new MasterGrpcStubHelper(
                 ChannelFactory.createChannel(
-                    Flags.instance().masterGrpcTarget.getNonNull(), rpcThreadPool));
+                    Flags.instance().masterGrpcTarget.getNonNull(), mainThreadPool));
         labSyncStub = new LabSyncGrpcStub(helper);
       }
 
@@ -230,7 +218,7 @@ public class UnifiedTestRunServer {
       // Starts gRPC server for local requests only.
       NettyServerBuilder localGrpcServerBuilder =
           NettyServerBuilder.forPort(Flags.instance().grpcPort.getNonNull())
-              .executor(localGrpcThreadPool);
+              .executor(mainThreadPool);
       for (BindableService service : localGrpcServices) {
         localGrpcServerBuilder.addService(service);
       }
@@ -255,7 +243,7 @@ public class UnifiedTestRunServer {
             "Fatal error in exit task");
       }
 
-      logger.atInfo().log("UTRS successfully started");
+      logger.atInfo().log("Lab server successfully started");
       startingFuture.set(TestServices.of(testManager, deviceManager));
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException
         | IOException
@@ -263,7 +251,7 @@ public class UnifiedTestRunServer {
         | Error e) {
       MobileHarnessException exception =
           new MobileHarnessException(
-              InfraErrorId.LAB_UTRS_SERVER_START_ERROR, "Failed to run UTRS!", e);
+              InfraErrorId.LAB_UTRS_SERVER_START_ERROR, "Failed to run lab server", e);
       startingFuture.setException(exception);
       throw exception;
     }
@@ -273,7 +261,7 @@ public class UnifiedTestRunServer {
   }
 
   /**
-   * Returns a future which becomes done after the UTRS starts.
+   * Returns a future which becomes done after the lab server starts.
    *
    * <p>Do NOT make it public in production.
    */
@@ -283,36 +271,28 @@ public class UnifiedTestRunServer {
   }
 
   public void onShutdown() {
-    logger.atInfo().log("UTRS is shutting down.");
+    logger.atInfo().log("Lab server is shutting down.");
 
     SystemUtil.setProcessIsShuttingDown();
     // Shuts down the server and all threads here.
-    if (deviceManagerThreadPool != null) {
-      deviceManagerThreadPool.shutdownNow();
-    }
     if (mainThreadPool != null) {
       mainThreadPool.shutdownNow();
     }
-    if (rpcThreadPool != null) {
-      rpcThreadPool.shutdownNow();
-    }
     // TODO: Shutdown socketFileReceiver.
-    if (localGrpcThreadPool != null) {
-      localGrpcThreadPool.shutdownNow();
-    }
 
     Set<Integer> processIds = null;
     try {
       processIds = systemUtil.getProcessesByPort(rpcPort);
     } catch (MobileHarnessException | InterruptedException e) {
       logger.atWarning().log(
-          "Failed to get child process id of UTRS (ignored): %s", e.getMessage());
+          "Failed to get child process id of lab server (ignored): %s", e.getMessage());
     }
     if (processIds != null) {
       for (int processId : processIds) {
         try {
           systemUtil.killDescendantAndZombieProcesses(processId, KillSignal.SIGKILL);
-          logger.atInfo().log("Killed child processes of UTRS rpc server with pid %d", processId);
+          logger.atInfo().log(
+              "Killed child processes of lab server rpc server with pid %d", processId);
         } catch (MobileHarnessException | InterruptedException e) {
           logger.atWarning().log(
               "Failed to kill child processes of parent pid %d (ignored): %s",
@@ -401,7 +381,7 @@ public class UnifiedTestRunServer {
         .add(Ascii.toLowerCase(Name.HOST_OS_VERSION.name()), OS_VERSION.value());
   }
 
-  /** Test services created by UTRS. */
+  /** Test services created by lab server. */
   @AutoValue
   @VisibleForTesting()
   public abstract static class TestServices {

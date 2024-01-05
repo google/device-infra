@@ -201,7 +201,7 @@ public class LabServerIntegrationTest {
                       System.err.printf("lab_server_stderr %s\n", stderr);
                       labServerStderrBuilder.append(stderr).append('\n');
 
-                      if (stderr.contains("UTRS successfully started")) {
+                      if (stderr.contains("Lab server successfully started")) {
                         labServerStartedSuccessfully.set(true);
                         labServerStartedOrFailedToStart.countDown();
                       } else if (stderr.contains("New device NoOpDevice-0")) {

@@ -22,18 +22,16 @@ package(
 )
 
 java_library(
-    name = "utrs",
+    name = "lab",
     srcs = [
-        "LabServerThreadPoolModule.java",
+        "LabServerModule.java",
         "UnifiedTestRunServer.java",
-        "UnifiedTestRunServerModule.java",
-        "UtrsTestRunLabModule.java",
     ],
     deps = [
         ":annotations",
-        ":test_run_base_module",
-        ":test_run_module",
         "//src/devtools/mobileharness/shared/trace/proto:span_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:base_detector_dispatcher_picker",
@@ -43,6 +41,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/external:external_device_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/external:noop_external_device_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:proxy_test_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:test_message_poster_util",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
@@ -106,37 +105,6 @@ java_library(
     name = "annotations",
     srcs = ["Annotations.java"],
     deps = [
-        "@maven//:com_google_inject_guice",
-    ],
-)
-
-java_library(
-    name = "test_run_base_module",
-    srcs = ["TestRunBaseModule.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:proxy_test_manager",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/system",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
-        "@maven//:com_google_inject_guice",
-    ],
-)
-
-java_library(
-    name = "test_run_module",
-    srcs = ["TestRunModule.java"],
-    deps = [
-        ":annotations",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:local_device_runner_provider",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:proxy_test_manager",
-        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:job_manager",
-        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:prepare_test",
-        "//src/java/com/google/devtools/mobileharness/shared/file/resolver:file_resolver",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/system",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
-        "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],
 )

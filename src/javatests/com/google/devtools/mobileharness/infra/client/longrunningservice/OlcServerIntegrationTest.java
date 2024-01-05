@@ -381,8 +381,7 @@ public class OlcServerIntegrationTest {
                             "--olc_server_port=" + olcServerPort,
                             "--no_op_device_num=1",
                             "--detect_adb_device=false",
-                            "--public_dir="
-                                + tmpFolder.newFolder("olc_server_public_dir").toString()),
+                            "--public_dir=" + tmpFolder.newFolder("olc_server_public_dir")),
                         ImmutableList.of()))
             .onStdout(
                 does(
@@ -450,13 +449,11 @@ public class OlcServerIntegrationTest {
                               "--grpc_port=" + labServerGrpcPort,
                               "--master_grpc_target=localhost:" + olcServerPort,
                               "--no_op_device_num=1",
-                              "--public_dir="
-                                  + tmpFolder.newFolder("lab_server_public_dir").toString(),
+                              "--public_dir=" + tmpFolder.newFolder("lab_server_public_dir"),
                               "--rpc_port=" + labServerRpcPort,
                               "--serv_via_cloud_rpc=false",
                               "--socket_port=" + labServerSocketPort,
-                              "--tmp_dir_root="
-                                  + tmpFolder.newFolder("lab_server_tmp_dir").toString()),
+                              "--tmp_dir_root=" + tmpFolder.newFolder("lab_server_tmp_dir")),
                           ImmutableList.of()))
               .onStdout(
                   does(
@@ -470,7 +467,7 @@ public class OlcServerIntegrationTest {
                         System.err.printf("lab_server_stderr %s\n", stderr);
                         labServerStderrBuilder.append(stderr).append('\n');
 
-                        if (stderr.contains("UTRS successfully started")) {
+                        if (stderr.contains("Lab server successfully started")) {
                           labServerStartedSuccessfully.set(true);
                           labServerStartedOrFailedToStart.countDown();
                         } else if (stderr.contains("New device NoOpDevice-0")) {

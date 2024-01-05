@@ -63,6 +63,7 @@ package_group(
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/...",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local/...",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/...",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/...",
         "//src/javatests/com/google/devtools/mobileharness/api/devicemanager/...",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/local/...",
         "//src/javatests/com/google/devtools/mobileharness/infra/controller/device/...",

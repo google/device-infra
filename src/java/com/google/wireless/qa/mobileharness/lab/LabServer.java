@@ -22,8 +22,8 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
+import com.google.devtools.mobileharness.infra.lab.LabServerModule;
 import com.google.devtools.mobileharness.infra.lab.UnifiedTestRunServer;
-import com.google.devtools.mobileharness.infra.lab.UnifiedTestRunServerModule;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -118,8 +118,7 @@ public class LabServer {
 
   /** Initializes environment by setting appropriate env vars and setting logger. */
   private void initializeEnv() throws MobileHarnessException {
-    Injector injector =
-        Guice.createInjector(new UnifiedTestRunServerModule(labArgs, globalInternalBus));
+    Injector injector = Guice.createInjector(new LabServerModule(labArgs, globalInternalBus));
     UnifiedTestRunServer.initializeEnv();
     utrs = injector.getInstance(UnifiedTestRunServer.class);
   }

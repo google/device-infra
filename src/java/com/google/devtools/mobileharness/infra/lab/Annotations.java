@@ -27,24 +27,6 @@ class Annotations {
 
   private Annotations() {}
 
-  /** Annotation for binding device manager thread pool. */
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
-  @BindingAnnotation
-  @interface DeviceManagerThreadPool {}
-
-  /** Annotation for binding LabServer thread pool. */
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
-  @BindingAnnotation
-  @interface LabServerRpcThreadPool {}
-
-  /** Annotation for binding local gRpc thread pool. */
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
-  @BindingAnnotation
-  @interface LocalGrpcThreadPool {}
-
   /** Annotation for binding debug thread pool. */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
