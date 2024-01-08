@@ -21,35 +21,14 @@ package(
     ],
 )
 
-java_library(
-    name = "lab_lib",
-    srcs = ["LabServer.java"],
-    resources = [
-    ],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
-        "//src/java/com/google/devtools/mobileharness/infra/lab",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/system",
-        "//src/java/com/google/devtools/mobileharness/shared/version",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:exit_code",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/util:base",
-        "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
-    ],
-)
-
 # Open-source version of MH lab server.
 java_binary(
     name = "lab_server_oss",
-    main_class = "com.google.wireless.qa.mobileharness.lab.LabServer",
+    main_class = "com.google.devtools.mobileharness.infra.lab.LabServerLauncher",
     # Think twice before adding resources here. Always try to pack the resources
     # into the libraries using the resources.
     runtime_deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/lab:lab_lib",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server_launcher",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:oss_lab_test",
     ],
 )

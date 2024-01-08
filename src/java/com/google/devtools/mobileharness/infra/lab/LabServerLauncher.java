@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.lab;
+package com.google.devtools.mobileharness.infra.lab;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
-import com.google.devtools.mobileharness.infra.lab.LabServerModule;
-import com.google.devtools.mobileharness.infra.lab.UnifiedTestRunServer;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -35,8 +32,8 @@ import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Starting point of a MobileHarness lab server. */
-public class LabServer {
+/** Launcher of lab server. */
+public class LabServerLauncher {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -45,20 +42,10 @@ public class LabServer {
   private volatile UnifiedTestRunServer utrs;
 
   private final String[] labArgs;
-  private final EventBus globalInternalBus;
+  private final EventBus globalInternalBus = new EventBus(new SubscriberExceptionLoggingHandler());
 
-  private LabServer(String[] labArgs) {
-    this(labArgs, new EventBus(new SubscriberExceptionLoggingHandler()));
-  }
-
-  @VisibleForTesting
-  LabServer(EventBus globalInternalBus) {
-    this(new String[0], globalInternalBus);
-  }
-
-  private LabServer(String[] labArgs, EventBus globalInternalBus) {
+  private LabServerLauncher(String[] labArgs) {
     this.labArgs = labArgs;
-    this.globalInternalBus = globalInternalBus;
   }
 
   /**
@@ -83,13 +70,13 @@ public class LabServer {
 
     try {
       // Initializes lab server.
-      LabServer labServer = new LabServer(allLabArgs);
+      LabServerLauncher labServerLauncher = new LabServerLauncher(allLabArgs);
 
       // Adds shutdown hook.
-      Runtime.getRuntime().addShutdownHook(new Thread(labServer::onShutdown));
+      Runtime.getRuntime().addShutdownHook(new Thread(labServerLauncher::onShutdown));
 
       // Runs lab server.
-      labServer.run();
+      labServerLauncher.run();
 
       // Sometimes some unexpected non-daemon threads may be blocked here, so we use System.exit(0)
       // to make sure the process is terminated.

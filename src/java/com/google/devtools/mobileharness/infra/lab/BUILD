@@ -22,6 +22,14 @@ package(
 )
 
 java_library(
+    name = "annotations",
+    srcs = ["Annotations.java"],
+    deps = [
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
     name = "lab",
     srcs = [
         "LabServerModule.java",
@@ -102,9 +110,22 @@ java_library(
 )
 
 java_library(
-    name = "annotations",
-    srcs = ["Annotations.java"],
+    name = "lab_server_launcher",
+    srcs = ["LabServerLauncher.java"],
+    resources = [
+    ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
+        "//src/java/com/google/devtools/mobileharness/infra/lab",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/devtools/mobileharness/shared/version",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:exit_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:base",
+        "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
     ],
 )
