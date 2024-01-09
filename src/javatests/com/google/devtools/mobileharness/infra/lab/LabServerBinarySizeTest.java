@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.lab;
+package com.google.devtools.mobileharness.infra.lab;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.shared.util.file.local.BinarySizeChecker;
@@ -34,7 +34,7 @@ public class LabServerBinarySizeTest {
 
   private static final String LAB_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
-          "java/com/google/wireless/qa/mobileharness/lab/lab_server_oss_deploy.jar");
+          "java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_deploy.jar");
 
   @Test
   public void checkLabServerBinarySize() throws Exception {
@@ -49,9 +49,9 @@ public class LabServerBinarySizeTest {
         LAB_SERVER_BINARY_FILE_PATH,
         MAX_LAB_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE,
         LAB_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST,
-        "google3/third_party/deviceinfra/src/java/com/google/wireless/qa/mobileharness"
+        "google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness/infra"
             + "/lab:lab_server_oss_deploy.jar",
-        "google3/third_party/deviceinfra/src/javatests/com/google/wireless/qa/mobileharness"
+        "google3/third_party/deviceinfra/src/javatests/com/google/devtools/mobileharness/infra"
             + "/lab/LabServerBinarySizeTest.java#LAB_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST");
   }
 }

@@ -17,18 +17,6 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/lab:__subpackages__",
-    ],
-)
-
-# Open-source version of MH lab server.
-java_binary(
-    name = "lab_server_oss",
-    main_class = "com.google.devtools.mobileharness.infra.lab.LabServerLauncher",
-    # Think twice before adding resources here. Always try to pack the resources
-    # into the libraries using the resources.
-    runtime_deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server_launcher",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:oss_lab_test",
+        "//src/javatests/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
 )

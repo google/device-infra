@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.lab;
+package com.google.devtools.mobileharness.infra.lab;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
@@ -116,7 +116,7 @@ public class LabServerIntegrationTest {
 
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
-          "java/com/google/wireless/qa/mobileharness/lab/lab_server_oss_deploy.jar");
+          "java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_deploy.jar");
 
   private StringBuilder labServerStdoutBuilder;
   private StringBuilder labServerStderrBuilder;

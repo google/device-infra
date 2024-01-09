@@ -152,7 +152,7 @@ public class OlcServerIntegrationTest {
               + "/infra/client/longrunningservice/OlcServerForTesting_deploy.jar");
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
-          "java/com/google/wireless/qa/mobileharness/lab/lab_server_oss_deploy.jar");
+          "java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_deploy.jar");
 
   private static final String PLUGIN_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.client.longrunningservice.SessionPluginForTesting";

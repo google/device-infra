@@ -24,7 +24,7 @@ java_library(
     name = "lab",
     srcs = glob(["*.java"]),
     data = [
-        "//src/java/com/google/wireless/qa/mobileharness/lab:lab_server_oss_deploy.jar",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server_oss_deploy.jar",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:error_java_proto",
