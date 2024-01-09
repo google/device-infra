@@ -176,7 +176,6 @@ public class LabServerIntegrationTest {
                             "--enable_api_config=false",
                             "--enable_cloud_logging=false",
                             "--enable_device_config_manager=false",
-                            "--enable_emulator_detection=false",
                             "--enable_external_master_server=true",
                             "--enable_file_cleaner=false",
                             "--enable_stubby_rpc_server=false",

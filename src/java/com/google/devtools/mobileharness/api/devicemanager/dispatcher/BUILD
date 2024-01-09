@@ -49,6 +49,25 @@ java_library(
     ],
 )
 
+################################################################################
+# Dispatcher libraries in alphabetical order
+################################################################################
+
+java_library(
+    name = "android_local_emulator",
+    srcs = ["AndroidLocalEmulatorDispatcher.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:cacheable",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher/model",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher/util:device_id_descriptor_generator",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemspec",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
 java_library(
     name = "android_real_device",
     srcs = ["AndroidRealDeviceDispatcher.java"],
@@ -69,9 +88,6 @@ java_library(
     ],
 )
 
-################################################################################
-## Debug related
-################################################################################
 java_library(
     name = "no_op_device",
     srcs = ["NoOpDeviceDispatcher.java"],
