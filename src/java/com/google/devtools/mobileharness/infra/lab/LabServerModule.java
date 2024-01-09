@@ -64,7 +64,7 @@ import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManag
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 
-/** Guice module for {@link UnifiedTestRunServer}. */
+/** Guice module for {@link LabServer}. */
 @SuppressWarnings("AvoidObjectArrays")
 public class LabServerModule extends AbstractModule {
 

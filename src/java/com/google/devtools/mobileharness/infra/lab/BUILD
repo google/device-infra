@@ -32,10 +32,10 @@ java_library(
 )
 
 java_library(
-    name = "lab",
+    name = "lab_server",
     srcs = [
+        "LabServer.java",
         "LabServerModule.java",
-        "UnifiedTestRunServer.java",
     ],
     deps = [
         ":annotations",
@@ -119,7 +119,7 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
-        "//src/java/com/google/devtools/mobileharness/infra/lab",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

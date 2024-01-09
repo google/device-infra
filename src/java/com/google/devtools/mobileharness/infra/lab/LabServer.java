@@ -85,7 +85,7 @@ import java.util.logging.Level;
 import javax.inject.Inject;
 
 /** Lab server. */
-public class UnifiedTestRunServer {
+public class LabServer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -108,7 +108,7 @@ public class UnifiedTestRunServer {
   private final int rpcPort;
 
   @Inject
-  UnifiedTestRunServer(
+  LabServer(
       ProxyTestManager testManager,
       JobManager jobManager,
       SystemUtil systemUtil,
@@ -391,7 +391,7 @@ public class UnifiedTestRunServer {
     public abstract LocalDeviceManager deviceManager();
 
     public static TestServices of(ProxyTestManager testManager, LocalDeviceManager deviceManager) {
-      return new AutoValue_UnifiedTestRunServer_TestServices(testManager, deviceManager);
+      return new AutoValue_LabServer_TestServices(testManager, deviceManager);
     }
   }
 }

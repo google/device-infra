@@ -22,7 +22,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/** Binding annotations for UTRS */
+/** Binding annotations for lab server. */
 class Annotations {
 
   private Annotations() {}

@@ -39,7 +39,7 @@ public class LabServerLauncher {
 
   private static final SystemUtil SYSTEM_UTIL = new SystemUtil();
 
-  private volatile UnifiedTestRunServer utrs;
+  private volatile LabServer labServer;
 
   private final String[] labArgs;
   private final EventBus globalInternalBus = new EventBus(new SubscriberExceptionLoggingHandler());
@@ -94,19 +94,19 @@ public class LabServerLauncher {
   public void run() throws MobileHarnessException, InterruptedException {
     initializeEnv();
 
-    utrs.run();
+    labServer.run();
     logger.atInfo().log("Lab Server successfully started");
   }
 
   private void onShutdown() {
     logger.atInfo().log("Lab server is shutting down.");
-    utrs.onShutdown();
+    labServer.onShutdown();
   }
 
   /** Initializes environment by setting appropriate env vars and setting logger. */
   private void initializeEnv() throws MobileHarnessException {
     Injector injector = Guice.createInjector(new LabServerModule(labArgs, globalInternalBus));
-    UnifiedTestRunServer.initializeEnv();
-    utrs = injector.getInstance(UnifiedTestRunServer.class);
+    LabServer.initializeEnv();
+    labServer = injector.getInstance(LabServer.class);
   }
 }
