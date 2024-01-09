@@ -55,6 +55,11 @@ proto_library(
     deps = ["//src/devtools/common/metrics/stability/model/proto:error_proto"],
 )
 
+cc_proto_library(
+    name = "error_cc_proto",
+    deps = [":error_proto"],
+)
+
 java_proto_library(
     name = "error_java_proto",
     deps = [":error_proto"],
