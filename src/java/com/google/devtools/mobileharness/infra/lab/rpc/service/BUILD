@@ -48,6 +48,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/launcher:local_device_test_runner_launcher",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:proxy_test_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/lab/common/dir",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:job_manager",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller/util:lab_file_notifier",

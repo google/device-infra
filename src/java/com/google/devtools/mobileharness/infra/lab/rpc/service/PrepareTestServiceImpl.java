@@ -59,6 +59,14 @@ import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTest
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestStartedException;
 import com.google.devtools.mobileharness.infra.controller.test.model.JobExecutionUnit;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionUnit;
+import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcDnsAddress;
+import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcShardName;
+import com.google.devtools.mobileharness.infra.lab.Annotations.DeviceRunner;
+import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
+import com.google.devtools.mobileharness.infra.lab.Annotations.LabGrpcPort;
+import com.google.devtools.mobileharness.infra.lab.Annotations.LabRpcPort;
+import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaCloudRpc;
+import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.infra.lab.controller.JobManager;
 import com.google.devtools.mobileharness.infra.lab.controller.util.LabFileNotifier;
@@ -129,20 +137,20 @@ public class PrepareTestServiceImpl {
 
   @Inject
   public PrepareTestServiceImpl(
-      LocalDeviceRunnerProvider deviceRunnerProvider,
+      @DeviceRunner LocalDeviceRunnerProvider deviceRunnerProvider,
       JobManager jobManager,
       ProxyTestManager testManager,
       LocalFileUtil localFileUtil,
       NetUtil netUtil,
       SystemUtil systemUtil,
       FileResolver fileResolver,
-      boolean servViaStubby,
-      int labRpcPort,
-      int labGrpcPort,
-      boolean servViaCloudRpc,
-      String cloudRpcDnsName,
-      String cloudRpcShardName,
-      EventBus globalInternalEventBus) {
+      @ServViaStubby boolean servViaStubby,
+      @LabRpcPort int labRpcPort,
+      @LabGrpcPort int labGrpcPort,
+      @ServViaCloudRpc boolean servViaCloudRpc,
+      @CloudRpcDnsAddress String cloudRpcDnsName,
+      @CloudRpcShardName String cloudRpcShardName,
+      @GlobalEventBus EventBus globalInternalEventBus) {
     this.deviceRunnerProvider = deviceRunnerProvider;
     this.jobManager = jobManager;
     this.testManager = testManager;

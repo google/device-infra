@@ -23,7 +23,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /** Binding annotations for lab server. */
-class Annotations {
+public class Annotations {
 
   private Annotations() {}
 
@@ -31,13 +31,13 @@ class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
   @BindingAnnotation
-  @interface DebugThreadPool {}
+  public @interface DebugThreadPool {}
 
   /** Annotation for binding RPC port flag value. */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
   @BindingAnnotation
-  @interface RpcPort {}
+  public @interface RpcPort {}
 
   /** Annotation for binding GlobalInternalBus. */
   @Retention(RetentionPolicy.RUNTIME)
@@ -69,6 +69,7 @@ class Annotations {
   @BindingAnnotation
   public @interface LabRpcPort {}
 
+  /** Annotation for binding lab gRPC port. */
   @Retention(RetentionPolicy.RUNTIME)
   @Target({ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
   @BindingAnnotation

@@ -45,10 +45,8 @@ import com.google.devtools.mobileharness.infra.lab.Annotations.LabRpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.RpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaCloudRpc;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
-import com.google.devtools.mobileharness.infra.lab.controller.JobManager;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunnerHolder;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
-import com.google.devtools.mobileharness.infra.lab.rpc.service.PrepareTestServiceImpl;
 import com.google.devtools.mobileharness.shared.file.resolver.AbstractFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.LocalFileResolver;
@@ -175,40 +173,6 @@ public class LabServerModule extends AbstractModule {
   @Singleton
   ExternalDeviceManager provideExternalDeviceManager() {
     return new NoopExternalDeviceManager();
-  }
-
-  @Provides
-  @Singleton
-  PrepareTestServiceImpl providePrepareTestServiceImpl(
-      @DeviceRunner LocalDeviceRunnerProvider localDeviceRunnerProvider,
-      ProxyTestManager testManager,
-      JobManager jobManager,
-      NetUtil netUtil,
-      LocalFileUtil localFileUtil,
-      SystemUtil systemUtil,
-      FileResolver fileResolver,
-      @GlobalEventBus EventBus eventBus,
-      @CloudRpcDnsAddress String cloudRpcDnsAddress,
-      @CloudRpcShardName String cloudRpcShardName,
-      @LabRpcPort int labRpcPort,
-      @LabGrpcPort int labGrpcPort,
-      @ServViaStubby boolean servViaStubby,
-      @ServViaCloudRpc boolean servViaCloudRpc) {
-    return new PrepareTestServiceImpl(
-        localDeviceRunnerProvider,
-        jobManager,
-        testManager,
-        localFileUtil,
-        netUtil,
-        systemUtil,
-        fileResolver,
-        servViaStubby,
-        labRpcPort,
-        labGrpcPort,
-        servViaCloudRpc,
-        cloudRpcDnsAddress,
-        cloudRpcShardName,
-        eventBus);
   }
 
   @Provides
