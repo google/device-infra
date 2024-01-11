@@ -28,23 +28,6 @@ package(
 )
 
 java_library(
-    name = "base_detector_dispatcher_picker",
-    srcs = ["BaseDetectorDispatcherPicker.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
-        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base_adb",
-        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:no_op",
-        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_real_device",
-        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
-        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:no_op_device",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:dispatcher_manager",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "base_device_status_provider",
     srcs = ["BaseDeviceStatusProvider.java"],
     visibility = [

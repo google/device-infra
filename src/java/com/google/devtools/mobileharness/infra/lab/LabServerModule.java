@@ -19,16 +19,15 @@ package com.google.devtools.mobileharness.infra.lab;
 import static com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools.createStandardScheduledThreadPool;
 import static com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools.createStandardThreadPool;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
-import com.google.devtools.mobileharness.api.devicemanager.dispatcher.Dispatcher;
-import com.google.devtools.mobileharness.infra.controller.device.BaseDetectorDispatcherPicker;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceHelperFactory;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunnerProvider;
+import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector;
+import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector.Component;
+import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorsAndDispatchers;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
@@ -59,6 +58,7 @@ import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import com.google.inject.assistedinject.FactoryModuleBuilder;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
+import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
 
@@ -148,25 +148,29 @@ public class LabServerModule extends AbstractModule {
   LocalDeviceManager provideLocalDeviceManager(
       ExternalDeviceManager externalDeviceManager, ListeningExecutorService threadPool)
       throws InterruptedException {
+    DetectorsAndDispatchers detectorsAndDispatchers =
+        new DetectorDispatcherSelector(Component.LAB_SERVER).selectDetectorsAndDispatchers();
+    if (detectorsAndDispatchers.supportedDetectors().isEmpty()) {
+      new SystemUtil()
+          .exit(
+              ExitCode.Lab.NO_DETECTOR,
+              String.format(
+                  "Your lab server is not properly configured: %n%s%n"
+                      + "Please follow%n - go/mh-codelab-android or"
+                      + "%n - go/mh-codelab-ios %nto set up lab server.",
+                  "All detectors are not supported by the current system."));
+    }
+
     LocalDeviceManager localDeviceManager =
         new LocalDeviceManager(
-            ossCheckAndGetSupportedDetectors(),
-            ossGetSupportedDispatchers(),
+            detectorsAndDispatchers.supportedDetectors(),
+            detectorsAndDispatchers.supportedDispatchers(),
             /* keepGoing= */ true,
             threadPool,
             globalInternalBus,
             externalDeviceManager);
     localDeviceManager.initialize();
     return localDeviceManager;
-  }
-
-  private static ImmutableList<Detector> ossCheckAndGetSupportedDetectors()
-      throws InterruptedException {
-    return BaseDetectorDispatcherPicker.checkAndGetSupportedDetectors();
-  }
-
-  private static ImmutableList<Class<? extends Dispatcher>> ossGetSupportedDispatchers() {
-    return BaseDetectorDispatcherPicker.getSupportedDispatchers();
   }
 
   @Provides

@@ -27,15 +27,14 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
-import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
-import com.google.devtools.mobileharness.api.devicemanager.dispatcher.Dispatcher;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
-import com.google.devtools.mobileharness.infra.controller.device.BaseDetectorDispatcherPicker;
-import com.google.devtools.mobileharness.infra.controller.device.DispatcherManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceTestRunner;
+import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector;
+import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector.Component;
+import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorsAndDispatchers;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
@@ -112,10 +111,12 @@ public class LocalMode implements ExecMode {
 
           // For the iOS device testing, it always needs DeviceStat. The IosRealDeviceDetector needs
           // check the device last reboot time.
+          DetectorsAndDispatchers detectorsAndDispatchers =
+              new DetectorDispatcherSelector(getComponent()).selectDetectorsAndDispatchers();
           localDeviceManager =
               new LocalDeviceManager(
-                  checkAndGetDetectors(),
-                  getSupportedDispatchers(),
+                  detectorsAndDispatchers.supportedDetectors(),
+                  detectorsAndDispatchers.supportedDispatchers(),
                   /* keepGoing= */ false,
                   localEnvThreadPool,
                   globalInternalBus,
@@ -219,23 +220,8 @@ public class LocalMode implements ExecMode {
     return localDeviceManager;
   }
 
-  protected ImmutableList<Detector> createDeviceDetectorCandidates() {
-    return BaseDetectorDispatcherPicker.createDetectorCandidates();
-  }
-
-  protected void addDeviceDispatchers(DispatcherManager dispatcherManager) {
-    BaseDetectorDispatcherPicker.addDispatchers(dispatcherManager);
-  }
-
-  private List<Detector> checkAndGetDetectors() throws InterruptedException {
-    ImmutableList<Detector> detectorCandidates = createDeviceDetectorCandidates();
-    return BaseDetectorDispatcherPicker.checkDetectors(detectorCandidates);
-  }
-
-  private ImmutableList<Class<? extends Dispatcher>> getSupportedDispatchers() {
-    DispatcherManager dispatcherManager = DispatcherManager.getInstance();
-    addDeviceDispatchers(dispatcherManager);
-    return dispatcherManager.getAllDispatchersInOrder();
+  protected DetectorDispatcherSelector.Component getComponent() {
+    return Component.LOCAL_MODE_3P;
   }
 
   @Subscribe
