@@ -300,7 +300,6 @@ public class Aapt {
   public int getApkMinSdkVersion(String apkPath)
       throws MobileHarnessException, InterruptedException {
     String output = run(ArrayUtil.join(AAPT_ARGS_DUMP_BADGING, apkPath));
-    // Rollback once b/317312779 is resolved
     Matcher matcher = Pattern.compile("\\nminSdkVersion:'([^']+)'").matcher(output);
     if (matcher.find()) {
       String version = matcher.group(1);
