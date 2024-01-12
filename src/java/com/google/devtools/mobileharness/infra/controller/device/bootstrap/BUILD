@@ -21,18 +21,18 @@ java_library(
     name = "all_detectors_and_dispatchers",
     srcs = ["AllDetectorsAndDispatchers.java"],
     deps = [
-        ":detectors_and_dispatchers_by_component",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base_adb",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:no_op",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:android_real_device",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:no_op_device",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/util:class_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:dispatcher_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/reflection:reflection_util",
         "@maven//:com_google_guava_guava",
-        "@maven//:com_google_inject_guice",
     ],
 )
 
@@ -65,16 +65,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "detectors_and_dispatchers_by_component",
-    srcs = ["DetectorsAndDispatchersByComponent.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:dispatcher_manager",
         "@maven//:com_google_guava_guava",
     ],
 )

@@ -21,7 +21,7 @@ java_library(
         "ClassUtil.java",
     ],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",

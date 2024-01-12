@@ -16,43 +16,29 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.bootstrap;
 
+
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.devicemanager.detector.BaseAdbDetector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.NoOpDeviceDetector;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.AndroidRealDeviceDispatcher;
+import com.google.devtools.mobileharness.api.devicemanager.dispatcher.Dispatcher;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.NoOpDeviceDispatcher;
+import com.google.devtools.mobileharness.api.devicemanager.util.ClassUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.device.DispatcherManager;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
-import com.google.inject.Guice;
 
 /** All detectors and dispatchers for {@link DetectorDispatcherSelector} in different components. */
 final class AllDetectorsAndDispatchers {
 
-  private AllDetectorsAndDispatchers() {}
+  private static final ReflectionUtil REFLECTION_UTIL = new ReflectionUtil();
 
-  public static ImmutableList<Detector> detectorCandidatesForLocalModeInternal() {
-    ImmutableList.Builder<Detector> detectorCandidates = ImmutableList.builder();
-    detectorCandidates.addAll(detectorCandidatesForLocalModeInternal3pOssAndLabServerOss());
-    detectorCandidates.addAll(
-        getByComponent(
-                "com.google.devtools.mobileharness.infra.controller.device.bootstrap."
-                    + "DetectorsAndDispatchersForLocalModeInternalOnly")
-            .detectorCandidates());
-    return detectorCandidates.build();
-  }
+  private AllDetectorsAndDispatchers() {}
 
   public static ImmutableList<Detector> detectorCandidatesForLocalMode3pAndOss() {
     return detectorCandidatesForLocalModeInternal3pOssAndLabServerOss();
-  }
-
-  public static ImmutableList<Detector> detectorCandidatesForLabServerInternal() {
-    return getByComponent(
-            "com.google.devtools.mobileharness.infra.controller.device.bootstrap."
-                + "DetectorsAndDispatchersForLabServerInternalOnly")
-        .detectorCandidates();
   }
 
   public static ImmutableList<Detector> detectorCandidatesForLabServerOss() {
@@ -79,24 +65,8 @@ final class AllDetectorsAndDispatchers {
     return new BaseAdbDetector();
   }
 
-  public static void addDispatchersForLocalModeInternal(DispatcherManager dispatcherManager) {
-    addDispatchersForAll(dispatcherManager);
-    getByComponent(
-            "com.google.devtools.mobileharness.infra.controller.device.bootstrap."
-                + "DetectorsAndDispatchersForLocalModeInternalOnly")
-        .addDispatchers(dispatcherManager);
-  }
-
   public static void addDispatchersForLocalMode3pAndOss(DispatcherManager dispatcherManager) {
     addDispatchersForAll(dispatcherManager);
-  }
-
-  public static void addDispatchersForLabServerInternal(DispatcherManager dispatcherManager) {
-    addDispatchersForAll(dispatcherManager);
-    getByComponent(
-            "com.google.devtools.mobileharness.infra.controller.device.bootstrap."
-                + "DetectorsAndDispatchersForLabServerInternalOnly")
-        .addDispatchers(dispatcherManager);
   }
 
   public static void addDispatchersForLabServerOss(DispatcherManager dispatcherManager) {
@@ -115,18 +85,28 @@ final class AllDetectorsAndDispatchers {
     }
   }
 
-  private static DetectorsAndDispatchersByComponent getByComponent(String className) {
+  private static Detector createDetector(String detectorClassSimpleName) {
+    String detectorClassName = Detector.class.getPackageName() + "." + detectorClassSimpleName;
     try {
-      return Guice.createInjector()
-          .getInstance(
-              new ReflectionUtil()
-                  .loadClass(
-                      className,
-                      DetectorsAndDispatchersByComponent.class,
-                      AllDetectorsAndDispatchers.class.getClassLoader()));
-    } catch (MobileHarnessException | ClassNotFoundException e) {
+      return REFLECTION_UTIL
+          .loadClass(
+              detectorClassName, Detector.class, AllDetectorsAndDispatchers.class.getClassLoader())
+          .getConstructor()
+          .newInstance();
+    } catch (MobileHarnessException | ReflectiveOperationException e) {
       throw new IllegalStateException(
-          String.format("Class %s is not added to runtime_deps", className), e);
+          String.format("Detector class [%s] is not added as runtime_deps", detectorClassName), e);
+    }
+  }
+
+  private static Class<? extends Dispatcher> loadDispatcherClass(String dispatcherClassSimpleName) {
+    try {
+      return ClassUtil.getDispatcherClass(dispatcherClassSimpleName);
+    } catch (MobileHarnessException e) {
+      throw new IllegalStateException(
+          String.format(
+              "Dispatcher class [%s] is not added as runtime_deps", dispatcherClassSimpleName),
+          e);
     }
   }
 }
