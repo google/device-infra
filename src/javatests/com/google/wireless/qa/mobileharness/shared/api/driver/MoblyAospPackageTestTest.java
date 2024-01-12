@@ -126,7 +126,7 @@ public final class MoblyAospPackageTestTest {
             moblyReportHelper,
             certificationSuiteInfoFactory);
 
-    var unused = moblyAospPackageTest.generateTestCommand(testInfo, configFile, false);
+    var unused = moblyAospPackageTest.generateTestCommand(testInfo, configFile);
 
     verify(setupUtil)
         .setupEnvAndGenerateTestCommand(

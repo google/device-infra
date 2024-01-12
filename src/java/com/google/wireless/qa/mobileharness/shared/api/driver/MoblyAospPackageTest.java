@@ -164,7 +164,7 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
   /** Generates the test execution command. */
   @Override
   @VisibleForTesting
-  String[] generateTestCommand(TestInfo testInfo, File configFile, boolean usePythonSpongeConverter)
+  String[] generateTestCommand(TestInfo testInfo, File configFile)
       throws MobileHarnessException, InterruptedException {
     Path moblyPkg = Path.of(testInfo.jobInfo().files().getSingle(FILE_MOBLY_PKG));
     Path moblyUnzipDir = Path.of(testInfo.getTmpFileDir(), "mobly");

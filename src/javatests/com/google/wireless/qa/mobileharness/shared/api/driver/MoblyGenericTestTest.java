@@ -144,7 +144,6 @@ public class MoblyGenericTestTest {
             .setTiming(timing)
             .build();
     jobInfo.params().add(MoblyGenericTest.TEST_SELECTOR_KEY, testName);
-    jobInfo.params().add("use_python_sponge_converter", "false");
     jobInfo.files().add(MoblyGenericTest.FILE_TEST_LIB_PAR, moblyTestLibPar);
     testInfo = jobInfo.tests().add(TEST_ID, testName, timing, localFileUtil);
     // Set up the test lib par for the driver

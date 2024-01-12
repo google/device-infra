@@ -126,14 +126,13 @@ public class MoblyGenericTest extends BaseDriver {
 
   @Override
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    boolean usePythonSpongeConverter = false;
     File configFile = prepareMoblyConfig(testInfo);
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     boolean passed;
     Instant startTime = clock.instant();
     Instant endTime;
     try {
-      passed = runMoblyCommand(testInfo, configFile, usePythonSpongeConverter);
+      passed = runMoblyCommand(testInfo, configFile);
       testInfo
           .log()
           .atInfo()
@@ -281,12 +280,11 @@ public class MoblyGenericTest extends BaseDriver {
    *
    * @param testInfo information about the test being run
    * @param configFile config to pass to Mobly in the -c flag
-   * @param usePythonSpongeConverter whether or not to use the Python Sponge converter results
    * @return true if Mobly ran and returned a successful exit code, false otherwise
    * @throws MobileHarnessException if there was an issue running the Mobly test.
    */
   @VisibleForTesting
-  boolean runMoblyCommand(TestInfo testInfo, File configFile, boolean usePythonSpongeConverter)
+  boolean runMoblyCommand(TestInfo testInfo, File configFile)
       throws MobileHarnessException, InterruptedException {
 
     // Use the adb and fastboot binaries that ship with Mobile Harness.
@@ -355,7 +353,7 @@ public class MoblyGenericTest extends BaseDriver {
             .buildOrThrow();
 
     // Run! :)
-    String[] cmd = generateTestCommand(testInfo, configFile, usePythonSpongeConverter);
+    String[] cmd = generateTestCommand(testInfo, configFile);
     CommandProcess moblyProcess = null;
     try {
       moblyProcess = runCommand(testInfo, envVars, cmd);
@@ -396,7 +394,7 @@ public class MoblyGenericTest extends BaseDriver {
 
   /** Generates the test execution command. */
   @VisibleForTesting
-  String[] generateTestCommand(TestInfo testInfo, File configFile, boolean usePythonSpongeConverter)
+  String[] generateTestCommand(TestInfo testInfo, File configFile)
       throws MobileHarnessException, InterruptedException {
     // Get par file.
     String testLibPar = testInfo.jobInfo().files().getSingle(FILE_TEST_LIB_PAR);
@@ -422,13 +420,11 @@ public class MoblyGenericTest extends BaseDriver {
             "--alsologtostderr",
             "--undefok=blog_dir,rpc_log_full_messages,alsologtostderr,uid,gid,loas_pwd_fallback_in_corp");
 
-    if (usePythonSpongeConverter) {
-      cmdElements.addAll(
-          ImmutableList.of(
-              "--convert_results_to_sponge",
-              String.format(
-                  "--sponge_root_directory=%s", testInfo.jobInfo().setting().getGenFileDir())));
-    }
+    cmdElements.addAll(
+        ImmutableList.of(
+            "--convert_results_to_sponge",
+            String.format(
+                "--sponge_root_directory=%s", testInfo.jobInfo().setting().getGenFileDir())));
     cmdElements.addAll(
         ImmutableList.of(
             "--",
