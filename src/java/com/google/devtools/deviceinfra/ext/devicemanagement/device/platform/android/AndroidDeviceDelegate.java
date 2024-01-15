@@ -313,9 +313,10 @@ public abstract class AndroidDeviceDelegate {
 
   /** Updates the cached sdk version of the device. */
   public void updateCachedSdkVersion() throws MobileHarnessException, InterruptedException {
-    device.setProperty(
-        PROPERTY_NAME_CACHED_SDK_VERSION,
-        Integer.toString(androidSystemSettingUtil.getDeviceSdkVersion(deviceId)));
+    int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
+    device.setProperty(PROPERTY_NAME_CACHED_SDK_VERSION, Integer.toString(sdkVersion));
+    logger.atInfo().log("Updating device %s dimension sdk_version to: %s", deviceId, sdkVersion);
+    device.updateDimension(Dimension.Name.SDK_VERSION, Integer.toString(sdkVersion));
   }
 
   /**
