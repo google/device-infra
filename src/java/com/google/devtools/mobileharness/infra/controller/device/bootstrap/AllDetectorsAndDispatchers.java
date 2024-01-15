@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.devicemanager.detector.BaseAdbDetector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.NoOpDeviceDetector;
+import com.google.devtools.mobileharness.api.devicemanager.dispatcher.AndroidLocalEmulatorDispatcher;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.AndroidRealDeviceDispatcher;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.Dispatcher;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.NoOpDeviceDispatcher;
@@ -67,10 +68,14 @@ final class AllDetectorsAndDispatchers {
 
   public static void addDispatchersForLocalModeOss(DispatcherManager dispatcherManager) {
     addDispatchersForAll(dispatcherManager);
+
+    addDispatchersForLocalModeLabServerOss(dispatcherManager);
   }
 
   public static void addDispatchersForLabServerOss(DispatcherManager dispatcherManager) {
     addDispatchersForAll(dispatcherManager);
+
+    addDispatchersForLocalModeLabServerOss(dispatcherManager);
   }
 
   private static void addDispatchersForAll(DispatcherManager dispatcherManager) {
@@ -82,6 +87,15 @@ final class AllDetectorsAndDispatchers {
     // NoOpDevice dispatcher.
     if (Flags.instance().noOpDeviceNum.getNonNull() > 0) {
       dispatcherManager.add(NoOpDeviceDispatcher.class);
+    }
+  }
+
+  private static void addDispatchersForLocalModeLabServerOss(DispatcherManager dispatcherManager) {
+    if (Flags.instance().enableEmulatorDetection.getNonNull()) {
+      dispatcherManager.add(AndroidLocalEmulatorDispatcher.class);
+      dispatcherManager.addDependency(
+          AndroidRealDeviceDispatcher.class.getSimpleName(),
+          AndroidLocalEmulatorDispatcher.class.getSimpleName());
     }
   }
 
