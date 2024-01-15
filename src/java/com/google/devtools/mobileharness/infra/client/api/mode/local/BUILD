@@ -27,6 +27,8 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
     ],
+    runtime_deps = [
+    ],
     deps = [
         ":device_info_filter",
         ":local_device_allocator",
@@ -57,6 +59,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/launcher:local_device_test_runner_launcher",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:local_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:no_op_test_flow_converter",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local/utp/controller:test_flow_converter",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
@@ -74,6 +77,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:device_query_java_proto",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
     ],
 )
 

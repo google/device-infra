@@ -33,7 +33,7 @@ public final class DetectorDispatcherSelector {
 
   /** The component where the device manager is. */
   public enum Component {
-    LOCAL_MODE_3P,
+    LOCAL_MODE,
     LAB_SERVER,
   }
 
@@ -51,26 +51,20 @@ public final class DetectorDispatcherSelector {
 
   private ImmutableList<Detector> selectSupportedDetectors() throws InterruptedException {
     ImmutableList<Detector> detectorCandidates;
-    switch (component) {
-      case LOCAL_MODE_3P:
-        detectorCandidates = AllDetectorsAndDispatchers.detectorCandidatesForLocalMode3pAndOss();
-        break;
-      default: // LAB_SERVER
-        detectorCandidates = AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss();
-        break;
+    if (component == Component.LOCAL_MODE) {
+      detectorCandidates = AllDetectorsAndDispatchers.detectorCandidatesForLocalModeOss();
+    } else {
+      detectorCandidates = AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss();
     }
     return checkDetectors(detectorCandidates);
   }
 
   private ImmutableList<Class<? extends Dispatcher>> selectSupportedDispatchers() {
     DispatcherManager dispatcherManager = DispatcherManager.getInstance();
-    switch (component) {
-      case LOCAL_MODE_3P:
-        AllDetectorsAndDispatchers.addDispatchersForLocalMode3pAndOss(dispatcherManager);
-        break;
-      default: // LAB_SERVER
-        AllDetectorsAndDispatchers.addDispatchersForLabServerOss(dispatcherManager);
-        break;
+    if (component == Component.LOCAL_MODE) {
+      AllDetectorsAndDispatchers.addDispatchersForLocalModeOss(dispatcherManager);
+    } else {
+      AllDetectorsAndDispatchers.addDispatchersForLabServerOss(dispatcherManager);
     }
     return dispatcherManager.getAllDispatchersInOrder();
   }

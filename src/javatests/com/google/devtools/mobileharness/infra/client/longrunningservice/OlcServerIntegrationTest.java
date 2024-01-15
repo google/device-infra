@@ -378,6 +378,7 @@ public class OlcServerIntegrationTest {
                             "--enable_client_experiment_manager=false",
                             "--enable_client_file_transfer=false",
                             "--enable_grpc_lab_server=true",
+                            "--external_adb_initializer_template=true",
                             "--olc_server_port=" + olcServerPort,
                             "--no_op_device_num=1",
                             "--detect_adb_device=false",

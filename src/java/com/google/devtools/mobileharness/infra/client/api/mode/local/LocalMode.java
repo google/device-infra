@@ -46,6 +46,7 @@ import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLaunche
 import com.google.devtools.mobileharness.infra.controller.test.launcher.LocalDeviceTestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.local.LocalTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.NoOpTestFlowConverter;
+import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -112,7 +113,7 @@ public class LocalMode implements ExecMode {
           // For the iOS device testing, it always needs DeviceStat. The IosRealDeviceDetector needs
           // check the device last reboot time.
           DetectorsAndDispatchers detectorsAndDispatchers =
-              new DetectorDispatcherSelector(getComponent()).selectDetectorsAndDispatchers();
+              new DetectorDispatcherSelector(Component.LOCAL_MODE).selectDetectorsAndDispatchers();
           localDeviceManager =
               new LocalDeviceManager(
                   detectorsAndDispatchers.supportedDetectors(),
@@ -205,12 +206,12 @@ public class LocalMode implements ExecMode {
       ListeningExecutorService threadPool)
       throws MobileHarnessException {
     return new LocalTestRunner(
-        launcher,
-        setting,
-        devices,
-        threadPool,
-        new NoOpTestFlowConverter(
-            IncompatibleReasonProto.InfraIncompatibleReason.ATS2, "ATS2 uses classic mode"));
+        launcher, setting, devices, threadPool, createTestFlowConverterOss());
+  }
+
+  private static TestFlowConverter createTestFlowConverterOss() {
+    return new NoOpTestFlowConverter(
+        IncompatibleReasonProto.InfraIncompatibleReason.ATS2, "ATS2 uses classic mode");
   }
 
   /** Returns the local device manager created and owned by LocalMode. */
@@ -218,10 +219,6 @@ public class LocalMode implements ExecMode {
       throws InterruptedException {
     initialize(globalInternalBus);
     return localDeviceManager;
-  }
-
-  protected DetectorDispatcherSelector.Component getComponent() {
-    return Component.LOCAL_MODE_3P;
   }
 
   @Subscribe

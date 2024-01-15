@@ -17,6 +17,7 @@ java_library(
     name = "test_flow_converter",
     srcs = ["TestFlowConverter.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
     ],

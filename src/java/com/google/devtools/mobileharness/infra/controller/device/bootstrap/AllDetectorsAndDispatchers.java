@@ -37,16 +37,16 @@ final class AllDetectorsAndDispatchers {
 
   private AllDetectorsAndDispatchers() {}
 
-  public static ImmutableList<Detector> detectorCandidatesForLocalMode3pAndOss() {
-    return detectorCandidatesForLocalModeInternal3pOssAndLabServerOss();
+  public static ImmutableList<Detector> detectorCandidatesForLocalModeOss() {
+    return detectorCandidatesForLocalModeInternalOssAndLabServerOss();
   }
 
   public static ImmutableList<Detector> detectorCandidatesForLabServerOss() {
-    return detectorCandidatesForLocalModeInternal3pOssAndLabServerOss();
+    return detectorCandidatesForLocalModeInternalOssAndLabServerOss();
   }
 
   private static ImmutableList<Detector>
-      detectorCandidatesForLocalModeInternal3pOssAndLabServerOss() {
+      detectorCandidatesForLocalModeInternalOssAndLabServerOss() {
     ImmutableList.Builder<Detector> detectorCandidates = ImmutableList.builder();
 
     // ADB detector.
@@ -65,7 +65,7 @@ final class AllDetectorsAndDispatchers {
     return new BaseAdbDetector();
   }
 
-  public static void addDispatchersForLocalMode3pAndOss(DispatcherManager dispatcherManager) {
+  public static void addDispatchersForLocalModeOss(DispatcherManager dispatcherManager) {
     addDispatchersForAll(dispatcherManager);
   }
 
