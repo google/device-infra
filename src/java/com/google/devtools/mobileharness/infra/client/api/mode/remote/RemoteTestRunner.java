@@ -362,6 +362,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         throw new MobileHarnessException(
             InfraErrorId.CLIENT_REMOTE_MODE_TEST_ENGINE_NOT_READY, "Test engine is not ready", e);
       }
+      logger.atInfo().log("Test engine is ready");
 
       kickOffTest(testInfo, deviceLocators);
     }
