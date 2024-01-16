@@ -30,6 +30,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
 /** Runner for running OmniLab jobs of a session. */
@@ -44,6 +45,14 @@ public class SessionJobRunner {
   private final ExecMode execMode;
   private final Sleeper sleeper;
 
+  private final Object lock = new Object();
+
+  @GuardedBy("lock")
+  private boolean enableJobPolling = true;
+
+  @GuardedBy("lock")
+  private boolean needKillJobs = false;
+
   @Inject
   SessionJobRunner(ClientApi clientApi, ExecMode execMode, Sleeper sleeper) {
     this.clientApi = clientApi;
@@ -57,20 +66,34 @@ public class SessionJobRunner {
 
     try {
       while (true) {
-        // Polls new jobs.
-        ImmutableList<JobInfo> newJobs = sessionDetailHolder.pollJobs();
-        allJobIds.addAll(
-            newJobs.stream()
-                .map(JobInfo::locator)
-                .map(JobLocator::getId)
-                .collect(toImmutableList()));
+        boolean enableJobPolling;
+        boolean needKillJobs;
+        synchronized (lock) {
+          enableJobPolling = this.enableJobPolling;
+          needKillJobs = this.needKillJobs;
+          this.needKillJobs = false;
+        }
 
-        // Starts new jobs.
-        for (JobInfo jobInfo : newJobs) {
-          logger.atInfo().log(
-              "Starting job %s of session %s",
-              jobInfo.locator().getId(), sessionDetailHolder.getSessionId());
-          clientApi.startJob(jobInfo, execMode, sessionPlugins);
+        if (enableJobPolling) {
+          // Polls new jobs.
+          ImmutableList<JobInfo> newJobs = sessionDetailHolder.pollJobs();
+          allJobIds.addAll(
+              newJobs.stream()
+                  .map(JobInfo::locator)
+                  .map(JobLocator::getId)
+                  .collect(toImmutableList()));
+
+          // Starts new jobs.
+          for (JobInfo jobInfo : newJobs) {
+            logger.atInfo().log(
+                "Starting job %s of session %s",
+                jobInfo.locator().getId(), sessionDetailHolder.getSessionId());
+            clientApi.startJob(jobInfo, execMode, sessionPlugins);
+          }
+        }
+
+        if (needKillJobs) {
+          killJobs(allJobIds);
         }
 
         // Waits until all jobs finish.
@@ -91,6 +114,14 @@ public class SessionJobRunner {
 
     logger.atInfo().log("All jobs of session %s finished", sessionDetailHolder.getSessionId());
     // TODO: Adds job information to SessionOutput.
+  }
+
+  /** Stops polling new jobs and kills all running jobs. */
+  public void abort() {
+    synchronized (lock) {
+      enableJobPolling = false;
+      needKillJobs = true;
+    }
   }
 
   private void killJobs(List<String> jobIds) {

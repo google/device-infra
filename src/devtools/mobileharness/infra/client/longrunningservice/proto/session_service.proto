@@ -38,6 +38,16 @@ service SessionService {
 
   // Gets information of all pending/running/archived sessions.
   rpc GetAllSessions(GetAllSessionsRequest) returns (GetAllSessionsResponse);
+
+  // Aborts a session.
+  //
+  // If the session has not started, it will not be started.
+  //
+  // If the session is running, and no more jobs will be started and all
+  // running jobs will be killed. Session plugins will still be executed.
+  //
+  // If the session has ended, nothing will happen.
+  rpc AbortSession(AbortSessionRequest) returns (AbortSessionResponse);
 }
 
 message CreateSessionRequest {
@@ -100,6 +110,13 @@ message GetAllSessionsRequest {
   // Optional.
   SessionFilter session_filter = 2;
 }
+
+message AbortSessionRequest {
+  // Required.
+  SessionId session_id = 1;
+}
+
+message AbortSessionResponse {}
 
 message GetAllSessionsResponse {
   // Required.

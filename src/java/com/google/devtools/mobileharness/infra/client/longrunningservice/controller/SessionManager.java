@@ -213,6 +213,48 @@ public class SessionManager {
     }
   }
 
+  public void abortSession(String sessionId) throws MobileHarnessException {
+    SessionDetailAndFinalResultFuture finalSession = null;
+    synchronized (lock) {
+      if (archivedSessions.containsKey(sessionId)) {
+        // If the session has ended, does nothing.
+        logger.atInfo().log("Abort an archived session [%s]", sessionId);
+        return;
+      }
+
+      if (sessionQueue.containsKey(sessionId)) {
+        // If the session has not started, archives its directly.
+        logger.atInfo().log("Abort a pending session [%s], archive it", sessionId);
+        SessionDetailAndFinalResultFuture session = sessionQueue.remove(sessionId);
+
+        // Marks the session as FINISHED.
+        SessionDetail finalSessionDetail =
+            createFinalSessionDetail(session.sessionDetail(), /* sessionRunnerError= */ null);
+
+        // Archives the session.
+        archiveSession(finalSessionDetail);
+
+        finalSession =
+            SessionDetailAndFinalResultFuture.of(finalSessionDetail, session.finalResultFuture());
+      } else if (sessionRunners.containsKey(sessionId)) {
+        // If the session is running, stops job polling and kills all running jobs.
+        logger.atInfo().log("Abort a running session [%s]", sessionId);
+
+        SessionRunner sessionRunner = sessionRunners.get(sessionId).sessionRunner();
+        sessionRunner.abortSession();
+      } else {
+        throw new MobileHarnessException(
+            InfraErrorId.OLCS_ABORT_SESSION_SESSION_NOT_FOUND,
+            String.format("Session not found, id=[%s]", sessionId));
+      }
+    }
+
+    // Sets the future out of the lock.
+    if (finalSession != null) {
+      finalSession.finalResultFuture().set(finalSession.sessionDetail());
+    }
+  }
+
   /** Tries to poll as many as sessions from the session queue and starts them. */
   @GuardedBy("lock")
   private void startSessions() {
@@ -277,34 +319,23 @@ public class SessionManager {
 
     @Override
     public void onSuccess(@Nullable Void result) {
-      afterSession(/* error= */ null);
+      afterSession(/* sessionRunnerError= */ null);
     }
 
     @Override
-    public void onFailure(Throwable error) {
-      afterSession(error);
+    public void onFailure(Throwable sessionRunnerError) {
+      afterSession(sessionRunnerError);
     }
 
-    private void afterSession(@Nullable Throwable error) {
+    private void afterSession(@Nullable Throwable sessionRunnerError) {
       SessionDetail sessionDetail = sessionRunner.sessionRunner().getSession(/* fieldMask= */ null);
-      SessionDetail.Builder sessionDetailBuilder = sessionDetail.toBuilder();
-      sessionDetailBuilder.setSessionStatus(SessionStatus.SESSION_FINISHED);
-
-      logger.atInfo().withCause(error).log("Session finished: %s", shortDebugString(sessionDetail));
-
-      // Adds the error thrown from the session runner to SessionDetail, if any.
-      if (error != null) {
-        sessionDetailBuilder.setSessionRunnerError(ErrorModelConverter.toExceptionDetail(error));
-      }
-      SessionDetail finalSessionDetail = sessionDetailBuilder.build();
+      SessionDetail finalSessionDetail =
+          createFinalSessionDetail(sessionDetail, sessionRunnerError);
 
       // Archives the session.
-      String sessionId = finalSessionDetail.getSessionId().getId();
       synchronized (lock) {
-        sessionRunners.remove(sessionId);
-        if (!finalSessionDetail.getSessionConfig().getRemoveAfterFinish()) {
-          archivedSessions.put(sessionId, finalSessionDetail);
-        }
+        sessionRunners.remove(finalSessionDetail.getSessionId().getId());
+        archiveSession(finalSessionDetail);
 
         // Tries to start new sessions if any.
         startSessions();
@@ -312,6 +343,29 @@ public class SessionManager {
 
       // Completes the final result future.
       sessionRunner.finalResultFuture().set(finalSessionDetail);
+    }
+  }
+
+  private static SessionDetail createFinalSessionDetail(
+      SessionDetail sessionDetail, @Nullable Throwable sessionRunnerError) {
+    SessionDetail.Builder sessionDetailBuilder = sessionDetail.toBuilder();
+    sessionDetailBuilder.setSessionStatus(SessionStatus.SESSION_FINISHED);
+
+    logger.atInfo().withCause(sessionRunnerError).log(
+        "Session finished: %s", shortDebugString(sessionDetail));
+
+    // Adds the error thrown from the session runner to SessionDetail, if any.
+    if (sessionRunnerError != null) {
+      sessionDetailBuilder.setSessionRunnerError(
+          ErrorModelConverter.toExceptionDetail(sessionRunnerError));
+    }
+    return sessionDetailBuilder.build();
+  }
+
+  @GuardedBy("lock")
+  private void archiveSession(SessionDetail finalSessionDetail) {
+    if (!finalSessionDetail.getSessionConfig().getRemoveAfterFinish()) {
+      archivedSessions.put(finalSessionDetail.getSessionId().getId(), finalSessionDetail);
     }
   }
 

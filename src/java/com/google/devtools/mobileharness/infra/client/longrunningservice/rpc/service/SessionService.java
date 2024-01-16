@@ -27,6 +27,8 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceGrpc;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
@@ -96,6 +98,17 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
         SessionServiceGrpc.getGetAllSessionsMethod());
   }
 
+  @Override
+  public void abortSession(
+      AbortSessionRequest request, StreamObserver<AbortSessionResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        this::doAbortSession,
+        SessionServiceGrpc.getServiceDescriptor(),
+        SessionServiceGrpc.getAbortSessionMethod());
+  }
+
   private CreateSessionResponse doCreateSession(CreateSessionRequest request)
       throws MobileHarnessException {
     SessionDetail sessionDetail =
@@ -153,6 +166,12 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
               .collect(toImmutableList());
     }
     return GetAllSessionsResponse.newBuilder().addAllSessionDetail(sessions).build();
+  }
+
+  private AbortSessionResponse doAbortSession(AbortSessionRequest request)
+      throws MobileHarnessException {
+    sessionManager.abortSession(request.getSessionId().getId());
+    return AbortSessionResponse.getDefaultInstance();
   }
 
   private static RunSessionResponse createRunSessionResponse(SessionDetail finalResult) {

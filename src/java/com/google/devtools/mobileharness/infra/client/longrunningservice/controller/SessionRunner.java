@@ -109,4 +109,8 @@ public class SessionRunner implements Callable<Void> {
   public SessionConfig getSessionConfig() {
     return sessionDetailHolder.getSessionConfig();
   }
+
+  public void abortSession() {
+    sessionJobRunner.abort();
+  }
 }
