@@ -1,0 +1,123 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.api.query;
+
+import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/api/query/proto/lab_query.proto";
+
+option java_package = "com.google.devtools.mobileharness.api.query.proto";
+option java_outer_classname = "LabRecordProto";
+
+// A query for querying record information of labs.
+message LabRecordQuery {
+  // Filter for filtering lab records from result.
+  message LabRecordFilter {
+    // Optional.
+    //
+    // The host name of the lab.
+    string host_name = 1;
+
+    // Optional.
+    //
+    // The start timestamp(inclusive) of the record.
+    google.protobuf.Timestamp start_timestamp = 2;
+
+    // Optional.
+    //
+    // The end timestamp(exclusive) of the record.
+    google.protobuf.Timestamp end_timestamp = 3;
+  }
+  // Optional.
+  //
+  // If not present, returns all lab recordss.
+  LabRecordFilter filter = 1;
+
+  // Optional.
+  //
+  // If not present, returns all fields of LabInfo.
+  LabQuery.Mask.LabInfoMask lab_info_mask = 2;
+}
+
+// Result of a lab record query.
+message LabRecordQueryResult {
+  repeated LabRecord lab_record = 1;
+  // Required.
+  //
+  // Lab record count regardless of Page setting. It may be larger than the size
+  // of lab_record.
+  int32 lab_record_total_count = 2;
+}
+
+// Lab record
+message LabRecord {
+  // Required
+  google.protobuf.Timestamp timestamp = 1;
+
+  // Required
+  LabInfo lab_info = 2;
+}
+
+// A query for querying record information of devices.
+message DeviceRecordQuery {
+  // Filter for filtering device records from result.
+  message DeviceRecordFilter {
+    // Optional.
+    //
+    // The device UUID of the device.
+    string devie_uuid = 1;
+
+    // Optional.
+    //
+    // The start timestamp(inclusive) of the record.
+    google.protobuf.Timestamp start_timestamp = 2;
+
+    // Optional.
+    //
+    // The end timestamp(exclusive) of the record.
+    google.protobuf.Timestamp end_timestamp = 3;
+  }
+  // Optional.
+  //
+  // If not present, returns all device records.
+  DeviceRecordFilter filter = 1;
+
+  // Optional.
+  //
+  // If not present, returns all fields of DeviceInfo.
+  LabQuery.Mask.DeviceInfoMask device_info_mask = 2;
+}
+
+// Result of a device query.
+message DeviceRecordQueryResult {
+  repeated DeviceRecord device_record = 1;
+  // Required.
+  //
+  // Device record count regardless of Page setting. It may be larger than the
+  // size of device_record.
+  int32 device_record_total_count = 2;
+}
+
+// Device record
+message DeviceRecord {
+  // Required
+  google.protobuf.Timestamp timestamp = 1;
+
+  // Required
+  DeviceInfo device_info = 2;
+}

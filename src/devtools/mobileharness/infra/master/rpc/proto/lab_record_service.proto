@@ -1,0 +1,59 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.master.rpc;
+
+import "src/devtools/mobileharness/api/query/proto/lab_query.proto";
+import "src/devtools/mobileharness/api/query/proto/lab_record.proto";
+
+option java_package = "com.google.devtools.mobileharness.infra.master.rpc.proto";
+option java_outer_classname = "LabRecordServiceProto";
+
+service LabRecordService {
+  // Gets lab record information.
+  rpc GetLabRecord(GetLabRecordRequest) returns (GetLabRecordResponse);
+  // Gets device record information.
+  rpc GetDeviceRecord(GetDeviceRecordRequest) returns (GetDeviceRecordResponse);
+}
+
+message GetLabRecordRequest {
+  // Required.
+  mobileharness.api.query.LabRecordQuery lab_record_query = 1;
+
+  // Optional.
+  mobileharness.api.query.Page page = 2;
+}
+
+message GetLabRecordResponse {
+  // Required.
+  mobileharness.api.query.LabRecordQueryResult lab_record_query_result = 1;
+}
+
+message GetDeviceRecordRequest {
+  // Required.
+  mobileharness.api.query.DeviceRecordQuery device_record_query = 1;
+
+  // Optional.
+  mobileharness.api.query.Page page = 2;
+}
+
+message GetDeviceRecordResponse {
+  // Required.
+  mobileharness.api.query.DeviceRecordQueryResult device_record_query_result =
+      1;
+}

@@ -61,3 +61,32 @@ py_proto_library(
         "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
     ],
 )
+
+proto_library(
+    name = "lab_record_proto",
+    srcs = ["lab_record.proto"],
+    deps = [
+        ":lab_query_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_proto",
+        "//src/devtools/mobileharness/api/model/proto:lab_proto",
+        "@com_google_protobuf//:timestamp_proto",
+    ],
+)
+
+java_proto_library(
+    name = "lab_record_java_proto",
+    deps = [":lab_record_proto"],
+)
+
+py_proto_library(
+    name = "lab_record_py_proto",
+    srcs = [
+        "lab_record.proto",
+    ],
+    deps = [
+        ":lab_query_py_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_py_pb2",
+        "//src/devtools/mobileharness/api/model/proto:lab_py_proto",
+        "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
+    ],
+)
