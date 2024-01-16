@@ -22,26 +22,41 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest.RequestCase;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
-import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
 import javax.inject.Inject;
 
-/** */
+/** Session Plugin to serve test requests coming from ATS server. */
 final class AtsServerSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final String TRADEFED_DRIVER_NAME = "XtsTradefedTest";
 
   /** Set in {@link #onSessionStarting}. */
   private volatile SessionRequest request;
+
+  private final Object requestDetailLock = new Object();
+
+  // The source of truth for this session's request states.
+  @GuardedBy("requestDetailLock")
+  private final RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+
+  @GuardedBy("requestDetailLock")
+  private Boolean nonTradefedJobsHasBeenCreated = false;
 
   private final SessionInfo sessionInfo;
   private final NewMultiCommandRequestHandler newMultiCommandRequestHandler;
@@ -59,35 +74,93 @@ final class AtsServerSessionPlugin {
     request =
         sessionInfo.getSessionPluginExecutionConfig().getConfig().unpack(SessionRequest.class);
     logger.atInfo().log("Config: %s", shortDebugString(request));
-
     if (request.getRequestCase().equals(RequestCase.NEW_MULTI_COMMAND_REQUEST)) {
-      newMultiCommandRequestHandler.handle(request.getNewMultiCommandRequest(), sessionInfo);
+      synchronized (requestDetailLock) {
+        requestDetail.mergeFrom(
+            newMultiCommandRequestHandler.addTradefedJobs(
+                request.getNewMultiCommandRequest(), sessionInfo));
+        // If no tradefed job was created and the request does not contain any error that cause it
+        // to cancel, create non tradefed jobs directly.
+        if (requestDetail.getCommandDetailsCount() == 0
+            && requestDetail.getState() == RequestState.RUNNING) {
+          createNonTradefedJobs();
+        }
+        RequestDetail latestRequestDetail = requestDetail.build();
+        sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
+      }
     }
   }
 
   @Subscribe
-  public void onJobEnded(JobEndEvent jobEndEvent) {
+  public void onJobEnded(JobEndEvent jobEndEvent)
+      throws InterruptedException, MobileHarnessException {
     updateCommandDetail(jobEndEvent.getJobInfo().toNewJobInfo());
+    JobInfo jobInfo = jobEndEvent.getJobInfo().toNewJobInfo();
 
-    // TODO: create mobly job after all tradefed jobs are done.
+    // If a non-tradefed tests ended, that means all non-tradefed tests had already been created and
+    // no need to create more.
+    if (!jobInfo.type().getDriver().equals(TRADEFED_DRIVER_NAME)) {
+      return;
+    }
+
+    // If all tradefed jobs have ended, create non tradefed jobs.
+    synchronized (requestDetailLock) {
+      // In case another thread has created the non TF jobs, skip the rest of the steps.
+      if (nonTradefedJobsHasBeenCreated) {
+        return;
+      }
+      for (CommandDetail commandDetail : requestDetail.getCommandDetailsMap().values()) {
+        if (!commandDetail.getState().equals(CommandState.COMPLETED)
+            && !commandDetail.getState().equals(CommandState.ERROR)) {
+          return;
+        }
+      }
+      createNonTradefedJobs();
+    }
+  }
+
+  @Subscribe
+  public void onSessionEnded(SessionEndedEvent event) throws InterruptedException {
+    // TODO: Result processing to be implemented.
+    synchronized (requestDetailLock) {
+      newMultiCommandRequestHandler.cleanup(requestDetail.getOriginalRequest(), sessionInfo);
+    }
+  }
+
+  private void createNonTradefedJobs() throws MobileHarnessException, InterruptedException {
+    synchronized (requestDetailLock) {
+      if (nonTradefedJobsHasBeenCreated) {
+        return;
+      }
+      nonTradefedJobsHasBeenCreated = true;
+      List<CommandDetail> nonTradefedCommandDetails = new ArrayList<>();
+      for (CommandInfo commandInfo : requestDetail.getOriginalRequest().getCommandsList()) {
+        nonTradefedCommandDetails.addAll(
+            newMultiCommandRequestHandler.addNonTradefedJobs(
+                requestDetail.getOriginalRequest(), commandInfo, sessionInfo));
+      }
+      nonTradefedCommandDetails.forEach(
+          commandDetail -> requestDetail.putCommandDetails(commandDetail.getId(), commandDetail));
+      RequestDetail latestRequestDetail = requestDetail.build();
+      sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
+    }
   }
 
   private void updateCommandDetail(JobInfo jobInfo) {
-    Optional<RequestDetail> requestDetail = sessionInfo.getSessionPluginOutput(RequestDetail.class);
-    if (requestDetail.isEmpty()
-        || !requestDetail.get().containsCommandDetails(jobInfo.locator().getId())) {
-      return;
+    synchronized (requestDetailLock) {
+      if (!requestDetail.containsCommandDetails(jobInfo.locator().getId())) {
+        logger.atWarning().log(
+            "Tradefed job %s not found in requestDetail", jobInfo.locator().getId());
+        return;
+      }
+      CommandDetail oldCommandDetail =
+          requestDetail.getCommandDetailsOrThrow(jobInfo.locator().getId());
+      CommandDetail newCommandDetail =
+          oldCommandDetail.toBuilder().setState(convertJobStatusToCommandState(jobInfo)).build();
+      requestDetail.putCommandDetails(jobInfo.locator().getId(), newCommandDetail);
+      RequestDetail latestRequestDetail = requestDetail.build();
+      sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
     }
-    CommandDetail oldCommandDetail =
-        requestDetail.get().getCommandDetailsOrThrow(jobInfo.locator().getId());
-    CommandDetail newCommandDetail =
-        oldCommandDetail.toBuilder().setState(convertJobStatusToCommandState(jobInfo)).build();
-    sessionInfo.setSessionPluginOutput(
-        oldOutput ->
-            (oldOutput == null ? RequestDetail.newBuilder() : oldOutput.toBuilder())
-                .putCommandDetails(jobInfo.locator().getId(), newCommandDetail)
-                .build(),
-        RequestDetail.class);
   }
 
   private CommandState convertJobStatusToCommandState(JobInfo jobInfo) {

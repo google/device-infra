@@ -284,7 +284,7 @@ class RunCommandHandler {
     if (runCommand.hasPythonPkgIndexUrl()) {
       builder.setPythonPkgIndexUrl(runCommand.getPythonPkgIndexUrl());
     }
-    return builder.build();
+    return sessionRequestHandlerUtil.addNonTradefedModuleInfo(builder.build());
   }
 
   /**

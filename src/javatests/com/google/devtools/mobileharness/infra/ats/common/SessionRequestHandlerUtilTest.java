@@ -355,14 +355,15 @@ public final class SessionRequestHandlerUtilTest {
                             .ConfigurationProto.Test.newBuilder()
                             .setClazz("Driver"))
                     .build()));
-
-    ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestHandlerUtil.SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
 
     assertThat(jobInfos).hasSize(2);
     verify(moduleConfigurationHelper, times(2)).updateJobInfo(any(), any(), any());
@@ -395,12 +396,13 @@ public final class SessionRequestHandlerUtilTest {
 
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setModuleNames(ImmutableList.of("TfModule1"))
-                .build());
+            sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+                SessionRequestHandlerUtil.SessionRequestInfo.builder()
+                    .setTestPlan("cts")
+                    .setXtsType(XtsType.CTS)
+                    .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                    .setModuleNames(ImmutableList.of("TfModule1"))
+                    .build()));
 
     assertThat(jobInfos).isEmpty();
   }
@@ -429,15 +431,16 @@ public final class SessionRequestHandlerUtilTest {
                             .ConfigurationProto.Test.newBuilder()
                             .setClazz("Driver"))
                     .build()));
-
-    ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestHandlerUtil.SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setModuleNames(ImmutableList.of("TfModule1", "module2"))
                 .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
 
     assertThat(jobInfos).hasSize(1);
   }

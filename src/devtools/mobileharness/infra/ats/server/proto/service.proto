@@ -102,6 +102,7 @@ message CommandDetail {
   optional CommandState state = 4;
   optional CancelReason cancel_reason = 5;
   optional ErrorReason error_reason = 6;
+  CommandInfo original_command_info = 7;
 }
 
 enum CommandState {
@@ -123,6 +124,7 @@ enum CancelReason {
   COMMAND_NOT_EXECUTABLE = 5;
   INVALID_REQUEST = 6;
   COMMAND_NOT_AVAILABLE = 7;
+  INVALID_RESOURCE = 8;
 }
 
 enum ErrorReason {
@@ -180,4 +182,5 @@ message RequestDetail {
   optional int64 shard_count = 19;
 
   optional CancelReason cancel_reason = 20;
+  optional NewMultiCommandRequest original_request = 21;
 }

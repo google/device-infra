@@ -31,6 +31,7 @@ olc_server_binary(
     extra_runtime_deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/local/sessionplugin:ats_local_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:ats_session_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:ats_server_session_plugin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:ats_test",
     ],
 )

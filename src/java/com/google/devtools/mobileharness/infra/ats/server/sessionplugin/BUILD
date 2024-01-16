@@ -20,7 +20,10 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "ats_server_session_plugin",
     srcs = ["AtsServerSessionPlugin.java"],
-    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+    ],
     deps = [
         ":new_multi_command_request_handler",
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
@@ -32,6 +35,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -53,6 +57,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

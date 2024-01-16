@@ -110,12 +110,20 @@ public class SessionRequestHandlerUtil {
 
     public abstract Optional<String> pythonPkgIndexUrl();
 
+    public abstract ImmutableSet<String> givenMatchedNonTfModules();
+
+    public abstract ImmutableMap<String, Configuration> v2ConfigsMap();
+
     public static Builder builder() {
       return new AutoValue_SessionRequestHandlerUtil_SessionRequestInfo.Builder()
           .setModuleNames(ImmutableList.of())
           .setDeviceSerials(ImmutableList.of())
-          .setExtraArgs(ImmutableList.of());
+          .setExtraArgs(ImmutableList.of())
+          .setGivenMatchedNonTfModules(ImmutableSet.of())
+          .setV2ConfigsMap(ImmutableMap.of());
     }
+
+    public abstract Builder toBuilder();
 
     /** Builder to create SessionRequestInfo. */
     @AutoValue.Builder
@@ -139,6 +147,11 @@ public class SessionRequestHandlerUtil {
       public abstract Builder setAndroidXtsZip(String androidXtsZip);
 
       public abstract SessionRequestInfo build();
+
+      public abstract Builder setGivenMatchedNonTfModules(
+          ImmutableSet<String> givenMatchedNonTfModules);
+
+      public abstract Builder setV2ConfigsMap(ImmutableMap<String, Configuration> v2ConfigsMap);
     }
   }
 
@@ -315,18 +328,68 @@ public class SessionRequestHandlerUtil {
   }
 
   /**
+   * Adds non-tradefed module info to the {@code SessionRequestInfo}. This is required step before
+   * creating non-tradefed jobs or checking if it can do so.
+   *
+   * @return an updated {@code SessionRequestInfo}
+   */
+  public SessionRequestInfo addNonTradefedModuleInfo(SessionRequestInfo sessionRequestInfo) {
+    SessionRequestInfo.Builder updatedSessionRequestInfo = sessionRequestInfo.toBuilder();
+
+    String xtsRootDir = sessionRequestInfo.xtsRootDir();
+    if (!localFileUtil.isDirExist(xtsRootDir)) {
+      logger.atInfo().log(
+          "xTS root dir [%s] doesn't exist, skip creating non-tradefed jobs.", xtsRootDir);
+      return updatedSessionRequestInfo.build();
+    }
+
+    XtsType xtsType = sessionRequestInfo.xtsType();
+    ImmutableMap<String, Configuration> configsMap =
+        configurationUtil.getConfigsV2FromDirs(
+            ImmutableList.of(getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
+    updatedSessionRequestInfo.setV2ConfigsMap(configsMap);
+
+    ImmutableList<String> modules = sessionRequestInfo.moduleNames();
+    ImmutableSet<String> allNonTfModules =
+        configsMap.values().stream()
+            .map(config -> config.getMetadata().getXtsModule())
+            .collect(toImmutableSet());
+    updatedSessionRequestInfo.setGivenMatchedNonTfModules(
+        modules.stream().filter(allNonTfModules::contains).collect(toImmutableSet()));
+    return updatedSessionRequestInfo.build();
+  }
+
+  /**
+   * Checks if non-tradefed jobs can be created based on the {@code SessionRequestInfo}.
+   *
+   * @return true if non-tradefed jobs can be created.
+   */
+  public boolean canCreateNonTradefedJobs(SessionRequestInfo sessionRequestInfo) {
+    String testPlan = sessionRequestInfo.testPlan();
+    // Currently only support CTS
+    if (!testPlan.equals("cts")) {
+      return false;
+    }
+    boolean noGivenModuleForNonTf =
+        !sessionRequestInfo.moduleNames().isEmpty()
+            && sessionRequestInfo.givenMatchedNonTfModules().isEmpty();
+    return !noGivenModuleForNonTf;
+  }
+
+  /**
    * Creates non-tradefed jobs based on the {@code SessionRequestInfo}.
    *
    * @return a list of added non-tradefed jobInfos.
    */
   public ImmutableList<JobInfo> createXtsNonTradefedJobs(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    String testPlan = sessionRequestInfo.testPlan();
-    // Currently only support CTS
-    if (!testPlan.equals("cts")) {
+    if (!canCreateNonTradefedJobs(sessionRequestInfo)) {
+      logger.atInfo().log(
+          "Skip creating non-tradefed jobs as none of given modules is for non-tradefed module: %s",
+          sessionRequestInfo.moduleNames());
       return ImmutableList.of();
     }
-
+    String testPlan = sessionRequestInfo.testPlan();
     String xtsRootDir = sessionRequestInfo.xtsRootDir();
     if (!localFileUtil.isDirExist(xtsRootDir)) {
       logger.atInfo().log(
@@ -335,30 +398,12 @@ public class SessionRequestHandlerUtil {
     }
 
     XtsType xtsType = sessionRequestInfo.xtsType();
-    ImmutableMap<String, Configuration> configsMap =
-        configurationUtil.getConfigsV2FromDirs(
-            ImmutableList.of(getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
-
-    ImmutableList<String> modules = sessionRequestInfo.moduleNames();
-    ImmutableSet<String> allNonTfModules =
-        configsMap.values().stream()
-            .map(config -> config.getMetadata().getXtsModule())
-            .collect(toImmutableSet());
-    ImmutableSet<String> givenMatchedNonTfModules =
-        modules.stream().filter(allNonTfModules::contains).collect(toImmutableSet());
-    boolean noGivenModuleForNonTf = !modules.isEmpty() && givenMatchedNonTfModules.isEmpty();
-    if (noGivenModuleForNonTf) {
-      logger.atInfo().log(
-          "Skip creating non-tradefed jobs as none of given modules is for non-tradefed module: %s",
-          modules);
-      return ImmutableList.of();
-    }
-
+    ImmutableSet<String> givenMatchedNonTfModules = sessionRequestInfo.givenMatchedNonTfModules();
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
 
     ImmutableList<String> androidDeviceSerials = sessionRequestInfo.deviceSerials();
 
-    for (Map.Entry<String, Configuration> entry : configsMap.entrySet()) {
+    for (Map.Entry<String, Configuration> entry : sessionRequestInfo.v2ConfigsMap().entrySet()) {
       String configModuleName = entry.getValue().getMetadata().getXtsModule();
       if (givenMatchedNonTfModules.isEmpty()
           || givenMatchedNonTfModules.contains(configModuleName)) {

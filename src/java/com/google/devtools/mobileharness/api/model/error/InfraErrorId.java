@@ -366,7 +366,10 @@ public enum InfraErrorId implements ErrorId {
   CONFIG_PUSHER_CL_NUMBER_NOT_MATCH(52_601, ErrorType.INFRA_ISSUE),
   CONFIG_PUSHER_YAML_PARSE_ERROR(52_602, ErrorType.UNDETERMINED),
 
-  // ID space here:52_701 ~ 60_000
+  // ATS Server: 52_701 ~ 52_800
+  ATS_SERVER_INVALID_REQUEST_ERROR(52_701, ErrorType.CUSTOMER_ISSUE),
+
+  // ID space here:52_801 ~ 60_000
   PLACE_HOLDER_TO_BE_RENAMED(60_000, ErrorType.UNDETERMINED);
 
   public static final int MIN_CODE = BasicErrorId.MAX_CODE + 1;

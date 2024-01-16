@@ -16,19 +16,17 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
-import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -54,7 +52,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Devic
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.time.Duration;
 import java.util.Optional;
-import java.util.function.UnaryOperator;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -72,7 +69,11 @@ import org.mockito.junit.MockitoRule;
 public final class NewMultiCommandRequestHandlerTest {
   private static final String ANDROID_XTS_ZIP = "file:///path/to/xts/zip/file.zip";
 
+  CommandInfo commandInfo = CommandInfo.getDefaultInstance();
+  NewMultiCommandRequest request = NewMultiCommandRequest.getDefaultInstance();
+
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
   @Bind @Mock private LocalFileUtil localFileUtil;
@@ -81,20 +82,21 @@ public final class NewMultiCommandRequestHandlerTest {
   @Mock private SessionInfo sessionInfo;
   @Mock private JobInfo jobInfo;
   @Mock private Properties properties;
-  @Captor private ArgumentCaptor<UnaryOperator<RequestDetail>> unaryOperatorCaptor;
+
+  @Captor
+  private ArgumentCaptor<SessionRequestHandlerUtil.SessionRequestInfo> sessionRequestInfoCaptor;
 
   @Inject private NewMultiCommandRequestHandler newMultiCommandRequestHandler;
 
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionInfo.getSessionId()).thenReturn("session_id");
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
     when(jobInfo.properties()).thenReturn(properties);
-  }
-
-  @Test
-  public void handle_success() throws Exception {
+    doAnswer(invocation -> invocation.getArgument(0))
+        .when(sessionRequestHandlerUtil)
+        .addNonTradefedModuleInfo(any());
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -103,16 +105,13 @@ public final class NewMultiCommandRequestHandlerTest {
                 .addDeviceInfo(
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-    CommandInfo commandInfo =
+    commandInfo =
         CommandInfo.newBuilder()
             .setName("command")
             .setCommandLine("cts -m module1 --logcat-on-failure")
             .putDeviceDimensions("device_serial", "device_id_1")
             .build();
-    NewMultiCommandRequest request =
+    request =
         NewMultiCommandRequest.newBuilder()
             .setUserId("user_id")
             .addCommands(commandInfo)
@@ -122,33 +121,62 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setName("android-cts.zip")
                     .build())
             .build();
+  }
+
+  @Test
+  public void addTradefedJobs_success() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Trigger the handler.
-    newMultiCommandRequestHandler.handle(request, sessionInfo);
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
 
-    // Verify the session plugin output.
-    verify(sessionInfo, times(2))
-        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
-    ImmutableList<RequestDetail> requestDetails =
-        unaryOperatorCaptor.getAllValues().stream()
-            .map(e -> e.apply(null))
-            .collect(toImmutableList());
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.RUNNING);
+    assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
 
-    assertThat(requestDetails.get(0).getId()).isEqualTo("session_id");
-    assertThat(requestDetails.get(0).getState()).isEqualTo(RequestState.RUNNING);
-    assertThat(requestDetails.get(0).getCommandInfosList()).containsExactly(commandInfo);
-
-    assertThat(requestDetails.get(1).getId()).isEqualTo("session_id");
-    assertThat(requestDetails.get(1).getCommandDetailsCount()).isEqualTo(1);
-    String jobId = requestDetails.get(1).getCommandDetailsMap().keySet().iterator().next();
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    String jobId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
     assertThat(jobId).isEqualTo("job_id");
-    CommandDetail commandDetail =
-        requestDetails.get(1).getCommandDetailsMap().values().iterator().next();
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(jobId);
 
     verify(sessionInfo).addJob(jobInfo);
     verify(properties).add("xts-tradefed-job", "true");
+    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify sessionRequestInfo has been correctly generated.
+    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
+        sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts");
+    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    String zipFile = "/path/to/xts/zip/file.zip";
+    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1");
+    assertThat(sessionRequestInfo.xtsType()).isEqualTo(XtsType.CTS);
+    assertThat(sessionRequestInfo.androidXtsZip()).isEqualTo(Optional.of(zipFile));
+
+    // Verify that handler has mounted the zip file.
+    Command mountCommand =
+        Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(mountCommand);
+  }
+
+  @Test
+  public void cleanup_success() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Trigger the handler.
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    verify(sessionInfo).addJob(jobInfo);
 
     // Verify that handler has mounted the zip file.
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
@@ -157,61 +185,38 @@ public final class NewMultiCommandRequestHandlerTest {
             .timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(mountCommand);
 
+    // Verify that handler has unmounted the zip file after calling cleanup().
     Command unmountCommand =
         Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
+    newMultiCommandRequestHandler.cleanup(request, sessionInfo);
     verify(commandExecutor).run(unmountCommand);
   }
 
   @Test
-  public void handle_mountAndroidXtsZipFailed() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
+  public void addTradefedJobs_mountAndroidXtsZipFailed_cancelRequestWithInvalidResourceError()
+      throws Exception {
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
         .thenReturn(Optional.of(jobInfo));
     MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
     when(commandExecutor.run(any())).thenThrow(commandExecutorException);
-    CommandInfo commandInfo =
-        CommandInfo.newBuilder()
-            .setName("command")
-            .setCommandLine("cts -m module1 --logcat-on-failure")
-            .putDeviceDimensions("device_serial", "device_id_1")
-            .build();
-    NewMultiCommandRequest request =
-        NewMultiCommandRequest.newBuilder()
-            .setUserId("user_id")
-            .addCommands(commandInfo)
-            .addTestResources(
-                TestResource.newBuilder()
-                    .setUrl(ANDROID_XTS_ZIP)
-                    .setName("android-cts.zip")
-                    .build())
-            .build();
 
-    // Trigger the handler.
-    assertThat(
-            assertThrows(
-                    MobileHarnessException.class,
-                    () -> newMultiCommandRequestHandler.handle(request, sessionInfo))
-                .getErrorId())
-        .isEqualTo(BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR);
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+    // Verify request detail.
+    assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+
+    // Verify command detail.
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    CommandDetail commandDetail =
+        requestDetail.getCommandDetailsOrThrow("UNKNOWN_" + commandInfo.getCommandLine());
+    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.CANCELED);
+    assertThat(commandDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_RESOURCE);
   }
 
   @Test
-  public void handle_unmountAndroidXtsZipFailed() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
+  public void cleanup_unmountAndroidXtsZipFailed_logWarningAndProceed() throws Exception {
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
         .thenReturn(Optional.of(jobInfo));
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
@@ -220,47 +225,22 @@ public final class NewMultiCommandRequestHandlerTest {
             .timeout(Duration.ofMinutes(10));
     when(commandExecutor.run(mountCommand)).thenReturn("COMMAND_OUTPUT");
 
+    // Create a tradefed job so that the xts zip file can be mounted.
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    verify(sessionInfo).addJob(jobInfo);
+
     // Throw exception when running unmount command.
     Command unmountCommand =
         Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
     MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
     when(commandExecutor.run(unmountCommand)).thenThrow(commandExecutorException);
-    CommandInfo commandInfo =
-        CommandInfo.newBuilder()
-            .setName("command")
-            .setCommandLine("cts -m module1 --logcat-on-failure")
-            .putDeviceDimensions("device_serial", "device_id_1")
-            .build();
-    NewMultiCommandRequest request =
-        NewMultiCommandRequest.newBuilder()
-            .setUserId("user_id")
-            .addCommands(commandInfo)
-            .addTestResources(
-                TestResource.newBuilder()
-                    .setUrl(ANDROID_XTS_ZIP)
-                    .setName("android-cts.zip")
-                    .build())
-            .build();
-
-    // Trigger the handler.
-    assertThat(
-            assertThrows(
-                    MobileHarnessException.class,
-                    () -> newMultiCommandRequestHandler.handle(request, sessionInfo))
-                .getErrorId())
-        .isEqualTo(BasicErrorId.LOCAL_UNMOUNT_DIR_ERROR);
+    newMultiCommandRequestHandler.cleanup(request, sessionInfo);
   }
 
   @Test
-  public void handleRequestWithInvalidResource_addResultToSessionOutput() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
+  public void addTradefedJobsWithInvalidResource_addResultToSessionOutput() throws Exception {
     CommandInfo commandInfo =
         CommandInfo.newBuilder()
             .setName("command")
@@ -275,44 +255,27 @@ public final class NewMultiCommandRequestHandlerTest {
                 TestResource.newBuilder().setUrl(ANDROID_XTS_ZIP).setName("INVALID_NAME").build())
             .build();
 
-    newMultiCommandRequestHandler.handle(request, sessionInfo);
-    verify(sessionInfo, times(2))
-        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
 
-    ImmutableList<RequestDetail> requestDetails =
-        unaryOperatorCaptor.getAllValues().stream()
-            .map(e -> e.apply(null))
-            .collect(toImmutableList());
-
-    assertThat(requestDetails.get(0).getId()).isEqualTo("session_id");
-    assertThat(requestDetails.get(0).getState()).isEqualTo(RequestState.RUNNING);
-    assertThat(requestDetails.get(0).getCommandInfosList()).containsExactly(commandInfo);
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
 
     // Verify request detail.
-    assertThat(requestDetails.get(1).getId()).isEqualTo("session_id");
-    assertThat(requestDetails.get(1).getCommandInfosList()).containsExactly(commandInfo);
-    assertThat(requestDetails.get(1).getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
-    assertThat(requestDetails.get(1).getState()).isEqualTo(RequestState.CANCELED);
+    assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
 
     // Verify command detail.
-    assertThat(requestDetails.get(1).getCommandDetailsCount()).isEqualTo(1);
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     CommandDetail commandDetail =
-        requestDetails.get(1).getCommandDetailsOrThrow("UNKNOWN_" + commandInfo.getCommandLine());
+        requestDetail.getCommandDetailsOrThrow("UNKNOWN_" + commandInfo.getCommandLine());
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.CANCELED);
     assertThat(commandDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
   }
 
   @Test
-  public void handleRequestWithEmptyCommand_addResultToSessionOutput() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
+  public void addTradefedJobsWithEmptyCommand_addResultToSessionOutput() throws Exception {
     NewMultiCommandRequest request =
         NewMultiCommandRequest.newBuilder()
             .setUserId("user_id")
@@ -323,23 +286,99 @@ public final class NewMultiCommandRequestHandlerTest {
                     .build())
             .build();
 
-    newMultiCommandRequestHandler.handle(request, sessionInfo);
-    verify(sessionInfo, times(2))
-        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
 
-    ImmutableList<RequestDetail> requestDetails =
-        unaryOperatorCaptor.getAllValues().stream()
-            .map(e -> e.apply(null))
-            .collect(toImmutableList());
-
-    assertThat(requestDetails.get(0).getId()).isEqualTo("session_id");
-    assertThat(requestDetails.get(0).getState()).isEqualTo(RequestState.RUNNING);
-    assertThat(requestDetails.get(0).getCommandInfosList()).isEmpty();
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    assertThat(requestDetail.getCommandInfosList()).isEmpty();
 
     // Verify request detail.
-    assertThat(requestDetails.get(1).getId()).isEqualTo("session_id");
-    assertThat(requestDetails.get(1).getCancelReason())
-        .isEqualTo(CancelReason.COMMAND_NOT_AVAILABLE);
-    assertThat(requestDetails.get(1).getState()).isEqualTo(RequestState.CANCELED);
+    assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.COMMAND_NOT_AVAILABLE);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+  }
+
+  @Test
+  public void addNonTradefedJob_success() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any()))
+        .thenReturn(ImmutableList.of(jobInfo));
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Trigger the handler.
+    ImmutableList<CommandDetail> commandDetails =
+        newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
+
+    assertThat(commandDetails).hasSize(1);
+    CommandDetail commandDetail = commandDetails.get(0);
+
+    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(commandDetail.getId()).isEqualTo("job_id");
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.UNKNOWN_STATE);
+    assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
+
+    verify(sessionInfo).addJob(jobInfo);
+
+    // Verify that handler has mounted the zip file.
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    Command mountCommand =
+        Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
+            .timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(mountCommand);
+  }
+
+  @Test
+  public void addNonTradefedJob_invalidRequest_returnEmptyCommandist() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any()))
+        .thenReturn(ImmutableList.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    CommandInfo commandInfo =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("cts -m module1 --logcat-on-failure")
+            .putDeviceDimensions("device_serial", "device_id_1")
+            .build();
+    NewMultiCommandRequest request =
+        NewMultiCommandRequest.newBuilder()
+            .setUserId("user_id")
+            .addCommands(commandInfo)
+            .addTestResources(
+                TestResource.newBuilder().setUrl(ANDROID_XTS_ZIP).setName("INVALID_NAME").build())
+            .build();
+
+    // Trigger the handler.
+    ImmutableList<CommandDetail> commandDetails =
+        newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
+
+    assertThat(commandDetails).isEmpty();
+  }
+
+  @Test
+  public void addNonTradefedJob_createdZeroJobInfo_returnEmptyCommandist() throws Exception {
+
+    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
+
+    // Trigger the handler.
+    ImmutableList<CommandDetail> commandDetails =
+        newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
+
+    assertThat(commandDetails).isEmpty();
+  }
+
+  @Test
+  public void addNonTradefedJob_cannotCreateNonTradefedJobs_returnEmptyCommandist()
+      throws Exception {
+
+    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
+
+    // Trigger the handler.
+    ImmutableList<CommandDetail> commandDetails =
+        newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
+
+    assertThat(commandDetails).isEmpty();
+    verify(sessionRequestHandlerUtil, never()).createXtsNonTradefedJobs(any());
   }
 }
