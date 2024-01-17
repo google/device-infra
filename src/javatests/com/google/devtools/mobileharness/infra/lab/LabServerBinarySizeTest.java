@@ -35,11 +35,17 @@ public class LabServerBinarySizeTest {
   private static final String LAB_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_deploy.jar");
+  private static final String LAB_SERVER_BINARY_SOURCE_PATH =
+      "google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness/infra"
+          + "/lab:lab_server_oss_deploy.jar";
 
   @Test
   public void checkLabServerBinarySize() throws Exception {
     BinarySizeChecker.checkBinarySize(
-        "lab_server_oss_deploy.jar", MAX_LAB_SERVER_BINARY_SIZE_BYTE, LAB_SERVER_BINARY_FILE_PATH);
+        "lab_server_oss_deploy.jar",
+        MAX_LAB_SERVER_BINARY_SIZE_BYTE,
+        LAB_SERVER_BINARY_FILE_PATH,
+        LAB_SERVER_BINARY_SOURCE_PATH);
   }
 
   @Test
@@ -49,8 +55,7 @@ public class LabServerBinarySizeTest {
         LAB_SERVER_BINARY_FILE_PATH,
         MAX_LAB_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE,
         LAB_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST,
-        "google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness/infra"
-            + "/lab:lab_server_oss_deploy.jar",
+        LAB_SERVER_BINARY_SOURCE_PATH,
         "google3/third_party/deviceinfra/src/javatests/com/google/devtools/mobileharness/infra"
             + "/lab/LabServerBinarySizeTest.java#LAB_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST");
   }

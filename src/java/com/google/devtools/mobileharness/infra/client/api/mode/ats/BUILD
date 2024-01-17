@@ -16,7 +16,6 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api/mode/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
@@ -26,6 +25,18 @@ java_library(
     name = "annotations",
     srcs = ["Annotations.java"],
     deps = ["@maven//:javax_inject_jsr330_api"],
+)
+
+java_library(
+    name = "ats",
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+    ],
+    runtime_deps = [
+        ":ats_mode",
+        ":module",
+    ],
 )
 
 java_library(
@@ -41,6 +52,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:local_device_allocator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:remote_test_runner",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:service_provider",
         "//src/java/com/google/devtools/mobileharness/infra/controller/scheduler:abstract_scheduler",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",

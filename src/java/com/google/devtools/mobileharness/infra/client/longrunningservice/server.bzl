@@ -22,8 +22,8 @@ def olc_server_binary(name, extra_runtime_deps, visibility = None):
 
     Args:
       name: java_binary.name
-      extra_runtime_deps: extra runtime deps including builtin session plugins
-        and supported OmniLab drivers/decorators/devices
+      extra_runtime_deps: extra runtime deps including builtin session plugins,
+        supported OmniLab drivers/decorators/devices and exec modes
       visibility: java_binary.visibility
     """
     native.java_binary(

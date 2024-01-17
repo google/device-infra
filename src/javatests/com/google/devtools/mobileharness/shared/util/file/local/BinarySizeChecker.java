@@ -32,14 +32,15 @@ import java.util.zip.ZipEntry;
 /** Checker for checking binary sizes. */
 public class BinarySizeChecker {
 
-  public static void checkBinarySize(String binaryName, long maxSizeByte, String binaryFilePath)
+  public static void checkBinarySize(
+      String binaryName, long maxSizeByte, String binaryFilePath, String binarySourcePath)
       throws MobileHarnessException {
     assertWithMessage(
             "The binary size of %s should be less than %s bytes. If you are sure that the new added"
                 + " deps are necessary, please update the number and explain the necessity (what"
                 + " libs are added to the binary, their sizes, why they are necessary) in the"
-                + " change description. file_path=%s",
-            binaryName, maxSizeByte, binaryFilePath)
+                + " change description.\n\nbinary_path=%s\n\nBinary size of %s:",
+            binaryName, maxSizeByte, binarySourcePath, binaryName)
         .that(new LocalFileUtil().getFileSize(binaryFilePath))
         .isLessThan(maxSizeByte);
   }

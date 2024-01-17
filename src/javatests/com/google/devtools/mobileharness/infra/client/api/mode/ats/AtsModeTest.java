@@ -16,8 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
+import static com.google.common.truth.OptionalSubject.optionals;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
@@ -147,7 +148,7 @@ public class AtsModeTest {
     Guice.createInjector(BoundFieldModule.of(this), new AtsModeModule()).injectMembers(this);
 
     atsMode.initialize(null);
-    ImmutableList<BindableService> bindableServices = atsMode.getExtraServices();
+    ImmutableList<BindableService> bindableServices = atsMode.provideServices();
     NettyServerBuilder nettyServerBuilder =
         NettyServerBuilder.forPort(serverPort).executor(listeningExecutorService);
     bindableServices.forEach(nettyServerBuilder::addService);
@@ -173,7 +174,10 @@ public class AtsModeTest {
     // Creates and sets up allocator.
     DeviceAllocator deviceAllocator =
         atsMode.createDeviceAllocator(jobInfo, /* globalInternalBus= */ null);
-    assertThat(deviceAllocator.setUp()).isEmpty();
+    assertWithMessage("Error during device allocator setup")
+        .about(optionals())
+        .that(deviceAllocator.setUp())
+        .isEmpty();
     assertThat(deviceAllocator.pollAllocations()).isEmpty();
 
     // Signs up device.

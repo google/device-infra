@@ -179,6 +179,7 @@ public class LabServerIntegrationTest {
                             "--enable_external_master_server=true",
                             "--enable_file_cleaner=false",
                             "--enable_stubby_rpc_server=false",
+                            "--external_adb_initializer_template=true",
                             "--grpc_port=" + labServerGrpcPort,
                             "--master_grpc_target=localhost:" + masterPort,
                             "--no_op_device_num=1",
@@ -315,7 +316,7 @@ public class LabServerIntegrationTest {
       throws MobileHarnessException, InterruptedException, IOException {
     logger.atInfo().log("Starting AtsMode, port=%s", masterPort);
     atsMode.initialize(null);
-    ImmutableList<BindableService> bindableServices = atsMode.getExtraServices();
+    ImmutableList<BindableService> bindableServices = atsMode.provideServices();
     NettyServerBuilder nettyServerBuilder =
         NettyServerBuilder.forPort(masterPort).executor(listeningExecutorService);
     bindableServices.forEach(nettyServerBuilder::addService);

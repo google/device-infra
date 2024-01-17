@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDevice
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.DeviceVerifier;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalDeviceAllocator.EmptyDeviceVerifier;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.RemoteTestRunner;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
@@ -44,11 +45,9 @@ import javax.inject.Singleton;
  * ATS mode which supports allocating devices from multiple hosts in an in-memory scheduler.
  *
  * <p>The {@link #initialize} method much be called before it is used.
- *
- * <p>The returned services in {@link #getExtraServices} should also be added in the rpc server.
  */
 @Singleton
-public class AtsMode implements ExecMode {
+public class AtsMode implements ExecMode, ServiceProvider {
 
   private final RemoteDeviceManager remoteDeviceManager;
   private final DeviceQuerier deviceQuerier;
@@ -96,8 +95,8 @@ public class AtsMode implements ExecMode {
         /* supportImpersonation= */ false);
   }
 
-  /** Returns the services to be installed in rpc server. */
-  public ImmutableList<BindableService> getExtraServices() {
+  @Override
+  public ImmutableList<BindableService> provideServices() {
     return ImmutableList.of(labInfoService, remoteDeviceManager.getLabSyncService());
   }
 }

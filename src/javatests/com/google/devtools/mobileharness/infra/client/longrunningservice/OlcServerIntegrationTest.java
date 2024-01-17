@@ -148,8 +148,12 @@ public class OlcServerIntegrationTest {
 
   private static final String OLC_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
-          "javatests/com/google/devtools/mobileharness"
-              + "/infra/client/longrunningservice/OlcServerForTesting_deploy.jar");
+          "javatests/com/google/devtools/mobileharness/infra/client/"
+              + "longrunningservice/olc_server_for_testing_deploy.jar");
+  private static final String OLC_SERVER_WITH_LOCAL_MODE_FILE_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "javatests/com/google/devtools/mobileharness/infra/client/"
+              + "longrunningservice/olc_server_for_testing_with_local_mode_deploy.jar");
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_deploy.jar");
@@ -372,7 +376,7 @@ public class OlcServerIntegrationTest {
                 new SystemUtil()
                     .getJavaCommandCreator()
                     .createJavaCommand(
-                        OLC_SERVER_FILE_PATH,
+                        enableAtsMode ? OLC_SERVER_FILE_PATH : OLC_SERVER_WITH_LOCAL_MODE_FILE_PATH,
                         ImmutableList.of(
                             "--enable_ats_mode=" + enableAtsMode,
                             "--enable_client_experiment_manager=false",
@@ -446,6 +450,7 @@ public class OlcServerIntegrationTest {
                               "--enable_file_cleaner=false",
                               "--enable_stubby_rpc_server=false",
                               "--enable_trace_span_processor=false",
+                              "--external_adb_initializer_template=true",
                               "--grpc_port=" + labServerGrpcPort,
                               "--master_grpc_target=localhost:" + olcServerPort,
                               "--no_op_device_num=1",

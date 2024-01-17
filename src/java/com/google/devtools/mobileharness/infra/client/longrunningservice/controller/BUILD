@@ -16,6 +16,7 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
@@ -55,6 +56,15 @@ java_library(
     deps = [
         ":log_manager",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
+    ],
+)
+
+java_library(
+    name = "service_provider",
+    srcs = ["ServiceProvider.java"],
+    deps = [
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

@@ -26,9 +26,9 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
-import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
@@ -115,7 +115,9 @@ public class OlcServer {
     // Starts RPC server.
     int port = Flags.instance().olcServerPort.getNonNull();
     ImmutableList<BindableService> extraServices =
-        execMode instanceof AtsMode ? ((AtsMode) execMode).getExtraServices() : ImmutableList.of();
+        execMode instanceof ServiceProvider
+            ? ((ServiceProvider) execMode).provideServices()
+            : ImmutableList.of();
     NettyServerBuilder serverBuilder =
         NettyServerBuilder.forPort(port)
             .executor(threadPool)

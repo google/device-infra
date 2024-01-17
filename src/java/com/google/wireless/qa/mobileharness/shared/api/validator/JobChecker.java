@@ -16,6 +16,8 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.validator;
 
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
@@ -74,8 +76,9 @@ public class JobChecker {
         Class<? extends Driver> driverClass = ClassUtil.getDriverClass(driverName);
         ClassUtil.getClassesWithAllSteps(driverClass, annotationValidatorClasses);
       } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to load the step validators for %s. Skipped.", driverName);
+        logger.atWarning().log(
+            "Failed to load validator methods of driver [%s], skip them, reason=[%s]",
+            driverName, shortDebugString(e, /* maxLength= */ 0));
       }
     }
 
@@ -92,8 +95,9 @@ public class JobChecker {
           Class<? extends Decorator> decoratorClass = ClassUtil.getDecoratorClass(decoratorName);
           ClassUtil.getClassesWithAllSteps(decoratorClass, annotationValidatorClasses);
         } catch (MobileHarnessException e) {
-          logger.atWarning().withCause(e).log(
-              "Failed to load the step validators for %s. Skipped.", decoratorName);
+          logger.atWarning().log(
+              "Failed to load validator methods of decorator [%s], skip them, reason=[%s]",
+              decoratorName, shortDebugString(e, /* maxLength= */ 0));
         }
       }
     }

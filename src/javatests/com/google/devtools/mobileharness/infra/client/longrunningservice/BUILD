@@ -30,7 +30,8 @@ java_library(
         ],
     ),
     data = [
-        ":OlcServerForTesting_deploy.jar",
+        ":olc_server_for_testing_deploy.jar",
+        ":olc_server_for_testing_with_local_mode_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server_oss_deploy.jar",
     ],
@@ -73,9 +74,19 @@ java_library(
 )
 
 olc_server_binary(
-    name = "OlcServerForTesting",
+    name = "olc_server_for_testing",
     extra_runtime_deps = [
         ":session_plugin_for_testing",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/lister:no_op_driver_lister",
+    ],
+)
+
+olc_server_binary(
+    name = "olc_server_for_testing_with_local_mode",
+    extra_runtime_deps = [
+        ":session_plugin_for_testing",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
     ],
 )

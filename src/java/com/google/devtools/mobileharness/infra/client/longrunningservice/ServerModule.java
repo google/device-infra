@@ -19,34 +19,40 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
-import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode;
-import com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsModeModule;
-import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
-import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
+import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import java.time.Instant;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import javax.inject.Singleton;
 
 /** Module for OLC server. */
 class ServerModule extends AbstractModule {
+
+  private static final ReflectionUtil REFLECTION_UTIL = new ReflectionUtil();
+
+  private static final String LOCAL_MODE_CLASS_NAME =
+      "com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode";
+  private static final String ATS_MODE_CLASS_NAME =
+      "com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsMode";
+  private static final String ATS_MODE_MODULE_CLASS_NAME =
+      "com.google.devtools.mobileharness.infra.client.api.mode.ats.AtsModeModule";
 
   private final Instant serverStartTime;
   private final boolean isAtsMode;
@@ -60,10 +66,14 @@ class ServerModule extends AbstractModule {
   protected void configure() {
     install(new ControllerModule());
     install(new ClientApiModule());
-    install(new AtsModeModule());
+    if (isAtsMode) {
+      installByClassName(ATS_MODE_MODULE_CLASS_NAME);
+    }
 
     bind(ClientApi.class).in(Scopes.SINGLETON);
-    bind(ExecMode.class).to(isAtsMode ? AtsMode.class : LocalMode.class).in(Scopes.SINGLETON);
+    bind(ExecMode.class)
+        .to(isAtsMode ? loadExecMode(ATS_MODE_CLASS_NAME) : loadExecMode(LOCAL_MODE_CLASS_NAME))
+        .in(Scopes.SINGLETON);
   }
 
   @Provides
@@ -74,30 +84,21 @@ class ServerModule extends AbstractModule {
 
   @Provides
   @Singleton
-  LocalMode provideLocalMode() {
-    return new LocalMode();
-  }
-
-  @Provides
-  @Singleton
-  DeviceQuerier provideDeviceQuerier(ExecMode execMode)
-      throws InterruptedException, MobileHarnessException {
+  DeviceQuerier provideDeviceQuerier(ExecMode execMode) {
     return execMode.createDeviceQuerier();
   }
 
   @Provides
   @Singleton
   ListeningExecutorService provideThreadPool() {
-    return MoreExecutors.listeningDecorator(
-        Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory("main-thread")));
+    return ThreadPools.createStandardThreadPool("main-thread");
   }
 
   @Provides
   @Singleton
   ListeningScheduledExecutorService provideScheduledThreadPool() {
-    return MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(
-            /* corePoolSize= */ 10, ThreadFactoryUtil.createThreadFactory("main-thread")));
+    return ThreadPools.createStandardScheduledThreadPool(
+        "main-scheduled-thread", /* corePoolSize= */ 10);
   }
 
   @Provides
@@ -128,6 +129,27 @@ class ServerModule extends AbstractModule {
     @Override
     public GetLogResponse collectLogRecords(LogRecords.Builder logRecords) {
       return GetLogResponse.newBuilder().setLogRecords(logRecords).build();
+    }
+  }
+
+  private void installByClassName(@SuppressWarnings("SameParameterValue") String className) {
+    try {
+      install(
+          REFLECTION_UTIL
+              .loadClass(className, Module.class, getClass().getClassLoader())
+              .getConstructor()
+              .newInstance());
+    } catch (MobileHarnessException | ReflectiveOperationException e) {
+      throw new IllegalStateException(e);
+    }
+  }
+
+  private static Class<? extends ExecMode> loadExecMode(String className) {
+    try {
+      return REFLECTION_UTIL.loadClass(
+          className, ExecMode.class, ServerModule.class.getClassLoader());
+    } catch (MobileHarnessException | ClassNotFoundException e) {
+      throw new IllegalStateException(e);
     }
   }
 }

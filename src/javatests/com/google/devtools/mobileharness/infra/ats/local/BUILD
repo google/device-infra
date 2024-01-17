@@ -31,7 +31,7 @@ java_library(
     name = "localrunner",
     srcs = glob(["*.java"]),
     data = [
-        ":OlcServerForLocalRunnerTesting_deploy.jar",
+        ":olc_server_for_local_runner_testing_deploy.jar",
         ":testdata",
         "//src/java/com/google/devtools/mobileharness/infra/ats/local:ats_local_runner_deploy.jar",
     ],
@@ -47,9 +47,10 @@ java_library(
 )
 
 olc_server_binary(
-    name = "OlcServerForLocalRunnerTesting",
+    name = "olc_server_for_local_runner_testing",
     extra_runtime_deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/local/sessionplugin:ats_local_session_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
     ],

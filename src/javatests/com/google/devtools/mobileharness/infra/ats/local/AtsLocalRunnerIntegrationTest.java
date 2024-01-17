@@ -41,7 +41,8 @@ public class AtsLocalRunnerIntegrationTest {
           "java/com/google/devtools/mobileharness/infra/ats/local/ats_local_runner_deploy.jar");
   private static final String OLC_SERVER_BINARY =
       RunfilesUtil.getRunfilesLocation(
-          "javatests/com/google/devtools/mobileharness/infra/ats/local/OlcServerForLocalRunnerTesting_deploy.jar");
+          "javatests/com/google/devtools/mobileharness/infra/ats/local/"
+              + "olc_server_for_local_runner_testing_deploy.jar");
   private static final String TEST_CONFIG_PATH =
       RunfilesUtil.getRunfilesLocation(
           "javatests/com/google/devtools/mobileharness/infra/ats/local/testdata/test.xml");
