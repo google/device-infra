@@ -237,6 +237,7 @@ public class SessionRequestHandlerUtil {
       logger.atInfo().log("None of passed in devices exist [%s], skipped.", passedInDeviceSerials);
       return ImmutableList.of();
     }
+    logger.atInfo().log("existingPassedInDeviceSerials: %s", existingPassedInDeviceSerials);
     return existingPassedInDeviceSerials.stream()
         .map(
             serial ->
@@ -328,6 +329,7 @@ public class SessionRequestHandlerUtil {
 
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
         getSubDeviceSpecList(deviceSerials, shardCount);
+    System.out.println("subDeviceSpecList: " + subDeviceSpecList);
     if (subDeviceSpecList.isEmpty()) {
       logger.atInfo().log("Found no devices to create the job config.");
       return Optional.empty();
