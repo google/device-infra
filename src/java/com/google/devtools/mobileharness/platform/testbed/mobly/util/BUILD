@@ -16,8 +16,8 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "mobly_aosp_test_setup_util",
-    srcs = ["MoblyAospTestSetupUtil.java"],
+    name = "mobly_aosp_package_test_setup_util",
+    srcs = ["MoblyAospPackageTestSetupUtil.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",

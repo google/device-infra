@@ -31,7 +31,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Certifi
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
@@ -72,7 +72,7 @@ public final class MoblyAospPackageTestTest {
   @Mock private CompositeDevice compositeDevice;
   @Mock private File configFile;
   @Mock private AndroidAdbUtil androidAdbUtil;
-  @Mock private MoblyAospTestSetupUtil setupUtil;
+  @Mock private MoblyAospPackageTestSetupUtil setupUtil;
   @Mock private LocalFileUtil localFileUtil;
   @Mock private MoblyReportHelper moblyReportHelper;
   @Mock private CertificationSuiteInfoFactory certificationSuiteInfoFactory;

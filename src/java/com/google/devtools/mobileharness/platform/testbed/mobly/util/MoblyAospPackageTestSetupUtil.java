@@ -35,7 +35,7 @@ import java.util.List;
 import javax.annotation.Nullable;
 
 /** Utility for running Mobly tests packaged in AOSP and distributed via the Android Build. */
-public class MoblyAospTestSetupUtil {
+public class MoblyAospPackageTestSetupUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public static final String TEST_SELECTOR_ALL = "all";
@@ -49,12 +49,12 @@ public class MoblyAospTestSetupUtil {
   private final LocalFileUtil localFileUtil;
   private final CommandExecutor executor;
 
-  public MoblyAospTestSetupUtil() {
+  public MoblyAospPackageTestSetupUtil() {
     this(new LocalFileUtil(), new CommandExecutor());
   }
 
   @VisibleForTesting
-  MoblyAospTestSetupUtil(LocalFileUtil localFileUtil, CommandExecutor executor) {
+  MoblyAospPackageTestSetupUtil(LocalFileUtil localFileUtil, CommandExecutor executor) {
     this.localFileUtil = localFileUtil;
     this.executor = executor;
   }

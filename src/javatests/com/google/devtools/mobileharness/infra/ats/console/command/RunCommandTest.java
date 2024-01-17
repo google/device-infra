@@ -40,7 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultU
 import com.google.devtools.mobileharness.infra.ats.console.testbed.config.YamlTestbedUpdater;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -93,7 +93,7 @@ public final class RunCommandTest {
   @Mock @Bind private YamlTestbedUpdater yamlTestbedUpdater;
   @Mock @Bind private XmlResultFormatter xmlResultFormatter;
   @Mock @Bind private XmlResultUtil xmlResultUtil;
-  @Mock @Bind private MoblyAospTestSetupUtil moblyAospTestSetupUtil;
+  @Mock @Bind private MoblyAospPackageTestSetupUtil moblyAospTestSetupUtil;
 
   @Bind private ConsoleUtil consoleUtil;
 

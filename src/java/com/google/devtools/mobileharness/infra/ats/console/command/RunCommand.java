@@ -47,7 +47,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultU
 import com.google.devtools.mobileharness.infra.ats.console.testbed.config.YamlTestbedUpdater;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -169,7 +169,7 @@ final class RunCommand implements Callable<Integer> {
   private final YamlTestbedUpdater yamlTestbedUpdater;
   private final XmlResultFormatter xmlResultFormatter;
   private final XmlResultUtil xmlResultUtil;
-  private final MoblyAospTestSetupUtil moblyAospTestSetupUtil;
+  private final MoblyAospPackageTestSetupUtil moblyAospTestSetupUtil;
 
   private final ServerPreparer serverPreparer;
   private final ServerLogPrinter serverLogPrinter;
@@ -186,7 +186,7 @@ final class RunCommand implements Callable<Integer> {
       YamlTestbedUpdater yamlTestbedUpdater,
       XmlResultFormatter xmlResultFormatter,
       XmlResultUtil xmlResultUtil,
-      MoblyAospTestSetupUtil moblyAospTestSetupUtil,
+      MoblyAospPackageTestSetupUtil moblyAospTestSetupUtil,
       ServerPreparer serverPreparer,
       ServerLogPrinter serverLogPrinter,
       ListeningExecutorService executorService,

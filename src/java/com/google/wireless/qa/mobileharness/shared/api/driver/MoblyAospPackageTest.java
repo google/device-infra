@@ -29,7 +29,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Certifi
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospTestSetupUtil;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -91,7 +91,7 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
   private static final String MOBLY_CONFIG_KEY_PREFIX_MH = "mh_";
 
   private final AndroidAdbUtil androidAdbUtil;
-  private final MoblyAospTestSetupUtil setupUtil;
+  private final MoblyAospPackageTestSetupUtil setupUtil;
   private final LocalFileUtil localFileUtil;
   private final MoblyReportHelper moblyReportHelper;
   private final CertificationSuiteInfoFactory certificationSuiteInfoFactory;
@@ -103,7 +103,7 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
       CommandExecutor executor,
       Clock clock,
       AndroidAdbUtil androidAdbUtil,
-      MoblyAospTestSetupUtil setupUtil,
+      MoblyAospPackageTestSetupUtil setupUtil,
       LocalFileUtil localFileUtil,
       MoblyReportHelper moblyReportHelper,
       CertificationSuiteInfoFactory certificationSuiteInfoFactory) {

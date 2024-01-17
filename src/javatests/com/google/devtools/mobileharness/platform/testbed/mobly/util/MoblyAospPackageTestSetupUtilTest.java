@@ -48,7 +48,7 @@ import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
-public final class MoblyAospTestSetupUtilTest {
+public final class MoblyAospPackageTestSetupUtilTest {
 
   @Rule public final MockitoRule rule = MockitoJUnit.rule();
 
@@ -58,16 +58,16 @@ public final class MoblyAospTestSetupUtilTest {
   @Mock private CommandResult commandResult;
   @Mock private LocalFileUtil localFileUtil;
 
-  private MoblyAospTestSetupUtil moblyAospTestSetupUtil;
+  private MoblyAospPackageTestSetupUtil moblyAospTestSetupUtil;
 
   @Before
   public void setUp() throws Exception {
-    moblyAospTestSetupUtil = new MoblyAospTestSetupUtil(localFileUtil, commandExecutor);
+    moblyAospTestSetupUtil = new MoblyAospPackageTestSetupUtil(localFileUtil, commandExecutor);
   }
 
   @Test
   public void setUpEnvAndGenerateTestCommand_generatesCommandWithVenv() throws Exception {
-    MoblyAospTestSetupUtil setupUtilSpy = spy(moblyAospTestSetupUtil);
+    MoblyAospPackageTestSetupUtil setupUtilSpy = spy(moblyAospTestSetupUtil);
     doReturn(true).when(setupUtilSpy).hasDeps(any());
     doReturn(null).when(setupUtilSpy).getPythonPath(any());
     doReturn(Path.of("mobly_venv/bin/python3")).when(setupUtilSpy).createVenv(any(), any());
@@ -98,7 +98,7 @@ public final class MoblyAospTestSetupUtilTest {
 
   @Test
   public void setUpEnvAndGenerateTestCommand_generatesCommandWithoutVenv() throws Exception {
-    MoblyAospTestSetupUtil setupUtilSpy = spy(moblyAospTestSetupUtil);
+    MoblyAospPackageTestSetupUtil setupUtilSpy = spy(moblyAospTestSetupUtil);
     doReturn(false).when(setupUtilSpy).hasDeps(any());
 
     assertThat(
@@ -207,7 +207,7 @@ public final class MoblyAospTestSetupUtilTest {
   @Test
   public void installMoblyTestBin_withRequirementsFile_usesRequirementsFile() throws Exception {
     String requirementsTxt =
-        Path.of("mobly").resolve(MoblyAospTestSetupUtil.REQUIREMENTS_TXT).toString();
+        Path.of("mobly").resolve(MoblyAospPackageTestSetupUtil.REQUIREMENTS_TXT).toString();
     when(localFileUtil.isFileExist(requirementsTxt)).thenReturn(true);
 
     moblyAospTestSetupUtil.installMoblyTestDeps(
@@ -221,7 +221,7 @@ public final class MoblyAospTestSetupUtilTest {
   @Test
   public void installMoblyTestBin_withPyprojectToml_usesDirectory() throws Exception {
     String pyprojectToml =
-        Path.of("mobly").resolve(MoblyAospTestSetupUtil.PYPROJECT_TOML).toString();
+        Path.of("mobly").resolve(MoblyAospPackageTestSetupUtil.PYPROJECT_TOML).toString();
     when(localFileUtil.isFileExist(pyprojectToml)).thenReturn(true);
 
     moblyAospTestSetupUtil.installMoblyTestDeps(
@@ -243,7 +243,7 @@ public final class MoblyAospTestSetupUtilTest {
   @Test
   public void installMoblyTestBin_usesGivenDefaultTimeoutAndIndexUrl() throws Exception {
     String requirementsTxt =
-        Path.of("mobly").resolve(MoblyAospTestSetupUtil.REQUIREMENTS_TXT).toString();
+        Path.of("mobly").resolve(MoblyAospPackageTestSetupUtil.REQUIREMENTS_TXT).toString();
     when(localFileUtil.isFileExist(requirementsTxt)).thenReturn(true);
 
     InstallMoblyTestDepsArgs installMoblyTestDepsArgs =
@@ -304,7 +304,7 @@ public final class MoblyAospTestSetupUtilTest {
                 Path.of("venv/python3"),
                 Path.of("mobly/sample_test.py"),
                 Path.of("config.yaml"),
-                MoblyAospTestSetupUtil.TEST_SELECTOR_ALL))
+                MoblyAospPackageTestSetupUtil.TEST_SELECTOR_ALL))
         .asList()
         .doesNotContain("--test_case");
   }
