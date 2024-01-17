@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
+import static com.google.common.base.Ascii.toLowerCase;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
@@ -24,8 +25,10 @@ import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -45,6 +48,9 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter.DeviceFilter.DeviceMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter.LabFilter.LabMatchCondition;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter.StringMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
@@ -77,6 +83,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.stream.Stream;
@@ -749,34 +756,89 @@ class RemoteDeviceManager {
   /** All access to this class must be guarded by {@link #lock}. */
   private static class LabPredicate implements Predicate<Entry<LabKey, LabData>> {
 
-    @SuppressWarnings({"FieldCanBeLocal", "unused"})
-    private final LabQuery.Filter.LabFilter labFilter;
+    private final ImmutableList<Predicate<LabData>> labMatchers;
 
     private LabPredicate(LabQuery.Filter.LabFilter labFilter) {
-      this.labFilter = labFilter;
+      this.labMatchers = createLabMatchers(labFilter);
     }
 
     @Override
     public boolean test(Entry<LabKey, LabData> entry) {
-      // TODO: Filters labs here.
-      return true;
+      return labMatchers.stream().allMatch(labMatcher -> labMatcher.test(entry.getValue()));
+    }
+
+    private static ImmutableList<Predicate<LabData>> createLabMatchers(
+        LabQuery.Filter.LabFilter labFilter) {
+      return labFilter.getLabMatchConditionList().stream()
+          .map(LabPredicate::createLabMatcher)
+          .collect(toImmutableList());
+    }
+
+    private static Predicate<LabData> createLabMatcher(LabMatchCondition labMatchCondition) {
+      switch (labMatchCondition.getConditionCase()) {
+        case LAB_HOST_NAME_MATCH_CONDITION:
+          return createStringMatcher(
+              labMatchCondition.getLabHostNameMatchCondition().getCondition(),
+              labData -> labData.labLocator.hostName());
+        case CONDITION_NOT_SET:
+          break;
+      }
+      return labData -> true;
     }
   }
 
   /** All access to this class must be guarded by {@link #lock}. */
   private static class DevicePredicate implements Predicate<DeviceData> {
 
-    @SuppressWarnings({"FieldCanBeLocal", "unused"})
-    private final LabQuery.Filter.DeviceFilter deviceFilter;
+    private final ImmutableList<Predicate<DeviceData>> deviceMatchers;
 
     private DevicePredicate(LabQuery.Filter.DeviceFilter deviceFilter) {
-      this.deviceFilter = deviceFilter;
+      this.deviceMatchers = createDeviceMatchers(deviceFilter);
     }
 
     @Override
     public boolean test(DeviceData deviceData) {
-      // TODO: Filters devices here.
-      return true;
+      return deviceMatchers.stream().allMatch(deviceMatcher -> deviceMatcher.test(deviceData));
     }
+
+    private static ImmutableList<Predicate<DeviceData>> createDeviceMatchers(
+        LabQuery.Filter.DeviceFilter deviceFilter) {
+      return deviceFilter.getDeviceMatchConditionList().stream()
+          .map(DevicePredicate::createDeviceMatcher)
+          .collect(toImmutableList());
+    }
+
+    private static Predicate<DeviceData> createDeviceMatcher(
+        DeviceMatchCondition deviceMatchCondition) {
+      switch (deviceMatchCondition.getConditionCase()) {
+        case DEVICE_UUID_MATCH_CONDITION:
+          return createStringMatcher(
+              deviceMatchCondition.getDeviceUuidMatchCondition().getCondition(),
+              deviceData -> deviceData.deviceKey.deviceUuid());
+        case CONDITION_NOT_SET:
+          break;
+      }
+      return deviceData -> true;
+    }
+  }
+
+  /**
+   * Creates a {@link Predicate} to match a string field of an entity based on the given {@link
+   * StringMatchCondition}.
+   */
+  private static <T> Predicate<T> createStringMatcher(
+      StringMatchCondition condition, Function<T, String> stringExtractor) {
+    switch (condition.getConditionCase()) {
+      case INCLUDE:
+        ImmutableSet<String> expectedValues =
+            ImmutableSet.copyOf(
+                condition.getInclude().getExpectedList().stream()
+                    .map(Ascii::toLowerCase)
+                    .collect(toImmutableList()));
+        return entity -> expectedValues.contains(toLowerCase(stringExtractor.apply(entity)));
+      case CONDITION_NOT_SET:
+        break;
+    }
+    return entity -> true;
   }
 }
