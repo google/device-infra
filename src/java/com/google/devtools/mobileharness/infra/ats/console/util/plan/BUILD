@@ -49,11 +49,13 @@ java_library(
 java_library(
     name = "jar_file_util",
     srcs = ["JarFileUtil.java"],
-    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util/plan:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util/plan:__pkg__",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
     ],
 )

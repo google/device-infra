@@ -19,6 +19,7 @@ syntax = "proto3";
 package mobileharness.infra.ats.console.controller;
 
 import "google/protobuf/timestamp.proto";
+import "src/devtools/mobileharness/infra/ats/common/proto/xts_common.proto";
 
 option java_package = "com.google.devtools.mobileharness.infra.ats.console.controller.proto";
 option java_outer_classname = "SessionPluginProto";
@@ -111,6 +112,9 @@ message ListDevicesCommand {
 message ListModulesCommand {
   // Required.
   string xts_root_dir = 1;
+
+  // Required.
+  mobileharness.infra.ats.common.XtsType xts_type = 2;
 }
 
 message DumpCommand {

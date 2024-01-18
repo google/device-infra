@@ -62,6 +62,7 @@ public class ListCommand implements Callable<Integer> {
   private final AtsSessionStub atsSessionStub;
   private final ResultLister resultLister;
   private final PlanLister planLister;
+  private final CommandHelper commandHelper;
 
   @Inject
   ListCommand(
@@ -70,13 +71,15 @@ public class ListCommand implements Callable<Integer> {
       ServerPreparer serverPreparer,
       AtsSessionStub atsSessionStub,
       ResultLister resultLister,
-      PlanLister planLister) {
+      PlanLister planLister,
+      CommandHelper commandHelper) {
     this.consoleInfo = consoleInfo;
     this.consoleUtil = consoleUtil;
     this.serverPreparer = serverPreparer;
     this.atsSessionStub = atsSessionStub;
     this.resultLister = resultLister;
     this.planLister = planLister;
+    this.commandHelper = commandHelper;
   }
 
   @Override
@@ -137,6 +140,7 @@ public class ListCommand implements Callable<Integer> {
       description = "List all modules available")
   public int modules() throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
+    String xtsRootDir = consoleInfo.getXtsRootDirectory().orElse("");
     AtsSessionPluginOutput output =
         atsSessionStub.runShortSession(
             "list_modules_command",
@@ -145,7 +149,8 @@ public class ListCommand implements Callable<Integer> {
                     SessionPluginProto.ListCommand.newBuilder()
                         .setListModulesCommand(
                             ListModulesCommand.newBuilder()
-                                .setXtsRootDir(consoleInfo.getXtsRootDirectory().orElse(""))))
+                                .setXtsRootDir(xtsRootDir)
+                                .setXtsType(commandHelper.getXtsType(xtsRootDir))))
                 .build());
     return PluginOutputPrinter.printOutput(output, consoleUtil);
   }

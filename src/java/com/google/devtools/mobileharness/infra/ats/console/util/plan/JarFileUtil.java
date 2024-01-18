@@ -29,7 +29,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
-import javax.inject.Inject;
 
 /** Utility to get the entries in the JAR file. */
 public class JarFileUtil {
@@ -55,8 +54,7 @@ public class JarFileUtil {
     String transform(String pathName);
   }
 
-  @Inject
-  JarFileUtil() {}
+  public JarFileUtil() {}
 
   /**
    * Gets the names of all entries contained in the given jar files, that match the given {@code

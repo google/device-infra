@@ -16,31 +16,19 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/devtools/mobileharness/infra/ats/console/controller/proto:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
     ],
 )
 
 proto_library(
-    name = "device_descriptor_proto",
-    srcs = ["device_descriptor.proto"],
+    name = "xts_common_proto",
+    srcs = ["xts_common.proto"],
 )
 
 java_proto_library(
-    name = "device_descriptor_java_proto",
-    deps = [":device_descriptor_proto"],
-)
-
-proto_library(
-    name = "session_plugin_proto",
-    srcs = ["session_plugin.proto"],
-    deps = [
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_proto",
-        "@com_google_protobuf//:timestamp_proto",
-    ],
-)
-
-java_proto_library(
-    name = "session_plugin_java_proto",
-    deps = [":session_plugin_proto"],
+    name = "xts_common_java_proto",
+    deps = [":xts_common_proto"],
 )

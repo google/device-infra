@@ -63,11 +63,14 @@ public class ListCommandTest {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final ImmutableList<String> CTS_MODULE_LIST =
-      ImmutableList.of("CtsAbiOverrideHostTestCases", "CtsBluetoothMultiDevicesTestCases");
+      ImmutableList.of(
+          "CtsAbiOverrideHostTestCases",
+          "CtsBluetoothMultiDevicesTestCases",
+          "CtsConfigV2TestCases");
 
   private static final String TEST_CTS_CONFIG_DIR =
       RunfilesUtil.getRunfilesLocation(
-          "javatests/com/google/devtools/mobileharness/platform/android/xts/config/testdata/cts");
+          "javatests/com/google/devtools/mobileharness/infra/ats/console/command/testdata/android-cts");
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
@@ -192,7 +195,9 @@ public class ListCommandTest {
                 "starts with"))
         .containsAtLeast("Serial", "NoOpDevice-0", "Serial", "NoOpDevice-0", "")
         .inOrder();
-    assertThat(stdout).contains(String.join("\n", CTS_MODULE_LIST));
+    for (String module : CTS_MODULE_LIST) {
+      assertThat(stdout).contains(module);
+    }
   }
 
   @Test

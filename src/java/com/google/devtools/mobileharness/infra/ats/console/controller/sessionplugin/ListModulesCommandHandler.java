@@ -16,69 +16,46 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil.getConfigDirs;
-
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.base.Joiner;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListModulesCommand;
-import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
-import java.io.File;
-import java.util.List;
-import java.util.Set;
-import javax.inject.Inject;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
+import java.util.Map;
 
 /** Handler for "list modules" commands. */
 class ListModulesCommandHandler {
 
-  private final ConfigurationUtil configurationUtil;
+  AtsSessionPluginOutput handle(ListModulesCommand command) throws MobileHarnessException {
+    TestSuiteHelper testSuiteHelper =
+        getTestSuiteHelper(command.getXtsRootDir(), command.getXtsType());
+    testSuiteHelper.setParameterizedModules(true);
+    testSuiteHelper.setOptionalParameterizedModules(true);
+    Map<String, Configuration> configs = testSuiteHelper.loadTests();
 
-  @Inject
-  ListModulesCommandHandler(ConfigurationUtil configurationUtil) {
-    this.configurationUtil = configurationUtil;
+    return getListModuleOutput(configs, command.getXtsRootDir());
   }
 
-  AtsSessionPluginOutput handle(ListModulesCommand command) {
-    return getListModuleOutput(getConfigDirs(command.getXtsRootDir()));
-  }
-
-  /**
-   * Gets the output of the "list modules" command.
-   *
-   * @param configDirs a list of directories that contains ATS2.0 configs
-   * @return {@code ExitCode.SOFTWARE} if error occurs, otherwise {@code ExitCode.OK}
-   */
-  private AtsSessionPluginOutput getListModuleOutput(List<File> configDirs) {
-    ImmutableMap<String, Configuration> configs = configurationUtil.getConfigsFromDirs(configDirs);
-    ImmutableList<String> modules = getModuleList(ImmutableSet.copyOf(configs.values()));
-    if (modules.isEmpty()) {
+  /** Gets the output of the "list modules" command. */
+  private AtsSessionPluginOutput getListModuleOutput(
+      Map<String, Configuration> configs, String xtsRootDir) {
+    if (configs.isEmpty()) {
       return AtsSessionPluginOutput.newBuilder()
           .setFailure(
               Failure.newBuilder()
-                  .setErrorMessage(String.format("No modules found at %s", configDirs)))
+                  .setErrorMessage(String.format("No modules found within %s", xtsRootDir)))
           .build();
     }
     return AtsSessionPluginOutput.newBuilder()
-        .setSuccess(Success.newBuilder().setOutputMessage(String.join("\n", modules)))
+        .setSuccess(Success.newBuilder().setOutputMessage(Joiner.on("\n").join(configs.keySet())))
         .build();
   }
 
-  /**
-   * Gets a sorted list of ATS2.0 modules from ATS2.0 configurations.
-   *
-   * @param configs a collection of ATS2.0 configuration proto
-   */
-  private ImmutableList<String> getModuleList(Set<Configuration> configs) {
-    // TODO: append configuration options to each module, e.g. abi, secondary-user.
-    return configs.stream()
-        .filter(config -> !config.getMetadata().getXtsModule().isEmpty())
-        .map(config -> config.getMetadata().getXtsModule())
-        .sorted()
-        .collect(toImmutableList());
+  private TestSuiteHelper getTestSuiteHelper(String xtsRootDir, XtsType xtsType) {
+    return new TestSuiteHelper(xtsRootDir, xtsType);
   }
 }
