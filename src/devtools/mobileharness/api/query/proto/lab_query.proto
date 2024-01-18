@@ -85,9 +85,17 @@ message LabQuery {
         repeated string expected = 1;
       }
 
+      // A string matches this condition if it matches the given regex.
+      //
+      // An invalid regex will match nothing.
+      message MatchesRegex {
+        string regex = 1;
+      }
+
       // An unset or unrecognized condition will always match.
       oneof condition {
         Include include = 1;
+        MatchesRegex matches_regex = 2;
       }
     }
   }

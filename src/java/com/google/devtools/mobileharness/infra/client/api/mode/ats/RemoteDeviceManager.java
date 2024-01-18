@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.auto.value.AutoValue;
@@ -86,6 +87,7 @@ import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -828,17 +830,27 @@ class RemoteDeviceManager {
    */
   private static <T> Predicate<T> createStringMatcher(
       StringMatchCondition condition, Function<T, String> stringExtractor) {
-    switch (condition.getConditionCase()) {
-      case INCLUDE:
-        ImmutableSet<String> expectedValues =
-            ImmutableSet.copyOf(
-                condition.getInclude().getExpectedList().stream()
-                    .map(Ascii::toLowerCase)
-                    .collect(toImmutableList()));
-        return entity -> expectedValues.contains(toLowerCase(stringExtractor.apply(entity)));
-      case CONDITION_NOT_SET:
-        break;
+    try {
+      switch (condition.getConditionCase()) {
+        case INCLUDE:
+          ImmutableSet<String> expectedValues =
+              ImmutableSet.copyOf(
+                  condition.getInclude().getExpectedList().stream()
+                      .map(Ascii::toLowerCase)
+                      .collect(toImmutableList()));
+          return entity -> expectedValues.contains(toLowerCase(stringExtractor.apply(entity)));
+        case MATCHES_REGEX:
+          Pattern pattern = Pattern.compile(condition.getMatchesRegex().getRegex());
+          return entity -> pattern.matcher(stringExtractor.apply(entity)).matches();
+        case CONDITION_NOT_SET:
+          break;
+      }
+      return entity -> true;
+    } catch (RuntimeException e) {
+      logger.atWarning().log(
+          "Invalid StringMatchCondition [%s], cause=[%s]",
+          shortDebugString(condition), shortDebugString(e, /* maxLength= */ 0));
+      return entity -> false;
     }
-    return entity -> true;
   }
 }

@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter.LabFilter.LabMatchCondition.LabHostNameMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter.StringMatchCondition;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter.StringMatchCondition.Include;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter.StringMatchCondition.MatchesRegex;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
@@ -250,10 +251,9 @@ public class RemoteDeviceManagerTest {
                                     DeviceUuidMatchCondition.newBuilder()
                                         .setCondition(
                                             StringMatchCondition.newBuilder()
-                                                .setInclude(
-                                                    Include.newBuilder()
-                                                        .addExpected("fake_UUID")
-                                                        .addExpected("whatever"))))))
+                                                .setMatchesRegex(
+                                                    MatchesRegex.newBuilder()
+                                                        .setRegex("fake_.*"))))))
                 .build());
 
     assertThat(labInfo).isEqualTo(LAB_VIEW);
@@ -269,9 +269,9 @@ public class RemoteDeviceManagerTest {
                                     DeviceUuidMatchCondition.newBuilder()
                                         .setCondition(
                                             StringMatchCondition.newBuilder()
-                                                .setInclude(
-                                                    Include.newBuilder()
-                                                        .addExpected("whatever"))))))
+                                                .setMatchesRegex(
+                                                    MatchesRegex.newBuilder()
+                                                        .setRegex("whatever"))))))
                 .build());
 
     LabView.Builder labViewBuilder = LAB_VIEW.toBuilder();
