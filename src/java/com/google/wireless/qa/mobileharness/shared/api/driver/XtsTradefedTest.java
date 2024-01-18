@@ -93,7 +93,10 @@ public class XtsTradefedTest extends BaseDriver
   private static final String XTS_DYNAMIC_DOWNLOAD_PATH_KEY = "xts_dynamic_download_path";
 
   private static final ImmutableSet<String> EXCLUDED_JAR_FILES =
-      ImmutableSet.of("ats_olc_server_deploy.jar", "ats_console_deploy.jar");
+      ImmutableSet.of(
+          "ats_console_deploy.jar",
+          "ats_olc_server_deploy.jar",
+          "ats_olc_server_local_mode_deploy.jar");
 
   private volatile ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
 

@@ -24,7 +24,7 @@ java_library(
     name = "olcserver",
     srcs = glob(["*.java"]),
     data = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_local_mode_deploy.jar",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",

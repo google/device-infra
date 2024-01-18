@@ -33,10 +33,11 @@ java_library(
     ],
 )
 
-# Driver/decorator/device/validator/lister/... for ATS
+# Driver/decorator/device/validator/lister/... for ATS.
 java_library(
     name = "ats_test",
     runtime_deps = [
+        ":ats_test_client",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_adb_shell_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_clean_apps_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_features_check_decorator",
@@ -48,6 +49,13 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_real_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_package_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
+    ],
+)
+
+# Client side dependencies (listers and validators) for ATS.
+java_library(
+    name = "ats_test_client",
+    runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:android_adb_shell_decorator_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:android_clean_apps_decorator_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:android_device_settings_decorator_validator",

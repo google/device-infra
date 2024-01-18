@@ -4,7 +4,7 @@
 readonly DEFAULT_TMP_DIR="/tmp/ats_local_runner"
 readonly PREBUILTS_DIR="${ANDROID_BUILD_TOP}/tools/deviceinfra/prebuilts"
 readonly ATS_LOCAL_RUNNER_JAR="${PREBUILTS_DIR}/ats_local_runner_deploy.jar"
-readonly ATS_OLC_SERVER_JAR="${PREBUILTS_DIR}/ats_olc_server_deploy.jar"
+readonly ATS_OLC_SERVER_JAR="${PREBUILTS_DIR}/ats_olc_server_local_mode_deploy.jar"
 readonly NORM='\e[0;38m'
 readonly LINK='\e[1;34m'  # Bold, blue. For links and other emphasized text.
 readonly ME="$(basename "$0")"

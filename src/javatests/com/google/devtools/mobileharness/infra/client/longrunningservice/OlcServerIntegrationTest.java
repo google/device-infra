@@ -153,7 +153,7 @@ public class OlcServerIntegrationTest {
   private static final String OLC_SERVER_WITH_LOCAL_MODE_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "javatests/com/google/devtools/mobileharness/infra/client/"
-              + "longrunningservice/olc_server_for_testing_with_local_mode_deploy.jar");
+              + "longrunningservice/olc_server_for_testing_local_mode_deploy.jar");
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_deploy.jar");

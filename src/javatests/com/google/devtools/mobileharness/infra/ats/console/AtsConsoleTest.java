@@ -92,7 +92,8 @@ public final class AtsConsoleTest {
     olcServerBinary =
         Path.of(
             RunfilesUtil.getRunfilesLocation(
-                "java/com/google/devtools/mobileharness/infra/ats/common/olcserver/ats_olc_server_deploy.jar"));
+                "java/com/google/devtools/mobileharness/infra/ats/common/"
+                    + "olcserver/ats_olc_server_local_mode_deploy.jar"));
 
     consoleOutOutputStream = new ByteArrayOutputStream();
     consoleOutPrintStream = new PrintStream(consoleOutOutputStream, false, UTF_8);

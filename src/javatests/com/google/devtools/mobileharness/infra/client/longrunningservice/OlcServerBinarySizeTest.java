@@ -30,10 +30,18 @@ public class OlcServerBinarySizeTest {
       ImmutableSet.of();
   private static final ImmutableSet<String> ATS_OLC_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST =
       ImmutableSet.of();
+  private static final ImmutableSet<String>
+      ATS_OLC_SERVER_LOCAL_MODE_LARGE_RESOURCE_PATH_ALLOWLIST = ImmutableSet.of();
 
   private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 24_300_000L;
-  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 28_600_000L;
+  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 27_400_000L;
+  private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 26_800_000L;
+
   private static final long MAX_OLC_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE = 1_000_000L;
+
+  private static final String BINARY_SIZE_TEST_SOURCE_PATH =
+      "google3/third_party/deviceinfra/src/javatests/com/google/devtools/mobileharness"
+          + "/infra/client/longrunningservice/OlcServerBinarySizeTest.java";
 
   private static final String BASE_OLC_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
@@ -50,6 +58,14 @@ public class OlcServerBinarySizeTest {
   private static final String ATS_OLC_SERVER_BINARY_SOURCE_PATH =
       "google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness"
           + "/infra/ats/common/olcserver:ats_olc_server_deploy.jar";
+
+  private static final String ATS_OLC_SERVER_LOCAL_MODE_BINARY_FILE_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "java/com/google/devtools/mobileharness"
+              + "/infra/ats/common/olcserver/ats_olc_server_local_mode_deploy.jar");
+  private static final String ATS_OLC_SERVER_LOCAL_MODE_BINARY_SOURCE_PATH =
+      "google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness"
+          + "/infra/ats/common/olcserver:ats_olc_server_local_mode_deploy.jar";
 
   @Test
   public void checkBaseOlcServerBinarySize() throws Exception {
@@ -68,9 +84,7 @@ public class OlcServerBinarySizeTest {
         MAX_OLC_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE,
         BASE_OLC_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST,
         BASE_OLC_SERVER_BINARY_SOURCE_PATH,
-        "google3/third_party/deviceinfra/src/javatests/com/google/devtools/mobileharness"
-            + "/infra/client/longrunningservice/OlcServerBinarySizeTest.java"
-            + "#BASE_OLC_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST");
+        BINARY_SIZE_TEST_SOURCE_PATH + "#BASE_OLC_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST");
   }
 
   @Test
@@ -90,8 +104,26 @@ public class OlcServerBinarySizeTest {
         MAX_OLC_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE,
         ATS_OLC_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST,
         ATS_OLC_SERVER_BINARY_SOURCE_PATH,
-        "google3/third_party/deviceinfra/src/javatests/com/google/devtools/mobileharness"
-            + "/infra/client/longrunningservice/OlcServerBinarySizeTest.java"
-            + "#ATS_OLC_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST");
+        BINARY_SIZE_TEST_SOURCE_PATH + "#ATS_OLC_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST");
+  }
+
+  @Test
+  public void checkAtsOlcServerLocalModeBinarySize() throws Exception {
+    BinarySizeChecker.checkBinarySize(
+        "ats_olc_server_local_mode_deploy.jar",
+        MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE,
+        ATS_OLC_SERVER_LOCAL_MODE_BINARY_FILE_PATH,
+        ATS_OLC_SERVER_LOCAL_MODE_BINARY_SOURCE_PATH);
+  }
+
+  @Test
+  public void checkAtsOlcServerLocalModeBinaryLargeResources() throws Exception {
+    BinarySizeChecker.checkBinaryLargeResourceFiles(
+        "ats_olc_server_local_mode_deploy.jar",
+        ATS_OLC_SERVER_LOCAL_MODE_BINARY_FILE_PATH,
+        MAX_OLC_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE,
+        ATS_OLC_SERVER_LOCAL_MODE_LARGE_RESOURCE_PATH_ALLOWLIST,
+        ATS_OLC_SERVER_LOCAL_MODE_BINARY_SOURCE_PATH,
+        BINARY_SIZE_TEST_SOURCE_PATH + "#ATS_OLC_SERVER_LOCAL_MODE_LARGE_RESOURCE_PATH_ALLOWLIST");
   }
 }

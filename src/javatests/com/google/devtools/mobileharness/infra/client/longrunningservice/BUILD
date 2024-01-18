@@ -31,8 +31,9 @@ java_library(
     ),
     data = [
         ":olc_server_for_testing_deploy.jar",
-        ":olc_server_for_testing_with_local_mode_deploy.jar",
+        ":olc_server_for_testing_local_mode_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_local_mode_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server_oss_deploy.jar",
     ],
     deps = [
@@ -83,7 +84,7 @@ olc_server_binary(
 )
 
 olc_server_binary(
-    name = "olc_server_for_testing_with_local_mode",
+    name = "olc_server_for_testing_local_mode",
     extra_runtime_deps = [
         ":session_plugin_for_testing",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
