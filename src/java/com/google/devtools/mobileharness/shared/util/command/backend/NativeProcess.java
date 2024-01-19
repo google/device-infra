@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ProcessBuilder.Redirect;
-import java.lang.reflect.Field;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
@@ -163,13 +162,7 @@ final class NativeProcess extends CommandProcess {
   }
 
   private long fetchPid() {
-    try {
-      Field pidField = process.getClass().getDeclaredField("pid");
-      pidField.setAccessible(true);
-      return pidField.getInt(process);
-    } catch (ReflectiveOperationException e) {
-      return -1;
-    }
+    return process.toHandle().pid();
   }
 
   private Optional<AsyncCopier> maybeStartAsyncCopy(
