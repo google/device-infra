@@ -19,7 +19,9 @@ package(
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
 )
 

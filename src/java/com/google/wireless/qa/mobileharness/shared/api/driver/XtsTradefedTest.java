@@ -34,6 +34,7 @@ import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
@@ -500,8 +501,9 @@ public class XtsTradefedTest extends BaseDriver
     switch (xtsType) {
       case CTS:
         return ImmutableMap.of("CTS_ROOT", tmpXtsRootDir.toString());
+      default:
+        return ImmutableMap.of();
     }
-    return ImmutableMap.of();
   }
 
   private ImmutableMap<String, String> getEnvironmentToTradefedConsole(
@@ -714,16 +716,11 @@ public class XtsTradefedTest extends BaseDriver
     // /android-xts/testcases/<test module A>, <test module B>, ...
     List<String> subTestCases = localFileUtil.listFileOrDirPaths(target.toString());
     for (String subTestCase : subTestCases) {
-      Path subTestCasePath = Paths.get(subTestCase);
+      Path subTestCasePath = Path.of(subTestCase);
       Path tmpXtsTestcasePath = link.resolve(subTestCasePath.getFileName().toString());
       createSymlink(tmpXtsTestcasePath, subTestCasePath);
     }
     logger.atInfo().log(
         "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
-  }
-
-  /** Type for xTS. */
-  public enum XtsType {
-    CTS
   }
 }

@@ -75,7 +75,7 @@ message RunCommand {
   repeated string extra_arg = 6;
 
   // Required for XtsTradefedTest
-  XtsType xts_type = 7;
+  mobileharness.infra.ats.common.XtsType xts_type = 7;
 
   // Optional.
   optional string python_pkg_index_url = 8;
@@ -130,8 +130,3 @@ message DumpStackTraceCommand {}
 message DumpEnvVarCommand {}
 
 message DumpUptimeCommand {}
-
-enum XtsType {
-  XTS_TYPE_UNSPECIFIED = 0;
-  CTS = 1;
-}
