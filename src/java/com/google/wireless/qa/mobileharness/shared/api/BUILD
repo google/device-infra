@@ -21,10 +21,10 @@ package(
 )
 
 ################################################################################
-# Test sets containing runtime_deps of driver/decorator/device
+# Test sets containing runtime_deps of driver/decorator/device/validator/lister
 ################################################################################
 
-# Driver/decorator/device for OSS lab server.
+# runtime_deps for OSS lab server tests.
 java_library(
     name = "oss_lab_test",
     runtime_deps = [
@@ -33,7 +33,7 @@ java_library(
     ],
 )
 
-# Driver/decorator/device/validator/lister/... for ATS.
+# runtime_deps for ATS tests.
 java_library(
     name = "ats_test",
     runtime_deps = [
@@ -52,7 +52,7 @@ java_library(
     ],
 )
 
-# Client side dependencies (listers and validators) for ATS.
+# Client side runtime_deps for ATS tests.
 java_library(
     name = "ats_test_client",
     runtime_deps = [
@@ -65,13 +65,21 @@ java_library(
     ],
 )
 
-# No-op test for integration test only.
+# runtime_deps for no-op tests.
 java_library(
     name = "no_op_test",
     runtime_deps = [
+        ":no_op_test_client",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:no_op_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:no_op_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:no_op_driver",
+    ],
+)
+
+# Client side runtime_deps for no-op tests.
+java_library(
+    name = "no_op_test_client",
+    runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/lister:no_op_driver_lister",
     ],
 )
