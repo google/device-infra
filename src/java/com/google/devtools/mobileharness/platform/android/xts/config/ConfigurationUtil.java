@@ -39,10 +39,6 @@ public class ConfigurationUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final ImmutableList<String> CONFIG_FILE_EXTENSIONS =
-      ImmutableList.of(".config", ".xml");
-  private static final ImmutableList<String> CONFIG_V2_FILE_EXTENSIONS =
-      ImmutableList.of(".configv2");
   private static final int CLASS_SEPARATOR = '.';
 
   private final LocalFileUtil localFileUtil;
@@ -78,7 +74,8 @@ public class ConfigurationUtil {
    */
   public ImmutableMap<String, Configuration> getConfigsV2FromDirs(List<File> dirs) {
     ImmutableMap.Builder<String, Configuration> configs = ImmutableMap.builder();
-    Set<File> configFiles = getConfigFilesFromDirsByExt(dirs, CONFIG_V2_FILE_EXTENSIONS);
+    Set<File> configFiles =
+        getConfigFilesFromDirsByExt(dirs, ConfigCommon.CONFIG_V2_FILE_EXTENSIONS);
     for (File configFile : configFiles) {
       try {
         configs.put(configFile.getAbsolutePath(), ConfigurationXmlParser.parse(configFile));
@@ -107,7 +104,7 @@ public class ConfigurationUtil {
    * @return the set of {@link File} that were found.
    */
   public Set<File> getConfigFilesFromDirs(List<File> dirs) {
-    return getConfigFilesFromDirsByExt(dirs, CONFIG_FILE_EXTENSIONS);
+    return getConfigFilesFromDirsByExt(dirs, ConfigCommon.CONFIG_FILE_EXTENSIONS);
   }
 
   /**

@@ -161,12 +161,16 @@ public final class CompatibilityReportMergerTest {
             ImmutableList.of(
                 MoblyReportInfo.of(
                     "mobly-package-1",
+                    "module-abi",
+                    "module-parameter",
                     Paths.get(MOBLY_TEST_SUMMARY_FILE_1),
                     Paths.get(MOBLY_RESULT_ATTR_FILE_1),
                     DEVICE_BUILD_FINGERPRINT,
                     Paths.get(MOBLY_BUILD_ATTR_FILE_1)),
                 MoblyReportInfo.of(
                     "mobly-package-2",
+                    "module-abi",
+                    "module-parameter",
                     Paths.get(MOBLY_TEST_SUMMARY_FILE_2),
                     Paths.get(MOBLY_RESULT_ATTR_FILE_2),
                     DEVICE_BUILD_FINGERPRINT,
@@ -184,12 +188,16 @@ public final class CompatibilityReportMergerTest {
             ImmutableList.of(
                 MoblyReportInfo.of(
                     "mobly-package-1",
+                    "module-abi",
+                    "module-parameter",
                     Paths.get(MOBLY_TEST_SUMMARY_FILE_1),
                     Paths.get(MOBLY_RESULT_ATTR_FILE_1),
                     DEVICE_BUILD_FINGERPRINT,
                     Paths.get(MOBLY_BUILD_ATTR_FILE_1)),
                 MoblyReportInfo.of(
                     "mobly-package-2",
+                    "module-abi",
+                    "module-parameter",
                     Paths.get(MOBLY_TEST_SUMMARY_FILE_2),
                     Paths.get(MOBLY_RESULT_ATTR_FILE_2),
                     DEVICE_BUILD_FINGERPRINT,

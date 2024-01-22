@@ -16,7 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.common;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.min;
@@ -34,10 +36,12 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
@@ -58,16 +62,25 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** Helper class for ATS applications to create job config. */
 public class SessionRequestHandlerUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
-  @VisibleForTesting static final String XTS_NON_TF_JOB_PROP = "xts-non-tradefed-job";
-  @VisibleForTesting static final String XTS_MODULE_NAME_PROP = "xts-module-name";
+  public static final String XTS_NON_TF_JOB_PROP = "xts-non-tradefed-job";
+  public static final String XTS_MODULE_NAME_PROP = "xts-module-name";
+  public static final String XTS_MODULE_ABI_PROP = "xts-module-abi";
+  public static final String XTS_MODULE_PARAMETER_PROP = "xts-module-parameter";
+
+  private static final Pattern MODULE_PARAMETER_PATTERN =
+      Pattern.compile(".*\\[(?<moduleParam>.*)\\]$");
 
   private final DeviceQuerier deviceQuerier;
   private final LocalFileUtil localFileUtil;
@@ -114,13 +127,22 @@ public class SessionRequestHandlerUtil {
 
     public abstract ImmutableMap<String, Configuration> v2ConfigsMap();
 
+    public abstract ImmutableMap<String, Configuration> expandedModules();
+
+    public abstract boolean enableModuleParameter();
+
+    public abstract boolean enableModuleOptionalParameter();
+
     public static Builder builder() {
       return new AutoValue_SessionRequestHandlerUtil_SessionRequestInfo.Builder()
           .setModuleNames(ImmutableList.of())
           .setDeviceSerials(ImmutableList.of())
           .setExtraArgs(ImmutableList.of())
           .setGivenMatchedNonTfModules(ImmutableSet.of())
-          .setV2ConfigsMap(ImmutableMap.of());
+          .setV2ConfigsMap(ImmutableMap.of())
+          .setExpandedModules(ImmutableMap.of())
+          .setEnableModuleParameter(false)
+          .setEnableModuleOptionalParameter(false);
     }
 
     public abstract Builder toBuilder();
@@ -152,6 +174,14 @@ public class SessionRequestHandlerUtil {
           ImmutableSet<String> givenMatchedNonTfModules);
 
       public abstract Builder setV2ConfigsMap(ImmutableMap<String, Configuration> v2ConfigsMap);
+
+      public abstract Builder setExpandedModules(
+          ImmutableMap<String, Configuration> expandedModules);
+
+      public abstract Builder setEnableModuleParameter(boolean enableModuleParameter);
+
+      public abstract Builder setEnableModuleOptionalParameter(
+          boolean enableModuleOptionalParameter);
     }
   }
 
@@ -333,7 +363,8 @@ public class SessionRequestHandlerUtil {
    *
    * @return an updated {@code SessionRequestInfo}
    */
-  public SessionRequestInfo addNonTradefedModuleInfo(SessionRequestInfo sessionRequestInfo) {
+  public SessionRequestInfo addNonTradefedModuleInfo(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException {
     SessionRequestInfo.Builder updatedSessionRequestInfo = sessionRequestInfo.toBuilder();
 
     String xtsRootDir = sessionRequestInfo.xtsRootDir();
@@ -348,6 +379,10 @@ public class SessionRequestHandlerUtil {
         configurationUtil.getConfigsV2FromDirs(
             ImmutableList.of(getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
     updatedSessionRequestInfo.setV2ConfigsMap(configsMap);
+
+    // Gets expanded modules with abi and module parameters (if any).
+    TestSuiteHelper testSuiteHelper = getTestSuiteHelper(xtsRootDir, xtsType, sessionRequestInfo);
+    updatedSessionRequestInfo.setExpandedModules(ImmutableMap.copyOf(testSuiteHelper.loadTests()));
 
     ImmutableList<String> modules = sessionRequestInfo.moduleNames();
     ImmutableSet<String> allNonTfModules =
@@ -403,13 +438,32 @@ public class SessionRequestHandlerUtil {
 
     ImmutableList<String> androidDeviceSerials = sessionRequestInfo.deviceSerials();
 
-    for (Map.Entry<String, Configuration> entry : sessionRequestInfo.v2ConfigsMap().entrySet()) {
-      String configModuleName = entry.getValue().getMetadata().getXtsModule();
+    ImmutableMap<String, String> moduleNameToConfigFilePathMap =
+        sessionRequestInfo.v2ConfigsMap().entrySet().stream()
+            .collect(toImmutableMap(e -> e.getValue().getMetadata().getXtsModule(), Entry::getKey));
+
+    for (Entry<String, Configuration> entry :
+        sessionRequestInfo.expandedModules().entrySet().stream()
+            .filter(e -> e.getValue().getMetadata().getIsConfigV2())
+            .collect(toImmutableList())) {
+      String originalModuleName = entry.getValue().getMetadata().getXtsModule();
+      String expandedModuleName = entry.getKey();
       if (givenMatchedNonTfModules.isEmpty()
-          || givenMatchedNonTfModules.contains(configModuleName)) {
+          || givenMatchedNonTfModules.contains(originalModuleName)) {
+        // Gets module abi
+        String moduleAbi = getModuleAbi(expandedModuleName).orElse(null);
+        // Gets module parameter
+        String moduleParameter = getModuleParameter(expandedModuleName).orElse(null);
         Optional<JobInfo> jobInfoOpt =
             createXtsNonTradefedJob(
-                Path.of(xtsRootDir), xtsType, testPlan, Path.of(entry.getKey()), entry.getValue());
+                Path.of(xtsRootDir),
+                xtsType,
+                testPlan,
+                Path.of(moduleNameToConfigFilePathMap.get(originalModuleName)),
+                entry.getValue(),
+                expandedModuleName,
+                moduleAbi,
+                moduleParameter);
         if (jobInfoOpt.isPresent()) {
           JobInfo jobInfo = jobInfoOpt.get();
           if (!androidDeviceSerials.isEmpty()) {
@@ -438,14 +492,27 @@ public class SessionRequestHandlerUtil {
     return jobInfos.build();
   }
 
+  private Optional<String> getModuleAbi(String expandedModuleName) {
+    String abi = AbiUtil.parseAbi(expandedModuleName);
+    return isNullOrEmpty(abi) ? Optional.empty() : Optional.of(abi);
+  }
+
+  private Optional<String> getModuleParameter(String expandedModuleName) {
+    Matcher matcher = MODULE_PARAMETER_PATTERN.matcher(expandedModuleName);
+    return matcher.find() ? Optional.of(matcher.group("moduleParam")) : Optional.empty();
+  }
+
   private Optional<JobInfo> createXtsNonTradefedJob(
       Path xtsRootDir,
       XtsType xtsType,
       String testPlan,
       Path moduleConfigPath,
-      Configuration moduleConfig)
+      Configuration moduleConfig,
+      String expandedModuleName,
+      @Nullable String moduleAbi,
+      @Nullable String moduleParameter)
       throws MobileHarnessException, InterruptedException {
-    Optional<JobInfo> jobInfoOpt = createBaseXtsNonTradefedJob(moduleConfig);
+    Optional<JobInfo> jobInfoOpt = createBaseXtsNonTradefedJob(moduleConfig, expandedModuleName);
     if (jobInfoOpt.isEmpty()) {
       return Optional.empty();
     }
@@ -459,25 +526,32 @@ public class SessionRequestHandlerUtil {
     moduleConfigurationHelper.updateJobInfo(jobInfo, moduleConfig, fileDepDirs);
     jobInfo.properties().add(XTS_NON_TF_JOB_PROP, "true");
     jobInfo.properties().add(XTS_MODULE_NAME_PROP, moduleConfig.getMetadata().getXtsModule());
+    if (moduleAbi != null) {
+      jobInfo.properties().add(XTS_MODULE_ABI_PROP, moduleAbi);
+    }
+    if (moduleParameter != null) {
+      jobInfo.properties().add(XTS_MODULE_PARAMETER_PROP, moduleParameter);
+    }
     jobInfo.params().add("xts_test_plan", testPlan);
     return Optional.of(jobInfo);
   }
 
-  private Optional<JobInfo> createBaseXtsNonTradefedJob(Configuration moduleConfig)
+  private Optional<JobInfo> createBaseXtsNonTradefedJob(
+      Configuration moduleConfig, String expandedModuleName)
       throws MobileHarnessException, InterruptedException {
-    String xtsModule = moduleConfig.getMetadata().getXtsModule();
     List<Device> moduleDevices = moduleConfig.getDevicesList();
     if (moduleDevices.isEmpty()) {
       logger.atInfo().log(
-          "Found no devices to create the job config for xts non-tradefed job with module %s.",
-          xtsModule);
+          "Found no devices to create the job config for xts non-tradefed job with module '%s'.",
+          expandedModuleName);
       return Optional.empty();
     }
 
     List<SubDeviceSpec> subDeviceSpecList = new ArrayList<>();
     for (Device device : moduleDevices) {
       if (device.getName().isEmpty()) {
-        logger.atWarning().log("Device name is missing in a <device> in module %s", xtsModule);
+        logger.atWarning().log(
+            "Device name is missing in a <device> in module '%s'", expandedModuleName);
         return Optional.empty();
       } else {
         subDeviceSpecList.add(SubDeviceSpec.newBuilder().setType(device.getName()).build());
@@ -486,7 +560,9 @@ public class SessionRequestHandlerUtil {
 
     JobConfig.Builder jobConfigBuilder =
         JobConfig.newBuilder()
-            .setName(String.format("xts-mobly-aosp-package-job-%s", xtsModule))
+            .setName(
+                String.format(
+                    "xts-mobly-aosp-package-job-%s", expandedModuleName.replace(' ', '_')))
             .setExecMode("local")
             .setJobTimeoutSec(5 * 24 * 60 * 60)
             .setTestTimeoutSec(5 * 24 * 60 * 60)
@@ -495,12 +571,16 @@ public class SessionRequestHandlerUtil {
             .setTestAttempts(1)
             .setTests(
                 StringList.newBuilder()
-                    .addContent(String.format("xts-mobly-aosp-package-test-%s", xtsModule)));
+                    .addContent(
+                        String.format(
+                            "xts-mobly-aosp-package-test-%s",
+                            expandedModuleName.replace(' ', '_'))));
     jobConfigBuilder.setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList));
     jobConfigBuilder.setDriver(Driver.newBuilder().setName("MoblyAospPackageTest"));
     JobConfig jobConfig = jobConfigBuilder.build();
     logger.atInfo().log(
-        "Non-tradefed job base config for module %s: %s", xtsModule, shortDebugString(jobConfig));
+        "Non-tradefed job base config for module '%s': %s",
+        expandedModuleName, shortDebugString(jobConfig));
 
     return Optional.of(JobInfoCreator.createJobInfo(jobConfig, ImmutableList.of(), null));
   }
@@ -508,5 +588,15 @@ public class SessionRequestHandlerUtil {
   private Path getXtsTestCasesDir(Path xtsRootDir, XtsType xtsType) {
     return xtsRootDir.resolve(
         String.format("android-%s/testcases", Ascii.toLowerCase(xtsType.name())));
+  }
+
+  @VisibleForTesting
+  TestSuiteHelper getTestSuiteHelper(
+      String xtsRootDir, XtsType xtsType, SessionRequestInfo sessionRequestInfo) {
+    TestSuiteHelper testSuiteHelper = new TestSuiteHelper(xtsRootDir, xtsType);
+    testSuiteHelper.setParameterizedModules(sessionRequestInfo.enableModuleParameter());
+    testSuiteHelper.setOptionalParameterizedModules(
+        sessionRequestInfo.enableModuleOptionalParameter());
+    return testSuiteHelper;
   }
 }

@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.ListMultimap;
+import com.google.common.io.Files;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
@@ -85,9 +86,13 @@ public class ConfigurationXmlParser {
 
     Element root = document.getDocumentElement();
     String fileName = xmlFile.getName();
-    String fileNameWithoutExtension = fileName.substring(0, fileName.lastIndexOf('.'));
+    String fileNameWithoutExtension = Files.getNameWithoutExtension(fileName);
     configuration.setMetadata(
-        ConfigurationMetadata.newBuilder().setXtsModule(fileNameWithoutExtension));
+        ConfigurationMetadata.newBuilder()
+            .setXtsModule(fileNameWithoutExtension)
+            .setIsConfigV2(
+                ConfigCommon.CONFIG_V2_FILE_EXTENSIONS.stream().anyMatch(fileName::endsWith)));
+
     configuration.setDescription(root.getAttribute(DESCRIPTION));
     ListMultimap<String, String> configDescriptorMetadata = LinkedListMultimap.create();
 

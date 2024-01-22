@@ -23,6 +23,7 @@ option java_outer_classname = "ConfigurationProto";
 
 message ConfigurationMetadata {
   string xts_module = 1;
+  bool is_config_v2 = 2;
 }
 
 message ConfigurationDescriptor {

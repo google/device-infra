@@ -52,6 +52,7 @@ import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.function.Function;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** Handler for "run" commands. */
@@ -60,8 +61,7 @@ class RunCommandHandler {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
-  @VisibleForTesting static final String XTS_NON_TF_JOB_PROP = "xts-non-tradefed-job";
-  @VisibleForTesting static final String XTS_MODULE_NAME_PROP = "xts-module-name";
+
   private static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
   private static final ImmutableSet<String> MOBLY_TEST_RESULT_FILE_NAMES =
       ImmutableSet.of(
@@ -169,7 +169,9 @@ class RunCommandHandler {
 
       ImmutableMap<JobInfo, Optional<TestInfo>> nonTradefedTests =
           sessionInfo.getAllJobs().stream()
-              .filter(jobInfo -> jobInfo.properties().has(XTS_NON_TF_JOB_PROP))
+              .filter(
+                  jobInfo ->
+                      jobInfo.properties().has(SessionRequestHandlerUtil.XTS_NON_TF_JOB_PROP))
               .collect(
                   toImmutableMap(
                       Function.identity(),
@@ -217,12 +219,19 @@ class RunCommandHandler {
             copyNonTradefedTestResultFiles(
                 test,
                 nonTradefedTestResultsDir,
-                testEntry.getKey().properties().get(XTS_MODULE_NAME_PROP));
+                testEntry.getKey().properties().get(SessionRequestHandlerUtil.XTS_MODULE_NAME_PROP),
+                testEntry.getKey().properties().get(SessionRequestHandlerUtil.XTS_MODULE_ABI_PROP),
+                testEntry
+                    .getKey()
+                    .properties()
+                    .get(SessionRequestHandlerUtil.XTS_MODULE_PARAMETER_PROP));
         nonTradefedTestResult.ifPresent(
             res ->
                 moblyReportInfos.add(
                     MoblyReportInfo.of(
                         res.moduleName(),
+                        res.moduleAbi().orElse(null),
+                        res.moduleParameter().orElse(null),
                         res.testSummaryFile(),
                         res.resultAttributesFile(),
                         res.deviceBuildFingerprint(),
@@ -267,12 +276,14 @@ class RunCommandHandler {
   }
 
   private SessionRequestHandlerUtil.SessionRequestInfo generateSessionRequestInfo(
-      RunCommand runCommand) {
+      RunCommand runCommand) throws MobileHarnessException {
     SessionRequestHandlerUtil.SessionRequestInfo.Builder builder =
         SessionRequestHandlerUtil.SessionRequestInfo.builder()
             .setTestPlan(runCommand.getTestPlan())
             .setXtsRootDir(runCommand.getXtsRootDir())
-            .setXtsType(runCommand.getXtsType());
+            .setXtsType(runCommand.getXtsType())
+            .setEnableModuleParameter(true)
+            .setEnableModuleOptionalParameter(false);
 
     builder.setDeviceSerials(runCommand.getDeviceSerialList());
     builder.setModuleNames(runCommand.getModuleNameList());
@@ -481,12 +492,22 @@ class RunCommandHandler {
    */
   @CanIgnoreReturnValue
   private Optional<NonTradefedTestResult> copyNonTradefedTestResultFiles(
-      TestInfo nonTradefedTestInfo, Path resultDir, String moduleName)
+      TestInfo nonTradefedTestInfo,
+      Path resultDir,
+      String moduleName,
+      @Nullable String moduleAbi,
+      @Nullable String moduleParameter)
       throws MobileHarnessException, InterruptedException {
     Path testResultDir = prepareLogOrResultDirForTest(nonTradefedTestInfo, resultDir);
 
     NonTradefedTestResult.Builder nonTradefedTestResultBuilder =
         NonTradefedTestResult.builder().setModuleName(moduleName);
+    if (moduleAbi != null) {
+      nonTradefedTestResultBuilder.setModuleAbi(moduleAbi);
+    }
+    if (moduleParameter != null) {
+      nonTradefedTestResultBuilder.setModuleParameter(moduleParameter);
+    }
     String testGenFileDir = nonTradefedTestInfo.getGenFileDir();
     List<Path> moblyTestResultFiles =
         localFileUtil.listFilePaths(
@@ -582,6 +603,12 @@ class RunCommandHandler {
     /** The xTS module name. */
     public abstract String moduleName();
 
+    /** The abi of the xTS module. */
+    public abstract Optional<String> moduleAbi();
+
+    /** The parameter of the xTS module. */
+    public abstract Optional<String> moduleParameter();
+
     /**
      * The build fingerprint for the major device on which the test run, it's used to identify the
      * generated report.
@@ -611,6 +638,10 @@ class RunCommandHandler {
     @AutoValue.Builder
     public abstract static class Builder {
       public abstract Builder setModuleName(String moduleName);
+
+      public abstract Builder setModuleAbi(String moduleAbi);
+
+      public abstract Builder setModuleParameter(String moduleParameter);
 
       public abstract Builder setDeviceBuildFingerprint(String deviceBuildFingerprint);
 

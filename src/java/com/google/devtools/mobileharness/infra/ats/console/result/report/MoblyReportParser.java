@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.lang.Math.max;
 
 import com.google.auto.value.AutoValue;
@@ -46,6 +47,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /**
@@ -117,7 +119,15 @@ public class MoblyReportParser {
           e);
     }
 
-    Module.Builder moduleBuilder = Module.newBuilder().setName(moblyReportInfo.moblyPackageName());
+    String moduleName =
+        moblyReportInfo.moblyPackageName()
+            + (!isNullOrEmpty(moblyReportInfo.moduleParameter())
+                ? String.format("[%s]", moblyReportInfo.moduleParameter())
+                : "");
+    Module.Builder moduleBuilder = Module.newBuilder().setName(moduleName);
+    if (moblyReportInfo.moduleAbi() != null) {
+      moduleBuilder.setAbi(moblyReportInfo.moduleAbi());
+    }
     long runtime = 0L;
     // Test class to list of test methods in that test class
     ImmutableMultimap.Builder<String, MoblyTestEntry> testEntriesMapBuilder =
@@ -202,6 +212,8 @@ public class MoblyReportParser {
     /** Creates a {@link ParseResult}. */
     public static MoblyReportInfo of(
         String moblyPackageName,
+        @Nullable String moduleAbi,
+        @Nullable String moduleParameter,
         Path moblySummaryFile,
         Path resultAttributesFile,
         String deviceBuildFingerprint,
@@ -209,6 +221,8 @@ public class MoblyReportParser {
       return new com.google.devtools.mobileharness.infra.ats.console.result.report
           .AutoValue_MoblyReportParser_MoblyReportInfo(
           moblyPackageName,
+          moduleAbi,
+          moduleParameter,
           moblySummaryFile,
           resultAttributesFile,
           deviceBuildFingerprint,
@@ -217,6 +231,14 @@ public class MoblyReportParser {
 
     /** The name of Mobly package to which the {@code moblySummaryFile} belongs to. */
     public abstract String moblyPackageName();
+
+    /** The abi of the Mobly module. */
+    @Nullable
+    public abstract String moduleAbi();
+
+    /** The parameter of the Mobly module. */
+    @Nullable
+    public abstract String moduleParameter();
 
     /** The path of the Mobly test summary file being parsed. */
     public abstract Path moblySummaryFile();

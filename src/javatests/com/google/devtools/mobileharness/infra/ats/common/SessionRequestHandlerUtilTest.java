@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.infra.ats.common;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth8.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -32,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -69,6 +72,8 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private ModuleConfigurationHelper moduleConfigurationHelper;
   @Bind @Mock private ConfigurationUtil configurationUtil;
+
+  @Mock private TestSuiteHelper testSuiteHelper;
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
@@ -333,28 +338,36 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void createXtsNonTradefedJobs() throws Exception {
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    Configuration config2 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
     when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
-        .thenReturn(
-            ImmutableMap.of(
-                "/path/to/config1",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build(),
-                "/path/to/config2",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build()));
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests())
+        .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
+
     SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestHandlerUtil.SessionRequestInfo.builder()
@@ -371,28 +384,35 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void createXtsNonTradefedJobs_noMatchedNonTradefedModules() throws Exception {
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    Configuration config2 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
     when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
-        .thenReturn(
-            ImmutableMap.of(
-                "/path/to/config1",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build(),
-                "/path/to/config2",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build()));
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests())
+        .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
 
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
@@ -409,28 +429,36 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void createXtsNonTradefedJobs_partialMatchedNonTradefedModules() throws Exception {
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    Configuration config2 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
     when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
-        .thenReturn(
-            ImmutableMap.of(
-                "/path/to/config1",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module1"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build(),
-                "/path/to/config2",
-                Configuration.newBuilder()
-                    .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule("module2"))
-                    .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
-                    .setTest(
-                        com.google.devtools.mobileharness.platform.android.xts.config.proto
-                            .ConfigurationProto.Test.newBuilder()
-                            .setClazz("Driver"))
-                    .build()));
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests())
+        .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
+
     SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestHandlerUtil.SessionRequestInfo.builder()

@@ -64,6 +64,8 @@ public final class MoblyReportParserTest {
         moblyReportParser.parseMoblyTestResult(
             MoblyReportInfo.of(
                 "mobly-package-name",
+                "module-abi",
+                "module-parameter",
                 Paths.get(MOBLY_TEST_SUMMARY_FILE),
                 Paths.get(RESULT_ATTR_FILE),
                 DEVICE_BUILD_FINGERPRINT,
@@ -89,7 +91,8 @@ public final class MoblyReportParserTest {
     assertThat(report.getModuleInfo(0))
         .isEqualTo(
             Module.newBuilder()
-                .setName("mobly-package-name")
+                .setName("mobly-package-name[module-parameter]")
+                .setAbi("module-abi")
                 .setDone(true)
                 .setTotalTests(3)
                 .setPassed(1)

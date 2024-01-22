@@ -26,6 +26,7 @@ java_library(
     name = "configuration_util",
     srcs = ["ConfigurationUtil.java"],
     deps = [
+        ":config_common",
         ":configuration_xml_parser",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -39,6 +40,7 @@ java_library(
     name = "configuration_xml_parser",
     srcs = ["ConfigurationXmlParser.java"],
     deps = [
+        ":config_common",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@maven//:com_google_guava_guava",
@@ -59,6 +61,12 @@ java_library(
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
     ],
+)
+
+java_library(
+    name = "config_common",
+    srcs = ["ConfigCommon.java"],
+    deps = ["@maven//:com_google_guava_guava"],
 )
 
 java_binary(

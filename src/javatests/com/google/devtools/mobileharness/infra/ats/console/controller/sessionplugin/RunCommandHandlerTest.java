@@ -146,10 +146,10 @@ public final class RunCommandHandlerTest {
                     .build())
             .setTiming(new Timing())
             .build();
-    nonTradefedJobInfo.properties().add(RunCommandHandler.XTS_NON_TF_JOB_PROP, "true");
+    nonTradefedJobInfo.properties().add(SessionRequestHandlerUtil.XTS_NON_TF_JOB_PROP, "true");
     nonTradefedJobInfo
         .properties()
-        .add(RunCommandHandler.XTS_MODULE_NAME_PROP, "mobly_test_module_name");
+        .add(SessionRequestHandlerUtil.XTS_MODULE_NAME_PROP, "mobly_test_module_name");
     nonTradefedJobInfo.tests().add("2", "test_name");
 
     SessionInfo sessionInfo =
