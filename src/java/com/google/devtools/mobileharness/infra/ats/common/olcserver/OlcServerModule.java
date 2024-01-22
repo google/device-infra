@@ -35,7 +35,7 @@ import java.util.List;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
-/** Module for ATS OLC server. */
+/** Module for ATS OLC server X. */
 public class OlcServerModule extends AbstractModule {
 
   private final Provider<Path> serverBinary;
