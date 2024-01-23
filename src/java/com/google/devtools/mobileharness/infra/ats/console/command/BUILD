@@ -50,6 +50,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_result_formatter",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_result_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/testbed/config:yaml_testbed_updater",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/log:log_dumper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:plan_lister",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:result_lister",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",

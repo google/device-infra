@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
@@ -34,11 +35,9 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
-import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.netty.NettyServerBuilder;
@@ -100,8 +99,7 @@ public class OlcServer {
   private void run(List<String> args) throws IOException, InterruptedException {
     // Initializes logger.
     MobileHarnessLogger.init(
-        PathUtil.join(DirCommon.getPublicDirRoot(), "olc_server_log"),
-        ImmutableList.of(logManager.getLogHandler()));
+        OlcServerDirs.getLogDir(), ImmutableList.of(logManager.getLogHandler()));
 
     logger.atInfo().log("Arguments: %s", args);
 

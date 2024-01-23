@@ -47,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_infra_service_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:dirs",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",

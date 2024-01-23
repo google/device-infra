@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DumpStackTraceCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DumpUptimeCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
+import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -117,8 +118,8 @@ public class DumpCommand implements Callable<Integer> {
       aliases = {"l"},
       description = "Dump the logs of all invocations to files")
   public int logs() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
+    LogDumper.dumpLog(consoleUtil);
+    return ExitCode.OK;
   }
 
   @Command(

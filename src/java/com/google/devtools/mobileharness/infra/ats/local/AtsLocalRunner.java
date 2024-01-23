@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.local.proto.AtsLocalSessionPluginProto.AtsLocalSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.local.proto.AtsLocalSessionPluginProto.AtsLocalSessionPluginOutput;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
@@ -169,12 +170,11 @@ public class AtsLocalRunner {
           logger.atSevere().withCause(e).log("Failed to unpack AtsLocalSessionPluginOutput");
         }
       }
-      Path logDir = Path.of(Flags.instance().publicDir.getNonNull()).toAbsolutePath();
-      System.out.printf("\nATS logs have been saved to %s/olc_server_log\n", logDir);
+      System.out.printf("\nATS logs have been saved to %s\n", OlcServerDirs.getLogDir());
       System.out.printf(
           "\nTo access logs, press \"ctrl\" and click on:\n"
-              + "\033[1;35mfile://%s/olc_server_log/log0.txt\033[0m\n\n", // Magenta
-          logDir);
+              + "\033[1;35mfile://%s\033[0m\n\n", // Magenta
+          OlcServerDirs.getLatestLogFile());
     }
   }
 

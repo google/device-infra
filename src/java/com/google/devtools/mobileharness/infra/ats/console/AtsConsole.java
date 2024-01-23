@@ -34,8 +34,10 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLi
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.command.RootCommand;
+import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleReaderOutputStream;
+import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -68,7 +70,7 @@ public class AtsConsole implements Callable<Void> {
   private static final String HELP_PATTERN = "h|help";
 
   public static void main(String[] args) throws IOException {
-    MobileHarnessLogger.init();
+    MobileHarnessLogger.init(AtsConsoleDirs.getLogDir());
 
     // Gets system properties.
     ImmutableMap<String, String> systemProperties =
@@ -100,6 +102,9 @@ public class AtsConsole implements Callable<Void> {
     // Creates ATS console.
     AtsConsole atsConsole = injector.getInstance(AtsConsole.class);
     atsConsole.injector = injector;
+
+    // Adds shutdown hook.
+    Runtime.getRuntime().addShutdownHook(new Thread(atsConsole::onShutdown));
 
     // Starts ATS console.
     logFailure(
@@ -209,6 +214,11 @@ public class AtsConsole implements Callable<Void> {
       // Makes sure that we don't quit with messages still in the buffers.
       consoleUtil.flushConsoleOutput();
     }
+  }
+
+  private void onShutdown() {
+    LogDumper.dumpLog(consoleUtil);
+    consoleUtil.flushConsoleOutput();
   }
 
   /**
