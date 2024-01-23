@@ -63,6 +63,7 @@ main() {
 
   local device_infra_service_flags="--public_dir=${DEFAULT_TMP_DIR} \
   --alr_olc_server_path=${ATS_OLC_SERVER_JAR} \
+  --log_file_size_no_limit=true \
   --adb=$(type -P adb 2>/dev/null) \
   --fastboot=$(type -P fastboot 2>/dev/null) \
   --aapt=$(type -P aapt 2>/dev/null)"

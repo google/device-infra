@@ -67,6 +67,7 @@ public class AtsLocalRunnerIntegrationTest {
             "--olc_server_port=" + serverPort,
             "--public_dir=" + olcServerPublicDir,
             "--alr_olc_server_path=" + OLC_SERVER_BINARY,
+            "--log_file_size_no_limit=true",
             "--no_op_device_num=2",
             "--detect_adb_device=false");
     StringBuilder stdoutBuilder = new StringBuilder();

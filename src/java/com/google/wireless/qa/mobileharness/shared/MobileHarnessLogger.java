@@ -167,7 +167,11 @@ public class MobileHarnessLogger {
     localFileUtil.grantFileOrDirFullAccess(logDir);
     String logFilePattern = PathUtil.join(logDir, logFileNamePattern);
     try {
-      return Optional.of(new FileHandler(logFilePattern, LOG_FILE_SIZE_LIMIT, fileNum));
+      if (Flags.instance().logFileSizeNoLimit.getNonNull()) {
+        return Optional.of(new FileHandler(logFilePattern));
+      } else {
+        return Optional.of(new FileHandler(logFilePattern, LOG_FILE_SIZE_LIMIT, fileNum));
+      }
     } catch (IOException e) {
       throw new MobileHarnessException(
           BasicErrorId.MOBILE_HARNESS_LOGGER_CREATE_FILE_HANDLER_ERROR,
