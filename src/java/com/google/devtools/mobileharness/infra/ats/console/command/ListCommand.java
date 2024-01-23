@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplu
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanLister;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultLister;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
+import com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -39,6 +40,7 @@ import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParameterException;
+import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
 /** Command for "list" commands. */
@@ -137,20 +139,34 @@ public class ListCommand implements Callable<Integer> {
   @Command(
       name = "modules",
       aliases = {"m"},
-      description = "List all modules available")
-  public int modules() throws MobileHarnessException, InterruptedException {
+      description =
+          "List all modules available, or all modules matching the given module parameter.")
+  public int modules(
+      @Parameters(
+              index = "0",
+              arity = "0..1",
+              paramLabel = "<module_parameter>",
+              description = "Supported params: ${COMPLETION-CANDIDATES}")
+          ModuleParameters moduleParameter)
+      throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
     String xtsRootDir = consoleInfo.getXtsRootDirectory().orElse("");
+
+    ListModulesCommand.Builder listModulesCommandBuilder =
+        ListModulesCommand.newBuilder()
+            .setXtsRootDir(xtsRootDir)
+            .setXtsType(commandHelper.getXtsType(xtsRootDir));
+    if (moduleParameter != null) {
+      listModulesCommandBuilder.setModuleParameter(moduleParameter.name());
+    }
+
     AtsSessionPluginOutput output =
         atsSessionStub.runShortSession(
             "list_modules_command",
             AtsSessionPluginConfig.newBuilder()
                 .setListCommand(
                     SessionPluginProto.ListCommand.newBuilder()
-                        .setListModulesCommand(
-                            ListModulesCommand.newBuilder()
-                                .setXtsRootDir(xtsRootDir)
-                                .setXtsType(commandHelper.getXtsType(xtsRootDir))))
+                        .setListModulesCommand(listModulesCommandBuilder))
                 .build());
     return PluginOutputPrinter.printOutput(output, consoleUtil);
   }

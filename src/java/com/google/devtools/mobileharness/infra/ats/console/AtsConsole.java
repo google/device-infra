@@ -148,6 +148,7 @@ public class AtsConsole implements Callable<Void> {
   public Void call() throws MobileHarnessException, InterruptedException {
     CommandLine commandLine =
         new CommandLine(RootCommand.class, new GuiceFactory(injector))
+            .setCaseInsensitiveEnumValuesAllowed(true)
             .setOut(outWriter)
             .setErr(errWriter);
     commandLine.setUnmatchedOptionsArePositionalParams(true);

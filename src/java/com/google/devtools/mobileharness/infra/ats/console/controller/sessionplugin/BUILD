@@ -118,6 +118,7 @@ java_library(
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:module_parameters",
         "@maven//:com_google_guava_guava",
     ],
 )

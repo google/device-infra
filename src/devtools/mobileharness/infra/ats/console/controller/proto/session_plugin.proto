@@ -115,6 +115,8 @@ message ListModulesCommand {
 
   // Required.
   mobileharness.infra.ats.common.XtsType xts_type = 2;
+
+  string module_parameter = 3;
 }
 
 message DumpCommand {

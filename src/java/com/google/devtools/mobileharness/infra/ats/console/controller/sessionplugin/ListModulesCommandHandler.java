@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
+import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
@@ -25,6 +26,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListModulesCommand;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
+import com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters;
 import java.util.Map;
 
 /** Handler for "list modules" commands. */
@@ -35,6 +37,10 @@ class ListModulesCommandHandler {
         getTestSuiteHelper(command.getXtsRootDir(), command.getXtsType());
     testSuiteHelper.setParameterizedModules(true);
     testSuiteHelper.setOptionalParameterizedModules(true);
+    if (!command.getModuleParameter().isEmpty()) {
+      testSuiteHelper.setModuleParameter(
+          ModuleParameters.valueOf(Ascii.toUpperCase(command.getModuleParameter())));
+    }
     Map<String, Configuration> configs = testSuiteHelper.loadTests();
 
     return getListModuleOutput(configs, command.getXtsRootDir());
