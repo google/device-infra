@@ -160,8 +160,8 @@ public class ProxyToDirectTestRunner extends AbstractProxyTestRunner<ProxyToDire
     } catch (InterruptedException e) {
       finalizeTest(
           new MobileHarnessException(
-              InfraErrorId.TR_TEST_INTERRUPTED_WHEN_WAITING_DIRECT_TEST,
-              "Interrupted when waiting direct test connected and launched",
+              InfraErrorId.TR_TEST_INTERRUPTED_WHEN_WAITING_KICK_OFF_TEST,
+              "Lab test runner thread is interrupted when waiting client KickOffTest",
               e));
       throw e;
     }
@@ -227,8 +227,8 @@ public class ProxyToDirectTestRunner extends AbstractProxyTestRunner<ProxyToDire
   }
 
   /**
-   * @return the lab file notifier built-in plugin which can be registered to the proxied direct
-   *     test runner.
+   * Returns the lab file notifier built-in plugin which can be registered to the proxied direct
+   * test runner.
    */
   public LabFileNotifier getProxiedTestLabFileNotifier() {
     return proxiedTestLabFileNotifier;
