@@ -67,6 +67,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_api_client_google_api_client",
         "@maven//:com_google_apis_google_api_services_storage",

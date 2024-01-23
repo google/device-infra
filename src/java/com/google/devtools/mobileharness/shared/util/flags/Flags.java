@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.util.flags;
 
 import static java.util.Arrays.stream;
 
+import com.google.common.base.Strings;
 import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.List;
@@ -555,6 +556,14 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> jobGenFileExpiredTime = jobGenFileExpiredTimeDefault;
 
+  private static final Flag<Boolean> logFileSizeNoLimitDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--log_file_size_no_limit",
+      description = "True to write all log content into one file. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> logFileSizeNoLimit = logFileSizeNoLimitDefault;
+
   private static final Flag<Integer> logFileNumDefault = Flag.value(100);
 
   @com.beust.jcommander.Parameter(
@@ -710,13 +719,17 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> printLabStats = printLabStatsDefault;
 
-  private static final Flag<String> publicDirDefault = Flag.value("/var/www");
+  private static final Flag<String> publicDirDefault = Flag.value(getPublicDirDefaultOss());
 
   @com.beust.jcommander.Parameter(
       names = "--public_dir",
-      description = "The public directory of the Apache/GSE.",
+      description = "The public directory.",
       converter = Flag.StringConverter.class)
   public Flag<String> publicDir = publicDirDefault;
+
+  private static String getPublicDirDefaultOss() {
+    return "/tmp";
+  }
 
   private static final Flag<Boolean> realTimeJobDefault = Flag.value(false);
 
@@ -881,14 +894,17 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> supplementalResDir = supplementalResDirDefault;
 
-  private static final Flag<String> tmpDirRootDefault =
-      Flag.value("/usr/local/google/mobileharness");
+  private static final Flag<String> tmpDirRootDefault = Flag.value(getTmpDirRootDefaultOss());
 
   @com.beust.jcommander.Parameter(
       names = "--tmp_dir_root",
       description = "The tmp Dir Root.",
       converter = Flag.StringConverter.class)
   public Flag<String> tmpDirRoot = tmpDirRootDefault;
+
+  private static String getTmpDirRootDefaultOss() {
+    return Strings.nullToEmpty(System.getenv("HOME")) + "/mobileharness";
+  }
 
   private static final Flags INSTANCE = new Flags();
 

@@ -26,6 +26,7 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
+import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import java.nio.file.Path;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -42,8 +43,7 @@ public final class FlagBasedResourceHelper implements ResourceHelper {
   private static final Path JAVA_BIN =
       Path.of(Flags.instance().javaCommandPath.getNonNull()).normalize();
 
-  private static final Path TMP_FILE_ROOT =
-      Path.of(Flags.instance().tmpDirRoot.getNonNull()).normalize();
+  private static final Path TMP_FILE_ROOT = Path.of(DirCommon.getTempDirRoot()).normalize();
 
   private static final Supplier<Path> TMP_FILE_DIR_SUPPLIER =
       Suppliers.memoize(() -> createSessionDir(TMP_FILE_ROOT));

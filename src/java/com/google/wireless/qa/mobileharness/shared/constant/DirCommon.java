@@ -34,7 +34,7 @@ public final class DirCommon {
   public static final String KEY_NAME_OF_TEST_GEN_FILE_DIR_RELATIVE_PATH =
       GenDir.KEY_NAME_OF_TEST_GEN_FILE_DIR_RELATIVE_PATH;
 
-  /** Returns the public directory of the Apache/GSE. */
+  /** Returns the public directory. */
   public static String getPublicDirRoot() {
     return Flags.instance().publicDir.getNonNull();
   }
