@@ -288,6 +288,9 @@ message LabInfo {
   // Optional.
   mobileharness.api.model.LabServerFeature lab_server_feature = 3;
 
+  // Optional.
+  mobileharness.api.model.LabStatus lab_status = 4;
+
   // TODO: Adds more fields.
 }
 

@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerSetting;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
@@ -583,6 +584,7 @@ class RemoteDeviceManager {
           .setLabLocator(labLocator.toProto())
           .setLabServerSetting(labServerSetting)
           .setLabServerFeature(labServerFeature)
+          .setLabStatus(LabStatus.LAB_RUNNING)
           .build();
     }
   }

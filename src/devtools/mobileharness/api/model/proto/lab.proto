@@ -65,3 +65,10 @@ message LabServerFeature {
   HostProperties host_properties = 2;
   reserved 1;
 }
+
+// Status of a lab
+enum LabStatus {
+  LAB_STATUS_UNSPECIFIED = 0;
+  LAB_RUNNING = 1;
+  LAB_MISSING = 2;
+}

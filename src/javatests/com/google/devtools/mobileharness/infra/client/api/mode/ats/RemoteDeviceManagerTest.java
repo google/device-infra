@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabPort;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerSetting;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.model.proto.Lab.PortType;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceList;
@@ -121,6 +122,7 @@ public class RemoteDeviceManagerTest {
                                       LabPort.newBuilder()
                                           .setType(PortType.LAB_SERVER_HTTP)
                                           .setNum(1234)))
+                          .setLabStatus(LabStatus.LAB_RUNNING)
                           .setLabServerSetting(
                               LabServerSetting.newBuilder()
                                   .addPort(
