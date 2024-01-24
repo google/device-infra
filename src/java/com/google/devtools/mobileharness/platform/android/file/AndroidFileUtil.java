@@ -21,6 +21,7 @@ import static java.util.stream.Collectors.toCollection;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -95,8 +96,9 @@ public class AndroidFileUtil {
   /** ADB shell command to list file/dir. Should be followed with the path in device. */
   @VisibleForTesting static final String ADB_SHELL_LIST_FILES = "ls";
 
-  /** Indicator for the success of remounting the device. */
-  private static final String ADB_REMOUNT_SUCCESS_INDICATOR = "remount succeeded";
+  /** Indicators for the success of remounting the device. */
+  private static final ImmutableList<String> ADB_REMOUNT_SUCCESS_INDICATORS =
+      ImmutableList.of("remount succeeded", "Remount succeeded");
 
   private static final String ADB_REMOUNT_REBOOT_INDICATOR =
       "Now reboot your device for settings to take effect";
@@ -998,12 +1000,12 @@ public class AndroidFileUtil {
         } else if (sdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()) {
           result = adb.run(serial, new String[] {"shell", "mount", "-o", "rw,remount", "/"});
         }
-        if (result.contains(ADB_REMOUNT_SUCCESS_INDICATOR)) {
+        if (remountSuccess(result)) {
           return;
         }
       }
       output = adb.run(serial, new String[] {ADB_ARG_REMOUNT});
-      if (checkResults && !output.contains(ADB_REMOUNT_SUCCESS_INDICATOR)) {
+      if (checkResults && !remountSuccess(output)) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_FILE_UTIL_REMOUNT_ERROR,
             "The output of adb remount doesn't indicate the success: " + output);
@@ -1205,6 +1207,10 @@ public class AndroidFileUtil {
       logger.atInfo().log("Type for symbolic link %s is unknown:%n%s", targetPath, output);
       return Optional.of(FileType.UNKNOWN);
     }
+  }
+
+  private static boolean remountSuccess(String output) {
+    return ADB_REMOUNT_SUCCESS_INDICATORS.stream().anyMatch(output::contains);
   }
 
   /**
