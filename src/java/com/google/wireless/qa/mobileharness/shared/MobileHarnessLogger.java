@@ -44,6 +44,8 @@ import javax.annotation.Nullable;
 /**
  * Helper class for configuring {@link java.util.logging.Logger} with the special format of
  * MobileHarness.
+ *
+ * <p>Calls methods of this class AFTER parsing flags.
  */
 public class MobileHarnessLogger {
 

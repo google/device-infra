@@ -187,6 +187,7 @@ public class LabServerIntegrationTest {
                             "--public_dir=" + labServerPublicDirPath,
                             "--rpc_port=" + labServerRpcPort,
                             "--serv_via_cloud_rpc=false",
+                            "--simplified_log_format=true",
                             "--socket_port=" + labServerSocketPort,
                             "--tmp_dir_root=" + labServerTmpDirPath),
                         ImmutableList.of()))

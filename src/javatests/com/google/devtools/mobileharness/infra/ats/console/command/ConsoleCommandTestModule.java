@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerLogger;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
@@ -60,7 +60,7 @@ public class ConsoleCommandTestModule extends AbstractModule {
   }
 
   @Provides
-  ServerLogger provideOlcServerLogger(ConsoleUtil consoleUtil) {
+  ServerStartingLogger provideOlcServerStartingLogger(ConsoleUtil consoleUtil) {
     return consoleUtil::printlnStderr;
   }
 }

@@ -27,8 +27,10 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
@@ -66,12 +68,12 @@ import picocli.CommandLine;
 /** ATS Console. */
 public class AtsConsole implements Callable<Void> {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   private static final String APPNAME = "AtsConsole";
   private static final String HELP_PATTERN = "h|help";
 
   public static void main(String[] args) throws IOException {
-    MobileHarnessLogger.init(AtsConsoleDirs.getLogDir());
-
     // Gets system properties.
     ImmutableMap<String, String> systemProperties =
         System.getProperties().entrySet().stream()
@@ -80,9 +82,7 @@ public class AtsConsole implements Callable<Void> {
     // Parses flags.
     ImmutableList<String> deviceInfraServiceFlags =
         DeviceInfraServiceUtil.parseDeviceInfraServiceFlagsFromSystemProperty();
-    if (!deviceInfraServiceFlags.isEmpty()) {
-      DeviceInfraServiceUtil.parseFlags(deviceInfraServiceFlags);
-    }
+    DeviceInfraServiceUtil.parseFlags(deviceInfraServiceFlags);
 
     // Initializes line reader and stdout/stderr.
     LineReader lineReader = initializeLineReaderAndStdout();
@@ -103,6 +103,9 @@ public class AtsConsole implements Callable<Void> {
     AtsConsole atsConsole = injector.getInstance(AtsConsole.class);
     atsConsole.injector = injector;
 
+    // Initializes logger.
+    MobileHarnessLogger.init(AtsConsoleDirs.getLogDir());
+
     // Adds shutdown hook.
     Runtime.getRuntime().addShutdownHook(new Thread(atsConsole::onShutdown));
 
@@ -115,6 +118,7 @@ public class AtsConsole implements Callable<Void> {
   }
 
   private final ImmutableList<String> mainArgs;
+  private final ImmutableList<String> deviceInfraServiceFlags;
   private final LineReader lineReader;
   private final PrintWriter outWriter;
   private final PrintWriter errWriter;
@@ -130,6 +134,7 @@ public class AtsConsole implements Callable<Void> {
   @Inject
   AtsConsole(
       @MainArgs ImmutableList<String> mainArgs,
+      @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags,
       @ConsoleLineReader LineReader lineReader,
       @ConsoleOutput(ConsoleOutput.Type.OUT_WRITER) PrintWriter outWriter,
       @ConsoleOutput(ConsoleOutput.Type.ERR_WRITER) PrintWriter errWriter,
@@ -139,6 +144,7 @@ public class AtsConsole implements Callable<Void> {
       ServerPreparer serverPreparer,
       ServerLogPrinter serverLogPrinter) {
     this.mainArgs = mainArgs;
+    this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.lineReader = lineReader;
     this.outWriter = outWriter;
     this.errWriter = errWriter;
@@ -151,6 +157,15 @@ public class AtsConsole implements Callable<Void> {
 
   @Override
   public Void call() throws MobileHarnessException, InterruptedException {
+    // Prints arguments.
+    if (!mainArgs.isEmpty()) {
+      logger.atInfo().log("arguments=%s", mainArgs);
+    }
+    if (!deviceInfraServiceFlags.isEmpty()) {
+      logger.atInfo().log("flags=%s", deviceInfraServiceFlags);
+    }
+
+    // Initializes CLI.
     CommandLine commandLine =
         new CommandLine(RootCommand.class, new GuiceFactory(injector))
             .setCaseInsensitiveEnumValuesAllowed(true)

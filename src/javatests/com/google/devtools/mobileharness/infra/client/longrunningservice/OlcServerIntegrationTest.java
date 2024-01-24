@@ -378,16 +378,17 @@ public class OlcServerIntegrationTest {
                     .createJavaCommand(
                         enableAtsMode ? OLC_SERVER_FILE_PATH : OLC_SERVER_WITH_LOCAL_MODE_FILE_PATH,
                         ImmutableList.of(
+                            "--detect_adb_device=false",
                             "--enable_ats_mode=" + enableAtsMode,
                             "--enable_client_experiment_manager=false",
                             "--enable_client_file_transfer=false",
                             "--enable_grpc_lab_server=true",
                             "--external_adb_initializer_template=true",
                             "--log_file_size_no_limit=true",
-                            "--olc_server_port=" + olcServerPort,
                             "--no_op_device_num=1",
-                            "--detect_adb_device=false",
-                            "--public_dir=" + tmpFolder.newFolder("olc_server_public_dir")),
+                            "--olc_server_port=" + olcServerPort,
+                            "--public_dir=" + tmpFolder.newFolder("olc_server_public_dir"),
+                            "--simplified_log_format=true"),
                         ImmutableList.of()))
             .onStdout(
                 does(
@@ -459,6 +460,7 @@ public class OlcServerIntegrationTest {
                               "--public_dir=" + tmpFolder.newFolder("lab_server_public_dir"),
                               "--rpc_port=" + labServerRpcPort,
                               "--serv_via_cloud_rpc=false",
+                              "--simplified_log_format=true",
                               "--socket_port=" + labServerSocketPort,
                               "--tmp_dir_root=" + tmpFolder.newFolder("lab_server_tmp_dir")),
                           ImmutableList.of()))

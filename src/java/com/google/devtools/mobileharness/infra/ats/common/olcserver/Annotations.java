@@ -49,7 +49,7 @@ public class Annotations {
   /** Flags for OLC server. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
-  @interface DeviceInfraServiceFlags {}
+  public @interface DeviceInfraServiceFlags {}
 
   private Annotations() {}
 }

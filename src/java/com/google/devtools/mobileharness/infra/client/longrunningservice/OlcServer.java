@@ -101,7 +101,10 @@ public class OlcServer {
     MobileHarnessLogger.init(
         OlcServerDirs.getLogDir(), ImmutableList.of(logManager.getLogHandler()));
 
-    logger.atInfo().log("Arguments: %s", args);
+    // Logs arguments.
+    if (!args.isEmpty()) {
+      logger.atInfo().log("arguments=%s", args);
+    }
 
     // Initializes TestMessageManager.
     TestMessageManager.createInstance(clientApi::getTestMessagePoster);

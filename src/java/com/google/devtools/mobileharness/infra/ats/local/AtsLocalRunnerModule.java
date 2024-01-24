@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.local;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerLogger;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
@@ -57,7 +57,7 @@ public final class AtsLocalRunnerModule extends AbstractModule {
   }
 
   @Provides
-  ServerLogger provideOlcServerLogger() {
+  ServerStartingLogger provideOlcServerStartingLogger() {
     return (format, args) -> System.out.printf(format + "%n", args);
   }
 }

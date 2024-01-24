@@ -67,6 +67,7 @@ public class AtsLocalRunner {
             .addAll(deviceInfraServiceFlags)
             .addAll(Arrays.asList(args))
             .build();
+    logger.atInfo().log("Device infra service flags: %s", allFlags);
     DeviceInfraServiceUtil.parseFlags(allFlags);
 
     Injector injector =

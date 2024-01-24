@@ -16,8 +16,11 @@
 
 package com.google.devtools.mobileharness.shared.util.logging;
 
+import static com.google.common.base.Strings.nullToEmpty;
+
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.logging.Formatter;
@@ -27,32 +30,61 @@ import javax.annotation.Nullable;
 /** Standard log formatter of Mobile Harness code. */
 public final class MobileHarnessLogFormatter {
 
-  private static final ImmutableSet<String> SIMPLIFIED_MODE_SOURCE_CLASS_NAMES = ImmutableSet.of();
+  /**
+   * Log messages from these classes will be printed directly without formatting.
+   *
+   * <p>Usually for printing logs from a sub process.
+   */
+  private static final ImmutableSet<String> DIRECT_MODE_SOURCE_CLASS_NAMES = ImmutableSet.of();
 
-  /** The default formatter for printing the date time in the log. */
+  private static final ZoneId ZONE_ID = ZoneId.of("America/Los_Angeles");
   private static final DateTimeFormatter DATE_TIME_FORMATTER =
-      DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss:SSS z")
-          .withZone(ZoneId.of("America/Los_Angeles"));
+      DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss:SSS z").withZone(ZONE_ID);
+  private static final DateTimeFormatter SIMPLIFIED_DATE_TIME_FORMATTER =
+      DateTimeFormatter.ofPattern("MM-dd HH:mm:ss z").withZone(ZONE_ID);
 
-  /** The formatter for each item of logs. */
-  private static final Formatter FORMATTER =
-      new Formatter() {
+  private static class DefaultFormatter extends Formatter {
 
-        @Override
-        public String format(LogRecord logRecord) {
-          return SIMPLIFIED_MODE_SOURCE_CLASS_NAMES.contains(logRecord.getSourceClassName())
-              ? String.format(
-                  "%s\n%s", logRecord.getMessage(), printThrowable(logRecord.getThrown()))
-              : String.format(
-                  "%s %s %s [%s] %s\n%s",
-                  DATE_TIME_FORMATTER.format(logRecord.getInstant()),
-                  logRecord.getLevel().toString().charAt(0),
-                  logRecord.getLoggerName(),
-                  logRecord.getSourceMethodName(),
-                  logRecord.getMessage(),
-                  printThrowable(logRecord.getThrown()));
-        }
-      };
+    private final boolean simplified;
+
+    private DefaultFormatter(boolean simplified) {
+      this.simplified = simplified;
+    }
+
+    @Override
+    public String format(LogRecord logRecord) {
+      if (DIRECT_MODE_SOURCE_CLASS_NAMES.contains(logRecord.getSourceClassName())) {
+        return String.format(
+            "%s\n%s", logRecord.getMessage(), printThrowable(logRecord.getThrown()));
+      } else if (simplified) {
+        return String.format(
+            "%s %s/%s: %s\n%s",
+            SIMPLIFIED_DATE_TIME_FORMATTER.format(logRecord.getInstant()),
+            logRecord.getLevel().toString().charAt(0),
+            getLoggerSimpleName(logRecord.getLoggerName()),
+            logRecord.getMessage(),
+            printThrowable(logRecord.getThrown()));
+      } else {
+        return String.format(
+            "%s %s %s [%s] %s\n%s",
+            DATE_TIME_FORMATTER.format(logRecord.getInstant()),
+            logRecord.getLevel().toString().charAt(0),
+            logRecord.getLoggerName(),
+            logRecord.getSourceMethodName(),
+            logRecord.getMessage(),
+            printThrowable(logRecord.getThrown()));
+      }
+    }
+
+    private static String getLoggerSimpleName(@Nullable String loggerName) {
+      String name = nullToEmpty(loggerName);
+      return name.substring(name.lastIndexOf('.') + 1);
+    }
+  }
+
+  private static final Formatter FORMATTER = new DefaultFormatter(/* simplified= */ false);
+  private static final Formatter SIMPLIFIED_FORMATTER =
+      new DefaultFormatter(/* simplified= */ true);
 
   /** Returns the default formatter for printing the date time in the log. */
   public static DateTimeFormatter getDateTimeFormatter() {
@@ -61,7 +93,7 @@ public final class MobileHarnessLogFormatter {
 
   /** Returns the default log formatter. */
   public static Formatter getDefaultFormatter() {
-    return FORMATTER;
+    return Flags.instance().simplifiedLogFormat.getNonNull() ? SIMPLIFIED_FORMATTER : FORMATTER;
   }
 
   private static String printThrowable(@Nullable Throwable e) {

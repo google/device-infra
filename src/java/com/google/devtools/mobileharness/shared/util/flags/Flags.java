@@ -852,6 +852,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> skipRecoverDeviceNetwork = skipRecoverDeviceNetworkDefault;
 
+  private static final Flag<Boolean> simplifiedLogFormatDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--simplified_log_format",
+      description = "True to use simplified log format. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> simplifiedLogFormat = simplifiedLogFormatDefault;
+
   private static final Flag<Integer> socketPortDefault = Flag.value(9998);
 
   @com.beust.jcommander.Parameter(

@@ -34,6 +34,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:job_reporter",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/lister",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/network",
         "//src/java/com/google/devtools/mobileharness/shared/version",

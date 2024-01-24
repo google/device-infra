@@ -22,7 +22,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerLogger;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
@@ -136,7 +136,7 @@ public class AtsConsoleModule extends AbstractModule {
   }
 
   @Provides
-  ServerLogger provideOlcServerLogger(ConsoleUtil consoleUtil) {
+  ServerStartingLogger provideOlcServerStartingLogger(ConsoleUtil consoleUtil) {
     return consoleUtil::printlnStderr;
   }
 }

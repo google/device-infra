@@ -16,11 +16,16 @@
 
 package com.google.devtools.mobileharness.infra.client.api;
 
+import static com.google.common.base.Preconditions.checkState;
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+
 import com.google.common.base.Ascii;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -47,10 +52,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Future;
 import java.util.function.Supplier;
+import java.util.logging.Level;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
 /** Device Infra client API for running tests. */
@@ -63,13 +69,16 @@ public class ClientApi {
 
   private final Supplier<String> clientHostnameSupplier;
 
-  /**
-   * EventBus for all {@link
-   * com.google.wireless.qa.mobileharness.shared.controller.event.ControllerEvent}s.
-   */
-  private final Future<?> jobManagerThreadFuture;
+  private final ListeningExecutorService jobThreadPool;
 
-  /** Creates Device Infra client API for running tests with Device Infra. */
+  private final Object closeLock = new Object();
+
+  @GuardedBy("closeLock")
+  private ListenableFuture<?> jobManagerFuture;
+
+  @GuardedBy("closeLock")
+  private boolean closed;
+
   @Inject
   public ClientApi(
       @EnvThreadPool ListeningExecutorService envThreadPool,
@@ -80,6 +89,7 @@ public class ClientApi {
       @ShutdownJobThreadWhenShutdownProcess boolean shutdownJobThreadWhenShutdownProcess,
       @GlobalInternalEventBus EventBus globalInternalEventBus,
       NetworkUtil networkUtil) {
+    this.jobThreadPool = jobThreadPool;
     jobManager =
         jobManagerCoreFactory.create(
             jobThreadPool, globalInternalEventBus, extraJobInternalPlugins);
@@ -88,8 +98,6 @@ public class ClientApi {
         ImmutableList.of(new JobReporter(), new TestLister(), jobManager);
     Stream.concat(builtinGlobalInternalPlugins.stream(), extraGlobalInternalPlugins.stream())
         .forEach(globalInternalEventBus::register);
-
-    jobManagerThreadFuture = envThreadPool.submit(jobManager);
 
     if (shutdownJobThreadWhenShutdownProcess) {
       Runtime.getRuntime()
@@ -141,6 +149,7 @@ public class ClientApi {
       }
 
       // Finally, starts the job.
+      initializeJobManager();
       jobManager.startJob(jobInfo, execMode, jobPlugins);
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       jobInfo.errors().add(e);
@@ -164,7 +173,12 @@ public class ClientApi {
    */
   @SuppressWarnings("Interruption")
   public void close() {
-    jobManagerThreadFuture.cancel(true);
+    synchronized (closeLock) {
+      closed = true;
+      if (jobManagerFuture != null) {
+        jobManagerFuture.cancel(true);
+      }
+    }
   }
 
   /**
@@ -191,5 +205,24 @@ public class ClientApi {
     jobInfo.properties().add(Job.EXEC_MODE, Ascii.toLowerCase(ExecModeUtil.getModeName(execMode)));
     jobInfo.properties().add(Job.CLIENT_HOSTNAME, clientHostnameSupplier.get());
     jobInfo.properties().add(Job.CLIENT_VERSION, Version.CLIENT_VERSION.toString());
+  }
+
+  private void initializeJobManager() {
+    synchronized (closeLock) {
+      checkState(!closed, "Client API has been closed");
+      if (jobManagerFuture == null) {
+        jobManagerFuture =
+            logFailure(
+                jobThreadPool.submit(
+                    threadRenaming(getJobManagerRunnable(), () -> "job-manager-thread")),
+                Level.WARNING,
+                "Error occurred in job manager");
+      }
+    }
+    // Does not need to wait initialization finishes.
+  }
+
+  private Runnable getJobManagerRunnable() {
+    return jobManager;
   }
 }

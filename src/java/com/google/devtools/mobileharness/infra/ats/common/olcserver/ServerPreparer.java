@@ -48,6 +48,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
@@ -58,14 +59,14 @@ public class ServerPreparer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  /** Logger for the OLC server. */
+  /** Logger for printing logs of OLC server until it starts successfully. */
   @FunctionalInterface
-  public interface ServerLogger {
+  public interface ServerStartingLogger {
     @FormatMethod
     void log(String format, Object... args);
   }
 
-  private final ServerLogger serverLogger;
+  private final ServerStartingLogger serverStartingLogger;
   private final CommandExecutor commandExecutor;
   private final Sleeper sleeper;
   private final SystemUtil systemUtil;
@@ -79,7 +80,7 @@ public class ServerPreparer {
 
   @Inject
   ServerPreparer(
-      ServerLogger serverLogger,
+      ServerStartingLogger serverStartingLogger,
       CommandExecutor commandExecutor,
       Sleeper sleeper,
       SystemUtil systemUtil,
@@ -88,7 +89,7 @@ public class ServerPreparer {
       @ServerStub(ServerStub.Type.VERSION_SERVICE) VersionStub versionStub,
       @ServerBinary Provider<Path> serverBinary,
       @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags) {
-    this.serverLogger = serverLogger;
+    this.serverStartingLogger = serverStartingLogger;
     this.commandExecutor = commandExecutor;
     this.sleeper = sleeper;
     this.systemUtil = systemUtil;
@@ -117,22 +118,25 @@ public class ServerPreparer {
       }
     }
     if (version != null) {
-      serverLogger.log("Connected to existing OLC server, version=[%s]", shortDebugString(version));
+      serverStartingLogger.log(
+          "Connected to existing OLC server, version=[%s]", shortDebugString(version));
 
       if (!needKillExistingServer(version) || !killExistingServer()) {
-        serverLogger.log("Using existing OLC server");
+        serverStartingLogger.log("Using existing OLC server");
         return;
       }
     }
 
     // Starts a new server if not exists.
-    serverLogger.log("Starting new OLC server...");
+    serverStartingLogger.log("Starting new OLC server...");
     String serverBinaryPath = requireNonNull(serverBinary.get()).toString();
     localFileUtil.checkFile(serverBinaryPath);
 
     CommandProcess serverProcess = null;
     CountDownLatch serverStartedLatch = new CountDownLatch(1);
     AtomicBoolean serverStartedSuccessfully = new AtomicBoolean();
+    ServerStderrLineCallback serverStderrLineCallback =
+        new ServerStderrLineCallback(serverStartedLatch, serverStartedSuccessfully);
     try {
       try {
         serverProcess =
@@ -144,9 +148,7 @@ public class ServerPreparer {
                                 serverBinaryPath,
                                 deviceInfraServiceFlags,
                                 /* nativeArguments= */ ImmutableList.of()))
-                    .onStderr(
-                        new ServerStderrLineCallback(
-                            serverLogger, serverStartedLatch, serverStartedSuccessfully))
+                    .onStderr(serverStderrLineCallback)
                     .onExit(result -> serverStartedLatch.countDown())
                     .timeout(ChronoUnit.YEARS.getDuration())
                     .redirectStderr(false)
@@ -172,20 +174,28 @@ public class ServerPreparer {
             "OLC server exited abnormally while initialization");
       }
       connectWithRetry();
-      serverLogger.log(
+      serverStartingLogger.log(
           "OLC server started, port=%s, pid=%s",
           Flags.instance().olcServerPort.getNonNull(), serverProcess.getUnixPidIfAny().orElse(0));
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+      // Kills the server.
       if (serverProcess != null && serverProcess.isAlive()) {
-        serverLogger.log("Killing OLC server");
+        serverStartingLogger.log("Killing OLC server");
         serverProcess.kill();
+      }
+
+      // Prints stderr of the server.
+      String serverStartingLog = serverStderrLineCallback.getServerStartingLog();
+      if (!serverStartingLog.isEmpty()) {
+        serverStartingLogger.log("olc_server_stderr=[%s]", serverStartingLog);
       }
       throw e;
     }
   }
 
+  @SuppressWarnings("BooleanMethodIsAlwaysInverted")
   public boolean killExistingServer() throws InterruptedException {
-    serverLogger.log("Killing existing OLC server...");
+    serverStartingLogger.log("Killing existing OLC server...");
     KillServerResponse killServerResponse = null;
     try {
       killServerResponse = controlStub.killServer();
@@ -202,7 +212,7 @@ public class ServerPreparer {
       try {
         versionStub.getVersion();
       } catch (GrpcExceptionWithErrorId e) {
-        serverLogger.log("Existing OLC server killed");
+        serverStartingLogger.log("Existing OLC server killed");
         return true;
       }
     }
@@ -245,22 +255,23 @@ public class ServerPreparer {
 
     private static final String SERVER_STARTED_SIGNAL = "OLC server started";
 
-    private final ServerLogger logger;
+    @GuardedBy("itself")
+    private final StringBuilder serverStartingLog = new StringBuilder();
+
     private final CountDownLatch serverStartedLatch;
     private final AtomicBoolean serverStartedSuccessfully;
 
     private ServerStderrLineCallback(
-        ServerLogger logger,
-        CountDownLatch serverStartedLatch,
-        AtomicBoolean serverStartedSuccessfully) {
-      this.logger = logger;
+        CountDownLatch serverStartedLatch, AtomicBoolean serverStartedSuccessfully) {
       this.serverStartedLatch = serverStartedLatch;
       this.serverStartedSuccessfully = serverStartedSuccessfully;
     }
 
     @Override
     public Response onLine(String stderrLine) {
-      logger.log("olc_server_stderr: %s", stderrLine);
+      synchronized (serverStartingLog) {
+        serverStartingLog.append(stderrLine).append('\n');
+      }
 
       if (stderrLine.contains(SERVER_STARTED_SIGNAL)) {
         serverStartedSuccessfully.set(true);
@@ -268,6 +279,12 @@ public class ServerPreparer {
         return Response.stopReadingOutput();
       } else {
         return Response.empty();
+      }
+    }
+
+    private String getServerStartingLog() {
+      synchronized (serverStartingLog) {
+        return serverStartingLog.toString();
       }
     }
   }

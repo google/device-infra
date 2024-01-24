@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.common;
 import static com.google.common.base.Strings.isNullOrEmpty;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
@@ -29,8 +28,6 @@ import java.util.List;
 /** Utility for device infra service. */
 public class DeviceInfraServiceUtil {
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
   private static final String DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY =
       "DEVICE_INFRA_SERVICE_FLAGS";
 
@@ -38,6 +35,7 @@ public class DeviceInfraServiceUtil {
    * Parses device infra service flags from system property.
    *
    * @return the list of flag strings
+   * @implSpec do not use logger since flags has not been parsed
    */
   public static ImmutableList<String> parseDeviceInfraServiceFlagsFromSystemProperty() {
     String property = System.getProperties().getProperty(DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY);
@@ -46,8 +44,11 @@ public class DeviceInfraServiceUtil {
       try {
         ShellUtils.tokenize(deviceInfraServiceFlags, property);
       } catch (TokenizationException e) {
-        logger.atSevere().withCause(e).log(
-            "Failed to parse flags for device infra service: [%s]", property);
+        throw new IllegalArgumentException(
+            String.format(
+                "Invalid property value, key=[%s], value=[%s]",
+                DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY, property),
+            e);
       }
     }
     return ImmutableList.copyOf(deviceInfraServiceFlags);
@@ -57,9 +58,9 @@ public class DeviceInfraServiceUtil {
    * Parses the list of device infra service flag strings and saves values to registered flags.
    *
    * @param flags the list of flag strings
+   * @implSpec do not use logger since flags has not been parsed
    */
   public static void parseFlags(List<String> flags) {
-    logger.atInfo().log("Device infra service flags: %s", flags);
     String[] flagArray = flags.toArray(new String[0]);
     Flags.parse(flagArray);
   }
