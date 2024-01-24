@@ -40,6 +40,8 @@ message KillServerResponse {
   // Required.
   //
   // True if no running/pending session and the server will exit.
+  //
+  // False otherwise and the request will be discarded.
   bool successful = 1;
 }
 
