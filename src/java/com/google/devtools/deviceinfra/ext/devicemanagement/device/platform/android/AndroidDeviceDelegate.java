@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
 import com.google.devtools.mobileharness.platform.android.app.ActivityManager;
+import com.google.devtools.mobileharness.platform.android.device.AndroidDeviceHelper;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.process.AndroidProcessUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
@@ -65,27 +66,12 @@ public abstract class AndroidDeviceDelegate {
   static final String[] ANDROID_UNEXPECTED_PACKAGE =
       new String[] {"com.google.android.apps.internal.statusbarhider"};
 
-  @VisibleForTesting static final String PROPERTY_NAME_CACHED_ABI = "cached_abi";
-
-  @VisibleForTesting
-  static final String PROPERTY_NAME_CACHED_SCREEN_DENSITY = "cached_screen_density";
-
-  @VisibleForTesting static final String PROPERTY_NAME_CACHED_SDK_VERSION = "cached_sdk_version";
-
   private static final String PROPERTY_NAME_LOCALE_PATTERN = "\\w{2}-\\w{2}";
-
-  private static final ImmutableSet<AndroidProperty> RETAIN_CAPS_PROPERTIES =
-      ImmutableSet.of(AndroidProperty.SERIAL, AndroidProperty.BUILD);
 
   @VisibleForTesting static final Duration WAIT_FOR_DEVICE_TIMEOUT = Duration.ofMinutes(15);
 
   // Cache the device when waitForDevice and waitUntilReady.
   private static final Duration CACHE_TIMEOUT = WAIT_FOR_DEVICE_TIMEOUT.plusMinutes(5);
-
-  @VisibleForTesting
-  public static final ImmutableSet<AndroidProperty> PROP_NOT_SET_AS_DIMENSION =
-      ImmutableSet.of(
-          AndroidProperty.FLAVOR, AndroidProperty.KAIOS_RUNTIME_TOKEN, AndroidProperty.PRODUCT);
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -99,6 +85,7 @@ public abstract class AndroidDeviceDelegate {
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
   private final AndroidProcessUtil androidProcessUtil;
+  private final AndroidDeviceHelper androidDeviceHelper;
 
   protected AndroidDeviceDelegate(
       BaseDevice device,
@@ -118,6 +105,7 @@ public abstract class AndroidDeviceDelegate {
     this.androidSystemSettingUtil = androidSystemSettingUtil;
     this.androidProcessUtil = androidProcessUtil;
     this.deviceId = device.getDeviceId();
+    this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil);
   }
 
   /** Ensures device is booted up and ready to respond. */
@@ -142,7 +130,7 @@ public abstract class AndroidDeviceDelegate {
     BaseDeviceHelper.setUp(device, BaseDevice.class, extraDimensions);
 
     // Adds all the system properties to its dimensions.
-    updateAndroidPropertyDimensions(deviceId);
+    androidDeviceHelper.updateAndroidPropertyDimensions(device);
 
     // Adds language and locale dimension from ActivityManager if any of them is missing.
     checkLocaleLanguageDimensions();
@@ -179,7 +167,7 @@ public abstract class AndroidDeviceDelegate {
   }
 
   private boolean updateDimension(AndroidProperty key, String value) {
-    ImmutableSet<String> values = maybeLowerCaseProperty(key, value);
+    ImmutableSet<String> values = androidDeviceHelper.maybeLowerCaseProperty(key, value);
     return device.updateDimension(Ascii.toLowerCase(key.name()), values.toArray(new String[0]));
   }
 
@@ -248,11 +236,13 @@ public abstract class AndroidDeviceDelegate {
     boolean isDimensionChanged = updateGMSVersionDimensions();
 
     // Update system property dimension in case some property changed.
-    isDimensionChanged = updateAndroidPropertyDimensions(deviceId) || isDimensionChanged;
-    if (device.getIntegerProperty(PROPERTY_NAME_CACHED_SDK_VERSION).isEmpty()) {
+    isDimensionChanged =
+        androidDeviceHelper.updateAndroidPropertyDimensions(device) || isDimensionChanged;
+    if (device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION).isEmpty()) {
       return device.removeDimension(Ascii.toLowerCase(AndroidProperty.SDK_VERSION.name()))
           || isDimensionChanged;
-    } else if (device.getIntegerProperty(PROPERTY_NAME_CACHED_SDK_VERSION).get() >= 18) {
+    } else if (device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION).get()
+        >= 18) {
       return updateGServicesAndroidID(deviceId) || isDimensionChanged;
     }
     return isDimensionChanged;
@@ -298,23 +288,24 @@ public abstract class AndroidDeviceDelegate {
 
   /** Returns the cached ABI of the device. */
   public Optional<String> getCachedAbi() {
-    return Optional.ofNullable(device.getProperty(PROPERTY_NAME_CACHED_ABI));
+    return Optional.ofNullable(device.getProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_ABI));
   }
 
   /** Returns the cached sdk version of the device. */
   public Optional<Integer> getCachedSdkVersion() {
-    return device.getIntegerProperty(PROPERTY_NAME_CACHED_SDK_VERSION);
+    return device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION);
   }
 
   /** Returns the cached screen density of this device. */
   public Optional<Integer> getCachedScreenDensity() {
-    return device.getIntegerProperty(PROPERTY_NAME_CACHED_SCREEN_DENSITY);
+    return device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SCREEN_DENSITY);
   }
 
   /** Updates the cached sdk version of the device. */
   public void updateCachedSdkVersion() throws MobileHarnessException, InterruptedException {
     int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
-    device.setProperty(PROPERTY_NAME_CACHED_SDK_VERSION, Integer.toString(sdkVersion));
+    device.setProperty(
+        AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION, Integer.toString(sdkVersion));
     logger.atInfo().log("Updating device %s dimension sdk_version to: %s", deviceId, sdkVersion);
     device.updateDimension(Dimension.Name.SDK_VERSION, Integer.toString(sdkVersion));
   }
@@ -325,7 +316,8 @@ public abstract class AndroidDeviceDelegate {
    * @return true iff its value has changed
    */
   public boolean updateGServicesAndroidID(String deviceId) throws InterruptedException {
-    if (device.getIntegerProperty(PROPERTY_NAME_CACHED_SDK_VERSION).orElse(0) < 18) {
+    if (device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION).orElse(0)
+        < 18) {
       logger.atWarning().log("GService Android ID is not available below API level 18.");
       return false;
     }
@@ -360,109 +352,10 @@ public abstract class AndroidDeviceDelegate {
     }
   }
 
-  /**
-   * Adds all the system properties to its dimensions. If a property not found, will not add the
-   * property the dimensions.
-   */
-  public boolean updateAndroidPropertyDimensions(String deviceId)
-      throws MobileHarnessException, InterruptedException {
-    boolean isDimensionChanged = false;
-    for (AndroidProperty key : AndroidProperty.values()) {
-      if (PROP_NOT_SET_AS_DIMENSION.contains(key)) {
-        continue;
-      }
-      ImmutableSet<String> oldValues =
-          ImmutableSet.copyOf(device.getDimension(Ascii.toLowerCase(key.name())));
-      String value = getPropertyValue(deviceId, key);
-      if (!value.isEmpty()) {
-        ImmutableSet<String> values = maybeLowerCaseProperty(key, value);
-        if (!oldValues.equals(values)) {
-          logger.atInfo().log(
-              "Dimension %s=%s (was: %s), device_id=%s",
-              Ascii.toLowerCase(key.name()), values, oldValues, deviceId);
-          device.updateDimension(Ascii.toLowerCase(key.name()), values.toArray(new String[0]));
-          isDimensionChanged = true;
-        }
-      }
-
-      switch (key) {
-        case ABI:
-          device.setProperty(PROPERTY_NAME_CACHED_ABI, value);
-          break;
-        case RELEASE_VERSION:
-          // Expose major version as a dimension, as many clients do not care about minor version.
-          String majorVersion = extractMajorVersionFromFullVersion(value);
-          logger.atInfo().log(
-              "Dimension %s=%s, device_id=%s",
-              Ascii.toLowerCase(Dimension.Name.RELEASE_VERSION_MAJOR.toString()),
-              Ascii.toLowerCase(majorVersion),
-              deviceId);
-          device.updateDimension(
-              Dimension.Name.RELEASE_VERSION_MAJOR, Ascii.toLowerCase(majorVersion));
-          break;
-        case SCREEN_DENSITY:
-          try {
-            device.setProperty(
-                PROPERTY_NAME_CACHED_SCREEN_DENSITY, Integer.toString(Integer.parseInt(value)));
-          } catch (NumberFormatException e) {
-            logger.atWarning().log(
-                "Failed to parse device %s screen density '%s' from device property: %s",
-                deviceId, value, MoreThrowables.shortDebugString(e, 0));
-          }
-          break;
-        case SDK_VERSION:
-          try {
-            device.setProperty(
-                PROPERTY_NAME_CACHED_SDK_VERSION, Integer.toString(Integer.parseInt(value)));
-          } catch (NumberFormatException e) {
-            logger.atWarning().log(
-                "Failed to parse device %s sdk version '%s' from device property: %s",
-                deviceId, value, MoreThrowables.shortDebugString(e, 0));
-          }
-          break;
-        default:
-          break;
-      }
-    }
-
-    return isDimensionChanged;
-  }
-
-  /**
-   * Returns an ImmutableSet containing either a lower-cased value or if the {@link AndroidProperty}
-   * should be retained (see {@link #RETAIN_CAPS_PROPERTIES}), a set containing at most two Strings:
-   * 1) value unchanged, and 2) a lower-cased value.
-   */
-  private ImmutableSet<String> maybeLowerCaseProperty(AndroidProperty key, String value) {
-    ImmutableSet.Builder<String> valuesBuilder = ImmutableSet.<String>builder();
-    if (RETAIN_CAPS_PROPERTIES.contains(key)) {
-      valuesBuilder.add(value);
-    }
-    valuesBuilder.add(Ascii.toLowerCase(value));
-    return valuesBuilder.build();
-  }
-
-  /**
-   * Extracts first two elements and returns them dot-separated, from a 3-element version string.
-   * Example: "6.0.1" -> "6.0". If the input does not contain two dot characters, returns the
-   * argument unchanged.
-   */
-  private String extractMajorVersionFromFullVersion(String fullVersion) {
-    // Finding a character is faster than parsing regular expressions.
-    int firstDotIndex = fullVersion.indexOf('.');
-    if (firstDotIndex != -1) {
-      int secondDotIndex = fullVersion.indexOf('.', firstDotIndex + 1);
-      if (secondDotIndex > firstDotIndex && secondDotIndex < fullVersion.length() - 1) {
-        return fullVersion.substring(0, secondDotIndex);
-      }
-    }
-    return fullVersion;
-  }
-
   /** Gets property value. */
   public String getPropertyValue(String deviceId, AndroidProperty key)
       throws MobileHarnessException, InterruptedException {
-    return androidAdbUtil.getProperty(deviceId, key);
+    return androidDeviceHelper.getPropertyValue(deviceId, key);
   }
 
   /**
@@ -662,7 +555,8 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDriver("HostBin");
 
     // Gets GServices Android ID(go/android-id).
-    if (device.getIntegerProperty(PROPERTY_NAME_CACHED_SDK_VERSION).orElse(0) >= 18) {
+    if (device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION).orElse(0)
+        >= 18) {
       updateGServicesAndroidID(deviceId);
     }
 
@@ -697,7 +591,7 @@ public abstract class AndroidDeviceDelegate {
   /**
    * Whether it will enable full stack features for the lab.
    *
-   * <p>Subclass can override it to decide whether enable full statck features.
+   * <p>Subclass can override it to decide whether enable full stack features.
    */
   protected abstract boolean ifEnableFullStackFeatures();
 }

@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.platform.android.app.devicedaemon.Devic
 import com.google.devtools.mobileharness.platform.android.app.devicedaemon.DeviceDaemonHelper;
 import com.google.devtools.mobileharness.platform.android.connectivity.AndroidConnectivityUtil;
 import com.google.devtools.mobileharness.platform.android.connectivity.ConnectToWifiArgs;
+import com.google.devtools.mobileharness.platform.android.device.AndroidDeviceHelper;
 import com.google.devtools.mobileharness.platform.android.file.AndroidFileUtil;
 import com.google.devtools.mobileharness.platform.android.file.StorageInfo;
 import com.google.devtools.mobileharness.platform.android.lightning.apkinstaller.ApkInstallArgs;
@@ -144,6 +145,7 @@ public abstract class AndroidRealDeviceDelegate {
   private final DeviceDaemonHelper deviceDaemonHelper;
   private final Fastboot fastboot;
   private final LocalFileUtil fileUtil;
+  private final AndroidDeviceHelper androidDeviceHelper;
 
   protected AndroidRealDeviceDelegate(
       AndroidDevice device,
@@ -193,6 +195,7 @@ public abstract class AndroidRealDeviceDelegate {
     this.deviceId = device.getDeviceId();
     device.setProperty(
         AndroidRealDeviceConstants.PROPERTY_NAME_REBOOT_TO_STATE, DeviceState.DEVICE.name());
+    this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil);
   }
 
   /**
@@ -773,7 +776,7 @@ public abstract class AndroidRealDeviceDelegate {
     device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_FLASHABLE_DEVICE);
     device.addSupportedDriver(AndroidRealDeviceConstants.NO_OP_DRIVER);
     device.addSupportedDecorator("AndroidFlashstationDecorator");
-    androidDeviceDelegate.updateAndroidPropertyDimensions(deviceId);
+    androidDeviceHelper.updateAndroidPropertyDimensions(device);
   }
 
   public boolean checkDevice() throws MobileHarnessException, InterruptedException {

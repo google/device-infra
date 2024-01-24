@@ -28,6 +28,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
         "//src/java/com/google/devtools/mobileharness/platform/android/app:activity",
+        "//src/java/com/google/devtools/mobileharness/platform/android/device:android_device_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/process:android_process_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
