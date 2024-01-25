@@ -13,12 +13,7 @@
 # limitations under the License.
 #
 
-package(
-    default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-    ],
-)
+package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "test_info_creator",
