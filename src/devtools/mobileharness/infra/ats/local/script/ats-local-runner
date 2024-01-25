@@ -20,6 +20,8 @@ ${LINK}OPTIONS${NORM}
   -s, --serials=SERIAL:
                 Comma separated serials to specify devices. If empty, randomly
                 select available devices on the host.
+  --help:
+                Display this help and exit.
 "
 
 check_file() {
@@ -86,6 +88,7 @@ while [[ $# -gt 0 ]]; do
     -a=*|--artifacts=*) ARTIFACTS="${1#*=}";;
     -c=*|--test_config=*) TEST_CONFIG="${1#*=}";;
     -s=*|--serials=*) SERIALS="${1#*=}";;
+    --help) echo -e "${HELP_MESSAGE}"; exit 0;;
     *) echo "Unknown argument $1"; echo -e "${HELP_MESSAGE}"; exit 1;
   esac
   shift # shift to next command
