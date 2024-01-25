@@ -92,6 +92,13 @@ public class ConsoleInfo {
     return Optional.ofNullable(systemProperties.get(XTS_ROOT_DIR_PROPERTY_KEY));
   }
 
+  /** Gets the xTS root directory. */
+  public String getXtsRootDirectoryNonEmpty() {
+    return getXtsRootDirectory()
+        .orElseThrow(
+            () -> new IllegalStateException("XTS root dir is not specified by -DXTS_ROOT"));
+  }
+
   /** Sets the base URL of Python Package Index. */
   public void setPythonPackageIndexUrl(String pythonPackageIndexUrl) {
     this.pythonPackageIndexUrl.set(pythonPackageIndexUrl);

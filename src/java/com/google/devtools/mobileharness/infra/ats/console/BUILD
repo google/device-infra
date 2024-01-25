@@ -53,6 +53,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:server_log_printer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_reader_output_stream",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/log:log_dumper",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/notice:notice_message_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:version_message_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",

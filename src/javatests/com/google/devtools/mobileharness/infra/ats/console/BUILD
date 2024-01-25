@@ -29,7 +29,9 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_lib",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_module",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",

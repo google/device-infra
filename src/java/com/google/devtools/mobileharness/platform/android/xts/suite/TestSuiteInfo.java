@@ -53,17 +53,18 @@ public class TestSuiteInfo {
 
   private Properties testSuiteInfoProps;
   private final JarFileUtil jarFileUtil;
+  private final String xtsRootDir;
+  private final String xtsTypeStr;
 
   private TestSuiteInfo(String xtsRootDir, XtsType xtsType, JarFileUtil jarFileUtil) {
     this.jarFileUtil = jarFileUtil;
-    loadSuiteInfo(xtsRootDir, xtsType);
+    this.xtsRootDir = xtsRootDir;
+    this.xtsTypeStr = Ascii.toLowerCase(xtsType.name());
+    loadSuiteInfo();
   }
 
-  private void loadSuiteInfo(String xtsRootDir, XtsType xtsType) {
-    String xtsTypeStr = Ascii.toLowerCase(xtsType.name());
-    Path xtsTfJar =
-        Path.of(xtsRootDir)
-            .resolve(String.format("android-%s/tools/%s-tradefed.jar", xtsTypeStr, xtsTypeStr));
+  private void loadSuiteInfo() {
+    Path xtsTfJar = getToolsDir().resolve(String.format("%s-tradefed.jar", xtsTypeStr));
     try {
       Optional<InputStream> testSuiteInfoPropsInputStream =
           jarFileUtil.getZipEntryInputStream(xtsTfJar, SUITE_INFO_PROPERTY);
@@ -104,7 +105,7 @@ public class TestSuiteInfo {
     if (instance == null) {
       synchronized (TestSuiteInfo.class) {
         if (instance == null) {
-          logger.atInfo().log(
+          logger.atFine().log(
               "Creating %s instance with params [xts root dir: %s, xts type: %s]",
               TestSuiteInfo.class.getSimpleName(), xtsRootDir, xtsType);
           instance = new TestSuiteInfo(xtsRootDir, xtsType, new JarFileUtil());
@@ -145,5 +146,9 @@ public class TestSuiteInfo {
    */
   public String get(String name) {
     return testSuiteInfoProps.getProperty(name);
+  }
+
+  public Path getToolsDir() {
+    return Path.of(xtsRootDir).resolve(String.format("android-%s/tools", xtsTypeStr));
   }
 }

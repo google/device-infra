@@ -25,7 +25,9 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -64,14 +66,22 @@ public final class AtsConsoleTest {
   private PrintStream consoleErrPrintStream;
 
   private ImmutableList<String> deviceInfraServiceFlags;
+  private ImmutableMap<String, String> systemProperties;
   private Path olcServerBinary;
 
   @Inject private AtsConsole atsConsole;
+
+  private final LocalFileUtil localFileUtil = new LocalFileUtil();
 
   @Before
   public void setUp() throws Exception {
     int olcServerPort = PortProber.pickUnusedPort();
     String publicDirPath = tmpFolder.newFolder("public_dir").toString();
+    String xtsRootDirPath = tmpFolder.newFolder("xts_root_dir").toString();
+    String versionFilePath = PathUtil.join(xtsRootDirPath, "android-cts/tools/version.txt");
+    localFileUtil.writeToFile(versionFilePath, "fake_version");
+
+    systemProperties = ImmutableMap.of("XTS_ROOT", xtsRootDirPath);
 
     ImmutableMap<String, String> flagMap =
         ImmutableMap.of(
@@ -82,6 +92,8 @@ public final class AtsConsoleTest {
             "detect_adb_device",
             "false",
             "enable_ats_console_olc_server",
+            "true",
+            "external_adb_initializer_template",
             "true");
     deviceInfraServiceFlags =
         flagMap.entrySet().stream()
@@ -108,7 +120,7 @@ public final class AtsConsoleTest {
             new AtsConsoleModule(
                 deviceInfraServiceFlags,
                 ImmutableList.of(),
-                /* systemProperties= */ ImmutableMap.of(),
+                systemProperties,
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
@@ -143,7 +155,7 @@ public final class AtsConsoleTest {
             new AtsConsoleModule(
                 deviceInfraServiceFlags,
                 ImmutableList.of("help"),
-                /* systemProperties= */ ImmutableMap.of(),
+                systemProperties,
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
@@ -160,7 +172,7 @@ public final class AtsConsoleTest {
   }
 
   @Test
-  public void runCtsv_enableAtsConsoleOlcServer() throws Exception {
+  public void runCtsV_enableAtsConsoleOlcServer() throws Exception {
     when(lineReader.readLine(anyString())).thenReturn("run -s abc cts-v").thenReturn("exit");
 
     atsConsole.call();

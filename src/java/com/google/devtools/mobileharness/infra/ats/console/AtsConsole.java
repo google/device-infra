@@ -40,6 +40,8 @@ import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDi
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleReaderOutputStream;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
+import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
+import com.google.devtools.mobileharness.infra.ats.console.util.version.VersionMessageUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -127,6 +129,7 @@ public class AtsConsole implements Callable<Void> {
   private final ConsoleInfo consoleInfo;
   private final ServerPreparer serverPreparer;
   private final ServerLogPrinter serverLogPrinter;
+  private final VersionMessageUtil versionMessageUtil;
 
   /** Set before {@link #call}; */
   @VisibleForTesting public volatile Injector injector;
@@ -142,7 +145,8 @@ public class AtsConsole implements Callable<Void> {
       ConsoleUtil consoleUtil,
       ConsoleInfo consoleInfo,
       ServerPreparer serverPreparer,
-      ServerLogPrinter serverLogPrinter) {
+      ServerLogPrinter serverLogPrinter,
+      VersionMessageUtil versionMessageUtil) {
     this.mainArgs = mainArgs;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.lineReader = lineReader;
@@ -153,10 +157,20 @@ public class AtsConsole implements Callable<Void> {
     this.consoleInfo = consoleInfo;
     this.serverPreparer = serverPreparer;
     this.serverLogPrinter = serverLogPrinter;
+    this.versionMessageUtil = versionMessageUtil;
   }
 
   @Override
   public Void call() throws MobileHarnessException, InterruptedException {
+    // Prints notice message.
+    consoleUtil.printlnStderr(NoticeMessageUtil.getNoticeMessage());
+
+    // Prints version information.
+    consoleUtil.printlnStderr(versionMessageUtil.getVersionMessage());
+
+    // Prints help information.
+    consoleUtil.printlnStderr("Use \"help\" to get more information on running commands.");
+
     // Prints arguments.
     if (!mainArgs.isEmpty()) {
       logger.atInfo().log("arguments=%s", mainArgs);
