@@ -38,7 +38,6 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.command.RootCommand;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleReaderOutputStream;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.version.VersionMessageUtil;
@@ -49,7 +48,6 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -274,15 +272,10 @@ public class AtsConsole implements Callable<Void> {
 
   /** Initializes line reader and stdout/stderr. */
   private static LineReader initializeLineReaderAndStdout() throws IOException {
-    LineReader lineReader =
-        LineReaderBuilder.builder()
-            .appName(APPNAME)
-            .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
-            .history(new DefaultHistory())
-            .build();
-    PrintStream ps = new PrintStream(new ConsoleReaderOutputStream(lineReader));
-    System.setOut(ps);
-    System.setErr(ps);
-    return lineReader;
+    return LineReaderBuilder.builder()
+        .appName(APPNAME)
+        .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
+        .history(new DefaultHistory())
+        .build();
   }
 }
