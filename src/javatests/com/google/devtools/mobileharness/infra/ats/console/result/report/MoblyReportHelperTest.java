@@ -22,11 +22,13 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.AttributeList;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -73,10 +75,7 @@ public final class MoblyReportHelperTest {
               .build(),
           Attribute.newBuilder().setKey(XmlConstants.SUITE_NAME_ATTR).setValue("CTS").build(),
           Attribute.newBuilder().setKey(XmlConstants.SUITE_VARIANT_ATTR).setValue("CTS").build(),
-          Attribute.newBuilder()
-              .setKey(XmlConstants.SUITE_VERSION_ATTR)
-              .setValue(CertificationSuiteInfoFactory.CTS_SUITE_VERSION_HEAD)
-              .build(),
+          Attribute.newBuilder().setKey(XmlConstants.SUITE_VERSION_ATTR).setValue("1").build(),
           Attribute.newBuilder().setKey(XmlConstants.SUITE_PLAN_ATTR).setValue("cts").build(),
           Attribute.newBuilder().setKey(XmlConstants.SUITE_BUILD_ATTR).setValue("0").build(),
           Attribute.newBuilder()
@@ -187,7 +186,20 @@ public final class MoblyReportHelperTest {
                 Instant.ofEpochSecond(1),
                 ImmutableList.of(DEVICE_ID),
                 new CertificationSuiteInfoFactory()
-                    .createSuiteInfo(CertificationSuiteInfoFactory.SuiteType.CTS, "cts")))
+                    .createSuiteInfo(
+                        ImmutableMap.of(
+                            SuiteCommon.SUITE_NAME,
+                            "CTS",
+                            SuiteCommon.SUITE_VARIANT,
+                            "CTS",
+                            SuiteCommon.SUITE_VERSION,
+                            "1",
+                            SuiteCommon.SUITE_PLAN,
+                            "cts",
+                            SuiteCommon.SUITE_BUILD,
+                            "0",
+                            SuiteCommon.SUITE_REPORT_VERSION,
+                            CertificationSuiteInfoFactory.SUITE_REPORT_VERSION))))
         .containsExactlyEntriesIn(
             EXPECTED_RESULT_ATTRIBUTES.stream()
                 .collect(toImmutableMap(Attribute::getKey, Attribute::getValue)));
@@ -210,7 +222,20 @@ public final class MoblyReportHelperTest {
         Instant.ofEpochSecond(1),
         ImmutableList.of(DEVICE_ID),
         new CertificationSuiteInfoFactory()
-            .createSuiteInfo(CertificationSuiteInfoFactory.SuiteType.CTS, "cts"),
+            .createSuiteInfo(
+                ImmutableMap.of(
+                    SuiteCommon.SUITE_NAME,
+                    "CTS",
+                    SuiteCommon.SUITE_VARIANT,
+                    "CTS",
+                    SuiteCommon.SUITE_VERSION,
+                    "1",
+                    SuiteCommon.SUITE_PLAN,
+                    "cts",
+                    SuiteCommon.SUITE_BUILD,
+                    "0",
+                    SuiteCommon.SUITE_REPORT_VERSION,
+                    CertificationSuiteInfoFactory.SUITE_REPORT_VERSION)),
         tempDir.toPath());
 
     AttributeList attributes =

@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
@@ -72,7 +73,7 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private ModuleConfigurationHelper moduleConfigurationHelper;
   @Bind @Mock private ConfigurationUtil configurationUtil;
-
+  @Bind @Mock private CertificationSuiteInfoFactory certificationSuiteInfoFactory;
   @Mock private TestSuiteHelper testSuiteHelper;
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;

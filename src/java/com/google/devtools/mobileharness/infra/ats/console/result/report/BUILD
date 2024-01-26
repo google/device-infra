@@ -172,10 +172,17 @@ java_library(
     name = "certification_suite_info_factory",
     srcs = ["CertificationSuiteInfoFactory.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
-    deps = [":certification_suite_info"],
+    deps = [
+        ":certification_suite_info",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info",
+    ],
 )

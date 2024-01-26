@@ -57,7 +57,6 @@ public final class MoblyAospPackageTestValidatorTest {
   @Test
   public void validateJob_pass() throws Exception {
     doNothing().when(jobFiles).checkUnique(MoblyAospPackageTest.FILE_MOBLY_PKG);
-    when(jobParams.get(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE)).thenReturn("cts");
 
     assertThat(validator.validateJob(mockJobInfo)).isEmpty();
   }
@@ -70,22 +69,10 @@ public final class MoblyAospPackageTestValidatorTest {
                 "More than one files/dirs marked for each tag(s)"))
         .when(jobFiles)
         .checkUnique(MoblyAospPackageTest.FILE_MOBLY_PKG);
-    when(jobParams.get(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE)).thenReturn("cts");
 
     List<String> errors = validator.validateJob(mockJobInfo);
 
     assertThat(errors).hasSize(1);
     assertThat(errors.get(0)).contains("More than one files/dirs marked for each tag(s)");
-  }
-
-  @Test
-  public void validateJob_certificationSuiteTypeNotRecognized_error() throws Exception {
-    doNothing().when(jobFiles).checkUnique(MoblyAospPackageTest.FILE_MOBLY_PKG);
-    when(jobParams.get(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE)).thenReturn("abc");
-
-    List<String> errors = validator.validateJob(mockJobInfo);
-
-    assertThat(errors).hasSize(1);
-    assertThat(errors.get(0)).contains("The param certification_suite_type needs to be");
   }
 }

@@ -35,6 +35,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
@@ -86,17 +87,20 @@ public class SessionRequestHandlerUtil {
   private final LocalFileUtil localFileUtil;
   private final ConfigurationUtil configurationUtil;
   private final ModuleConfigurationHelper moduleConfigurationHelper;
+  private final CertificationSuiteInfoFactory certificationSuiteInfoFactory;
 
   @Inject
   SessionRequestHandlerUtil(
       DeviceQuerier deviceQuerier,
       LocalFileUtil localFileUtil,
       ConfigurationUtil configurationUtil,
-      ModuleConfigurationHelper moduleConfigurationHelper) {
+      ModuleConfigurationHelper moduleConfigurationHelper,
+      CertificationSuiteInfoFactory certificationSuiteInfoFactory) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
     this.moduleConfigurationHelper = moduleConfigurationHelper;
+    this.certificationSuiteInfoFactory = certificationSuiteInfoFactory;
   }
 
   /**
@@ -532,8 +536,19 @@ public class SessionRequestHandlerUtil {
     if (moduleParameter != null) {
       jobInfo.properties().add(XTS_MODULE_PARAMETER_PROP, moduleParameter);
     }
-    jobInfo.params().add("xts_test_plan", testPlan);
+    jobInfo.params().add("run_certification_test_suite", "true");
+    jobInfo
+        .params()
+        .add(
+            "xts_suite_info",
+            generateXtsSuiteInfoMap(xtsRootDir.toAbsolutePath().toString(), xtsType, testPlan));
     return Optional.of(jobInfo);
+  }
+
+  private String generateXtsSuiteInfoMap(String xtsRootDir, XtsType xtsType, String testPlan) {
+    Map<String, String> xtsSuiteInfoMap =
+        certificationSuiteInfoFactory.generateSuiteInfoMap(xtsRootDir, xtsType, testPlan);
+    return Joiner.on(",").withKeyValueSeparator("=").join(xtsSuiteInfoMap);
   }
 
   private Optional<JobInfo> createBaseXtsNonTradefedJob(

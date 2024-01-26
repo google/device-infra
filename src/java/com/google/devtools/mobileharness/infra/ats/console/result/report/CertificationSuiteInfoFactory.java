@@ -16,22 +16,39 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
+
 /** Factory for creating certification suite info. */
 public class CertificationSuiteInfoFactory {
 
-  /** Certification suite types. */
-  public enum SuiteType {
-    CTS;
+  // The known existing variant of suites.
+  // Adding a new variant requires approval from Android Partner team and Test Harness team.
+  private enum SuiteVariant {
+    CTS_ON_GSI("CTS_ON_GSI", "cts-on-gsi");
+
+    private final String reportDisplayName;
+    private final String configName;
+
+    private SuiteVariant(String reportName, String configName) {
+      this.reportDisplayName = reportName;
+      this.configName = configName;
+    }
+
+    public String getReportDisplayName() {
+      return reportDisplayName;
+    }
+
+    public String getConfigName() {
+      return configName;
+    }
   }
 
   public static final String SUITE_REPORT_VERSION = "5.0";
-
-  /**
-   * The latest suite version for CTS.
-   *
-   * <p>Find more versions in https://source.android.com/docs/compatibility/cts/downloads
-   */
-  public static final String CTS_SUITE_VERSION_HEAD = "13.0_r3";
 
   /**
    * Creates suite info based on given info.
@@ -39,18 +56,55 @@ public class CertificationSuiteInfoFactory {
    * <p>Mimic from {@code
    * com.android.compatibility.common.tradefed.result.suite.CertificationResultXml}
    */
-  public CertificationSuiteInfo createSuiteInfo(SuiteType suiteType, String suitePlan) {
-    switch (suiteType) {
-      case CTS:
-        return CertificationSuiteInfo.builder()
-            .setSuiteName("CTS")
-            .setSuiteVariant("CTS")
-            .setSuiteVersion(CTS_SUITE_VERSION_HEAD)
-            .setSuitePlan(suitePlan)
-            .setSuiteBuild("0") // Default to 0 for now
-            .setSuiteReportVersion(SUITE_REPORT_VERSION)
-            .build();
+  public CertificationSuiteInfo createSuiteInfo(Map<String, String> suiteInfo) {
+    CertificationSuiteInfo.Builder certificationSuiteInfoBuilder = CertificationSuiteInfo.builder();
+    if (suiteInfo.containsKey(SuiteCommon.SUITE_NAME)) {
+      certificationSuiteInfoBuilder.setSuiteName(suiteInfo.get(SuiteCommon.SUITE_NAME));
     }
-    throw new UnsupportedOperationException("Unrecognized suite type: " + suiteType);
+    if (suiteInfo.containsKey(SuiteCommon.SUITE_VARIANT)) {
+      certificationSuiteInfoBuilder.setSuiteVariant(suiteInfo.get(SuiteCommon.SUITE_VARIANT));
+    }
+    if (suiteInfo.containsKey(SuiteCommon.SUITE_VERSION)) {
+      certificationSuiteInfoBuilder.setSuiteVersion(suiteInfo.get(SuiteCommon.SUITE_VERSION));
+    }
+    if (suiteInfo.containsKey(SuiteCommon.SUITE_PLAN)) {
+      certificationSuiteInfoBuilder.setSuitePlan(suiteInfo.get(SuiteCommon.SUITE_PLAN));
+    }
+    if (suiteInfo.containsKey(SuiteCommon.SUITE_BUILD)) {
+      certificationSuiteInfoBuilder.setSuiteBuild(suiteInfo.get(SuiteCommon.SUITE_BUILD));
+    }
+    certificationSuiteInfoBuilder.setSuiteReportVersion(SUITE_REPORT_VERSION);
+
+    return certificationSuiteInfoBuilder.build();
+  }
+
+  /**
+   * Generates suite info map.
+   *
+   * <p>Mimic from {@code
+   * com.android.compatibility.common.tradefed.result.suite.CertificationResultXml}
+   */
+  public Map<String, String> generateSuiteInfoMap(
+      String xtsRootDir, XtsType xtsType, String suitePlan) {
+    TestSuiteInfo testSuiteInfo = TestSuiteInfo.getInstance(xtsRootDir, xtsType);
+
+    Map<String, String> suiteInfoMap = new HashMap<>();
+    suiteInfoMap.put(SuiteCommon.SUITE_NAME, testSuiteInfo.getName());
+    suiteInfoMap.put(
+        SuiteCommon.SUITE_VARIANT, createSuiteVariant(suitePlan).orElse(testSuiteInfo.getName()));
+    suiteInfoMap.put(SuiteCommon.SUITE_VERSION, testSuiteInfo.getVersion());
+    suiteInfoMap.put(SuiteCommon.SUITE_PLAN, suitePlan);
+    suiteInfoMap.put(SuiteCommon.SUITE_BUILD, testSuiteInfo.getBuildNumber());
+
+    return suiteInfoMap;
+  }
+
+  private Optional<String> createSuiteVariant(String suitePlan) {
+    for (SuiteVariant var : SuiteVariant.values()) {
+      if (suitePlan.equals(var.getConfigName())) {
+        return Optional.of(var.getReportDisplayName());
+      }
+    }
+    return Optional.empty();
   }
 }

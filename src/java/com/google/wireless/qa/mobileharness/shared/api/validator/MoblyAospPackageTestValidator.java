@@ -16,10 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.validator;
 
-import com.google.common.base.Ascii;
-import com.google.common.base.Strings;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.wireless.qa.mobileharness.shared.api.driver.MoblyAospPackageTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.ArrayList;
@@ -36,18 +33,6 @@ public class MoblyAospPackageTestValidator extends BaseValidator {
       job.files().checkUnique(MoblyAospPackageTest.FILE_MOBLY_PKG);
     } catch (MobileHarnessException e) {
       errors.add(e.getMessage());
-    }
-
-    String suiteType = job.params().get(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE);
-    if (!Strings.isNullOrEmpty(suiteType)) {
-      try {
-        SuiteType unused = SuiteType.valueOf(Ascii.toUpperCase(suiteType));
-      } catch (IllegalArgumentException e) {
-        errors.add(
-            String.format(
-                "The param certification_suite_type needs to be \"CTS\", while it's given \"%s\".",
-                suiteType));
-      }
     }
 
     return errors;

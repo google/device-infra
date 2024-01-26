@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -27,9 +28,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
-import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -149,19 +150,26 @@ public final class MoblyAospPackageTestTest {
             .setSuiteVersion("")
             .setSuitePlan("")
             .setSuiteBuild("0")
-            .setSuiteReportVersion("")
+            .setSuiteReportVersion(CertificationSuiteInfoFactory.SUITE_REPORT_VERSION)
             .build();
     when(emptyDevice.getDeviceId()).thenReturn(SERIAL);
     when(testInfo.getGenFileDir()).thenReturn("/gen");
     params = new Params(null);
-    params.add(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE, "cts");
-    params.add(MoblyAospPackageTest.PARAM_XTS_TEST_PLAN, "cts-plan");
+    params.add(MoblyAospPackageTest.PARAM_RUN_CERTIFICATION_TEST_SUITE, "true");
+    params.add(
+        MoblyAospPackageTest.PARAM_XTS_SUITE_INFO,
+        String.format(
+            "%s=CTS,%s=CTS,%s=,%s=,%s=0",
+            SuiteCommon.SUITE_NAME,
+            SuiteCommon.SUITE_VARIANT,
+            SuiteCommon.SUITE_VERSION,
+            SuiteCommon.SUITE_PLAN,
+            SuiteCommon.SUITE_BUILD));
     when(jobInfo.params()).thenReturn(params);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
-    when(certificationSuiteInfoFactory.createSuiteInfo(SuiteType.CTS, "cts-plan"))
-        .thenReturn(certificationSuiteInfo);
     when(androidAdbUtil.getProperty(SERIAL, ImmutableList.of("ro.build.fingerprint")))
         .thenReturn("");
+    doCallRealMethod().when(certificationSuiteInfoFactory).createSuiteInfo(any());
 
     MoblyAospPackageTest moblyAospPackageTest =
         new MoblyAospPackageTest(
@@ -188,13 +196,12 @@ public final class MoblyAospPackageTestTest {
   }
 
   @Test
-  public void postMoblyCommandExec_noCertificationSuiteType_skipGeneratingAttrFiles()
+  public void postMoblyCommandExec_notRunCertificationTestSuite_skipGeneratingAttrFiles()
       throws Exception {
     when(emptyDevice.getDeviceId()).thenReturn(SERIAL);
     when(testInfo.getGenFileDir()).thenReturn("/gen");
     params = new Params(null);
-    params.add(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE, "");
-    params.add(MoblyAospPackageTest.PARAM_XTS_TEST_PLAN, "cts-plan");
+    params.add(MoblyAospPackageTest.PARAM_RUN_CERTIFICATION_TEST_SUITE, "false");
     when(jobInfo.params()).thenReturn(params);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
 
@@ -212,7 +219,7 @@ public final class MoblyAospPackageTestTest {
 
     moblyAospPackageTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
 
-    verify(certificationSuiteInfoFactory, never()).createSuiteInfo(any(), any());
+    verify(certificationSuiteInfoFactory, never()).createSuiteInfo(any());
     verify(moblyReportHelper, never())
         .generateResultAttributesFile(any(), any(), any(), any(), any());
     verify(moblyReportHelper, never()).generateBuildAttributesFile(any(), any());
@@ -224,8 +231,7 @@ public final class MoblyAospPackageTestTest {
     when(compositeDevice.getManagedDevices()).thenReturn(ImmutableSet.of());
     when(testInfo.getGenFileDir()).thenReturn("/gen");
     params = new Params(null);
-    params.add(MoblyAospPackageTest.PARAM_CERTIFICATION_SUITE_TYPE, "cts");
-    params.add(MoblyAospPackageTest.PARAM_XTS_TEST_PLAN, "cts-plan");
+    params.add(MoblyAospPackageTest.PARAM_RUN_CERTIFICATION_TEST_SUITE, "true");
     when(jobInfo.params()).thenReturn(params);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
 
@@ -243,7 +249,7 @@ public final class MoblyAospPackageTestTest {
 
     moblyAospPackageTest.postMoblyCommandExec(Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
 
-    verify(certificationSuiteInfoFactory, never()).createSuiteInfo(any(), any());
+    verify(certificationSuiteInfoFactory, never()).createSuiteInfo(any());
     verify(moblyReportHelper, never())
         .generateResultAttributesFile(any(), any(), any(), any(), any());
     verify(moblyReportHelper, never()).generateBuildAttributesFile(any(), any());

@@ -19,17 +19,16 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
-import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory.SuiteType;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
+import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -45,7 +44,9 @@ import java.nio.file.Paths;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import javax.inject.Inject;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -79,11 +80,15 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
               + " supplied here must match the executable name.")
   public static final String PARAM_PYTHON_VERSION = "python_version";
 
-  @ParamAnnotation(required = false, help = "Certification suite type for the xTS Mobly run.")
-  public static final String PARAM_CERTIFICATION_SUITE_TYPE = "certification_suite_type";
+  @ParamAnnotation(
+      required = false,
+      help = "Whether to run certification test suite. Default to false.")
+  public static final String PARAM_RUN_CERTIFICATION_TEST_SUITE = "run_certification_test_suite";
 
-  @ParamAnnotation(required = false, help = "Test plan for the xTS Mobly run.")
-  public static final String PARAM_XTS_TEST_PLAN = "xts_test_plan";
+  @ParamAnnotation(
+      required = false,
+      help = "xTS suite info. Should be key value pairs like 'key1=value1,key2=value2'.")
+  public static final String PARAM_XTS_SUITE_INFO = "xts_suite_info";
 
   @ParamAnnotation(required = false, help = "Base URL of Python Package Index.")
   public static final String PARAM_PY_PKG_INDEX_URL = "python_pkg_index_url";
@@ -197,19 +202,21 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
   protected void postMoblyCommandExec(Instant testStartTime, Instant testEndTime)
       throws MobileHarnessException, InterruptedException {
     TestInfo testInfo = getTest();
-    String suiteType = testInfo.jobInfo().params().get(PARAM_CERTIFICATION_SUITE_TYPE, "");
-    // If certification suite type is not defined, it means this is not a xTS Mobly test.
-    if (suiteType.isEmpty()) {
+    boolean runCertificationTestSuite =
+        testInfo.jobInfo().params().getBool(PARAM_RUN_CERTIFICATION_TEST_SUITE, false);
+    if (!runCertificationTestSuite) {
       return;
     }
     ImmutableList<String> deviceIds = getDeviceIds();
     if (deviceIds.isEmpty()) {
       return;
     }
-    String xtsTestPlan = testInfo.jobInfo().params().get(PARAM_XTS_TEST_PLAN, "");
-    CertificationSuiteInfo suiteInfo =
-        certificationSuiteInfoFactory.createSuiteInfo(
-            SuiteType.valueOf(Ascii.toUpperCase(suiteType)), xtsTestPlan);
+    Map<String, String> suiteInfoMap =
+        new HashMap<>(
+            StrUtil.toMap(
+                testInfo.jobInfo().params().get(PARAM_XTS_SUITE_INFO, ""),
+                /* allowDelimiterInValue= */ true));
+    CertificationSuiteInfo suiteInfo = certificationSuiteInfoFactory.createSuiteInfo(suiteInfoMap);
     try {
       moblyReportHelper.generateResultAttributesFile(
           testStartTime, testEndTime, deviceIds, suiteInfo, Paths.get(testInfo.getGenFileDir()));

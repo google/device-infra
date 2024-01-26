@@ -68,6 +68,7 @@ java_library(
     name = "test_suite_info",
     srcs = ["TestSuiteInfo.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__",
     ],
     deps = [
@@ -83,5 +84,16 @@ java_library(
     srcs = ["DeviceFoldableState.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+    ],
+)
+
+java_library(
+    name = "suite_common",
+    srcs = ["SuiteCommon.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],
 )
