@@ -112,7 +112,9 @@ public class LocalFileUtil {
   private static final int LINK_ATTEMPTS = 100;
 
   /** Timeout setting for slow commands. */
-  private static final Duration SLOW_CMD_TIMEOUT = Duration.ofMinutes(10);
+  private static final Duration SLOW_CMD_TIMEOUT = Duration.ofMinutes(10L);
+
+  private static final Pattern SPACE_CHARS = Pattern.compile("\\s+");
 
   /** System command executor. */
   private final CommandExecutor cmdExecutor;
@@ -268,7 +270,7 @@ public class LocalFileUtil {
    * following steps to lists all opened files and formats the output with file names only before
    * removing unopened files.
    *
-   * <p>1. Use command - "lsof -w -Fn +D <dir>" to list opened files. Normall there will be 3 lines
+   * <p>1. Use command - "lsof -w -Fn +D <dir>" to list opened files. Normally there will be 3 lines
    * per file.
    *
    * <p>1.1 A line of process id with leading p like - p12345
@@ -499,7 +501,7 @@ public class LocalFileUtil {
     // Example:
     // $ du -sh /var/www/
     // 286M /var/www/
-    List<String> words = Splitter.onPattern("\\s+").splitToList(output);
+    List<String> words = Splitter.on(SPACE_CHARS).splitToList(output);
     if (words.size() != 2) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_OR_DIR_GET_SIZE_ERROR,
@@ -555,7 +557,7 @@ public class LocalFileUtil {
     // Example: (default size unit is KB)
     // $ du -s /var/www/
     // 9539176 /var/www/
-    List<String> words = Splitter.onPattern("\\s+").splitToList(output);
+    List<String> words = Splitter.on(SPACE_CHARS).splitToList(output);
     if (words.size() < 2) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_OR_DIR_PARSE_SIZE_ERROR,

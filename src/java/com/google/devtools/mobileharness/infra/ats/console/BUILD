@@ -42,7 +42,6 @@ java_library(
         ":annotations",
         ":ats_console_module",
         ":console_info",
-        ":console_util",
         ":guice_factory",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_infra_service_util",
@@ -51,6 +50,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/constant:dirs",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:server_log_printer",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/log:log_dumper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/notice:notice_message_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:version_message_util",
@@ -74,10 +74,10 @@ java_library(
     srcs = ["AtsConsoleModule.java"],
     deps = [
         ":annotations",
-        ":console_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "@maven//:com_google_guava_guava",
@@ -98,18 +98,6 @@ java_library(
 )
 
 java_library(
-    name = "console_util",
-    srcs = ["ConsoleUtil.java"],
-    deps = [
-        ":annotations",
-        ":apache_commons_io",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
     name = "guice_factory",
     srcs = ["GuiceFactory.java"],
     deps = [
@@ -120,6 +108,9 @@ java_library(
 
 java_library(
     name = "apache_commons_io",
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/path:__pkg__",
+    ],
     exports = [
         "@maven//:commons_io_commons_io",
     ],

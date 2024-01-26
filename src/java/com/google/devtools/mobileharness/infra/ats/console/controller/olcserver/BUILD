@@ -53,7 +53,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@io_grpc_grpc_java//stub",

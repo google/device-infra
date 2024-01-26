@@ -14,20 +14,16 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console;
+package com.google.devtools.mobileharness.infra.ats.console.util.console;
 
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.errorprone.annotations.FormatMethod;
-import java.io.File;
-import java.io.IOException;
 import java.io.PrintStream;
-import java.util.zip.ZipFile;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import org.apache.commons.io.FilenameUtils;
 
-/** Util class for the console. */
+/** Utility for printing information to ATS console. */
 @Singleton
 public class ConsoleUtil {
 
@@ -45,17 +41,6 @@ public class ConsoleUtil {
       @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM) PrintStream consoleOutputErr) {
     this.consoleOutputOut = consoleOutputOut;
     this.consoleOutputErr = consoleOutputErr;
-  }
-
-  /** Expands path prefixed with "~/" with user home expanded path. */
-  public String completeHomeDirectory(String path) {
-    if (path.startsWith("~" + File.separator)) {
-      return System.getProperty("user.home") + path.substring(1);
-    }
-    if (path.equals("~")) {
-      return System.getProperty("user.home");
-    }
-    return path;
   }
 
   /**
@@ -160,19 +145,6 @@ public class ConsoleUtil {
     synchronized (consoleOutputLock) {
       consoleOutputOut.flush();
       consoleOutputErr.flush();
-    }
-  }
-
-  /** Checks if the given file is a zip file. */
-  public boolean isZipFile(File file) {
-    String fileExt = FilenameUtils.getExtension(file.getPath());
-    if (!fileExt.isEmpty() && !fileExt.equals("zip")) {
-      return false;
-    }
-    try (ZipFile ignored = new ZipFile(file)) {
-      return true;
-    } catch (IOException e) {
-      return false;
     }
   }
 }

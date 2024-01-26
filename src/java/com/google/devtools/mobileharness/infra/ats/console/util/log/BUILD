@@ -23,8 +23,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
     ],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/constant:dirs",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:dirs",
     ],
 )

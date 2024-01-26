@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.command.RootCommand;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.version.VersionMessageUtil;
@@ -270,7 +271,7 @@ public class AtsConsole implements Callable<Void> {
     return Path.of(Flags.instance().atsConsoleOlcServerPath.getNonNull());
   }
 
-  /** Initializes line reader and stdout/stderr. */
+  /** Initializes line reader. */
   private static LineReader initializeLineReaderAndStdout() throws IOException {
     return LineReaderBuilder.builder()
         .appName(APPNAME)

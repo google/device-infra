@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.log;
 
-import com.google.devtools.mobileharness.infra.ats.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 
 /** Utility for dumping logs. */

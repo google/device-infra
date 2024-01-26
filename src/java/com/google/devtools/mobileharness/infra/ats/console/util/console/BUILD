@@ -15,17 +15,19 @@
 
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//:deviceinfra_all_pkg"],
+    default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+    ],
 )
 
 java_library(
-    name = "file_name_util",
-    srcs = ["FileNameUtil.java"],
-    deps = ["//src/java/com/google/devtools/mobileharness/infra/ats/console:apache_commons_io"],
-)
-
-java_library(
-    name = "path",
-    srcs = ["PathUtil.java"],
-    deps = ["@maven//:com_google_guava_guava"],
+    name = "console_util",
+    srcs = ["ConsoleUtil.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:javax_inject_jsr330_api",
+    ],
 )

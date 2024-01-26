@@ -20,7 +20,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
-import com.google.devtools.mobileharness.infra.ats.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
@@ -28,6 +27,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListDevicesCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListModulesCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanLister;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultLister;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;

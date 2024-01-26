@@ -16,8 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static com.google.common.truth.OptionalSubject.optionals;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.Truth.assertWithMessage;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -29,8 +30,8 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
-import com.google.devtools.mobileharness.infra.ats.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -102,7 +103,6 @@ public final class SetCommandTest {
 
     doCallRealMethod().when(consoleUtil).printlnStdout(anyString(), any());
     doCallRealMethod().when(consoleUtil).printlnStderr(anyString(), any());
-    when(consoleUtil.completeHomeDirectory(anyString())).thenCallRealMethod();
   }
 
   @After
@@ -240,6 +240,9 @@ public final class SetCommandTest {
     int exitCode = commandLine.execute("set", "python-package-index-url", newPythonPackageIndexUrl);
 
     assertThat(exitCode).isEqualTo(0);
-    assertThat(consoleInfo.getPythonPackageIndexUrl()).isEmpty();
+    assertWithMessage("consoleInfo.getPythonPackageIndexUrl()")
+        .about(optionals())
+        .that(consoleInfo.getPythonPackageIndexUrl())
+        .isEmpty();
   }
 }

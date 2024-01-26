@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.JarFileUtil.EntryFilter;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.path.FileNameUtil;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,7 +38,6 @@ import javax.inject.Inject;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
-import org.apache.commons.io.FilenameUtils;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
@@ -73,11 +73,12 @@ public class PlanConfigUtil {
 
   private final JarFileUtil jarFileUtil;
   private final LocalFileUtil localFileUtil;
+  private final FileNameUtil fileNameUtil;
 
   /** A {@link EntryFilter} for plan configuration XML files. */
   private class ConfigInJarFilter implements EntryFilter {
 
-    private String prefix = null;
+    private String prefix;
 
     public ConfigInJarFilter(@Nullable String prefixSubPath) {
       prefix = getConfigPrefix();
@@ -89,7 +90,7 @@ public class PlanConfigUtil {
 
     @Override
     public boolean accept(String pathName) {
-      String extension = FilenameUtils.getExtension(pathName);
+      String extension = fileNameUtil.getExtension(pathName);
       return pathName.startsWith(prefix) && SUPPORTED_EXTENSIONS.contains(extension);
     }
 
@@ -97,16 +98,17 @@ public class PlanConfigUtil {
     public String transform(String pathName) {
       // Strip off CONFIG_PREFIX and config extension
       int pathStartIndex = getConfigPrefix().length();
-      String extension = FilenameUtils.getExtension(pathName);
+      String extension = fileNameUtil.getExtension(pathName);
       int pathEndIndex = pathName.length() - (extension.length() + 1);
       return pathName.substring(pathStartIndex, pathEndIndex);
     }
   }
 
   @Inject
-  PlanConfigUtil(JarFileUtil jarFileUtil, LocalFileUtil localFileUtil) {
+  PlanConfigUtil(JarFileUtil jarFileUtil, LocalFileUtil localFileUtil, FileNameUtil fileNameUtil) {
     this.jarFileUtil = jarFileUtil;
     this.localFileUtil = localFileUtil;
+    this.fileNameUtil = fileNameUtil;
   }
 
   /**
@@ -178,7 +180,7 @@ public class PlanConfigUtil {
   }
 
   private Optional<InputStream> getBundledConfigStream(Path jar, String name) {
-    String ext = FilenameUtils.getExtension(name);
+    String ext = fileNameUtil.getExtension(name);
     if (Strings.isNullOrEmpty(ext)) {
       // If the default name doesn't have an extension, search all possible extensions.
       for (String supportedExt : SUPPORTED_EXTENSIONS) {

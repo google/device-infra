@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.shared.util.path;
 
+import static com.google.common.base.Strings.nullToEmpty;
+
+import java.io.File;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -168,6 +171,17 @@ public final class PathUtil {
   /** Removes leading slashes from a string. */
   public static String removeLeadingSlashes(String path) {
     return SLASH_PREFIX_PATTERN.matcher(path).replaceFirst("");
+  }
+
+  /** Expands path prefixed with "~/" with user home expanded path. */
+  public static String completeHomeDirectory(String path) {
+    if (path.startsWith("~" + File.separator)) {
+      return nullToEmpty(System.getProperty("user.home")) + path.substring(1);
+    }
+    if (path.equals("~")) {
+      return nullToEmpty(System.getProperty("user.home"));
+    }
+    return path;
   }
 
   private PathUtil() {}

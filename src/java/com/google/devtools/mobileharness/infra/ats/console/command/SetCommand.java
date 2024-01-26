@@ -22,11 +22,12 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
-import com.google.devtools.mobileharness.infra.ats.console.ConsoleUtil;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -108,7 +109,7 @@ public class SetCommand implements Callable<Integer> {
 
   private boolean setMoblyTestCasesDir() {
     if (moblyTestCasesDir != null) {
-      moblyTestCasesDir = consoleUtil.completeHomeDirectory(moblyTestCasesDir);
+      moblyTestCasesDir = PathUtil.completeHomeDirectory(moblyTestCasesDir);
       if (!moblyTestCasesDir.isEmpty() && localFileUtil.isDirExist(moblyTestCasesDir)) {
         consoleInfo.setMoblyTestCasesDir(moblyTestCasesDir);
       } else {
@@ -122,7 +123,7 @@ public class SetCommand implements Callable<Integer> {
 
   private boolean setResultsDir() {
     if (resultsDir != null) {
-      resultsDir = consoleUtil.completeHomeDirectory(resultsDir);
+      resultsDir = PathUtil.completeHomeDirectory(resultsDir);
       if (!resultsDir.isEmpty() && localFileUtil.isDirExist(resultsDir)) {
         consoleInfo.setResultsDirectory(resultsDir);
       } else {

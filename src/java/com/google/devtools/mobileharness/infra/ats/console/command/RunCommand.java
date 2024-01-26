@@ -34,7 +34,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
-import com.google.devtools.mobileharness.infra.ats.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto;
@@ -45,6 +44,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.xml.MoblyResul
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultFormatter;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultUtil;
 import com.google.devtools.mobileharness.infra.ats.console.testbed.config.YamlTestbedUpdater;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
@@ -52,6 +52,8 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.path.FileNameUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -69,7 +71,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.inject.Inject;
-import org.apache.commons.io.FilenameUtils;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
@@ -165,6 +166,7 @@ final class RunCommand implements Callable<Integer> {
   private final ConsoleUtil consoleUtil;
   private final AndroidAdbInternalUtil androidAdbInternalUtil;
   private final LocalFileUtil localFileUtil;
+  private final FileNameUtil fileNameUtil;
   private final CommandExecutor commandExecutor;
   private final YamlTestbedUpdater yamlTestbedUpdater;
   private final XmlResultFormatter xmlResultFormatter;
@@ -183,6 +185,7 @@ final class RunCommand implements Callable<Integer> {
       ConsoleUtil consoleUtil,
       AndroidAdbInternalUtil androidAdbInternalUtil,
       LocalFileUtil localFileUtil,
+      FileNameUtil fileNameUtil,
       YamlTestbedUpdater yamlTestbedUpdater,
       XmlResultFormatter xmlResultFormatter,
       XmlResultUtil xmlResultUtil,
@@ -196,6 +199,7 @@ final class RunCommand implements Callable<Integer> {
     this.consoleUtil = consoleUtil;
     this.androidAdbInternalUtil = androidAdbInternalUtil;
     this.localFileUtil = localFileUtil;
+    this.fileNameUtil = fileNameUtil;
     this.yamlTestbedUpdater = yamlTestbedUpdater;
     this.xmlResultFormatter = xmlResultFormatter;
     this.xmlResultUtil = xmlResultUtil;
@@ -426,10 +430,10 @@ final class RunCommand implements Callable<Integer> {
     }
     ImmutableList.Builder<MoblyTestRunEntry> moblyTestRunEntries = ImmutableList.builder();
     localFileUtil.listFiles(moblyTestCasesDir, /* recursively= */ false).stream()
-        .filter(consoleUtil::isZipFile)
+        .filter(fileNameUtil::isZipFile)
         .forEach(
             moblyTestZip -> {
-              String name = FilenameUtils.removeExtension(moblyTestZip.getName());
+              String name = fileNameUtil.removeExtension(moblyTestZip.getName());
               moblyTestRunEntries.add(
                   MoblyTestRunEntry.builder()
                       .setName(name)
@@ -605,8 +609,7 @@ final class RunCommand implements Callable<Integer> {
   }
 
   private String getMoblyTestZipSuiteMainFilePath() {
-    return consoleUtil.completeHomeDirectory(
-        consoleInfo.getMoblyTestZipSuiteMainFile().orElseThrow());
+    return PathUtil.completeHomeDirectory(consoleInfo.getMoblyTestZipSuiteMainFile().orElseThrow());
   }
 
   @AutoValue

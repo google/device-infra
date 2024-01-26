@@ -33,17 +33,18 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
-import com.google.devtools.mobileharness.infra.ats.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultFormatter;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultUtil;
 import com.google.devtools.mobileharness.infra.ats.console.testbed.config.YamlTestbedUpdater;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.path.FileNameUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -90,6 +91,7 @@ public final class RunCommandTest {
   @Mock @Bind private CommandExecutor commandExecutor;
   @Mock @Bind private AndroidAdbInternalUtil androidAdbInternalUtil;
   @Mock @Bind private LocalFileUtil localFileUtil;
+  @Mock @Bind private FileNameUtil fileNameUtil;
   @Mock @Bind private YamlTestbedUpdater yamlTestbedUpdater;
   @Mock @Bind private XmlResultFormatter xmlResultFormatter;
   @Mock @Bind private XmlResultUtil xmlResultUtil;
@@ -136,14 +138,14 @@ public final class RunCommandTest {
 
     doCallRealMethod().when(consoleUtil).printlnStdout(anyString(), any());
     doCallRealMethod().when(consoleUtil).printlnStderr(anyString(), any());
-    doCallRealMethod().when(consoleUtil).completeHomeDirectory(anyString());
+    doCallRealMethod().when(fileNameUtil).removeExtension(anyString());
     when(localFileUtil.isDirExist(MOBLY_TESTCASES_DIR)).thenReturn(true);
     when(localFileUtil.isFileExist(MOBLY_TEST_ZIP_SUITE_MAIN_FILE)).thenReturn(true);
     when(androidAdbInternalUtil.getDeviceSerialsByState(DeviceState.DEVICE))
         .thenReturn(CONNECTED_DEVICES);
-    when(consoleUtil.isZipFile(MOBLY_TEST_ZIP_A)).thenReturn(true);
-    when(consoleUtil.isZipFile(MOBLY_TEST_ZIP_B)).thenReturn(true);
-    when(consoleUtil.isZipFile(MOBLY_TEST_ZIP_C_WITH_WRONG_FILE_EXTENSION)).thenReturn(false);
+    when(fileNameUtil.isZipFile(MOBLY_TEST_ZIP_A)).thenReturn(true);
+    when(fileNameUtil.isZipFile(MOBLY_TEST_ZIP_B)).thenReturn(true);
+    when(fileNameUtil.isZipFile(MOBLY_TEST_ZIP_C_WITH_WRONG_FILE_EXTENSION)).thenReturn(false);
   }
 
   @After

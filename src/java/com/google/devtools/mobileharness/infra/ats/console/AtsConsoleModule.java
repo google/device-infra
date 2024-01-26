@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOu
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;

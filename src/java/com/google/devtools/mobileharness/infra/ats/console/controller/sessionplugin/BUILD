@@ -158,7 +158,7 @@ java_library(
     visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__"],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
