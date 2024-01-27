@@ -19,27 +19,21 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 import static com.google.common.truth.OptionalSubject.optionals;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
-import static java.nio.charset.StandardCharsets.UTF_8;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doCallRealMethod;
-import static org.mockito.Mockito.spy;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
-import org.junit.After;
+import org.jline.reader.LineReader;
+import org.jline.utils.AttributedString;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -58,64 +52,21 @@ public final class SetCommandTest {
   private static final String MOBLY_TESTCASES_DIR = "/path/to/mobly_testcases_dir";
   private static final String TEST_RESULTS_DIR = "/path/to/test_results";
 
-  private final PrintStream originalOut = System.out;
-  private final PrintStream originalErr = System.err;
-  private final ByteArrayOutputStream out = new ByteArrayOutputStream();
-  private final ByteArrayOutputStream err = new ByteArrayOutputStream();
-
   @Mock @Bind private LocalFileUtil localFileUtil;
-
-  @Bind private ConsoleUtil consoleUtil;
+  @Mock @Bind @ConsoleLineReader private LineReader lineReader;
 
   private CommandLine commandLine;
   private ConsoleInfo consoleInfo;
 
-  private static class PrintStreams {
-    @Bind
-    @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM)
-    private PrintStream outPrintStream;
-
-    @Bind
-    @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM)
-    private PrintStream errPrintStream;
-  }
-
   @Before
   public void setUp() {
-    out.reset();
-    err.reset();
-    PrintStreams printStreams = new PrintStreams();
-    printStreams.outPrintStream = new PrintStream(out);
-    printStreams.errPrintStream = new PrintStream(err);
-    System.setOut(printStreams.outPrintStream);
-    System.setErr(printStreams.errPrintStream);
-    consoleUtil =
-        spy(Guice.createInjector(BoundFieldModule.of(printStreams)).getInstance(ConsoleUtil.class));
-
     consoleInfo =
         new ConsoleInfo(
             ImmutableMap.of(
                 "MOBLY_TESTCASES_DIR", MOBLY_TESTCASES_DIR, "TEST_RESULTS_DIR", TEST_RESULTS_DIR));
     Injector injector =
         Guice.createInjector(BoundFieldModule.of(this), new ConsoleCommandTestModule(consoleInfo));
-    injector.injectMembers(this);
     commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
-
-    doCallRealMethod().when(consoleUtil).printlnStdout(anyString(), any());
-    doCallRealMethod().when(consoleUtil).printlnStderr(anyString(), any());
-  }
-
-  @After
-  public void restoreStreams() {
-    String output = out.toString(UTF_8);
-    String error = err.toString(UTF_8);
-
-    System.setOut(originalOut);
-    System.setErr(originalErr);
-
-    // Also prints out and err, so they can be shown on the sponge
-    System.out.println(output);
-    System.out.println(error);
   }
 
   @Test
@@ -130,7 +81,7 @@ public final class SetCommandTest {
   }
 
   @Test
-  public void setMoblyTestCasesDir_givenDirNotExist_noChange() throws Exception {
+  public void setMoblyTestCasesDir_givenDirNotExist_noChange() {
     String newMoblyTestCasesDir = "/path/to/not_exist_mobly_testcases_dir";
     when(localFileUtil.isDirExist(newMoblyTestCasesDir)).thenReturn(false);
 
@@ -138,18 +89,18 @@ public final class SetCommandTest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getMoblyTestCasesDir().orElse("")).isEqualTo(MOBLY_TESTCASES_DIR);
-    assertThat(err.toString(UTF_8)).contains("doesn't exist");
+    verifyStderrContains("doesn't exist");
   }
 
   @Test
-  public void setMoblyTestCasesDir_givenDirEmpty() throws Exception {
+  public void setMoblyTestCasesDir_givenDirEmpty() {
     String newMoblyTestCasesDir = "";
 
     int exitCode = commandLine.execute("set", "--mobly_testcases_dir", newMoblyTestCasesDir);
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getMoblyTestCasesDir().orElse("")).isEqualTo(MOBLY_TESTCASES_DIR);
-    assertThat(err.toString(UTF_8)).contains("doesn't exist");
+    verifyStderrContains("doesn't exist");
   }
 
   @Test
@@ -164,7 +115,7 @@ public final class SetCommandTest {
   }
 
   @Test
-  public void setResultsDir_givenDirNotExist_noChange() throws Exception {
+  public void setResultsDir_givenDirNotExist_noChange() {
     String newResultsDir = "/path/to/not_exist_dir";
     when(localFileUtil.isDirExist(newResultsDir)).thenReturn(false);
 
@@ -172,18 +123,18 @@ public final class SetCommandTest {
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getResultsDirectory().orElse("")).isEqualTo(TEST_RESULTS_DIR);
-    assertThat(err.toString(UTF_8)).contains("doesn't exist");
+    verifyStderrContains("doesn't exist");
   }
 
   @Test
-  public void setResultsDir_givenDirEmpty() throws Exception {
+  public void setResultsDir_givenDirEmpty() {
     String newResultsDir = "";
 
     int exitCode = commandLine.execute("set", "--results_dir", newResultsDir);
 
     assertThat(exitCode).isEqualTo(1);
     assertThat(consoleInfo.getResultsDirectory().orElse("")).isEqualTo(TEST_RESULTS_DIR);
-    assertThat(err.toString(UTF_8)).contains("doesn't exist");
+    verifyStderrContains("doesn't exist");
   }
 
   @Test
@@ -223,7 +174,7 @@ public final class SetCommandTest {
   }
 
   @Test
-  public void setPythonPackageIndexUrl_success() throws Exception {
+  public void setPythonPackageIndexUrl_success() {
     String newPythonPackageIndexUrl = "https://pypi.tuna.tsinghua.edu.cn/simple";
 
     int exitCode = commandLine.execute("set", "python-package-index-url", newPythonPackageIndexUrl);
@@ -234,7 +185,7 @@ public final class SetCommandTest {
   }
 
   @Test
-  public void setPythonPackageIndexUrl_skipIfGivenUrlIsWhitespace() throws Exception {
+  public void setPythonPackageIndexUrl_skipIfGivenUrlIsWhitespace() {
     String newPythonPackageIndexUrl = "  ";
 
     int exitCode = commandLine.execute("set", "python-package-index-url", newPythonPackageIndexUrl);
@@ -244,5 +195,11 @@ public final class SetCommandTest {
         .about(optionals())
         .that(consoleInfo.getPythonPackageIndexUrl())
         .isEmpty();
+  }
+
+  private void verifyStderrContains(@SuppressWarnings("SameParameterValue") String substring) {
+    verify(lineReader)
+        .printAbove(
+            (AttributedString) argThat(argument -> argument.toString().contains(substring)));
   }
 }

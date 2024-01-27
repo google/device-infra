@@ -162,20 +162,20 @@ public class AtsConsole implements Callable<Void> {
   @Override
   public Void call() throws MobileHarnessException, InterruptedException {
     // Prints notice message.
-    consoleUtil.printlnStderr(NoticeMessageUtil.getNoticeMessage());
+    consoleUtil.printlnStdout(NoticeMessageUtil.getNoticeMessage());
 
     // Prints version information.
-    consoleUtil.printlnStderr(versionMessageUtil.getVersionMessage());
+    consoleUtil.printlnStdout(versionMessageUtil.getVersionMessage());
 
     // Prints help information.
-    consoleUtil.printlnStderr("Use \"help\" to get more information on running commands.");
+    consoleUtil.printlnStdout("Use \"help\" to get more information on running commands.");
 
     // Prints arguments.
     if (!mainArgs.isEmpty()) {
-      logger.atInfo().log("arguments=%s", mainArgs);
+      consoleUtil.printlnStderr("Args: %s", mainArgs);
     }
     if (!deviceInfraServiceFlags.isEmpty()) {
-      logger.atInfo().log("flags=%s", deviceInfraServiceFlags);
+      consoleUtil.printlnStderr("Flags: %s", deviceInfraServiceFlags);
     }
 
     // Initializes CLI.
@@ -198,55 +198,49 @@ public class AtsConsole implements Callable<Void> {
 
     // Starts to read input from console.
     ImmutableList<String> args = mainArgs;
-    try {
-      String input;
-      List<String> tokens;
+    String input;
+    List<String> tokens;
 
-      do {
-        if (args.isEmpty()) {
-          input = getConsoleInput().orElse(null);
-          if (input == null) {
-            consoleUtil.printlnStderr("Input interrupted; quitting...");
-            consoleInfo.setShouldExitConsole(true);
-            break;
-          }
-
-          tokens = new ArrayList<>();
-          try {
-            tokenize(tokens, input);
-          } catch (TokenizationException e) {
-            consoleUtil.printlnStderr("Invalid input: %s", input);
-            continue;
-          }
-          if (tokens.isEmpty()) {
-            continue;
-          }
-        } else {
-          consoleUtil.printlnStdout("Using commandline arguments as starting command: %s", args);
-          lineReader.getHistory().add(Joiner.on(" ").join(args));
-          tokens = args;
-          if (args.get(0).matches(HELP_PATTERN)) {
-            // If starts from command line with args "--help", "-h", returns to shell.
-            consoleInfo.setShouldExitConsole(true);
-          }
-          args = ImmutableList.of();
+    do {
+      if (args.isEmpty()) {
+        input = getConsoleInput().orElse(null);
+        if (input == null) {
+          consoleUtil.printlnStderr("Input interrupted; quitting...");
+          consoleInfo.setShouldExitConsole(true);
+          break;
         }
 
-        commandLine.execute(tokens.toArray(new String[0]));
+        tokens = new ArrayList<>();
+        try {
+          tokenize(tokens, input);
+        } catch (TokenizationException e) {
+          consoleUtil.printlnStderr("Invalid input: %s", input);
+          continue;
+        }
+        if (tokens.isEmpty()) {
+          continue;
+        }
+      } else {
+        consoleUtil.printlnStdout("Using commandline arguments as starting command: %s", args);
+        lineReader.getHistory().add(Joiner.on(" ").join(args));
+        tokens = args;
+        if (args.get(0).matches(HELP_PATTERN)) {
+          // If starts from command line with args "--help", "-h", returns to shell.
+          consoleInfo.setShouldExitConsole(true);
+        }
+        args = ImmutableList.of();
+      }
 
-        sleeper.sleep(Duration.ofMillis(100));
-      } while (!consoleInfo.getShouldExitConsole());
+      commandLine.execute(tokens.toArray(new String[0]));
 
-      return null;
-    } finally {
-      // Makes sure that we don't quit with messages still in the buffers.
-      consoleUtil.flushConsoleOutput();
-    }
+      sleeper.sleep(Duration.ofMillis(100));
+    } while (!consoleInfo.getShouldExitConsole());
+
+    return null; // Void
   }
 
   private void onShutdown() {
     LogDumper.dumpLog(consoleUtil);
-    consoleUtil.flushConsoleOutput();
   }
 
   /**

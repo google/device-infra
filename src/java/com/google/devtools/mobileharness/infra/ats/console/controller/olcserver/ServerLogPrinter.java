@@ -29,12 +29,17 @@ import io.grpc.stub.StreamObserver;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.jline.utils.AttributedString;
+import org.jline.utils.AttributedStyle;
 
 /** Printer for printing OLC server streaming logs. */
 @Singleton
 public class ServerLogPrinter {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final AttributedStyle SERVER_LOG_STYLE =
+      AttributedStyle.DEFAULT.italic().foreground(AttributedStyle.GREEN);
 
   private final ConsoleUtil consoleUtil;
   private final ControlStub controlStub;
@@ -93,7 +98,8 @@ public class ServerLogPrinter {
     @Override
     public void onNext(GetLogResponse response) {
       for (LogRecord logRecord : response.getLogRecords().getLogRecordList()) {
-        consoleUtil.printStderr(logRecord.getFormattedLogRecord());
+        consoleUtil.printlnDirect(
+            new AttributedString(logRecord.getFormattedLogRecord(), SERVER_LOG_STYLE));
       }
     }
 

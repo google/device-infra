@@ -19,16 +19,14 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
-import static java.util.Objects.requireNonNull;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.truth.Correspondence;
-import com.google.common.truth.Correspondence.BinaryPredicate;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsole;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsoleModule;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -36,6 +34,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.mobileharness.shared.util.truth.Correspondences;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import java.io.ByteArrayOutputStream;
@@ -53,6 +52,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -79,11 +80,10 @@ public class ListCommandTest {
 
   @Mock private LineReader lineReader;
 
+  @Captor private ArgumentCaptor<String> consoleStdoutCaptor;
+
   private String publicDirPath;
   private String xtsRootDirPath;
-
-  private ByteArrayOutputStream consoleOutOutputStream;
-  private ByteArrayOutputStream consoleErrOutputStream;
 
   @Inject private AtsConsole atsConsole;
 
@@ -111,7 +111,9 @@ public class ListCommandTest {
             "enable_ats_console_olc_server",
             "true",
             "no_op_device_num",
-            "1");
+            "1",
+            "simplified_log_format",
+            "true");
     ImmutableList<String> deviceInfraServiceFlags =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
@@ -119,9 +121,9 @@ public class ListCommandTest {
     Flags.parse(deviceInfraServiceFlags.toArray(new String[0]));
 
     // Sets console stdout/stderr.
-    consoleOutOutputStream = new ByteArrayOutputStream();
+    ByteArrayOutputStream consoleOutOutputStream = new ByteArrayOutputStream();
     PrintStream consoleOutPrintStream = new PrintStream(consoleOutOutputStream, false, UTF_8);
-    consoleErrOutputStream = new ByteArrayOutputStream();
+    ByteArrayOutputStream consoleErrOutputStream = new ByteArrayOutputStream();
     PrintStream consoleErrPrintStream = new PrintStream(consoleErrOutputStream, false, UTF_8);
 
     // Creates ATS console.
@@ -142,11 +144,6 @@ public class ListCommandTest {
   @After
   public void tearDown() throws Exception {
     Flags.resetToDefault();
-
-    System.out.println("ATS console stdout:");
-    System.out.println(consoleOutOutputStream.toString(UTF_8));
-    System.out.println("ATS console stderr:");
-    System.out.println(consoleErrOutputStream.toString(UTF_8));
 
     Path serverLogDir = Path.of(publicDirPath, "olc_server_log");
     if (Files.exists(serverLogDir)) {
@@ -184,19 +181,18 @@ public class ListCommandTest {
 
     atsConsole.call();
 
-    String stdout = consoleOutOutputStream.toString(UTF_8);
-    assertThat(stdout).contains("TestDeviceState");
-    assertThat(Splitter.on('\n').splitToList(stdout))
-        .comparingElementsUsing(
-            Correspondence.from(
-                (BinaryPredicate<String, String>)
-                    (actual, expected) ->
-                        requireNonNull(actual).startsWith(requireNonNull(expected)),
-                "starts with"))
-        .containsAtLeast("Serial", "NoOpDevice-0", "Serial", "NoOpDevice-0", "")
-        .inOrder();
+    verify(lineReader, atLeastOnce()).printAbove(consoleStdoutCaptor.capture());
+
+    assertThat(consoleStdoutCaptor.getAllValues())
+        .comparingElementsUsing(Correspondences.contains())
+        .contains("TestDeviceState");
+    assertThat(consoleStdoutCaptor.getAllValues())
+        .comparingElementsUsing(Correspondences.contains())
+        .containsAtLeast("NoOpDevice-0", "NoOpDevice-0");
     for (String module : CTS_MODULE_LIST) {
-      assertThat(stdout).contains(module);
+      assertThat(consoleStdoutCaptor.getAllValues())
+          .comparingElementsUsing(Correspondences.contains())
+          .contains(module);
     }
   }
 
@@ -216,11 +212,11 @@ public class ListCommandTest {
 
     atsConsole.call();
 
-    assertThat(consoleOutOutputStream.toString(UTF_8))
-        .isEqualTo(
+    verify(lineReader)
+        .printAbove(
             "Session  Pass  Fail  Modules Complete  Result Directory     Test Plan  Device"
                 + " serial(s)  Build ID            Product\n"
                 + "0        117   0     1 of 1            2023.11.30_12.34.56  cts        ABC, DEF "
-                + "         SQ3A.220705.003.A1  redfin\n");
+                + "         SQ3A.220705.003.A1  redfin");
   }
 }

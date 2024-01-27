@@ -59,5 +59,6 @@ java_library(
         "@io_grpc_grpc_java//stub",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:javax_inject_jsr330_api",
+        "@maven//:org_jline_jline",
     ],
 )

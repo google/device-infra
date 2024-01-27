@@ -33,8 +33,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
-        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",

@@ -17,13 +17,12 @@
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
 import static com.google.common.truth.Truth.assertThat;
-import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,13 +30,12 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultFormatter;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultUtil;
 import com.google.devtools.mobileharness.infra.ats.console.testbed.config.YamlTestbedUpdater;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
@@ -49,11 +47,10 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.PrintStream;
 import java.nio.file.Path;
-import org.junit.After;
+import org.jline.reader.LineReader;
+import org.jline.utils.AttributedString;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -83,11 +80,6 @@ public final class RunCommandTest {
   private static final ImmutableSet<String> CONNECTED_DEVICES =
       ImmutableSet.of(CONNECTED_DEVICE1_SERIAL, CONNECTED_DEVICE2_SERIAL);
 
-  private final PrintStream originalOut = System.out;
-  private final PrintStream originalErr = System.err;
-  private final ByteArrayOutputStream out = new ByteArrayOutputStream();
-  private final ByteArrayOutputStream err = new ByteArrayOutputStream();
-
   @Mock @Bind private CommandExecutor commandExecutor;
   @Mock @Bind private AndroidAdbInternalUtil androidAdbInternalUtil;
   @Mock @Bind private LocalFileUtil localFileUtil;
@@ -96,34 +88,13 @@ public final class RunCommandTest {
   @Mock @Bind private XmlResultFormatter xmlResultFormatter;
   @Mock @Bind private XmlResultUtil xmlResultUtil;
   @Mock @Bind private MoblyAospPackageTestSetupUtil moblyAospTestSetupUtil;
-
-  @Bind private ConsoleUtil consoleUtil;
+  @Mock @Bind @ConsoleLineReader private LineReader lineReader;
 
   private CommandLine commandLine;
   private ConsoleInfo consoleInfo;
 
-  private static class PrintStreams {
-    @Bind
-    @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM)
-    private PrintStream outPrintStream;
-
-    @Bind
-    @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM)
-    private PrintStream errPrintStream;
-  }
-
   @Before
   public void setUp() throws Exception {
-    out.reset();
-    err.reset();
-    PrintStreams printStreams = new PrintStreams();
-    printStreams.outPrintStream = new PrintStream(out);
-    printStreams.errPrintStream = new PrintStream(err);
-    System.setOut(printStreams.outPrintStream);
-    System.setErr(printStreams.errPrintStream);
-    consoleUtil =
-        spy(Guice.createInjector(BoundFieldModule.of(printStreams)).getInstance(ConsoleUtil.class));
-
     consoleInfo =
         new ConsoleInfo(
             ImmutableMap.of(
@@ -133,11 +104,8 @@ public final class RunCommandTest {
                 MOBLY_TESTCASES_DIR));
     Injector injector =
         Guice.createInjector(BoundFieldModule.of(this), new ConsoleCommandTestModule(consoleInfo));
-    injector.injectMembers(this);
     commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
 
-    doCallRealMethod().when(consoleUtil).printlnStdout(anyString(), any());
-    doCallRealMethod().when(consoleUtil).printlnStderr(anyString(), any());
     doCallRealMethod().when(fileNameUtil).removeExtension(anyString());
     when(localFileUtil.isDirExist(MOBLY_TESTCASES_DIR)).thenReturn(true);
     when(localFileUtil.isFileExist(MOBLY_TEST_ZIP_SUITE_MAIN_FILE)).thenReturn(true);
@@ -146,19 +114,6 @@ public final class RunCommandTest {
     when(fileNameUtil.isZipFile(MOBLY_TEST_ZIP_A)).thenReturn(true);
     when(fileNameUtil.isZipFile(MOBLY_TEST_ZIP_B)).thenReturn(true);
     when(fileNameUtil.isZipFile(MOBLY_TEST_ZIP_C_WITH_WRONG_FILE_EXTENSION)).thenReturn(false);
-  }
-
-  @After
-  public void restoreStreams() {
-    String output = out.toString(UTF_8);
-    String error = err.toString(UTF_8);
-
-    System.setOut(originalOut);
-    System.setErr(originalErr);
-
-    // Also prints out and err, so they can be shown on the sponge
-    System.out.println(output);
-    System.out.println(error);
   }
 
   @Test
@@ -178,22 +133,21 @@ public final class RunCommandTest {
   }
 
   @Test
-  public void run_missingMoblyTestCasesDir() throws Exception {
+  public void run_missingMoblyTestCasesDir() {
     Injector injector =
         Guice.createInjector(
             BoundFieldModule.of(this),
             new ConsoleCommandTestModule(new ConsoleInfo(ImmutableMap.of())));
-    injector.injectMembers(this);
     commandLine = new CommandLine(RootCommand.class, new GuiceFactory(injector));
 
     int exitCode = commandLine.execute("run", "cts-v");
 
     assertThat(exitCode).isEqualTo(1);
-    assertThat(err.toString(UTF_8)).contains("Mobly test cases dir is not set");
+    verifyStderrContains("Mobly test cases dir is not set");
   }
 
   @Test
-  public void run_missingMoblyTestZipSuiteMainFile() throws Exception {
+  public void run_missingMoblyTestZipSuiteMainFile() {
     consoleInfo = new ConsoleInfo(ImmutableMap.of("MOBLY_TESTCASES_DIR", MOBLY_TESTCASES_DIR));
     Injector injector =
         Guice.createInjector(BoundFieldModule.of(this), new ConsoleCommandTestModule(consoleInfo));
@@ -203,7 +157,7 @@ public final class RunCommandTest {
     int exitCode = commandLine.execute("run", "cts-v");
 
     assertThat(exitCode).isEqualTo(1);
-    assertThat(err.toString(UTF_8)).contains("\"suite_main.py\" file is required");
+    verifyStderrContains("\"suite_main.py\" file is required");
   }
 
   @Test
@@ -261,7 +215,7 @@ public final class RunCommandTest {
 
     commandLine.execute("run", "cts-v");
 
-    assertThat(err.toString(UTF_8)).contains("Found no match");
+    verifyStderrContains("Found no match");
     verify(commandExecutor, never()).exec(any(Command.class));
   }
 
@@ -355,5 +309,11 @@ public final class RunCommandTest {
 
     verify(localFileUtil, times(3)).prepareDir(any(Path.class));
     verify(commandExecutor).exec(any(Command.class));
+  }
+
+  private void verifyStderrContains(String substring) {
+    verify(lineReader)
+        .printAbove(
+            (AttributedString) argThat(argument -> argument.toString().contains(substring)));
   }
 }

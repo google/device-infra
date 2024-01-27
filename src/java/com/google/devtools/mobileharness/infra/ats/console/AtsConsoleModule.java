@@ -97,32 +97,16 @@ public class AtsConsoleModule extends AbstractModule {
 
   @Provides
   @Singleton
-  @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM)
-  PrintStream provideConsoleOutputOutStream() {
-    return consoleOutputOut;
-  }
-
-  @Provides
-  @Singleton
-  @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM)
-  PrintStream provideConsoleOutputErrStream() {
-    return consoleOutputErr;
-  }
-
-  @Provides
-  @Singleton
   @ConsoleOutput(ConsoleOutput.Type.OUT_WRITER)
-  PrintWriter provideConsoleOutputOutWriter(
-      @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM) PrintStream outStream) {
-    return new PrintWriter(outStream, /* autoFlush= */ true, UTF_8);
+  PrintWriter provideConsoleOutputOutWriter() {
+    return new PrintWriter(consoleOutputOut, /* autoFlush= */ true, UTF_8);
   }
 
   @Provides
   @Singleton
   @ConsoleOutput(ConsoleOutput.Type.ERR_WRITER)
-  PrintWriter provideConsoleOutputErrWriter(
-      @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM) PrintStream errStream) {
-    return new PrintWriter(errStream, /* autoFlush= */ true, UTF_8);
+  PrintWriter provideConsoleOutputErrWriter() {
+    return new PrintWriter(consoleOutputErr, /* autoFlush= */ true, UTF_8);
   }
 
   @Provides

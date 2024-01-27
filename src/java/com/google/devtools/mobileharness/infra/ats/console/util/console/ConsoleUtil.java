@@ -16,135 +16,106 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.console;
 
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.errorprone.annotations.FormatMethod;
-import java.io.PrintStream;
-import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import org.jline.reader.LineReader;
+import org.jline.utils.AttributedString;
+import org.jline.utils.AttributedStyle;
 
 /** Utility for printing information to ATS console. */
 @Singleton
 public class ConsoleUtil {
 
-  private final Object consoleOutputLock = new Object();
+  private static final AttributedStyle STDERR_STYLE =
+      AttributedStyle.DEFAULT.italic().foreground(AttributedStyle.MAGENTA);
 
-  @GuardedBy("consoleOutputLock")
-  private final PrintStream consoleOutputOut;
-
-  @GuardedBy("consoleOutputLock")
-  private final PrintStream consoleOutputErr;
+  private final LineReader lineReader;
 
   @Inject
-  ConsoleUtil(
-      @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM) PrintStream consoleOutputOut,
-      @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM) PrintStream consoleOutputErr) {
-    this.consoleOutputOut = consoleOutputOut;
-    this.consoleOutputErr = consoleOutputErr;
+  ConsoleUtil(@ConsoleLineReader LineReader lineReader) {
+    this.lineReader = lineReader;
   }
 
   /**
-   * Displays a text (command output or user-requested help) (without trailing "\n") on the console
-   * (stdout).
+   * Displays a text (command output or user-requested help) on the console.
    *
-   * <p>The method is thread safe.
-   */
-  @FormatMethod
-  public void printStdout(String format, Object... args) {
-    synchronized (consoleOutputLock) {
-      consoleOutputOut.printf(format, args);
-    }
-  }
-
-  /**
-   * Displays a text (command output or user-requested help) (without trailing "\n") on the console
-   * (stdout).
+   * <p>No matter if the text has a trailing '\n' (prefer not to), it will create a new line.
    *
-   * <p>The method is thread safe.
-   */
-  public void printStdout(String text) {
-    synchronized (consoleOutputLock) {
-      consoleOutputOut.print(text);
-    }
-  }
-
-  /**
-   * Displays a text line (command output or user-requested help) on the console (stdout).
+   * <p>The text will be displayed on the line above the input line.
+   *
+   * <p>The text will be also logged to file.
    *
    * <p>The method is thread safe.
    */
   @FormatMethod
   public void printlnStdout(String format, Object... args) {
-    synchronized (consoleOutputLock) {
-      consoleOutputOut.printf(format, args);
-      consoleOutputOut.println();
-    }
+    lineReader.printAbove(String.format(format, args));
   }
 
   /**
-   * Displays a text line (command output or user-requested help) on the console (stdout).
+   * Displays a text (command output or user-requested help) on the console.
+   *
+   * <p>No matter if the text has a trailing '\n' (prefer not to), it will create a new line.
+   *
+   * <p>The text will be displayed on the line above the input line.
+   *
+   * <p>The text will be also logged to file.
    *
    * <p>The method is thread safe.
    */
   public void printlnStdout(String text) {
-    synchronized (consoleOutputLock) {
-      consoleOutputOut.print(text);
-      consoleOutputOut.println();
-    }
+    lineReader.printAbove(text);
   }
 
   /**
-   * Displays a text (error messages or log) (without trailing "\n") on the console (stderr).
+   * Displays a text (error messages or log) on the console.
    *
-   * <p>The method is thread safe.
-   */
-  @FormatMethod
-  public void printStderr(String format, Object... args) {
-    synchronized (consoleOutputLock) {
-      consoleOutputErr.printf(format, args);
-    }
-  }
-
-  /**
-   * Displays a text (error messages or log) (without trailing "\n") on the console (stderr).
+   * <p>No matter if the text has a trailing '\n' (prefer not to), it will create a new line.
    *
-   * <p>The method is thread safe.
-   */
-  public void printStderr(String text) {
-    synchronized (consoleOutputLock) {
-      consoleOutputErr.print(text);
-    }
-  }
-
-  /**
-   * Displays a text line (error messages or log) on the console (stderr).
+   * <p>The text will be displayed on the line above the input line.
+   *
+   * <p>The text will be also logged to file.
    *
    * <p>The method is thread safe.
    */
   @FormatMethod
   public void printlnStderr(String format, Object... args) {
-    synchronized (consoleOutputLock) {
-      consoleOutputErr.printf(format, args);
-      consoleOutputErr.println();
-    }
+    lineReader.printAbove(createStderr(String.format(format, args)));
   }
 
   /**
-   * Displays a text line (error messages or log) on the console (stderr).
+   * Displays a text (error messages or log) on the console.
+   *
+   * <p>No matter if the text has a trailing '\n' (prefer not to), it will create a new line.
+   *
+   * <p>The text will be displayed on the line above the input line.
+   *
+   * <p>The text will be also logged to file.
    *
    * <p>The method is thread safe.
    */
   public void printlnStderr(String text) {
-    synchronized (consoleOutputLock) {
-      consoleOutputErr.print(text);
-      consoleOutputErr.println();
-    }
+    lineReader.printAbove(createStderr(text));
   }
 
-  public void flushConsoleOutput() {
-    synchronized (consoleOutputLock) {
-      consoleOutputOut.flush();
-      consoleOutputErr.flush();
-    }
+  /**
+   * Displays a text (e.g., logs from another process) directly on the console.
+   *
+   * <p>No matter if the text has a trailing '\n' (prefer not to), it will create a new line.
+   *
+   * <p>The text will be displayed on the line above the input line.
+   *
+   * <p>The text will NOT be logged to file.
+   *
+   * <p>The method is thread safe.
+   */
+  public void printlnDirect(AttributedString attributedString) {
+    lineReader.printAbove(attributedString);
+  }
+
+  private static AttributedString createStderr(String text) {
+    return new AttributedString(text, STDERR_STYLE);
   }
 }
