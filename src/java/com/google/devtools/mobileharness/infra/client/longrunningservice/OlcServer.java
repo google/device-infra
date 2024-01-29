@@ -99,7 +99,9 @@ public class OlcServer {
   private void run(List<String> args) throws IOException, InterruptedException {
     // Initializes logger.
     MobileHarnessLogger.init(
-        OlcServerDirs.getLogDir(), ImmutableList.of(logManager.getLogHandler()));
+        OlcServerDirs.getLogDir(),
+        ImmutableList.of(logManager.getLogHandler()),
+        /* disableConsoleHandler= */ false);
 
     // Logs arguments.
     if (!args.isEmpty()) {

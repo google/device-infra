@@ -16,8 +16,13 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.console;
 
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.errorprone.annotations.FormatMethod;
+import java.util.Objects;
+import java.util.logging.ErrorManager;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.jline.reader.LineReader;
@@ -28,9 +33,14 @@ import org.jline.utils.AttributedStyle;
 @Singleton
 public class ConsoleUtil {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final String LOGGER_NAME = ConsoleUtil.class.getName();
+
   private static final AttributedStyle STDERR_STYLE =
       AttributedStyle.DEFAULT.italic().foreground(AttributedStyle.MAGENTA);
 
+  private final LogHandler logHandler = new LogHandler();
   private final LineReader lineReader;
 
   @Inject
@@ -52,6 +62,7 @@ public class ConsoleUtil {
   @FormatMethod
   public void printlnStdout(String format, Object... args) {
     lineReader.printAbove(String.format(format, args));
+    logger.atInfo().logVarargs(format, args);
   }
 
   /**
@@ -67,6 +78,7 @@ public class ConsoleUtil {
    */
   public void printlnStdout(String text) {
     lineReader.printAbove(text);
+    logger.atInfo().log("%s", text);
   }
 
   /**
@@ -82,7 +94,8 @@ public class ConsoleUtil {
    */
   @FormatMethod
   public void printlnStderr(String format, Object... args) {
-    lineReader.printAbove(createStderr(String.format(format, args)));
+    doPrintlnStderr(String.format(format, args));
+    logger.atInfo().logVarargs(format, args);
   }
 
   /**
@@ -97,11 +110,12 @@ public class ConsoleUtil {
    * <p>The method is thread safe.
    */
   public void printlnStderr(String text) {
-    lineReader.printAbove(createStderr(text));
+    doPrintlnStderr(text);
+    logger.atInfo().log("%s", text);
   }
 
   /**
-   * Displays a text (e.g., logs from another process) directly on the console.
+   * Displays an attributed text directly on the console.
    *
    * <p>No matter if the text has a trailing '\n' (prefer not to), it will create a new line.
    *
@@ -113,6 +127,39 @@ public class ConsoleUtil {
    */
   public void printlnDirect(AttributedString attributedString) {
     lineReader.printAbove(attributedString);
+  }
+
+  private void doPrintlnStderr(String text) {
+    printlnDirect(createStderr(text));
+  }
+
+  public Handler getLogHandler() {
+    return logHandler;
+  }
+
+  private class LogHandler extends Handler {
+
+    @Override
+    public void publish(LogRecord logRecord) {
+      if (isLoggable(logRecord) && !Objects.equals(logRecord.getLoggerName(), LOGGER_NAME)) {
+        try {
+          String text = getFormatter().format(logRecord);
+          doPrintlnStderr(text);
+        } catch (RuntimeException e) {
+          reportError(/* msg= */ null, e, ErrorManager.WRITE_FAILURE);
+        }
+      }
+    }
+
+    @Override
+    public void flush() {
+      // Does nothing.
+    }
+
+    @Override
+    public void close() {
+      // Does nothing.
+    }
   }
 
   private static AttributedString createStderr(String text) {

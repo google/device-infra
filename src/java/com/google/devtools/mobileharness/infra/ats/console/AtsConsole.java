@@ -27,7 +27,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
@@ -69,8 +68,6 @@ import picocli.CommandLine;
 /** ATS Console. */
 public class AtsConsole implements Callable<Void> {
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
   private static final String APPNAME = "AtsConsole";
   private static final String HELP_PATTERN = "h|help";
 
@@ -105,10 +102,10 @@ public class AtsConsole implements Callable<Void> {
     atsConsole.injector = injector;
 
     // Initializes logger.
-    MobileHarnessLogger.init(AtsConsoleDirs.getLogDir());
-
-    // Adds shutdown hook.
-    Runtime.getRuntime().addShutdownHook(new Thread(atsConsole::onShutdown));
+    MobileHarnessLogger.init(
+        AtsConsoleDirs.getLogDir(),
+        ImmutableList.of(atsConsole.consoleUtil.getLogHandler()),
+        /* disableConsoleHandler= */ true);
 
     // Starts ATS console.
     logFailure(
@@ -116,6 +113,9 @@ public class AtsConsole implements Callable<Void> {
             .submit(threadRenaming(atsConsole, () -> "ats-console-main-thread")),
         Level.SEVERE,
         "Console received an unexpected exception (shown below); shutting down ATS Console.");
+
+    // Dump logs.
+    LogDumper.dumpLog(atsConsole.consoleUtil);
   }
 
   private final ImmutableList<String> mainArgs;
@@ -237,10 +237,6 @@ public class AtsConsole implements Callable<Void> {
     } while (!consoleInfo.getShouldExitConsole());
 
     return null; // Void
-  }
-
-  private void onShutdown() {
-    LogDumper.dumpLog(consoleUtil);
   }
 
   /**

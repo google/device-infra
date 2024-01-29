@@ -26,6 +26,7 @@ java_library(
     srcs = ["ConsoleUtil.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:org_jline_jline",

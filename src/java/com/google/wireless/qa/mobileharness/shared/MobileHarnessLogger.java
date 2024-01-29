@@ -34,6 +34,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.FileHandler;
 import java.util.logging.Filter;
 import java.util.logging.Handler;
@@ -88,7 +89,7 @@ public class MobileHarnessLogger {
 
   /** Initializes the root logger. */
   public static void init(@Nullable String logFileDirName) {
-    init(logFileDirName, ImmutableList.of());
+    init(logFileDirName, ImmutableList.of(), /* disableConsoleHandler= */ false);
   }
 
   /**
@@ -99,7 +100,10 @@ public class MobileHarnessLogger {
    *
    * @see FileHandler
    */
-  public static void init(@Nullable String logFileDirName, ImmutableList<Handler> otherHandlers) {
+  public static void init(
+      @Nullable String logFileDirName,
+      ImmutableList<Handler> otherHandlers,
+      boolean disableConsoleHandler) {
     checkState(
         !isInitialized.getAndSet(true), "Mobile Harness logger has already been initialized");
     MobileHarnessLogger.logFileDirName = logFileDirName;
@@ -120,6 +124,12 @@ public class MobileHarnessLogger {
     otherHandlers.forEach(rootLogger::addHandler);
 
     for (Handler handler : rootLogger.getHandlers()) {
+      // Removes ConsoleHandler if necessary.
+      if (disableConsoleHandler && handler instanceof ConsoleHandler) {
+        rootLogger.removeHandler(handler);
+      }
+
+      // Sets formatter/filter/level.
       handler.setFormatter(MobileHarnessLogFormatter.getDefaultFormatter());
       handler.setFilter(FILTER);
       handler.setLevel(Level.INFO);
