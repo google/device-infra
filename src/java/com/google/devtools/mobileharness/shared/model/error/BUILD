@@ -18,9 +18,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "rpc_exception",
     srcs = ["MobileHarnessRpcException.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@maven//:com_google_code_findbugs_jsr305",
