@@ -101,6 +101,20 @@ java_library(
 )
 
 java_library(
+    name = "lab_record_manager",
+    srcs = ["LabRecordManager.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_record_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "module",
     srcs = ["AtsModeModule.java"],
     deps = [
