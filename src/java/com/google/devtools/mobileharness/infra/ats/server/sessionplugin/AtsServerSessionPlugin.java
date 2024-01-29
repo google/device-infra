@@ -120,10 +120,16 @@ final class AtsServerSessionPlugin {
   }
 
   @Subscribe
-  public void onSessionEnded(SessionEndedEvent event) throws InterruptedException {
+  public void onSessionEnded(SessionEndedEvent event)
+      throws InterruptedException, MobileHarnessException {
     // TODO: Result processing to be implemented.
     synchronized (requestDetailLock) {
-      newMultiCommandRequestHandler.cleanup(requestDetail.getOriginalRequest(), sessionInfo);
+      newMultiCommandRequestHandler.handleResultProcessing(
+          requestDetail.getOriginalRequest(), sessionInfo);
+      requestDetail.setState(RequestState.COMPLETED);
+      logger.atInfo().log("RequestDetail: %s", shortDebugString(requestDetail.build()));
+      RequestDetail latestRequestDetail = requestDetail.build();
+      sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
     }
   }
 

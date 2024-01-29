@@ -39,6 +39,7 @@ proto_library(
 java_proto_library(
     name = "report_java_proto",
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:__pkg__",

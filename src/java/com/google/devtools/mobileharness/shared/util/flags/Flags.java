@@ -832,6 +832,17 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> skipConnectDeviceToWifi = skipConnectDeviceToWifiDefault;
 
+  private static final Flag<Boolean> skipLabJobGenFileCleanupDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--skip_lab_job_gen_file_cleanup",
+      description =
+          "whether to skip job gen file cleanup when job ended. Default is false. Use when the gen"
+              + " files are placed in /tmp directory and make sure they can be cleaned by operating"
+              + " system.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> skipLabJobGenFileCleanup = skipLabJobGenFileCleanupDefault;
+
   private static final Flag<Boolean> skipNetworkDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

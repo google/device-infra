@@ -25,6 +25,8 @@ java_test(
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",

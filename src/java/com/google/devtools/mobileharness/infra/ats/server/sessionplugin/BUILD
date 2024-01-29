@@ -19,6 +19,17 @@ package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "ats_server_session_plugin",
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
+    ],
+    runtime_deps = [
+        ":ats_server_session_plugin_lib",
+        ":ats_server_session_plugin_module",
+    ],
+)
+
+java_library(
+    name = "ats_server_session_plugin_lib",
     srcs = ["AtsServerSessionPlugin.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__pkg__",
@@ -61,5 +72,14 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "ats_server_session_plugin_module",
+    srcs = ["AtsServerSessionPluginModule.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
+        "@maven//:com_google_inject_guice",
     ],
 )

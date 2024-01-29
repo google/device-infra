@@ -82,7 +82,6 @@ public final class RunCommandHandlerTest {
   @Rule public TemporaryFolder folder = new TemporaryFolder();
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
-  @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private CompatibilityReportMerger compatibilityReportMerger;
   @Bind @Mock private CompatibilityReportCreator reportCreator;
 
@@ -92,21 +91,15 @@ public final class RunCommandHandlerTest {
   @Before
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     runCommandHandler = spy(runCommandHandler);
-    doReturn(TIMESTAMP_DIR_NAME).when(runCommandHandler).getTimestampDirName();
   }
 
   @Test
   public void handleResultProcessing_copyResultsAndLogsIntoXtsRootDir() throws Exception {
-    runCommandHandler =
-        spy(
-            new RunCommandHandler(
-                new LocalFileUtil(),
-                compatibilityReportMerger,
-                reportCreator,
-                sessionRequestHandlerUtil));
+    runCommandHandler = spy(new RunCommandHandler(new LocalFileUtil(), sessionRequestHandlerUtil));
+    doNothing().when(sessionRequestHandlerUtil).cleanUpJobGenDirs(any());
     doReturn(TIMESTAMP_DIR_NAME).when(runCommandHandler).getTimestampDirName();
-    doNothing().when(runCommandHandler).cleanUpJobGenDirs(any());
 
     File xtsRootDir = folder.newFolder(XTS_ROOT_DIR_NAME);
     RunCommand command =
@@ -129,7 +122,7 @@ public final class RunCommandHandlerTest {
                     .build())
             .setTiming(new Timing())
             .build();
-    tradefedJobInfo.properties().add(RunCommandHandler.XTS_TF_JOB_PROP, "true");
+    tradefedJobInfo.properties().add(SessionRequestHandlerUtil.XTS_TF_JOB_PROP, "true");
     tradefedJobInfo.tests().add("1", "test_name");
 
     JobInfo nonTradefedJobInfo =

@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -35,6 +36,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.New
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
@@ -62,6 +64,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -80,6 +83,7 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class AtsServerSessionPluginTest {
   private static final String ANDROID_XTS_ZIP = "file:///path/to/xts/zip/file";
+  private static final String OUTPUT_FILE_UPLOAD_URL = "file:///path/to/output";
 
   private NewMultiCommandRequest request = NewMultiCommandRequest.getDefaultInstance();
   private CommandInfo commandInfo = CommandInfo.getDefaultInstance();
@@ -130,6 +134,8 @@ public final class AtsServerSessionPluginTest {
         NewMultiCommandRequest.newBuilder()
             .setUserId("user_id")
             .addCommands(commandInfo)
+            .setTestEnvironment(
+                TestEnvironment.newBuilder().setOutputFileUploadUrl(OUTPUT_FILE_UPLOAD_URL).build())
             .addTestResources(
                 TestResource.newBuilder()
                     .setUrl(ANDROID_XTS_ZIP)
@@ -311,7 +317,7 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
-  public void onSessionEnd_triggerCleanup() throws Exception {
+  public void onSessionEnd_generateReportAndCleanup() throws Exception {
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(
             SessionPluginExecutionConfig.newBuilder()
@@ -321,18 +327,27 @@ public final class AtsServerSessionPluginTest {
                 .build());
     plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
     verify(sessionInfo).addJob(jobInfo);
-    verify(sessionInfo)
-        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
-    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
 
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     // Verify that handler has unmounted the zip file after calling cleanup().
     Command unmountCommand =
         Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(unmountCommand);
+    verify(sessionRequestHandlerUtil)
+        .processResult(
+            XtsType.CTS,
+            Path.of("/path/to/output"),
+            Path.of("/path/to/output"),
+            ImmutableList.of(jobInfo));
+    verify(sessionInfo, times(2))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    assertThat(unaryOperatorCaptor.getAllValues().size()).isEqualTo(2);
+    assertThat(unaryOperatorCaptor.getAllValues().get(0).apply(null).getState())
+        .isEqualTo(RequestState.RUNNING);
+    assertThat(unaryOperatorCaptor.getAllValues().get(1).apply(null).getState())
+        .isEqualTo(RequestState.COMPLETED);
   }
 
   @Test

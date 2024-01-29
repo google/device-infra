@@ -45,6 +45,9 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +63,6 @@ final class NewMultiCommandRequestHandler {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final String GEN_FILE_DIR = DirUtil.getPublicGenDir();
-  private static final String FILE_URL_PREFIX = "file://";
 
   /** Timeout setting for slow commands. */
   private static final Duration SLOW_CMD_TIMEOUT = Duration.ofMinutes(10);
@@ -235,9 +237,18 @@ final class NewMultiCommandRequestHandler {
     }
     String androidXtsZipPath = "";
     for (TestResource testResource : request.getTestResourcesList()) {
+      URL testResourceUrl;
+      try {
+        testResourceUrl = new URL(testResource.getUrl());
+      } catch (MalformedURLException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to parse url from url: %s", testResource.getUrl());
+        continue;
+      }
+
       if (ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()
-          && testResource.getUrl().startsWith(FILE_URL_PREFIX)) {
-        androidXtsZipPath = testResource.getUrl().substring(FILE_URL_PREFIX.length());
+          && testResourceUrl.getProtocol().equals("file")) {
+        androidXtsZipPath = testResourceUrl.getPath();
         break;
       }
     }
@@ -248,7 +259,7 @@ final class NewMultiCommandRequestHandler {
       throw new MobileHarnessException(
           InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
           String.format(
-              "Didn't find android xts zip file in request resources: %s, session ID: %s ",
+              "Didn't find valid android xts zip file in request resources: %s, session ID: %s ",
               request.getTestResourcesList(), sessionInfo.getSessionId()));
     }
     String xtsRootDir =
@@ -284,14 +295,52 @@ final class NewMultiCommandRequestHandler {
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(sessionRequestInfoBuilder.build());
   }
 
+  /**
+   * Copies xTS tradefed and non-tradefed generated logs/results into proper locations within the
+   * given xts root dir.
+   */
   void handleResultProcessing(
-      NewMultiCommandRequest newMultiCommandRequest, SessionInfo sessionInfo) {
-    // TODO: To be implemented.
+      NewMultiCommandRequest newMultiCommandRequest, SessionInfo sessionInfo)
+      throws MobileHarnessException, InterruptedException {
+    URL outputUrl;
+    try {
+      outputUrl = new URL(newMultiCommandRequest.getTestEnvironment().getOutputFileUploadUrl());
+      // Currently only supports local URL.
+      if (outputUrl.getProtocol().equals("file")) {
+        Path outputDirPath = Path.of(outputUrl.getPath());
+        String xtsType =
+            Iterables.get(
+                Splitter.on(' ')
+                    .split(newMultiCommandRequest.getCommandsList().get(0).getCommandLine()),
+                0);
+        Path resultDir = outputDirPath;
+        Path logDir = outputDirPath;
+        sessionRequestHandlerUtil.processResult(
+            XtsType.valueOf(xtsType.toUpperCase(Locale.ROOT)),
+            resultDir,
+            logDir,
+            sessionInfo.getAllJobs());
+      } else {
+        logger.atWarning().log(
+            "Skip processing result for unsupported file output upload url: %s",
+            newMultiCommandRequest.getTestEnvironment().getOutputFileUploadUrl());
+      }
+    } catch (MalformedURLException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to parse output file upload url: %s, skip processing result.",
+          newMultiCommandRequest.getTestEnvironment().getOutputFileUploadUrl());
+
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to process result for session: %s", sessionInfo.getSessionId());
+    }
+    cleanup(newMultiCommandRequest, sessionInfo);
   }
 
-  // Clean up temporary files and directories.
+  // Clean up temporary files and directories in session and jobs.
   void cleanup(NewMultiCommandRequest newMultiCommandRequest, SessionInfo sessionInfo)
-      throws InterruptedException {
+      throws InterruptedException, MobileHarnessException {
+    sessionRequestHandlerUtil.cleanUpJobGenDirs(sessionInfo.getAllJobs());
     for (CommandInfo commandInfo : newMultiCommandRequest.getCommandsList()) {
       String xtsRootDir = sessionRequestInfoCache.get(commandInfo).xtsRootDir();
       try {

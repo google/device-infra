@@ -471,7 +471,10 @@ public class JobManager {
 
     if (jobDirs.hasGenFileDir()) {
       Duration jobGenFileExpiredTime = Flags.instance().jobGenFileExpiredTime.getNonNull();
-      if (!jobGenFileExpiredTime.isNegative() && !jobGenFileExpiredTime.isZero()) {
+      if (Flags.instance().skipLabJobGenFileCleanup.getNonNull()) {
+        logger.atInfo().log(
+            "Skip gen file cleanup for job %s, gen file dir: %s.", jobId, jobDirs.genFileDir());
+      } else if (!jobGenFileExpiredTime.isNegative() && !jobGenFileExpiredTime.isZero()) {
         logger.atInfo().log(
             "Skip gen file cleanup for job %s, gen file dir: %s. It will be cleaned up later by"
                 + " FileCleaner after %s.",

@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -34,6 +35,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Com
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
@@ -50,6 +52,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -68,6 +71,7 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class NewMultiCommandRequestHandlerTest {
   private static final String ANDROID_XTS_ZIP = "file:///path/to/xts/zip/file.zip";
+  private static final String OUTPUT_FILE_UPLOAD_URL = "file:///path/to/output";
 
   CommandInfo commandInfo = CommandInfo.getDefaultInstance();
   NewMultiCommandRequest request = NewMultiCommandRequest.getDefaultInstance();
@@ -120,6 +124,8 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setUrl(ANDROID_XTS_ZIP)
                     .setName("android-cts.zip")
                     .build())
+            .setTestEnvironment(
+                TestEnvironment.newBuilder().setOutputFileUploadUrl(OUTPUT_FILE_UPLOAD_URL).build())
             .build();
   }
 
@@ -186,10 +192,113 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(commandExecutor).run(mountCommand);
 
     // Verify that handler has unmounted the zip file after calling cleanup().
+    newMultiCommandRequestHandler.cleanup(request, sessionInfo);
+    verifyUnmountRootDir(xtsRootDir);
+  }
+
+  private void verifyUnmountRootDir(String xtsRootDir) throws Exception {
+    // Verify that handler has unmounted the zip file after calling cleanup().
     Command unmountCommand =
         Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
-    newMultiCommandRequestHandler.cleanup(request, sessionInfo);
     verify(commandExecutor).run(unmountCommand);
+  }
+
+  @Test
+  public void handleResultProcessing_success() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    verify(sessionInfo).addJob(jobInfo);
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    newMultiCommandRequestHandler.handleResultProcessing(request, sessionInfo);
+    verify(sessionRequestHandlerUtil)
+        .processResult(
+            XtsType.CTS,
+            Path.of("/path/to/output"),
+            Path.of("/path/to/output"),
+            ImmutableList.of(jobInfo));
+    verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+  }
+
+  @Test
+  public void handleResultProcessing_getMalformedOutputURL_onlyCleanup() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    String malformedOutputFileUploadUrl = "malformed_URL";
+    request =
+        request.toBuilder()
+            .setTestEnvironment(
+                request.getTestEnvironment().toBuilder()
+                    .setOutputFileUploadUrl(malformedOutputFileUploadUrl)
+                    .build())
+            .build();
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    verify(sessionInfo).addJob(jobInfo);
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    newMultiCommandRequestHandler.handleResultProcessing(request, sessionInfo);
+    verify(sessionRequestHandlerUtil, never()).processResult(any(), any(), any(), any());
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+  }
+
+  @Test
+  public void handleResultProcessing_processResultFailed_onlyCleanup() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    verify(sessionInfo).addJob(jobInfo);
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    MobileHarnessException mhException = Mockito.mock(MobileHarnessException.class);
+    doThrow(mhException).when(sessionRequestHandlerUtil).processResult(any(), any(), any(), any());
+    newMultiCommandRequestHandler.handleResultProcessing(request, sessionInfo);
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+  }
+
+  @Test
+  public void handleResultProcessing_nonFileUrl_onlyCleanup() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    String malformedOutputFileUploadUrl = "https://www.google.com";
+    request =
+        request.toBuilder()
+            .setTestEnvironment(
+                request.getTestEnvironment().toBuilder()
+                    .setOutputFileUploadUrl(malformedOutputFileUploadUrl)
+                    .build())
+            .build();
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    verify(sessionInfo).addJob(jobInfo);
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    newMultiCommandRequestHandler.handleResultProcessing(request, sessionInfo);
+    verify(sessionRequestHandlerUtil, never()).processResult(any(), any(), any(), any());
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
   }
 
   @Test
