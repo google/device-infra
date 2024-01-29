@@ -56,6 +56,9 @@ public class Flag<T> {
   public static class StringListConverter implements IStringConverter<Flag<List<String>>> {
     @Override
     public Flag<List<String>> convert(String value) {
+      if (value.isEmpty()) {
+        return value(ImmutableList.of());
+      }
       return value(ImmutableList.copyOf(value.split(",")));
     }
   }
