@@ -95,8 +95,11 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
   }
 
   private KillServerResponse doKillServer(KillServerRequest request) {
+    KillServerResponse.Builder response = KillServerResponse.newBuilder();
+    response.setServerPid(ProcessHandle.current().pid());
+
     if (sessionManager.hasUnarchivedSessions()) {
-      return KillServerResponse.newBuilder().setSuccessful(false).build();
+      return response.setSuccessful(false).build();
     } else {
       logger.atInfo().log("Exiting by KillServerRequest");
       server.shutdown();
@@ -105,7 +108,7 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
               threadRenaming(server::shutdownNow, () -> "server-shutdown"), Duration.ofSeconds(3L)),
           Level.SEVERE,
           "Fatal error while shutting down server");
-      return KillServerResponse.newBuilder().setSuccessful(true).build();
+      return response.setSuccessful(true).build();
     }
   }
 

@@ -247,6 +247,7 @@ public class OlcServerIntegrationTest {
     // Verifies the server cannot be killed.
     KillServerResponse killServerResponse = controlStub.killServer();
     assertThat(killServerResponse)
+        .comparingExpectedFieldsOnly()
         .isEqualTo(KillServerResponse.newBuilder().setSuccessful(false).build());
 
     // Waits until the session finishes.
@@ -266,6 +267,7 @@ public class OlcServerIntegrationTest {
     assertThat(olcServerProcess.isAlive()).isTrue();
     killServerResponse = controlStub.killServer();
     assertThat(killServerResponse)
+        .comparingExpectedFieldsOnly()
         .isEqualTo(KillServerResponse.newBuilder().setSuccessful(true).build());
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
     assertThat(olcServerProcess.isAlive()).isFalse();

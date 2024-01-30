@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -93,12 +94,18 @@ public class AtsLocalRunner {
 
   public void run() throws InterruptedException, MobileHarnessException {
     serverPreparer.prepareOlcServer();
-    enableServerLog();
+    try {
+      enableServerLog();
 
-    runSession();
-
-    if (!serverPreparer.killExistingServer()) {
-      logger.atWarning().log("Failed to kill OLC server.");
+      runSession();
+    } finally {
+      try {
+        serverPreparer.killExistingServer();
+      } catch (MobileHarnessException e) {
+        logger.atWarning().log(
+            "Failed to kill OLC server, reason=[%s]",
+            MoreThrowables.shortDebugString(e, /* maxLength= */ 0));
+      }
     }
   }
 

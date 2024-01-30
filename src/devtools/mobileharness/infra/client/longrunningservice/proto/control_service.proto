@@ -43,6 +43,11 @@ message KillServerResponse {
   //
   // False otherwise and the request will be discarded.
   bool successful = 1;
+
+  // Required.
+  //
+  // PID of the server.
+  int64 server_pid = 2;
 }
 
 message GetLogRequest {
