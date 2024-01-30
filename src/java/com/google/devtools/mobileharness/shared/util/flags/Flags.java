@@ -94,6 +94,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> adbLibusb = adbLibusbDefault;
 
+  private static final Flag<Integer> adbMaxNoDeviceDetectionRoundsDefault = Flag.value(20);
+
+  @com.beust.jcommander.Parameter(
+      names = "--adb_max_no_device_detection_rounds",
+      description =
+          "The max rounds of detection when ADB detects no devices. If reaches, will restart ADB. 0"
+              + " to disable the feature. Default is 20.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> adbMaxNoDeviceDetectionRounds = adbMaxNoDeviceDetectionRoundsDefault;
+
   private static final Flag<List<String>> alrArtifactsDefault = Flag.stringList();
 
   @com.beust.jcommander.Parameter(

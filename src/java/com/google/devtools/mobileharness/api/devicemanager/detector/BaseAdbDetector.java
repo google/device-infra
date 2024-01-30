@@ -29,8 +29,10 @@ import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
+import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -41,9 +43,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 /** Detector for adb. */
 public class BaseAdbDetector implements Detector {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  /** The max rounds of detection when adb detects no devices. If reached, will restart the adb. */
-  @VisibleForTesting static final int MAX_NO_DEVICE_DETECTION_ROUNDS = 20;
 
   /**
    * The max rounds of detection when adb detect command failed with "could not install
@@ -108,14 +107,15 @@ public class BaseAdbDetector implements Detector {
   public List<DetectionResult> detectDevices() throws MobileHarnessException, InterruptedException {
     try {
       Map<String, DeviceState> ids = adbInternalUtil.getDeviceSerialsAsMap();
-      if (needCheckAdbProcess()) {
+      int maxNoDeviceDetectionRounds = Flags.instance().adbMaxNoDeviceDetectionRounds.getNonNull();
+      if (needCheckAdbProcess(maxNoDeviceDetectionRounds)) {
         if (ids.isEmpty() && getCachedDevices().isEmpty()) {
-          if (noDeviceDetectionRounds.getAndIncrement() == MAX_NO_DEVICE_DETECTION_ROUNDS) {
+          if (noDeviceDetectionRounds.getAndIncrement() == maxNoDeviceDetectionRounds) {
             // Kills the ADB server and let it restart automatically.
             logger.atInfo().log(
                 "Adb detects no devices for %s rounds. "
                     + "In case adb is not working, trying to recover the adb by starting it...",
-                MAX_NO_DEVICE_DETECTION_ROUNDS);
+                maxNoDeviceDetectionRounds);
             adbInternalUtil.killAdbServer();
             noDeviceDetectionRounds.set(0);
           }
@@ -143,15 +143,12 @@ public class BaseAdbDetector implements Detector {
 
   /** Gets the cached device id from DeviceCache. */
   Set<String> getCachedDevices() {
-    Set<String> cachedRealDevices = new HashSet<>();
-    cachedRealDevices.addAll(
-        DeviceCacheManager.getInstance().getCachedDevices("AndroidRealDevice"));
-    return cachedRealDevices;
+    return new HashSet<>(DeviceCacheManager.getInstance().getCachedDevices("AndroidRealDevice"));
   }
 
   /** Returns whether the detector need to check adb process. */
-  boolean needCheckAdbProcess() {
-    return true;
+  private boolean needCheckAdbProcess(int maxNoDeviceDetectionRounds) {
+    return maxNoDeviceDetectionRounds > 0 && !DeviceUtil.inSharedLab();
   }
 
   /**
@@ -168,7 +165,7 @@ public class BaseAdbDetector implements Detector {
   }
 
   private void killAllAdbIfNeeded(MobileHarnessException e) {
-    if (!needCheckAdbProcess()) {
+    if (DeviceUtil.inSharedLab()) {
       logger.atInfo().log("The devices are not managed by MH, skip killing adb processes.");
       return;
     }

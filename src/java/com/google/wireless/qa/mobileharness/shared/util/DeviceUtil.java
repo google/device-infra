@@ -45,9 +45,6 @@ public final class DeviceUtil {
    * manage devices. If this method returns false (in Shared Lab), it means in the lab there are
    * some other components managing devices.
    *
-   * <p>This method returns a <b>negative</b> boolean value of the legacy {@link
-   * #shouldManageDevices()} method.
-   *
    * @return true if the lab server is in Shared Lab, false if the lab server is in Satellite Lab
    * @since lab server 4.158.0
    */
