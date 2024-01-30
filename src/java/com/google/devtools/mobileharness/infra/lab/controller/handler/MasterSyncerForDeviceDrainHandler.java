@@ -36,6 +36,10 @@ public class MasterSyncerForDeviceDrainHandler implements DrainHandler {
   public void drain() {
     logger.atInfo().log("MasterSyncerForDevice Drain Started!");
     masterSyncerForDevice.enableDrainingMode();
-    return;
+  }
+
+  @Override
+  public boolean hasDrained() {
+    return masterSyncerForDevice.hasDrained();
   }
 }

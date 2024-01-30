@@ -46,7 +46,11 @@ import java.util.Map.Entry;
 import java.util.Observable;
 import java.util.Observer;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /** For syncing the information of the Mobile Harness lab server with the Mobile Harness master. */
 public class MasterSyncerForDevice implements Runnable, Observer {
@@ -61,7 +65,11 @@ public class MasterSyncerForDevice implements Runnable, Observer {
   /** Provider where to get the device status. */
   private final DeviceStatusProvider deviceStatusProvider;
 
-  private final AtomicBoolean inDrainingMode = new AtomicBoolean(false);
+  private final Lock syncLock = new ReentrantLock();
+  private final Condition readyToSync = syncLock.newCondition();
+
+  private final AtomicBoolean inDrainingMode = new AtomicBoolean();
+  private final AtomicBoolean heartbeatAfterDrain = new AtomicBoolean();
 
   public MasterSyncerForDevice(
       DeviceStatusProvider deviceStatusProvider, LabSyncHelper labSyncHelper) {
@@ -75,12 +83,20 @@ public class MasterSyncerForDevice implements Runnable, Observer {
     firstSyncWithMaster();
     while (!Thread.currentThread().isInterrupted()) {
       try {
-        Thread.sleep(SYNC_INTERVAL.toMillis());
+        syncLock.lock();
+        try {
+          readyToSync.await(SYNC_INTERVAL.getSeconds(), TimeUnit.SECONDS);
+        } finally {
+          syncLock.unlock();
+        }
         regularSyncWithMaster();
+        if (inDrainingMode.get()) {
+          heartbeatAfterDrain.set(true);
+        }
       } catch (InterruptedException e) {
         logger.atWarning().log("Interrupted: %s", e.getMessage());
         Thread.currentThread().interrupt();
-      } catch (Exception e) {
+      } catch (RuntimeException e) {
         // Catches all exception to make sure the DeviceStatusProvider thread in lab won't be
         // stopped. Otherwise, no device can be detected.
         logger.atSevere().withCause(e).log("FATAL ERROR");
@@ -325,5 +341,16 @@ public class MasterSyncerForDevice implements Runnable, Observer {
   /** Flag to notify MasterSyncer in draining mode. */
   public void enableDrainingMode() {
     inDrainingMode.set(true);
+    syncLock.lock();
+    try {
+      readyToSync.signalAll();
+    } finally {
+      syncLock.unlock();
+    }
+  }
+
+  /** Returns true when heartbeat has been sent to master after drain is triggered. */
+  public boolean hasDrained() {
+    return heartbeatAfterDrain.get();
   }
 }
