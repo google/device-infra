@@ -16,10 +16,9 @@
 
 package com.google.wireless.qa.mobileharness.shared.util;
 
-import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.truth.Truth8;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil.NetworkInterfaceInfo;
 import java.net.InetAddress;
@@ -51,7 +50,7 @@ public class NetUtilTest {
 
   @Test
   public void getUniqueHostIpOrEmpty_emptyInterface() throws Exception {
-    assertThat(netUtil.getUniqueHostIpOrEmpty(Optional.empty())).isEmpty();
+    Truth8.assertThat(netUtil.getUniqueHostIpOrEmpty(Optional.empty())).isEmpty();
   }
 
   @Test
@@ -59,7 +58,7 @@ public class NetUtilTest {
     String siteLocalAddress = "192.168.1.1";
     Optional<List<NetworkInterfaceInfo>> interfaces = mockNetworkInterfaceInfo(siteLocalAddress);
 
-    assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).hasValue(siteLocalAddress);
+    Truth8.assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).hasValue(siteLocalAddress);
   }
 
   @Test
@@ -67,7 +66,7 @@ public class NetUtilTest {
     String corpLocalAddress = "100.90.104.32";
     Optional<List<NetworkInterfaceInfo>> interfaces = mockNetworkInterfaceInfo(corpLocalAddress);
 
-    assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).hasValue(corpLocalAddress);
+    Truth8.assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).hasValue(corpLocalAddress);
   }
 
   @Test
@@ -77,7 +76,7 @@ public class NetUtilTest {
     Optional<List<NetworkInterfaceInfo>> interfaces =
         mockNetworkInterfaceInfo(corpAddress, siteLocalAddress);
 
-    assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).hasValue(corpAddress);
+    Truth8.assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).hasValue(corpAddress);
   }
 
   @Test
@@ -87,7 +86,7 @@ public class NetUtilTest {
     Optional<List<NetworkInterfaceInfo>> interfaces =
         mockNetworkInterfaceInfo(corpAddress, corpLocalAddress);
 
-    assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).isEmpty();
+    Truth8.assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).isEmpty();
   }
 
   @Test
@@ -97,7 +96,7 @@ public class NetUtilTest {
     Optional<List<NetworkInterfaceInfo>> interfaces =
         mockNetworkInterfaceInfo(siteAddress, siteLocalAddress);
 
-    assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).isEmpty();
+    Truth8.assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).isEmpty();
   }
 
   @Test
@@ -108,7 +107,7 @@ public class NetUtilTest {
     Optional<List<NetworkInterfaceInfo>> interfaces =
         mockNetworkInterfaceInfo(siteLocalAddressOne, siteLocalAddressTwo, corpAddress);
 
-    assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).hasValue(corpAddress);
+    Truth8.assertThat(netUtil.getUniqueHostIpOrEmpty(interfaces)).hasValue(corpAddress);
   }
 
   private Optional<List<NetworkInterfaceInfo>> mockNetworkInterfaceInfo(String... ipAddresses)

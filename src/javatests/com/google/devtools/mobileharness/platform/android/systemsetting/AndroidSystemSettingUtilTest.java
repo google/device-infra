@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.platform.android.systemsetting;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.fail;
 import static org.mockito.AdditionalMatchers.aryEq;
@@ -30,6 +29,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.truth.Truth8;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -425,7 +425,7 @@ public class AndroidSystemSettingUtilTest {
                 + "  technology: Li-ion");
 
     Optional<Integer> temperature = settingUtil.getBatteryTemperature(DEVICE_ID);
-    assertThat(temperature).isPresent();
+    Truth8.assertThat(temperature).isPresent();
     int batteryTemperature = temperature.get();
     assertThat(batteryTemperature).isEqualTo(36);
   }
@@ -523,17 +523,18 @@ public class AndroidSystemSettingUtilTest {
     when(adbUtil.cmd(DEVICE_ID, AndroidService.APPOPS, new String[] {"get", TEST_PACKAGE_NAME}))
         .thenReturn(appOpsGetOutput);
 
-    assertThat(
+    Truth8.assertThat(
             settingUtil.getPackageOperationMode(
                 DEVICE_ID, TEST_PACKAGE_NAME, "MANAGE_EXTERNAL_STORAGE"))
         .hasValue(AppOperationMode.DEFAULT);
-    assertThat(
+    Truth8.assertThat(
             settingUtil.getPackageOperationMode(DEVICE_ID, TEST_PACKAGE_NAME, "WRITE_MEDIA_IMAGES"))
         .hasValue(AppOperationMode.DENY);
-    assertThat(
+    Truth8.assertThat(
             settingUtil.getPackageOperationMode(DEVICE_ID, TEST_PACKAGE_NAME, "READ_MEDIA_IMAGES"))
         .hasValue(AppOperationMode.ALLOW);
-    assertThat(settingUtil.getPackageOperationMode(DEVICE_ID, TEST_PACKAGE_NAME, "NON_EXIST_OP"))
+    Truth8.assertThat(
+            settingUtil.getPackageOperationMode(DEVICE_ID, TEST_PACKAGE_NAME, "NON_EXIST_OP"))
         .isEmpty();
   }
 

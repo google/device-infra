@@ -17,7 +17,6 @@
 package com.google.devtools.deviceaction.common.utils;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -25,6 +24,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.truth.Truth8;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -126,7 +126,7 @@ public final class BundletoolUtilTest {
     verify(mockExecutor).run(commandCaptor.capture());
     assertThat(commandCaptor.getValue().getExecutable()).isEqualTo(javaBin.getAbsolutePath());
     assertThat(commandCaptor.getValue().getArguments()).containsExactlyElementsIn(expectedArgs);
-    assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
+    Truth8.assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
         .hasValue(workingDir);
     assertThat(output.toString()).isEqualTo(filePath);
   }
@@ -152,7 +152,7 @@ public final class BundletoolUtilTest {
     verify(mockExecutor).run(commandCaptor.capture());
     assertThat(commandCaptor.getValue().getExecutable()).isEqualTo(javaBin.getAbsolutePath());
     assertThat(commandCaptor.getValue().getArguments()).containsExactlyElementsIn(expectedArgs);
-    assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
+    Truth8.assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
         .hasValue(workingDir);
     assertThat(output.toString()).isEqualTo(outputDir);
     assertTrue(new File(outputDir).isDirectory());
@@ -179,7 +179,7 @@ public final class BundletoolUtilTest {
     verify(mockExecutor).run(commandCaptor.capture());
     assertThat(commandCaptor.getValue().getExecutable()).isEqualTo(javaBin.getAbsolutePath());
     assertThat(commandCaptor.getValue().getArguments()).containsExactlyElementsIn(expectedArgs);
-    assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
+    Truth8.assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
         .hasValue(workingDir);
     assertThat(output).isEqualTo(expect);
   }
@@ -205,7 +205,7 @@ public final class BundletoolUtilTest {
     verify(mockExecutor).run(commandCaptor.capture());
     assertThat(commandCaptor.getValue().getExecutable()).isEqualTo(javaBin.getAbsolutePath());
     assertThat(commandCaptor.getValue().getArguments()).containsExactlyElementsIn(expectedArgs);
-    assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
+    Truth8.assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
         .hasValue(workingDir);
     assertThat(output).isEqualTo(expect);
   }
@@ -236,7 +236,7 @@ public final class BundletoolUtilTest {
     verify(mockExecutor).run(commandCaptor.capture());
     assertThat(commandCaptor.getValue().getExecutable()).isEqualTo(javaBin.getAbsolutePath());
     assertThat(commandCaptor.getValue().getArguments()).containsExactlyElementsIn(expectedArgs);
-    assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
+    Truth8.assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
         .hasValue(workingDir);
     assertThat(output).isEqualTo(expect);
   }
@@ -265,7 +265,7 @@ public final class BundletoolUtilTest {
     verify(mockExecutor).run(commandCaptor.capture());
     assertThat(commandCaptor.getValue().getExecutable()).isEqualTo(javaBin.getAbsolutePath());
     assertThat(commandCaptor.getValue().getArguments()).containsExactlyElementsIn(expectedArgs);
-    assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
+    Truth8.assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
         .hasValue(workingDir);
     assertThat(output).isEqualTo(expect);
   }
@@ -294,7 +294,7 @@ public final class BundletoolUtilTest {
     verify(mockExecutor).run(commandCaptor.capture());
     assertThat(commandCaptor.getValue().getExecutable()).isEqualTo(javaBin.getAbsolutePath());
     assertThat(commandCaptor.getValue().getArguments()).containsExactlyElementsIn(expectedArgs);
-    assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
+    Truth8.assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
         .hasValue(workingDir);
     assertThat(output).isEqualTo(expect);
   }
@@ -323,7 +323,7 @@ public final class BundletoolUtilTest {
     verify(mockExecutor).run(commandCaptor.capture());
     assertThat(commandCaptor.getValue().getExecutable()).isEqualTo(javaBin.getAbsolutePath());
     assertThat(commandCaptor.getValue().getArguments()).containsExactlyElementsIn(expectedArgs);
-    assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
+    Truth8.assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
         .hasValue(workingDir);
     assertThat(output).isEqualTo(expect);
   }
@@ -339,7 +339,7 @@ public final class BundletoolUtilTest {
     verify(mockExecutor).run(commandCaptor.capture());
     assertThat(commandCaptor.getValue().getExecutable()).isEqualTo(javaBin.getAbsolutePath());
     assertThat(commandCaptor.getValue().getArguments()).containsExactlyElementsIn(expectedArgs);
-    assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
+    Truth8.assertThat(commandCaptor.getValue().getWorkDirectory().map(Path::toString))
         .hasValue(workingDir);
     assertThat(output).isEqualTo(expect);
   }

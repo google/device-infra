@@ -17,9 +17,9 @@
 package com.google.devtools.deviceaction.common.schemas;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static org.junit.Assert.assertThrows;
 
+import com.google.common.truth.Truth8;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.ActionOptions.Options;
 import org.junit.Test;
@@ -53,8 +53,8 @@ public final class ActionOptionsTest {
             .addKeyValues("key2", "value1", "value2")
             .build();
 
-    assertThat(options.getOnlyValue("key1")).hasValue("value");
-    assertThat(options.getOnlyValue("key3")).isEmpty();
+    Truth8.assertThat(options.getOnlyValue("key1")).hasValue("value");
+    Truth8.assertThat(options.getOnlyValue("key3")).isEmpty();
     assertThrows(DeviceActionException.class, () -> options.getOnlyValue("key2"));
   }
 }

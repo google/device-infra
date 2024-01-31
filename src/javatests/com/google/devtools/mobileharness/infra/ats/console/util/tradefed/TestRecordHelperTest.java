@@ -17,12 +17,12 @@
 package com.google.devtools.mobileharness.infra.ats.console.util.tradefed;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.android.tradefed.config.proto.ConfigurationDescription.Metadata;
 import com.android.tradefed.invoker.proto.InvocationContext.Context;
 import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
 import com.google.common.collect.ImmutableList;
+import com.google.common.truth.Truth8;
 import com.google.inject.Guice;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -48,7 +48,7 @@ public final class TestRecordHelperTest {
             ImmutableList.of(
                 TestRecordHelperTestData.TEST_RECORD_1, TestRecordHelperTestData.TEST_RECORD_2));
 
-    assertThat(res).isPresent();
+    Truth8.assertThat(res).isPresent();
 
     TestRecord testRecord = res.get();
 

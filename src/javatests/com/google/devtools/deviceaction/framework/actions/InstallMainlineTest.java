@@ -18,7 +18,6 @@ package com.google.devtools.deviceaction.framework.actions;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static com.google.devtools.deviceaction.common.utils.Constants.APEX_SUFFIX;
 import static com.google.devtools.deviceaction.common.utils.Constants.APKS_SUFFIX;
 import static com.google.devtools.deviceaction.common.utils.Constants.APK_SUFFIX;
@@ -41,6 +40,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.truth.Correspondence;
+import com.google.common.truth.Truth8;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.AndroidPackage;
@@ -351,11 +351,11 @@ public final class InstallMainlineTest {
     assertThat(androidPackages).hasSize(2);
     switch (type) {
       case PACKAGE_FILE:
-        assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
+        Truth8.assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
             .containsExactly(apexFile, apkFile);
         break;
       case SPLIT_FOLDER:
-        assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
+        Truth8.assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
             .containsExactly(apexExtractFile, apkExtractFile1, apkExtractFile2);
         break;
       default:

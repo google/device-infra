@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -27,6 +26,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.truth.Truth8;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
@@ -107,7 +107,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
+    Truth8.assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
 
@@ -140,7 +140,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
+    Truth8.assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
 
@@ -175,7 +175,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
+    Truth8.assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build(),
@@ -204,7 +204,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
+    Truth8.assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build(),
@@ -224,7 +224,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isEmpty();
+    Truth8.assertThat(jobConfigOpt).isEmpty();
   }
 
   @Test
@@ -251,7 +251,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of("module1"));
 
-    assertThat(jobConfigOpt).isPresent();
+    Truth8.assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder()
@@ -301,7 +301,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
+    Truth8.assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder()
@@ -338,7 +338,7 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isEmpty();
+    Truth8.assertThat(jobConfigOpt).isEmpty();
   }
 
   @Test

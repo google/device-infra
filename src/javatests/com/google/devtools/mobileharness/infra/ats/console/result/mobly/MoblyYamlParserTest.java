@@ -17,9 +17,9 @@
 package com.google.devtools.mobileharness.infra.ats.console.result.mobly;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.truth.Truth8;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.MoblyResult;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
 import org.junit.Before;
@@ -56,16 +56,16 @@ public final class MoblyYamlParserTest {
 
     assertThat(results.get(0)).isInstanceOf(MoblyTestEntry.class);
     MoblyTestEntry entry = (MoblyTestEntry) results.get(0);
-    assertThat(entry.getBeginTime()).hasValue(1663584277766L);
-    assertThat(entry.getEndTime()).hasValue(1663584280787L);
+    Truth8.assertThat(entry.getBeginTime()).hasValue(1663584277766L);
+    Truth8.assertThat(entry.getEndTime()).hasValue(1663584280787L);
     assertThat(entry.getResult()).isEqualTo(MoblyResult.PASS);
     assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest1");
     assertThat(entry.getTestName()).isEqualTo("test_hello_world1_1");
 
     assertThat(results.get(1)).isInstanceOf(MoblyTestEntry.class);
     entry = (MoblyTestEntry) results.get(1);
-    assertThat(entry.getBeginTime()).hasValue(1663584280794L);
-    assertThat(entry.getEndTime()).hasValue(1663584283819L);
+    Truth8.assertThat(entry.getBeginTime()).hasValue(1663584280794L);
+    Truth8.assertThat(entry.getEndTime()).hasValue(1663584283819L);
     assertThat(entry.getResult()).isEqualTo(MoblyResult.PASS);
     assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest1");
     assertThat(entry.getTestName()).isEqualTo("test_hello_world1_2");
@@ -84,16 +84,16 @@ public final class MoblyYamlParserTest {
 
     assertThat(results.get(0)).isInstanceOf(MoblyTestEntry.class);
     MoblyTestEntry entry = (MoblyTestEntry) results.get(0);
-    assertThat(entry.getBeginTime()).hasValue(1663584277766L);
-    assertThat(entry.getEndTime()).hasValue(1663584280787L);
+    Truth8.assertThat(entry.getBeginTime()).hasValue(1663584277766L);
+    Truth8.assertThat(entry.getEndTime()).hasValue(1663584280787L);
     assertThat(entry.getResult()).isEqualTo(MoblyResult.PASS);
     assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest1");
     assertThat(entry.getTestName()).isEqualTo("test_hello_world1_1");
 
     assertThat(results.get(1)).isInstanceOf(MoblyTestEntry.class);
     entry = (MoblyTestEntry) results.get(1);
-    assertThat(entry.getBeginTime()).hasValue(1663584280794L);
-    assertThat(entry.getEndTime()).hasValue(1663584283819L);
+    Truth8.assertThat(entry.getBeginTime()).hasValue(1663584280794L);
+    Truth8.assertThat(entry.getEndTime()).hasValue(1663584283819L);
     assertThat(entry.getResult()).isEqualTo(MoblyResult.FAIL);
     assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest1");
     assertThat(entry.getTestName()).isEqualTo("test_hello_world1_2");
@@ -118,16 +118,16 @@ public final class MoblyYamlParserTest {
 
     assertThat(results.get(0)).isInstanceOf(MoblyTestEntry.class);
     MoblyTestEntry entry = (MoblyTestEntry) results.get(0);
-    assertThat(entry.getBeginTime()).hasValue(1663584277766L);
-    assertThat(entry.getEndTime()).hasValue(1663584280787L);
+    Truth8.assertThat(entry.getBeginTime()).hasValue(1663584277766L);
+    Truth8.assertThat(entry.getEndTime()).hasValue(1663584280787L);
     assertThat(entry.getResult()).isEqualTo(MoblyResult.PASS);
     assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest1");
     assertThat(entry.getTestName()).isEqualTo("test_hello_world1_1");
 
     assertThat(results.get(1)).isInstanceOf(MoblyTestEntry.class);
     entry = (MoblyTestEntry) results.get(1);
-    assertThat(entry.getBeginTime()).hasValue(1663584280794L);
-    assertThat(entry.getEndTime()).hasValue(1663584283819L);
+    Truth8.assertThat(entry.getBeginTime()).hasValue(1663584280794L);
+    Truth8.assertThat(entry.getEndTime()).hasValue(1663584283819L);
     assertThat(entry.getResult()).isEqualTo(MoblyResult.ERROR);
     assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest1");
     assertThat(entry.getTestName()).isEqualTo("test_hello_world1_2");
@@ -152,16 +152,16 @@ public final class MoblyYamlParserTest {
 
     assertThat(results.get(0)).isInstanceOf(MoblyTestEntry.class);
     MoblyTestEntry entry = (MoblyTestEntry) results.get(0);
-    assertThat(entry.getBeginTime()).hasValue(1663584277766L);
-    assertThat(entry.getEndTime()).hasValue(1663584280787L);
+    Truth8.assertThat(entry.getBeginTime()).hasValue(1663584277766L);
+    Truth8.assertThat(entry.getEndTime()).hasValue(1663584280787L);
     assertThat(entry.getResult()).isEqualTo(MoblyResult.PASS);
     assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest1");
     assertThat(entry.getTestName()).isEqualTo("test_hello_world1_1");
 
     assertThat(results.get(1)).isInstanceOf(MoblyTestEntry.class);
     entry = (MoblyTestEntry) results.get(1);
-    assertThat(entry.getBeginTime()).hasValue(1663584280794L);
-    assertThat(entry.getEndTime()).hasValue(1663584283819L);
+    Truth8.assertThat(entry.getBeginTime()).hasValue(1663584280794L);
+    Truth8.assertThat(entry.getEndTime()).hasValue(1663584283819L);
     assertThat(entry.getResult()).isEqualTo(MoblyResult.SKIP);
     assertThat(entry.getTestClass()).isEqualTo("HelloWorldTest1");
     assertThat(entry.getTestName()).isEqualTo("test_hello_world1_2");
