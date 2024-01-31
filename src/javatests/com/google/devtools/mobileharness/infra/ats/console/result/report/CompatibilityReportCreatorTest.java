@@ -17,11 +17,11 @@
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.truth.Truth8;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordWriter;
@@ -95,7 +95,7 @@ public final class CompatibilityReportCreatorTest {
 
     reportCreator.createReport(report, xmlResultDir.toPath(), /* testRecord= */ null);
 
-    assertThat(
+    Truth8.assertThat(
             realLocalFileUtil.listFilePaths(xmlResultDir.toPath(), false).stream()
                 .map(p -> p.getFileName().toString()))
         .containsExactlyElementsIn(
@@ -106,7 +106,7 @@ public final class CompatibilityReportCreatorTest {
                 .add("checksum-suite.data")
                 .build());
 
-    assertThat(
+    Truth8.assertThat(
             realLocalFileUtil.listFilePaths(xmlResultDir.toPath().getParent(), false).stream()
                 .map(p -> p.getFileName().toString()))
         .containsExactly("xml_result.zip");

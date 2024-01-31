@@ -17,9 +17,9 @@
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.truth.Truth8;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
@@ -96,7 +96,7 @@ public final class CompatibilityReportMergerTest {
         reportMerger.mergeXmlReports(
             ImmutableList.of(Paths.get(CTS_TEST_RESULT_XML_2), Paths.get(CTS_TEST_RESULT_XML)));
 
-    assertThat(res).isPresent();
+    Truth8.assertThat(res).isPresent();
     Result result = res.get();
 
     assertThat(result.getAttributeList())
@@ -203,7 +203,7 @@ public final class CompatibilityReportMergerTest {
                     DEVICE_BUILD_FINGERPRINT,
                     Paths.get(MOBLY_BUILD_ATTR_FILE_2))));
 
-    assertThat(res).isPresent();
+    Truth8.assertThat(res).isPresent();
     Result result = res.get();
 
     assertThat(result.getAttributeList())

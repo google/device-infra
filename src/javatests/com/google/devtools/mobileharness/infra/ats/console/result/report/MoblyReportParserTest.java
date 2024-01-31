@@ -17,8 +17,8 @@
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 
+import com.google.common.truth.Truth8;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
@@ -71,7 +71,7 @@ public final class MoblyReportParserTest {
                 DEVICE_BUILD_FINGERPRINT,
                 Paths.get(BUILD_ATTR_FILE)));
 
-    assertThat(res).isPresent();
+    Truth8.assertThat(res).isPresent();
 
     Result report = res.get();
     assertThat(report.getAttributeList()).hasSize(2);
