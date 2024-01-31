@@ -18,10 +18,12 @@ package com.google.devtools.mobileharness.api.model.error;
 
 import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
 import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import javax.annotation.Nullable;
 
 /** Base class of all Mobile Harness exceptions. */
+@SuppressWarnings("OverrideThrowableToString")
 public class MobileHarnessException
     extends com.google.wireless.qa.mobileharness.shared.MobileHarnessException
     implements ErrorIdProvider<ErrorId> {
@@ -52,6 +54,14 @@ public class MobileHarnessException
     return errorId;
   }
 
+  @Override
+  public String toString() {
+    String classSimpleName = getClass().getSimpleName();
+    String message = getLocalizedMessage();
+    return message == null ? classSimpleName : classSimpleName + ": " + message;
+  }
+
+  @CanIgnoreReturnValue
   public static <T> T checkNotNull(T reference, ErrorId errorId, @Nullable Object message)
       throws MobileHarnessException {
     if (reference == null) {

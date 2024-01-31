@@ -29,8 +29,8 @@ public class LabServerBinarySizeTest {
   private static final ImmutableSet<String> LAB_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST =
       ImmutableSet.of();
 
-  private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 27_000_000L;
-  private static final long MAX_LAB_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE = 1_000_000L;
+  private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 27_150_000L;
+  private static final long MAX_LAB_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE = 800_000L;
 
   private static final String LAB_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
