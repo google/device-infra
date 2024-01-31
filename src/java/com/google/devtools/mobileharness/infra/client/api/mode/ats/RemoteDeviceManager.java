@@ -851,7 +851,7 @@ class RemoteDeviceManager {
     } catch (RuntimeException e) {
       logger.atWarning().log(
           "Invalid StringMatchCondition [%s], cause=[%s]",
-          shortDebugString(condition), shortDebugString(e, /* maxLength= */ 0));
+          shortDebugString(condition), shortDebugString(e));
       return entity -> false;
     }
   }

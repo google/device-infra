@@ -142,7 +142,7 @@ public class PlanConfigUtil {
       }
       logger.atInfo().log(
           "Failed to load plan configs from JAR files in dir %s: %s",
-          dir, MoreThrowables.shortDebugString(e, 0));
+          dir, MoreThrowables.shortDebugString(e));
     }
 
     return configNameToPlanConfigInfo.buildOrThrow();
@@ -165,12 +165,12 @@ public class PlanConfigUtil {
       } catch (ParserConfigurationException | SAXException | IOException e) {
         logger.atWarning().log(
             "Failed to load the config [%s] from %s: %s",
-            configName, jar, MoreThrowables.shortDebugString(e, 0));
+            configName, jar, MoreThrowables.shortDebugString(e));
       }
     } catch (IOException e) {
       logger.atWarning().log(
           "Failed to load the config [%s] from %s: %s",
-          configName, jar, MoreThrowables.shortDebugString(e, 0));
+          configName, jar, MoreThrowables.shortDebugString(e));
     }
     return Optional.of(PlanConfigInfo.of(configName, jar, configDescription));
   }

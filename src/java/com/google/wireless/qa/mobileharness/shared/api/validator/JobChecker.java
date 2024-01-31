@@ -78,7 +78,7 @@ public class JobChecker {
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Failed to load validator methods of driver [%s], skip them, reason=[%s]",
-            driverName, shortDebugString(e, /* maxLength= */ 0));
+            driverName, shortDebugString(e));
       }
     }
 
@@ -97,7 +97,7 @@ public class JobChecker {
         } catch (MobileHarnessException e) {
           logger.atWarning().log(
               "Failed to load validator methods of decorator [%s], skip them, reason=[%s]",
-              decoratorName, shortDebugString(e, /* maxLength= */ 0));
+              decoratorName, shortDebugString(e));
         }
       }
     }

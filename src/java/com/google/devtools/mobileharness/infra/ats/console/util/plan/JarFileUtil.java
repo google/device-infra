@@ -67,7 +67,7 @@ public class JarFileUtil {
         entryNames.putAll(getEntriesFromJar(jar, filter));
       } catch (IOException e) {
         logger.atWarning().log(
-            "Failed to get entries from jar %s: %s", jar, MoreThrowables.shortDebugString(e, 0));
+            "Failed to get entries from jar %s: %s", jar, MoreThrowables.shortDebugString(e));
       }
     }
     return ImmutableMap.copyOf(entryNames);
@@ -99,7 +99,7 @@ public class JarFileUtil {
       jarFile = new JarFile(jar.toFile());
     } catch (IOException e) {
       logger.atWarning().log(
-          "Failed to open jar file %s: %s", jar, MoreThrowables.shortDebugString(e, 0));
+          "Failed to open jar file %s: %s", jar, MoreThrowables.shortDebugString(e));
       return Optional.empty();
     }
 
@@ -114,7 +114,7 @@ public class JarFileUtil {
     } catch (IOException e) {
       logger.atWarning().log(
           "Failed to get input stream for entry %s in jar file %s: %s",
-          entry, jar, MoreThrowables.shortDebugString(e, 0));
+          entry, jar, MoreThrowables.shortDebugString(e));
     }
     return Optional.empty();
   }

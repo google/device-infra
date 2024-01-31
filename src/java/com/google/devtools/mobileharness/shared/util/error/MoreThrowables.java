@@ -25,6 +25,26 @@ import java.util.stream.Stream;
 public class MoreThrowables {
 
   /**
+   * Equivalent to {@linkplain #shortDebugString(Throwable, int) shortDebugString(e, 0)} (print
+   * until the last cause).
+   *
+   * <p>Returns a string containing {@link Throwable#getMessage()} of the given exception and all of
+   * its causes (if any). The delimiter string is "{@code , cause: }". For example, "{@code
+   * message_of_e, cause: message_of_cause_of_e, cause: message_of_cause_of_cause_of_e}".
+   *
+   * <p>Note that the purpose of this method is "printing the content of an exception but making the
+   * result string NOT be like an exception", for the cases in which you don't want the "\tat
+   * xxx.xxx.Xxx(Xxx.java:xxx)" in log confuse users that here is the root cause. The result string
+   * of this method may have bad readability. In most cases, you should use {@code
+   * Throwables.getStackTraceAsString(e)} instead.
+   *
+   * @see #shortDebugString(Throwable, int)
+   */
+  public static String shortDebugString(Throwable e) {
+    return shortDebugString(e, /* maxLength= */ 0);
+  }
+
+  /**
    * Returns a string containing {@link Throwable#getMessage()} of the given exception and all of
    * its causes (if any). The delimiter string is "{@code , cause: }". For example, "{@code
    * message_of_e, cause: message_of_cause_of_e, cause: message_of_cause_of_cause_of_e}".

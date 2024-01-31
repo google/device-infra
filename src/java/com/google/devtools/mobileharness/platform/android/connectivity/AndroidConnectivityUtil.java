@@ -674,7 +674,7 @@ public class AndroidConnectivityUtil {
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Device %s failed to ping %s (times=%d): %s",
-            serial, host, i, MoreThrowables.shortDebugString(e, 0));
+            serial, host, i, MoreThrowables.shortDebugString(e));
         continue;
       }
       logger.atInfo().log("Device %s pings %s (times=%d):%n%s", serial, host, i, output);
@@ -713,8 +713,7 @@ public class AndroidConnectivityUtil {
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
-          "Device %s failed to ping %s: %s",
-          serial, targetUrl, MoreThrowables.shortDebugString(e, 0));
+          "Device %s failed to ping %s: %s", serial, targetUrl, MoreThrowables.shortDebugString(e));
     }
     return false;
   }

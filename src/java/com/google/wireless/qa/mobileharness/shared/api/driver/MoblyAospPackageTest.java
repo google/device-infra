@@ -223,7 +223,7 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to generate result attributes file for xTS Mobly run: %s",
-          MoreThrowables.shortDebugString(e, 0));
+          MoreThrowables.shortDebugString(e));
     }
 
     try {
@@ -232,7 +232,7 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to generate build attributes file for xTS Mobly run: %s",
-          MoreThrowables.shortDebugString(e, 0));
+          MoreThrowables.shortDebugString(e));
     }
 
     // Writes first device build fingerprint to a file for post processing

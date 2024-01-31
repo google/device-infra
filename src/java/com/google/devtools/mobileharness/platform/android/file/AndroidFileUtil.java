@@ -1018,7 +1018,7 @@ public class AndroidFileUtil {
           && e.getMessage().contains(ADB_REMOUNT_EXIT_CODE_INDICATOR)) {
         logger.atWarning().log(
             "Needs to reboot device %s to make remount effective because [%s].",
-            serial, MoreThrowables.shortDebugString(e, 0));
+            serial, MoreThrowables.shortDebugString(e));
       } else {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_FILE_UTIL_REMOUNT_ERROR, e.getMessage(), e);

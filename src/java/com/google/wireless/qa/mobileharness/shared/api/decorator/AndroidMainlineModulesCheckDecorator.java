@@ -70,7 +70,7 @@ public class AndroidMainlineModulesCheckDecorator extends BaseDecorator
           .alsoTo(logger)
           .log(
               "Failed to check if test should be skipped on device %s. Skip it by default: %s",
-              deviceId, MoreThrowables.shortDebugString(e, 0));
+              deviceId, MoreThrowables.shortDebugString(e));
     }
 
     if (skipTest) {

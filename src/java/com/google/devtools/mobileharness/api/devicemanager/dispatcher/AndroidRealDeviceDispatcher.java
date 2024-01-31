@@ -65,14 +65,14 @@ public class AndroidRealDeviceDispatcher extends CacheableDispatcher {
     try {
       new Fastboot().checkFastboot();
     } catch (MobileHarnessException e) {
-      errors.add(MoreThrowables.shortDebugString(e, 0));
+      errors.add(MoreThrowables.shortDebugString(e));
     }
 
     // Checks AAPT.
     try {
       new Aapt().checkAapt();
     } catch (MobileHarnessException e) {
-      errors.add(MoreThrowables.shortDebugString(e, 0));
+      errors.add(MoreThrowables.shortDebugString(e));
     }
 
     return errors.isEmpty() ? Optional.empty() : Optional.of(errors.toString());

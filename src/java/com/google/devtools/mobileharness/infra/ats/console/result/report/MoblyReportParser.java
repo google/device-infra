@@ -91,7 +91,7 @@ public class MoblyReportParser {
       } catch (MobileHarnessException | ParseException e) {
         logger.atWarning().log(
             "Failed to parse result attributes file [%s]: %s",
-            moblyReportInfo.resultAttributesFile(), MoreThrowables.shortDebugString(e, 0));
+            moblyReportInfo.resultAttributesFile(), MoreThrowables.shortDebugString(e));
       }
     }
 
@@ -104,7 +104,7 @@ public class MoblyReportParser {
       } catch (MobileHarnessException | ParseException e) {
         logger.atWarning().log(
             "Failed to parse build attributes file [%s]: %s",
-            moblyReportInfo.buildAttributesFile(), MoreThrowables.shortDebugString(e, 0));
+            moblyReportInfo.buildAttributesFile(), MoreThrowables.shortDebugString(e));
       }
     }
 

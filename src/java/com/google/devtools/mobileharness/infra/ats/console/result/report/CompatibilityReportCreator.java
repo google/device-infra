@@ -141,7 +141,7 @@ public class CompatibilityReportCreator {
     } catch (IOException e) {
       logger.atWarning().log(
           "Failed to create zip for %s: %s",
-          resultDir.getFileName(), MoreThrowables.shortDebugString(e, 0));
+          resultDir.getFileName(), MoreThrowables.shortDebugString(e));
     }
 
     Optional<File> htmlReport = createHtmlReport(resultDir.resolve(TEST_RESULT_FILE_NAME).toFile());
@@ -372,8 +372,7 @@ public class CompatibilityReportCreator {
           localFileUtil.writeToFile(resultFile.getAbsolutePath(), configStream);
         } catch (MobileHarnessException e) {
           logger.atWarning().log(
-              "Failed to write %s to file: %s",
-              resultFileName, MoreThrowables.shortDebugString(e, 0));
+              "Failed to write %s to file: %s", resultFileName, MoreThrowables.shortDebugString(e));
         }
       } else {
         logger.atWarning().log("Failed to load %s from jar", resultFileName);
@@ -392,7 +391,7 @@ public class CompatibilityReportCreator {
       transformer.transform(new StreamSource(inputXml), new StreamResult(outputStream));
     } catch (IOException | TransformerException ignored) {
       logger.atSevere().log(
-          "Failed to create %s: %s", HTML_REPORT_NAME, MoreThrowables.shortDebugString(ignored, 0));
+          "Failed to create %s: %s", HTML_REPORT_NAME, MoreThrowables.shortDebugString(ignored));
       if (report != null) {
         report.delete();
       }

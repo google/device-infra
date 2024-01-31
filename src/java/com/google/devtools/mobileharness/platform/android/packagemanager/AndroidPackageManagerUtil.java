@@ -1796,7 +1796,7 @@ public class AndroidPackageManagerUtil {
       if (e.getErrorId() == AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE) {
         logger.atWarning().log(
             "Ignore the execution failure to process the output: %s",
-            MoreThrowables.shortDebugString(e, /* maxLength= */ 0));
+            MoreThrowables.shortDebugString(e));
         return Optional.of(toThrow);
       } else {
         throw toThrow;

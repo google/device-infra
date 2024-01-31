@@ -302,7 +302,7 @@ public abstract class AndroidRealDeviceDelegate {
       } catch (MobileHarnessException e) {
         logger.atInfo().log(
             "Failed to get serialno for fastboot device %s: %s",
-            deviceId, MoreThrowables.shortDebugString(e, 0));
+            deviceId, MoreThrowables.shortDebugString(e));
       }
 
       device.addSupportedDecorator("AndroidFlashDeviceDecorator");
@@ -626,7 +626,7 @@ public abstract class AndroidRealDeviceDelegate {
           .ifPresent(imei -> device.addDimension(Dimension.Name.IMEI, imei));
     } catch (MobileHarnessException e) {
       logger.atInfo().log(
-          "Failed to get device %s IMEI: %s", deviceId, MoreThrowables.shortDebugString(e, 0));
+          "Failed to get device %s IMEI: %s", deviceId, MoreThrowables.shortDebugString(e));
     }
 
     // Adds screenshot dimension.
@@ -645,7 +645,7 @@ public abstract class AndroidRealDeviceDelegate {
           .ifPresent(iccid -> device.addDimension(Dimension.Name.ICCID, iccid));
     } catch (MobileHarnessException e) {
       logger.atInfo().log(
-          "Failed to get device %s ICCID: %s", deviceId, MoreThrowables.shortDebugString(e, 0));
+          "Failed to get device %s ICCID: %s", deviceId, MoreThrowables.shortDebugString(e));
     }
 
     // Add a comma-delimited list of ICCIDS to device dimensions.
@@ -654,7 +654,7 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atInfo().log(
           "Failed to get list of SIM ICCIDS for device %s: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          deviceId, MoreThrowables.shortDebugString(e));
     }
   }
 
@@ -926,7 +926,7 @@ public abstract class AndroidRealDeviceDelegate {
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Failed to set host name to device daemon for device %s: %s",
-            deviceId, MoreThrowables.shortDebugString(e, 0));
+            deviceId, MoreThrowables.shortDebugString(e));
       }
       if (hostname != null) {
         // Hides the suffix from the hostname.
@@ -1260,7 +1260,7 @@ public abstract class AndroidRealDeviceDelegate {
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Failed to remove tmp screen shot for device %s: %s",
-            deviceId, MoreThrowables.shortDebugString(e, 0));
+            deviceId, MoreThrowables.shortDebugString(e));
       }
     }
     return desFilePathOnHost;
@@ -1449,7 +1449,7 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to check device %s read only properties: %s",
-          serial, MoreThrowables.shortDebugString(e, 0));
+          serial, MoreThrowables.shortDebugString(e));
     }
     if (Flags.instance().disableCalling.getNonNull()) {
       logger.atInfo().log("Disable calling on device %s", serial);
@@ -1470,7 +1470,7 @@ public abstract class AndroidRealDeviceDelegate {
         logger.atWarning().log(
             "Failed to disable package com.android.cellbroadcastreceiver when setup the device "
                 + "%s: %s",
-            serial, MoreThrowables.shortDebugString(e, 0));
+            serial, MoreThrowables.shortDebugString(e));
       }
     }
   }
@@ -1566,7 +1566,7 @@ public abstract class AndroidRealDeviceDelegate {
             null);
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
-            "Failed to install WiFi apk: %s", MoreThrowables.shortDebugString(e, 0));
+            "Failed to install WiFi apk: %s", MoreThrowables.shortDebugString(e));
       }
     }
 
@@ -1610,14 +1610,13 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to get device %s SDK version, use default value 0: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          deviceId, MoreThrowables.shortDebugString(e));
     }
     try {
       currentSsid = connectivityUtil.getNetworkSsid(deviceId, sdkVersion);
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
-          "Failed to get device %s network SSID: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          "Failed to get device %s network SSID: %s", deviceId, MoreThrowables.shortDebugString(e));
     }
     if (!ifCheckDefaultWifi()) {
       return Optional.ofNullable(currentSsid);
@@ -1656,7 +1655,7 @@ public abstract class AndroidRealDeviceDelegate {
           deviceId,
           defaultWifi.getSsid(),
           defaultWifi.getPsk(),
-          MoreThrowables.shortDebugString(e, 0));
+          MoreThrowables.shortDebugString(e));
     }
     // Regain the WiFi SSID
     try {
@@ -1664,8 +1663,7 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (MobileHarnessException e) {
       currentSsid = null;
       logger.atWarning().log(
-          "Failed to get device %s network SSID: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          "Failed to get device %s network SSID: %s", deviceId, MoreThrowables.shortDebugString(e));
     }
     if (currentSsid != null) {
       logger.atInfo().log("Device %s network connection OK, SSID=%s", deviceId, currentSsid);
@@ -1715,7 +1713,7 @@ public abstract class AndroidRealDeviceDelegate {
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Failed to get device %s saved SSIDs and PSKs: %s",
-            deviceId, MoreThrowables.shortDebugString(e, 0));
+            deviceId, MoreThrowables.shortDebugString(e));
       }
     }
     if (!hasSavedSsidsAndPsks) {
@@ -1738,8 +1736,7 @@ public abstract class AndroidRealDeviceDelegate {
       currentSsid = connectivityUtil.getNetworkSsid(deviceId, sdkVersion);
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
-          "Failed to recover device %s network: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          "Failed to recover device %s network: %s", deviceId, MoreThrowables.shortDebugString(e));
     }
     return Optional.ofNullable(currentSsid);
   }
@@ -1772,7 +1769,7 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to get device %s network link address: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          deviceId, MoreThrowables.shortDebugString(e));
     }
     boolean isNetworkAddressDimensionUpdated =
         Strings.isNullOrEmpty(linkAddress)
@@ -1810,7 +1807,7 @@ public abstract class AndroidRealDeviceDelegate {
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Failed to get device %s battery level: %s",
-            deviceId, MoreThrowables.shortDebugString(e, 0));
+            deviceId, MoreThrowables.shortDebugString(e));
       }
       logger.atInfo().log("Checking device %s battery temperature...", deviceId);
       int batteryTemperature = 0;
@@ -1823,7 +1820,7 @@ public abstract class AndroidRealDeviceDelegate {
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Failed to get device %s battery temperature: %s",
-            deviceId, MoreThrowables.shortDebugString(e, 0));
+            deviceId, MoreThrowables.shortDebugString(e));
       }
       isDimensionChanged |= device.updateDimension(Dimension.Name.BATTERY_STATUS, batteryStatus);
       isDimensionChanged |=
@@ -1848,8 +1845,7 @@ public abstract class AndroidRealDeviceDelegate {
       logger.atInfo().log("ICCIDs of SIMS on device %s: %s", deviceId, iccids);
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
-          "Failed to fetch device %s's ICCIDs: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          "Failed to fetch device %s's ICCIDs: %s", deviceId, MoreThrowables.shortDebugString(e));
     }
 
     return device.updateDimension(Dimension.Name.ICCIDS, iccids);
@@ -1920,7 +1916,7 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to get %s storage info (device_id=%s): %s",
-          externalOrInternal, deviceId, MoreThrowables.shortDebugString(e, 0));
+          externalOrInternal, deviceId, MoreThrowables.shortDebugString(e));
     }
     if (storageInfo == null || storageInfo.totalKB() == 0) {
       isDimensionChanged |=
@@ -1975,8 +1971,7 @@ public abstract class AndroidRealDeviceDelegate {
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
-          "Failed to scan device %s temp apks: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          "Failed to scan device %s temp apks: %s", deviceId, MoreThrowables.shortDebugString(e));
     }
 
     logger.atInfo().log("Cleaning device %s temp apks...", deviceId);
@@ -1985,8 +1980,7 @@ public abstract class AndroidRealDeviceDelegate {
       logger.atInfo().log("Device %s temp apks cleared", deviceId);
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
-          "Failed to clean device %s temp apks: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          "Failed to clean device %s temp apks: %s", deviceId, MoreThrowables.shortDebugString(e));
     }
 
     // Devices are getting full because of generated smlog files (b/65023626).
@@ -1998,7 +1992,7 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to clean %s on device %s: %s",
-          AndroidRealDeviceConstants.SMLOG_PATH, deviceId, MoreThrowables.shortDebugString(e, 0));
+          AndroidRealDeviceConstants.SMLOG_PATH, deviceId, MoreThrowables.shortDebugString(e));
     }
 
     // Cleans up the lost+found files only if the device is rooted because /data and
@@ -2011,7 +2005,7 @@ public abstract class AndroidRealDeviceDelegate {
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Failed to clean device %s lost+found files: %s",
-            deviceId, MoreThrowables.shortDebugString(e, 0));
+            deviceId, MoreThrowables.shortDebugString(e));
       }
     } else {
       logger.atInfo().log(
@@ -2093,8 +2087,7 @@ public abstract class AndroidRealDeviceDelegate {
         wifiRssiValue = connectivityUtil.getWifiRssi(deviceId);
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
-            "Failed to get device %s WIFI RSSI: %s",
-            deviceId, MoreThrowables.shortDebugString(e, 0));
+            "Failed to get device %s WIFI RSSI: %s", deviceId, MoreThrowables.shortDebugString(e));
       }
       if (wifiRssiValue == null) {
         isDimensionChanged |= device.removeDimension(Dimension.Name.WIFI_RSSI);
@@ -2140,7 +2133,7 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to list active user from device %s: %s",
-          serial, MoreThrowables.shortDebugString(e, 0));
+          serial, MoreThrowables.shortDebugString(e));
     }
 
     // For headless system, default user should be a secondary user, as UserType.secondary.
@@ -2170,7 +2163,7 @@ public abstract class AndroidRealDeviceDelegate {
           // Only log the error message and continue remove other users.
           logger.atWarning().log(
               "Failed to remove user %s from device %s with error: %s",
-              userId, serial, MoreThrowables.shortDebugString(e, 0));
+              userId, serial, MoreThrowables.shortDebugString(e));
         }
       }
     }
@@ -2217,7 +2210,7 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to get package list from device %s: %s",
-          serial, MoreThrowables.shortDebugString(e, 0));
+          serial, MoreThrowables.shortDebugString(e));
       return false;
     }
 
@@ -2310,13 +2303,13 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Error setting full charge level for device %s: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          deviceId, MoreThrowables.shortDebugString(e));
       try {
         toggleChargingForSafeDischarge(stopChargeLevelInt, startChargeLevelInt);
       } catch (MobileHarnessException e2) {
         logger.atWarning().log(
             "Failed to enforce device %s safe discharge level: %s",
-            deviceId, MoreThrowables.shortDebugString(e2, 0));
+            deviceId, MoreThrowables.shortDebugString(e2));
       }
     }
   }
@@ -2358,7 +2351,7 @@ public abstract class AndroidRealDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Error when enabling charge for device %s before test %s: %s",
-          deviceId, testInfo.getId(), MoreThrowables.shortDebugString(e, 0));
+          deviceId, testInfo.getId(), MoreThrowables.shortDebugString(e));
     }
   }
 

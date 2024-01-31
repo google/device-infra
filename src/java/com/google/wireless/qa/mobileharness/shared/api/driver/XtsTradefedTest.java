@@ -224,10 +224,10 @@ public class XtsTradefedTest extends BaseDriver
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
-          "Error when copying xTS TF gen files: %s", MoreThrowables.shortDebugString(e, 0));
+          "Error when copying xTS TF gen files: %s", MoreThrowables.shortDebugString(e));
     } catch (InterruptedException e) {
       logger.atWarning().log(
-          "Interrupted when copying xTS TF gen files: %s", MoreThrowables.shortDebugString(e, 0));
+          "Interrupted when copying xTS TF gen files: %s", MoreThrowables.shortDebugString(e));
       Thread.currentThread().interrupt();
     }
 
@@ -236,11 +236,11 @@ public class XtsTradefedTest extends BaseDriver
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to clean up xTS Tradefed temp directory [%s]: %s",
-          tmpXtsRootDir, MoreThrowables.shortDebugString(e, 0));
+          tmpXtsRootDir, MoreThrowables.shortDebugString(e));
     } catch (InterruptedException e) {
       logger.atWarning().log(
           "Interrupted when clean up xTS Tradefed temp directory [%s]: %s",
-          tmpXtsRootDir, MoreThrowables.shortDebugString(e, 0));
+          tmpXtsRootDir, MoreThrowables.shortDebugString(e));
       Thread.currentThread().interrupt();
     }
   }

@@ -104,7 +104,7 @@ public class AndroidDeviceHelper {
           } catch (NumberFormatException e) {
             logger.atWarning().log(
                 "Failed to parse device %s screen density '%s' from device property: %s",
-                deviceId, value, MoreThrowables.shortDebugString(e, 0));
+                deviceId, value, MoreThrowables.shortDebugString(e));
           }
           break;
         case SDK_VERSION:
@@ -114,7 +114,7 @@ public class AndroidDeviceHelper {
           } catch (NumberFormatException e) {
             logger.atWarning().log(
                 "Failed to parse device %s sdk version '%s' from device property: %s",
-                deviceId, value, MoreThrowables.shortDebugString(e, 0));
+                deviceId, value, MoreThrowables.shortDebugString(e));
           }
           break;
         default:

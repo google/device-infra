@@ -195,7 +195,7 @@ public abstract class AndroidDeviceDelegate {
     } catch (MobileHarnessException ex) {
       logger.atWarning().log(
           "Update device %s Locale and Language fails: %s",
-          deviceId, MoreThrowables.shortDebugString(ex, 0));
+          deviceId, MoreThrowables.shortDebugString(ex));
       return false;
     }
   }
@@ -329,7 +329,7 @@ public abstract class AndroidDeviceDelegate {
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to get device %s GService Android ID: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          deviceId, MoreThrowables.shortDebugString(e));
     }
     return isUpdated;
   }
@@ -570,8 +570,7 @@ public abstract class AndroidDeviceDelegate {
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
-          "Failed to get device %s GMS version: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          "Failed to get device %s GMS version: %s", deviceId, MoreThrowables.shortDebugString(e));
     }
 
     // Gets the current override size of the screen of the device.
@@ -584,7 +583,7 @@ public abstract class AndroidDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to get screen size for device %s: %s",
-          deviceId, MoreThrowables.shortDebugString(e, 0));
+          deviceId, MoreThrowables.shortDebugString(e));
     }
   }
 

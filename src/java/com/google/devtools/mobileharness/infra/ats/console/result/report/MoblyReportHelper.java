@@ -284,7 +284,7 @@ public class MoblyReportHelper {
     } catch (MobileHarnessException e) {
       logger.atInfo().log(
           "Failed to get kernel info for device %s: %s",
-          serial, MoreThrowables.shortDebugString(e, 0));
+          serial, MoreThrowables.shortDebugString(e));
     }
     if (!Strings.isNullOrEmpty(kernelInfoResult)) {
       buildAttributesMap.put(XmlConstants.DEVICE_KERNEL_INFO_ATTR, kernelInfoResult);

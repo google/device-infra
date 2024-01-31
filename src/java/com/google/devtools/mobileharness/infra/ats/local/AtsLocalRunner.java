@@ -103,8 +103,7 @@ public class AtsLocalRunner {
         serverPreparer.killExistingServer();
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
-            "Failed to kill OLC server, reason=[%s]",
-            MoreThrowables.shortDebugString(e, /* maxLength= */ 0));
+            "Failed to kill OLC server, reason=[%s]", MoreThrowables.shortDebugString(e));
       }
     }
   }

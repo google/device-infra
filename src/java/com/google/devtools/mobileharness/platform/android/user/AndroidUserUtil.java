@@ -341,7 +341,7 @@ public class AndroidUserUtil {
       return Integer.parseInt(cmdOutput.substring(cmdOutput.lastIndexOf(" ")).trim());
     } catch (NumberFormatException e) {
       logger.atWarning().log(
-          "Failed to parse result [%s]: %s", cmdOutput, MoreThrowables.shortDebugString(e, 0));
+          "Failed to parse result [%s]: %s", cmdOutput, MoreThrowables.shortDebugString(e));
     }
     return 0;
   }

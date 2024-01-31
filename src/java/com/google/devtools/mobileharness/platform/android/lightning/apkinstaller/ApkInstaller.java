@@ -336,7 +336,7 @@ public class ApkInstaller {
           log,
           "Not found a valid version code for apk %s:%n%s",
           apkPath,
-          MoreThrowables.shortDebugString(e, 0));
+          MoreThrowables.shortDebugString(e));
     }
     if (apkVersionCode != null
         && shouldSkipOnVersionCode(
@@ -947,7 +947,7 @@ public class ApkInstaller {
           "Skip checking app version code because package (%s) info not found on device %s:%n%s",
           packageName,
           deviceId,
-          MoreThrowables.shortDebugString(e, 0));
+          MoreThrowables.shortDebugString(e));
     }
     if (deviceAppVersionCode != null) {
       SharedLogUtil.logMsg(
