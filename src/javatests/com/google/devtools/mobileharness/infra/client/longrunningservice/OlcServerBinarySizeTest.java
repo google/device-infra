@@ -33,11 +33,11 @@ public class OlcServerBinarySizeTest {
   private static final ImmutableSet<String>
       ATS_OLC_SERVER_LOCAL_MODE_LARGE_RESOURCE_PATH_ALLOWLIST = ImmutableSet.of();
 
-  private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 24_300_000L;
-  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 27_800_000L;
-  private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 26_900_000L;
+  private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 24_450_000L;
+  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 27_950_000L;
+  private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 26_950_000L;
 
-  private static final long MAX_OLC_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE = 1_000_000L;
+  private static final long MAX_OLC_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE = 800_000L;
 
   private static final String BINARY_SIZE_TEST_SOURCE_PATH =
       "google3/third_party/deviceinfra/src/javatests/com/google/devtools/mobileharness"

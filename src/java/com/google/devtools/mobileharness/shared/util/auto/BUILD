@@ -30,5 +30,6 @@ java_library(
     exports = [
         "@maven//:com_google_auto_value_auto_value",
         "@maven//:com_google_auto_value_auto_value_annotations",
+        "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
