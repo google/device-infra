@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.xts.config;
 
 import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
@@ -51,6 +52,9 @@ import java.util.Optional;
 /** A Helper class for xTS module configuration. */
 public class ModuleConfigurationHelper {
   private static final String FILE_KEY = "file";
+
+  private static final ImmutableMap<String, String> DRIVER_ALIAS_MAP =
+      ImmutableMap.of("MoblyAospPackageTest", "MoblyAospTest");
 
   private final ConfigurationUtil configurationUtil;
 
@@ -107,7 +111,8 @@ public class ModuleConfigurationHelper {
   private void updateDriverSpecs(Test config, JobInfo jobInfo, Visitor fileResolver)
       throws MobileHarnessException, InterruptedException {
     String className = ConfigurationUtil.getSimpleClassName(config.getClazz());
-    if (!jobInfo.type().getDriver().equals(className)) {
+    if (!jobInfo.type().getDriver().equals(className)
+        && !jobInfo.type().getDriver().equals(DRIVER_ALIAS_MAP.get(className))) {
       throw new MobileHarnessException(
           ExtErrorId.MODULE_CONFIG_DRIVER_NOT_MATCH,
           String.format(
