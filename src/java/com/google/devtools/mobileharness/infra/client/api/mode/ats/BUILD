@@ -45,6 +45,8 @@ java_library(
     deps = [
         ":annotations",
         ":lab_info_service",
+        ":lab_record_manager",
+        ":lab_record_service",
         ":remote_device_manager",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
@@ -159,6 +161,21 @@ java_library(
         "@io_grpc_grpc_java//stub",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "lab_record_service",
+    srcs = ["LabRecordService.java"],
+    deps = [
+        ":lab_record_manager",
+        "//src/devtools/mobileharness/api/query/proto:lab_record_java_proto",
+        "//src/devtools/mobileharness/infra/master/rpc/proto:lab_record_service_java_grpc_proto",
+        "//src/devtools/mobileharness/infra/master/rpc/proto:lab_record_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
+        "@io_grpc_grpc_java//stub",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

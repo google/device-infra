@@ -53,6 +53,8 @@ public class AtsMode implements ExecMode, ServiceProvider {
   private final DeviceQuerier deviceQuerier;
   private final AbstractScheduler scheduler;
   private final LabInfoService labInfoService;
+  private final LabRecordManager labRecordManager;
+  private final LabRecordService labRecordService;
   private final DeviceVerifier deviceVerifier = new EmptyDeviceVerifier();
 
   @Inject
@@ -60,11 +62,15 @@ public class AtsMode implements ExecMode, ServiceProvider {
       RemoteDeviceManager remoteDeviceManager,
       @AtsModeDeviceQuerier DeviceQuerier deviceQuerier,
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
-      LabInfoService labInfoService) {
+      LabInfoService labInfoService,
+      LabRecordManager labRecordManager,
+      LabRecordService labRecordService) {
     this.remoteDeviceManager = remoteDeviceManager;
     this.deviceQuerier = deviceQuerier;
     this.scheduler = scheduler;
     this.labInfoService = labInfoService;
+    this.labRecordManager = labRecordManager;
+    this.labRecordService = labRecordService;
   }
 
   @Override
@@ -72,6 +78,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
     // Starts remote device manager and scheduler.
     remoteDeviceManager.start();
     scheduler.start();
+    labRecordManager.start();
   }
 
   @Override
@@ -97,6 +104,7 @@ public class AtsMode implements ExecMode, ServiceProvider {
 
   @Override
   public ImmutableList<BindableService> provideServices() {
-    return ImmutableList.of(labInfoService, remoteDeviceManager.getLabSyncService());
+    return ImmutableList.of(
+        labInfoService, labRecordService, remoteDeviceManager.getLabSyncService());
   }
 }

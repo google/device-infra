@@ -77,6 +77,7 @@ import com.google.protobuf.FieldMask;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -192,11 +193,14 @@ public class OlcServerIntegrationTest {
   private CommandProcess labServerProcess;
 
   @Bind private MasterGrpcStubHelper masterGrpcStubHelper;
+  @Bind private Clock clock;
 
   @Inject private LabInfoGrpcStub labInfoGrpcStub;
 
   @Before
   public void setUp() throws Exception {
+    clock = Clock.systemUTC();
+
     olcServerStdoutBuilder = new StringBuilder();
     olcServerStderrBuilder = new StringBuilder();
 

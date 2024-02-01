@@ -73,6 +73,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Devic
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import io.grpc.BindableService;
 import io.grpc.netty.NettyServerBuilder;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
@@ -128,6 +129,7 @@ public class AtsModeTest {
   @Bind private ListeningScheduledExecutorService listeningScheduledExecutorService;
   @Bind private ExecutorService executorService;
   @Bind private ListeningExecutorService listeningExecutorService;
+  @Bind private Clock clock;
 
   @Inject private AtsMode atsMode;
   @Inject private LabSyncGrpcStub labSyncGrpcStub;
@@ -139,6 +141,7 @@ public class AtsModeTest {
     masterGrpcStubHelper =
         new MasterGrpcStubHelper(ChannelFactory.createLocalChannel(serverPort, directExecutor()));
     sleeper = Sleeper.defaultSleeper();
+    clock = Clock.systemUTC();
     listeningExecutorService = ThreadPools.createStandardThreadPool("ats-mode-thread-pool");
     executorService = listeningExecutorService;
     listeningScheduledExecutorService =

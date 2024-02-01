@@ -16,11 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
-import static java.util.concurrent.TimeUnit.MINUTES;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.collect.ImmutableList;
-import com.google.common.util.concurrent.AbstractScheduledService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.LabRecord;
@@ -32,18 +33,30 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
+import javax.inject.Singleton;
 
 /** The lab record manager. */
-public class LabRecordManager extends AbstractScheduledService {
+@Singleton
+class LabRecordManager {
 
   private static final Duration LAB_MISSING_DELAY = Duration.ofMinutes(10L);
 
   private final Map<String, LabHistory> labHistories = new ConcurrentHashMap<>();
   private final Clock clock;
 
+  private final ListeningScheduledExecutorService listeningScheduledExecutorService;
+
   @Inject
-  LabRecordManager(Clock clock) {
+  LabRecordManager(
+      Clock clock, ListeningScheduledExecutorService listeningScheduledExecutorService) {
     this.clock = clock;
+    this.listeningScheduledExecutorService = listeningScheduledExecutorService;
+  }
+
+  void start() {
+    var unused =
+        listeningScheduledExecutorService.scheduleWithFixedDelay(
+            this::addLabRecordWhenBecomeMissing, Duration.ofMinutes(1), Duration.ofMinutes(1));
   }
 
   void addLabRecordIfLabInfoChanged(LabInfo labInfo) {
@@ -53,21 +66,25 @@ public class LabRecordManager extends AbstractScheduledService {
     labHistory.addLabRecordIfLabInfoChanged(labInfo);
   }
 
+  /**
+   * Returns the lab records of given host. If the host name is empty, return all the lab records.
+   */
   ImmutableList<LabRecord> getLabRecords(String hostName) {
-    LabHistory labHistory = labHistories.get(hostName);
-    return labHistory == null ? ImmutableList.of() : labHistory.getLabRecords();
-  }
-
-  @Override
-  protected void runOneIteration() {
-    for (LabHistory labHistory : labHistories.values()) {
-      labHistory.addLabRecordWhenBecomeMissing();
+    if (hostName.isEmpty()) {
+      return labHistories.values().stream()
+          .flatMap(labHistory -> labHistory.getLabRecords().stream())
+          .collect(toImmutableList());
+    } else {
+      LabHistory labHistory = labHistories.get(hostName);
+      return labHistory == null ? ImmutableList.of() : labHistory.getLabRecords();
     }
   }
 
-  @Override
-  protected Scheduler scheduler() {
-    return Scheduler.newFixedDelaySchedule(/* initialDelay= */ 1, /* delay= */ 1, MINUTES);
+  @VisibleForTesting
+  void addLabRecordWhenBecomeMissing() {
+    for (LabHistory labHistory : labHistories.values()) {
+      labHistory.addLabRecordWhenBecomeMissing();
+    }
   }
 
   private static class LabHistory {
@@ -85,6 +102,17 @@ public class LabRecordManager extends AbstractScheduledService {
       this.hostName = hostName;
       this.clock = clock;
       labRecordQueue = EvictingQueue.create(LAB_RECORD_MAX_SIZE);
+    }
+
+    private static boolean isLabInfoChanged(LabInfo previousLabInfo, LabInfo newLabInfo) {
+      if (previousLabInfo.getLabStatus() != newLabInfo.getLabStatus()) {
+        return true;
+      }
+      // TODO: Not all feature change need to trigger adding new record.
+      if (!previousLabInfo.getLabServerFeature().equals(newLabInfo.getLabServerFeature())) {
+        return true;
+      }
+      return false;
     }
 
     private ImmutableList<LabRecord> getLabRecords() {
@@ -127,17 +155,6 @@ public class LabRecordManager extends AbstractScheduledService {
               .setTimestamp(TimeUtils.toProtoTimestamp(now))
               .setLabInfo(labInfo)
               .build());
-    }
-
-    private static boolean isLabInfoChanged(LabInfo previousLabInfo, LabInfo newLabInfo) {
-      if (previousLabInfo.getLabStatus() != newLabInfo.getLabStatus()) {
-        return true;
-      }
-      // TODO: Not all feature change need to trigger adding new record.
-      if (!previousLabInfo.getLabServerFeature().equals(newLabInfo.getLabServerFeature())) {
-        return true;
-      }
-      return false;
     }
   }
 }

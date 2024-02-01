@@ -63,6 +63,7 @@ import io.grpc.BindableService;
 import io.grpc.ManagedChannel;
 import io.grpc.netty.NettyServerBuilder;
 import java.io.IOException;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
@@ -138,11 +139,14 @@ public class LabServerIntegrationTest {
   @Bind private ExecutorService executorService;
   @Bind private ListeningExecutorService listeningExecutorService;
 
+  @Bind private Clock clock;
+
   @Inject private AtsMode atsMode;
 
   @Before
   public void setUp() throws Exception {
     sleeper = Sleeper.defaultSleeper();
+    clock = Clock.systemUTC();
     listeningExecutorService = ThreadPools.createStandardThreadPool("ats-mode-thread-pool");
     executorService = listeningExecutorService;
     listeningScheduledExecutorService =

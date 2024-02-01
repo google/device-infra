@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.testing.TestingExecutors;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
@@ -46,11 +48,13 @@ import org.mockito.junit.MockitoRule;
 public final class LabRecordManagerTest {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Bind @Mock private Clock clock;
+  @Bind private ListeningScheduledExecutorService listeningScheduledExecutorService;
 
   @Inject private LabRecordManager labRecordManager;
 
   @Before
   public void setUp() {
+    listeningScheduledExecutorService = TestingExecutors.sameThreadScheduledExecutor();
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(clock.instant()).thenReturn(Instant.EPOCH);
   }
@@ -128,7 +132,7 @@ public final class LabRecordManagerTest {
   }
 
   @Test
-  public void addLabRecordWhenBecomeMissing() throws Exception {
+  public void addLabRecordWhenBecomeMissing() {
     LabInfo labInfo1 =
         LabInfo.newBuilder()
             .setLabLocator(LabLocator.newBuilder().setHostName("host_name").build())
@@ -155,7 +159,7 @@ public final class LabRecordManagerTest {
                 .build());
 
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000 * 60 * 11)); // 11 mins
-    labRecordManager.runOneIteration();
+    labRecordManager.addLabRecordWhenBecomeMissing();
 
     assertThat(labRecordManager.getLabRecords("host_name"))
         .containsExactly(
