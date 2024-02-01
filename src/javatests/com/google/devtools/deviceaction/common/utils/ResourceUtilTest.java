@@ -16,13 +16,14 @@
 
 package com.google.devtools.deviceaction.common.utils;
 
-import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.deviceaction.common.utils.ResourceUtil.createSessionDir;
 import static com.google.devtools.deviceaction.common.utils.ResourceUtil.filterExistingFile;
 import static com.google.devtools.deviceaction.common.utils.ResourceUtil.getExistingDir;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
+import com.google.common.truth.Truth8;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import java.io.File;
 import java.nio.file.Path;
@@ -49,7 +50,7 @@ public final class ResourceUtilTest {
 
   @Test
   public void getExistingDir_expectedResults() throws Exception {
-    assertThat(getExistingDir(exist)).isEqualTo(exist);
+    Truth8.assertThat(getExistingDir(exist)).isEqualTo(exist);
     assertThrows(DeviceActionException.class, () -> getExistingDir(nonExist));
   }
 
@@ -69,6 +70,6 @@ public final class ResourceUtilTest {
 
     assertTrue(random1.toFile().isDirectory());
     assertTrue(random2.toFile().isDirectory());
-    assertThat(random1.getFileName()).isEqualTo(random2.getFileName());
+    Truth8.assertThat(random1.getFileName()).isEqualTo(random2.getFileName());
   }
 }

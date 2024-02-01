@@ -16,7 +16,7 @@
 
 package com.google.devtools.deviceaction.common.error;
 
-import static com.google.common.truth.Truth8.assertThat;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.api.model.error.BasicErrorId.SYSTEM_INVALID_PROCESS_ID;
 
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;

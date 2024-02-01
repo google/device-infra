@@ -17,7 +17,6 @@
 package com.google.devtools.deviceaction.framework.devices;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.common.truth.Truth8.assertThat;
 import static com.google.devtools.deviceaction.framework.devices.AndroidPhone.DEFAULT_AWAIT_FOR_DISCONNECT;
 import static com.google.devtools.deviceaction.framework.devices.AndroidPhone.DEFAULT_DEVICE_READY_TIMEOUT;
 import static com.google.devtools.deviceaction.framework.devices.AndroidPhone.DEFAULT_REBOOT_TIMEOUT;
@@ -36,6 +35,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
+import com.google.common.truth.Truth8;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.utils.BundletoolUtil;
@@ -364,7 +364,7 @@ public class AndroidPhoneTest {
             isNull());
     UtilArgs utilArgs = utilArgsCaptor.getValue();
     InstallCmdArgs installCmdArgs = installCmdArgsCaptor.getValue();
-    assertThat(utilArgs.sdkVersion()).hasValue(31);
+    Truth8.assertThat(utilArgs.sdkVersion()).hasValue(31);
     assertThat(utilArgs.serial()).isEqualTo(UUID);
     assertThat(installCmdArgs.extraArgs()).contains("--enable-rollback");
     if (spec.hasStagedReadyTimeout()) {
