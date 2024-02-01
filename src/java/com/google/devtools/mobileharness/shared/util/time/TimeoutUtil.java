@@ -28,8 +28,12 @@ public class TimeoutUtil {
   public static final Duration DEFAULT_OFFSET_TIME_OF_LAB_SERVER_TR_EARLIER_THAN_CLIENT_TR =
       Duration.ofSeconds(10);
 
-  /** The offset time between blaze test command timeout and OmniLab related timeout. */
-  public static final Duration DEFAULT_OFFSET_TIME_OF_OMNILAB_TR_EARLIER_THAN_BLAZE =
+  /** The up limit time between blaze test command timeout and OmniLab job/test timeout. */
+  public static final Duration UPPER_LIMIT_OFFSET_TIME_OF_OMNILAB_TR_EARLIER_THAN_BLAZE =
+      Duration.ofMinutes(10);
+
+  /** The lower limit time between blaze test command timeout and OmniLab start timeout. */
+  public static final Duration LOWER_LIMIT_OFFSET_TIME_OF_OMNILAB_TR_EARLIER_THAN_BLAZE =
       Duration.ofSeconds(60);
 
   /**
@@ -123,15 +127,15 @@ public class TimeoutUtil {
 
   /**
    * Gets the offset time between the blaze test command timeout and OmniLab start timeout. It is
-   * the max value of the default offset and 1% of the blaze test command timeout.
+   * the max value of the lower limit offset and 1% of the blaze test command timeout.
    */
   private static Duration getOffsetTimeOfOmniLabStartTimeoutEarlierThanBlazeTimeout(
       Duration blazeTimeout) {
     Duration onePercent = blazeTimeout.dividedBy(100);
-    if (DEFAULT_OFFSET_TIME_OF_OMNILAB_TR_EARLIER_THAN_BLAZE.compareTo(onePercent) < 0) {
+    if (LOWER_LIMIT_OFFSET_TIME_OF_OMNILAB_TR_EARLIER_THAN_BLAZE.compareTo(onePercent) < 0) {
       return onePercent;
     } else {
-      return DEFAULT_OFFSET_TIME_OF_OMNILAB_TR_EARLIER_THAN_BLAZE;
+      return LOWER_LIMIT_OFFSET_TIME_OF_OMNILAB_TR_EARLIER_THAN_BLAZE;
     }
   }
 
@@ -150,14 +154,14 @@ public class TimeoutUtil {
   }
 
   /**
-   * Gets the offset time between the blaze test command timeout and OmniLab job/test/start timeout.
-   * It is the min value of the default offset and 1% of the blaze test command timeout.
+   * Gets the offset time between the blaze test command timeout and OmniLab job/test timeout. It is
+   * the min value of the upper limit offset and 1% of the blaze test command timeout.
    */
   private static Duration getOffsetTimeOfOmniLabTestRunnerEarlierThanBlazeTimeout(
       Duration blazeTimeout) {
     Duration onePercent = blazeTimeout.dividedBy(100);
-    if (DEFAULT_OFFSET_TIME_OF_OMNILAB_TR_EARLIER_THAN_BLAZE.compareTo(onePercent) < 0) {
-      return DEFAULT_OFFSET_TIME_OF_OMNILAB_TR_EARLIER_THAN_BLAZE;
+    if (UPPER_LIMIT_OFFSET_TIME_OF_OMNILAB_TR_EARLIER_THAN_BLAZE.compareTo(onePercent) < 0) {
+      return UPPER_LIMIT_OFFSET_TIME_OF_OMNILAB_TR_EARLIER_THAN_BLAZE;
     } else {
       return onePercent;
     }
