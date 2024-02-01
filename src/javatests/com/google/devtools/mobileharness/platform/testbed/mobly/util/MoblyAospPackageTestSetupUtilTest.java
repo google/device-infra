@@ -27,7 +27,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
-import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -174,20 +173,6 @@ public final class MoblyAospPackageTestSetupUtilTest {
                 .resolveMoblyTestBin(Path.of("sample_test.zip"), Path.of("mobly"), null)
                 .toString())
         .isEqualTo("sample_test.zip");
-  }
-
-  @Test
-  public void resolveMoblyTestBin_unzipError_throwsUnzipException() throws Exception {
-    when(localFileUtil.unzipFile(any(Path.class), any(Path.class)))
-        .thenThrow(new MobileHarnessException(BasicErrorId.LOCAL_FILE_UNZIP_ERROR, ""));
-
-    MobileHarnessException exception =
-        assertThrows(
-            MobileHarnessException.class,
-            () ->
-                moblyAospTestSetupUtil.resolveMoblyTestBin(
-                    Path.of("sample_test.zip"), Path.of("mobly"), "sample_test.py"));
-    assertThat(exception.getErrorId()).isEqualTo(ExtErrorId.MOBLY_AOSP_UNZIP_TEST_PACKAGE_ERROR);
   }
 
   @Test

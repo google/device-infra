@@ -105,13 +105,15 @@ public class MoblyAospPackageTestSetupUtil {
     logger.atInfo().log("Unzipping Mobly test package to %s", moblyUnzipDir);
     try {
       localFileUtil.unzipFile(moblyPkg, moblyUnzipDir);
-      localFileUtil.grantFileOrDirFullAccessRecursively(moblyUnzipDir);
     } catch (MobileHarnessException e) {
-      throw new MobileHarnessException(
-          ExtErrorId.MOBLY_AOSP_UNZIP_TEST_PACKAGE_ERROR,
-          "Failed to unzip the Mobly test package. Please ensure that it is in the correct format.",
-          e);
+      // Certain test packages contain files that cannot be extracted properly, causing the unzip
+      // command to fail even if the remainder of the files are successfully extracted. We do not
+      // rely on the problematic files for the test, so do not block on the error.
+      logger.atWarning().log(
+          "Encountered an error during test package unzip. See error message for details: %s",
+          e.getMessage());
     }
+    localFileUtil.grantFileOrDirFullAccessRecursively(moblyUnzipDir);
     if (testPath == null) {
       logger.atInfo().log("No test path specified by user. Run the test package directly.");
       return moblyPkg;
