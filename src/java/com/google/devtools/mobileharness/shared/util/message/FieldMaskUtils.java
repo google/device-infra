@@ -72,5 +72,13 @@ public class FieldMaskUtils {
     return Optional.of(result.build());
   }
 
+  /**
+   * Creates a path which can be added to a {@link FieldMask} by {@link
+   * FieldMask.Builder#addPaths(String)}.
+   */
+  public static String createFieldMaskPath(FieldDescriptor... fields) {
+    return stream(fields).map(FieldDescriptor::getName).collect(joining("."));
+  }
+
   private FieldMaskUtils() {}
 }

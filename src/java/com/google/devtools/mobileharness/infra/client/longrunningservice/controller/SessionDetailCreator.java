@@ -19,7 +19,11 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionTimingInfo;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
+import java.time.Instant;
 import java.util.UUID;
 
 /**
@@ -33,6 +37,11 @@ public class SessionDetailCreator {
         .setSessionId(SessionId.newBuilder().setId(UUID.randomUUID().toString()))
         .setSessionStatus(SessionStatus.SESSION_SUBMITTED)
         .setSessionConfig(sessionConfig)
+        .setSessionOutput(
+            SessionOutput.newBuilder()
+                .setSessionTimingInfo(
+                    SessionTimingInfo.newBuilder()
+                        .setSessionSubmittedTime(TimeUtils.toProtoTimestamp(Instant.now()))))
         .build();
   }
 }

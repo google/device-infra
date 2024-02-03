@@ -207,12 +207,6 @@ public class SessionManager {
     }
   }
 
-  public boolean hasUnarchivedSessions() {
-    synchronized (lock) {
-      return !sessionRunners.isEmpty() || !sessionQueue.isEmpty();
-    }
-  }
-
   public void abortSession(String sessionId) throws MobileHarnessException {
     SessionDetailAndFinalResultFuture finalSession = null;
     synchronized (lock) {

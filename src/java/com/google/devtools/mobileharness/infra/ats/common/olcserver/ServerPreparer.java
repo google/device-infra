@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerBinary;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.ResultCase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
@@ -208,12 +209,13 @@ public class ServerPreparer {
           e);
     }
     long serverPid = killServerResponse.getServerPid();
-    if (!killServerResponse.getSuccessful()) {
+    if (killServerResponse.getResultCase() == ResultCase.FAILURE) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SERVER_PREPARER_CANNOT_KILL_EXISTING_OLC_SERVER_ERROR,
           String.format(
-              "Existing OLC server cannot be killed since it has running sessions, server_pid=%s",
-              serverPid));
+              "Existing OLC server cannot be killed since it has running sessions,"
+                  + " kill_server_response=[%s]",
+              shortDebugString(killServerResponse)));
     }
 
     // Waits until the existing server is killed.

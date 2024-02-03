@@ -19,6 +19,7 @@ syntax = "proto3";
 package mobileharness.infra.client.longrunningservice;
 
 import "src/devtools/mobileharness/infra/client/longrunningservice/proto/log.proto";
+import "src/devtools/mobileharness/infra/client/longrunningservice/proto/session.proto";
 
 option java_package = "com.google.devtools.mobileharness.infra.client.longrunningservice.proto";
 option java_outer_classname = "ControlServiceProto";
@@ -38,16 +39,26 @@ message KillServerRequest {}
 
 message KillServerResponse {
   // Required.
-  //
-  // True if no running/pending session and the server will exit.
-  //
-  // False otherwise and the request will be discarded.
-  bool successful = 1;
+  oneof result {
+    Success success = 1;
+    Failure failure = 2;
+  }
+
+  // Succeed if no running/pending session and the server will exit.
+  message Success {}
+
+  // Fail otherwise the request will be discarded.
+  message Failure {
+    // Required.
+    //
+    // Summary of unfinished sessions. Only parts of fields are present.
+    repeated SessionDetail unfinished_sessions = 1;
+  }
 
   // Required.
   //
   // PID of the server.
-  int64 server_pid = 2;
+  int64 server_pid = 3;
 }
 
 message GetLogRequest {

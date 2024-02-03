@@ -35,6 +35,7 @@ proto_library(
     srcs = ["control_service.proto"],
     deps = [
         ":log_proto",
+        ":session_proto",
     ],
 )
 
@@ -72,6 +73,7 @@ proto_library(
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_proto",
         "@com_google_protobuf//:any_proto",
+        "@com_google_protobuf//:timestamp_proto",
     ],
 )
 

@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.olcserver
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils.createFieldMaskPath;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.util.stream.Collectors.partitioningBy;
 
@@ -82,14 +83,11 @@ public class AtsSessionStub {
   private static final FieldMask GET_SESSION_STATUS_FIELD_MASK =
       FieldMask.newBuilder()
           .addPaths(
-              String.format(
-                  "%s.%s",
+              createFieldMaskPath(
                   GetSessionResponse.getDescriptor()
-                      .findFieldByNumber(GetSessionResponse.SESSION_DETAIL_FIELD_NUMBER)
-                      .getName(),
+                      .findFieldByNumber(GetSessionResponse.SESSION_DETAIL_FIELD_NUMBER),
                   SessionDetail.getDescriptor()
-                      .findFieldByNumber(SessionDetail.SESSION_STATUS_FIELD_NUMBER)
-                      .getName()))
+                      .findFieldByNumber(SessionDetail.SESSION_STATUS_FIELD_NUMBER)))
           .build();
   private static final Duration GET_SESSION_STATUS_SHORT_INTERVAL = Duration.ofMillis(400L);
   private static final Duration GET_SESSION_STATUS_MEDIUM_INTERVAL = Duration.ofSeconds(5L);

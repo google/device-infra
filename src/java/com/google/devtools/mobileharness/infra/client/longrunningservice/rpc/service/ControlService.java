@@ -18,8 +18,12 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.se
 
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+import static com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils.createFieldMaskPath;
+import static com.google.protobuf.TextFormat.shortDebugString;
+import static java.util.stream.Collectors.joining;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
@@ -31,8 +35,16 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.Failure;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.Success;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
+import com.google.protobuf.FieldMask;
 import io.grpc.Server;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
@@ -45,6 +57,38 @@ import javax.inject.Inject;
 public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final FieldMask SESSION_SUMMARY_FIELD_MASK =
+      FieldMask.newBuilder()
+          .addPaths(
+              createFieldMaskPath(
+                  SessionDetail.getDescriptor()
+                      .findFieldByNumber(SessionDetail.SESSION_ID_FIELD_NUMBER)))
+          .addPaths(
+              createFieldMaskPath(
+                  SessionDetail.getDescriptor()
+                      .findFieldByNumber(SessionDetail.SESSION_STATUS_FIELD_NUMBER)))
+          .addPaths(
+              createFieldMaskPath(
+                  SessionDetail.getDescriptor()
+                      .findFieldByNumber(SessionDetail.SESSION_CONFIG_FIELD_NUMBER),
+                  SessionConfig.getDescriptor()
+                      .findFieldByNumber(SessionConfig.SESSION_NAME_FIELD_NUMBER)))
+          .addPaths(
+              createFieldMaskPath(
+                  SessionDetail.getDescriptor()
+                      .findFieldByNumber(SessionDetail.SESSION_OUTPUT_FIELD_NUMBER),
+                  SessionOutput.getDescriptor()
+                      .findFieldByNumber(SessionOutput.SESSION_TIMING_INFO_FIELD_NUMBER)))
+          .build();
+  private static final SessionFilter UNFINISHED_SESSION_FILTER =
+      SessionFilter.newBuilder()
+          .setSessionStatusNameRegex(
+              ImmutableList.of(SessionStatus.SESSION_SUBMITTED, SessionStatus.SESSION_RUNNING)
+                  .stream()
+                  .map(SessionStatus::name)
+                  .collect(joining("|")))
+          .build();
 
   private final LogManager<GetLogResponse> logManager;
   private final SessionManager sessionManager;
@@ -95,12 +139,13 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
   }
 
   private KillServerResponse doKillServer(KillServerRequest request) {
-    KillServerResponse.Builder response = KillServerResponse.newBuilder();
-    response.setServerPid(ProcessHandle.current().pid());
+    KillServerResponse.Builder responseBuilder = KillServerResponse.newBuilder();
+    responseBuilder.setServerPid(ProcessHandle.current().pid());
 
-    if (sessionManager.hasUnarchivedSessions()) {
-      return response.setSuccessful(false).build();
-    } else {
+    ImmutableList<SessionDetail> unfinishedSessions =
+        sessionManager.getAllSessions(SESSION_SUMMARY_FIELD_MASK, UNFINISHED_SESSION_FILTER);
+
+    if (unfinishedSessions.isEmpty()) {
       logger.atInfo().log("Exiting by KillServerRequest");
       server.shutdown();
       logFailure(
@@ -108,7 +153,16 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
               threadRenaming(server::shutdownNow, () -> "server-shutdown"), Duration.ofSeconds(3L)),
           Level.SEVERE,
           "Fatal error while shutting down server");
-      return response.setSuccessful(true).build();
+      return responseBuilder.setSuccess(Success.getDefaultInstance()).build();
+    } else {
+      KillServerResponse response =
+          responseBuilder
+              .setFailure(Failure.newBuilder().addAllUnfinishedSessions(unfinishedSessions))
+              .build();
+      logger.atInfo().log(
+          "KillServerRequest is rejected due to unfinished sessions, response=[%s]",
+          shortDebugString(response));
+      return response;
     }
   }
 

@@ -73,6 +73,7 @@ java_library(
     srcs = ["SessionDetailCreator.java"],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
     ],
 )
 

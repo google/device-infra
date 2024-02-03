@@ -36,6 +36,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/message:field_mask_utils",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf_protobuf_java",

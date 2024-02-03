@@ -33,6 +33,8 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.Failure;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.Success;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingOutput;
@@ -252,7 +254,17 @@ public class OlcServerIntegrationTest {
     KillServerResponse killServerResponse = controlStub.killServer();
     assertThat(killServerResponse)
         .comparingExpectedFieldsOnly()
-        .isEqualTo(KillServerResponse.newBuilder().setSuccessful(false).build());
+        .isEqualTo(
+            KillServerResponse.newBuilder()
+                .setFailure(
+                    Failure.newBuilder()
+                        .addUnfinishedSessions(
+                            SessionDetail.newBuilder()
+                                .setSessionId(sessionId)
+                                .setSessionConfig(
+                                    SessionConfig.newBuilder()
+                                        .setSessionName("session_with_no_op_test"))))
+                .build());
 
     // Waits until the session finishes.
     GetSessionResponse getSessionResponse =
@@ -272,7 +284,8 @@ public class OlcServerIntegrationTest {
     killServerResponse = controlStub.killServer();
     assertThat(killServerResponse)
         .comparingExpectedFieldsOnly()
-        .isEqualTo(KillServerResponse.newBuilder().setSuccessful(true).build());
+        .isEqualTo(
+            KillServerResponse.newBuilder().setSuccess(Success.getDefaultInstance()).build());
     Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
     assertThat(olcServerProcess.isAlive()).isFalse();
 
