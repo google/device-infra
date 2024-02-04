@@ -18,9 +18,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "fastboot_initializer",
     srcs = ["FastbootInitializer.java"],
-    visibility = [
-        "//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot:__subpackages__",
-    ],
+    visibility = ["//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot:__subpackages__"],
     deps = [
         ":fastboot_initialize_template",
         ":fastboot_initialize_template_impl",
