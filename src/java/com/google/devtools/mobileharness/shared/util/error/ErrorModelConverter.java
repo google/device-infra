@@ -28,12 +28,10 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.E
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTrace;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTraceElement;
 import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
-import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
 import com.google.devtools.deviceinfra.api.error.id.DeviceInfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.proto.Error;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionSummary;
@@ -51,28 +49,6 @@ public class ErrorModelConverter {
       return (ErrorId) newErrorId;
     }
     return UnknownErrorId.of(newErrorId.code(), newErrorId.name(), newErrorId.type());
-  }
-
-  /** Converts a new {@link DeviceInfraException} to an old {@link MobileHarnessException}. */
-  public static MobileHarnessException toOldException(DeviceInfraException exception) {
-    MobileHarnessException result =
-        MobileHarnessExceptionFactory.create(
-            toOldErrorId(exception.getErrorId()),
-            exception.getMessage(),
-            toOldExceptionIfPossible(exception.getCause()),
-            /* addErrorIdToMessage= */ false,
-            /* clearStackTrace= */ false);
-    result.setStackTrace(exception.getStackTrace());
-    for (Throwable suppressed : exception.getSuppressed()) {
-      result.addSuppressed(toOldExceptionIfPossible(suppressed));
-    }
-    return result;
-  }
-
-  private static Throwable toOldExceptionIfPossible(Throwable exception) {
-    return exception instanceof DeviceInfraException
-        ? toOldException((DeviceInfraException) exception)
-        : exception;
   }
 
   /**

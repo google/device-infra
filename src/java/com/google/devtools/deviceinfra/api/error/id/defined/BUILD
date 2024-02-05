@@ -34,10 +34,7 @@ java_library(
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/deviceinfra/api/error/id/proto:error_code_range_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception",
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception_generator",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -49,10 +46,7 @@ java_library(
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/deviceinfra/api/error/id/proto:error_code_range_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception",
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception_generator",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -64,10 +58,7 @@ java_library(
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/deviceinfra/api/error/id/proto:error_code_range_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception",
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception_generator",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -83,10 +74,7 @@ java_library(
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/deviceinfra/api/error/id/proto:error_code_range_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_formatter",
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception",
-        "//src/java/com/google/devtools/deviceinfra/api/error:exception_generator",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )

@@ -17,7 +17,6 @@
 package com.google.devtools.common.metrics.stability.converter;
 
 import static com.google.common.truth.Truth.assertThat;
-import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
@@ -33,39 +32,12 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.E
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.FlattenedExceptionDetail;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTrace;
 import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
-import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
-import com.google.devtools.deviceinfra.api.error.id.defined.BasicErrorId;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 
 @RunWith(JUnit4.class)
 public class ErrorModelConverterTest {
-
-  private static final DeviceInfraException DEVICE_INFRA_EXCEPTION =
-      new DeviceInfraException(
-          BasicErrorId.REFLECTION_LOAD_CLASS_ERROR,
-          "Failed to load class",
-          new DeviceInfraException(
-              BasicErrorId.REFLECTION_LOAD_CLASS_TYPE_MISMATCH, "Message of cause", null));
-
-  static {
-    DEVICE_INFRA_EXCEPTION.addSuppressed(new InterruptedException("Message of suppressed"));
-    DEVICE_INFRA_EXCEPTION.setStackTrace(
-        new StackTraceElement[] {
-          new StackTraceElement("foo.goo.Class1", "method1", "Class1.java", 123)
-        });
-    DEVICE_INFRA_EXCEPTION
-        .getCause()
-        .setStackTrace(
-            new StackTraceElement[] {
-              new StackTraceElement("foo.goo.Class2", "method2", "Class2.java", 456)
-            });
-    DEVICE_INFRA_EXCEPTION.getSuppressed()[0].setStackTrace(
-        new StackTraceElement[] {
-          new StackTraceElement("foo.goo.Class3", "method3", "Class3.java", 789)
-        });
-  }
 
   public static final ExceptionDetail DEVICE_INFRA_EXCEPTION_DETAIL =
       ExceptionDetail.newBuilder()
@@ -156,13 +128,6 @@ public class ErrorModelConverterTest {
           + "\tat foo.goo.Class2.method2(Class2.java:456)\n";
 
   @Test
-  public void toExceptionDetail() {
-    ExceptionDetail exceptionDetail = ErrorModelConverter.toExceptionDetail(DEVICE_INFRA_EXCEPTION);
-
-    assertThat(exceptionDetail).isEqualTo(DEVICE_INFRA_EXCEPTION_DETAIL);
-  }
-
-  @Test
   public void toDeserializedException_toExceptionDetail() {
     ExceptionDetail.Builder expectedExceptionDetail = DEVICE_INFRA_EXCEPTION_DETAIL.toBuilder();
     expectedExceptionDetail
@@ -209,57 +174,6 @@ public class ErrorModelConverterTest {
 
     assertThat(Throwables.getStackTraceAsString(exception))
         .isEqualTo(DEVICE_INFRA_EXCEPTION_STRING);
-  }
-
-  @Test
-  public void toExceptionDetail_toDeserializedException() {
-    DeserializedException exception =
-        ErrorModelConverter.toDeserializedException(
-            ErrorModelConverter.toExceptionDetail(DEVICE_INFRA_EXCEPTION));
-
-    assertThat(exception.getOriginalExceptionClassName())
-        .isEqualTo(DEVICE_INFRA_EXCEPTION.getClass().getName());
-    assertThat(requireNonNull(exception.getCause()).getOriginalExceptionClassName())
-        .isEqualTo(DEVICE_INFRA_EXCEPTION.getCause().getClass().getName());
-    assertThat(
-            ((DeserializedException) exception.getSuppressed()[0]).getOriginalExceptionClassName())
-        .isEqualTo(DEVICE_INFRA_EXCEPTION.getSuppressed()[0].getClass().getName());
-
-    assertThat(exception)
-        .hasMessageThat()
-        .isEqualTo(
-            String.format(
-                "%s [%s]",
-                DEVICE_INFRA_EXCEPTION.getMessage(),
-                DEVICE_INFRA_EXCEPTION.getClass().getSimpleName()));
-    assertThat(exception)
-        .hasCauseThat()
-        .hasMessageThat()
-        .isEqualTo(
-            String.format(
-                "%s [%s]",
-                DEVICE_INFRA_EXCEPTION.getCause().getMessage(),
-                DEVICE_INFRA_EXCEPTION.getCause().getClass().getSimpleName()));
-    assertThat(exception.getSuppressed()[0])
-        .hasMessageThat()
-        .isEqualTo(
-            String.format(
-                "%s [%s]",
-                DEVICE_INFRA_EXCEPTION.getSuppressed()[0].getMessage(),
-                DEVICE_INFRA_EXCEPTION.getSuppressed()[0].getClass().getSimpleName()));
-
-    assertThat(exception.getStackTrace())
-        .asList()
-        .containsExactlyElementsIn(DEVICE_INFRA_EXCEPTION.getStackTrace())
-        .inOrder();
-    assertThat(exception.getCause().getStackTrace())
-        .asList()
-        .containsExactlyElementsIn(DEVICE_INFRA_EXCEPTION.getCause().getStackTrace())
-        .inOrder();
-    assertThat(exception.getSuppressed()[0].getStackTrace())
-        .asList()
-        .containsExactlyElementsIn(DEVICE_INFRA_EXCEPTION.getSuppressed()[0].getStackTrace())
-        .inOrder();
   }
 
   @Test
@@ -339,7 +253,7 @@ public class ErrorModelConverterTest {
 
   @Test
   public void getCriticalErrorId() {
-    ExceptionProto.ExceptionDetail underterminedError =
+    ExceptionProto.ExceptionDetail undeterminedError =
         ExceptionProto.ExceptionDetail.newBuilder()
             .setSummary(
                 ExceptionProto.ExceptionSummary.newBuilder()
@@ -366,7 +280,7 @@ public class ErrorModelConverterTest {
             .build();
 
     ErrorIdProto.ErrorId criticalErrorId =
-        ErrorModelConverter.getCriticalErrorId(underterminedError);
+        ErrorModelConverter.getCriticalErrorId(undeterminedError);
     assertThat(criticalErrorId.getCode()).isEqualTo(1);
     assertThat(criticalErrorId.getType()).isEqualTo(ErrorTypeProto.ErrorType.UNDETERMINED);
 

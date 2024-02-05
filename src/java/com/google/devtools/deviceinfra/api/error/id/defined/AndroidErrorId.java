@@ -21,14 +21,11 @@ import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.util.ErrorIdFormatter;
-import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
-import com.google.devtools.deviceinfra.api.error.DeviceInfraExceptionGenerator;
 import com.google.devtools.deviceinfra.api.error.id.DeviceInfraErrorId;
 import com.google.devtools.deviceinfra.api.error.id.proto.ErrorCodeRangeProto.ErrorCodeRange;
-import javax.annotation.Nullable;
 
 /** {@link DeviceInfraErrorId}s for Android platform supports. */
-public enum AndroidErrorId implements DeviceInfraErrorId, DeviceInfraExceptionGenerator {
+public enum AndroidErrorId implements DeviceInfraErrorId {
   // ***********************************************************************************************
   // Standard Android Platforms: 5_000_001 ~ 5_200_000
   // ***********************************************************************************************
@@ -78,15 +75,5 @@ public enum AndroidErrorId implements DeviceInfraErrorId, DeviceInfraExceptionGe
   @Override
   public String toString() {
     return ErrorIdFormatter.formatErrorId(this);
-  }
-
-  @Override
-  public DeviceInfraException toException(String message) {
-    return new DeviceInfraException(this, message);
-  }
-
-  @Override
-  public DeviceInfraException toException(String message, @Nullable Throwable cause) {
-    return new DeviceInfraException(this, message, cause);
   }
 }

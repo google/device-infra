@@ -21,7 +21,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static java.util.function.Function.identity;
-import static java.util.function.Predicate.not;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 
@@ -36,7 +35,6 @@ import com.google.common.reflect.ClassPath;
 import com.google.common.reflect.ClassPath.ClassInfo;
 import com.google.common.truth.Correspondence;
 import com.google.devtools.common.metrics.stability.util.ErrorIdFormatter;
-import com.google.devtools.deviceinfra.api.error.DeviceInfraExceptionGenerator;
 import com.google.devtools.deviceinfra.api.error.id.proto.ErrorCodeRangeProto.ErrorCodeRange;
 import java.util.Collection;
 import java.util.stream.Stream;
@@ -141,18 +139,6 @@ public class ErrorIdTest {
                                         errorId,
                                         ErrorIdFormatter.formatErrorId(errorId)))
                             .stream())
-                .collect(toImmutableList()))
-        .isEmpty();
-  }
-
-  @Test
-  public void checkExceptionGenerator() throws Exception {
-    assertWithMessage(
-            "ErrorId class which does not implement %s",
-            DeviceInfraExceptionGenerator.class.getSimpleName())
-        .that(
-            errorIds.keySet().stream()
-                .filter(not(DeviceInfraExceptionGenerator.class::isAssignableFrom))
                 .collect(toImmutableList()))
         .isEmpty();
   }

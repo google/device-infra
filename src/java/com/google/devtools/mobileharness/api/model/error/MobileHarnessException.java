@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.api.model.error;
 
 import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
-import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import javax.annotation.Nullable;
 
@@ -117,27 +116,6 @@ public class MobileHarnessException
         break;
     }
     return ErrorType.UNCLASSIFIED_ERROR;
-  }
-
-  /** Converts an old {@link MobileHarnessException} to a new {@link DeviceInfraException}. */
-  public DeviceInfraException toNewException() {
-    DeviceInfraException result =
-        new DeviceInfraException(getErrorId(), getMessage(), /* addErrorIdToMessage= */ false);
-    result.setStackTrace(getStackTrace());
-    Throwable cause = getCause();
-    if (cause != null) {
-      result.initCause(toNewExceptionIfPossible(cause));
-    }
-    for (Throwable suppressed : getSuppressed()) {
-      result.addSuppressed(toNewExceptionIfPossible(suppressed));
-    }
-    return result;
-  }
-
-  private static Throwable toNewExceptionIfPossible(Throwable exception) {
-    return exception instanceof MobileHarnessException
-        ? ((MobileHarnessException) exception).toNewException()
-        : exception;
   }
 
   private static String getMessageSuffix(ErrorId errorId) {
