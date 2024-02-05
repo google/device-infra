@@ -16,9 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.DeviceRecord;
+import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.DeviceRecordQueryResult;
 import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.LabRecord;
 import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.LabRecordQueryResult;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabRecordServiceGrpc;
@@ -74,9 +75,15 @@ class LabRecordService extends LabRecordServiceGrpc.LabRecordServiceImplBase {
         LabRecordServiceGrpc.getGetDeviceRecordMethod());
   }
 
-  @VisibleForTesting
   GetDeviceRecordResponse doGetDeviceRecord(GetDeviceRecordRequest request) {
-    // TODO: Implement later.
-    return GetDeviceRecordResponse.getDefaultInstance();
+    ImmutableList<DeviceRecord> deviceRecords =
+        labRecordManager.getDeviceRecords(
+            request.getDeviceRecordQuery().getFilter().getDevieUuid());
+    return GetDeviceRecordResponse.newBuilder()
+        .setDeviceRecordQueryResult(
+            DeviceRecordQueryResult.newBuilder()
+                .addAllDeviceRecord(deviceRecords)
+                .setDeviceRecordTotalCount(deviceRecords.size()))
+        .build();
   }
 }
