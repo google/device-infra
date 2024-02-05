@@ -30,6 +30,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/api/error:exception",
         "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
         "//src/java/com/google/devtools/mobileharness/shared/model/error:unknown_error",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "@maven//:com_google_code_findbugs_jsr305",

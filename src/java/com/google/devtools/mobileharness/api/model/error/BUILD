@@ -19,6 +19,9 @@ java_library(
     name = "error",
     srcs = glob(
         ["*.java"],
+        exclude = [
+            "MobileHarnessExceptionFactory.java",
+        ],
     ),
     visibility = [
         "//:deviceinfra_api_users",
@@ -34,5 +37,19 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+# For internal use only. Do NOT add external visibility to it.
+java_library(
+    name = "exception_factory",
+    srcs = ["MobileHarnessExceptionFactory.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:__pkg__",
+    ],
+    deps = [
+        ":error",
+        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )

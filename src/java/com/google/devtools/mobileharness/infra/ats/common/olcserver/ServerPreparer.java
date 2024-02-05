@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -25,6 +26,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerBinary;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
@@ -33,6 +35,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
+import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
@@ -42,6 +45,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.errorprone.annotations.FormatMethod;
 import io.grpc.Status.Code;
@@ -50,6 +54,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.stream.Stream;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import javax.inject.Provider;
@@ -60,6 +65,9 @@ import javax.inject.Singleton;
 public class ServerPreparer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final ImmutableList<String> UNFINISHED_SESSIONS_TABLE_HEADER =
+      ImmutableList.of("Session ID", "Name", "Status", "Submitted Time");
 
   /** Logger for printing logs of OLC server until it starts successfully. */
   @FunctionalInterface
@@ -210,12 +218,14 @@ public class ServerPreparer {
     }
     long serverPid = killServerResponse.getServerPid();
     if (killServerResponse.getResultCase() == ResultCase.FAILURE) {
-      throw new MobileHarnessException(
+      throw MobileHarnessExceptionFactory.create(
           InfraErrorId.ATSC_SERVER_PREPARER_CANNOT_KILL_EXISTING_OLC_SERVER_ERROR,
           String.format(
-              "Existing OLC server cannot be killed since it has running sessions,"
-                  + " kill_server_response=[%s]",
-              shortDebugString(killServerResponse)));
+              "Existing OLC server (pid=%s) cannot be killed since it has running sessions:\n%s",
+              serverPid, createUnfinishedSessionsTable(killServerResponse)),
+          /* cause= */ null,
+          /* addErrorIdToMessage= */ false,
+          /* clearStackTrace= */ true);
     }
 
     // Waits until the existing server is killed.
@@ -224,14 +234,14 @@ public class ServerPreparer {
       try {
         versionStub.getVersion();
       } catch (GrpcExceptionWithErrorId e) {
-        serverStartingLogger.log("Existing OLC server killed");
+        serverStartingLogger.log("Existing OLC server (pid=%s) killed", serverPid);
         return;
       }
     }
     throw new MobileHarnessException(
         InfraErrorId.ATSC_SERVER_PREPARER_EXISTING_OLC_SERVER_STILL_RUNNING_ERROR,
         String.format(
-            "Existing OLC server is still running for 10s after it was killed, server_pid=%s",
+            "Existing OLC server (pid=%s) is still running for 10s after it was killed",
             serverPid));
   }
 
@@ -282,6 +292,26 @@ public class ServerPreparer {
       logger.atWarning().log("Invalid OLC server version [%s]", serverVersionString);
       return true;
     }
+  }
+
+  private static String createUnfinishedSessionsTable(KillServerResponse killServerResponse) {
+    return TableFormatter.displayTable(
+        Stream.concat(
+                Stream.of(UNFINISHED_SESSIONS_TABLE_HEADER),
+                killServerResponse.getFailure().getUnfinishedSessionsList().stream()
+                    .map(
+                        sessionDetail ->
+                            ImmutableList.of(
+                                sessionDetail.getSessionId().getId(),
+                                sessionDetail.getSessionConfig().getSessionName(),
+                                sessionDetail.getSessionStatus().name(),
+                                TimeUtils.toJavaInstant(
+                                        sessionDetail
+                                            .getSessionOutput()
+                                            .getSessionTimingInfo()
+                                            .getSessionSubmittedTime())
+                                    .toString())))
+            .collect(toImmutableList()));
   }
 
   private static class ServerStderrLineCallback implements LineCallback {

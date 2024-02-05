@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.api.model.error;
 
 import com.google.common.base.Throwables;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
 
@@ -24,14 +25,24 @@ import javax.annotation.Nullable;
 public class MobileHarnessExceptions {
 
   /**
-   * @see com.google.common.base.Preconditions#checkArgument
-   * @see com.google.common.base.Preconditions#checkState
+   * See {@link com.google.common.base.Preconditions#checkArgument} and {@link
+   * com.google.common.base.Preconditions#checkState}.
    */
   public static void check(boolean expression, ErrorId errorId, Supplier<String> errorMessage)
       throws MobileHarnessException {
     if (!expression) {
       throw new MobileHarnessException(errorId, errorMessage.get());
     }
+  }
+
+  /** See {@link com.google.common.base.Preconditions#checkNotNull}. */
+  @CanIgnoreReturnValue
+  public static <T> T checkNotNull(T reference, ErrorId errorId, @Nullable Object message)
+      throws MobileHarnessException {
+    if (reference == null) {
+      throw new MobileHarnessException(errorId, String.valueOf(message));
+    }
+    return reference;
   }
 
   /**

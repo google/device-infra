@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.api.model.error;
 
 import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
 import com.google.devtools.deviceinfra.api.error.DeviceInfraException;
-import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import javax.annotation.Nullable;
 
@@ -28,6 +27,8 @@ public class MobileHarnessException
     extends com.google.wireless.qa.mobileharness.shared.MobileHarnessException
     implements ErrorIdProvider<ErrorId> {
 
+  private static final StackTraceElement[] EMPTY_STACK_TRACE = new StackTraceElement[0];
+
   private final ErrorId errorId;
 
   public MobileHarnessException(ErrorId errorId, String message) {
@@ -35,11 +36,21 @@ public class MobileHarnessException
   }
 
   public MobileHarnessException(ErrorId errorId, String message, @Nullable Throwable cause) {
-    this(errorId, message, cause, !message.endsWith(getMessageSuffix(errorId)));
+    this(
+        errorId,
+        message,
+        cause,
+        !message.endsWith(getMessageSuffix(errorId)),
+        /* clearStackTrace= */ false);
   }
 
-  public MobileHarnessException(
-      ErrorId errorId, String message, @Nullable Throwable cause, boolean addErrorIdToMessage) {
+  /** Do NOT make it public. */
+  MobileHarnessException(
+      ErrorId errorId,
+      String message,
+      @Nullable Throwable cause,
+      boolean addErrorIdToMessage,
+      boolean clearStackTrace) {
     super(
         ErrorCode.NEXT_GEN_ERROR,
         ErrorType.UNCLASSIFIED_ERROR,
@@ -47,6 +58,9 @@ public class MobileHarnessException
         cause,
         false /* don't add cause to message */);
     this.errorId = errorId;
+    if (clearStackTrace) {
+      setStackTrace(EMPTY_STACK_TRACE);
+    }
   }
 
   @Override
@@ -59,15 +73,6 @@ public class MobileHarnessException
     String classSimpleName = getClass().getSimpleName();
     String message = getLocalizedMessage();
     return message == null ? classSimpleName : classSimpleName + ": " + message;
-  }
-
-  @CanIgnoreReturnValue
-  public static <T> T checkNotNull(T reference, ErrorId errorId, @Nullable Object message)
-      throws MobileHarnessException {
-    if (reference == null) {
-      throw new MobileHarnessException(errorId, String.valueOf(message));
-    }
-    return reference;
   }
 
   /**

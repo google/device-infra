@@ -33,6 +33,7 @@ import com.google.devtools.deviceinfra.api.error.id.DeviceInfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.proto.Error;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionSummary;
@@ -55,11 +56,12 @@ public class ErrorModelConverter {
   /** Converts a new {@link DeviceInfraException} to an old {@link MobileHarnessException}. */
   public static MobileHarnessException toOldException(DeviceInfraException exception) {
     MobileHarnessException result =
-        new MobileHarnessException(
+        MobileHarnessExceptionFactory.create(
             toOldErrorId(exception.getErrorId()),
             exception.getMessage(),
             toOldExceptionIfPossible(exception.getCause()),
-            /* addErrorIdToMessage= */ false);
+            /* addErrorIdToMessage= */ false,
+            /* clearStackTrace= */ false);
     result.setStackTrace(exception.getStackTrace());
     for (Throwable suppressed : exception.getSuppressed()) {
       result.addSuppressed(toOldExceptionIfPossible(suppressed));
