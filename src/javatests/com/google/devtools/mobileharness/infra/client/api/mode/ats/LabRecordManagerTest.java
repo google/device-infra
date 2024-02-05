@@ -21,12 +21,17 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.testing.TestingExecutors;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
+import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.DeviceRecord;
 import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.LabRecord;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -169,6 +174,87 @@ public final class LabRecordManagerTest {
                 .build(),
             LabRecord.newBuilder()
                 .setLabInfo(labInfo1.toBuilder().setLabStatus(LabStatus.LAB_MISSING).build())
+                .setTimestamp(Timestamp.newBuilder().setSeconds(660).build())
+                .build());
+  }
+
+  @Test
+  public void addDeviceRecordWhenLabInfoChanged() {
+    assertThat(labRecordManager.getDeviceRecords("device_uuid")).isEmpty();
+
+    DeviceInfo deviceInfo1 =
+        DeviceInfo.newBuilder()
+            .setDeviceUuid("device_uuid")
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("device_id").build())
+            .setDeviceStatus(DeviceStatus.BUSY)
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .build();
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1));
+    labRecordManager.addDeviceRecordIfDeviceInfoChanged(deviceInfo1);
+    assertThat(labRecordManager.getDeviceRecords("device_uuid"))
+        .containsExactly(
+            DeviceRecord.newBuilder()
+                .setDeviceInfo(deviceInfo1)
+                .setTimestamp(Timestamp.newBuilder().setNanos(1000000).build())
+                .build());
+
+    DeviceInfo deviceInfo2 =
+        DeviceInfo.newBuilder()
+            .setDeviceUuid("device_uuid")
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("device_id").build())
+            .setDeviceStatus(DeviceStatus.IDLE)
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .build();
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(2));
+    labRecordManager.addDeviceRecordIfDeviceInfoChanged(deviceInfo2);
+    assertThat(labRecordManager.getDeviceRecords("device_uuid"))
+        .containsExactly(
+            DeviceRecord.newBuilder()
+                .setDeviceInfo(deviceInfo1)
+                .setTimestamp(Timestamp.newBuilder().setNanos(1000000).build())
+                .build(),
+            DeviceRecord.newBuilder()
+                .setDeviceInfo(deviceInfo2)
+                .setTimestamp(Timestamp.newBuilder().setNanos(2000000).build())
+                .build());
+  }
+
+  @Test
+  public void addDeviceRecordWhenBecomeMissing() {
+    DeviceInfo deviceInfo1 =
+        DeviceInfo.newBuilder()
+            .setDeviceUuid("device_uuid")
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("device_id").build())
+            .setDeviceStatus(DeviceStatus.BUSY)
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .build();
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1));
+    labRecordManager.addDeviceRecordIfDeviceInfoChanged(deviceInfo1);
+    assertThat(labRecordManager.getDeviceRecords("device_uuid"))
+        .containsExactly(
+            DeviceRecord.newBuilder()
+                .setDeviceInfo(deviceInfo1)
+                .setTimestamp(Timestamp.newBuilder().setNanos(1000000).build())
+                .build());
+
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000 * 60 * 11)); // 11 mins
+    labRecordManager.addDeviceRecordWhenBecomeMissing();
+
+    DeviceInfo deviceInfo2 =
+        DeviceInfo.newBuilder()
+            .setDeviceUuid("device_uuid")
+            .setDeviceLocator(DeviceLocator.newBuilder().setId("device_id").build())
+            .setDeviceStatus(DeviceStatus.MISSING)
+            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .build();
+    assertThat(labRecordManager.getDeviceRecords("device_uuid"))
+        .containsExactly(
+            DeviceRecord.newBuilder()
+                .setDeviceInfo(deviceInfo1)
+                .setTimestamp(Timestamp.newBuilder().setNanos(1000000).build())
+                .build(),
+            DeviceRecord.newBuilder()
+                .setDeviceInfo(deviceInfo2)
                 .setTimestamp(Timestamp.newBuilder().setSeconds(660).build())
                 .build());
   }
