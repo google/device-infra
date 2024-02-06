@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
+import com.google.devtools.mobileharness.api.model.job.in.Params;
 import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Error.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
@@ -286,9 +287,7 @@ public class JobRunnerCore implements Runnable {
       Sleeper sleeper,
       JobChecker jobChecker,
       PluginCreator.Factory pluginLoaderFactory,
-      @Nullable EventBus globalInternalBus)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      @Nullable EventBus globalInternalBus) {
     this.jobInfo = jobInfo;
     this.deviceAllocator = deviceAllocator;
     this.execMode = execMode;
@@ -825,6 +824,9 @@ public class JobRunnerCore implements Runnable {
         jobChecker.validateJob(jobInfo);
       }
       resolveJobFiles(jobInfo);
+
+      // See b/323976485.
+      addBuiltinPluginForceLoadFromJarClassRegex(jobInfo.params().toNewParams());
 
       jobInfo
           .log()
@@ -1649,6 +1651,20 @@ public class JobRunnerCore implements Runnable {
           onJobStartTimeout(true, false);
         }
       }
+    }
+  }
+
+  private static void addBuiltinPluginForceLoadFromJarClassRegex(Params jobParams) {
+    String builtinPluginForceLoadFromJarClassRegex = "com\\.google\\.protobuf\\..*";
+    if (!jobParams.has(JobInfo.PARAM_CLIENT_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX)) {
+      jobParams.add(
+          JobInfo.PARAM_CLIENT_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX,
+          builtinPluginForceLoadFromJarClassRegex);
+    }
+    if (!jobParams.has(JobInfo.PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX)) {
+      jobParams.add(
+          JobInfo.PARAM_LAB_PLUGIN_FORCE_LOAD_FROM_JAR_CLASS_REGEX,
+          builtinPluginForceLoadFromJarClassRegex);
     }
   }
 }
