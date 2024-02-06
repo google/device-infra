@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.api.model.error;
 
-import com.google.devtools.deviceinfra.api.error.id.DeviceInfraErrorId;
+import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
 
 /**
  * Identity for distinguishing Mobile Harness errors/exceptions.
@@ -28,4 +28,10 @@ import com.google.devtools.deviceinfra.api.error.id.DeviceInfraErrorId;
  * @see InfraErrorId
  * @see ExtErrorId
  */
-public interface ErrorId extends DeviceInfraErrorId {}
+public interface ErrorId extends com.google.devtools.common.metrics.stability.model.ErrorId {
+
+  @Override
+  default Namespace namespace() {
+    return Namespace.MH;
+  }
+}

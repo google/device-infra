@@ -26,7 +26,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_comparator",
-        "//src/java/com/google/devtools/deviceinfra/api/error/id/defined",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:junit_junit",
     ],

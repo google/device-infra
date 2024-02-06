@@ -27,7 +27,6 @@ java_library(
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:error_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",
-        "//src/java/com/google/devtools/deviceinfra/api/error/id:error_id_interface",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/model/error:unknown_error",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",

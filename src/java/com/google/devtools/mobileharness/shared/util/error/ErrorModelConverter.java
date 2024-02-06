@@ -28,7 +28,6 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.E
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTrace;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.StackTraceElement;
 import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
-import com.google.devtools.deviceinfra.api.error.id.DeviceInfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -41,15 +40,8 @@ import javax.annotation.Nullable;
 
 /** For converting between new and old data models of exceptions/errors. */
 public class ErrorModelConverter {
-  private ErrorModelConverter() {}
 
-  /** Converts a new {@linkplain DeviceInfraErrorId} to an old {@link ErrorId}. */
-  public static ErrorId toOldErrorId(DeviceInfraErrorId newErrorId) {
-    if (newErrorId instanceof ErrorId) {
-      return (ErrorId) newErrorId;
-    }
-    return UnknownErrorId.of(newErrorId.code(), newErrorId.name(), newErrorId.type());
-  }
+  private ErrorModelConverter() {}
 
   /**
    * @deprecated This method will set the NON_MH_ERROR as the ErrorId for any

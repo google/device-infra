@@ -23,7 +23,7 @@ import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorIdProto;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.common.metrics.stability.model.proto.NamespaceProto.Namespace;
-import com.google.devtools.deviceinfra.api.error.id.defined.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -34,35 +34,34 @@ public class ErrorIdComparatorTest {
   public void equals_compareClasses() {
     assertThat(
             ErrorIdComparator.equal(
-                BasicErrorId.REFLECTION_LOAD_CLASS_ERROR,
-                BasicErrorId.REFLECTION_LOAD_CLASS_TYPE_MISMATCH))
+                BasicErrorId.BASE64_ARGUMENT_ERROR, BasicErrorId.BASE64_ENCODING_ERROR))
         .isFalse();
     assertThat(
             ErrorIdComparator.equal(
-                BasicErrorId.REFLECTION_LOAD_CLASS_ERROR, BasicErrorId.REFLECTION_LOAD_CLASS_ERROR))
+                BasicErrorId.BASE64_ARGUMENT_ERROR, BasicErrorId.BASE64_ARGUMENT_ERROR))
         .isTrue();
     assertThat(
             ErrorIdComparator.equal(
-                BasicErrorId.REFLECTION_LOAD_CLASS_ERROR,
+                BasicErrorId.BASE64_ARGUMENT_ERROR,
                 new ErrorId() {
                   @Override
                   public int code() {
-                    return BasicErrorId.REFLECTION_LOAD_CLASS_ERROR.code();
+                    return BasicErrorId.BASE64_ARGUMENT_ERROR.code();
                   }
 
                   @Override
                   public String name() {
-                    return BasicErrorId.REFLECTION_LOAD_CLASS_ERROR.name();
+                    return BasicErrorId.BASE64_ARGUMENT_ERROR.name();
                   }
 
                   @Override
                   public ErrorType type() {
-                    return BasicErrorId.REFLECTION_LOAD_CLASS_ERROR.type();
+                    return BasicErrorId.BASE64_ARGUMENT_ERROR.type();
                   }
 
                   @Override
                   public Namespace namespace() {
-                    return BasicErrorId.REFLECTION_LOAD_CLASS_ERROR.namespace();
+                    return BasicErrorId.BASE64_ARGUMENT_ERROR.namespace();
                   }
                 }))
         .isTrue();
@@ -70,7 +69,7 @@ public class ErrorIdComparatorTest {
 
   @Test
   public void equals_compareProto() {
-    BasicErrorId mhErrorId = BasicErrorId.REFLECTION_LOAD_CLASS_ERROR;
+    BasicErrorId mhErrorId = BasicErrorId.BASE64_ARGUMENT_ERROR;
     ErrorIdProto.ErrorId commonErrorIdProto = ErrorModelConverter.toErrorIdProto(mhErrorId);
     assertThat(ErrorIdComparator.equal(commonErrorIdProto, mhErrorId)).isTrue();
     assertThat(ErrorIdComparator.equal(mhErrorId, commonErrorIdProto)).isTrue();
