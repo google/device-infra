@@ -215,9 +215,6 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       runningThread = Thread.currentThread();
     }
 
-    String oldThreadName = Thread.currentThread().getName();
-    Thread.currentThread().setName("local-device-runner-" + device.getDeviceId());
-
     MobileHarnessLogTag.addTag(MobileHarnessLogTag.DEVICE_ID, device.getDeviceId());
 
     boolean needReboot = false;
@@ -349,7 +346,6 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
 
       logger.atInfo().log("Stopped");
 
-      Thread.currentThread().setName(oldThreadName);
       synchronized (interruptLock) {
         runningThread = null;
       }

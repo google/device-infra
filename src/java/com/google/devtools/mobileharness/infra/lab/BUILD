@@ -83,6 +83,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:master_grpc_stub_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history:recorder",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",

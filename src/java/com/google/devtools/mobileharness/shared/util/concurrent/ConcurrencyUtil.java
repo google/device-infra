@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.shared.util.concurrent;
 
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -26,7 +28,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -109,21 +110,15 @@ public class ConcurrencyUtil {
         tasks.stream()
             .map(
                 task ->
-                    (Callable<V>)
+                    threadRenaming(
                         () -> {
-                          // Sets the thread name.
-                          String oldThreadName = Thread.currentThread().getName();
-                          Thread.currentThread().setName(task.threadName());
-                          try {
-                            // Adds the log tag.
-                            MobileHarnessLogTag.addTag(task.logTagName(), task.logTagValue());
+                          // Adds the log tag.
+                          MobileHarnessLogTag.addTag(task.logTagName(), task.logTagValue());
 
-                            // Runs the actual sub task.
-                            return task.callable().call();
-                          } finally {
-                            Thread.currentThread().setName(oldThreadName);
-                          }
-                        })
+                          // Runs the actual sub task.
+                          return task.callable().call();
+                        },
+                        task::threadName))
             .map(executorService::submit)
             .collect(Collectors.toList());
 

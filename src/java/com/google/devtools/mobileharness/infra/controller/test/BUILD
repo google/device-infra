@@ -74,6 +74,7 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_unit",
     ],
 )
@@ -128,7 +129,6 @@ java_library(
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/exception",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",

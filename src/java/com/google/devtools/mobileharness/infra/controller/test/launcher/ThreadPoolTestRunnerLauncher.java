@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.launcher;
 
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
@@ -51,7 +53,10 @@ public class ThreadPoolTestRunnerLauncher<T extends TestRunner> extends TestRunn
   @Override
   protected void asyncLaunchTest() {
     synchronized (testTask) {
-      testFuture = threadPool.submit(testTask, /* result= */ null);
+      testFuture =
+          threadPool.submit(
+              threadRenaming(testTask, () -> getTestRunner().getTestRunnerThreadName()),
+              /* result= */ null);
     }
   }
 

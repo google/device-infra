@@ -24,6 +24,7 @@ java_library(
     name = "callables",
     srcs = ["Callables.java"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
@@ -36,6 +37,7 @@ java_library(
         "MobileHarnessCallable.java",
     ],
     deps = [
+        ":callables",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:tag",

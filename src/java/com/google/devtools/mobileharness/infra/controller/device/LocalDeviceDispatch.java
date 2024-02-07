@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.controller.device;
 
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -283,7 +284,10 @@ public class LocalDeviceDispatch {
                 globalInternalBus,
                 deviceStat,
                 externalDeviceManager);
-        Future<?> future = threadPool.submit(() -> runner.run());
+        Future<?> future =
+            threadPool.submit(
+                threadRenaming(
+                    runner, () -> "local-device-runner-" + runner.getDevice().getDeviceId()));
         devices.put(newId, Map.entry(runner, future));
         logger.atInfo().log("Post LocalDeviceUpEvent");
         globalInternalBus.post(

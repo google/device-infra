@@ -16,21 +16,20 @@
 
 package com.google.devtools.mobileharness.infra.controller.test;
 
+import static java.util.stream.Collectors.joining;
+
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionUnit;
 
 /** Test runner which is the main entry for controlling a generic Mobile Harness test. */
 public interface TestRunner {
 
-  /**
-   * @return the execution information of the test.
-   */
+  /** Returns the execution information of the test. */
   TestExecutionUnit getTestExecutionUnit();
 
-  /**
-   * @return the allocation information of the test.
-   */
+  /** Returns the allocation information of the test. */
   Allocation getAllocation();
 
   /**
@@ -63,4 +62,11 @@ public interface TestRunner {
    * com.google.devtools.mobileharness.infra.container.controller.ProxyTestRunner ProxyTestRunner}).
    */
   boolean isClosed();
+
+  default String getTestRunnerThreadName() {
+    return String.format(
+        "test-runner-%s@%s",
+        getTestExecutionUnit().locator().id(),
+        getAllocation().getAllDevices().stream().map(DeviceLocator::id).collect(joining(",")));
+  }
 }

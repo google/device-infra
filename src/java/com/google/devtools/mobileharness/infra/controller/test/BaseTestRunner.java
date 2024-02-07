@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.controller.test;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toCollection;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -262,233 +261,219 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
 
   @Override
   public TestExecutionResult execute() throws InterruptedException {
-    try (MobileHarnessAutoCloseable executeSpan = getExecuteSpan()) {
+    try (MobileHarnessAutoCloseable ignored1 = getExecuteSpan();
+        WithTestContext ignored2 = TestContext.set(testInfo.locator())) {
       MobileHarnessLogTag.addTag(MobileHarnessLogTag.TEST_ID, getTestInfo().locator().getId());
-      String oldThreadName = Thread.currentThread().getName();
-      Thread.currentThread()
-          .setName(
-              "test-runner-"
-                  + getTestInfo().locator().getId()
-                  + "@"
-                  + getAllocation().getAllDevices().stream()
-                      .map(com.google.devtools.mobileharness.api.model.lab.DeviceLocator::id)
-                      .collect(joining(",")));
-      try (WithTestContext ignored2 = TestContext.set(testInfo.locator())) {
-        ImmutableList<DeviceLocator> deviceLocators = allocation.getAllDeviceLocators();
-        TestLocator testLocator = testInfo.locator();
-        JobInfo jobInfo = testInfo.jobInfo();
-        Throwable testException = null;
-        testInfo.status().set(TestStatus.RUNNING);
-        PostTestDeviceOp postTestDeviceOp;
-        String testLinkInMhfe =
-            String.format(
-                "http://mobileharness-fe/testdetailview/%s/%s",
-                jobInfo.locator().getId(), testLocator.getId());
-        testInfo.properties().add(PropertyName.Test.TEST_LINK_IN_MHFE, testLinkInMhfe);
-        try {
-          testInfo
-              .log()
-              .atInfo()
-              .alsoTo(logger)
-              .log(
-                  "Start pre-running test %s on device(s) %s",
-                  testLocator.getName(), deviceLocators);
+      ImmutableList<DeviceLocator> deviceLocators = allocation.getAllDeviceLocators();
+      TestLocator testLocator = testInfo.locator();
+      JobInfo jobInfo = testInfo.jobInfo();
+      Throwable testException = null;
+      testInfo.status().set(TestStatus.RUNNING);
+      PostTestDeviceOp postTestDeviceOp;
+      String testLinkInMhfe =
+          String.format(
+              "http://mobileharness-fe/testdetailview/%s/%s",
+              jobInfo.locator().getId(), testLocator.getId());
+      testInfo.properties().add(PropertyName.Test.TEST_LINK_IN_MHFE, testLinkInMhfe);
+      try {
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log(
+                "Start pre-running test %s on device(s) %s", testLocator.getName(), deviceLocators);
 
-          boolean skipRunTest = false;
-          if (shouldRunDoPreRunTest(testInfo)) {
-            try (MobileHarnessAutoCloseable preRunTestSpan = getPreRunTestSpan()) {
-              skipRunTest = doPreRunTest();
-            } finally {
-              testInfo
-                  .log()
-                  .atInfo()
-                  .alsoTo(logger)
-                  .log(
-                      "Pre-run test %s finished%s",
-                      testLocator.getName(),
-                      skipRunTest ? " and test running will be skipped" : "");
-            }
-          } else {
-            testInfo
-                .log()
-                .atInfo()
-                .alsoTo(logger)
-                .log("Skip doPreRunTest because it is a resumed job");
-          }
-          if (!skipRunTest && !Thread.currentThread().isInterrupted()) {
+        boolean skipRunTest = false;
+        if (shouldRunDoPreRunTest(testInfo)) {
+          try (MobileHarnessAutoCloseable preRunTestSpan = getPreRunTestSpan()) {
+            skipRunTest = doPreRunTest();
+          } finally {
             testInfo
                 .log()
                 .atInfo()
                 .alsoTo(logger)
                 .log(
-                    "Start running test %s on device(s) %s",
-                    testInfo.locator().getName(), allocation.getAllDeviceLocators());
-            try (MobileHarnessAutoCloseable runTestSpan = getRunTestSpan()) {
-              runTest(testInfo, allocation);
-            } finally {
-              testInfo
-                  .log()
-                  .atInfo()
-                  .alsoTo(logger)
-                  .log("Run test %s finished", testInfo.locator().getName());
-            }
+                    "Pre-run test %s finished%s",
+                    testLocator.getName(), skipRunTest ? " and test running will be skipped" : "");
           }
-        } catch (InterruptedException e) {
-          if (jobInfo.timer().isExpired()) {
-            // Job is timeout and test thread pool is shutdown.
-            testInfo
-                .result()
-                .toNewResult()
-                .setNonPassing(
-                    Test.TestResult.TIMEOUT,
-                    new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                        InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
-                        "Test interrupted due to job timeout",
-                        e));
-          } else if (testInfo.timer().isExpired()) {
-            // Job is timeout and test thread pool is shutdown.
-            testInfo
-                .result()
-                .toNewResult()
-                .setNonPassing(
-                    Test.TestResult.TIMEOUT,
-                    new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                        InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
-                        "Test timeout and interrupted",
-                        e));
-          } else if (SystemUtil.isProcessShuttingDown()) {
-            // The process is shutting down.
-            testInfo
-                .result()
-                .toNewResult()
-                .setNonPassing(
-                    Test.TestResult.ERROR,
-                    new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                        InfraErrorId.TR_TEST_INTERRUPTED_WHEN_PROCESS_SHUTDOWN,
-                        "The process is shutting down.",
-                        e));
-          } else {
-            // If job is not timeout but test timeout, TestManager has already marked the test as
-            // TIMEOUT and can not be overwritten here.
-            com.google.devtools.mobileharness.api.model.error.MobileHarnessException cause;
-
-            if ("lab".equals(getComponentName()) || "local".equals(getComponentName())) {
-              // If the test is not timeout, and it runs in lab or local mode, it should be
-              // some error such as device disconnected.
-              if (SharedPoolJobUtil.isUsingSharedPool(testInfo.jobInfo())) {
-                cause =
-                    new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                        InfraErrorId.TR_TEST_INTERRUPTED_IN_SHARED_LAB,
-                        "Test is interrupted in the shared lab. It can be caused by device"
-                            + " disconnection.",
-                        e);
-              } else {
-                cause =
-                    new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                        InfraErrorId.TR_TEST_INTERRUPTED_IN_SATELLITE_LAB,
-                        "Test is interrupted in the satellite lab. It can be caused by device"
-                            + " disconnection",
-                        e);
-              }
-            } else {
-              // If the test is not timeout, and it runs in client, it's usually killed by user.
-              cause =
-                  new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                      InfraErrorId.TR_TEST_INTERRUPTED_WHEN_USER_KILL_JOB,
-                      "Test interrupted because it's manually killed by user.",
-                      e);
-            }
-            testInfo.result().toNewResult().setNonPassing(Test.TestResult.ERROR, cause);
-            testException = e;
-          }
+        } else {
           testInfo
               .log()
-              .atWarning()
+              .atInfo()
               .alsoTo(logger)
-              .log("Test interrupted, error:%n%s", Throwables.getStackTraceAsString(e));
-          throw e;
-        } catch (MobileHarnessException e) {
-          // Marks this to {@link TestResult#ERROR} in case the driver has already changed the
-          // {@link TestResult}.
+              .log("Skip doPreRunTest because it is a resumed job");
+        }
+        if (!skipRunTest && !Thread.currentThread().isInterrupted()) {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log(
+                  "Start running test %s on device(s) %s",
+                  testInfo.locator().getName(), allocation.getAllDeviceLocators());
+          try (MobileHarnessAutoCloseable runTestSpan = getRunTestSpan()) {
+            runTest(testInfo, allocation);
+          } finally {
+            testInfo
+                .log()
+                .atInfo()
+                .alsoTo(logger)
+                .log("Run test %s finished", testInfo.locator().getName());
+          }
+        }
+      } catch (InterruptedException e) {
+        if (jobInfo.timer().isExpired()) {
+          // Job is timeout and test thread pool is shutdown.
           testInfo
               .result()
               .toNewResult()
               .setNonPassing(
-                  Result.upgradeTestResult(ResultUtil.getResultByException(e)),
-                  ErrorModelConverter.upgradeMobileHarnessException(e));
+                  Test.TestResult.TIMEOUT,
+                  new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                      InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
+                      "Test interrupted due to job timeout",
+                      e));
+        } else if (testInfo.timer().isExpired()) {
+          // Job is timeout and test thread pool is shutdown.
           testInfo
-              .log()
-              .atWarning()
-              .alsoTo(logger)
-              .log("ERROR: %s", Throwables.getStackTraceAsString(e));
-          testException = e;
-        } catch (Throwable e) {
-          // Marks this to {@link TestResult#ERROR} in case the driver has already changed the
-          // {@link TestResult}.
+              .result()
+              .toNewResult()
+              .setNonPassing(
+                  Test.TestResult.TIMEOUT,
+                  new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                      InfraErrorId.TR_JOB_TIMEOUT_AND_INTERRUPTED,
+                      "Test timeout and interrupted",
+                      e));
+        } else if (SystemUtil.isProcessShuttingDown()) {
+          // The process is shutting down.
           testInfo
               .result()
               .toNewResult()
               .setNonPassing(
                   Test.TestResult.ERROR,
                   new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                      InfraErrorId.TR_TEST_RUNNER_FATAL_ERROR,
-                      "TR FATAL ERROR: " + e.getMessage(),
+                      InfraErrorId.TR_TEST_INTERRUPTED_WHEN_PROCESS_SHUTDOWN,
+                      "The process is shutting down.",
                       e));
-          testInfo
-              .log()
-              .atWarning()
-              .alsoTo(logger)
-              .log("FATAL ERROR: %s", Throwables.getStackTraceAsString(e));
+        } else {
+          // If job is not timeout but test timeout, TestManager has already marked the test as
+          // TIMEOUT and can not be overwritten here.
+          com.google.devtools.mobileharness.api.model.error.MobileHarnessException cause;
+
+          String componentName = getComponentName();
+          if (componentName.equals("lab") || componentName.equals("local")) {
+            // If the test is not timeout, and it runs in lab or local mode, it should be
+            // some error such as device disconnected.
+            if (SharedPoolJobUtil.isUsingSharedPool(testInfo.jobInfo())) {
+              cause =
+                  new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                      InfraErrorId.TR_TEST_INTERRUPTED_IN_SHARED_LAB,
+                      "Test is interrupted in the shared lab. It can be caused by device"
+                          + " disconnection.",
+                      e);
+            } else {
+              cause =
+                  new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                      InfraErrorId.TR_TEST_INTERRUPTED_IN_SATELLITE_LAB,
+                      "Test is interrupted in the satellite lab. It can be caused by device"
+                          + " disconnection",
+                      e);
+            }
+          } else {
+            // If the test is not timeout, and it runs in client, it's usually killed by user.
+            cause =
+                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                    InfraErrorId.TR_TEST_INTERRUPTED_WHEN_USER_KILL_JOB,
+                    "Test interrupted because it's manually killed by user.",
+                    e);
+          }
+          testInfo.result().toNewResult().setNonPassing(Test.TestResult.ERROR, cause);
           testException = e;
+        }
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log("Test interrupted, error:%n%s", Throwables.getStackTraceAsString(e));
+        throw e;
+      } catch (MobileHarnessException e) {
+        // Marks this to {@link TestResult#ERROR} in case the driver has already changed the
+        // {@link TestResult}.
+        testInfo
+            .result()
+            .toNewResult()
+            .setNonPassing(
+                Result.upgradeTestResult(ResultUtil.getResultByException(e)),
+                ErrorModelConverter.upgradeMobileHarnessException(e));
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log("ERROR: %s", Throwables.getStackTraceAsString(e));
+        testException = e;
+      } catch (Throwable e) {
+        // Marks this to {@link TestResult#ERROR} in case the driver has already changed the
+        // {@link TestResult}.
+        testInfo
+            .result()
+            .toNewResult()
+            .setNonPassing(
+                Test.TestResult.ERROR,
+                new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                    InfraErrorId.TR_TEST_RUNNER_FATAL_ERROR,
+                    "TR FATAL ERROR: " + e.getMessage(),
+                    e));
+        testInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .log("FATAL ERROR: %s", Throwables.getStackTraceAsString(e));
+        testException = e;
+      } finally {
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log(
+                "Start post-run test %s on device(s) %s",
+                testInfo.locator().getName(), allocation.getAllDeviceLocators());
+        testInfo
+            .properties()
+            .add(
+                PropertyName.Test.DEVICE_DONE_EPOCH_MS, String.valueOf(Clock.systemUTC().millis()));
+        try (MobileHarnessAutoCloseable postRunTestSpan = getPostRunTestSpan()) {
+          // Makes sure we finalize the test result.
+          if (testInfo.result().get() == TestResult.UNKNOWN) {
+            String errMsg = "Test result not found when test finished normally. Mark as ERROR.";
+            testInfo
+                .result()
+                .toNewResult()
+                .setNonPassing(
+                    Test.TestResult.ERROR,
+                    new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                        InfraErrorId.TR_TEST_FINISHED_WITHOUT_RESULT, errMsg));
+            testInfo.log().atWarning().alsoTo(logger).log("%s", errMsg);
+          }
+
+          postTestDeviceOp = doPostRunTest(testException);
+          testMessagePoster.close();
         } finally {
           testInfo
               .log()
               .atInfo()
               .alsoTo(logger)
-              .log(
-                  "Start post-run test %s on device(s) %s",
-                  testInfo.locator().getName(), allocation.getAllDeviceLocators());
-          testInfo
-              .properties()
-              .add(
-                  PropertyName.Test.DEVICE_DONE_EPOCH_MS,
-                  String.valueOf(Clock.systemUTC().millis()));
-          try (MobileHarnessAutoCloseable postRunTestSpan = getPostRunTestSpan()) {
-            // Makes sure we finalize the test result.
-            if (testInfo.result().get() == TestResult.UNKNOWN) {
-              String errMsg = "Test result not found when test finished normally. Mark as ERROR.";
-              testInfo
-                  .result()
-                  .toNewResult()
-                  .setNonPassing(
-                      Test.TestResult.ERROR,
-                      new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                          InfraErrorId.TR_TEST_FINISHED_WITHOUT_RESULT, errMsg));
-              testInfo.log().atWarning().alsoTo(logger).log("%s", errMsg);
-            }
-
-            postTestDeviceOp = doPostRunTest(testException);
-            testMessagePoster.close();
-          } finally {
-            testInfo
-                .log()
-                .atInfo()
-                .alsoTo(logger)
-                .log("Post-run test %s finished", testInfo.locator().getName());
-          }
-          // Do not add test logs after calling the following method.
-          testInfo.log().shrink();
-          jobInfo
-              .log()
-              .atInfo()
-              .alsoTo(logger)
-              .log("End test %s on devices(s) %s", testLocator.getName(), deviceLocators);
+              .log("Post-run test %s finished", testInfo.locator().getName());
         }
-        return TestExecutionResult.create(
-            Result.upgradeTestResult(testInfo.result().get()), postTestDeviceOp);
-      } finally {
-        Thread.currentThread().setName(oldThreadName);
+        // Do not add test logs after calling the following method.
+        testInfo.log().shrink();
+        jobInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("End test %s on devices(s) %s", testLocator.getName(), deviceLocators);
       }
+      return TestExecutionResult.create(
+          Result.upgradeTestResult(testInfo.result().get()), postTestDeviceOp);
     }
   }
 

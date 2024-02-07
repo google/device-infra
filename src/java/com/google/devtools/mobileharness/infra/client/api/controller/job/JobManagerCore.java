@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.api.controller.job;
 
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
@@ -151,7 +153,12 @@ public class JobManagerCore implements Runnable {
       registerPlugins(jobRunner, jobInfo, deviceAllocator);
 
       jobRunners.put(
-          jobId, JobRunnerAndFuture.of(jobRunner, startJobRunnerThread(jobRunner, jobId)));
+          jobId,
+          JobRunnerAndFuture.of(
+              jobRunner,
+              jobThreadPool.submit(
+                  threadRenaming(
+                      getJobRunnerRunnable(jobRunner, jobId), () -> "job-runner-" + jobId))));
 
       jobInfo.log().atInfo().alsoTo(logger).log("Started job %s", jobId);
     }
@@ -288,9 +295,8 @@ public class JobManagerCore implements Runnable {
     // Does nothing.
   }
 
-  /** Actually starts the JobRunnerCore thread. */
-  protected Future<?> startJobRunnerThread(JobRunnerCore jobRunner, String jobId) {
-    return jobThreadPool.submit(jobRunner);
+  protected Runnable getJobRunnerRunnable(JobRunnerCore jobRunner, String jobId) {
+    return jobRunner;
   }
 
   /** Core logic to handle the test execution ended event in job manager. */

@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.util.concurrent;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
@@ -41,15 +42,8 @@ public final class Callables {
     checkNotNull(nameSupplier);
     checkNotNull(callable);
     return () -> {
-      Thread currentThread = Thread.currentThread();
-      String oldName = currentThread.getName();
-      boolean restoreName = trySetName(nameSupplier.get(), currentThread);
-      try {
+      try (NonThrowingAutoCloseable ignored = threadRenaming(nameSupplier.get())) {
         return callable.call();
-      } finally {
-        if (restoreName) {
-          trySetName(oldName, currentThread);
-        }
       }
     };
   }
@@ -66,17 +60,44 @@ public final class Callables {
     checkNotNull(nameSupplier);
     checkNotNull(runnable);
     return () -> {
-      Thread currentThread = Thread.currentThread();
-      String oldName = currentThread.getName();
-      boolean restoreName = trySetName(nameSupplier.get(), currentThread);
-      try {
+      try (NonThrowingAutoCloseable ignored = threadRenaming(nameSupplier.get())) {
         runnable.run();
-      } finally {
-        if (restoreName) {
-          trySetName(oldName, currentThread);
-        }
       }
     };
+  }
+
+  /**
+   * Sets the thread name for a code block in the current thread, and restores the original thread
+   * name when leaving the block (when the returned closeable is closed).
+   *
+   * <p>Example:
+   *
+   * <pre>{@code try (NonThrowingAutoCloseable ignored = threadRenaming("new-thread-name")) {
+   *   doSomething(); // with the thread name "new-thread-name"
+   * }}</pre>
+   */
+  public static NonThrowingAutoCloseable threadRenaming(String threadName) {
+    return new ThreadRenamer(threadName);
+  }
+
+  private static class ThreadRenamer implements NonThrowingAutoCloseable {
+
+    private final Thread thread;
+    private final String oldThreadName;
+    private final boolean restoreThreadName;
+
+    private ThreadRenamer(String threadName) {
+      this.thread = Thread.currentThread();
+      this.oldThreadName = thread.getName();
+      this.restoreThreadName = trySetName(threadName, thread);
+    }
+
+    @Override
+    public void close() {
+      if (restoreThreadName) {
+        trySetName(oldThreadName, thread);
+      }
+    }
   }
 
   @CanIgnoreReturnValue

@@ -16,17 +16,19 @@
 
 package com.google.devtools.mobileharness.infra.controller.test.launcher;
 
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceTestExecutor;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
+import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,17 +37,17 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
-/** Local device test runner launcher which uses {@link LocalDeviceRunner}s to launch the test. */
+/** Local device test runner launcher which uses {@code LocalDeviceRunner}s to launch the test. */
 public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /**
    * Primary local device test executor which will invoke {@link #executeTest()} synchronously on
-   * the main thread of the primary {@link LocalDeviceRunner} of the test.
+   * the main thread of the primary {@code LocalDeviceRunner} of the test.
    *
-   * <p>When a test has multiple {@link LocalDeviceRunner}, one and only one will be the primary
-   * {@link LocalDeviceRunner} and the other ones will wait until the primary one finishes the test.
+   * <p>When a test has multiple {@code LocalDeviceRunner}, one and only one will be the primary
+   * {@code LocalDeviceRunner} and the other ones will wait until the primary one finishes the test.
    */
   private class PrimaryDeviceTestExecutor extends AbstractDeviceTestExecutor {
 
@@ -67,7 +69,8 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
 
       // Executes the test and broadcasts the result or the error.
       hasExecuted = true;
-      try {
+      try (NonThrowingAutoCloseable ignored =
+          threadRenaming(getTestRunner().getTestRunnerThreadName())) {
         logger.atInfo().log(
             "Executing test [%s] on its primary device runner [%s]",
             getTestRunner().getTestExecutionUnit().locator().id(),

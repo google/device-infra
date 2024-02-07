@@ -55,6 +55,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:mobile_harness_auto_closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",

@@ -286,9 +286,7 @@ public class JobRunnerCore implements Runnable {
       Sleeper sleeper,
       JobChecker jobChecker,
       PluginCreator.Factory pluginLoaderFactory,
-      @Nullable EventBus globalInternalBus)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      @Nullable EventBus globalInternalBus) {
     this.jobInfo = jobInfo;
     this.deviceAllocator = deviceAllocator;
     this.execMode = execMode;
@@ -404,8 +402,6 @@ public class JobRunnerCore implements Runnable {
 
   @Override
   public void run() {
-    String oldThreadName = Thread.currentThread().getName();
-    Thread.currentThread().setName("job-runner-" + jobInfo.locator().getId());
     running = true;
     jobInfo.status().set(TestStatus.RUNNING);
     Throwable jobError = null;
@@ -718,7 +714,6 @@ public class JobRunnerCore implements Runnable {
       try (MobileHarnessAutoCloseable postRunJobSpan = getPostRunJobSpan()) {
         postRunJob(jobError, failFastError, isDeviceAllocatorSetUp);
       }
-      Thread.currentThread().setName(oldThreadName);
     }
   }
 
