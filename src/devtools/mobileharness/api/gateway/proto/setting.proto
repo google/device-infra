@@ -1,0 +1,61 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.gateway;
+
+import "src/devtools/mobileharness/api/model/proto/job.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job_config.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/job_spec.proto";
+
+option java_package = "com.google.devtools.mobileharness.api.gateway.proto";
+option java_outer_classname = "Setting";
+
+// Next tag: 20
+message JobConfig {
+  optional string name = 1;  // required.
+  optional string user = 2;
+  optional mobileharness.shared.JobType type = 3;  // required.
+  repeated mobileharness.shared.StrPair dimension = 4;
+  repeated mobileharness.shared.StrPair param = 5;
+  repeated mobileharness.shared.StrPair file = 6;
+  repeated string test = 7;
+  optional mobileharness.shared.Timeout timeout = 8;
+  optional mobileharness.shared.Retry deprecated_retry = 9 [deprecated = true];
+  optional mobileharness.api.model.Retry retry = 16;
+  optional mobileharness.api.model.Repeat repeat = 17;
+  repeated mobileharness.client.JobConfig.SubDeviceSpec sub_device_spec = 18;
+  repeated string shared_dimension_names = 19;
+
+  // Properties which need to be set into JobInfo after the JobInfo is created.
+  repeated mobileharness.shared.StrPair property = 11;
+  optional mobileharness.shared.spec.JobSpec job_spec = 12;
+
+  // Do NOT set this field explicitly. It is the parsing result of BlazeTarget.
+  optional JobConfigFromTarget job_config_from_target = 13;
+  optional string master_spec = 14;
+  optional mobileharness.shared.Priority priority = 15 [default = DEFAULT];
+}
+
+// MH's JobConfig from test target.
+message JobConfigFromTarget {
+  optional mobileharness.client.JobConfig mh_job_config = 1;
+  repeated string nonstandard_flag = 2;
+  optional string gen_dir_path = 3;
+}
