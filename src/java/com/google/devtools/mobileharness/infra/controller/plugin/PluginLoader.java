@@ -25,6 +25,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collection;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /** Plugin loader for loading plugins. */
@@ -58,7 +59,7 @@ public class PluginLoader {
 
   /**
    * Operates exactly as a {@link URLClassLoader}, with the exception that any classes with names
-   * matching the optional {@link #forceLoadFromJarClassRegex} will not be loaded from the parent
+   * matching the optional {@link #forceLoadFromJarClassPattern} will not be loaded from the parent
    * {@link ClassLoader}.
    *
    * <p>This gives plugin authors a mechanism to force the system to load certain classes from their
@@ -73,14 +74,15 @@ public class PluginLoader {
      * from a plugin's unintended use of classes from Mobile Harness, rather than its own classes
      * (since parent classes are always used, if they are present).
      */
-    @Nullable private final String forceLoadFromJarClassRegex;
+    @Nullable private final Pattern forceLoadFromJarClassPattern;
 
     private PluginClassLoader(
         Collection<URL> jarUrls,
         ClassLoader parentClassLoader,
         @Nullable String forceLoadFromJarClassRegex) {
       super(jarUrls.toArray(new URL[0]), parentClassLoader);
-      this.forceLoadFromJarClassRegex = forceLoadFromJarClassRegex;
+      forceLoadFromJarClassPattern =
+          forceLoadFromJarClassRegex == null ? null : Pattern.compile(forceLoadFromJarClassRegex);
     }
 
     @Override
@@ -89,11 +91,12 @@ public class PluginLoader {
         // First, check if the class has already been loaded
         Class<?> c = findLoadedClass(name);
         if (c == null) {
-          if (forceLoadFromJarClassRegex != null && name.matches(forceLoadFromJarClassRegex)) {
+          if (forceLoadFromJarClassPattern != null
+              && forceLoadFromJarClassPattern.matcher(name).matches()) {
             logger.atInfo().log(
                 "Class %s forced to load from plugin library only, by"
                     + " *_force_load_from_jar_class_regex = %s",
-                name, forceLoadFromJarClassRegex);
+                name, forceLoadFromJarClassPattern);
             c = findClass(name);
             if (resolve) {
               resolveClass(c);
