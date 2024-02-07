@@ -36,3 +36,9 @@ java_proto_library(
     name = "setting_java_proto",
     deps = [":setting_proto"],
 )
+
+go_proto_library(
+    name = "setting_go_proto",
+    visibility = ["//visibility:public"],
+    deps = [":setting_proto"],
+)
