@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.jobconfig;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -29,6 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
+import com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfigFromTarget;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
@@ -43,6 +45,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.protobuf.Descriptors.FieldDescriptor;
+import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Message;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
@@ -57,6 +60,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.DriverDecoratorSpecMapper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
+import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.DeviceList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
@@ -110,7 +114,77 @@ public final class JobInfoCreator {
   private static final ImmutableSet<String> LINKABLE_FILE_SUFFIX =
       ImmutableSet.of("apk", "gz", "img", "jar", "par", "tar", "zip");
 
-  /** Creates JobInfo from MH's JobConfig. */
+  /** Creates JobInfo from Gateway JobConfig. */
+  public static JobInfo createJobInfo(
+      String jobId,
+      com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
+      String sessionTmpDir,
+      String sessionGenDir)
+      throws MobileHarnessException, InterruptedException {
+    jobId = jobId == null ? UUID.randomUUID().toString() : jobId;
+    String jobDir = PathUtil.join(sessionTmpDir, "j_" + jobId);
+    LocalFileUtil localFileUtil = new LocalFileUtil();
+    JobSetting.Builder jobSettingBuilder =
+        JobSetting.newBuilder()
+            .setRemoteFileDir(sessionGenDir)
+            .setTmpFileDir(PathUtil.join(jobDir, "tmp"))
+            .setRunFileDir(PathUtil.join(jobDir, "run"))
+            .setGenFileDir(PathUtil.join(jobDir, "gen"))
+            .setTimeout(
+                SharedPoolJobUtil.maybeExtendStartTimeout(jobConfig.getTimeout(), jobConfig))
+            .setRepeat(jobConfig.getRepeat());
+    if (jobConfig.hasRetry()) {
+      jobSettingBuilder.setRetry(jobConfig.getRetry());
+    } else {
+      // Set to default value.
+      // When previously use com.google.wireless.qa.mobileharness.shared.proto.Job.Retry, the
+      // test_attempts and retry_level have default value. With new
+      // com.google.devtools.mobileharness.api.model.proto.Job.Retry, the default value doesn't
+      // exist, so we need to manually set it to avoid inconsistency.
+      jobSettingBuilder.setRetry(JobSetting.getDefaultRetryInstance());
+    }
+    logger.atInfo().log("Input gateway JobConfig.hasRetry=%b", jobConfig.hasRetry());
+    logger.atInfo().log("Output MH JobSetting.getRetry=%s", jobSettingBuilder.build().getRetry());
+    if (jobConfig.hasPriority()) {
+      jobSettingBuilder.setPriority(jobConfig.getPriority());
+    }
+
+    JobSetting jobSetting = jobSettingBuilder.build();
+
+    JobInfo jobInfo;
+    if (jobConfig.hasJobConfigFromTarget()) {
+      JobConfigFromTarget jobConfigFromTarget = jobConfig.getJobConfigFromTarget();
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig mhJobConfig =
+          jobConfigFromTarget.getMhJobConfig();
+      mhJobConfig = mhJobConfig.toBuilder().setName(mhJobConfig.getName()).build();
+      jobInfo =
+          createJobInfo(
+              jobId,
+              mhJobConfig,
+              jobConfigFromTarget.getNonstandardFlagList(),
+              jobSetting,
+              JobUser.newBuilder()
+                  .setRunAs(jobConfig.getUser())
+                  .setActualUser("mobileharness-gateway")
+                  .build(),
+              sessionTmpDir,
+              jobConfigFromTarget.getGenDirPath(),
+              false);
+      for (StrPair property : jobConfig.getPropertyList()) {
+        jobInfo.properties().add(property.getName(), property.getValue());
+      }
+      for (StrPair param : jobConfig.getParamList()) {
+        if (!jobInfo.params().has(param.getName())) {
+          jobInfo.params().add(param.getName(), param.getValue());
+        }
+      }
+    } else {
+      jobInfo = createJobInfo(jobId, jobConfig, jobSetting, localFileUtil, sessionTmpDir);
+    }
+    return jobInfo;
+  }
+
+  /** Creates JobInfo from MH JobConfig. */
   public static JobInfo createJobInfo(
       com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
       List<String> nonstandardFlags,
@@ -129,7 +203,7 @@ public final class JobInfoCreator {
         true);
   }
 
-  /** Creates JobInfo from MH's JobConfig. */
+  /** Creates JobInfo from MH JobConfig. */
   @VisibleForTesting
   static JobInfo createJobInfo(
       String jobId,
@@ -248,6 +322,83 @@ public final class JobInfoCreator {
     if (sessionId != null) {
       jobInfo.properties().add(PropertyName.Job.SESSION_ID, sessionId);
     }
+    return jobInfo;
+  }
+
+  /** Creates JobInfo from Gateway JobConfig which does not contain MH JobConfig. */
+  private static JobInfo createJobInfo(
+      String jobId,
+      com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
+      JobSetting jobSetting,
+      LocalFileUtil localFileUtil,
+      String sessionTmpDir)
+      throws MobileHarnessException, InterruptedException {
+    JobInfo jobInfo =
+        JobInfo.newBuilder()
+            .setLocator(new JobLocator(jobId, jobConfig.getName()))
+            .setJobUser(
+                JobUser.newBuilder()
+                    .setRunAs(jobConfig.getUser())
+                    .setActualUser("mobileharness-gateway")
+                    .build())
+            .setType(mayAppendDecorator(jobConfig.getType(), jobConfig))
+            .setSetting(jobSetting)
+            .build();
+
+    for (StrPair param : jobConfig.getParamList()) {
+      jobInfo.params().add(param.getName(), param.getValue());
+    }
+
+    for (StrPair file : jobConfig.getFileList()) {
+      String fileValue = file.getValue();
+      if (localFileUtil.isLocalFileOrDir(fileValue)
+          // The local file must be an absolute path.
+          && fileValue.startsWith("/")) {
+        // Copies file from session tmp dir to job run dir.
+        fileValue = PathUtil.join(jobSetting.getRunFileDir(), fileValue.replace(sessionTmpDir, ""));
+        localFileUtil.prepareDir(PathUtil.dirname(fileValue));
+        // Copies/links the source file/dir to the job specific run-file dir.
+        if (LINKABLE_FILE_SUFFIX.contains(Ascii.toLowerCase(Files.getFileExtension(fileValue)))) {
+          localFileUtil.linkFileOrDir(file.getValue(), fileValue);
+        } else {
+          localFileUtil.copyFileOrDir(file.getValue(), fileValue);
+        }
+      }
+      jobInfo.files().add(file.getName(), fileValue);
+    }
+
+    jobInfo.tests().addAll(jobConfig.getTestList());
+    for (StrPair property : jobConfig.getPropertyList()) {
+      jobInfo.properties().add(property.getName(), property.getValue());
+    }
+
+    try {
+      jobInfo
+          .protoSpec()
+          .setProto(
+              jobInfo.protoSpec().getProto().toBuilder()
+                  .mergeFrom(
+                      jobConfig.getJobSpec().toByteString(),
+                      JobSpecHelper.getDefaultHelper().getExtensionRegistry())
+                  .build());
+    } catch (InvalidProtocolBufferException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.JOB_SPEC_PARSE_PROTOBUF_ERROR, "Invalid job spec proto.", e);
+    }
+
+    List<String> apksUnderTest =
+        putApksUnderTestInFront(new ArrayList<>(jobInfo.files().get(TAG_BUILD_APK)));
+    finalizeSubDeviceSpecs(
+        jobConfig.getSubDeviceSpecList(), jobConfig.getSharedDimensionNamesList(), jobInfo);
+
+    ImmutableMap<String, String> dimensionMap =
+        jobConfig.getDimensionList().stream()
+            .collect(toImmutableMap(StrPair::getName, StrPair::getValue));
+
+    jobInfo.subDeviceSpecs().getAllSubDevices().stream()
+        .map(com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec::dimensions)
+        .forEach(dimensions -> dimensions.addAll(dimensionMap));
+
     return jobInfo;
   }
 
@@ -393,12 +544,10 @@ public final class JobInfoCreator {
       com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig)
       throws MobileHarnessException {
     JobType type;
-    /**
-     * It is possible for jobConfig to have both a non-empty type and device fields. We should check
-     * for the deprecated type field first because device may have been populated while rewriting
-     * the job config json to accommodate moving the dimensions proto field into part of
-     * SubDeviceSpecs.
-     */
+    // It is possible for jobConfig to have both a non-empty type and device fields. We should check
+    // for the deprecated type field first because device may have been populated while rewriting
+    // the job config json to accommodate moving the dimensions proto field into part of
+    // SubDeviceSpecs.
     if (!jobConfig.getType().isEmpty()) {
       try {
         type = JobTypeUtil.parseString(jobConfig.getType());
@@ -454,6 +603,16 @@ public final class JobInfoCreator {
 
   private static JobType mayAppendDecorator(
       JobType type, com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig) {
+    JobType newType =
+        SharedPoolJobUtil.isUsingSharedDefaultPerformancePool(jobConfig)
+            ? mayAppendPerformanceLockDecorator(type)
+            : type;
+    return mayAddSysLogDecoratorForIosTest(newType);
+  }
+
+  private static JobType mayAppendDecorator(
+      JobType type,
+      com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig) {
     JobType newType =
         SharedPoolJobUtil.isUsingSharedDefaultPerformancePool(jobConfig)
             ? mayAppendPerformanceLockDecorator(type)

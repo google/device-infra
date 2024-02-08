@@ -37,6 +37,7 @@ java_library(
         "JobSettingsCreator.java",
     ],
     deps = [
+        "//src/devtools/mobileharness/api/gateway/proto:setting_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/infra/client/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -46,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/sharedpool:shared_pool_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:timeout_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:exit_code",

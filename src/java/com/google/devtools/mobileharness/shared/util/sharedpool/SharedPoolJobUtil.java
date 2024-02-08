@@ -20,6 +20,7 @@ import static java.lang.Math.max;
 
 import com.google.common.base.Ascii;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.gateway.proto.Setting;
 import com.google.devtools.mobileharness.api.model.job.JobLocator;
 import com.google.devtools.mobileharness.api.model.job.in.Dimensions;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
@@ -62,6 +63,15 @@ public final class SharedPoolJobUtil {
                         .get(Ascii.toLowerCase(Name.POOL.toString()))));
   }
 
+  /** Returns whether a gateway {@code jobConfig} is using shared pool. */
+  public static boolean isUsingSharedPool(Setting.JobConfig jobConfig) {
+    return jobConfig.getDimensionList().stream()
+        .anyMatch(
+            dimension ->
+                dimension.getName().equals(Ascii.toLowerCase(Name.POOL.toString()))
+                    && dimension.getValue().equals(Value.POOL_SHARED));
+  }
+
   /** Returns whether {@code job} is using performance pool. */
   public static boolean isUsingPerformancePool(JobScheduleUnit job) {
     return job.dimensions().get(Name.PERFORMANCE_POOL) != null;
@@ -90,6 +100,19 @@ public final class SharedPoolJobUtil {
                         spec.getDimensions().getContentMap().get("performance_pool")));
   }
 
+  /** Returns whether a gateway {@code jobConfig} is using default performance pool. */
+  public static boolean isUsingDefaultPerformancePool(Setting.JobConfig jobConfig) {
+    boolean inPerformancePool =
+        jobConfig.getDimensionList().stream()
+            .anyMatch(
+                dimension ->
+                    dimension.getName().equals(Ascii.toLowerCase(Name.PERFORMANCE_POOL.toString()))
+                        && Value.DEFAULT_PERFORMANCE_POOL_SHARED.equals(dimension.getValue()));
+    // Check MH JobConfig
+    return inPerformancePool
+        || isUsingDefaultPerformancePool(jobConfig.getJobConfigFromTarget().getMhJobConfig());
+  }
+
   /** Returns whether {@code job} is user performance pool in shared pool. */
   public static boolean isUsingSharedPerformancePool(JobScheduleUnit job) {
     return isUsingSharedPool(job) && isUsingPerformancePool(job);
@@ -110,6 +133,11 @@ public final class SharedPoolJobUtil {
     return isUsingSharedPool(job) && isUsingDefaultPerformancePool(job);
   }
 
+  /** Returns whether a gateway {@code job} is user default performance pool in shared pool. */
+  public static boolean isUsingSharedDefaultPerformancePool(Setting.JobConfig job) {
+    return isUsingSharedPool(job) && isUsingDefaultPerformancePool(job);
+  }
+
   /** Returns whether a job is from Hawkeye. */
   public static boolean isFromHawkeye(JobLocator job) {
     return job.name().contains(HAWKEYE_JOB_STR);
@@ -124,6 +152,17 @@ public final class SharedPoolJobUtil {
    * @return updated timeout
    */
   public static Timeout maybeExtendStartTimeout(Timeout timeout, JobConfig jobConfig) {
+    if (!isUsingSharedPool(jobConfig)) {
+      return timeout;
+    }
+    return maybeExtendStartTimeout(timeout);
+  }
+
+  /**
+   * Extends start timeout if necessary. The same as {@link #maybeExtendStartTimeout(Timeout,
+   * JobConfig)}.
+   */
+  public static Timeout maybeExtendStartTimeout(Timeout timeout, Setting.JobConfig jobConfig) {
     if (!isUsingSharedPool(jobConfig)) {
       return timeout;
     }

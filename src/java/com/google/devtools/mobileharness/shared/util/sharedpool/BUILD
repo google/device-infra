@@ -24,6 +24,7 @@ java_library(
     name = "shared_pool_util",
     srcs = ["SharedPoolJobUtil.java"],
     deps = [
+        "//src/devtools/mobileharness/api/gateway/proto:setting_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in:dimensions",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

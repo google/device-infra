@@ -33,9 +33,9 @@ public class OlcServerBinarySizeTest {
   private static final ImmutableSet<String>
       ATS_OLC_SERVER_LOCAL_MODE_LARGE_RESOURCE_PATH_ALLOWLIST = ImmutableSet.of();
 
-  private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 24_850_000L;
-  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 28_350_000L;
-  private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 27_200_000L;
+  private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 24_950_000L;
+  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 28_450_000L;
+  private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 27_350_000L;
 
   private static final long MAX_OLC_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE = 800_000L;
 
