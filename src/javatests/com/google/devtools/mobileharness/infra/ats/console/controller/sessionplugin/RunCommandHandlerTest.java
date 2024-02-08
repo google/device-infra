@@ -22,7 +22,6 @@ import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 
-import com.google.common.truth.Truth8;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
@@ -173,7 +172,7 @@ public final class RunCommandHandlerTest {
                         "android-cts/results/%s/tradefed_results/XtsTradefedTest_test_1",
                         TIMESTAMP_DIR_NAME)),
             /* recursively= */ true);
-    Truth8.assertThat(newFilesInTradefedResultsDir.stream().map(f -> f.getFileName().toString()))
+    assertThat(newFilesInTradefedResultsDir.stream().map(f -> f.getFileName().toString()))
         .containsExactly("test_result.xml");
 
     List<Path> newFilesInTradefedLogsDir =
@@ -185,7 +184,7 @@ public final class RunCommandHandlerTest {
                         "android-cts/logs/%s/tradefed_logs/XtsTradefedTest_test_1",
                         TIMESTAMP_DIR_NAME)),
             /* recursively= */ true);
-    Truth8.assertThat(newFilesInTradefedLogsDir.stream().map(f -> f.getFileName().toString()))
+    assertThat(newFilesInTradefedLogsDir.stream().map(f -> f.getFileName().toString()))
         .containsExactly("host_adb_log.txt", "xts_tf_output.log", "command_history.txt");
 
     // Verifies non-tradefed test
@@ -198,7 +197,7 @@ public final class RunCommandHandlerTest {
                         "android-cts/results/%s/non-tradefed_results/MoblyAospPackageTest_test_2",
                         TIMESTAMP_DIR_NAME)),
             /* recursively= */ true);
-    Truth8.assertThat(newFilesInNonTradefedResultsDir.stream().map(f -> f.getFileName().toString()))
+    assertThat(newFilesInNonTradefedResultsDir.stream().map(f -> f.getFileName().toString()))
         .containsExactly(
             "device_build_fingerprint.txt",
             "mobly_run_build_attributes.textproto",
@@ -214,7 +213,7 @@ public final class RunCommandHandlerTest {
                         "android-cts/logs/%s/non-tradefed_logs/MoblyAospPackageTest_test_2",
                         TIMESTAMP_DIR_NAME)),
             /* recursively= */ true);
-    Truth8.assertThat(newFilesInNonTradefedLogsDir.stream().map(f -> f.getFileName().toString()))
+    assertThat(newFilesInNonTradefedLogsDir.stream().map(f -> f.getFileName().toString()))
         .containsExactly(
             "command_history.txt",
             "mobly_command_output.log",

@@ -23,7 +23,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.truth.Truth8;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -138,7 +137,7 @@ public class AndroidSystemSpecUtilTest {
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
 
     Optional<String> optImei = systemSpecUtil.getDeviceImei(SERIAL, 29);
-    Truth8.assertThat(optImei).hasValue("867981021893899");
+    assertThat(optImei).hasValue("867981021893899");
 
     assertThat(
             assertThrows(
@@ -161,7 +160,7 @@ public class AndroidSystemSpecUtilTest {
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
 
     Optional<String> optImei = systemSpecUtil.getDeviceImei(SERIAL, 20);
-    Truth8.assertThat(optImei).hasValue("867981021893899");
+    assertThat(optImei).hasValue("867981021893899");
 
     assertThat(
             assertThrows(
@@ -184,7 +183,7 @@ public class AndroidSystemSpecUtilTest {
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
 
     Optional<String> optImei = systemSpecUtil.getDeviceImei(SERIAL, 30);
-    Truth8.assertThat(optImei).hasValue("867981021893899");
+    assertThat(optImei).hasValue("867981021893899");
 
     assertThat(
             assertThrows(
@@ -202,7 +201,7 @@ public class AndroidSystemSpecUtilTest {
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR,
                 "service: Service iphonesubinfo does not exist"));
 
-    Truth8.assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
+    assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
   }
 
   @Test
@@ -211,7 +210,7 @@ public class AndroidSystemSpecUtilTest {
             SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 4)))
         .thenReturn("Result: Parcel(00000000 ffffffff   '........')\n");
 
-    Truth8.assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
+    assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
   }
 
   @Test
@@ -224,7 +223,7 @@ public class AndroidSystemSpecUtilTest {
                 + "  0x00000010: 00310038 00320030 00380031 00330039 '8.1.0.2.1.8.9.3.'\n"
                 + "  0x00000020: 00390038 00000038                   '8.9.8...        ')\n");
 
-    Truth8.assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
+    assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
   }
 
   @Test
@@ -237,7 +236,7 @@ public class AndroidSystemSpecUtilTest {
                 + "  0x00000010: 00300030 00300030 00300030 00300030 '0.0.0.0.0.0.0.0.'\n"
                 + "  0x00000020: 00300030 00000030                   '0.0.0...        ')\n");
 
-    Truth8.assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
+    assertThat(systemSpecUtil.getDeviceImei(SERIAL, 29)).isEmpty();
   }
 
   @Test
@@ -254,7 +253,7 @@ public class AndroidSystemSpecUtilTest {
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
 
     Optional<String> optIccid = systemSpecUtil.getDeviceIccid(SERIAL, 29);
-    Truth8.assertThat(optIccid).hasValue("8901260971143441721");
+    assertThat(optIccid).hasValue("8901260971143441721");
 
     assertThat(
             assertThrows(
@@ -277,7 +276,7 @@ public class AndroidSystemSpecUtilTest {
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
 
     Optional<String> optIccid = systemSpecUtil.getDeviceIccid(SERIAL, 20);
-    Truth8.assertThat(optIccid).hasValue("8901260971143441721");
+    assertThat(optIccid).hasValue("8901260971143441721");
 
     assertThat(
             assertThrows(
@@ -300,7 +299,7 @@ public class AndroidSystemSpecUtilTest {
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
 
     Optional<String> optIccid = systemSpecUtil.getDeviceIccid(SERIAL, 21);
-    Truth8.assertThat(optIccid).hasValue("8901260971143441721");
+    assertThat(optIccid).hasValue("8901260971143441721");
 
     assertThat(
             assertThrows(
@@ -323,7 +322,7 @@ public class AndroidSystemSpecUtilTest {
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
 
     Optional<String> optIccid = systemSpecUtil.getDeviceIccid(SERIAL, 28);
-    Truth8.assertThat(optIccid).hasValue("8901260971143441721");
+    assertThat(optIccid).hasValue("8901260971143441721");
 
     assertThat(
             assertThrows(
@@ -346,7 +345,7 @@ public class AndroidSystemSpecUtilTest {
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
 
     Optional<String> optIccid = systemSpecUtil.getDeviceIccid(SERIAL, 30);
-    Truth8.assertThat(optIccid).hasValue("8901260971143441721");
+    assertThat(optIccid).hasValue("8901260971143441721");
 
     assertThat(
             assertThrows(
@@ -364,7 +363,7 @@ public class AndroidSystemSpecUtilTest {
                 AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_ERROR,
                 "service: Service iphonesubinfo does not exist"));
 
-    Truth8.assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
+    assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
   }
 
   @Test
@@ -373,7 +372,7 @@ public class AndroidSystemSpecUtilTest {
             SERIAL, String.format(AndroidSystemSpecUtil.ADB_SHELL_IPHONE_SUBINFO_TEMPLATE, 11)))
         .thenReturn("Result: Parcel(00000000 ffffffff   '........')\n");
 
-    Truth8.assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
+    assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
   }
 
   @Test
@@ -386,7 +385,7 @@ public class AndroidSystemSpecUtilTest {
                 + "  0x00000010: 00360032 00390030 00310037 00340031 '2.6.0.9.7.1.1.4.'\n"
                 + "  0x00000020: 00340033 00310034 00320037 00000031 '3.4.4.1.7.2.2...')\n");
 
-    Truth8.assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
+    assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
   }
 
   @Test
@@ -399,7 +398,7 @@ public class AndroidSystemSpecUtilTest {
                 + "  0x00000010: 00000000 00000000 00000000 00000000 '0.0.0.0.0.0.0.0.'\n"
                 + "  0x00000020: 00000000 00000000 00000000 00000000 '0.0.0.0.0.0.0...')\n");
 
-    Truth8.assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
+    assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
   }
 
   @Test
@@ -412,7 +411,7 @@ public class AndroidSystemSpecUtilTest {
                 + "  0x00000010: 00360032 00390030 00310037 00340031 '2.6.0.9.7.1.1.4.'\n"
                 + "  0x00000020: 00340033 00310034 00320037 00000031 '3.4.4.1.7.2.1...')\n");
 
-    Truth8.assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
+    assertThat(systemSpecUtil.getDeviceIccid(SERIAL, 29)).isEmpty();
   }
 
   @Test

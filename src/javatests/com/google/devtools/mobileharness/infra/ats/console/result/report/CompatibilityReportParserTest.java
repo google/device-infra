@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.console.result.report;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.Mockito.when;
 
-import com.google.common.truth.Truth8;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.LoggedFile;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Metric;
@@ -260,6 +259,6 @@ public final class CompatibilityReportParserTest {
     Path nonExistentXml = Paths.get("/path/to/non-existent-xml");
     when(localFileUtil.isFileExist(nonExistentXml)).thenReturn(false);
 
-    Truth8.assertThat(reportParser.parse(nonExistentXml)).isEmpty();
+    assertThat(reportParser.parse(nonExistentXml)).isEmpty();
   }
 }

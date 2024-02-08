@@ -23,7 +23,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.truth.Truth8;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
@@ -121,7 +120,7 @@ public final class AtsLocalSessionPluginTest {
     assertThat(jobInfo.subDeviceSpecs().getSubDevice(0).type()).isEqualTo("NoOpDevice");
     Optional<String> serialDimension =
         jobInfo.subDeviceSpecs().getSubDevice(0).deviceRequirement().dimensions().get("serial");
-    Truth8.assertThat(serialDimension).hasValue("regex:(serial_1|serial_2)");
+    assertThat(serialDimension).hasValue("regex:(serial_1|serial_2)");
   }
 
   @Test

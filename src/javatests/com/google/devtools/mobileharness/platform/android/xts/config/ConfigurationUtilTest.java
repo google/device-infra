@@ -21,7 +21,6 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.truth.Truth8;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -147,7 +146,7 @@ public class ConfigurationUtilTest {
 
     Optional<File> result = configurationUtil.getFileInDir(fileName, tempDirPath.toFile());
 
-    Truth8.assertThat(result).isPresent();
+    assertThat(result).isPresent();
     assertThat(result.get().exists()).isTrue();
   }
 
@@ -155,7 +154,7 @@ public class ConfigurationUtilTest {
   public void getFileInDir_notExist() throws Exception {
     Optional<File> result = configurationUtil.getFileInDir("not_exist", tempDirPath.toFile());
 
-    Truth8.assertThat(result).isEmpty();
+    assertThat(result).isEmpty();
   }
 
   @Test
@@ -168,7 +167,7 @@ public class ConfigurationUtilTest {
 
     Optional<File> result = configurationUtil.getFileInDir(fileName, tempDirPath.toFile());
 
-    Truth8.assertThat(result).isPresent();
+    assertThat(result).isPresent();
     assertThat(localFileUtil.readFile(result.get().toPath())).isEqualTo("file1");
   }
 }

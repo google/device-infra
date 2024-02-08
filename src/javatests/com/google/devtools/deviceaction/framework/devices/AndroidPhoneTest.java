@@ -35,7 +35,6 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Multimap;
-import com.google.common.truth.Truth8;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.utils.BundletoolUtil;
@@ -364,7 +363,7 @@ public class AndroidPhoneTest {
             isNull());
     UtilArgs utilArgs = utilArgsCaptor.getValue();
     InstallCmdArgs installCmdArgs = installCmdArgsCaptor.getValue();
-    Truth8.assertThat(utilArgs.sdkVersion()).hasValue(31);
+    assertThat(utilArgs.sdkVersion()).hasValue(31);
     assertThat(utilArgs.serial()).isEqualTo(UUID);
     assertThat(installCmdArgs.extraArgs()).contains("--enable-rollback");
     if (spec.hasStagedReadyTimeout()) {

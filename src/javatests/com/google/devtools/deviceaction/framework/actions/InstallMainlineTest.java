@@ -40,7 +40,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.truth.Correspondence;
-import com.google.common.truth.Truth8;
 import com.google.devtools.common.metrics.stability.model.proto.ErrorTypeProto.ErrorType;
 import com.google.devtools.deviceaction.common.error.DeviceActionException;
 import com.google.devtools.deviceaction.common.schemas.AndroidPackage;
@@ -351,11 +350,11 @@ public final class InstallMainlineTest {
     assertThat(androidPackages).hasSize(2);
     switch (type) {
       case PACKAGE_FILE:
-        Truth8.assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
+        assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
             .containsExactly(apexFile, apkFile);
         break;
       case SPLIT_FOLDER:
-        Truth8.assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
+        assertThat(androidPackages.stream().flatMap(ap -> ap.files().stream()))
             .containsExactly(apexExtractFile, apkExtractFile1, apkExtractFile2);
         break;
       default:

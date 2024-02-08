@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.common.truth.Truth8;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -38,10 +37,10 @@ public final class AndroidVersionTest {
 
   @Test
   public void toCodeNameInitial_getExpected() {
-    Truth8.assertThat(AndroidVersion.toCodeNameInitial(1)).isEmpty();
-    Truth8.assertThat(AndroidVersion.toCodeNameInitial(31)).hasValue("S");
-    Truth8.assertThat(AndroidVersion.toCodeNameInitial(32)).hasValue("S");
-    Truth8.assertThat(AndroidVersion.toCodeNameInitial(33)).hasValue("T");
-    Truth8.assertThat(AndroidVersion.toCodeNameInitial(100)).isEmpty();
+    assertThat(AndroidVersion.toCodeNameInitial(1)).isEmpty();
+    assertThat(AndroidVersion.toCodeNameInitial(31)).hasValue("S");
+    assertThat(AndroidVersion.toCodeNameInitial(32)).hasValue("S");
+    assertThat(AndroidVersion.toCodeNameInitial(33)).hasValue("T");
+    assertThat(AndroidVersion.toCodeNameInitial(100)).isEmpty();
   }
 }

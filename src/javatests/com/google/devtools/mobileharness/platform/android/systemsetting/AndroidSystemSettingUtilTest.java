@@ -29,7 +29,6 @@ import static org.mockito.Mockito.when;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.truth.Truth8;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -425,7 +424,7 @@ public class AndroidSystemSettingUtilTest {
                 + "  technology: Li-ion");
 
     Optional<Integer> temperature = settingUtil.getBatteryTemperature(DEVICE_ID);
-    Truth8.assertThat(temperature).isPresent();
+    assertThat(temperature).isPresent();
     int batteryTemperature = temperature.get();
     assertThat(batteryTemperature).isEqualTo(36);
   }
@@ -523,18 +522,17 @@ public class AndroidSystemSettingUtilTest {
     when(adbUtil.cmd(DEVICE_ID, AndroidService.APPOPS, new String[] {"get", TEST_PACKAGE_NAME}))
         .thenReturn(appOpsGetOutput);
 
-    Truth8.assertThat(
+    assertThat(
             settingUtil.getPackageOperationMode(
                 DEVICE_ID, TEST_PACKAGE_NAME, "MANAGE_EXTERNAL_STORAGE"))
         .hasValue(AppOperationMode.DEFAULT);
-    Truth8.assertThat(
+    assertThat(
             settingUtil.getPackageOperationMode(DEVICE_ID, TEST_PACKAGE_NAME, "WRITE_MEDIA_IMAGES"))
         .hasValue(AppOperationMode.DENY);
-    Truth8.assertThat(
+    assertThat(
             settingUtil.getPackageOperationMode(DEVICE_ID, TEST_PACKAGE_NAME, "READ_MEDIA_IMAGES"))
         .hasValue(AppOperationMode.ALLOW);
-    Truth8.assertThat(
-            settingUtil.getPackageOperationMode(DEVICE_ID, TEST_PACKAGE_NAME, "NON_EXIST_OP"))
+    assertThat(settingUtil.getPackageOperationMode(DEVICE_ID, TEST_PACKAGE_NAME, "NON_EXIST_OP"))
         .isEmpty();
   }
 

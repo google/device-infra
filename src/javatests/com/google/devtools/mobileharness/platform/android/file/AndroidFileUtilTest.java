@@ -27,7 +27,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.truth.Truth8;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
@@ -214,16 +213,14 @@ public final class AndroidFileUtilTest {
                   "Failed to execute command");
             });
 
-    Truth8.assertThat(
-            androidFileUtil.getFileInfo(SERIAL, sdkVersion, filePath, /* followSymlink= */ true))
+    assertThat(androidFileUtil.getFileInfo(SERIAL, sdkVersion, filePath, /* followSymlink= */ true))
         .hasValue(
             FileInfo.builder()
                 .setPath(filePath)
                 .setType(FileType.FILE)
                 .setPermissions(FilePermissions.from("rw-rw-rw-"))
                 .build());
-    Truth8.assertThat(
-            androidFileUtil.getFileInfo(SERIAL, sdkVersion, filePath, /* followSymlink= */ true))
+    assertThat(androidFileUtil.getFileInfo(SERIAL, sdkVersion, filePath, /* followSymlink= */ true))
         .isEmpty();
   }
 
@@ -241,8 +238,7 @@ public final class AndroidFileUtilTest {
             any(LineCallback.class)))
         .thenReturn("drwxrwxrwx root     root              2019-07-17 05:28 test_dir");
 
-    Truth8.assertThat(
-            androidFileUtil.getFileInfo(SERIAL, sdkVersion, dirPath, /* followSymlink= */ true))
+    assertThat(androidFileUtil.getFileInfo(SERIAL, sdkVersion, dirPath, /* followSymlink= */ true))
         .hasValue(
             FileInfo.builder()
                 .setPath(dirPath)
@@ -256,8 +252,7 @@ public final class AndroidFileUtilTest {
     int sdkVersion = 28;
     String dirPath = "/";
 
-    Truth8.assertThat(
-            androidFileUtil.getFileInfo(SERIAL, sdkVersion, dirPath, /* followSymlink= */ true))
+    assertThat(androidFileUtil.getFileInfo(SERIAL, sdkVersion, dirPath, /* followSymlink= */ true))
         .hasValue(FileInfo.builder().setPath(dirPath).setType(FileType.DIR).build());
   }
 
@@ -276,8 +271,7 @@ public final class AndroidFileUtilTest {
         .thenReturn(
             "lrwxrwxrwx root   root    2019-07-17 05:28 test_dir -> /data/local/original_test_dir");
 
-    Truth8.assertThat(
-            androidFileUtil.getFileInfo(SERIAL, sdkVersion, dirPath, /* followSymlink= */ false))
+    assertThat(androidFileUtil.getFileInfo(SERIAL, sdkVersion, dirPath, /* followSymlink= */ false))
         .hasValue(
             FileInfo.builder()
                 .setPath(dirPath)
@@ -307,8 +301,7 @@ public final class AndroidFileUtilTest {
             any(LineCallback.class)))
         .thenReturn("drwxrwx--x root   root    2019-07-18 15:16 test_dir");
 
-    Truth8.assertThat(
-            androidFileUtil.getFileInfo(SERIAL, sdkVersion, dirPath, /* followSymlink= */ true))
+    assertThat(androidFileUtil.getFileInfo(SERIAL, sdkVersion, dirPath, /* followSymlink= */ true))
         .hasValue(
             FileInfo.builder()
                 .setPath(dirPath)
@@ -339,8 +332,7 @@ public final class AndroidFileUtilTest {
             any(LineCallback.class)))
         .thenReturn("ld test_dir");
 
-    Truth8.assertThat(
-            androidFileUtil.getFileInfo(SERIAL, sdkVersion, dirPath, /* followSymlink= */ true))
+    assertThat(androidFileUtil.getFileInfo(SERIAL, sdkVersion, dirPath, /* followSymlink= */ true))
         .hasValue(
             FileInfo.builder()
                 .setPath(dirPath)
