@@ -18,7 +18,6 @@ package(
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
 )
 
