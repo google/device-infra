@@ -109,6 +109,7 @@ class RemoteDeviceManager {
   private final LabSyncService labSyncService = new LabSyncService();
   private final AbstractScheduler scheduler;
   private final ListeningScheduledExecutorService scheduledThreadPool;
+  private final LabRecordManager labRecordManager;
 
   private final Object lock = new Object();
 
@@ -126,9 +127,11 @@ class RemoteDeviceManager {
   @Inject
   RemoteDeviceManager(
       @AtsModeAbstractScheduler AbstractScheduler scheduler,
-      ListeningScheduledExecutorService scheduledThreadPool) {
+      ListeningScheduledExecutorService scheduledThreadPool,
+      LabRecordManager labRecordManager) {
     this.scheduler = scheduler;
     this.scheduledThreadPool = scheduledThreadPool;
+    this.labRecordManager = labRecordManager;
   }
 
   BindableService getLabSyncService() {
@@ -258,13 +261,14 @@ class RemoteDeviceManager {
       synchronized (lock) {
         // Handles information of the lab.
         LabKey labKey = LabKey.of(labLocator.hostName());
+        LabData labData;
         if (labs.containsKey(labKey)) {
           // Updates lab data.
-          LabData labData = labs.get(labKey);
+          labData = labs.get(labKey);
           labData.updateBySignUp(request);
         } else {
           // Adds lab data.
-          LabData labData = new LabData(labLocator, request);
+          labData = new LabData(labLocator, request);
           labs.put(labKey, labData);
         }
 
@@ -305,7 +309,9 @@ class RemoteDeviceManager {
           }
 
           updateScheduler(deviceData);
+          labRecordManager.addDeviceRecordIfDeviceInfoChanged(deviceData.createDeviceRecordData());
         }
+        labRecordManager.addLabRecordIfLabInfoChanged(labData.createLabRecordData());
       }
 
       return SignUpLabResponse.newBuilder()
@@ -326,6 +332,7 @@ class RemoteDeviceManager {
           // Updates lab data.
           LabData labData = labs.get(labKey);
           labData.updateByHeartbeat();
+          labRecordManager.addLabRecordIfLabInfoChanged(labData.createLabRecordData());
         } else {
           logger.atWarning().log("Lab hasn't been signed up yet, lab=%s", labKey);
         }
@@ -348,6 +355,7 @@ class RemoteDeviceManager {
           }
 
           updateScheduler(deviceData);
+          labRecordManager.addDeviceRecordIfDeviceInfoChanged(deviceData.createDeviceRecordData());
         }
       }
 
@@ -587,6 +595,15 @@ class RemoteDeviceManager {
           .setLabStatus(LabStatus.LAB_RUNNING)
           .build();
     }
+
+    private LabRecordManager.LabRecordData createLabRecordData() {
+      return LabRecordManager.LabRecordData.create(
+          updateFromLabLocalTimestamp,
+          labLocator,
+          labServerSetting,
+          labServerFeature,
+          LabStatus.LAB_RUNNING);
+    }
   }
 
   /** All access to this class must be guarded by {@link #lock}. */
@@ -706,6 +723,15 @@ class RemoteDeviceManager {
     /** Updates latest allocation info. */
     private void updateByAllocationEvent(Allocation allocation) {
       latestAllocationFromScheduler = allocation;
+    }
+
+    private LabRecordManager.DeviceRecordData createDeviceRecordData() {
+      return LabRecordManager.DeviceRecordData.create(
+          updateFromLabLocalTimestamp,
+          dataFromLab.locator(),
+          deviceKey.deviceUuid(),
+          dataFromLab,
+          statusFromLab);
     }
 
     private LabQueryProto.DeviceInfo toLabQueryDeviceInfo() {

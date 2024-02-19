@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static org.mockito.Mockito.verify;
 
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -48,7 +49,10 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQuery.Filter.StringMatchCondition.MatchesRegex;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabQueryResult.LabView;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeAbstractScheduler;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.DeviceRecordData;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.LabRecordData;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest.Device;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
@@ -68,6 +72,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -107,62 +112,67 @@ public class RemoteDeviceManagerTest {
                                           .setValue("fake_dimension_value")))))
           .build();
 
+  private static final HeartbeatLabRequest HEARTBEAT_LAB_REQUEST =
+      HeartbeatLabRequest.newBuilder()
+          .setLabIp("fake_lab_ip")
+          .addDevice(
+              HeartbeatLabRequest.Device.newBuilder()
+                  .setId("fake_uuid")
+                  .setStatus(DeviceStatus.IDLE)
+                  .setTimestampMs(0L))
+          .build();
+  private static final LabInfo LAB_INFO =
+      LabInfo.newBuilder()
+          .setLabLocator(
+              LabLocator.newBuilder()
+                  .setIp("fake_lab_ip")
+                  .setHostName("fake_lab_host_name")
+                  .addPort(LabPort.newBuilder().setType(PortType.LAB_SERVER_HTTP).setNum(1234)))
+          .setLabStatus(LabStatus.LAB_RUNNING)
+          .setLabServerSetting(
+              LabServerSetting.newBuilder()
+                  .addPort(LabPort.newBuilder().setType(PortType.LAB_SERVER_HTTP).setNum(1234)))
+          .setLabServerFeature(LabServerFeature.getDefaultInstance())
+          .build();
+
+  private static final DeviceInfo DEVICE_INFO =
+      DeviceInfo.newBuilder()
+          .setDeviceLocator(
+              DeviceLocator.newBuilder()
+                  .setId("fake_uuid")
+                  .setLabLocator(
+                      LabLocator.newBuilder()
+                          .setIp("fake_lab_ip")
+                          .setHostName("fake_lab_host_name")
+                          .addPort(
+                              LabPort.newBuilder().setType(PortType.LAB_SERVER_HTTP).setNum(1234))))
+          .setDeviceUuid("fake_uuid")
+          .setDeviceStatus(DeviceStatus.IDLE)
+          .setDeviceFeature(
+              DeviceFeature.newBuilder()
+                  .addOwner("fake_owner")
+                  .addType("NoOpDevice")
+                  .addDriver("NoOpDriver")
+                  .addDecorator("NoOpDecorator")
+                  .setCompositeDimension(
+                      DeviceCompositeDimension.newBuilder()
+                          .addSupportedDimension(
+                              DeviceDimension.newBuilder()
+                                  .setName("fake_dimension_name")
+                                  .setValue("fake_dimension_value"))))
+          .build();
   private static final LabView LAB_VIEW =
       LabView.newBuilder()
           .setLabTotalCount(1)
           .addLabData(
               LabData.newBuilder()
-                  .setLabInfo(
-                      LabInfo.newBuilder()
-                          .setLabLocator(
-                              LabLocator.newBuilder()
-                                  .setIp("fake_lab_ip")
-                                  .setHostName("fake_lab_host_name")
-                                  .addPort(
-                                      LabPort.newBuilder()
-                                          .setType(PortType.LAB_SERVER_HTTP)
-                                          .setNum(1234)))
-                          .setLabStatus(LabStatus.LAB_RUNNING)
-                          .setLabServerSetting(
-                              LabServerSetting.newBuilder()
-                                  .addPort(
-                                      LabPort.newBuilder()
-                                          .setType(PortType.LAB_SERVER_HTTP)
-                                          .setNum(1234)))
-                          .setLabServerFeature(LabServerFeature.getDefaultInstance()))
+                  .setLabInfo(LAB_INFO)
                   .setDeviceList(
-                      DeviceList.newBuilder()
-                          .setDeviceTotalCount(1)
-                          .addDeviceInfo(
-                              DeviceInfo.newBuilder()
-                                  .setDeviceLocator(
-                                      DeviceLocator.newBuilder()
-                                          .setId("fake_uuid")
-                                          .setLabLocator(
-                                              LabLocator.newBuilder()
-                                                  .setIp("fake_lab_ip")
-                                                  .setHostName("fake_lab_host_name")
-                                                  .addPort(
-                                                      LabPort.newBuilder()
-                                                          .setType(PortType.LAB_SERVER_HTTP)
-                                                          .setNum(1234))))
-                                  .setDeviceUuid("fake_uuid")
-                                  .setDeviceStatus(DeviceStatus.IDLE)
-                                  .setDeviceFeature(
-                                      DeviceFeature.newBuilder()
-                                          .addOwner("fake_owner")
-                                          .addType("NoOpDevice")
-                                          .addDriver("NoOpDriver")
-                                          .addDecorator("NoOpDecorator")
-                                          .setCompositeDimension(
-                                              DeviceCompositeDimension.newBuilder()
-                                                  .addSupportedDimension(
-                                                      DeviceDimension.newBuilder()
-                                                          .setName("fake_dimension_name")
-                                                          .setValue("fake_dimension_value")))))))
+                      DeviceList.newBuilder().setDeviceTotalCount(1).addDeviceInfo(DEVICE_INFO)))
           .build();
 
   @Bind @Mock @AtsModeAbstractScheduler private AbstractScheduler scheduler;
+  @Bind @Mock private LabRecordManager labRecordManager;
 
   @Bind private ListeningScheduledExecutorService scheduledThreadPool;
 
@@ -283,5 +293,32 @@ public class RemoteDeviceManagerTest {
         .clearDeviceInfo()
         .clearDeviceTotalCount();
     assertThat(labInfo).isEqualTo(labViewBuilder.build());
+  }
+
+  @Test
+  public void singUpLab_heatbeatLab_addLabAndDeviceRecord() throws Exception {
+    ArgumentCaptor<DeviceRecordData> deviceRecordData1 =
+        ArgumentCaptor.forClass(DeviceRecordData.class);
+    ArgumentCaptor<LabRecordData> labRecordData1 = ArgumentCaptor.forClass(LabRecordData.class);
+
+    labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
+
+    verify(labRecordManager).addLabRecordIfLabInfoChanged(labRecordData1.capture());
+    assertThat(labRecordData1.getValue().toRecordProto().getLabInfo()).isEqualTo(LAB_INFO);
+
+    verify(labRecordManager).addDeviceRecordIfDeviceInfoChanged(deviceRecordData1.capture());
+    assertThat(deviceRecordData1.getValue().toRecordProto().getDeviceInfo()).isEqualTo(DEVICE_INFO);
+
+    ArgumentCaptor<DeviceRecordData> deviceRecordData2 =
+        ArgumentCaptor.forClass(DeviceRecordData.class);
+    ArgumentCaptor<LabRecordData> labRecordData2 = ArgumentCaptor.forClass(LabRecordData.class);
+
+    labSyncGrpcStub.heartbeatLab(HEARTBEAT_LAB_REQUEST);
+
+    verify(labRecordManager).addLabRecordIfLabInfoChanged(labRecordData2.capture());
+    assertThat(labRecordData2.getValue().toRecordProto().getLabInfo()).isEqualTo(LAB_INFO);
+
+    verify(labRecordManager).addDeviceRecordIfDeviceInfoChanged(deviceRecordData2.capture());
+    assertThat(deviceRecordData2.getValue().toRecordProto().getDeviceInfo()).isEqualTo(DEVICE_INFO);
   }
 }

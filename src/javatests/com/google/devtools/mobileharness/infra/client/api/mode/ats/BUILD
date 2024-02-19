@@ -36,6 +36,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
         "//src/java/com/google/devtools/mobileharness/api/model/job:locator",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:schedule_unit",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:ats_mode",

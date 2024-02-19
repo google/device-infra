@@ -21,6 +21,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.testing.TestingExecutors;
+import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
@@ -28,11 +30,14 @@ import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperties;
 import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerFeature;
+import com.google.devtools.mobileharness.api.model.proto.Lab.LabServerSetting;
 import com.google.devtools.mobileharness.api.model.proto.Lab.LabStatus;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.DeviceRecord;
 import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.LabRecord;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.DeviceRecordData;
+import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.LabRecordData;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -72,6 +77,7 @@ public final class LabRecordManagerTest {
         LabInfo.newBuilder()
             .setLabLocator(LabLocator.newBuilder().setHostName("host_name").build())
             .setLabStatus(LabStatus.LAB_RUNNING)
+            .setLabServerSetting(LabServerSetting.getDefaultInstance())
             .setLabServerFeature(
                 LabServerFeature.newBuilder()
                     .setHostProperties(
@@ -85,7 +91,13 @@ public final class LabRecordManagerTest {
                     .build())
             .build();
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(1));
-    labRecordManager.addLabRecordIfLabInfoChanged(labInfo1);
+    labRecordManager.addLabRecordIfLabInfoChanged(
+        LabRecordData.create(
+            Instant.ofEpochMilli(1),
+            com.google.devtools.mobileharness.api.model.lab.LabLocator.of(labInfo1.getLabLocator()),
+            labInfo1.getLabServerSetting(),
+            labInfo1.getLabServerFeature(),
+            labInfo1.getLabStatus()));
     assertThat(labRecordManager.getLabRecords("host_name"))
         .containsExactly(
             LabRecord.newBuilder()
@@ -97,6 +109,7 @@ public final class LabRecordManagerTest {
         LabInfo.newBuilder()
             .setLabLocator(LabLocator.newBuilder().setHostName("host_name").build())
             .setLabStatus(LabStatus.LAB_RUNNING)
+            .setLabServerSetting(LabServerSetting.getDefaultInstance())
             .setLabServerFeature(
                 LabServerFeature.newBuilder()
                     .setHostProperties(
@@ -110,7 +123,13 @@ public final class LabRecordManagerTest {
                     .build())
             .build();
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(2));
-    labRecordManager.addLabRecordIfLabInfoChanged(labInfo2);
+    labRecordManager.addLabRecordIfLabInfoChanged(
+        LabRecordData.create(
+            Instant.ofEpochMilli(2),
+            com.google.devtools.mobileharness.api.model.lab.LabLocator.of(labInfo2.getLabLocator()),
+            labInfo2.getLabServerSetting(),
+            labInfo2.getLabServerFeature(),
+            labInfo2.getLabStatus()));
 
     assertThat(labRecordManager.getLabRecords("host_name"))
         .containsExactly(
@@ -123,7 +142,13 @@ public final class LabRecordManagerTest {
                 .setTimestamp(Timestamp.newBuilder().setNanos(2000000).build())
                 .build());
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(3));
-    labRecordManager.addLabRecordIfLabInfoChanged(labInfo1);
+    labRecordManager.addLabRecordIfLabInfoChanged(
+        LabRecordData.create(
+            Instant.ofEpochMilli(3),
+            com.google.devtools.mobileharness.api.model.lab.LabLocator.of(labInfo1.getLabLocator()),
+            labInfo1.getLabServerSetting(),
+            labInfo1.getLabServerFeature(),
+            labInfo1.getLabStatus()));
     assertThat(labRecordManager.getLabRecords("host_name"))
         .containsExactly(
             LabRecord.newBuilder()
@@ -142,6 +167,7 @@ public final class LabRecordManagerTest {
         LabInfo.newBuilder()
             .setLabLocator(LabLocator.newBuilder().setHostName("host_name").build())
             .setLabStatus(LabStatus.LAB_RUNNING)
+            .setLabServerSetting(LabServerSetting.getDefaultInstance())
             .setLabServerFeature(
                 LabServerFeature.newBuilder()
                     .setHostProperties(
@@ -155,7 +181,13 @@ public final class LabRecordManagerTest {
                     .build())
             .build();
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(1));
-    labRecordManager.addLabRecordIfLabInfoChanged(labInfo1);
+    labRecordManager.addLabRecordIfLabInfoChanged(
+        LabRecordData.create(
+            Instant.ofEpochMilli(1),
+            com.google.devtools.mobileharness.api.model.lab.LabLocator.of(labInfo1.getLabLocator()),
+            labInfo1.getLabServerSetting(),
+            labInfo1.getLabServerFeature(),
+            labInfo1.getLabStatus()));
     assertThat(labRecordManager.getLabRecords("host_name"))
         .containsExactly(
             LabRecord.newBuilder()
@@ -185,12 +217,29 @@ public final class LabRecordManagerTest {
     DeviceInfo deviceInfo1 =
         DeviceInfo.newBuilder()
             .setDeviceUuid("device_uuid")
-            .setDeviceLocator(DeviceLocator.newBuilder().setId("device_id").build())
+            .setDeviceLocator(
+                DeviceLocator.newBuilder()
+                    .setId("device_id")
+                    .setLabLocator(LabLocator.getDefaultInstance())
+                    .build())
             .setDeviceStatus(DeviceStatus.BUSY)
-            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addType("AndroidRealDevice")
+                    .setCompositeDimension(DeviceCompositeDimension.getDefaultInstance()))
             .build();
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(1));
-    labRecordManager.addDeviceRecordIfDeviceInfoChanged(deviceInfo1);
+    labRecordManager.addDeviceRecordIfDeviceInfoChanged(
+        DeviceRecordData.create(
+            Instant.ofEpochMilli(1),
+            com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
+                deviceInfo1.getDeviceLocator()),
+            deviceInfo1.getDeviceUuid(),
+            new DeviceScheduleUnit(
+                    com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
+                        deviceInfo1.getDeviceLocator()))
+                .addFeature(deviceInfo1.getDeviceFeature()),
+            deviceInfo1.getDeviceStatus()));
     assertThat(labRecordManager.getDeviceRecords("device_uuid"))
         .containsExactly(
             DeviceRecord.newBuilder()
@@ -201,12 +250,29 @@ public final class LabRecordManagerTest {
     DeviceInfo deviceInfo2 =
         DeviceInfo.newBuilder()
             .setDeviceUuid("device_uuid")
-            .setDeviceLocator(DeviceLocator.newBuilder().setId("device_id").build())
+            .setDeviceLocator(
+                DeviceLocator.newBuilder()
+                    .setId("device_id")
+                    .setLabLocator(LabLocator.getDefaultInstance())
+                    .build())
             .setDeviceStatus(DeviceStatus.IDLE)
-            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addType("AndroidRealDevice")
+                    .setCompositeDimension(DeviceCompositeDimension.getDefaultInstance()))
             .build();
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(2));
-    labRecordManager.addDeviceRecordIfDeviceInfoChanged(deviceInfo2);
+    labRecordManager.addDeviceRecordIfDeviceInfoChanged(
+        DeviceRecordData.create(
+            Instant.ofEpochMilli(2),
+            com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
+                deviceInfo2.getDeviceLocator()),
+            deviceInfo2.getDeviceUuid(),
+            new DeviceScheduleUnit(
+                    com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
+                        deviceInfo2.getDeviceLocator()))
+                .addFeature(deviceInfo2.getDeviceFeature()),
+            deviceInfo2.getDeviceStatus()));
     assertThat(labRecordManager.getDeviceRecords("device_uuid"))
         .containsExactly(
             DeviceRecord.newBuilder()
@@ -224,12 +290,30 @@ public final class LabRecordManagerTest {
     DeviceInfo deviceInfo1 =
         DeviceInfo.newBuilder()
             .setDeviceUuid("device_uuid")
-            .setDeviceLocator(DeviceLocator.newBuilder().setId("device_id").build())
+            .setDeviceLocator(
+                DeviceLocator.newBuilder()
+                    .setId("device_id")
+                    .setLabLocator(LabLocator.getDefaultInstance())
+                    .build())
             .setDeviceStatus(DeviceStatus.BUSY)
-            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addType("AndroidRealDevice")
+                    .setCompositeDimension(DeviceCompositeDimension.getDefaultInstance()))
             .build();
     when(clock.instant()).thenReturn(Instant.ofEpochMilli(1));
-    labRecordManager.addDeviceRecordIfDeviceInfoChanged(deviceInfo1);
+
+    labRecordManager.addDeviceRecordIfDeviceInfoChanged(
+        DeviceRecordData.create(
+            Instant.ofEpochMilli(1),
+            com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
+                deviceInfo1.getDeviceLocator()),
+            deviceInfo1.getDeviceUuid(),
+            new DeviceScheduleUnit(
+                    com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
+                        deviceInfo1.getDeviceLocator()))
+                .addFeature(deviceInfo1.getDeviceFeature()),
+            deviceInfo1.getDeviceStatus()));
     assertThat(labRecordManager.getDeviceRecords("device_uuid"))
         .containsExactly(
             DeviceRecord.newBuilder()
@@ -243,9 +327,16 @@ public final class LabRecordManagerTest {
     DeviceInfo deviceInfo2 =
         DeviceInfo.newBuilder()
             .setDeviceUuid("device_uuid")
-            .setDeviceLocator(DeviceLocator.newBuilder().setId("device_id").build())
+            .setDeviceLocator(
+                DeviceLocator.newBuilder()
+                    .setId("device_id")
+                    .setLabLocator(LabLocator.getDefaultInstance())
+                    .build())
             .setDeviceStatus(DeviceStatus.MISSING)
-            .setDeviceFeature(DeviceFeature.newBuilder().addType("AndroidRealDevice"))
+            .setDeviceFeature(
+                DeviceFeature.newBuilder()
+                    .addType("AndroidRealDevice")
+                    .setCompositeDimension(DeviceCompositeDimension.getDefaultInstance()))
             .build();
     assertThat(labRecordManager.getDeviceRecords("device_uuid"))
         .containsExactly(
