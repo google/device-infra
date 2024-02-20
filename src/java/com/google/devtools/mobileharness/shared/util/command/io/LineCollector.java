@@ -22,10 +22,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import javax.annotation.concurrent.GuardedBy;
-import javax.annotation.concurrent.ThreadSafe;
 
-/** Line collector for collecting lines from {@link LineReader}. */
-@ThreadSafe
+/**
+ * Line collector for collecting lines from {@link LineReader}.
+ *
+ * <p>The class is thread safe.
+ */
 public class LineCollector implements LineHandler {
 
   private final CountDownLatch sourceCloseLatch;
@@ -88,6 +90,12 @@ public class LineCollector implements LineHandler {
 
   public boolean notAllSourceClosed() {
     return sourceCloseLatch.getCount() != 0L;
+  }
+
+  public void stopConsumingLines() {
+    synchronized (handleLineLock) {
+      stopConsumingLines = true;
+    }
   }
 
   private String getAllLines() {

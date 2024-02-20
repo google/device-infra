@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.shared.util.command;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.Arrays.stream;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
@@ -38,36 +40,33 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 /**
  * An executable command.
  *
  * <p>Execute a command by {@link CommandExecutor}. Example:
  *
- * <pre class="code"><code class="java">
+ * <pre>{@code
  * String result = commandExecutor.run(Command.of("echo", "Hello, Command!"));
- * </code></pre>
+ * }</pre>
+ *
+ * <p>
  *
  * <h3 id="timeout">Timeout</h3>
  *
  * You can specify a timeout for a command. Command executor will kill a command when it timeouts. A
- * timeout can be a fixed duration (e.g., 1 minute), a "deadline" (e.g., a command timeouts when a
- * Mobile Harness test ends, or at a fixed moment like "now + 1 hour") or their mixture. Example:
+ * timeout can be a fixed duration (e.g., 1 minute) or at a fixed moment) or their mixture. Example:
  *
- * <pre class="code"><code class="java">
+ * <pre>{@code
  * // A command with fixed 15s timeout.
  * Command.of("ls").timeout(Duration.ofSeconds(15));
  *
  * // A command timeouts at a fixed moment.
  * Command.of("ls").timeout(instant);
  *
- * // A command timeouts when the test ends.
- * Command.of("ls").timeout(testInfo.timer());
- *
  * // A command timeouts when the test ends or 2 min has passed.
  * Command.of("ls").timeout(fixed(Duration.ofMinutes(2)).withDeadline(testInfo.timer()));
- * </code></pre>
+ * }</pre>
  *
  * <p>If you don't specify a timeout for a command, the default timeout of a command executor will
  * be used. You can also set the default timeout of a command executor. By default, it is 5 min.
@@ -75,37 +74,58 @@ import java.util.stream.Collectors;
  * <p><b>NOTE</b>: If a command timeouts, getting its result by {@link
  * CommandExecutor#run(Command)}, {@link CommandExecutor#exec(Command)} and {@link
  * CommandProcess#await()} will always throw {@link CommandTimeoutException} no matter if the
- * command successes.
+ * command succeeds.
+ *
+ * <p>
+ *
+ * <h3 id="successful-start">Successful Start</h3>
+ *
+ * A command is considered <b>successfully started</b> when a line satisfying a specified condition
+ * appears in stdout/stderr. By default, the condition is "line -> true", meaning any output
+ * indicates a successful start.
+ *
+ * <p>Two features relate to the successful start detection: <b>start timeout</b> of a command,
+ * which defines the maximum time to wait for the successful start condition to be met.
+ * <b>successful start future</b>, which provides a future indicating whether the command started
+ * successfully.
+ *
+ * <p>
  *
  * <h4 id="start-timeout">Start Timeout</h4>
  *
- * If you specify a start timeout for a command, the command will timeout additionally if it does
- * not "start successfully" for the specified duration since the command starts. By default, the
- * condition of a successfully starting is there is any line from stdout/stderr. Example:
+ * If the start timeout of a command is specified, the command will timeout if the successful start
+ * condition of the command is not met within the specified duration after the command's execution
+ * begins. Example:
  *
- * <pre class="code"><code class="java">
+ * <pre>{@code
  * // A command with fixed 700ms start timeout.
- * Command.of("ls").startTimeout(Duration.ofMillis(700));
- * </code></pre>
+ * Command.of("ls").startTimeout(Duration.ofMillis(700L));
+ * }</pre>
  *
- * <h5 id="success-start-condition">Success Start Condition</h5>
+ * <p>
+ *
+ * <h4 id="successful-start-condition">Successful Start Condition</h4>
  *
  * You can change the default condition of successfully starting a command. Example:
  *
- * <pre class="code"><code class="java">{@code
+ * <pre>{@code
  * // A command with fixed 700ms start timeout and specified success start condition.
- * Command.of("ls").startTimeout(Duration.ofMillis(700))
- *     .successStartCondition(line -> line.contains("Started"));
- * }</code></pre>
+ * Command.of("ls").startTimeout(Duration.ofMillis(700L))
+ *     .successStartCondition(line -> line.contains("Server started"));
+ * }</pre>
+ *
+ * <p>
  *
  * <h3>Callback</h3>
+ *
+ * <p>
  *
  * <h4 id="line-callback">1. Stdout/stderr line callback</h4>
  *
  * You can specify a stdout/stderr line callback for a command. It will be invoked when there comes
  * a new line in stdout/stderr. Example:
  *
- * <pre class="code"><code class="java">{@code
+ * <pre>{@code
  * // Logs each line of the command.
  * Command.of("ls").onStdout(does(logger.atInfo()::log));
  *
@@ -114,49 +134,57 @@ import java.util.stream.Collectors;
  *
  * // Each time the command generates a new line in stderr, writes upper case of the line to stdin.
  * Command.of("ls").onStderr(answerLn(line -> Optional.of(line.toUpperCase())));
- * }</code></pre>
+ * }</pre>
+ *
+ * <p>
  *
  * <h4 id="exit-callback">2. Exit callback</h4>
  *
  * The exit callback of a command will be invoked when the command ends no matter if it succeeds or
  * fails. It is useful in asynchronous mode. Example:
  *
- * <pre class="code"><code class="java">{@code
+ * <pre>{@code
  * // Prints the exit code of the command when it ends.
  * Command.of("ls").onExit(result -> System.out.println(result.exitCode()));
- * }</code></pre>
+ * }</pre>
+ *
+ * <p>
  *
  * <h4 id="timeout-callback">3. Timeout callback</h4>
  *
  * The exit callback of a command will be invoked when the command timeouts. Example:
  *
- * <pre class="code"><code class="java">{@code
+ * <pre>{@code
  * // Prints a message when the command timeouts.
  * Command.of("ls").onTimeout(() -> System.out.println("Command timeouts"));
- * }</code></pre>
+ * }</pre>
+ *
+ * <p>
  *
  * <h3 id="success-exit-codes">Success Exit Codes</h3>
  *
  * You can specify success exit codes for a command. Only if they contain the exit code of the
  * command process, the command succeeds, and it fails otherwise. By default, they are {0}. Example:
  *
- * <pre class="code"><code class="java">
+ * <pre>{@code
  * // A command with success exit codes {0, 1, 2, 10}.
  * Command.of("ls").successExitCodes(0, 1, 2, 10);
- * </code></pre>
+ * }</pre>
+ *
+ * <p>
  *
  * <h3 id="input">Input</h3>
  *
  * You can write an initial input string to stdin of the command. Example:
  *
- * <pre class="code"><code class="java">
+ * <pre>{@code
  * // A command with initial input "Y\n".
  * Command.of("ls").inputLn("Y");
- * </code></pre>
+ * }</pre>
  *
  * You can also write to stdin of the command while it is running. Example:
  *
- * <pre class="code"><code class="java">{@code
+ * <pre>{@code
  * // Uses answer() in stdout/stderr line callback.
  * commandExecutor.exec(Command.of("ls").onStdout(answerLn(line -> "Y")));
  *
@@ -165,16 +193,20 @@ import java.util.stream.Collectors;
  * Writer stdin = process.stdin();
  * stdin.write("Y\n");
  * stdin.flush();
- * }</code></pre>
+ * }</pre>
+ *
+ * <p>
  *
  * <h3 id="work-directory">Work Directory</h3>
  *
  * You can specify work directory of a command. If it is not specified and the command executor has
  * a default work directory, the default directory will be used. Example:
  *
- * <pre class="code"><code class="java">
+ * <pre>{@code
  * Command.of("ls").workDir(path);
- * </code></pre>
+ * }</pre>
+ *
+ * <p>
  *
  * <h3 id="environment">Environment</h3>
  *
@@ -190,29 +222,33 @@ import java.util.stream.Collectors;
  * For example, if system environment is {a=1, b=2}, the following command will have environment
  * {a=1, b=3, c=5, d=6}:
  *
- * <pre class="code"><code class="java">
+ * <pre>{@code
  * commandExecutor.setBaseEnvironment(ImmutableMap.of("b", "3", "c", "4"));
  *
  * commandExecutor.exec(Command.of("ls").extraEnv("c", "5", "d", "6"));
- * </code></pre>
+ * }</pre>
+ *
+ * <p>
  *
  * <h3 id="redirect-stderr">Redirect Stderr to Stdout</h3>
  *
  * You can redirect stderr of a command to its stdout. Example:
  *
- * <pre class="code"><code class="java">
+ * <pre>{@code
  * // Redirects stderr of the command to its stdout.
  * Command.of("ls").redirectStderr(true);
- * </code></pre>
+ * }</pre>
  *
  * If this option is not specified in a command, the default value of a command executor will be
  * used. You can also set the default value of a command executor. By default, it is <b>true</b>.
+ *
+ * <p>
  *
  * <h3>Command Template</h3>
  *
  * This is an immutable class, so a Command can be used as a command template. Example:
  *
- * <pre class="code"><code class="java">
+ * <pre>{@code
  * Command template = Command.of("adb", "-s", "device_id").successExitCodes(0, 1, 4);
  *
  * // Same as Command.of("adb", "-s", "device_id", "shell", "pwd").successExitCodes(0, 1, 4).
@@ -220,11 +256,15 @@ import java.util.stream.Collectors;
  *
  * // Same as Command.of("adb", "-s", "device_id", "logcat").successExitCodes(0, 1, 4).
  * Command command2 = template.argsAppended("logcat");
- * </code></pre>
+ * }</pre>
+ *
+ * <p>
  *
  * <h3>Equivalence</h3>
  *
  * Two command equals if and only if they have same executable and arguments.
+ *
+ * <p>
  *
  * <h3 id="memory">Memory Usage</h3>
  *
@@ -256,7 +296,7 @@ public abstract class Command {
    * <p>The length of the array should be at least 1.
    */
   public static Command of(String... command) {
-    return of(command[0], Arrays.stream(command).skip(1L).collect(Collectors.toList()));
+    return of(command[0], stream(command).skip(1L).collect(toImmutableList()));
   }
 
   /** Constructs a command. */
@@ -347,12 +387,12 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
+   * <pre>{@code
    * command.timeout(fixed(Duration.ofSeconds(10)));
    * command.timeout(deadline(instant));
    * command.timeout(deadline(testInfo.timer()));
    * command.timeout(fixed(Duration.ofSeconds(10)).withDeadline(testInfo.timer()));
-   * </code></pre>
+   * }</pre>
    *
    * <p>If it is not specified, the default value in the command executor will be used.
    *
@@ -375,9 +415,9 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
+   * <pre>{@code
    * command.timeout(testInfo.timer());
-   * </code></pre>
+   * }</pre>
    *
    * <p>If it is not specified, the default value in the command executor will be used.
    *
@@ -400,9 +440,9 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
-   * command.timeout(Instant.now().plus(Duration.ofMillis(900)));
-   * </code></pre>
+   * <pre>{@code
+   * command.timeout(Instant.now().plus(Duration.ofMillis(900L)));
+   * }</pre>
    *
    * <p>If it is not specified, the default value in the command executor will be used.
    *
@@ -425,9 +465,9 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
-   * command.timeout(Duration.ofMillis(500));
-   * </code></pre>
+   * <pre>{@code
+   * command.timeout(Duration.ofMillis(500L));
+   * }</pre>
    *
    * <p>If it is not specified, the default value in the command executor will be used.
    *
@@ -455,19 +495,21 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
+   * <pre>{@code
    * command.startTimeout(fixed(Duration.ofSeconds(10)));
    * command.startTimeout(deadline(instant));
    * command.startTimeout(deadline(testInfo.timer()));
    * command.startTimeout(fixed(Duration.ofMinutes(10)).withDeadline(testInfo.timer()));
-   * </code></pre>
+   * }</pre>
    *
-   * <p>You can specify the success start condition by {@link #successStartCondition(Predicate)}.
+   * <p>You can specify the successful start condition by {@link
+   * #successfulStartCondition(Predicate)}.
    *
    * @see <a href="#start-timeout">Command Start Timeout</a>
-   * @see <a href="#success-start-condition">Command Success Start Condition</a>
+   * @see <a href="#successful-start-condition">Command Successful Start Condition</a>
    * @see Timeout
-   * @see #successStartCondition(Predicate)
+   * @see #successfulStartCondition(Predicate)
+   * @see CommandProcess#successfulStartFuture()
    */
   @CheckReturnValue
   public Command startTimeout(Timeout startTimeout) {
@@ -487,16 +529,17 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
+   * <pre>{@code
    * command.startTimeout(testInfo.timer());
-   * </code></pre>
+   * }</pre>
    *
-   * <p>You can specify the success start condition by {@link #successStartCondition(Predicate)}.
+   * <p>You can specify the successful start condition by {@link
+   * #successfulStartCondition(Predicate)}.
    *
    * @see <a href="#start-timeout">Command Start Timeout</a>
-   * @see <a href="#success-start-condition">Command Success Start Condition</a>
+   * @see <a href="#successful-start-condition">Command Successful Start Condition</a>
    * @see Timeout
-   * @see #successStartCondition(Predicate)
+   * @see #successfulStartCondition(Predicate)
    */
   @CheckReturnValue
   public Command startTimeout(CountDownTimer startDeadline) {
@@ -516,16 +559,17 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
-   * command.startTimeout(Instant.now().plus(Duration.ofMillis(900)));
-   * </code></pre>
+   * <pre>{@code
+   * command.startTimeout(Instant.now().plus(Duration.ofMillis(900L)));
+   * }</pre>
    *
-   * <p>You can specify the success start condition by {@link #successStartCondition(Predicate)}.
+   * <p>You can specify the successful start condition by {@link
+   * #successfulStartCondition(Predicate)}.
    *
    * @see <a href="#start-timeout">Command Start Timeout</a>
-   * @see <a href="#success-start-condition">Command Success Start Condition</a>
+   * @see <a href="#successful-start-condition">Command Successful Start Condition</a>
    * @see Timeout
-   * @see #successStartCondition(Predicate)
+   * @see #successfulStartCondition(Predicate)
    */
   @CheckReturnValue
   public Command startTimeout(Instant startDeadline) {
@@ -546,16 +590,17 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
-   * command.startTimeout(Duration.ofMillis(900));
-   * </code></pre>
+   * <pre>{@code
+   * command.startTimeout(Duration.ofMillis(900L));
+   * }</pre>
    *
-   * <p>You can specify the success start condition by {@link #successStartCondition(Predicate)}.
+   * <p>You can specify the successful start condition by {@link
+   * #successfulStartCondition(Predicate)}.
    *
    * @see <a href="#start-timeout">Command Start Timeout</a>
-   * @see <a href="#success-start-condition">Command Success Start Condition</a>
+   * @see <a href="#successful-start-condition">Command Successful Start Condition</a>
    * @see Timeout
-   * @see #successStartCondition(Predicate)
+   * @see #successfulStartCondition(Predicate)
    */
   @CheckReturnValue
   public Command startTimeout(Duration startTimeout) {
@@ -564,18 +609,17 @@ public abstract class Command {
 
   /**
    * Returns a command that behaves equivalently to this command, but with the specified success
-   * start condition in place of the current success start condition.
+   * start condition in place of the current successful start condition.
    *
-   * <p>It is only meaningful when {@linkplain #startTimeout(Timeout) start timeout} is specified.
-   *
-   * <p>Be default, it is {@link Command#DEFAULT_SUCCESS_START_CONDITION}.
+   * <p>The default condition is {@link #DEFAULT_SUCCESS_START_CONDITION} (any stdout/stderr lines
+   * meet the condition).
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">{@code
-   * command.startTimeout(Duration.ofMillis(700))
-   *     .successStartCondition(line -> line.contains("Started"));
-   * }</code></pre>
+   * <pre>{@code
+   * command.startTimeout(Duration.ofMillis(700L))
+   *     .successStartCondition(line -> line.contains("Server started"));
+   * }</pre>
    *
    * <p><b>*WARNING*</b>: This is intended for lightweight check work, for example, specified
    * substring detection. A long-lasting invocation may cause stdout/stderr callbacks and the
@@ -583,16 +627,16 @@ public abstract class Command {
    * implement your own start timeout logic with {@link CommandExecutor#start(Command)} and {@link
    * CommandProcess#kill()}.
    *
-   * @param successStartCondition the success start condition whose {@linkplain
+   * @param successfulStartCondition the success start condition whose {@linkplain
    *     Predicate#test(Object) test(String)} will be invoked when there comes a new line from
-   *     stdout/stderr and the command starts successfully if its return value is {@code true}
-   * @see <a href="#start-timeout">Command Start Timeout</a>
-   * @see <a href="#success-start-condition">Command Success Start Condition</a>
+   *     stdout/stderr and the command starts successfully when its return value is {@code true}
+   * @see <a href="#successful-start">Command Successful Start</a>
    * @see #startTimeout(Timeout)
+   * @see CommandProcess#successfulStartFuture()
    */
   @CheckReturnValue
-  public Command successStartCondition(Predicate<String> successStartCondition) {
-    return toBuilder().successStartCondition(successStartCondition).build();
+  public Command successfulStartCondition(Predicate<String> successfulStartCondition) {
+    return toBuilder().successfulStartCondition(successfulStartCondition).build();
   }
 
   /**
@@ -624,13 +668,13 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">{@code
+   * <pre>{@code
    * command.onStdout(does(line -> System.out.println("Line: " + line)));
    * command.onStdout(writeTo(fileWriter));
    * command.onStdout(stopWhen(line -> line.contains("Successful")));
    * command.onStdout(
    *     answerLn(line -> line.contains("Confirm") ? Optional.of("Y") : Optional.empty()));
-   * }</code></pre>
+   * }</pre>
    *
    * <p><b>*WARNING*</b>: This is intended for lightweight callback work like logging. A
    * long-lasting invocation may cause the command process or its start timeout detection to be
@@ -655,13 +699,13 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">{@code
+   * <pre>{@code
    * command.onStderr(does(line -> System.out.println("Line: " + line)));
    * command.onStderr(writeTo(fileWriter));
    * command.onStderr(stopWhen(line -> line.contains("Successful")));
    * command.onStderr(
    *     answerLn(line -> line.contains("Confirm") ? Optional.of("Y") : Optional.empty()));
-   * }</code></pre>
+   * }</pre>
    *
    * <p><b>*WARNING*</b>: This is intended for lightweight callback work like logging. A
    * long-lasting invocation may cause the command process or its start timeout detection to be
@@ -704,9 +748,9 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
+   * <pre>{@code
    * command.successExitCodes(0, 1, 2, 10);
-   * </code></pre>
+   * }</pre>
    *
    * <p>By default, it is {@linkplain Command#DEFAULT_SUCCESS_EXIT_CODE 0}.
    *
@@ -727,9 +771,9 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
+   * <pre>{@code
    * command.successExitCodes(ImmutableSet.of(0, 1, 2, 10));
-   * </code></pre>
+   * }</pre>
    *
    * <p>By default, it is {@linkplain Command#DEFAULT_SUCCESS_EXIT_CODE 0}.
    *
@@ -746,9 +790,9 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
+   * <pre>{@code
    * command.input("Y\n");
-   * </code></pre>
+   * }</pre>
    *
    * @see <a href="#input">Command Input</a>
    */
@@ -765,9 +809,9 @@ public abstract class Command {
    *
    * <p>Example:
    *
-   * <pre class="code"><code class="java">
+   * <pre>{@code
    * command.inputLn("Y");
-   * </code></pre>
+   * }</pre>
    *
    * @see <a href="#input">Command Input</a>
    */
@@ -933,8 +977,8 @@ public abstract class Command {
   /** See {@link #startTimeout(Timeout)}. */
   public abstract Optional<Timeout> getStartTimeout();
 
-  /** See {@link #successStartCondition(Predicate)}. */
-  public abstract Predicate<String> getSuccessStartCondition();
+  /** See {@link #successfulStartCondition(Predicate)}. */
+  public abstract Predicate<String> getSuccessfulStartCondition();
 
   /** See {@link #onTimeout(Runnable)}. */
   public abstract Optional<Runnable> getTimeoutCallback();
@@ -1026,7 +1070,7 @@ public abstract class Command {
 
     abstract Builder startTimeout(Timeout startTimeout);
 
-    abstract Builder successStartCondition(Predicate<String> successStartCondition);
+    abstract Builder successfulStartCondition(Predicate<String> successStartCondition);
 
     abstract Builder timeoutCallback(Runnable timeoutCallback);
 
@@ -1058,7 +1102,7 @@ public abstract class Command {
   private static Builder newBuilder() {
     return new AutoValue_Command.Builder()
         .arguments(ImmutableList.of())
-        .successStartCondition(DEFAULT_SUCCESS_START_CONDITION)
+        .successfulStartCondition(DEFAULT_SUCCESS_START_CONDITION)
         .successExitCodes(ImmutableSet.of(DEFAULT_SUCCESS_EXIT_CODE))
         .extraEnvironment(ImmutableMap.of())
         .needStdoutInResult(DEFAULT_NEED_STDOUT_IN_RESULT)

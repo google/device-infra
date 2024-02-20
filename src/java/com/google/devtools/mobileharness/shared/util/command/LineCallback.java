@@ -155,15 +155,20 @@ public interface LineCallback {
       return answer(answer + "\n");
     }
 
-    /** A response to tell command executor to stop reading output from stdout/stderr. */
+    /**
+     * A response to tell command executor to stop reading further output from stdout/stderr for
+     * line callbacks. Output in results/exceptions is not affected.
+     *
+     * @see CommandProcess#stopReadingOutput()
+     */
     public static Response stopReadingOutput() {
       return builder().stopReadingOutput(true).build();
     }
 
     /**
      * A response to tell command executor to stop the command specified by {@code stop}, write
-     * {@code answer} to stdin, and stop reading output from stdout/stderr specified by {@code
-     * stopReadingOutput}.
+     * {@code answer} to stdin, and stop reading further output from stdout/stderr (for line
+     * callbacks only) specified by {@code stopReadingOutput}.
      *
      * <p>If a command is stopped, getting its result by {@link CommandExecutor#run(Command)},
      * {@link CommandExecutor#exec(Command)} and {@link CommandProcess#await()} will not throw
@@ -175,8 +180,8 @@ public interface LineCallback {
 
     /**
      * A response to tell command executor to stop the command specified by {@code stop}, write
-     * {@code answer} + "\n" to stdin, and stop reading output from stdout/stderr specified by
-     * {@code stopReadingOutput}.
+     * {@code answer} + "\n" to stdin, and stop reading further output from stdout/stderr (for line
+     * callbacks only) specified by {@code stopReadingOutput}.
      *
      * <p>If a command is stopped, getting its result by {@link CommandExecutor#run(Command)},
      * {@link CommandExecutor#exec(Command)} and {@link CommandProcess#await()} will not throw
@@ -248,7 +253,10 @@ public interface LineCallback {
      * Returns a new response that behaves equivalently to this response, but with the specified
      * stop_reading_output argument in place of the current stop_reading_output argument.
      *
-     * <p>The new response tells command executor to stop reading output from stdout/stderr.
+     * <p>The new response tells command executor to stop reading further output from stdout/stderr
+     * for line callbacks. Output in results/exceptions is not affected.
+     *
+     * @see CommandProcess#stopReadingOutput()
      */
     public Response withStopReadingOutput() {
       return toBuilder().stopReadingOutput(true).build();
@@ -260,7 +268,12 @@ public interface LineCallback {
     /** Gets the answer to write to stdin of the command. */
     public abstract Optional<String> getAnswer();
 
-    /** Gets whether to stop reading the following output from stdout/stderr */
+    /**
+     * Gets whether to stop reading further output from stdout/stderr for line callbacks. Output in
+     * results/exceptions is not affected.
+     *
+     * @see CommandProcess#stopReadingOutput()
+     */
     public abstract boolean getStopReadingOutput();
 
     @AutoValue.Builder

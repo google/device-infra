@@ -68,8 +68,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.TimeoutException;
 import javax.inject.Inject;
 import org.junit.After;
 import org.junit.Before;
@@ -122,8 +123,6 @@ public class LabServerIntegrationTest {
   private StringBuilder labServerStdoutBuilder;
   private StringBuilder labServerStderrBuilder;
 
-  private CountDownLatch labServerStartedOrFailedToStart;
-  private AtomicBoolean labServerStartedSuccessfully;
   private CountDownLatch labServerFoundDevice;
 
   private int masterPort;
@@ -165,8 +164,6 @@ public class LabServerIntegrationTest {
     labServerStdoutBuilder = new StringBuilder();
     labServerStderrBuilder = new StringBuilder();
 
-    labServerStartedOrFailedToStart = new CountDownLatch(1);
-    labServerStartedSuccessfully = new AtomicBoolean();
     labServerFoundDevice = new CountDownLatch(1);
 
     labServerCommand =
@@ -207,14 +204,11 @@ public class LabServerIntegrationTest {
                       System.err.printf("lab_server_stderr %s\n", stderr);
                       labServerStderrBuilder.append(stderr).append('\n');
 
-                      if (stderr.contains("Lab server successfully started")) {
-                        labServerStartedSuccessfully.set(true);
-                        labServerStartedOrFailedToStart.countDown();
-                      } else if (stderr.contains("New device NoOpDevice-0")) {
+                      if (stderr.contains("New device NoOpDevice-0")) {
                         labServerFoundDevice.countDown();
                       }
                     }))
-            .onExit(result -> labServerStartedOrFailedToStart.countDown())
+            .successfulStartCondition(line -> line.contains("Lab server successfully started"))
             .redirectStderr(false)
             .needStdoutInResult(false)
             .needStderrInResult(false);
@@ -319,7 +313,7 @@ public class LabServerIntegrationTest {
   }
 
   private void startServersAndWaitUntilReady()
-      throws MobileHarnessException, InterruptedException, IOException {
+      throws MobileHarnessException, InterruptedException, IOException, ExecutionException {
     logger.atInfo().log("Starting AtsMode, port=%s", masterPort);
     atsMode.initialize(null);
     ImmutableList<BindableService> bindableServices = atsMode.provideServices();
@@ -332,12 +326,13 @@ public class LabServerIntegrationTest {
     labServerProcess = new CommandExecutor().start(labServerCommand);
 
     // Waits until lab server starts and detects devices successfully.
-    assertWithMessage("Lab server didn't start in 60 seconds")
-        .that(labServerStartedOrFailedToStart.await(60L, SECONDS))
-        .isTrue();
-    assertWithMessage("Lab server didn't start successfully")
-        .that(labServerStartedSuccessfully.get())
-        .isTrue();
+    try {
+      assertWithMessage("Lab server didn't start successfully")
+          .that(labServerProcess.successfulStartFuture().get(60L, SECONDS))
+          .isTrue();
+    } catch (TimeoutException e) {
+      throw new AssertionError("Lab server didn't start in 60 seconds", e);
+    }
     assertWithMessage("Lab server didn't detect devices in 15 seconds")
         .that(labServerFoundDevice.await(15L, SECONDS))
         .isTrue();

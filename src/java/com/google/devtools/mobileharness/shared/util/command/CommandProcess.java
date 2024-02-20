@@ -17,6 +17,9 @@
 package com.google.devtools.mobileharness.shared.util.command;
 
 import com.google.common.annotations.Beta;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
+import com.google.devtools.mobileharness.shared.util.command.LineCallback.Response;
 import com.google.devtools.mobileharness.shared.util.command.io.LineCollector;
 import java.io.OutputStream;
 import java.io.Writer;
@@ -26,6 +29,7 @@ import java.time.Instant;
 import java.util.OptionalInt;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Predicate;
 import javax.annotation.Nullable;
 
 /**
@@ -57,6 +61,7 @@ public class CommandProcess {
 
   private final AtomicBoolean isTimeout = new AtomicBoolean();
   private final AtomicBoolean isStopped = new AtomicBoolean();
+  private final SettableFuture<Boolean> successfulStartFuture = SettableFuture.create();
 
   /** Do NOT make it public. */
   CommandProcess(
@@ -157,18 +162,45 @@ public class CommandProcess {
     kill();
   }
 
-  /** Kills the command. Killing a process that has already exited has no effect. */
+  /**
+   * Kills the command.
+   *
+   * <p>Killing a process that has already exited has no effect.
+   */
   public void kill() {
     backendProcess.kill();
   }
 
   /**
-   * Kills the command forcibly. Killing a process that has already exited has no effect.
+   * Kills the command forcibly.
+   *
+   * <p>Killing a process that has already exited has no effect.
    *
    * <p><b>NOTE</b>: If the feature is not supported, it will invoke {@link #kill()} instead.
    */
   public void killForcibly() {
     backendProcess.killForcibly();
+  }
+
+  /**
+   * {@linkplain #kill() Kills} the command, {@linkplain #await(Duration) waits} for its completion,
+   * and if the command keeps running for {@code timeout} after being killed, {@linkplain
+   * #killForcibly() forcibly kills} the command.
+   *
+   * <p>Killing a process that has already exited has no effect.
+   */
+  public void killAndThenKillForcibly(Duration timeout) throws InterruptedException {
+    try {
+      kill();
+      CommandResult ignored = await(timeout);
+    } catch (CommandExecutionException e) {
+      // The command has exited, does not need to kill it forcibly.
+    } catch (TimeoutException e) {
+      killForcibly();
+    } catch (InterruptedException | RuntimeException | Error e) {
+      killForcibly();
+      throw e;
+    }
   }
 
   /**
@@ -215,9 +247,32 @@ public class CommandProcess {
     return stdinWriter;
   }
 
-  /** Returns the command of the command process */
+  /** Returns the command of the command process. */
   public Command command() {
     return command;
+  }
+
+  /**
+   * Returns a future which completes when the command <b>starts successfully</b> (the {@linkplain
+   * Command#successfulStartCondition successful start condition} of the command is met) (the result
+   * will be {@code true}), or the command ends (the result will be {@code false}).
+   *
+   * @see Command#successfulStartCondition(Predicate)
+   */
+  public ListenableFuture<Boolean> successfulStartFuture() {
+    return successfulStartFuture;
+  }
+
+  /**
+   * Stop reading further output from stdout/stderr for line callbacks. Output in results/exceptions
+   * is not affected (specify them by {@link Command#needStdoutInResult} and {@link
+   * Command#needStderrInResult}).
+   *
+   * @see Response#stopReadingOutput()
+   */
+  public void stopReadingOutput() {
+    stdoutCollector.stopConsumingLines();
+    stderrCollector.stopConsumingLines();
   }
 
   /**
@@ -226,8 +281,12 @@ public class CommandProcess {
    * <p>If a command is timeout, {@link #await()} on its process will always throw {@link
    * CommandTimeoutException} no matter whether the command successes.
    */
-  void timeout() {
+  void setTimeout() {
     isTimeout.set(true);
+  }
+
+  void setSuccessfulStart(boolean successfulStart) {
+    successfulStartFuture.set(successfulStart);
   }
 
   private CommandResult getResult(

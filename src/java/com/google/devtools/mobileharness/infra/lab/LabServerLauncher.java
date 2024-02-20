@@ -95,7 +95,6 @@ public class LabServerLauncher {
     initializeEnv();
 
     labServer.run();
-    logger.atInfo().log("Lab Server successfully started");
   }
 
   private void onShutdown() {

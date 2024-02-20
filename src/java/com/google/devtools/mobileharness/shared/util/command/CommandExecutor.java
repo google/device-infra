@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.command;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.util.concurrent.Futures.getUnchecked;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import com.google.common.collect.ImmutableMap;
@@ -43,7 +44,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
@@ -325,10 +325,12 @@ public class CommandExecutor {
 
     // Schedules timeout tasks.
     Runnable timeoutTask = new TestContextRunnable(new TimeoutTask(commandProcess));
-    Function<Duration, Future<?>> timeoutTaskScheduler =
+    Function<Duration, ListenableFuture<?>> timeoutTaskScheduler =
         timeout -> timer.schedule(timeoutTask, timeout.toMillis(), MILLISECONDS);
-    Future<?> timeoutTaskFuture = timeoutTaskScheduler.apply(remainingTime);
-    Optional<Future<?>> startTimeoutTaskFuture = startRemainingTime.map(timeoutTaskScheduler);
+    ListenableFuture<?> timeoutTaskFuture = timeoutTaskScheduler.apply(remainingTime);
+    @Nullable
+    ListenableFuture<?> startTimeoutTaskFuture =
+        startRemainingTime.map(timeoutTaskScheduler).orElse(null);
 
     // Writes initial input.
     writeToStdin(commandProcess, command.getInput().orElse(null));
@@ -336,14 +338,10 @@ public class CommandExecutor {
     // Sets line consumers.
     stdoutCollector.setLineConsumer(
         new LineConsumer(
-            commandProcess,
-            command.getStdoutLineCallback().orElse(null),
-            startTimeoutTaskFuture.orElse(null)));
+            commandProcess, command.getStdoutLineCallback().orElse(null), startTimeoutTaskFuture));
     stderrCollector.setLineConsumer(
         new LineConsumer(
-            commandProcess,
-            command.getStderrLineCallback().orElse(null),
-            startTimeoutTaskFuture.orElse(null)));
+            commandProcess, command.getStderrLineCallback().orElse(null), startTimeoutTaskFuture));
 
     // Starts reading outputs.
     threadPool.execute(
@@ -361,11 +359,7 @@ public class CommandExecutor {
     threadPool.execute(
         new TestContextRunnable(
             () ->
-                postRun(
-                    commandProcess,
-                    timeoutTaskFuture,
-                    startTimeoutTaskFuture.orElse(null),
-                    commandRecord)));
+                postRun(commandProcess, timeoutTaskFuture, startTimeoutTaskFuture, commandRecord)));
 
     return commandProcess;
   }
@@ -451,9 +445,7 @@ public class CommandExecutor {
   }
 
   private Optional<Path> getCommandWorkDirectory(Command command) {
-    return command.getWorkDirectory().isPresent()
-        ? command.getWorkDirectory()
-        : getDefaultWorkDirectory();
+    return command.getWorkDirectory().or(this::getDefaultWorkDirectory);
   }
 
   private static Duration getRemainingTime(Command command, Timeout timeout)
@@ -490,8 +482,8 @@ public class CommandExecutor {
 
   private static void postRun(
       CommandProcess commandProcess,
-      Future<?> timeoutTaskFuture,
-      @Nullable Future<?> startTimeoutTaskFuture,
+      ListenableFuture<?> timeoutTaskFuture,
+      @Nullable ListenableFuture<?> startTimeoutTaskFuture,
       CommandRecord commandRecord) {
     try {
       CommandResult result;
@@ -504,6 +496,7 @@ public class CommandExecutor {
         if (startTimeoutTaskFuture != null) {
           startTimeoutTaskFuture.cancel(/* mayInterruptIfRunning= */ false);
         }
+        commandProcess.setSuccessfulStart(/* successfulStart= */ false);
       }
       CommandRecorder.getInstance().addCommandResult(commandRecord, result);
       final CommandResult commandResult = result;
@@ -513,17 +506,6 @@ public class CommandExecutor {
           .ifPresent(callback -> callback.accept(commandResult));
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-    }
-  }
-
-  private static boolean testSuccessStartCondition(Command command, String line) {
-    try {
-      return command.getSuccessStartCondition().test(line);
-    } catch (RuntimeException e) {
-      logger.atWarning().withCause(e).log(
-          "Error when testing success start condition of command [%s] with line [%s]",
-          command, line);
-      return false;
     }
   }
 
@@ -545,23 +527,24 @@ public class CommandExecutor {
 
     private void onTimeout() {
       logger.atInfo().log("Kill timeout command: %s", commandProcess.command());
-      commandProcess.timeout();
+      commandProcess.setTimeout();
       commandProcess.kill();
       commandProcess.command().getTimeoutCallback().ifPresent(Runnable::run);
     }
   }
 
+  /** Returning {@code true} indicates stopping consuming lines. */
   @NotThreadSafe
   private static class LineConsumer implements Predicate<String> {
 
     private final CommandProcess commandProcess;
+    @Nullable private final ListenableFuture<?> startTimeoutTaskFuture;
     @Nullable private LineCallback lineCallback;
-    @Nullable private Future<?> startTimeoutTaskFuture;
 
     private LineConsumer(
         CommandProcess commandProcess,
         @Nullable LineCallback lineCallback,
-        @Nullable Future<?> startTimeoutTaskFuture) {
+        @Nullable ListenableFuture<?> startTimeoutTaskFuture) {
       this.commandProcess = commandProcess;
       this.lineCallback = lineCallback;
       this.startTimeoutTaskFuture = startTimeoutTaskFuture;
@@ -569,14 +552,15 @@ public class CommandExecutor {
 
     @Override
     public boolean test(String line) {
-      if (startTimeoutTaskFuture != null
-          && testSuccessStartCondition(commandProcess.command(), line)) {
-        startTimeoutTaskFuture.cancel(/* mayInterruptIfRunning= */ false);
-        startTimeoutTaskFuture = null;
-        if (lineCallback == null) {
-          return true;
+      // Tests successful start.
+      if (testSuccessfulStart(line)) {
+        if (startTimeoutTaskFuture != null) {
+          startTimeoutTaskFuture.cancel(/* mayInterruptIfRunning= */ false);
         }
+        commandProcess.setSuccessfulStart(true);
       }
+
+      // Calls line callback.
       if (lineCallback != null) {
         Response response = null;
         try {
@@ -592,9 +576,6 @@ public class CommandExecutor {
           }
           if (e.getStopReadingOutput()) {
             lineCallback = null;
-            if (startTimeoutTaskFuture == null) {
-              return true;
-            }
           }
         } catch (RuntimeException e) {
           logger.atWarning().withCause(e).log(
@@ -610,13 +591,23 @@ public class CommandExecutor {
           }
           if (response.getStopReadingOutput()) {
             lineCallback = null;
-            if (startTimeoutTaskFuture == null) {
-              return true;
-            }
           }
         }
       }
-      return false;
+      return lineCallback == null
+          && commandProcess.successfulStartFuture().isDone()
+          && Boolean.TRUE.equals(getUnchecked(commandProcess.successfulStartFuture()));
+    }
+
+    private boolean testSuccessfulStart(String line) {
+      try {
+        return commandProcess.command().getSuccessfulStartCondition().test(line);
+      } catch (RuntimeException e) {
+        logger.atWarning().withCause(e).log(
+            "Error when testing successful start condition of command [%s] with line [%s]",
+            commandProcess.command(), line);
+        return false;
+      }
     }
   }
 

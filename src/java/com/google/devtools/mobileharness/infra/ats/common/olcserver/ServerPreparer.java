@@ -17,12 +17,15 @@
 package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.util.concurrent.Futures.addCallback;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -52,7 +55,8 @@ import io.grpc.Status.Code;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 import javax.annotation.concurrent.GuardedBy;
@@ -68,6 +72,8 @@ public class ServerPreparer {
 
   private static final ImmutableList<String> UNFINISHED_SESSIONS_TABLE_HEADER =
       ImmutableList.of("Session ID", "Name", "Status", "Submitted Time");
+
+  private static final String SERVER_STARTED_SIGNAL = "OLC server started";
 
   /** Logger for printing logs of OLC server until it starts successfully. */
   @FunctionalInterface
@@ -145,10 +151,7 @@ public class ServerPreparer {
     localFileUtil.checkFile(serverBinaryPath);
 
     CommandProcess serverProcess = null;
-    CountDownLatch serverStartedLatch = new CountDownLatch(1);
-    AtomicBoolean serverStartedSuccessfully = new AtomicBoolean();
-    ServerStderrLineCallback serverStderrLineCallback =
-        new ServerStderrLineCallback(serverStartedLatch, serverStartedSuccessfully);
+    ServerStderrLineCallback serverStderrLineCallback = new ServerStderrLineCallback();
     try {
       try {
         serverProcess =
@@ -161,11 +164,15 @@ public class ServerPreparer {
                                 deviceInfraServiceFlags,
                                 /* nativeArguments= */ ImmutableList.of()))
                     .onStderr(serverStderrLineCallback)
-                    .onExit(result -> serverStartedLatch.countDown())
+                    .successfulStartCondition(line -> line.contains(SERVER_STARTED_SIGNAL))
                     .timeout(ChronoUnit.YEARS.getDuration())
                     .redirectStderr(false)
                     .needStdoutInResult(false)
                     .needStderrInResult(false));
+        addCallback(
+            serverProcess.successfulStartFuture(),
+            new ServerSuccessfulStartCallback(serverProcess),
+            directExecutor());
       } catch (CommandStartException e) {
         throw new MobileHarnessException(
             InfraErrorId.ATSC_SERVER_PREPARER_START_OLC_SERVER_ERROR,
@@ -175,15 +182,18 @@ public class ServerPreparer {
 
       // Waits until the server starts.
       logger.atFine().log("Wait until OLC server starts, command=[%s]", serverProcess.command());
-      if (!serverStartedLatch.await(40L, SECONDS)) {
+      try {
+        if (!serverProcess.successfulStartFuture().get(40L, SECONDS)) {
+          throw new MobileHarnessException(
+              InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_ABNORMAL_EXIT_WHILE_INITIALIZATION,
+              "OLC server exited abnormally while initialization");
+        }
+      } catch (ExecutionException e) {
+        throw new AssertionError(e);
+      } catch (TimeoutException unused) {
         throw new MobileHarnessException(
             InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_INITIALIZE_ERROR,
-            "OLC server didn't start in 30 seconds");
-      }
-      if (!serverStartedSuccessfully.get()) {
-        throw new MobileHarnessException(
-            InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_ABNORMAL_EXIT_WHILE_INITIALIZATION,
-            "OLC server exited abnormally while initialization");
+            "OLC server didn't start in 40 seconds");
       }
       connectWithRetry();
       serverStartingLogger.log(
@@ -314,35 +324,36 @@ public class ServerPreparer {
             .collect(toImmutableList()));
   }
 
-  private static class ServerStderrLineCallback implements LineCallback {
+  private static class ServerSuccessfulStartCallback implements FutureCallback<Boolean> {
 
-    private static final String SERVER_STARTED_SIGNAL = "OLC server started";
+    private final CommandProcess commandProcess;
+
+    private ServerSuccessfulStartCallback(CommandProcess commandProcess) {
+      this.commandProcess = commandProcess;
+    }
+
+    @Override
+    public void onSuccess(Boolean result) {
+      if (Boolean.TRUE.equals(result)) {
+        commandProcess.stopReadingOutput();
+      }
+    }
+
+    @Override
+    public void onFailure(Throwable t) {}
+  }
+
+  private static class ServerStderrLineCallback implements LineCallback {
 
     @GuardedBy("itself")
     private final StringBuilder serverStartingLog = new StringBuilder();
-
-    private final CountDownLatch serverStartedLatch;
-    private final AtomicBoolean serverStartedSuccessfully;
-
-    private ServerStderrLineCallback(
-        CountDownLatch serverStartedLatch, AtomicBoolean serverStartedSuccessfully) {
-      this.serverStartedLatch = serverStartedLatch;
-      this.serverStartedSuccessfully = serverStartedSuccessfully;
-    }
 
     @Override
     public Response onLine(String stderrLine) {
       synchronized (serverStartingLog) {
         serverStartingLog.append(stderrLine).append('\n');
       }
-
-      if (stderrLine.contains(SERVER_STARTED_SIGNAL)) {
-        serverStartedSuccessfully.set(true);
-        serverStartedLatch.countDown();
-        return Response.stopReadingOutput();
-      } else {
-        return Response.empty();
-      }
+      return Response.empty();
     }
 
     private String getServerStartingLog() {

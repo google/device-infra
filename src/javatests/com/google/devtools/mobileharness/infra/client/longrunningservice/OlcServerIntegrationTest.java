@@ -84,7 +84,8 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import org.junit.After;
@@ -381,12 +382,10 @@ public class OlcServerIntegrationTest {
   }
 
   private void startServers(boolean enableAtsMode)
-      throws IOException, CommandStartException, InterruptedException {
+      throws IOException, CommandStartException, InterruptedException, ExecutionException {
     CommandExecutor commandExecutor = new CommandExecutor();
 
     // Starts the OLC server.
-    CountDownLatch olcServerStartedLatch = new CountDownLatch(1);
-    AtomicBoolean olcServerStartedSuccessfully = new AtomicBoolean();
     CountDownLatch olcServerLocalDeviceFound = new CountDownLatch(1);
     CountDownLatch olcServerRemoteDeviceFound = new CountDownLatch(1);
 
@@ -421,17 +420,14 @@ public class OlcServerIntegrationTest {
                       System.err.printf("olc_server_stderr %s\n", stderr);
                       olcServerStderrBuilder.append(stderr).append('\n');
 
-                      if (stderr.contains("OLC server started")) {
-                        olcServerStartedSuccessfully.set(true);
-                        olcServerStartedLatch.countDown();
-                      } else if (stderr.contains("New device NoOpDevice-0")) {
+                      if (stderr.contains("New device NoOpDevice-0")) {
                         olcServerLocalDeviceFound.countDown();
                       } else if (stderr.contains("Sign up lab")
                           && stderr.contains("NoOpDevice-0")) {
                         olcServerRemoteDeviceFound.countDown();
                       }
                     }))
-            .onExit(result -> olcServerStartedLatch.countDown())
+            .successfulStartCondition(line -> line.contains("OLC server started"))
             .redirectStderr(false)
             .needStdoutInResult(false)
             .needStderrInResult(false);
@@ -439,17 +435,16 @@ public class OlcServerIntegrationTest {
     olcServerProcess = commandExecutor.start(olcServerCommand);
 
     // Waits until the server starts successfully.
-    assertWithMessage("The OLC server has not started in 15 seconds")
-        .that(olcServerStartedLatch.await(15L, SECONDS))
-        .isTrue();
-    assertWithMessage("The OLC server does not start successfully")
-        .that(olcServerStartedSuccessfully.get())
-        .isTrue();
+    try {
+      assertWithMessage("The OLC server does not start successfully")
+          .that(olcServerProcess.successfulStartFuture().get(15L, SECONDS))
+          .isTrue();
+    } catch (TimeoutException e) {
+      throw new AssertionError("The OLC server has not started in 15 seconds", e);
+    }
 
     // Starts the lab server.
     if (enableAtsMode) {
-      CountDownLatch labServerStartedOrFailedToStart = new CountDownLatch(1);
-      AtomicBoolean labServerStartedSuccessfully = new AtomicBoolean();
       CountDownLatch labServerLocalDeviceFound = new CountDownLatch(1);
 
       int labServerGrpcPort = PortProber.pickUnusedPort();
@@ -495,14 +490,11 @@ public class OlcServerIntegrationTest {
                         System.err.printf("lab_server_stderr %s\n", stderr);
                         labServerStderrBuilder.append(stderr).append('\n');
 
-                        if (stderr.contains("Lab server successfully started")) {
-                          labServerStartedSuccessfully.set(true);
-                          labServerStartedOrFailedToStart.countDown();
-                        } else if (stderr.contains("New device NoOpDevice-0")) {
+                        if (stderr.contains("New device NoOpDevice-0")) {
                           labServerLocalDeviceFound.countDown();
                         }
                       }))
-              .onExit(result -> labServerStartedOrFailedToStart.countDown())
+              .successfulStartCondition(line -> line.contains("Lab server successfully started"))
               .redirectStderr(false)
               .needStdoutInResult(false)
               .needStderrInResult(false);
@@ -511,12 +503,13 @@ public class OlcServerIntegrationTest {
       labServerProcess = commandExecutor.start(labServerCommand);
 
       // Waits until lab server starts and detects devices successfully.
-      assertWithMessage("Lab server didn't start in 60 seconds")
-          .that(labServerStartedOrFailedToStart.await(60L, SECONDS))
-          .isTrue();
-      assertWithMessage("Lab server didn't start successfully")
-          .that(labServerStartedSuccessfully.get())
-          .isTrue();
+      try {
+        assertWithMessage("Lab server didn't start successfully")
+            .that(labServerProcess.successfulStartFuture().get(60L, SECONDS))
+            .isTrue();
+      } catch (TimeoutException e) {
+        throw new AssertionError("Lab server didn't start in 60 seconds", e);
+      }
       assertWithMessage("Lab server didn't detect devices in 15 seconds")
           .that(labServerLocalDeviceFound.await(15L, SECONDS))
           .isTrue();
