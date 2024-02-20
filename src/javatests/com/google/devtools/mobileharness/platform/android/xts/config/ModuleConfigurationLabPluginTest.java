@@ -79,7 +79,7 @@ public class ModuleConfigurationLabPluginTest {
   public void onTestStarting_withoutModuleName() throws Exception {
     when(params.getOptional(ModuleConfigurationLabPlugin.MODULE_NAME)).thenReturn(Optional.empty());
     Configuration targetConfig = Configuration.getDefaultInstance();
-    when(configurationUtil.getConfigsFromDirs(any()))
+    when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(
             ImmutableMap.of(
                 "module1", targetConfig, "module2", Configuration.getDefaultInstance()));
@@ -98,7 +98,7 @@ public class ModuleConfigurationLabPluginTest {
         Configuration.newBuilder()
             .setMetadata(ConfigurationMetadata.newBuilder().setXtsModule(targetModuleName))
             .build();
-    when(configurationUtil.getConfigsFromDirs(any()))
+    when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(
             ImmutableMap.of(
                 "module1", Configuration.getDefaultInstance(), "module2", targetConfig));
@@ -111,7 +111,7 @@ public class ModuleConfigurationLabPluginTest {
   @Test
   public void onTestStarting_configNotFound() {
     when(params.getOptional(ModuleConfigurationLabPlugin.MODULE_NAME)).thenReturn(Optional.empty());
-    when(configurationUtil.getConfigsFromDirs(any())).thenReturn(ImmutableMap.of());
+    when(configurationUtil.getConfigsV2FromDirs(any())).thenReturn(ImmutableMap.of());
 
     SkipTestException exception =
         assertThrows(

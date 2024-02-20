@@ -66,7 +66,7 @@ public class ModuleConfigurationLabPlugin {
 
     File testPackage = new File(testInfo.jobInfo().files().getSingle(AB_TEST_PACKAGE));
     ImmutableMap<String, Configuration> configs =
-        configurationUtil.getConfigsFromDirs(ImmutableList.of(testPackage));
+        configurationUtil.getConfigsV2FromDirs(ImmutableList.of(testPackage));
     Configuration targetConfig =
         testInfo
             .jobInfo()
