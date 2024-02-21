@@ -2,6 +2,36 @@ workspace(name = "com_google_deviceinfra")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
+_FASTCDC_BUILD_FILE_CONTENT = """\
+package(
+    default_applicable_licenses = ["//third_party/deviceinfra:license"],
+    default_visibility = ["//visibility:public"],
+)
+
+licenses(["notice"])
+
+exports_files(["LICENSE"])
+
+go_library(
+    name = "fastcdc",
+    srcs = ["fastcdc.go"],
+)
+
+"""
+
+# FastCDC
+http_archive(
+    name = "fastcdc_go",
+    build_file_content = _FASTCDC_BUILD_FILE_CONTENT,
+    patch_cmds = [
+        "sed -i '1 i // Package fastcdc implements the FastCDC content-defined chunking algorithm.' fastcdc.go",
+        "sed -i -e 's/\([oO]ffset\) int/\1 int64/' -e 's/c.offset += chunk.Length/c.offset += int64(chunk.Length)/' fastcdc.go",
+    ],
+    sha256 = "fc618da339bb890ecedb54484bff5fc50f04e968ea470555c45eb3dfd5e5f093",
+    strip_prefix = "fastcdc-go-0.2.0",
+    urls = ["https://github.com/jotfs/fastcdc-go/archive/refs/tags/v0.2.0.zip"],
+)
+
 # GoogleTest/GoogleMock framework. Used by most unit-tests.
 http_archive(
     name = "com_google_googletest",
