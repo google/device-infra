@@ -1,4 +1,4 @@
-module github.com/google/device-infra/src/devtools/rbe/casuploader
+module github.com/google/device-infra/src/devtools/rbe
 
 go 1.22
 
@@ -6,9 +6,9 @@ require (
 	github.com/bazelbuild/remote-apis v0.0.0-20230411132548-35aee1c4a425
 	github.com/bazelbuild/remote-apis-sdks v0.0.0-20230822143022-8ee7a6ff900a
 	github.com/golang/glog v1.1.2
-	github.com/google/device-infra v0.0.0-20230821085359-d99bb10f2d1d
 	github.com/google/uuid v1.3.0
 	github.com/pkg/xattr v0.4.4
+	google.golang.org/protobuf v1.31.0
 )
 
 require (
@@ -32,5 +32,4 @@ require (
 	google.golang.org/genproto/googleapis/bytestream v0.0.0-20230807174057-1744710a1577 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20230731190214-cbb8c96f2d6d // indirect
 	google.golang.org/grpc v1.58.0-dev.0.20230804151048-7aceafcc52f9 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
 )
