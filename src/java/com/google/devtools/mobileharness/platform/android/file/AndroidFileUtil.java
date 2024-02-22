@@ -886,6 +886,43 @@ public class AndroidFileUtil {
       String desFileOrDirOnDevice,
       @Nullable Duration pushTimeout)
       throws MobileHarnessException, InterruptedException {
+    return push(
+        serial,
+        sdkVersion,
+        srcFileOrDirOnHost,
+        desFileOrDirOnDevice,
+        pushTimeout,
+        /* skipIfSameTimestamp= */ false);
+  }
+
+  /**
+   * Pushes the file or the folder from lab server host machine to device.
+   *
+   * <p>For command output, Adb uses "\r\n" as line separator on SDK<=23, while uses "\n" as line
+   * separator on SDK>23. It's callers' responsibility to parse it correctly.
+   *
+   * @param serial serial number of the device
+   * @param sdkVersion SDK version of device
+   * @param srcFileOrDirOnHost source file path on lab server host machine, could be a file or
+   *     directory
+   * @param desFileOrDirOnDevice destination file path on the device
+   * @param pushTimeout timeout for the execution of push
+   * @param skipIfSameTimestamp don't push files that already exist on the destination and have the
+   *     the same timestamp as the source
+   * @return log message
+   * @throws MobileHarnessException if failed to run the command, or failed to get destination dir
+   *     path to source dir.
+   * @throws InterruptedException if the thread executing the commands is interrupted.
+   */
+  @CanIgnoreReturnValue
+  public String push(
+      String serial,
+      int sdkVersion,
+      String srcFileOrDirOnHost,
+      String desFileOrDirOnDevice,
+      @Nullable Duration pushTimeout,
+      boolean skipIfSameTimestamp)
+      throws MobileHarnessException, InterruptedException {
     if (!localFileUtil.isDirExist(srcFileOrDirOnHost)) {
       try {
         return adb.runWithRetry(
@@ -928,7 +965,7 @@ public class AndroidFileUtil {
     StringBuilder log =
         new StringBuilder(
             "Source path is a directory and may contain symbolic links. "
-                + "Need to walk through the dir and push every files");
+                + "Need to walk through the dir and push every file");
     List<String> srcFilePathList;
     try {
       srcFilePathList = localFileUtil.listFilePaths(srcFileOrDirOnHost, true);
@@ -945,15 +982,25 @@ public class AndroidFileUtil {
       // Only get the file name into relative path.
       String relativePath = PathUtil.makeRelative(srcFileOrDirOnHost, srcFilePath);
       String desFilePath = PathUtil.join(desDirPathOnDevice, relativePath);
+      String[] adbArgs;
+      if (skipIfSameTimestamp) {
+        // Pass --sync flag to `adb push`. According to `adb help`, that means "only push files
+        // that are NEWER on the host than the device" docs, but the implementation <a href="
+        // https://android.googlesource.com/platform/packages/modules/adb/+/3dac5b70f053ca2988e9ac77eb64f55b9193acbb/client/file_sync_client.cpp#1048">
+        // here</a> actually pushes files whenever they don't have the same timestamp on the device
+        // as on the host, i.e. OLDER _OR_ NEWER, including in the case when the destination file
+        // doesn't exist on the device.
+        adbArgs = new String[] {ADB_ARG_PUSH, "--sync", srcFilePath, desFilePath};
+      } else {
+        adbArgs = new String[] {ADB_ARG_PUSH, srcFilePath, desFilePath};
+      }
       try {
         log.append("\nPush: ")
             .append(relativePath)
             .append(" -> ")
             .append(desFilePath)
             .append(": ")
-            .append(
-                adb.runWithRetry(
-                    serial, new String[] {ADB_ARG_PUSH, srcFilePath, desFilePath}, pushTimeout));
+            .append(adb.runWithRetry(serial, adbArgs, pushTimeout));
       } catch (MobileHarnessException e) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_FILE_UTIL_PUSH_FILE_ADB_ERROR,
