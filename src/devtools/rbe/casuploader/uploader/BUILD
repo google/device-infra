@@ -24,11 +24,13 @@ go_library(
     name = "uploader",
     srcs = [
         "dir.go",
+        "file.go",
         "uploader.go",
         "zip.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casuploader/uploader",
     deps = [
+        "//src/devtools/rbe/casuploader/chunker",
         "@com_github_bazelbuild_remote_apis//build/bazel/remote/execution/v2:remote_execution_go_proto",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/client",
         "@com_github_bazelbuild_remote_apis_sdks//go/pkg/command",

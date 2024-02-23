@@ -41,6 +41,9 @@ var (
 
 	zipPath         = flag.String("zip-path", "", "Path to a .zip file to upload")
 	dirPath         = flag.String("dir-path", "", "Path to a directory to upload")
+	filePath        = flag.String("file-path", "", "Path to a single file to upload")
+	chunk           = flag.Bool("chunk", false, "Chunk files when applicable")
+	avgChunkSizeKb  = flag.Int("avg-chunk-size", 1024, "Average chunk size in KiB")
 	casInstance     = flag.String("cas-instance", "", "RBE instance")
 	casAddr         = flag.String("cas-addr", "remotebuildexecution.googleapis.com:443", "RBE server addr")
 	serviceAccount  = flag.String("service-account-json", "", "Path to JSON file with service account credentials to use.")
@@ -57,11 +60,8 @@ func checkFlags() error {
 	if *casAddr == "" {
 		return errors.New("-cas-addr must be specified")
 	}
-	if *zipPath == "" && *dirPath == "" {
-		return errors.New("-zip-path or -dir-path must be specified")
-	}
-	if *dirPath != "" && *zipPath != "" {
-		return errors.New("-dir-path and -zip-path cannot both be specified")
+	if countPaths(*dirPath, *zipPath, *filePath) != 1 {
+		return errors.New("One and only one of -zip-path, -dir-path or -file-path must be specified")
 	}
 	if *serviceAccount == "" && *useADC == false {
 		return errors.New("Either -use-adc must be true or -service-account-json must be specified")
@@ -70,6 +70,16 @@ func checkFlags() error {
 		return errors.New("-use-adc and -service-account-json must not be set together")
 	}
 	return nil
+}
+
+func countPaths(paths ...string) int {
+	count := 0
+	for _, path := range paths {
+		if path != "" {
+			count++
+		}
+	}
+	return count
 }
 
 func main() {
@@ -114,7 +124,7 @@ func main() {
 	defer client.Close()
 
 	var rootDigest digest.Digest
-	uploaderConfig := uploader.NewCommonConfig(ctx, client, excludeFilters, *dumpFileDetails)
+	uploaderConfig := uploader.NewCommonConfig(ctx, client, excludeFilters, *dumpFileDetails, *chunk, *avgChunkSizeKb)
 	if *zipPath != "" {
 		zipUploader := uploader.NewZipUploader(uploaderConfig, *zipPath)
 		rootDigest, err = zipUploader.DoUpload()
@@ -126,6 +136,12 @@ func main() {
 		rootDigest, err = dirUploader.DoUpload()
 		if err != nil {
 			log.Exitf("Failed to upload the directory to CAS: %v", err)
+		}
+	} else if *filePath != "" {
+		fileUploader := uploader.NewFileUploader(uploaderConfig, *filePath)
+		rootDigest, err = fileUploader.DoUpload()
+		if err != nil {
+			log.Exitf("Failed to upload the file to CAS: %v", err)
 		}
 	}
 

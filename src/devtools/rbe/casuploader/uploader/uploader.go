@@ -23,15 +23,19 @@ type CommonConfig struct {
 	client          *client.Client
 	excludeFilters  []string
 	dumpFileDetails string
+	chunk           bool
+	avgChunkSize    int
 }
 
 // NewCommonConfig creates a common CAS uploader configuration.
-func NewCommonConfig(ctx context.Context, client *client.Client, excludeFilters []string, dumpFileDetails string) *CommonConfig {
+func NewCommonConfig(ctx context.Context, client *client.Client, excludeFilters []string, dumpFileDetails string, chunk bool, avgChunkSize int) *CommonConfig {
 	return &CommonConfig{
 		ctx:             ctx,
 		client:          client,
 		excludeFilters:  excludeFilters,
 		dumpFileDetails: dumpFileDetails,
+		chunk:           chunk,
+		avgChunkSize:    avgChunkSize,
 	}
 }
 
