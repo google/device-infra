@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.protobuf.TextFormat.shortDebugString;
-import static java.util.stream.Stream.concat;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
@@ -34,24 +33,21 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
+import com.google.devtools.mobileharness.infra.controller.plugin.loader.PluginInstantiator;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethodSearchResult;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.inject.AbstractModule;
-import com.google.inject.CreationException;
-import com.google.inject.Guice;
 import com.google.inject.Module;
 import com.google.inject.Provides;
-import com.google.inject.ProvisionException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
@@ -117,10 +113,18 @@ public class SessionPluginLoader {
           new SessionInfo(
               sessionDetailHolder, sessionPluginLabel, sessionPluginConfig.getExecutionConfig());
 
-      // Creates plugin instance.
+      // Creates default module.
       CloseableResources closeableResources = new CloseableResources();
+      SessionPluginDefaultModule defaultModule =
+          new SessionPluginDefaultModule(
+              sessionInfo, deviceQuerier, serverStartTime, closeableResources);
+
+      // Creates session plugin.
       Object sessionPlugin =
-          createSessionPlugin(sessionPluginClasses, sessionInfo, closeableResources);
+          PluginInstantiator.instantiatePlugin(
+              sessionPluginClasses.sessionPluginClass(),
+              sessionPluginClasses.sessionPluginModuleClass().stream().collect(toImmutableList()),
+              ImmutableList.of(defaultModule));
 
       // Searches subscriber methods.
       SubscriberMethodSearchResult subscriberMethodSearchResult =
@@ -170,38 +174,6 @@ public class SessionPluginLoader {
           String.format(
               "Builtin session plugin or module class not found, loading_config=[%s]",
               shortDebugString(loadingConfig)),
-          e);
-    }
-  }
-
-  private Object createSessionPlugin(
-      SessionPluginClasses sessionPluginClasses,
-      SessionInfo sessionInfo,
-      CloseableResources closeableResources)
-      throws MobileHarnessException {
-    // Creates default module.
-    SessionPluginDefaultModule defaultModule =
-        new SessionPluginDefaultModule(
-            sessionInfo, deviceQuerier, serverStartTime, closeableResources);
-
-    try {
-      // Creates session plugin module.
-      Optional<Module> sessionPluginModule =
-          sessionPluginClasses
-              .sessionPluginModuleClass()
-              .map(
-                  sessionPluginModuleClass ->
-                      Guice.createInjector().getInstance(sessionPluginModuleClass));
-
-      // Creates session plugin.
-      return Guice.createInjector(
-              concat(sessionPluginModule.stream(), Stream.of(defaultModule))
-                  .collect(toImmutableList()))
-          .getInstance(sessionPluginClasses.sessionPluginClass());
-    } catch (CreationException | ProvisionException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.OLCS_CREATE_SESSION_PLUGIN_ERROR,
-          String.format("Failed to create session plugin [%s]", sessionPluginClasses),
           e);
     }
   }

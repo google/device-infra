@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.infra.controller.plugin.loader.PluginInstantiator;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.AnnotatedPluginClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.AnnotatedPluginModuleClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.NamedPluginClassProvider;
@@ -31,10 +32,7 @@ import com.google.devtools.mobileharness.infra.controller.plugin.provider.Plugin
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.RetryPluginClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.RetryPluginModuleClassProvider;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.google.inject.ProvisionException;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
@@ -304,33 +302,16 @@ public class PluginCreator implements AutoCloseable {
         return false;
       }
 
-      logger.atInfo().log("Create injector with plugin module instances");
-      Set<Module> moduleInstances = new HashSet<>(systemModules);
-      for (Class<? extends Module> moduleClass : moduleClasses) {
-        try {
-          moduleInstances.add(moduleClass.getConstructor().newInstance());
-        } catch (ReflectiveOperationException e) {
-          close();
-          throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-              BasicErrorId.PLUGIN_LOADER_FAILED_TO_CREATE_PLUGIN_MODULE_INSTANCE,
-              String.format("Failed to create plugin module instance [%s]", moduleClass.getName()),
-              e);
-        }
-      }
-      Injector injector = Guice.createInjector(moduleInstances);
-
       // Creates plugin instances.
       plugins = new ArrayList<>();
       for (Class<?> pluginClass : classes) {
         try {
-          plugins.add(injector.getInstance(pluginClass));
+          plugins.add(
+              PluginInstantiator.instantiatePlugin(pluginClass, moduleClasses, systemModules));
           logger.atInfo().log("Loaded plugin: %s", pluginClass.getName());
-        } catch (ProvisionException e) {
+        } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
           close();
-          throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-              BasicErrorId.PLUGIN_LOADER_FAILED_TO_CREATE_PLUGIN_INSTANCE,
-              String.format("Failed to create plugin instance [%s]", pluginClass.getName()),
-              e);
+          throw e;
         }
       }
       return true;
