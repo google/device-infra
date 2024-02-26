@@ -1,0 +1,62 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Use proto2 to be compatible with Job Config proto.
+syntax = "proto2";
+
+package mobileharness.infra.ats.gateway;
+
+import "src/devtools/mobileharness/api/gateway/proto/setting.proto";
+
+option java_package = "com.google.devtools.mobileharness.infra.ats.gateway.proto";
+option java_outer_classname = "SessionServiceProto";
+
+// Session config.
+message SessionConfig {}
+
+message InvocationData {
+  // Session id from requester.
+  optional string requester_session_id = 1;
+}
+
+enum SessionStatus {
+  SESSION_STATUS_UNSPECIFIED = 0;
+  SESSION_SUBMITTED = 100;
+  // Creation refused by the service. No need to retry.
+  SESSION_CREATION_FAILED = 200;
+  // Creation error. May retry.
+  SESSION_CREATION_ERROR = 300;
+}
+
+message TrackingData {
+  // Session id from long running client
+  optional string client_session_id = 1;
+}
+
+service SessionService {
+  // Create Session and return tracking data.
+  rpc CreateSession(CreateSessionRequest) returns (CreateSessionResponse) {}
+}
+
+message CreateSessionRequest {
+  optional SessionConfig session_config = 1;
+  optional InvocationData invocation_data = 2;
+}
+
+message CreateSessionResponse {
+  optional SessionStatus session_status = 1;
+  optional TrackingData tracking_data = 2;
+}
