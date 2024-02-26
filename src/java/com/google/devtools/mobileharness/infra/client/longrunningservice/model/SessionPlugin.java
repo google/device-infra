@@ -18,7 +18,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.model;
 
 import com.google.auto.value.AutoValue;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
-import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethodSearchResult;
+import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
 
 /** A loaded session plugin. */
 @AutoValue
@@ -26,18 +26,12 @@ public abstract class SessionPlugin {
 
   public abstract SessionInfo sessionInfo();
 
-  public abstract Object plugin();
-
-  public abstract SubscriberMethodSearchResult subscriberMethodSearchResult();
+  public abstract Subscriber subscriber();
 
   public abstract NonThrowingAutoCloseable closeableResource();
 
   public static SessionPlugin of(
-      SessionInfo sessionInfo,
-      Object plugin,
-      SubscriberMethodSearchResult subscriberMethodSearchResult,
-      NonThrowingAutoCloseable closeableResource) {
-    return new AutoValue_SessionPlugin(
-        sessionInfo, plugin, subscriberMethodSearchResult, closeableResource);
+      SessionInfo sessionInfo, Subscriber subscriber, NonThrowingAutoCloseable closeableResource) {
+    return new AutoValue_SessionPlugin(sessionInfo, subscriber, closeableResource);
   }
 }

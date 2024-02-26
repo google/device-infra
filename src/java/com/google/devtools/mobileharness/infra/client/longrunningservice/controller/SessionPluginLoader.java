@@ -37,7 +37,7 @@ import com.google.devtools.mobileharness.infra.controller.plugin.loader.PluginIn
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend;
-import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethodSearchResult;
+import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Module;
@@ -127,12 +127,9 @@ public class SessionPluginLoader {
               ImmutableList.of(defaultModule));
 
       // Searches subscriber methods.
-      SubscriberMethodSearchResult subscriberMethodSearchResult =
-          eventBusBackend.searchSubscriberMethods(sessionPlugin);
+      Subscriber subscriber = eventBusBackend.searchSubscriberMethods(sessionPlugin);
 
-      sessionPlugins.add(
-          SessionPlugin.of(
-              sessionInfo, sessionPlugin, subscriberMethodSearchResult, closeableResources));
+      sessionPlugins.add(SessionPlugin.of(sessionInfo, subscriber, closeableResources));
     }
     return sessionPlugins.build();
   }

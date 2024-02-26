@@ -19,8 +19,8 @@ package com.google.devtools.mobileharness.shared.util.event;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethod;
-import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethodSearchResult;
 import com.google.devtools.mobileharness.shared.util.event.proto.EventBusProto;
 import com.google.devtools.mobileharness.shared.util.event.proto.EventBusProto.EventReceiving;
 import com.google.devtools.mobileharness.shared.util.event.proto.EventBusProto.EventStatistics;
@@ -93,7 +93,7 @@ public class EventBus {
   @Nullable private final SubscriberExceptionHandler globalExceptionHandler;
 
   @GuardedBy("itself")
-  private final List<SubscriberMethodSearchResult> subscribers = new ArrayList<>();
+  private final List<Subscriber> subscribers = new ArrayList<>();
 
   /** Creates an event bus without event bus global exception handler. */
   public EventBus() {
@@ -110,7 +110,7 @@ public class EventBus {
    * SubscriberExceptionHandler) post} for more details.
    */
   public void register(Object subscriberObject) {
-    SubscriberMethodSearchResult subscriber = BACKEND.searchSubscriberMethods(subscriberObject);
+    Subscriber subscriber = BACKEND.searchSubscriberMethods(subscriberObject);
 
     // Logs invalid subscriber methods if any.
     if (!subscriber.invalidSubscriberMethods().isEmpty()) {
@@ -185,13 +185,13 @@ public class EventBus {
     EventStatistics.Builder statistics = EventStatistics.newBuilder();
 
     // Gets a snapshot of subscribers.
-    ImmutableList<SubscriberMethodSearchResult> subscribers;
+    ImmutableList<Subscriber> subscribers;
     synchronized (this.subscribers) {
       subscribers = ImmutableList.copyOf(this.subscribers);
     }
 
     // Finds all suitable subscriber methods.
-    for (SubscriberMethodSearchResult subscriber :
+    for (Subscriber subscriber :
         order.equals(SubscriberOrder.REGISTER) ? subscribers : subscribers.reverse()) {
       ImmutableList<SubscriberMethod> subscriberMethods = subscriber.subscriberMethods();
       for (SubscriberMethod subscriberMethod :

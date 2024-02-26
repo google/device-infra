@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
 import com.google.inject.assistedinject.Assisted;
 import com.google.protobuf.FieldMask;
 import java.util.concurrent.Callable;
@@ -78,7 +79,10 @@ public class SessionRunner implements Callable<Void> {
       // Starts all jobs and wait until they finish.
       sessionJobRunner.runJobs(
           sessionDetailHolder,
-          sessionPlugins.stream().map(SessionPlugin::plugin).collect(toImmutableList()));
+          sessionPlugins.stream()
+              .map(SessionPlugin::subscriber)
+              .map(Subscriber::subscriberObject)
+              .collect(toImmutableList()));
     } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
       sessionError = e;
       throw e;

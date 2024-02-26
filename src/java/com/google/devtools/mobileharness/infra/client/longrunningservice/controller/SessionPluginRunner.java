@@ -63,8 +63,7 @@ public class SessionPluginRunner {
     // TODO: Supports skipping session.
     for (SessionPlugin sessionPlugin : sessionPlugins) {
       T event = eventGenerator.apply(sessionPlugin.sessionInfo());
-      for (SubscriberMethod subscriberMethod :
-          sessionPlugin.subscriberMethodSearchResult().subscriberMethods()) {
+      for (SubscriberMethod subscriberMethod : sessionPlugin.subscriber().subscriberMethods()) {
         if (subscriberMethod.canReceiveEvent(eventClass)) {
           logger.atInfo().log("Posting %s to subscriber [%s]", event, subscriberMethod);
           try {

@@ -111,7 +111,7 @@ public class EventBusBackend {
 
   /** Result of searching subscriber methods of a given class. */
   @AutoValue
-  public abstract static class SubscriberMethodSearchResult {
+  public abstract static class Subscriber {
 
     public abstract Object subscriberObject();
 
@@ -119,11 +119,11 @@ public class EventBusBackend {
 
     public abstract ImmutableList<InvalidSubscriberMethod> invalidSubscriberMethods();
 
-    public static SubscriberMethodSearchResult of(
+    public static Subscriber of(
         Object subscriberObject,
         List<SubscriberMethod> subscriberMethods,
         List<InvalidSubscriberMethod> invalidSubscriberMethods) {
-      return new AutoValue_EventBusBackend_SubscriberMethodSearchResult(
+      return new AutoValue_EventBusBackend_Subscriber(
           subscriberObject,
           ImmutableList.copyOf(subscriberMethods),
           ImmutableList.copyOf(invalidSubscriberMethods));
@@ -131,7 +131,7 @@ public class EventBusBackend {
   }
 
   /** Searches {@link SubscriberMethod}s in a given object. */
-  public SubscriberMethodSearchResult searchSubscriberMethods(Object subscriberObject) {
+  public Subscriber searchSubscriberMethods(Object subscriberObject) {
     Class<?> clazz = subscriberObject.getClass();
     ImmutableList.Builder<SubscriberMethod> subscriberMethods = ImmutableList.builder();
     ImmutableList.Builder<InvalidSubscriberMethod> invalidSubscriberMethods =
@@ -179,7 +179,7 @@ public class EventBusBackend {
               subscriberMethods.add(
                   SubscriberMethod.of(subscriberObject, clazz, method, parameter));
             });
-    return SubscriberMethodSearchResult.of(
+    return Subscriber.of(
         subscriberObject, subscriberMethods.build(), invalidSubscriberMethods.build());
   }
 }
