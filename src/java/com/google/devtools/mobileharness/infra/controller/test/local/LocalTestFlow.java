@@ -86,7 +86,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /** The workflow of executing a single test locally. */
@@ -133,15 +132,15 @@ public class LocalTestFlow {
    *
    * @return the loaded plugin items
    */
-  ImmutableList<PluginItem<?>> loadBuiltInPlugin(DirectTestRunner testRunner) {
+  ImmutableList<PluginItem<?>> loadBuiltInPlugin(TestInfo testInfo, DirectTestRunner testRunner) {
     // Loads built-in plugins.
-    ImmutableList<Object> builtinPlugins =
-        Stream.concat(
-                isXtsDynamicDownloaderEnabled()
-                    ? Stream.of(new MctsDynamicDownloadPlugin())
-                    : Stream.empty(),
-                Stream.of(new TestCommandHistorySaver()))
-            .collect(toImmutableList());
+    ImmutableList.Builder<Object> builtinPluginsBuilder = ImmutableList.builder();
+    if (isXtsDynamicDownloaderEnabled()) {
+      builtinPluginsBuilder.add(new MctsDynamicDownloadPlugin());
+    }
+    builtinPluginsBuilder.add(new TestCommandHistorySaver());
+
+    ImmutableList<Object> builtinPlugins = builtinPluginsBuilder.build();
     for (Object plugin : builtinPlugins) {
       testRunner.registerTestEventSubscriber(plugin, EventScope.CLASS_INTERNAL);
       testRunner.registerTestEventSubscriber(plugin, EventScope.TEST_MESSAGE);

@@ -17,6 +17,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/javatests/com/google/devtools:__subpackages__",
     ],
@@ -67,6 +68,23 @@ java_library(
     name = "config_common",
     srcs = ["ConfigCommon.java"],
     deps = ["@maven//:com_google_guava_guava"],
+)
+
+java_library(
+    name = "module_configuration_lab_plugin_lib",
+    srcs = ["ModuleConfigurationLabPlugin.java"],
+    deps = [
+        ":configuration_util",
+        ":module_configuration_helper",
+        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_binary(

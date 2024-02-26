@@ -128,7 +128,7 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
     try {
       List<PluginItem<?>> pluginItems = new ArrayList<>();
       pluginItems.addAll(this.initialPluginItems);
-      pluginItems.addAll(testFlow.loadBuiltInPlugin(this));
+      pluginItems.addAll(testFlow.loadBuiltInPlugin(testInfo, this));
 
       pluginItems.addAll(testFlow.loadPlugin(testInfo, this));
       PluginLoadingResult pluginLoadingResult = PluginLoadingResult.create(pluginItems);
