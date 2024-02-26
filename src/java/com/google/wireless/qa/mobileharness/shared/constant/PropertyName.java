@@ -285,6 +285,9 @@ public interface PropertyName {
     /** The epoch time when the test execution is completed and the device is released. */
     DEVICE_DONE_EPOCH_MS,
 
+    /** Execution mode (lower case of ExecModeUtil.getModeName()). */
+    EXEC_MODE,
+
     /**
      * id of MH HaTS survey shown in sponge starting with '_' so sponge can make it invisible
      * http://b/169158354
@@ -407,19 +410,19 @@ public interface PropertyName {
 
     /** AndroidAndIosAccountDecorator property name constants. */
     public enum AndroidAndIosAccountDecorator implements PropertyName {
-      /** The status of validating a list of Google accounts. * */
+      /** The status of validating a list of Google accounts. */
       ACCOUNT_VALIDATION_STATUS,
 
-      /** Error message for validation failure * */
+      /** Error message for validation failure */
       ACCOUNT_VALIDATION_FAILURE_ERROR_MESSAGE,
 
-      /** Error adding account using LST form TestaccountService * */
+      /** Error adding account using LST form TestaccountService */
       ADD_ACCOUNT_USING_LST_FROM_TAS_ERROR_MESSAGE,
 
-      /** Missing LST or Obfuscated GaiaID or both the test properties * */
+      /** Missing LST or Obfuscated GaiaID or both the test properties */
       TEST_PROPERTY_FOR_LST_OR_OBFUSCATED_GAIA_ID_MISSING,
 
-      /** LST and Obfuscated GaiaID mismatch * */
+      /** LST and Obfuscated GaiaID mismatch */
       TAS_LST_AND_OBFUSCATED_GAIA_ID_MISMATCH
     }
 
