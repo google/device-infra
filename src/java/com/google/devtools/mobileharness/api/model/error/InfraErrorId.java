@@ -375,6 +375,9 @@ public enum InfraErrorId implements ErrorId {
   // ATS Server: 52_701 ~ 52_800
   ATS_SERVER_INVALID_REQUEST_ERROR(52_701, ErrorType.CUSTOMER_ISSUE),
 
+  // ATS Message Relay: 52_801 ~ 52_900
+  MESSAGE_RELAY_NO_AVAILABLE_STREAM(52_801, ErrorType.UNDETERMINED),
+
   // ID space here:52_801 ~ 60_000
   PLACE_HOLDER_TO_BE_RENAMED(60_000, ErrorType.UNDETERMINED);
 
