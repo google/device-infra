@@ -491,6 +491,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidWebviewBridgeDecorator");
     device.addSupportedDecorator("ManekiYouTubeLauncherDecorator");
     device.addSupportedDecorator("ManekiAndroidWebdriverPortForwardDecorator");
+    device.addSupportedDecorator("KimonoAccountSelectorDecorator");
     device.addSupportedDecorator("MaskImageDecorator");
 
     // This will replace `AndroidChromeWebViewInstallerDecorator` when it's ready. DO NOT USE YET!
