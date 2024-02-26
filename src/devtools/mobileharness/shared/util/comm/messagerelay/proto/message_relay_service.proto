@@ -1,0 +1,81 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.shared.util.comm.messagerelay;
+
+import "google/protobuf/any.proto";
+
+option java_package = "com.google.devtools.mobileharness.shared.util.comm.messagerelay.proto";
+option java_outer_classname = "MessageRelayServiceProto";
+
+// Message relay service for exchanging gRPC message.
+service MessageRelayService {
+  // Relays the messages between clients.
+  rpc Relay(stream RelayMessage) returns (stream RelayMessage) {}
+}
+
+message RelayMessage {
+  // The message to relay. Required.
+  oneof message {
+    // When a client connects to the Message Relay Service, the first message
+    // must be stream_info.
+    StreamInfo stream_info = 1;
+    // The unary message to transfer via the service.
+    UnaryMessage unary_message = 2;
+  }
+}
+
+message StreamInfo {
+  // An unique ID of the stream. Required.
+  string stream_id = 1;
+  // Hostname of the client. It is the identifier of source and destination
+  // location. Required.
+  string hostname = 2;
+}
+
+enum MessageType {
+  MESSAGE_TYPE_UNKNOWN = 0;
+  REQUEST = 1;
+  RESPONSE = 2;
+}
+
+message Locator {
+  // The hostname of the source. Required.
+  string source = 1;
+  // The hostname of the destination. Required.
+  string destination = 2;
+  // Type of the message: request or response. Required.
+  MessageType type = 3;
+  // The full name of gRPC service. Full name includes package name, service
+  // name. For example, /package.MyServiceName. Required if the message type is
+  // request.
+  string full_service_name = 4;
+  // The method name, for example, "MyMethodName". Required if the message type
+  // is request.
+  string method_name = 5;
+}
+
+message UnaryMessage {
+  // An unique ID of the message. A pair of request and response must use
+  // the same ID. Required.
+  string id = 1;
+  // Locator of the message. Required.
+  Locator locator = 2;
+  // Payload content of the actual message. Required.
+  google.protobuf.Any payload = 3;
+}
