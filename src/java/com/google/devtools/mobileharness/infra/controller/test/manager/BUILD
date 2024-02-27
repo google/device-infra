@@ -51,6 +51,7 @@ java_library(
     srcs = ["TestMessagePosterUtil.java"],
     visibility = [
         "//java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [

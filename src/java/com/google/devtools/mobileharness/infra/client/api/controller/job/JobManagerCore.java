@@ -35,9 +35,7 @@ import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
-import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -51,15 +49,11 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /**
- * Job manager which manages all the running jobs. It can start and kill a job. It's feasible to use
- * it in an external environment. E.g. in a RBE instance. The logic different from the old
- * JobManager includes:
+ * Job manager which manages all the running jobs. It can start and kill a job. The logic different
+ * from the JobManager includes:
  *
  * <ul>
- *   <li>trace.* that may cause the library crashed is removed.
- *   <li>JobFileResolver which is useless currently is removed.
  *   <li>references to useless plugins are removed.
- *   <li>JobRunner -> JobRunnerCore.
  * </ul>
  */
 public class JobManagerCore implements Runnable {
@@ -67,16 +61,16 @@ public class JobManagerCore implements Runnable {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Interval of checking the current active jobs. */
-  private static final long CHECK_JOB_INTERVAL_MS = java.time.Duration.ofMinutes(1).toMillis();
+  private static final Duration CHECK_JOB_INTERVAL = Duration.ofMinutes(1L);
 
   /** Interval of waiting jobs. */
-  private static final Duration WAIT_JOB_INTERVAL = Duration.ofSeconds(2);
+  private static final Duration WAIT_JOB_INTERVAL = Duration.ofSeconds(2L);
 
   /** Job runner thread pool. */
-  protected final ExecutorService jobThreadPool;
+  private final ExecutorService jobThreadPool;
 
   /** Event bus for global Mobile Harness framework logic. */
-  protected final EventBus globalInternalBus;
+  private final EventBus globalInternalBus;
 
   /** Some special internal plugins which needs to be executed before API/JAR plugins. */
   private final ImmutableList<Object> internalPlugins;
@@ -84,7 +78,6 @@ public class JobManagerCore implements Runnable {
   @GuardedBy("itself")
   private final Map<String, JobRunnerAndFuture> jobRunners;
 
-  /** Creates a job manager to manage all running jobs. */
   public JobManagerCore(
       ExecutorService jobThreadPool,
       EventBus globalInternalEventBus,
@@ -92,7 +85,6 @@ public class JobManagerCore implements Runnable {
     this(jobThreadPool, globalInternalEventBus, internalPlugins, new HashMap<>());
   }
 
-  /** Constructor for testing. */
   protected JobManagerCore(
       ExecutorService jobThreadPool,
       EventBus globalInternalEventBus,
@@ -123,7 +115,8 @@ public class JobManagerCore implements Runnable {
         }
       }
       DeviceAllocator deviceAllocator = execMode.createDeviceAllocator(jobInfo, globalInternalBus);
-      JobRunnerCore jobRunner = getJobRunner(jobInfo, deviceAllocator, execMode);
+      JobRunnerCore jobRunner =
+          new JobRunnerCore(jobInfo, deviceAllocator, execMode, globalInternalBus);
 
       // Loads internal plugins.
       for (Object internalPlugin : internalPlugins) {
@@ -225,18 +218,9 @@ public class JobManagerCore implements Runnable {
   @Override
   public void run() {
     logger.atInfo().log("JobManager is started");
-    Clock clock = Clock.systemUTC();
     while (!Thread.currentThread().isInterrupted()) {
       try {
-        Instant beforeSleep = clock.instant();
-        Sleeper.defaultSleeper().sleep(Duration.ofMillis(CHECK_JOB_INTERVAL_MS));
-        if (clock
-            .instant()
-            .isAfter(beforeSleep.plus(Duration.ofMillis((long) (CHECK_JOB_INTERVAL_MS * 1.5))))) {
-          logger.atInfo().log(
-              "Sleep too long in JobManager.run for %d ms. Before: %s, After %s.",
-              clock.millis() - beforeSleep.toEpochMilli(), beforeSleep, clock.instant());
-        }
+        Sleeper.defaultSleeper().sleep(CHECK_JOB_INTERVAL);
         synchronized (jobRunners) {
           List<String> deadJobIds = new ArrayList<>();
           for (Entry<String, JobRunnerAndFuture> entry : jobRunners.entrySet()) {
@@ -281,13 +265,6 @@ public class JobManagerCore implements Runnable {
     }
   }
 
-  /** Gets the instance of a JobRunnerCore thread. */
-  protected JobRunnerCore getJobRunner(
-      JobInfo jobInfo, DeviceAllocator deviceAllocator, ExecMode execMode)
-      throws MobileHarnessException, InterruptedException {
-    return new JobRunnerCore(jobInfo, deviceAllocator, execMode, globalInternalBus);
-  }
-
   /** Registers job level plugins, does nothing by default. */
   protected void registerPlugins(
       JobRunnerCore jobRunner, JobInfo jobInfo, DeviceAllocator deviceAllocator)
@@ -295,7 +272,7 @@ public class JobManagerCore implements Runnable {
     // Does nothing.
   }
 
-  protected Runnable getJobRunnerRunnable(JobRunnerCore jobRunner, String jobId) {
+  private Runnable getJobRunnerRunnable(JobRunnerCore jobRunner, String jobId) {
     return jobRunner;
   }
 

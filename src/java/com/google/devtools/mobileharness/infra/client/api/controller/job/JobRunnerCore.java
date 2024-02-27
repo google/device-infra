@@ -61,6 +61,7 @@ import com.google.devtools.mobileharness.infra.controller.plugin.PluginCreator;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
+import com.google.devtools.mobileharness.infra.controller.test.manager.TestMessagePosterUtil;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.shared.constant.closeable.MobileHarnessAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
@@ -106,16 +107,7 @@ import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
 
-/**
- * Job runner for running a given job in an independent thread. It's feasible to use it in an
- * external environment. E.g. in a RBE instance. The logic removed includes:
- *
- * <ul>
- *   <li>trace.* that may cause the library to crash.
- *   <li>JobFileResolver and TestMessagePoster that need further refactor and are useless in
- *       external currently.
- * </ul>
- */
+/** Job runner for running a given job. */
 public class JobRunnerCore implements Runnable {
 
   /** Event scopes of job runner. */
@@ -201,7 +193,7 @@ public class JobRunnerCore implements Runnable {
   private final DeviceAllocator deviceAllocator;
 
   /** To manage all the test runner threads of this job. */
-  protected final TestManager<DirectTestRunner> testManager;
+  private final TestManager<DirectTestRunner> testManager;
 
   /** Test manager and runner thread pool. */
   private final ListeningExecutorService threadPool;
@@ -274,7 +266,8 @@ public class JobRunnerCore implements Runnable {
         globalInternalBus);
   }
 
-  protected JobRunnerCore(
+  @VisibleForTesting
+  JobRunnerCore(
       JobInfo jobInfo,
       DeviceAllocator deviceAllocator,
       ExecMode execMode,
@@ -295,6 +288,7 @@ public class JobRunnerCore implements Runnable {
     this.deviceQuerier = execMode.createDeviceQuerier();
     this.threadPool = threadPool;
     this.testManager = testManager;
+
     logFailure(this.threadPool.submit(testManager), Level.SEVERE, "Fatal error in test manager");
     scopedEventBus = new ScopedEventBus<>(EventScope.class);
     scopedEventBus.add(EventScope.CLASS_INTERNAL);
@@ -399,6 +393,7 @@ public class JobRunnerCore implements Runnable {
     }
   }
 
+  @SuppressWarnings("EmptyTryBlock")
   @Override
   public void run() {
     running = true;
@@ -716,55 +711,59 @@ public class JobRunnerCore implements Runnable {
     }
   }
 
-  /* Gets the correct test allocation start time. When a test retries, the test allocation time is
+  /**
+   * Gets the correct test allocation start time. When a test retries, the test allocation time is
    * different from the job allocation start time.
-   **/
-  protected static Instant getCorrectAllocationStartTime(
+   */
+  private static Instant getCorrectAllocationStartTime(
       Instant jobStartDeviceAllocationTime, TestInfo testInfo) {
     return jobStartDeviceAllocationTime.isBefore(testInfo.timing().getCreateTime())
         ? testInfo.timing().getCreateTime()
         : jobStartDeviceAllocationTime;
   }
 
-  /**
-   * Gets the test message poster by the test id.Returns {@link Optional#empty} by default in the
-   * core logic.
-   */
+  /** Gets the test message poster by the test id. */
   public Optional<TestMessagePoster> getTestMessagePoster(String testId) {
-    return Optional.empty();
+    return TestMessagePosterUtil.getPosterFromDirectTestManager(testManager, testId);
   }
 
   DeviceAllocator getDeviceAllocator() {
     return deviceAllocator;
   }
 
-  /** Gets the span to be used in pre run job logic, empty by default. */
-  protected MobileHarnessAutoCloseable getPreRunJobSpan() {
+  /** Gets the span to be used in pre run job logic. */
+  @SuppressWarnings("MustBeClosedChecker")
+  private MobileHarnessAutoCloseable getPreRunJobSpan() {
     return new MobileHarnessAutoCloseable();
   }
 
-  /** Gets the span to be used in run all tests logic, empty by default. */
-  protected MobileHarnessAutoCloseable getRunAllTestsSpan() {
+  /** Gets the span to be used in run all tests logic. */
+  @SuppressWarnings("MustBeClosedChecker")
+  private MobileHarnessAutoCloseable getRunAllTestsSpan() {
     return new MobileHarnessAutoCloseable();
   }
 
-  /** Gets the span to be used in allocate device logic, empty by default. */
-  protected MobileHarnessAutoCloseable getAllocateDeviceSpan(
+  /** Gets the span to be used in allocate device logic. */
+  @SuppressWarnings("MustBeClosedChecker")
+  @VisibleForTesting
+  MobileHarnessAutoCloseable getAllocateDeviceSpan(
       Instant startDeviceAllocationTime, TestInfo testInfo) {
     return new MobileHarnessAutoCloseable();
   }
 
-  /** Gets the span to be used in post run job logic, empty by default. */
-  protected MobileHarnessAutoCloseable getPostRunJobSpan() {
+  /** Gets the span to be used in post run job logic. */
+  @SuppressWarnings("MustBeClosedChecker")
+  private MobileHarnessAutoCloseable getPostRunJobSpan() {
     return new MobileHarnessAutoCloseable();
   }
 
-  /** Adds the trace related properties to the job, does nothing by default in the core logic. */
-  protected void addTracePropertiesToJob(JobInfo jobInfo) {}
-
-  /** Resolves running files of the job, does nothing by default in the core logic. */
-  protected void resolveJobFiles(JobInfo jobInfo)
+  /** Resolves running files of the job. */
+  private void resolveJobFiles(JobInfo jobInfo)
       throws MobileHarnessException, InterruptedException {}
+
+  /** Adds the trace related properties to the job. */
+  @VisibleForTesting
+  void addTracePropertiesToJob(JobInfo jobInfo) {}
 
   private void printJobDetail() {
     Joiner listJoiner = Joiner.on("\n- ");
@@ -815,7 +814,8 @@ public class JobRunnerCore implements Runnable {
       // TODO: Not do validation check for ait-triggered test to reduce binary size.
       // Explicitly disable job validation for ACID jobs as we don't want to introduce driver deps
       // in the acid frontend binary.
-      if (!"ait".equals(jobInfo.properties().get("client")) && !jobInfo.params().has("acid_id")) {
+      if (!Objects.equals(jobInfo.properties().get("client"), "ait")
+          && !jobInfo.params().has("acid_id")) {
         jobChecker.validateJob(jobInfo);
       }
       resolveJobFiles(jobInfo);

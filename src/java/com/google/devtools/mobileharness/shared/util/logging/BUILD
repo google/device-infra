@@ -41,6 +41,7 @@ java_library(
     name = "tag",
     srcs = ["MobileHarnessLogTag.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc/controller:__pkg__",
