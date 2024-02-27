@@ -100,6 +100,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.logging.Level;
@@ -225,7 +226,7 @@ public class JobRunnerCore implements Runnable {
   private final Sleeper sleeper;
 
   /** Util for diagnostic the reasons when the job fails to allocate devices. */
-  @Nullable private volatile AllocationDiagnostician allocDiagnostician;
+  private volatile AllocationDiagnostician allocDiagnostician;
 
   private int diagnosticTimes = 0;
 
@@ -258,9 +259,7 @@ public class JobRunnerCore implements Runnable {
       JobInfo jobInfo,
       DeviceAllocator deviceAllocator,
       ExecMode execMode,
-      EventBus globalInternalBus)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+      EventBus globalInternalBus) {
     this(
         jobInfo,
         deviceAllocator,
@@ -411,7 +410,7 @@ public class JobRunnerCore implements Runnable {
     jobInfo.log().atInfo().alsoTo(logger).log("Job started");
     try {
       boolean skipJob;
-      try (MobileHarnessAutoCloseable preRunJobSpan = getPreRunJobSpan()) {
+      try (MobileHarnessAutoCloseable ignored1 = getPreRunJobSpan()) {
         skipJob = preRunJob();
       }
 
@@ -459,10 +458,10 @@ public class JobRunnerCore implements Runnable {
 
         SuitableDeviceChecker suitableDeviceChecker = new SuitableDeviceChecker();
         // Don't check whether there's potential suitable device for tests in M&M. b/124489785
-        if (Value.POOL_SHARED.equals(jobInfo.dimensions().get(Name.POOL))) {
+        if (Objects.equals(jobInfo.dimensions().get(Name.POOL), Value.POOL_SHARED)) {
           suitableDeviceChecker.setHasFoundPotentialSuitableDevice();
         }
-        try (MobileHarnessAutoCloseable runAllTestsSpan = getRunAllTestsSpan()) {
+        try (MobileHarnessAutoCloseable ignored = getRunAllTestsSpan()) {
           while (true) {
             for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
               String testId = testInfo.locator().getId();
@@ -552,7 +551,7 @@ public class JobRunnerCore implements Runnable {
                 testInfo.properties().add(PropertyName.Test.ALLOCATION_TIME_SEC, allocationTimeSec);
                 jobInfo.log().atInfo().alsoTo(logger).log("Device allocation finished");
 
-                try (MobileHarnessAutoCloseable allocateDeviceSpan =
+                try (MobileHarnessAutoCloseable ignored1 =
                     getAllocateDeviceSpan(startDeviceAllocationTime, testInfo)) {
                   // Does nothing.
                 }
@@ -711,8 +710,8 @@ public class JobRunnerCore implements Runnable {
       if (isDeviceAllocatorSetUp) {
         tearDownAllocator();
       }
-      try (MobileHarnessAutoCloseable postRunJobSpan = getPostRunJobSpan()) {
-        postRunJob(jobError, failFastError, isDeviceAllocatorSetUp);
+      try (MobileHarnessAutoCloseable ignored = getPostRunJobSpan()) {
+        postRunJob(jobError, failFastError.orElse(null), isDeviceAllocatorSetUp);
       }
     }
   }
@@ -956,7 +955,7 @@ public class JobRunnerCore implements Runnable {
 
   private void postRunJob(
       @Nullable Throwable jobError,
-      Optional<ExceptionDetail> failFastError,
+      @Nullable ExceptionDetail failFastError,
       boolean isDeviceAllocatorSetUp) {
     try {
       logger.at(jobError == null ? Level.INFO : Level.WARNING).log(
@@ -1109,7 +1108,8 @@ public class JobRunnerCore implements Runnable {
       throws MobileHarnessException, InterruptedException {
     com.google.wireless.qa.mobileharness.shared.MobileHarnessException suppressed = null;
     try {
-      finalizeJobResult(Optional.empty(), isDeviceAllocatorSetUp, !isStartTimeoutExpired, null);
+      finalizeJobResult(
+          /* failFastError= */ null, isDeviceAllocatorSetUp, !isStartTimeoutExpired, null);
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       suppressed = e;
     }
@@ -1153,7 +1153,7 @@ public class JobRunnerCore implements Runnable {
    */
   @VisibleForTesting
   void finalizeJobResult(
-      Optional<ExceptionDetail> failFastError,
+      @Nullable ExceptionDetail failFastError,
       boolean isDeviceAllocatorSetUp,
       boolean noPerfectCandidate,
       @Nullable Throwable jobError)
@@ -1227,14 +1227,14 @@ public class JobRunnerCore implements Runnable {
                       Test.TestResult.ERROR, new MobileHarnessException(errorId, errMsg, cause));
               logAllocUserConfigErrorCauseToProperty(testInfo, errorId, cause);
             }
-          } else if (failFastError.isPresent()) {
+          } else if (failFastError != null) {
             hasAllocFailTests = true;
             testInfo
                 .result()
                 .toNewResult()
                 .setNonPassing(
                     Test.TestResult.ERROR,
-                    ErrorModelConverter.toMobileHarnessException(failFastError.get()));
+                    ErrorModelConverter.toMobileHarnessException(failFastError));
           } else {
             if (!jobInfo.result().get().equals(TestResult.PASS)) {
               testInfo
@@ -1419,7 +1419,7 @@ public class JobRunnerCore implements Runnable {
     return jobInfo.dimensions().getAll().entrySet().stream()
         .filter(
             dimension ->
-                dimension.getValue().matches(".*[\\*\\[\\]\\|].*")
+                dimension.getValue().matches(".*[*\\[\\]|].*")
                     && !dimension.getValue().startsWith("regex:"))
         .map(
             dimension ->
@@ -1539,7 +1539,7 @@ public class JobRunnerCore implements Runnable {
                 apiPluginExceptions.stream(),
                 jarPluginExceptions.stream())
             .map(SkipInformationHandler::convertIfSkipJobRunning)
-            .flatMap(Streams::stream)
+            .flatMap(Optional::stream)
             .collect(toImmutableList());
 
     if (!skipInfos.isEmpty()) {
@@ -1571,8 +1571,7 @@ public class JobRunnerCore implements Runnable {
               .resultWithCause()
               .setNonPassing(
                   skipResultWithCause.resultWithCause().type(),
-                  ErrorModelConverter.toCommonExceptionDetail(
-                      skipResultWithCause.resultWithCause().causeNonEmpty()));
+                  skipResultWithCause.resultWithCause().causeProtoNonEmpty());
           for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
             testInfo
                 .resultWithCause()

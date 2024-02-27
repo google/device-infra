@@ -155,23 +155,14 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   /** Whether the test is actually started in the remote lab. */
   private volatile boolean testKickedOff = false;
 
-  /** The lab server version. It is set in {@link #initialize} method. */
-  @SuppressWarnings({"FieldCanBeLocal", "unused"})
+  /** Set in {@link #initialize} method. */
   private volatile Version labVersion;
 
-  /** Set in {@link #initialize} method. */
-  @VisibleForTesting volatile ContainerModePreference containerModePreference;
-
-  /** Set in {@link #initialize} method. */
-  @VisibleForTesting volatile SandboxModePreference sandboxModePreference;
-
-  /** Set in {@link #prepareTest}. */
-  @VisibleForTesting volatile boolean isContainerMode;
-
-  /** Set in {@link #prepareTest}. */
-  @VisibleForTesting volatile boolean isSandboxMode;
-
-  /** The task that waits until the test engine becomes ready. Set in {@link #prepareTest}. */
+  /**
+   * Set in {@link #checkDevice} if it returns normally.
+   *
+   * <p>The task that waits until the test engine becomes ready.
+   */
   @VisibleForTesting volatile ListenableFuture<TestEngineLocator> waitUntilTestEngineReadyTask;
 
   /** Set in {@link #runTest}. It is non-null when {@link #testKickedOff} is true. */
@@ -250,13 +241,6 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         .alsoTo(logger)
         .log("========= Client: InitializeTest (%s) =========", testInfo.locator().getId());
     labVersion = getLabVersion();
-
-    boolean defaultSandboxPreference = getDefaultSandboxPreference(testInfo);
-
-    containerModePreference = getContainerModePreference(defaultSandboxPreference);
-    logger.atInfo().log("Container mode preference: %s", containerModePreference);
-    sandboxModePreference = getSandboxModePreference(defaultSandboxPreference);
-    logger.atInfo().log("Sandbox mode preference: %s", sandboxModePreference);
   }
 
   @CanIgnoreReturnValue
@@ -269,9 +253,29 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         .alsoTo(logger)
         .log("========= Client: CheckDevice (%s) =========", testInfo.locator().getId());
 
-    // Sends the test metadata to lab server.
-    List<DeviceFeature> deviceFeatures = prepareTest(testInfo, allocation.getAllDeviceLocators());
+    // Gets container/sandbox mode preferences.
+    boolean defaultSandboxPreference = getDefaultSandboxPreference(testInfo);
+    ContainerModePreference containerModePreference =
+        getContainerModePreference(defaultSandboxPreference);
+    SandboxModePreference sandboxModePreference =
+        getSandboxModePreference(defaultSandboxPreference);
+    logger.atInfo().log(
+        "container_mode_preference=%s, sandbox_mode_preference=%s",
+        containerModePreference, sandboxModePreference);
 
+    // Sends the test metadata to lab server.
+    CreateTestResponse createTestResponse =
+        prepareTest(
+            testInfo,
+            allocation.getAllDeviceLocators(),
+            containerModePreference,
+            sandboxModePreference);
+
+    // Validates container/sandbox modes.
+    boolean isContainerMode = createTestResponse.getContainerInfo().getIsContainerMode();
+    boolean isSandboxMode = createTestResponse.getContainerInfo().getIsSandboxMode();
+    testInfo.properties().add(PropertyName.Test.CONTAINER_MODE, Boolean.toString(isContainerMode));
+    testInfo.properties().add(PropertyName.Test.SANDBOX_MODE, Boolean.toString(isSandboxMode));
     logger.atInfo().log(
         "Is container mode: %s, is sandbox mode: %s", isContainerMode, isSandboxMode);
     if ((containerModePreference == ContainerModePreference.MANDATORY_CONTAINER && !isContainerMode)
@@ -293,7 +297,13 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
               sandboxModePreference, isSandboxMode ? "sandbox" : "non-sandbox"));
     }
 
-    return deviceFeatures;
+    waitUntilTestEngineReadyTask =
+        threadPool.submit(
+            () ->
+                waitUntilTestEngineReady(
+                    createTestResponse.getGetTestEngineStatusResponse(), testInfo));
+
+    return createTestResponse.getDeviceFeatureList();
   }
 
   @Override
@@ -557,7 +567,11 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   }
 
   /** Sends all the test information except the file info to the lab. */
-  private List<DeviceFeature> prepareTest(TestInfo testInfo, List<DeviceLocator> deviceLocators)
+  private CreateTestResponse prepareTest(
+      TestInfo testInfo,
+      List<DeviceLocator> deviceLocators,
+      ContainerModePreference containerModePreference,
+      SandboxModePreference sandboxModePreference)
       throws MobileHarnessException {
     ImmutableList<String> hostNames =
         deviceLocators.stream()
@@ -622,16 +636,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
           e);
     }
 
-    isContainerMode = response.getContainerInfo().getIsContainerMode();
-    isSandboxMode = response.getContainerInfo().getIsSandboxMode();
-    waitUntilTestEngineReadyTask =
-        threadPool.submit(
-            () -> waitUntilTestEngineReady(response.getGetTestEngineStatusResponse(), testInfo));
-
-    testInfo.properties().add(PropertyName.Test.CONTAINER_MODE, Boolean.toString(isContainerMode));
-    testInfo.properties().add(PropertyName.Test.SANDBOX_MODE, Boolean.toString(isSandboxMode));
-
-    return response.getDeviceFeatureList();
+    return response;
   }
 
   private static ImmutableList<ResolveFileItem> getUnresolvedJobFiles(JobInfo jobInfo) {
