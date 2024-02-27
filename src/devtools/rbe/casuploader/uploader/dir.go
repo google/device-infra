@@ -53,6 +53,7 @@ func (du *DirUploader) inputSpec() command.InputSpec {
 // DoUpload uploads the given directories to CAS, and returns the digest of the root directory.
 func (du *DirUploader) DoUpload() (digest.Digest, error) {
 	inputSpec := du.inputSpec()
+	log.Infof("begin ComputeMerkleTree for root %s\n", du.dirPath)
 	rootDigest, uploadEntries, _, err := du.client.ComputeMerkleTree(
 		du.ctx, du.dirPath, "", "", &inputSpec, filemetadata.NewNoopCache())
 	if err != nil {

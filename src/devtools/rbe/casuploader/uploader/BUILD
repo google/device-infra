@@ -25,6 +25,7 @@ go_library(
     srcs = [
         "dir.go",
         "file.go",
+        "filelist.go",
         "uploader.go",
         "zip.go",
     ],
