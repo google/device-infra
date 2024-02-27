@@ -567,6 +567,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
 
   /** Initializes the device. If fails, will set {@link #initialized} to false. */
   @VisibleForTesting
+  @SuppressWarnings("LogAndThrow")
   void initDevice() throws InterruptedException, MobileHarnessException {
     extendExpireTime(Duration.ofDays(1));
     logger.atInfo().log("Initializing...");
@@ -577,7 +578,8 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
             device.getDeviceId(), Duration.ofDays(1).minusMinutes(1))) {
       extendExpireTime(device.getSetupTimeout());
       device.setUp();
-    } catch (MobileHarnessException e) {
+    } catch (MobileHarnessException | InterruptedException e) {
+      logger.atWarning().withCause(e).log("Failed to initialize device");
       initialized = false;
       postDeviceErrorEvent(e);
       throw e;
