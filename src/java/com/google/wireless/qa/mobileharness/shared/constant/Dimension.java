@@ -248,6 +248,8 @@ public final class Dimension {
     LAB_SUPPORTS_CONTAINER,
     /** Whether the lab the device is connected to supports sandbox-mode test. */
     LAB_SUPPORTS_SANDBOX,
+    /** Whether the lab the device is connected to has an IO issue. */
+    LAB_FILE_SYSTEM_IO_ERROR,
     /** Shared performance pool */
     PERFORMANCE_POOL,
     /** Sim card info */

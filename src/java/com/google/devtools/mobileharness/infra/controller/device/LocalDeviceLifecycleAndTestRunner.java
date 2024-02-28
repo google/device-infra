@@ -404,6 +404,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     return device.isPrepping()
         || !device.getDimension(Dimension.Name.ALERT_LAB_DISK_USABLE_SIZE).isEmpty()
         || !device.getDimension(Dimension.Name.CLOUDRPC_FAILURE).isEmpty()
+        || !device.getDimension(Dimension.Name.LAB_FILE_SYSTEM_IO_ERROR).isEmpty()
         || !isAvailableInExternalDeviceManager();
   }
 
