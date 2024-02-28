@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.lab.controller.util;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -30,6 +31,7 @@ import com.google.devtools.mobileharness.infra.lab.proto.File.JobOrTestFileUnit.
 import com.google.devtools.mobileharness.infra.lab.proto.File.TestFileUnit;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -80,10 +82,15 @@ public class LabFileNotifier {
   }
 
   /** Handles all cached job/test files. */
-  @SuppressWarnings("GuardedBy")
   public void onTestStarting(TestInfo testInfo, Allocation allocation) {
-    testInfo.log().atInfo().alsoTo(logger).log("Start to handling cached job/test files");
     synchronized (fileCache) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log(
+              "Start to handling cached job/test files, cache=%s",
+              fileCache.stream().map(TextFormat::shortDebugString).collect(toImmutableList()));
       isTestStarted = true;
       this.testInfo = testInfo;
       this.allocation = allocation;
@@ -100,7 +107,7 @@ public class LabFileNotifier {
 
   /** Handles a job/test file if the test has already started, otherwise adds it to a cache. */
   public void notifyJobOrTestFile(JobOrTestFileUnit fileUnit) {
-    logger.atFine().log("Notify job/test file: %s", shortDebugString(fileUnit));
+    logger.atInfo().log("Notify job/test file: %s", shortDebugString(fileUnit));
     synchronized (fileCache) {
       if (isTestStarted) {
         addJobOrTestFile(fileUnit);
