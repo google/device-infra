@@ -41,6 +41,7 @@ var (
 
 	zipPath         = flag.String("zip-path", "", "Path to a .zip file to upload")
 	dirPath         = flag.String("dir-path", "", "Path to a directory to upload")
+	filelistPath    = flag.String("filelist-path", "", "Path to a file containing a list of files to upload")
 	filePath        = flag.String("file-path", "", "Path to a single file to upload")
 	chunk           = flag.Bool("chunk", false, "Chunk files when applicable")
 	avgChunkSizeKb  = flag.Int("avg-chunk-size", 1024, "Average chunk size in KiB")
@@ -60,7 +61,7 @@ func checkFlags() error {
 	if *casAddr == "" {
 		return errors.New("-cas-addr must be specified")
 	}
-	if countPaths(*dirPath, *zipPath, *filePath) != 1 {
+	if countPaths(*dirPath, *zipPath, *filePath, *filelistPath) != 1 {
 		return errors.New("One and only one of -zip-path, -dir-path or -file-path must be specified")
 	}
 	if *serviceAccount == "" && *useADC == false {
@@ -130,6 +131,17 @@ func main() {
 		rootDigest, err = zipUploader.DoUpload()
 		if err != nil {
 			log.Exitf("Failed to upload the zip archive to CAS: %v", err)
+		}
+	} else if *filelistPath != "" {
+		dir, err := os.Getwd()
+		if err != nil {
+			log.Exitf("Failed to get current working directory: %v", err)
+		}
+		log.Infof("Current working directory: %s", dir)
+		flUploader := uploader.NewFilelistUploader(uploaderConfig, *filelistPath, dir)
+		rootDigest, err = flUploader.DoUpload()
+		if err != nil {
+			log.Exitf("Failed to upload the files listed in %s to CAS: %v", *filelistPath, err)
 		}
 	} else if *dirPath != "" {
 		dirUploader := uploader.NewDirUploader(uploaderConfig, *dirPath, nil)
