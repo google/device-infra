@@ -87,12 +87,3 @@ java_library(
         "@maven//:com_google_inject_guice",
     ],
 )
-
-java_library(
-    name = "job_factory",
-    srcs = ["JobManagerCoreFactory.java"],
-    deps = [
-        ":job_core",
-        "@maven//:com_google_guava_guava",
-    ],
-)

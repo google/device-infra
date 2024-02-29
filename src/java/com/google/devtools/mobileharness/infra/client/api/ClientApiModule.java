@@ -24,8 +24,6 @@ import com.google.devtools.mobileharness.infra.client.api.Annotations.ExtraGloba
 import com.google.devtools.mobileharness.infra.client.api.Annotations.ExtraJobInternalPlugins;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.JobThreadPool;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.ShutdownJobThreadWhenShutdownProcess;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManagerCoreFactory;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManagerCoreFactory.DefaultJobManagerCoreFactory;
 import com.google.devtools.mobileharness.infra.client.api.plugin.GenFileHandler;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
@@ -35,11 +33,6 @@ import javax.inject.Singleton;
 
 /** Module for {@link ClientApi}. */
 public class ClientApiModule extends AbstractModule {
-
-  @Override
-  protected void configure() {
-    bind(JobManagerCoreFactory.class).to(DefaultJobManagerCoreFactory.class);
-  }
 
   @Provides
   @Singleton

@@ -28,7 +28,6 @@ java_library(
         ":annotations",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:job_core",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:job_factory",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:util",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:job_reporter",
@@ -59,7 +58,6 @@ java_library(
     ],
     deps = [
         ":annotations",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:job_factory",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:gen_file_handler",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
         "@maven//:com_google_guava_guava",

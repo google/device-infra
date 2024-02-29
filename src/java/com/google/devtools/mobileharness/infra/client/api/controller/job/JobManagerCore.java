@@ -19,10 +19,12 @@ package com.google.devtools.mobileharness.infra.client.api.controller.job;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
+import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.JobRunnerCore.EventScope;
@@ -48,14 +50,7 @@ import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
-/**
- * Job manager which manages all the running jobs. It can start and kill a job. The logic different
- * from the JobManager includes:
- *
- * <ul>
- *   <li>references to useless plugins are removed.
- * </ul>
- */
+/** Job manager which manages all the running jobs. It can start and kill a job. */
 public class JobManagerCore implements Runnable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -85,7 +80,8 @@ public class JobManagerCore implements Runnable {
     this(jobThreadPool, globalInternalEventBus, internalPlugins, new HashMap<>());
   }
 
-  protected JobManagerCore(
+  @VisibleForTesting
+  JobManagerCore(
       ExecutorService jobThreadPool,
       EventBus globalInternalEventBus,
       List<Object> internalPlugins,
@@ -149,9 +145,7 @@ public class JobManagerCore implements Runnable {
           jobId,
           JobRunnerAndFuture.of(
               jobRunner,
-              jobThreadPool.submit(
-                  threadRenaming(
-                      getJobRunnerRunnable(jobRunner, jobId), () -> "job-runner-" + jobId))));
+              jobThreadPool.submit(threadRenaming(jobRunner, () -> "job-runner-" + jobId))));
 
       jobInfo.log().atInfo().alsoTo(logger).log("Started job %s", jobId);
     }
@@ -265,19 +259,15 @@ public class JobManagerCore implements Runnable {
     }
   }
 
-  /** Registers job level plugins, does nothing by default. */
-  protected void registerPlugins(
-      JobRunnerCore jobRunner, JobInfo jobInfo, DeviceAllocator deviceAllocator)
-      throws MobileHarnessException {
-    // Does nothing.
-  }
-
-  private Runnable getJobRunnerRunnable(JobRunnerCore jobRunner, String jobId) {
-    return jobRunner;
-  }
+  /** Registers job level builtin plugins. */
+  @VisibleForTesting
+  void registerPlugins(JobRunnerCore jobRunner, JobInfo jobInfo, DeviceAllocator deviceAllocator)
+      throws MobileHarnessException {}
 
   /** Core logic to handle the test execution ended event in job manager. */
-  protected void onTestExecutionEnded(TestExecutionEndedEvent event)
+  @Subscribe
+  @VisibleForTesting
+  void onTestExecutionEnded(TestExecutionEndedEvent event)
       throws MobileHarnessException, InterruptedException {
     String jobId = event.getAllocation().getTest().jobLocator().id();
     JobRunnerAndFuture jobRunnerFuture;

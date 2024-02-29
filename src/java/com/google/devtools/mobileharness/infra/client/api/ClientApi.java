@@ -36,7 +36,6 @@ import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInte
 import com.google.devtools.mobileharness.infra.client.api.Annotations.JobThreadPool;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.ShutdownJobThreadWhenShutdownProcess;
 import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManagerCore;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManagerCoreFactory;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecModeUtil;
 import com.google.devtools.mobileharness.infra.client.api.plugin.JobReporter;
@@ -83,16 +82,13 @@ public class ClientApi {
   public ClientApi(
       @EnvThreadPool ListeningExecutorService envThreadPool,
       @JobThreadPool ListeningExecutorService jobThreadPool,
-      JobManagerCoreFactory jobManagerCoreFactory,
       @ExtraGlobalInternalPlugins ImmutableList<Object> extraGlobalInternalPlugins,
       @ExtraJobInternalPlugins ImmutableList<Object> extraJobInternalPlugins,
       @ShutdownJobThreadWhenShutdownProcess boolean shutdownJobThreadWhenShutdownProcess,
       @GlobalInternalEventBus EventBus globalInternalEventBus,
       NetworkUtil networkUtil) {
     this.jobThreadPool = jobThreadPool;
-    jobManager =
-        jobManagerCoreFactory.create(
-            jobThreadPool, globalInternalEventBus, extraJobInternalPlugins);
+    jobManager = new JobManagerCore(jobThreadPool, globalInternalEventBus, extraJobInternalPlugins);
 
     ImmutableList<Object> builtinGlobalInternalPlugins =
         ImmutableList.of(new JobReporter(), new TestLister(), jobManager);
