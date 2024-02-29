@@ -78,7 +78,7 @@ class LabRecordService extends LabRecordServiceGrpc.LabRecordServiceImplBase {
   GetDeviceRecordResponse doGetDeviceRecord(GetDeviceRecordRequest request) {
     ImmutableList<DeviceRecord> deviceRecords =
         labRecordManager.getDeviceRecords(
-            request.getDeviceRecordQuery().getFilter().getDevieUuid());
+            request.getDeviceRecordQuery().getFilter().getDeviceUuid());
     return GetDeviceRecordResponse.newBuilder()
         .setDeviceRecordQueryResult(
             DeviceRecordQueryResult.newBuilder()

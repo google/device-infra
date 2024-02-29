@@ -80,7 +80,7 @@ message DeviceRecordQuery {
     // Optional.
     //
     // The device UUID of the device.
-    string devie_uuid = 1;
+    string device_uuid = 1;
 
     // Optional.
     //
