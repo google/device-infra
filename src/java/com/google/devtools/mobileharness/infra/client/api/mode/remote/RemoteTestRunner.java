@@ -61,6 +61,7 @@ import com.google.devtools.mobileharness.shared.util.comm.messaging.message.Test
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.time.TimeoutUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -259,6 +260,12 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
         getContainerModePreference(defaultSandboxPreference);
     SandboxModePreference sandboxModePreference =
         getSandboxModePreference(defaultSandboxPreference);
+
+    if (SharedPoolJobUtil.isUsingSharedPool(testInfo.jobInfo())) {
+      containerModePreference = ContainerModePreference.MANDATORY_NON_CONTAINER;
+      sandboxModePreference = SandboxModePreference.MANDATORY_NON_SANDBOX;
+    }
+
     logger.atInfo().log(
         "container_mode_preference=%s, sandbox_mode_preference=%s",
         containerModePreference, sandboxModePreference);
