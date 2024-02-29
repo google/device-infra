@@ -35,7 +35,7 @@ import com.google.devtools.mobileharness.infra.client.api.Annotations.ExtraJobIn
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.JobThreadPool;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.ShutdownJobThreadWhenShutdownProcess;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManagerCore;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.JobManager;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecModeUtil;
 import com.google.devtools.mobileharness.infra.client.api.plugin.JobReporter;
@@ -64,7 +64,7 @@ public class ClientApi {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Job manager which manages all the running jobs. */
-  private final JobManagerCore jobManager;
+  private final JobManager jobManager;
 
   private final Supplier<String> clientHostnameSupplier;
 
@@ -88,7 +88,7 @@ public class ClientApi {
       @GlobalInternalEventBus EventBus globalInternalEventBus,
       NetworkUtil networkUtil) {
     this.jobThreadPool = jobThreadPool;
-    jobManager = new JobManagerCore(jobThreadPool, globalInternalEventBus, extraJobInternalPlugins);
+    jobManager = new JobManager(jobThreadPool, globalInternalEventBus, extraJobInternalPlugins);
 
     ImmutableList<Object> builtinGlobalInternalPlugins =
         ImmutableList.of(new JobReporter(), new TestLister(), jobManager);

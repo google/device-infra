@@ -26,15 +26,16 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
-import com.google.devtools.mobileharness.infra.client.api.controller.job.JobRunnerCore.EventScope;
+import com.google.devtools.mobileharness.infra.client.api.controller.job.JobRunner.EventScope;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.plugin.TestRetryHandler;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.time.Duration;
@@ -45,13 +46,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 /** Job manager which manages all the running jobs. It can start and kill a job. */
-public class JobManagerCore implements Runnable {
+public class JobManager implements Runnable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -62,7 +62,7 @@ public class JobManagerCore implements Runnable {
   private static final Duration WAIT_JOB_INTERVAL = Duration.ofSeconds(2L);
 
   /** Job runner thread pool. */
-  private final ExecutorService jobThreadPool;
+  private final ListeningExecutorService jobThreadPool;
 
   /** Event bus for global Mobile Harness framework logic. */
   private final EventBus globalInternalBus;
@@ -73,16 +73,16 @@ public class JobManagerCore implements Runnable {
   @GuardedBy("itself")
   private final Map<String, JobRunnerAndFuture> jobRunners;
 
-  public JobManagerCore(
-      ExecutorService jobThreadPool,
+  public JobManager(
+      ListeningExecutorService jobThreadPool,
       EventBus globalInternalEventBus,
       List<Object> internalPlugins) {
     this(jobThreadPool, globalInternalEventBus, internalPlugins, new HashMap<>());
   }
 
   @VisibleForTesting
-  JobManagerCore(
-      ExecutorService jobThreadPool,
+  JobManager(
+      ListeningExecutorService jobThreadPool,
       EventBus globalInternalEventBus,
       List<Object> internalPlugins,
       Map<String, JobRunnerAndFuture> jobRunners) {
@@ -98,21 +98,22 @@ public class JobManagerCore implements Runnable {
    * @throws MobileHarnessException if the job is already started, or failed to start the new thread
    */
   public void startJob(JobInfo jobInfo, ExecMode execMode, @Nullable Collection<Object> jobPlugins)
-      throws InterruptedException, MobileHarnessException {
+      throws InterruptedException,
+          com.google.wireless.qa.mobileharness.shared.MobileHarnessException {
     synchronized (jobRunners) {
       String jobId = jobInfo.locator().getId();
       JobRunnerAndFuture runnerFuture = jobRunners.get(jobId);
       if (runnerFuture != null) {
-        JobRunnerCore runner = runnerFuture.jobRunner();
+        JobRunner runner = runnerFuture.jobRunner();
         Future<?> future = runnerFuture.jobRunnerFuture();
         if (runner.isRunning() || !future.isDone()) {
           throw new MobileHarnessException(
-              ErrorCode.JOB_DUPLICATED, "Job " + jobId + " is already running");
+              InfraErrorId.CLIENT_JR_JOB_START_DUPLICATED_ID,
+              "Job " + jobId + " is already running");
         }
       }
       DeviceAllocator deviceAllocator = execMode.createDeviceAllocator(jobInfo, globalInternalBus);
-      JobRunnerCore jobRunner =
-          new JobRunnerCore(jobInfo, deviceAllocator, execMode, globalInternalBus);
+      JobRunner jobRunner = new JobRunner(jobInfo, deviceAllocator, execMode, globalInternalBus);
 
       // Loads internal plugins.
       for (Object internalPlugin : internalPlugins) {
@@ -157,7 +158,7 @@ public class JobManagerCore implements Runnable {
     synchronized (jobRunners) {
       JobRunnerAndFuture runnerFuture = jobRunners.get(jobId);
       if (runnerFuture != null) {
-        JobRunnerCore runner = runnerFuture.jobRunner();
+        JobRunner runner = runnerFuture.jobRunner();
         Future<?> future = runnerFuture.jobRunnerFuture();
         JobInfo jobInfo = runner.getJobInfo();
         if (runner.isRunning() || !future.isDone()) {
@@ -180,7 +181,7 @@ public class JobManagerCore implements Runnable {
     synchronized (jobRunners) {
       JobRunnerAndFuture runnerFuture = jobRunners.get(jobId);
       if (runnerFuture != null) {
-        JobRunnerCore runner = runnerFuture.jobRunner();
+        JobRunner runner = runnerFuture.jobRunner();
         Future<?> future = runnerFuture.jobRunnerFuture();
         if (runner.isRunning() || !future.isDone()) {
           return false;
@@ -219,7 +220,7 @@ public class JobManagerCore implements Runnable {
           List<String> deadJobIds = new ArrayList<>();
           for (Entry<String, JobRunnerAndFuture> entry : jobRunners.entrySet()) {
             String jobId = entry.getKey();
-            JobRunnerCore runner = entry.getValue().jobRunner();
+            JobRunner runner = entry.getValue().jobRunner();
             Future<?> future = entry.getValue().jobRunnerFuture();
             if (!runner.isRunning() && future.isDone()) {
               deadJobIds.add(jobId);
@@ -261,14 +262,15 @@ public class JobManagerCore implements Runnable {
 
   /** Registers job level builtin plugins. */
   @VisibleForTesting
-  void registerPlugins(JobRunnerCore jobRunner, JobInfo jobInfo, DeviceAllocator deviceAllocator)
+  void registerPlugins(JobRunner jobRunner, JobInfo jobInfo, DeviceAllocator deviceAllocator)
       throws MobileHarnessException {}
 
   /** Core logic to handle the test execution ended event in job manager. */
   @Subscribe
   @VisibleForTesting
   void onTestExecutionEnded(TestExecutionEndedEvent event)
-      throws MobileHarnessException, InterruptedException {
+      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
+          InterruptedException {
     String jobId = event.getAllocation().getTest().jobLocator().id();
     JobRunnerAndFuture jobRunnerFuture;
     synchronized (jobRunners) {
@@ -294,14 +296,12 @@ public class JobManagerCore implements Runnable {
   @AutoValue
   public abstract static class JobRunnerAndFuture {
 
-    abstract JobRunnerCore jobRunner();
+    abstract JobRunner jobRunner();
 
-    @Nullable
     abstract Future<?> jobRunnerFuture();
 
-    public static JobRunnerAndFuture of(
-        JobRunnerCore jobRunner, @Nullable Future<?> jobRunnerFuture) {
-      return new AutoValue_JobManagerCore_JobRunnerAndFuture(jobRunner, jobRunnerFuture);
+    public static JobRunnerAndFuture of(JobRunner jobRunner, Future<?> jobRunnerFuture) {
+      return new AutoValue_JobManager_JobRunnerAndFuture(jobRunner, jobRunnerFuture);
     }
   }
 }

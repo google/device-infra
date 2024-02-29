@@ -29,7 +29,7 @@ public enum InfraErrorId implements ErrorId {
   // Infra: 40_001 ~ 50_000
   // ***********************************************************************************************
 
-  // Test Runner ERROR: 40_101 ~ 40_300
+  // Test Runner ERROR (1): 40_101 ~ 40_120
   TR_CHECK_DEVICE_UNMATCHED_DEVICE_COUNT(40_101, ErrorType.INFRA_ISSUE),
   TR_MULTIPLE_DEVICES_IN_DIFFERENT_LABS(40_102, ErrorType.UNDETERMINED),
   TR_FAILED_TO_RUN_SUB_DRIVER_IN_ADHOC_TESTBED_TEST(40_103, ErrorType.UNDETERMINED),
@@ -61,7 +61,7 @@ public enum InfraErrorId implements ErrorId {
   TR_PLUGIN_UNKNOWN_JOB_ERROR(40_127, ErrorType.UNDETERMINED),
   TR_PLUGIN_UNKNOWN_TEST_ERROR(40_128, ErrorType.UNDETERMINED),
 
-  // Test Runner ERROR: 40_201 ~ 40_240.
+  // Test Runner ERROR (2): 40_201 ~ 40_240.
   TR_TEST_INTERRUPTED_WHEN_PROCESS_SHUTDOWN(40_201, ErrorType.INFRA_ISSUE),
 
   // Test Runner DRAIN ERROR: 40_241 ~ 40_260
@@ -232,6 +232,7 @@ public enum InfraErrorId implements ErrorId {
   CLIENT_JR_JOB_EXPIRED(49_312, ErrorType.CUSTOMER_ISSUE),
   CLIENT_JR_JOB_START_WITHOUT_TEST(49_313, ErrorType.CUSTOMER_ISSUE),
   CLIENT_JR_JOB_END_WITHOUT_TEST(49_314, ErrorType.INFRA_ISSUE),
+  CLIENT_JR_JOB_START_DUPLICATED_ID(49_315, ErrorType.CUSTOMER_ISSUE),
 
   CLIENT_API_START_JOB_ERROR(49_321, ErrorType.UNDETERMINED),
 

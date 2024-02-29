@@ -108,7 +108,7 @@ import java.util.logging.Level;
 import javax.annotation.Nullable;
 
 /** Job runner for running a given job. */
-public class JobRunnerCore implements Runnable {
+public class JobRunner implements Runnable {
 
   /** Event scopes of job runner. */
   public enum EventScope {
@@ -247,7 +247,7 @@ public class JobRunnerCore implements Runnable {
   private final int maxQueryDeviceTimes;
 
   /** Creates a job runner to run the given job in the given mode. */
-  public JobRunnerCore(
+  public JobRunner(
       JobInfo jobInfo,
       DeviceAllocator deviceAllocator,
       ExecMode execMode,
@@ -267,7 +267,7 @@ public class JobRunnerCore implements Runnable {
   }
 
   @VisibleForTesting
-  JobRunnerCore(
+  JobRunner(
       JobInfo jobInfo,
       DeviceAllocator deviceAllocator,
       ExecMode execMode,

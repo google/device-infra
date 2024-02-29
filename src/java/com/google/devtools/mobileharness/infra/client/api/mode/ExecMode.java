@@ -34,7 +34,6 @@ public interface ExecMode {
 
   /** Initializes the exec mode. */
   default void initialize(EventBus globalInternalBus) throws InterruptedException {}
-  ;
 
   /** Creates allocator for allocating devices of the given job. */
   DeviceAllocator createDeviceAllocator(JobInfo jobInfo, EventBus globalInternalBus)

@@ -24,8 +24,8 @@ package(
 java_library(
     name = "job_core",
     srcs = [
-        "JobManagerCore.java",
-        "JobRunnerCore.java",
+        "JobManager.java",
+        "JobRunner.java",
     ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
