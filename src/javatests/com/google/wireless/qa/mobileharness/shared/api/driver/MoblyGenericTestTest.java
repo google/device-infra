@@ -86,7 +86,7 @@ public class MoblyGenericTestTest {
   @Before
   public void setUp() throws Exception {
     timeSource = FakeTimeSource.create();
-    clock = timeSource.asClockWithArbitraryZone();
+    clock = timeSource.withArbitraryZone();
     timing = new Timing(clock);
     timing.start();
     genFileDir = new File(UndeclaredOutputs.getUndeclaredOutputDir(), testName.getMethodName());
