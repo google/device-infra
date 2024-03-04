@@ -18,8 +18,12 @@ package com.google.devtools.mobileharness.shared.util.concurrent;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.base.Throwables;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Supplier;
 
@@ -28,6 +32,102 @@ import java.util.function.Supplier;
  * have some methods.
  */
 public final class Callables {
+
+  /**
+   * Executes all {@link MobileHarnessCallable}s in the given list sequentially. All callables will
+   * be executed regardless of any {@link Throwable}s thrown by previous callables.
+   *
+   * <p>This method will throw the first exception, and add the following exceptions as its
+   * suppressed exceptions, if any.
+   *
+   * <p>Before executing each callable, the interrupted status of the current thread will be saved
+   * and cleared.
+   *
+   * <p>This method can be used for simplifying code of executing multiple cleanup tasks in finally
+   * blocks. For example, from
+   *
+   * <pre>{@code
+   * try {
+   *   try {
+   *     try {
+   *       foo();
+   *     } finally {
+   *       cleanupTask1();
+   *     }
+   *   } finally {
+   *     cleanupTask2();
+   *   }
+   * } finally {
+   *   cleanupTask3();
+   * }
+   * }</pre>
+   *
+   * or
+   *
+   * <pre>{@code
+   * try {
+   *   foo();
+   * } finally {
+   *   try {
+   *     cleanupTask1();
+   *   } finally {
+   *     try {
+   *       cleanupTask2();
+   *     } finally {
+   *       cleanupTask3();
+   *     }
+   *   }
+   * }
+   * }</pre>
+   *
+   * to
+   *
+   * <pre>{@code
+   * try {
+   *   foo();
+   * } finally {
+   *   Callables.callAll(this::cleanupTask1, this::cleanupTask2, this::cleanupTask3);
+   * }
+   * }</pre>
+   */
+  public void callAll(MobileHarnessCallable<?>... callables)
+      throws MobileHarnessException, InterruptedException {
+    boolean interrupted = false;
+    List<Throwable> errors = new ArrayList<>();
+
+    // Calls each callable.
+    for (MobileHarnessCallable<?> callable : callables) {
+      interrupted |= Thread.interrupted();
+      try {
+        @SuppressWarnings("unused")
+        var unused = callable.call();
+      } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+        errors.add(e);
+        if (isInterruptedException(e)) {
+          interrupted = true;
+        }
+      }
+    }
+
+    // Gets the error to throw if any.
+    Throwable error;
+    if (errors.isEmpty()) {
+      error = null;
+    } else {
+      error = errors.get(0);
+      errors.stream().skip(1L).forEach(error::addSuppressed);
+    }
+    if (interrupted && !isInterruptedException(error)) {
+      Thread.currentThread().interrupt();
+    }
+
+    // Throws the error if any.
+    Throwables.propagateIfPossible(error, MobileHarnessException.class, InterruptedException.class);
+  }
+
+  private static boolean isInterruptedException(Throwable e) {
+    return e instanceof InterruptedException;
+  }
 
   /**
    * Wraps the given callable such that for the duration of {@link Callable#call} the thread that is

@@ -24,6 +24,8 @@ java_library(
     name = "callables",
     srcs = ["Callables.java"],
     deps = [
+        ":mobile_harness_callable",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
@@ -32,17 +34,21 @@ java_library(
 
 java_library(
     name = "concurrency_util",
-    srcs = [
-        "ConcurrencyUtil.java",
-        "MobileHarnessCallable.java",
-    ],
+    srcs = ["ConcurrencyUtil.java"],
     deps = [
         ":callables",
+        ":mobile_harness_callable",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:tag",
         "@maven//:com_google_guava_guava",
     ],
+)
+
+java_library(
+    name = "mobile_harness_callable",
+    srcs = ["MobileHarnessCallable.java"],
+    deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
 )
 
 java_library(
