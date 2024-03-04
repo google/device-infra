@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.controller.plugin;
 
+
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
