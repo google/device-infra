@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.controller.device;
 
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugStackTrace;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -61,7 +62,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.TimeUnit;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
@@ -93,7 +93,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       Duration.ofSeconds(10);
 
   /** Wait interval in milliseconds when the runner is idle. */
-  private static final long WAIT_INTERVAL_MS = TimeUnit.SECONDS.toMillis(10);
+  private static final long WAIT_INTERVAL_MS = Duration.ofSeconds(10).toMillis();
 
   /** The device property to store reservation id. */
   private static final String DEVICE_PROPERTY_RESERVATION_ID = "reservation_id";
@@ -226,7 +226,16 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       logger.atInfo().log("Started");
 
       // Initializes the device.
+      deviceReservation =
+          externalDeviceManager.reserveDevice(
+              device.getDeviceId(), Duration.ofDays(1).minusMinutes(1));
       initDevice();
+      // Release the reservation if it can be successfully initialized.
+      if (deviceReservation != null) {
+        deviceReservation.close();
+        deviceReservation = null;
+      }
+
       recordBecomeIdleTime();
       postDeviceChangeEvent("initialized");
       // Keeps running until interrupted.
@@ -574,9 +583,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     logger.atInfo().log("Initializing...");
 
     // Block the device setup process until it's reserved by MH DM.
-    try (DeviceReservation ignored =
-        externalDeviceManager.reserveDevice(
-            device.getDeviceId(), Duration.ofDays(1).minusMinutes(1))) {
+    try {
       extendExpireTime(device.getSetupTimeout());
       device.setUp();
     } catch (MobileHarnessException | InterruptedException e) {
@@ -775,7 +782,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
    */
   private void recordBecomeIdleTime() {
     Instant now = clock.instant();
-    logger.atInfo().atMostEvery(10, TimeUnit.MINUTES).log(
+    logger.atInfo().atMostEvery(10, MINUTES).log(
         "Update device %s last IDLE time: %s", device.getDeviceId(), now);
     getDevice()
         .setProperty(
