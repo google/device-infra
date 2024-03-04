@@ -24,8 +24,11 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.time.testing.FakeTimeSource;
 import com.google.common.util.PathUtil;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlParser;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
@@ -40,6 +43,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -52,6 +56,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -70,6 +75,9 @@ public class MoblyGenericTestTest {
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
   @Rule public TestName testName = new TestName();
+
+  @Mock private MoblyYamlParser moblyYamlParser;
+  @Mock private MoblyTestInfoMapHelper moblyTestInfoMapHelper;
 
   private TestInfo testInfo;
   private JobInfo jobInfo;
@@ -109,7 +117,21 @@ public class MoblyGenericTestTest {
     setupTestInfo("test_pass");
     CommandExecutor mockCommandExecutor = getMockCommandExecutor();
     moblyGenericTest =
-        new MoblyGenericTest(new NoOpDevice("device_name"), testInfo, mockCommandExecutor, clock);
+        new MoblyGenericTest(
+            new NoOpDevice("device_name"),
+            testInfo,
+            moblyYamlParser,
+            moblyTestInfoMapHelper,
+            mockCommandExecutor,
+            clock) {
+          @Override
+          protected void handleOutput(TestInfo testInfo)
+              throws IOException, MobileHarnessException {}
+
+          @Override
+          protected void parseResults(TestInfo testInfo)
+              throws IOException, MobileHarnessException {}
+        };
 
     moblyGenericTest.run(testInfo);
 

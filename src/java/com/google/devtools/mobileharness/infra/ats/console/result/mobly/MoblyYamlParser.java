@@ -25,6 +25,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.Map;
 import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
@@ -46,12 +47,26 @@ public class MoblyYamlParser {
   private static final String RESULT_TYPE_CONTROLLERINFO = "ControllerInfo";
   private static final String RESULT_TYPE_SUMMARY = "Summary";
   private static final String RESULT_TYPE_USERDATA = "UserData";
-
   private static final String RESULT_TESTNAME = "Test Name";
   private static final String RESULT_TESTCLASS = "Test Class";
+  private static final String RESULT_SIGNATURE = "Signature";
   private static final String RESULT_RESULT = "Result";
+  private static final String RESULT_STACKTRACE = "Stacktrace";
   private static final String RESULT_BEGIN_TIME = "Begin Time";
   private static final String RESULT_END_TIME = "End Time";
+  private static final String RESULT_UID = "UID";
+  private static final String RESULT_DETAILS = "Details";
+  private static final String RESULT_EXTRAS = "Extras";
+  private static final String RESULT_RETRY_PARENT = "Retry Parent";
+
+  // Key constants found within the body of "Extra Errors".
+  public static final String RESULT_EXTRA_ERRORS_DETAILS = "Details";
+  public static final String RESULT_EXTRA_ERRORS_EXTRAS = "Extras";
+  public static final String RESULT_EXTRA_ERRORS_STACKTRACE = "Stacktrace";
+  private static final String RESULT_EXTRA_ERRORS = "Extra Errors";
+  private static final String RESULT_EXTRA_ERRORS_POSITION = "Position";
+
+  private static final String USERDATA_TIMESTAMP = "timestamp";
 
   private static final String RESULT_PASS = "PASS";
   private static final String RESULT_FAIL = "FAIL";
@@ -96,11 +111,15 @@ public class MoblyYamlParser {
         case RESULT_TYPE_RECORD:
           results.add(parseRecord(documentMap));
           break;
+        case RESULT_TYPE_CONTROLLERINFO:
+          results.add(parseControllerInfo(documentMap));
+          break;
+        case RESULT_TYPE_USERDATA:
+          results.add(parseUserData(documentMap));
+          break;
         case RESULT_TYPE_SUMMARY:
           results.add(parseSummary(documentMap));
           break;
-        case RESULT_TYPE_CONTROLLERINFO:
-        case RESULT_TYPE_USERDATA:
         case RESULT_TYPE_TESTNAMELIST:
           // Do nothing. We don't care about this for now
           break;
@@ -127,6 +146,7 @@ public class MoblyYamlParser {
    * test. The results of a record are parsed into a MoblyTestEntry object.
    */
   private MoblyTestEntry parseRecord(Map<String, Object> record) throws MobileHarnessException {
+    Yaml yaml = new Yaml(new SafeConstructor(new LoaderOptions()));
     // Build MoblyTestEntry for Mobly result
     MoblyTestEntry.Builder builder = MoblyTestEntry.builder();
     builder.setTestName(String.valueOf(record.get(RESULT_TESTNAME)));
@@ -134,6 +154,26 @@ public class MoblyYamlParser {
 
     setResult(builder, record);
     setTiming(builder, record);
+    setExtraErrors(builder, record);
+
+    if (record.get(RESULT_DETAILS) != null) {
+      builder.setDetails(String.valueOf(record.get(RESULT_DETAILS)));
+    }
+    if (record.get(RESULT_STACKTRACE) != null) {
+      builder.setStacktrace(String.valueOf(record.get(RESULT_STACKTRACE)));
+    }
+    if (record.get(RESULT_EXTRAS) != null) {
+      builder.setExtras(yaml.dump(record.get(RESULT_EXTRAS)));
+    }
+    if (record.get(RESULT_UID) != null) {
+      builder.setUid(String.valueOf(record.get(RESULT_UID)));
+    }
+    if (record.get(RESULT_RETRY_PARENT) != null) {
+      builder.setRetryParent(String.valueOf(record.get(RESULT_RETRY_PARENT)));
+    }
+    if (record.get(RESULT_SIGNATURE) != null) {
+      builder.setSignature(String.valueOf(record.get(RESULT_SIGNATURE)));
+    }
 
     return builder.build();
   }
@@ -177,12 +217,101 @@ public class MoblyYamlParser {
       case RESULT_NULL:
         // When a user manually interrupts a test, Mobly sets test result as null.
         builder.setResult(MoblyResult.NULL);
+        builder.setDetails("Test was interrupted manually.");
         break;
       default:
         logger.atSevere().log("Unrecognized result for test %s", testName);
         throw new MobileHarnessException(
             ExtErrorId.MOBLY_OUTPUT_PARSING_ERROR, "Unrecognized result: " + result);
     }
+  }
+
+  /**
+   * Parses the Extra Errors in the Mobly summary file.
+   *
+   * <p>The Extra Errors portion of the Mobly summary file can either be a Map or a List. The format
+   * will determine how this section will be parsed. If the Extra Error content is neither a Map or
+   * a List, an ExtraError object will still be built where the entire content will be stored in
+   * ExtraError.getDetails().
+   */
+  private void setExtraErrors(MoblyTestEntry.Builder builder, Map<String, Object> record) {
+    Object extraErrors = record.get(RESULT_EXTRA_ERRORS);
+    if (extraErrors != null) {
+      if (extraErrors instanceof Map) {
+        @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
+        Map<String, Object> extraErrorObj = (Map<String, Object>) extraErrors;
+        if (!extraErrorObj.isEmpty()) {
+          extraErrorObj.forEach(
+              (k, v) -> {
+                @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
+                Map<String, Object> valMap = (Map<String, Object>) v;
+                builder.addExtraError(buildExtraError(valMap));
+              });
+        }
+      } else if (extraErrors instanceof List) {
+        @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
+        List<Object> extraErrorArray = (List<Object>) extraErrors;
+        if (!extraErrorArray.isEmpty()) {
+          extraErrorArray.forEach(
+              elem -> {
+                @SuppressWarnings("unchecked") // snakeyaml only supports this return value atm
+                Map<String, Object> valMap = (Map<String, Object>) elem;
+                builder.addExtraError(buildExtraError(valMap));
+              });
+        }
+      } else {
+        // If unrecognized format, log bug
+        StringBuilder strBuilder = new StringBuilder();
+        strBuilder.append("Unable to parse the content of extra errors:\n");
+        strBuilder.append(extraErrors);
+        logger.atSevere().log("%s", strBuilder);
+
+        // Create ExtraError to hold entire extra error object body in the Details string. We still
+        // want to display this on sponge
+        strBuilder.append("\nCheck \"Extra Errors\" sections in test_summary.yaml to make sure ");
+        strBuilder.append("they are either JSONObject or JSONArray.");
+        builder.addExtraError(
+            MoblyTestEntry.ExtraError.builder()
+                .setPosition("N/A")
+                .setDetails(strBuilder.toString())
+                .build());
+      }
+    }
+  }
+
+  private MoblyTestEntry.ExtraError buildExtraError(Map<String, Object> extraErrorMap) {
+    MoblyTestEntry.ExtraError.Builder builder = MoblyTestEntry.ExtraError.builder();
+    builder.setPosition(String.valueOf(extraErrorMap.get(RESULT_EXTRA_ERRORS_POSITION)));
+    if (extraErrorMap.get(RESULT_EXTRA_ERRORS_DETAILS) != null) {
+      builder.setDetails(String.valueOf(extraErrorMap.get(RESULT_EXTRA_ERRORS_DETAILS)));
+    }
+    if (extraErrorMap.get(RESULT_EXTRA_ERRORS_EXTRAS) != null) {
+      builder.setExtras(String.valueOf(extraErrorMap.get(RESULT_EXTRA_ERRORS_EXTRAS)));
+    }
+    if (extraErrorMap.get(RESULT_EXTRA_ERRORS_STACKTRACE) != null) {
+      builder.setStacktrace(String.valueOf(extraErrorMap.get(RESULT_EXTRA_ERRORS_STACKTRACE)));
+    }
+    return builder.build();
+  }
+
+  /**
+   * Create container class for Mobly ControllerInfo.
+   *
+   * <p>Because the ControllerInfo document has no standard structure, the entire yaml document is
+   * stored in MoblyControllerInfoEntry.getDevices(). The yaml document is read is as a Map<String,
+   * Object>, so that is what is stored.
+   */
+  private MoblyControllerInfoEntry parseControllerInfo(Map<String, Object> record) {
+    MoblyControllerInfoEntry.Builder builder = MoblyControllerInfoEntry.builder();
+    builder.setDevices(record);
+    return builder.build();
+  }
+
+  private MoblyUserDataEntry parseUserData(Map<String, Object> record) {
+    MoblyUserDataEntry.Builder builder = MoblyUserDataEntry.builder();
+    builder.setTimestamp(String.valueOf(record.get(USERDATA_TIMESTAMP)));
+    builder.setUserDataMap(record);
+    return builder.build();
   }
 
   private MoblySummaryEntry parseSummary(Map<String, Object> record) {

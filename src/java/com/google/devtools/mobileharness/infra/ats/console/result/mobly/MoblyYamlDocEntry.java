@@ -28,6 +28,8 @@ public interface MoblyYamlDocEntry {
   /** Used to differentiate between the different Mobly documents. See {@code records.py} */
   public enum Type {
     RECORD,
+    CONTROLLER_INFO,
+    USERDATA,
     SUMMARY,
   }
 

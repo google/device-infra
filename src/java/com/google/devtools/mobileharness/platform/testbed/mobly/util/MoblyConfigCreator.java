@@ -40,7 +40,7 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 /** Provides a utility to generate a Mobly test config for supported device types. */
-public class MoblyConfigGenerator {
+public class MoblyConfigCreator {
 
   // TODO: Update config generation to not rely on passing aroundsomething besides
   // org.json types.
@@ -48,7 +48,7 @@ public class MoblyConfigGenerator {
   /** Prefix to attach to device ids for configs generated from non-{@link TestbedDevice}. */
   private static final String TESTBED_PREFIX = "testbed_";
 
-  private MoblyConfigGenerator() {}
+  private MoblyConfigCreator() {}
 
   /**
    * Gets a JSONObject config which represents controller and test param information locally defined
@@ -104,7 +104,7 @@ public class MoblyConfigGenerator {
 
     // Load subdevice info into controller scope
     for (Entry<SubDeviceKey, SubDeviceInfo> subDevice : testbedConfig.getDevices().entrySet()) {
-      MoblySubdeviceType type =
+      MoblySubDeviceType type =
           getTypeFromClassName(subDevice.getKey().deviceType().getSimpleName());
       // Create a subdevice config
       JSONObject subDeviceConfig =
@@ -127,7 +127,7 @@ public class MoblyConfigGenerator {
    * @throws JSONException If there are issues manipulating the config
    */
   private static JSONObject createSubDeviceConfig(
-      String id, MoblySubdeviceType type, @Nullable SubDeviceInfo subDeviceInfo)
+      String id, MoblySubDeviceType type, @Nullable SubDeviceInfo subDeviceInfo)
       throws MobileHarnessException, JSONException {
     JSONObject controller = new JSONObject();
     if (subDeviceInfo != null) {
@@ -156,22 +156,22 @@ public class MoblyConfigGenerator {
     String moblyType = type.getJsonTypeName();
     // Only for Miscellaneous subdevice types (usually hardware not supported by Mobile Harness)
     // grab the controller type from properties.
-    if (type.equals(MoblySubdeviceType.MISC_TESTBED_SUB_DEVICE) && subDeviceInfo != null) {
+    if (type.equals(MoblySubDeviceType.MISC_TESTBED_SUB_DEVICE) && subDeviceInfo != null) {
       ImmutableCollection<String> moblyTypeStrings =
           subDeviceInfo
               .getDimensions()
-              .get(MoblySubdeviceType.MISC_TESTBED_SUB_DEVICE.getJsonTypeName());
+              .get(MoblySubDeviceType.MISC_TESTBED_SUB_DEVICE.getJsonTypeName());
       if (moblyTypeStrings.size() != 1) {
         throw new MobileHarnessException(
             ExtErrorId.MOBLY_MISC_TESTBED_SUBDEVICE_JSON_TYPE_NAME_ERROR,
             String.format(
                 "Exactly one value for key \"%s\" is expected in subdevice dimensions, found %s.",
-                MoblySubdeviceType.MISC_TESTBED_SUB_DEVICE.getJsonTypeName(),
+                MoblySubDeviceType.MISC_TESTBED_SUB_DEVICE.getJsonTypeName(),
                 moblyTypeStrings.size()));
       }
       moblyType = moblyTypeStrings.asList().get(0);
       // Remove this from the Controller config for MiscTestbedSubDevice.
-      controller.remove(MoblySubdeviceType.MISC_TESTBED_SUB_DEVICE.getJsonIdKey());
+      controller.remove(MoblySubDeviceType.MISC_TESTBED_SUB_DEVICE.getJsonIdKey());
     }
 
     JSONObject config = new JSONObject();
@@ -187,12 +187,12 @@ public class MoblyConfigGenerator {
     return config;
   }
 
-  /** Infers the MoblySubdeviceType from the device className. */
-  private static MoblySubdeviceType getTypeFromClassName(String className)
+  /** Infers the MoblySubDeviceType from the device className. */
+  private static MoblySubDeviceType getTypeFromClassName(String className)
       throws MobileHarnessException {
-    Optional<MoblySubdeviceType> finalType = Optional.empty();
+    Optional<MoblySubDeviceType> finalType = Optional.empty();
     Class<? extends Device> subdeviceClass = ClassUtil.getDeviceClass(className);
-    for (MoblySubdeviceType subdeviceType : MoblySubdeviceType.values()) {
+    for (MoblySubDeviceType subdeviceType : MoblySubDeviceType.values()) {
       Class<? extends Device> typeClass = ClassUtil.getDeviceClass(subdeviceType.getMhClassName());
       if (!typeClass.isAssignableFrom(subdeviceClass)) {
         continue;

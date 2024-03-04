@@ -20,10 +20,10 @@ package com.google.devtools.mobileharness.platform.testbed.mobly.util;
  * Device types in a Mobly testbed that are also detectable by MobileHarness detectors directly.
  *
  * <p>When adding a new device to this enum, make sure to add the corresponding MH device library to
- * the runtime_deps of the MoblyConfigGenerator library, because it uses reflection to get the MH
+ * the runtime_deps of the MoblyConfigCreator library, because it uses reflection to get the MH
  * device class.
  */
-public enum MoblySubdeviceType {
+public enum MoblySubDeviceType {
   ANDROID_DEVICE(
       /* jsonTypeName= */ "AndroidDevice",
       /* jsonIdKey= */ "serial",
@@ -81,7 +81,7 @@ public enum MoblySubdeviceType {
   private final String jsonIdKey;
   private final String mhClassName;
 
-  private MoblySubdeviceType(String jsonTypeName, String jsonIdKey, String mhClassName) {
+  private MoblySubDeviceType(String jsonTypeName, String jsonIdKey, String mhClassName) {
     this.jsonTypeName = jsonTypeName;
     this.jsonIdKey = jsonIdKey;
     this.mhClassName = mhClassName;

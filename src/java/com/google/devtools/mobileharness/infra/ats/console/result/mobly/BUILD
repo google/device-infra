@@ -22,7 +22,10 @@ java_library(
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],
     deps = [
         ":mobly_doc_entry",
@@ -37,17 +40,22 @@ java_library(
 java_library(
     name = "mobly_doc_entry",
     srcs = [
+        "MoblyControllerInfoEntry.java",
         "MoblySummaryEntry.java",
         "MoblyTestEntry.java",
+        "MoblyUserDataEntry.java",
         "MoblyYamlDocEntry.java",
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
 )

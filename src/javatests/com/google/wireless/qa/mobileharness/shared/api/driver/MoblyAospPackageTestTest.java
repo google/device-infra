@@ -26,6 +26,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportHelper;
@@ -33,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
@@ -77,6 +79,8 @@ public final class MoblyAospPackageTestTest {
   @Mock private LocalFileUtil localFileUtil;
   @Mock private MoblyReportHelper moblyReportHelper;
   @Mock private CertificationSuiteInfoFactory certificationSuiteInfoFactory;
+  @Mock private MoblyYamlParser moblyYamlParser;
+  @Mock private MoblyTestInfoMapHelper moblyTestInfoMapHelper;
 
   private Params params;
 
@@ -119,6 +123,8 @@ public final class MoblyAospPackageTestTest {
         new MoblyAospPackageTest(
             emptyDevice,
             testInfo,
+            moblyYamlParser,
+            moblyTestInfoMapHelper,
             new CommandExecutor(),
             Clock.systemUTC(),
             androidAdbUtil,
@@ -175,6 +181,8 @@ public final class MoblyAospPackageTestTest {
         new MoblyAospPackageTest(
             emptyDevice,
             testInfo,
+            moblyYamlParser,
+            moblyTestInfoMapHelper,
             new CommandExecutor(),
             Clock.systemUTC(),
             androidAdbUtil,
@@ -209,6 +217,8 @@ public final class MoblyAospPackageTestTest {
         new MoblyAospPackageTest(
             emptyDevice,
             testInfo,
+            moblyYamlParser,
+            moblyTestInfoMapHelper,
             new CommandExecutor(),
             Clock.systemUTC(),
             androidAdbUtil,
@@ -239,6 +249,8 @@ public final class MoblyAospPackageTestTest {
         new MoblyAospPackageTest(
             compositeDevice,
             testInfo,
+            moblyYamlParser,
+            moblyTestInfoMapHelper,
             new CommandExecutor(),
             Clock.systemUTC(),
             androidAdbUtil,

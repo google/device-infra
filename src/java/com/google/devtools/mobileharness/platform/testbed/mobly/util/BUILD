@@ -37,16 +37,16 @@ java_library(
 )
 
 java_library(
-    name = "subdevice_type",
+    name = "mobly_sub_device_type",
     srcs = [
-        "MoblySubdeviceType.java",
+        "MoblySubDeviceType.java",
     ],
 )
 
 java_library(
-    name = "config_generator",
+    name = "mobly_config_creator",
     srcs = [
-        "MoblyConfigGenerator.java",
+        "MoblyConfigCreator.java",
     ],
     visibility = ["//src/java/com/google/wireless/qa/mobileharness/shared:__subpackages__"],
     runtime_deps = [
@@ -56,7 +56,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:simple_composite_device",
     ],
     deps = [
-        ":subdevice_type",
+        ":mobly_sub_device_type",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/adhoc",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/config:base",
@@ -78,4 +78,26 @@ java_library(
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
+)
+
+java_library(
+    name = "mobly_test_info_map_helper",
+    srcs = ["MoblyTestInfoMapHelper.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/mobly:mobly_doc_entry",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/mobly:parser",
+        "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly:mobly_constant",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:error_model_converter",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
 )

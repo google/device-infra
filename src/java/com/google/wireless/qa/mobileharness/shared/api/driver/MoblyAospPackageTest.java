@@ -22,12 +22,14 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.InstallMoblyTestDepsArgs;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
@@ -105,6 +107,8 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
   MoblyAospPackageTest(
       Device device,
       TestInfo testInfo,
+      MoblyYamlParser parser,
+      MoblyTestInfoMapHelper mapper,
       CommandExecutor executor,
       Clock clock,
       AndroidAdbUtil androidAdbUtil,
@@ -112,7 +116,7 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
       LocalFileUtil localFileUtil,
       MoblyReportHelper moblyReportHelper,
       CertificationSuiteInfoFactory certificationSuiteInfoFactory) {
-    super(device, testInfo, executor, clock);
+    super(device, testInfo, parser, mapper, executor, clock);
     this.androidAdbUtil = androidAdbUtil;
     this.setupUtil = setupUtil;
     this.localFileUtil = localFileUtil;
