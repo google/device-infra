@@ -279,13 +279,15 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     // mv all the mcts test cases to /tmp/android/xts/mcts/testcases/
     List<String> listPaths =
         fileUtil.listFileOrDirPaths(
-            unzipDirPath
-                + "/"
-                + subDirName.substring(subDirName.lastIndexOf("/") + 1).replace(".zip", "")
-                + "/testcases");
+            unzipDirPath + "/" + PathUtil.basename(subDirName).replace(".zip", "") + "/testcases");
     for (String path : listPaths) {
-      fileUtil.moveFileOrDir(path, unzipDirPath + "/testcases");
-      logger.atInfo().log("Moved test cases from link [%s] to [%s]", path, unzipDirPath);
+      String desPath = unzipDirPath + "/testcases";
+      // Skip moving the files that already existed. For example, CtsDeviceInfo contained in all the
+      // android-mcts-<module>.zip.
+      if (!fileUtil.getFileOrDir(desPath + "/" + PathUtil.basename(path)).exists()) {
+        fileUtil.moveFileOrDir(path, desPath);
+        logger.atInfo().log("Moved test cases from link [%s] to [%s]", path, unzipDirPath);
+      }
     }
     logger.atInfo().log("Unzipped resource to %s", unzipDirPath);
   }
