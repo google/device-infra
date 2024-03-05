@@ -103,6 +103,9 @@ message CommandDetail {
   optional CancelReason cancel_reason = 5;
   optional ErrorReason error_reason = 6;
   CommandInfo original_command_info = 7;
+  optional int64 passed_test_count = 8;
+  optional int64 failed_test_count = 9;
+  optional int64 total_test_count = 10;
 }
 
 enum CommandState {
@@ -146,6 +149,9 @@ message CommandAttemptDetail {
   optional google.protobuf.Timestamp update_time = 10;
 
   optional CommandState state = 11;
+  optional int64 passed_test_count = 12;
+  optional int64 failed_test_count = 13;
+  optional int64 total_test_count = 14;
 }
 
 // Request detail returned by session service.

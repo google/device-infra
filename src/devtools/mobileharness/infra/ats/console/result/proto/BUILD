@@ -44,7 +44,9 @@ java_proto_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server:__subpackages__",
     ],
     deps = [":report_proto"],
 )
