@@ -13,43 +13,36 @@
 # limitations under the License.
 #
 
+load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
+
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    default_testonly = 1,
 )
 
 java_library(
     name = "service",
-    srcs = [
-        "MessageRelayService.java",
-        "MessageRelayServiceModule.java",
-    ],
+    srcs = glob(["*.java"]),
     deps = [
-        ":stream_manager",
         "//src/devtools/mobileharness/shared/util/comm/messagerelay/proto:message_relay_service_java_grpc",
         "//src/devtools/mobileharness/shared/util/comm/messagerelay/proto:message_relay_service_java_proto",
-        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/messagerelay/service",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/messagerelay/service:stream_manager",
+        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "@com_google_protobuf_protobuf_java",
+        "@io_grpc_grpc_java//core",
+        "@io_grpc_grpc_java//core:inprocess",
         "@io_grpc_grpc_java//stub",
-        "@maven//:com_google_inject_guice",
-        "@maven//:javax_inject_jsr330_api",
+        "@io_grpc_grpc_java//testing",
+        "@maven//:junit_junit",
     ],
 )
 
-java_library(
-    name = "stream_manager",
-    srcs = ["StreamManager.java"],
-    visibility = [
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/comm/messagerelay/service:__subpackages__",
+junit_test_suites(
+    name = "gen_tests",
+    sizes = [
+        "small",
     ],
-    deps = [
-        "//src/devtools/mobileharness/shared/util/comm/messagerelay/proto:message_relay_service_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "@io_grpc_grpc_java//stub",
-        "@maven//:com_google_guava_guava",
-    ],
+    deps = [":service"],
 )

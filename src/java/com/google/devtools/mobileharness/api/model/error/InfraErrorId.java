@@ -378,6 +378,7 @@ public enum InfraErrorId implements ErrorId {
 
   // ATS Message Relay: 52_801 ~ 52_900
   MESSAGE_RELAY_NO_AVAILABLE_STREAM(52_801, ErrorType.UNDETERMINED),
+  MESSAGE_RELAY_NO_STREAM_INFO(52_802, ErrorType.INFRA_ISSUE),
 
   // ID space here:52_801 ~ 60_000
   PLACE_HOLDER_TO_BE_RENAMED(60_000, ErrorType.UNDETERMINED);
