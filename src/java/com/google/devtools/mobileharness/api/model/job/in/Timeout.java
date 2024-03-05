@@ -176,13 +176,20 @@ public abstract class Timeout {
             "Start timeout %s is less than lower bound. Increase it to %s.",
             startTimeout(), MIN_START_TIMEOUT);
         setStartTimeout(MIN_START_TIMEOUT);
-      } else if (startTimeout().compareTo(jobTimeout()) > 0) {
-        logger.atWarning().log(
-            "Start timeout %s is greater than the job timeout setting. Reduce it to %s.",
-            startTimeout(), jobTimeout());
-        setStartTimeout(jobTimeout());
+      } else {
+        Duration upperBound = jobTimeout().minus(MIN_JOB_TEST_TIMEOUT_DIFF);
+        if (startTimeout().compareTo(upperBound) > 0) {
+          logger.atWarning().log(
+              "Start timeout %s is "
+                  + (upperBound.equals(MAX_TEST_TIMEOUT)
+                      ? "greater than upper bound"
+                      : "greater than or too close to job timeout")
+                  + ". Reduce it to %s.",
+              startTimeout(),
+              upperBound);
+          setStartTimeout(upperBound);
+        }
       }
-
       return autoBuild();
     }
   }
