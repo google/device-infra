@@ -11,7 +11,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"fastcdc"
+	"github.com/jotfs/fastcdc-go"
 )
 
 // ChunkInfo contains the sha256 and offset of a chunk in a file.

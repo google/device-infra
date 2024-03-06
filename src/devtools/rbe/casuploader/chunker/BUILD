@@ -26,7 +26,7 @@ go_library(
         "chunker.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casuploader/chunker",
-    deps = ["@fastcdc_go//:fastcdc"],
+    deps = ["@com_github_jotfs_fastcdc_go//:fastcdc-go"],
 )
 
 go_test(

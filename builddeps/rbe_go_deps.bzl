@@ -159,6 +159,17 @@ def rbe_go_deps():
         version = "v2.11.0",
     )
     go_repository(
+        name = "com_github_jotfs_fastcdc_go",
+        importpath = "github.com/jotfs/fastcdc-go",
+        sum = "h1:WHYIGk3k9NumGWfp4YMsemEcx/s4JKpGAa6tpCpHJOo=",
+        version = "v0.2.0",
+        # Supports large files (size of int64)
+        patch_cmds = [
+            "sed -i '1 i // Package fastcdc implements the FastCDC content-defined chunking algorithm.' fastcdc.go",
+            "sed -i -e 's/\\([oO]ffset\\) int/\\1 int64/' -e 's/c.offset += chunk.Length/c.offset += int64(chunk.Length)/' fastcdc.go",
+        ],
+    )
+    go_repository(
         name = "com_github_klauspost_compress",
         importpath = "github.com/klauspost/compress",
         sum = "h1:G5AfA94pHPysR56qqrkO2pxEexdDzrpFJ6yt/VqWxVU=",
