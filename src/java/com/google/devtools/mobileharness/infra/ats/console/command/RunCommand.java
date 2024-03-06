@@ -92,9 +92,8 @@ import picocli.CommandLine.Spec;
       "%nAlternatively you can enter @|fg(yellow) <config>|@ right after \"run\" command which"
           + " will achieve same result.%n",
     },
+    synopsisSubcommandLabel = "",
     subcommands = {
-      // Add HelpCommand as a subcommand of "run" command so users can do "run help <subcommand>" to
-      // get the usage help message for the <subcommand> in the "run" command.
       HelpCommand.class,
     })
 final class RunCommand implements Callable<Integer> {
@@ -107,6 +106,7 @@ final class RunCommand implements Callable<Integer> {
       index = "0",
       arity = "0..1",
       paramLabel = "<config>",
+      hideParamSyntax = true,
       description = "CTS test config/plan.")
   private String config;
 
@@ -117,36 +117,57 @@ final class RunCommand implements Callable<Integer> {
     @Option(
         names = {"-m", "--module"},
         required = true,
+        paramLabel = "<test_module_name>",
         description = "Run the specified module.")
     String module;
   }
 
   @Option(
       names = {"-s", "--serial"},
-      paramLabel = "deviceID",
+      paramLabel = "<device_id>",
       description = "Run test on the specific device.")
   private List<String> serialOpt;
 
   @Option(
       names = {"--serials"},
       split = ",",
-      paramLabel = "device_serial",
+      paramLabel = "<device_id>",
       description =
           "A list serial numbers of Android devices used for multiple-device test(separated by"
               + " comma). For example, `--serials <device_a>,<device_b>`. No spaces around the"
               + " comma. Note: the order of pass-in device serial numbers will be kept when passing"
               + " them to the test infra.")
-  @SuppressWarnings("PreferredInterfaceType")
   private List<String> androidDeviceSerialList;
 
   @Option(
       names = {"--shard-count"},
+      paramLabel = "<number_of_shards>",
       description =
           "Shard a CTS run into given number of independent chunks, to run on multiple devices in"
               + " parallel.")
   private int shardCount;
 
-  @Parameters(index = "1..*", description = "Extra run command args.")
+  @Option(
+      names = {"--include-filter"},
+      paramLabel = "\"<test_module_name> <test_name>\"",
+      description =
+          "Run with the specified modules, or test packages, classes, and cases. For example, run"
+              + " cts --include-filter \"CtsCalendarcommon2TestCases"
+              + " android.calendarcommon2.cts.Calendarcommon2Test#testStaticLinking\" includes the"
+              + " specified module.")
+  private List<String> includeFilters;
+
+  @Option(
+      names = {"--exclude-filter"},
+      paramLabel = "\"<test_module_name> <test_name>\"",
+      description =
+          "Exclude the specified modules, or test packages, classes, and cases, from the run. For"
+              + " example, run cts --exclude-filter \"CtsCalendarcommon2Test"
+              + " android.calendarcommon2.cts.Calendarcommon2Test#testStaticLinking\" excludes the"
+              + " specified module.")
+  private List<String> excludeFilters;
+
+  @Parameters(index = "1..*", hidden = true)
   private List<String> extraRunCmdArgs;
 
   private enum RetryType {
@@ -345,6 +366,15 @@ final class RunCommand implements Callable<Integer> {
                 .collect(toImmutableList())
             : ImmutableList.of();
 
+    ImmutableList<String> includeFilters =
+        this.includeFilters == null
+            ? ImmutableList.of()
+            : ImmutableList.copyOf(this.includeFilters);
+    ImmutableList<String> excludeFilters =
+        this.excludeFilters == null
+            ? ImmutableList.of()
+            : ImmutableList.copyOf(this.excludeFilters);
+
     ImmutableList<String> extraArgs =
         extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
 
@@ -353,7 +383,9 @@ final class RunCommand implements Callable<Integer> {
         SessionPluginProto.RunCommand.newBuilder()
             .setXtsRootDir(consoleInfo.getXtsRootDirectory().orElse(""))
             .setXtsType(XtsType.CTS)
-            .addAllDeviceSerial(deviceSerials);
+            .addAllDeviceSerial(deviceSerials)
+            .addAllIncludeFilter(includeFilters)
+            .addAllExcludeFilter(excludeFilters);
     if (shardCount > 0) {
       runCommand.setShardCount(shardCount);
     }

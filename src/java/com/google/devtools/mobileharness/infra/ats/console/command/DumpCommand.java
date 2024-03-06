@@ -43,9 +43,8 @@ import picocli.CommandLine.Spec;
     aliases = {"d"},
     sortOptions = false,
     description = "Dump logs, bugreport, config, etc.",
+    synopsisSubcommandLabel = "",
     subcommands = {
-      // Add HelpCommand as a subcommand of "dump" command so users can do "dump help <subcommand>"
-      // to get the usage help message for the <subcommand> in the "dump" command.
       HelpCommand.class,
     })
 public class DumpCommand implements Callable<Integer> {

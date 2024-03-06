@@ -79,6 +79,10 @@ message RunCommand {
 
   // Optional.
   optional string python_pkg_index_url = 8;
+
+  repeated string include_filter = 9;
+
+  repeated string exclude_filter = 10;
 }
 
 message RunCommandState {

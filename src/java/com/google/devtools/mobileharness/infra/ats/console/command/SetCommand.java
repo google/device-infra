@@ -41,9 +41,8 @@ import picocli.CommandLine.Option;
     aliases = {"s"},
     sortOptions = false,
     description = "Set console configurations.",
+    synopsisSubcommandLabel = "",
     subcommands = {
-      // Add HelpCommand as a subcommand of "set" command so users can do "set help <subcommand>"
-      // to get the usage help message for the <subcommand> in the "set" command.
       HelpCommand.class,
     })
 public class SetCommand implements Callable<Integer> {

@@ -49,9 +49,8 @@ import picocli.CommandLine.Spec;
     aliases = {"l"},
     sortOptions = false,
     description = "List invocations, devices, modules, etc.",
+    synopsisSubcommandLabel = "",
     subcommands = {
-      // Add HelpCommand as a subcommand of "list" command so users can do "list help <subcommand>"
-      // to get the usage help message for the <subcommand> in the "list" command.
       HelpCommand.class,
     })
 public class ListCommand implements Callable<Integer> {

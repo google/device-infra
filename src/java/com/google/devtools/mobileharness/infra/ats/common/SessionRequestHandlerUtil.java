@@ -143,6 +143,10 @@ public class SessionRequestHandlerUtil {
 
     public abstract Optional<Integer> shardCount();
 
+    public abstract ImmutableList<String> includeFilters();
+
+    public abstract ImmutableList<String> excludeFilters();
+
     public abstract ImmutableList<String> extraArgs();
 
     public abstract XtsType xtsType();
@@ -163,6 +167,8 @@ public class SessionRequestHandlerUtil {
       return new AutoValue_SessionRequestHandlerUtil_SessionRequestInfo.Builder()
           .setModuleNames(ImmutableList.of())
           .setDeviceSerials(ImmutableList.of())
+          .setIncludeFilters(ImmutableList.of())
+          .setExcludeFilters(ImmutableList.of())
           .setExtraArgs(ImmutableList.of())
           .setGivenMatchedNonTfModules(ImmutableSet.of())
           .setV2ConfigsMap(ImmutableMap.of())
@@ -185,6 +191,10 @@ public class SessionRequestHandlerUtil {
       public abstract Builder setModuleNames(List<String> moduleNames);
 
       public abstract Builder setShardCount(int shardCount);
+
+      public abstract Builder setIncludeFilters(List<String> includeFilters);
+
+      public abstract Builder setExcludeFilters(List<String> excludeFilters);
 
       public abstract Builder setExtraArgs(List<String> extraArgs);
 
@@ -323,7 +333,7 @@ public class SessionRequestHandlerUtil {
     String xtsRootDir = sessionRequestInfo.xtsRootDir();
     String xtsType = sessionRequestInfo.xtsType().name();
     ImmutableList<String> deviceSerials = sessionRequestInfo.deviceSerials();
-    Integer shardCount = sessionRequestInfo.shardCount().orElse(0);
+    int shardCount = sessionRequestInfo.shardCount().orElse(0);
     ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
 
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
@@ -368,6 +378,14 @@ public class SessionRequestHandlerUtil {
                 Streams.concat(
                         tfModules.stream().map(module -> String.format("-m %s", module)),
                         shardCountArg.stream(),
+                        sessionRequestInfo.includeFilters().stream()
+                            .map(
+                                includeFilter ->
+                                    String.format("--include-filter \"%s\"", includeFilter)),
+                        sessionRequestInfo.includeFilters().stream()
+                            .map(
+                                excludeFilter ->
+                                    String.format("--exclude-filter \"%s\"", excludeFilter)),
                         extraArgs.stream())
                     .collect(toImmutableList()));
     if (!sessionRequestInfoArgs.isEmpty()) {
