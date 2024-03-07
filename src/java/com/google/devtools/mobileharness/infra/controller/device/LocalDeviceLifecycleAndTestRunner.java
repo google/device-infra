@@ -317,7 +317,9 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
               : externalDeviceManager.reserveDevice(
                   device.getDeviceId(), Duration.between(clock.instant(), expireTime))) {
         device.tearDown();
-        if (needReboot && !externalDeviceManager.isManagingDeviceLifeCycle()) {
+        if (needReboot
+            && (!externalDeviceManager.isManagingDeviceLifeCycle()
+                || (!initialized && !externalDeviceManager.isManagingDeviceRecovery()))) {
           // TODO: Leaves the device in an unusable state instead of put it in the reboot
           // loop when rebooting doesn't help.
           try {
