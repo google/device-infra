@@ -24,9 +24,11 @@ import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.min;
 
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -81,16 +83,18 @@ import javax.inject.Inject;
 
 /** Helper class for ATS applications to create job config. */
 public class SessionRequestHandlerUtil {
+
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-  private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
+
   public static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
   public static final String XTS_NON_TF_JOB_PROP = "xts-non-tradefed-job";
   public static final String XTS_MODULE_NAME_PROP = "xts-module-name";
   public static final String XTS_MODULE_ABI_PROP = "xts-module-abi";
   public static final String XTS_MODULE_PARAMETER_PROP = "xts-module-parameter";
 
+  private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
   private static final Pattern MODULE_PARAMETER_PATTERN =
-      Pattern.compile(".*\\[(?<moduleParam>.*)\\]$");
+      Pattern.compile(".*\\[(?<moduleParam>.*)]$");
   private static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
   private static final ImmutableSet<String> MOBLY_TEST_RESULT_FILE_NAMES =
       ImmutableSet.of(
@@ -218,6 +222,88 @@ public class SessionRequestHandlerUtil {
 
       public abstract Builder setEnableModuleOptionalParameter(
           boolean enableModuleOptionalParameter);
+    }
+  }
+
+  @AutoValue
+  abstract static class SuiteTestFilter {
+
+    /** The original filter string in --include-filter or --exclude-filter. */
+    abstract String filterString();
+
+    abstract Optional<String> abi();
+
+    /**
+     * Module name with module parameter (if any), e.g., "FooModuleName" or
+     * "FooModuleName[instant]".
+     */
+    abstract String moduleName();
+
+    abstract Optional<String> testName();
+
+    private static final Splitter FILTER_STRING_SPLITTER = Splitter.on(' ').omitEmptyStrings();
+
+    private static SuiteTestFilter create(String filterString) {
+      List<String> tokens = FILTER_STRING_SPLITTER.splitToList(filterString);
+      switch (tokens.size()) {
+        case 1:
+          return create(
+              filterString, /* abi= */ null, /* moduleName= */ tokens.get(0), /* testName= */ null);
+        case 2:
+          if (AbiUtil.isAbiSupportedByCompatibility(tokens.get(0))) {
+            return create(
+                filterString,
+                /* abi= */ tokens.get(0),
+                /* moduleName= */ tokens.get(1),
+                /* testName= */ null);
+          } else {
+            return create(
+                filterString,
+                /* abi= */ null,
+                /* moduleName= */ tokens.get(0),
+                /* testName= */ tokens.get(1));
+          }
+        case 3:
+          return create(
+              filterString,
+              /* abi= */ tokens.get(0),
+              /* moduleName= */ tokens.get(1),
+              /* testName= */ tokens.get(2));
+        default:
+          throw new IllegalArgumentException(
+              String.format("Invalid filter string: [%s]", filterString));
+      }
+    }
+
+    private static SuiteTestFilter create(
+        String filterString, @Nullable String abi, String moduleName, @Nullable String testName) {
+      return new AutoValue_SessionRequestHandlerUtil_SuiteTestFilter(
+          filterString, Optional.ofNullable(abi), moduleName, Optional.ofNullable(testName));
+    }
+
+    /**
+     * Exactly matches {@code originalModuleName} and {@code moduleParameter}. If {@link #abi()} is
+     * empty, matches any {@code moduleAbi}. Otherwise exactly matches {@code moduleAbi}.
+     */
+    private boolean matchModule(
+        String originalModuleName, @Nullable String moduleAbi, @Nullable String moduleParameter) {
+      String moduleName =
+          moduleParameter == null
+              ? originalModuleName
+              : String.format("%s[%s]", originalModuleName, moduleParameter);
+      if (!moduleName().equals(moduleName)) {
+        return false;
+      }
+      if (abi().isEmpty()) {
+        return true;
+      }
+      return abi().get().equals(moduleAbi);
+    }
+
+    @Memoized
+    @Override
+    public String toString() {
+      return filterString();
     }
   }
 
@@ -486,6 +572,15 @@ public class SessionRequestHandlerUtil {
         sessionRequestInfo.v2ConfigsMap().entrySet().stream()
             .collect(toImmutableMap(e -> e.getValue().getMetadata().getXtsModule(), Entry::getKey));
 
+    ImmutableList<SuiteTestFilter> includeFilters =
+        sessionRequestInfo.includeFilters().stream()
+            .map(SuiteTestFilter::create)
+            .collect(toImmutableList());
+    ImmutableList<SuiteTestFilter> excludeFilters =
+        sessionRequestInfo.excludeFilters().stream()
+            .map(SuiteTestFilter::create)
+            .collect(toImmutableList());
+
     for (Entry<String, Configuration> entry :
         sessionRequestInfo.expandedModules().entrySet().stream()
             .filter(e -> e.getValue().getMetadata().getIsConfigV2())
@@ -498,6 +593,23 @@ public class SessionRequestHandlerUtil {
         String moduleAbi = getModuleAbi(expandedModuleName).orElse(null);
         // Gets module parameter
         String moduleParameter = getModuleParameter(expandedModuleName).orElse(null);
+
+        // Filters the module by include-filter and exclude-filter.
+        if (!includeFilters.isEmpty()
+            && includeFilters.stream()
+                .noneMatch(
+                    includeFilter ->
+                        includeFilter.matchModule(
+                            originalModuleName, moduleAbi, moduleParameter))) {
+          continue;
+        }
+        if (excludeFilters.stream()
+            .anyMatch(
+                excludeFilter ->
+                    excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))) {
+          continue;
+        }
+
         Optional<JobInfo> jobInfoOpt =
             createXtsNonTradefedJob(
                 Path.of(xtsRootDir),
