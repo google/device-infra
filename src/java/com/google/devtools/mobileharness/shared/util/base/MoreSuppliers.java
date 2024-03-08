@@ -16,7 +16,9 @@
 
 package com.google.devtools.mobileharness.shared.util.base;
 
-import com.google.common.base.Throwables;
+import static com.google.common.base.Throwables.throwIfInstanceOf;
+import static com.google.common.base.Throwables.throwIfUnchecked;
+
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 
 /** More useful suppliers. */
@@ -77,7 +79,8 @@ public class MoreSuppliers {
       if (successful) {
         return value;
       } else {
-        Throwables.propagateIfPossible(error, MobileHarnessException.class);
+        throwIfInstanceOf(error, MobileHarnessException.class);
+        throwIfUnchecked(error);
         throw new AssertionError(); // The error can always be propagated.
       }
     }

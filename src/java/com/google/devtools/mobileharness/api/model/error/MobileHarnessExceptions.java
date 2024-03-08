@@ -16,7 +16,9 @@
 
 package com.google.devtools.mobileharness.api.model.error;
 
-import com.google.common.base.Throwables;
+import static com.google.common.base.Throwables.throwIfInstanceOf;
+import static com.google.common.base.Throwables.throwIfUnchecked;
+
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.function.Supplier;
 import javax.annotation.Nullable;
@@ -63,8 +65,11 @@ public class MobileHarnessExceptions {
   @SuppressWarnings("TypeParameterUnusedInFormals")
   public static <T> T rethrow(@Nullable Throwable throwable, ErrorId defaultError)
       throws MobileHarnessException, InterruptedException {
-    Throwables.propagateIfPossible(
-        throwable, MobileHarnessException.class, InterruptedException.class);
+    if (throwable != null) {
+      throwIfInstanceOf(throwable, MobileHarnessException.class);
+      throwIfInstanceOf(throwable, InterruptedException.class);
+      throwIfUnchecked(throwable);
+    }
     throw new MobileHarnessException(
         defaultError,
         String.format(
