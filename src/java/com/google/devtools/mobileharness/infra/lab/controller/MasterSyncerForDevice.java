@@ -29,9 +29,15 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWith
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusProvider;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusProvider.DeviceWithStatusInfo;
+import com.google.devtools.mobileharness.infra.lab.proto.DeviceStatusProto.MobileHarnessDeviceStatus;
+import com.google.devtools.mobileharness.infra.lab.proto.DeviceStatusProto.MobileHarnessDeviceStatusList;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.LabSyncHelper;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceChangeEvent;
@@ -39,8 +45,10 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceD
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceErrorEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceUpEvent;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Observable;
@@ -233,6 +241,10 @@ public class MasterSyncerForDevice implements Runnable, Observer {
           entry.getKey().getDeviceId());
     }
 
+    if (Flags.instance().writeDeviceStatusIntoLocalFile.getNonNull()) {
+      writeDeviceStatusIntoLocalFile(devicesToSync);
+    }
+
     StringBuilder buf = new StringBuilder("Device count: ");
     buf.append(devicesToSync.size());
     if (!devicesToPrint.isEmpty()) {
@@ -336,6 +348,31 @@ public class MasterSyncerForDevice implements Runnable, Observer {
     signUpLabResponse
         .getDuplicatedDeviceUuidList()
         .forEach(deviceStatusProvider::updateDuplicatedUuid);
+  }
+
+  private void writeDeviceStatusIntoLocalFile(Map<Device, DeviceStatusInfo> devicesToSync) {
+    List<MobileHarnessDeviceStatus> deviceStatusList = new ArrayList<>();
+    for (Entry<Device, DeviceStatusInfo> entry : devicesToSync.entrySet()) {
+      deviceStatusList.add(
+          MobileHarnessDeviceStatus.newBuilder()
+              .setId(entry.getKey().getDeviceId())
+              .setStatus(entry.getValue().getDeviceStatusWithTimestamp().getStatus())
+              .setTimestampMs(entry.getValue().getDeviceStatusWithTimestamp().getTimestampMs())
+              .build());
+    }
+    LocalFileUtil localFileUtil = new LocalFileUtil();
+    try {
+      localFileUtil.writeToFile(
+          "/tmp/mh_device_status.textproto",
+          TextFormat.printer()
+              .printToString(
+                  MobileHarnessDeviceStatusList.newBuilder()
+                      .addAllDeviceStatus(deviceStatusList)
+                      .build()));
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log(
+          "Failed to write device status local file: %s", MoreThrowables.shortDebugString(e));
+    }
   }
 
   /** Flag to notify MasterSyncer in draining mode. */

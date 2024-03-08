@@ -945,6 +945,14 @@ public class Flags {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/mobileharness";
   }
 
+  private static final Flag<Boolean> writeDeviceStatusIntoLocalFileDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--write_device_status_into_local_file",
+      description = "Whether to write a local file containing status of lab's devices.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> writeDeviceStatusIntoLocalFile = writeDeviceStatusIntoLocalFileDefault;
+
   private static final Flags INSTANCE = new Flags();
 
   public static Flags instance() {

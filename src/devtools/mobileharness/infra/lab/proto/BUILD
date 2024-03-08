@@ -23,6 +23,19 @@ package(
 )
 
 proto_library(
+    name = "device_status_proto",
+    srcs = ["device_status.proto"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_proto",
+    ],
+)
+
+java_proto_library(
+    name = "device_status_java_proto",
+    deps = [":device_status_proto"],
+)
+
+proto_library(
     name = "file_proto",
     srcs = ["file.proto"],
     deps = [
