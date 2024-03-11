@@ -172,6 +172,16 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> atsConsoleOlcServerPath = atsConsoleOlcServerPathDefault;
 
+  private static final Flag<Boolean> atsConsolePrintAboveInputDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_console_print_above_input",
+      description =
+          "Whether to print ATS console output above the input line rather than in the input line."
+              + " Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> atsConsolePrintAboveInput = atsConsolePrintAboveInputDefault;
+
   private static final Flag<Boolean> cacheInstalledApksDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

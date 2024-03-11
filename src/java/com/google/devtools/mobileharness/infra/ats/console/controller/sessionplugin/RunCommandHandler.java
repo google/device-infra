@@ -134,6 +134,7 @@ class RunCommandHandler {
       sessionRequestHandlerUtil.processResult(xtsType, resultDir, logDir, sessionInfo.getAllJobs());
     } finally {
       sessionRequestHandlerUtil.cleanUpJobGenDirs(sessionInfo.getAllJobs());
+      // TODO: Sets success or failure based on the result.
       sessionInfo.setSessionPluginOutput(
           oldOutput ->
               (oldOutput == null ? AtsSessionPluginOutput.newBuilder() : oldOutput.toBuilder())

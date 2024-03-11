@@ -17,16 +17,16 @@
 package com.google.devtools.mobileharness.infra.ats.console.util.log;
 
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 
 /** Utility for dumping logs. */
 public class LogDumper {
 
   /** Prints information about log dirs of ATS console and OLC server. */
-  public static void dumpLog(ConsoleUtil consoleUtil) {
-    consoleUtil.printlnStdout("Saved log to %s", OlcServerDirs.getLatestLogFile());
-    consoleUtil.printlnStdout("Saved log to %s", AtsConsoleDirs.getLatestLogFile());
+  public static String dumpLog() {
+    return String.format(
+        "Saved log to %s\nSaved log to %s",
+        OlcServerDirs.getLatestLogFile(), AtsConsoleDirs.getLatestLogFile());
   }
 
   private LogDumper() {}

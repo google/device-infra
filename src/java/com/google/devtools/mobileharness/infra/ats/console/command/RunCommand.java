@@ -54,6 +54,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.FileNameUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -100,7 +101,7 @@ final class RunCommand implements Callable<Integer> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final AtomicInteger RUN_CMD_COUNT = new AtomicInteger(0);
+  private static final AtomicInteger RUNNING_COMMAND_COUNT = new AtomicInteger(0);
 
   @Parameters(
       index = "0",
@@ -167,6 +168,12 @@ final class RunCommand implements Callable<Integer> {
               + " specified module.")
   private List<String> excludeFilters;
 
+  @Option(
+      names = {"--exit-after-run"},
+      paramLabel = "<exit_after_run>",
+      description = "If true, exit the console after the command finishes. Default is false.")
+  private boolean exitAfterRun;
+
   @Parameters(index = "1..*", hidden = true)
   private List<String> extraRunCmdArgs;
 
@@ -187,6 +194,7 @@ final class RunCommand implements Callable<Integer> {
   private final ConsoleUtil consoleUtil;
   private final AndroidAdbInternalUtil androidAdbInternalUtil;
   private final LocalFileUtil localFileUtil;
+  private final SystemUtil systemUtil;
   private final FileNameUtil fileNameUtil;
   private final CommandExecutor commandExecutor;
   private final YamlTestbedUpdater yamlTestbedUpdater;
@@ -206,6 +214,7 @@ final class RunCommand implements Callable<Integer> {
       ConsoleUtil consoleUtil,
       AndroidAdbInternalUtil androidAdbInternalUtil,
       LocalFileUtil localFileUtil,
+      SystemUtil systemUtil,
       FileNameUtil fileNameUtil,
       YamlTestbedUpdater yamlTestbedUpdater,
       XmlResultFormatter xmlResultFormatter,
@@ -220,6 +229,7 @@ final class RunCommand implements Callable<Integer> {
     this.consoleUtil = consoleUtil;
     this.androidAdbInternalUtil = androidAdbInternalUtil;
     this.localFileUtil = localFileUtil;
+    this.systemUtil = systemUtil;
     this.fileNameUtil = fileNameUtil;
     this.yamlTestbedUpdater = yamlTestbedUpdater;
     this.xmlResultFormatter = xmlResultFormatter;
@@ -404,13 +414,16 @@ final class RunCommand implements Callable<Integer> {
         atsSessionStub.runSession(
             RUN_COMMAND_SESSION_NAME,
             AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build());
-    RUN_CMD_COUNT.incrementAndGet();
+    RUNNING_COMMAND_COUNT.incrementAndGet();
     addCallback(
         atsRunSessionFuture, new PrintPluginOutputFutureCallback(consoleUtil), directExecutor());
     addCallback(
         atsRunSessionFuture,
         new DisableServerLogPrinterFutureCallback(serverLogPrinter),
         executorService);
+    if (exitAfterRun) {
+      addCallback(atsRunSessionFuture, new ExitAfterRunFutureCallback(), executorService);
+    }
     consoleUtil.printlnStdout("Command submitted.");
     return ExitCode.OK;
   }
@@ -667,7 +680,7 @@ final class RunCommand implements Callable<Integer> {
   }
 
   /** Future callback which disables server log printer. */
-  public static class DisableServerLogPrinterFutureCallback
+  private static class DisableServerLogPrinterFutureCallback
       implements FutureCallback<AtsSessionPluginOutput> {
 
     private final ServerLogPrinter serverLogPrinter;
@@ -689,7 +702,7 @@ final class RunCommand implements Callable<Integer> {
     private void disableServerLogPrinter() {
       try {
         // Only disable server log printer when there is no in-process run commands.
-        if (RUN_CMD_COUNT.decrementAndGet() == 0) {
+        if (RUNNING_COMMAND_COUNT.decrementAndGet() == 0) {
           serverLogPrinter.enable(false);
         }
       } catch (MobileHarnessException | InterruptedException e) {
@@ -697,6 +710,27 @@ final class RunCommand implements Callable<Integer> {
         if (e instanceof InterruptedException) {
           Thread.currentThread().interrupt();
         }
+      }
+    }
+  }
+
+  /** Future callback which exits the console after the run command finishes. */
+  private class ExitAfterRunFutureCallback implements FutureCallback<AtsSessionPluginOutput> {
+
+    @Override
+    public void onSuccess(AtsSessionPluginOutput output) {
+      exit(output != null && output.hasSuccess() ? 0 : 1);
+    }
+
+    @Override
+    public void onFailure(Throwable unused) {
+      exit(/* exitCode= */ 1);
+    }
+
+    private void exit(int exitCode) {
+      if (RUNNING_COMMAND_COUNT.get() == 0) {
+        logger.atInfo().log("Exiting after the run command finishes");
+        systemUtil.exit(exitCode);
       }
     }
   }

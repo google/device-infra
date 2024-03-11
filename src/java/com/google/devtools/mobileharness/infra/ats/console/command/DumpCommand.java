@@ -117,7 +117,7 @@ public class DumpCommand implements Callable<Integer> {
       aliases = {"l"},
       description = "Dump the logs of all invocations to files")
   public int logs() {
-    LogDumper.dumpLog(consoleUtil);
+    consoleUtil.printlnStdout(LogDumper.dumpLog());
     return ExitCode.OK;
   }
 

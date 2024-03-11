@@ -170,10 +170,21 @@ public class SystemUtil {
   }
 
   /** Terminates the currently running Java Virtual Machine. */
-  @SuppressWarnings("SystemExitOutsideMain")
   public void exit(ExitCode exitCode) {
+    exit(exitCode.toNewExitCode());
+  }
+
+  /** Terminates the currently running Java Virtual Machine. */
+  public void exit(
+      com.google.devtools.mobileharness.shared.util.system.constant.ExitCode exitCode) {
     logger.atInfo().log("Exit code: %d %s", exitCode.code(), exitCode.name());
-    System.exit(exitCode.code());
+    exit(exitCode.code());
+  }
+
+  /** Terminates the currently running Java Virtual Machine. */
+  @SuppressWarnings("SystemExitOutsideMain")
+  public void exit(int exitCode) {
+    System.exit(exitCode);
   }
 
   /** Logs the exception and terminates the currently running Java Virtual Machine. */

@@ -17,14 +17,13 @@
 package com.google.devtools.mobileharness.infra.ats.console;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.common.util.concurrent.MoreExecutors.newDirectExecutorService;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
-import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.tokenize;
 import static java.util.Arrays.asList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -41,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleU
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.version.VersionMessageUtil;
+import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -54,8 +54,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.logging.Level;
 import javax.inject.Inject;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -66,7 +64,7 @@ import org.jline.terminal.TerminalBuilder;
 import picocli.CommandLine;
 
 /** ATS Console. */
-public class AtsConsole implements Callable<Void> {
+public class AtsConsole {
 
   private static final String APPNAME = "AtsConsole";
   private static final String HELP_PATTERN = "h|help";
@@ -107,15 +105,22 @@ public class AtsConsole implements Callable<Void> {
         ImmutableList.of(atsConsole.consoleUtil.getLogHandler()),
         /* disableConsoleHandler= */ true);
 
-    // Starts ATS console.
-    logFailure(
-        newDirectExecutorService()
-            .submit(threadRenaming(atsConsole, () -> "ats-console-main-thread")),
-        Level.SEVERE,
-        "Console received an unexpected exception (shown below); shutting down ATS Console.");
+    // Adds shutdown hook.
+    Runtime.getRuntime()
+        .addShutdownHook(
+            new Thread(
+                () -> System.out.println(LogDumper.dumpLog()), // Dump logs.
+                "ats-console-shutdown-hook"));
 
-    // Dump logs.
-    LogDumper.dumpLog(atsConsole.consoleUtil);
+    // Starts ATS console.
+    try (NonThrowingAutoCloseable ignored = threadRenaming("ats-console-main-thread")) {
+      atsConsole.run();
+    } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+      atsConsole.consoleUtil.printlnStderr(
+          "Console received an unexpected exception (shown below); shutting down ATS Console.\n%s",
+          Throwables.getStackTraceAsString(e));
+      System.exit(1);
+    }
   }
 
   private final ImmutableList<String> mainArgs;
@@ -130,7 +135,7 @@ public class AtsConsole implements Callable<Void> {
   private final ServerLogPrinter serverLogPrinter;
   private final VersionMessageUtil versionMessageUtil;
 
-  /** Set before {@link #call}; */
+  /** Set before {@link #run}; */
   @VisibleForTesting public volatile Injector injector;
 
   @Inject
@@ -159,8 +164,7 @@ public class AtsConsole implements Callable<Void> {
     this.versionMessageUtil = versionMessageUtil;
   }
 
-  @Override
-  public Void call() throws MobileHarnessException, InterruptedException {
+  public void run() throws MobileHarnessException, InterruptedException {
     // Prints notice message.
     consoleUtil.printlnStdout(NoticeMessageUtil.getNoticeMessage());
 
@@ -183,8 +187,8 @@ public class AtsConsole implements Callable<Void> {
         new CommandLine(RootCommand.class, new GuiceFactory(injector))
             .setCaseInsensitiveEnumValuesAllowed(true)
             .setOut(outWriter)
-            .setErr(errWriter);
-    commandLine.setUnmatchedOptionsArePositionalParams(true);
+            .setErr(errWriter)
+            .setUnmatchedOptionsArePositionalParams(true);
 
     // Prepares OLC server.
     if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
@@ -233,10 +237,8 @@ public class AtsConsole implements Callable<Void> {
 
       commandLine.execute(tokens.toArray(new String[0]));
 
-      sleeper.sleep(Duration.ofMillis(100));
+      sleeper.sleep(Duration.ofMillis(100L));
     } while (!consoleInfo.getShouldExitConsole());
-
-    return null; // Void
   }
 
   /**

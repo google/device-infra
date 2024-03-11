@@ -151,7 +151,7 @@ public final class AtsConsoleTest {
     injector.injectMembers(this);
     atsConsole.injector = injector;
 
-    atsConsole.call();
+    atsConsole.run();
 
     verify(lineReader)
         .printAbove(startsWith("Using commandline arguments as starting command: [help]"));
@@ -163,7 +163,7 @@ public final class AtsConsoleTest {
   public void runCtsV_enableAtsConsoleOlcServer() throws Exception {
     when(lineReader.readLine(anyString())).thenReturn("run -s abc cts-v").thenReturn("exit");
 
-    atsConsole.call();
+    atsConsole.run();
 
     verify(lineReader, timeout(TimeUnit.SECONDS.toMillis(15L)))
         .printAbove(

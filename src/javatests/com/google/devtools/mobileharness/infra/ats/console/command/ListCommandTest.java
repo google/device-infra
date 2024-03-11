@@ -179,7 +179,7 @@ public class ListCommandTest {
         .thenReturn("list modules")
         .thenReturn("exit");
 
-    atsConsole.call();
+    atsConsole.run();
 
     verify(lineReader, atLeastOnce()).printAbove(consoleStdoutCaptor.capture());
 
@@ -210,7 +210,7 @@ public class ListCommandTest {
 
     when(lineReader.readLine(anyString())).thenReturn("list results").thenReturn("exit");
 
-    atsConsole.call();
+    atsConsole.run();
 
     verify(lineReader)
         .printAbove(

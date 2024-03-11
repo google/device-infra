@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.console.util.console;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.FormatMethod;
 import java.util.Objects;
 import java.util.logging.ErrorManager;
@@ -42,10 +43,12 @@ public class ConsoleUtil {
 
   private final LogHandler logHandler = new LogHandler();
   private final LineReader lineReader;
+  private final boolean printAbove;
 
   @Inject
   ConsoleUtil(@ConsoleLineReader LineReader lineReader) {
     this.lineReader = lineReader;
+    this.printAbove = Flags.instance().atsConsolePrintAboveInput.getNonNull();
   }
 
   /**
@@ -61,7 +64,12 @@ public class ConsoleUtil {
    */
   @FormatMethod
   public void printlnStdout(String format, Object... args) {
-    lineReader.printAbove(String.format(format, args));
+    String line = String.format(format, args);
+    if (printAbove) {
+      lineReader.printAbove(line);
+    } else {
+      System.out.print(addLineTerminatorIfNecessary(line));
+    }
     logger.atInfo().logVarargs(format, args);
   }
 
@@ -77,7 +85,11 @@ public class ConsoleUtil {
    * <p>The method is thread safe.
    */
   public void printlnStdout(String text) {
-    lineReader.printAbove(text);
+    if (printAbove) {
+      lineReader.printAbove(text);
+    } else {
+      System.out.print(addLineTerminatorIfNecessary(text));
+    }
     logger.atInfo().log("%s", text);
   }
 
@@ -126,7 +138,11 @@ public class ConsoleUtil {
    * <p>The method is thread safe.
    */
   public void printlnDirect(AttributedString attributedString) {
-    lineReader.printAbove(attributedString);
+    if (printAbove) {
+      lineReader.printAbove(attributedString);
+    } else {
+      System.err.print(addLineTerminatorIfNecessary(attributedString.toString()));
+    }
   }
 
   private void doPrintlnStderr(String text) {
@@ -164,5 +180,9 @@ public class ConsoleUtil {
 
   private static AttributedString createStderr(String text) {
     return new AttributedString(text, STDERR_STYLE);
+  }
+
+  private static String addLineTerminatorIfNecessary(String line) {
+    return line.endsWith("\n") ? line : line + "\n";
   }
 }
