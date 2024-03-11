@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -198,6 +199,7 @@ public class SessionPluginLoader {
       bind(SessionInfo.class).toInstance(sessionInfo);
       bind(DeviceQuerier.class).toInstance(deviceQuerier);
       bind(Instant.class).annotatedWith(ServerStartTime.class).toInstance(serverStartTime);
+      bind(Clock.class).toInstance(Clock.systemUTC());
     }
 
     @Provides

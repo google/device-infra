@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -27,9 +28,11 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
@@ -44,11 +47,14 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -59,6 +65,7 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -75,6 +82,7 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @Mock private ModuleConfigurationHelper moduleConfigurationHelper;
   @Bind @Mock private ConfigurationUtil configurationUtil;
   @Bind @Mock private CompatibilityReportMerger compatibilityReportMerger;
+  @Bind @Mock private CompatibilityReportParser compatibilityReportParser;
   @Bind @Mock private CompatibilityReportCreator reportCreator;
   @Bind @Mock private CertificationSuiteInfoFactory certificationSuiteInfoFactory;
   @Mock private TestSuiteHelper testSuiteHelper;
@@ -475,5 +483,61 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
 
     assertThat(jobInfos).hasSize(1);
+  }
+
+  @Test
+  public void getTestResultFromTest_success() throws Exception {
+    TestInfo testInfo = Mockito.mock(TestInfo.class);
+    Properties properties = Mockito.mock(Properties.class);
+    when(properties.get(
+            com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test
+                .LAB_TEST_GEN_FILE_DIR))
+        .thenReturn("/test_gen_file_dir");
+    when(properties.has(
+            com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test
+                .LAB_TEST_GEN_FILE_DIR))
+        .thenReturn(true);
+    when(testInfo.properties()).thenReturn(properties);
+    Path resultFilePath = Path.of("/test_gen_file_dir/test_file.txt");
+    when(localFileUtil.listFilePaths(eq(Path.of("/test_gen_file_dir")), eq(true), any()))
+        .thenReturn(ImmutableList.of(resultFilePath));
+    Optional<Result> result = Optional.of(Result.getDefaultInstance());
+    when(compatibilityReportParser.parse(resultFilePath)).thenReturn(result);
+
+    assertThat(sessionRequestHandlerUtil.getTestResultFromTest(testInfo)).isEqualTo(result);
+  }
+
+  @Test
+  public void getTestResultFromTest_parserFailed() throws Exception {
+    TestInfo testInfo = Mockito.mock(TestInfo.class);
+    Properties properties = Mockito.mock(Properties.class);
+    when(properties.get(
+            com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test
+                .LAB_TEST_GEN_FILE_DIR))
+        .thenReturn("/test_gen_file_dir");
+    when(properties.has(
+            com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test
+                .LAB_TEST_GEN_FILE_DIR))
+        .thenReturn(true);
+    when(testInfo.properties()).thenReturn(properties);
+    Path resultFilePath = Path.of("/test_gen_file_dir/test_file.txt");
+    when(localFileUtil.listFilePaths(eq(Path.of("/test_gen_file_dir")), eq(true), any()))
+        .thenReturn(ImmutableList.of(resultFilePath));
+    when(compatibilityReportParser.parse(resultFilePath)).thenReturn(Optional.empty());
+
+    assertThat(sessionRequestHandlerUtil.getTestResultFromTest(testInfo)).isEmpty();
+  }
+
+  @Test
+  public void getTestResultFromTest_noTestGenFileDir() throws Exception {
+    TestInfo testInfo = Mockito.mock(TestInfo.class);
+    Properties properties = Mockito.mock(Properties.class);
+
+    when(properties.has(
+            com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test
+                .LAB_TEST_GEN_FILE_DIR))
+        .thenReturn(false);
+    when(testInfo.properties()).thenReturn(properties);
+    assertThat(sessionRequestHandlerUtil.getTestResultFromTest(testInfo)).isEmpty();
   }
 }

@@ -16,11 +16,16 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.DIMENSION_ID;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandAttemptDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
@@ -31,13 +36,19 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Ses
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
@@ -59,13 +70,17 @@ final class AtsServerSessionPlugin {
   private Boolean nonTradefedJobsHasBeenCreated = false;
 
   private final SessionInfo sessionInfo;
+  private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final NewMultiCommandRequestHandler newMultiCommandRequestHandler;
 
   @Inject
   AtsServerSessionPlugin(
-      SessionInfo sessionInfo, NewMultiCommandRequestHandler newMultiCommandRequestHandler) {
+      SessionInfo sessionInfo,
+      NewMultiCommandRequestHandler newMultiCommandRequestHandler,
+      SessionRequestHandlerUtil sessionRequestHandlerUtil) {
     this.sessionInfo = sessionInfo;
     this.newMultiCommandRequestHandler = newMultiCommandRequestHandler;
+    this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
   }
 
   @Subscribe
@@ -94,8 +109,33 @@ final class AtsServerSessionPlugin {
   @Subscribe
   public void onJobEnded(JobEndEvent jobEndEvent)
       throws InterruptedException, MobileHarnessException {
-    updateCommandDetail(jobEndEvent.getJobInfo().toNewJobInfo());
     JobInfo jobInfo = jobEndEvent.getJobInfo().toNewJobInfo();
+
+    long jobTotalTestCount = 0;
+    long jobFailedTestCount = 0;
+    long jobPassedTestCount = 0;
+    for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
+      Optional<com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result>
+          result = sessionRequestHandlerUtil.getTestResultFromTest(testInfo);
+      logger.atInfo().log("Result: %s", result);
+      if (result.isPresent()) {
+        long passedTestCount = result.get().getSummary().getPassed();
+        long failedTestCount = result.get().getSummary().getFailed();
+        long totalTestCount = passedTestCount + failedTestCount;
+        testInfo.properties().add("ats_test_passed_count", String.valueOf(passedTestCount));
+        testInfo.properties().add("ats_test_failed_count", String.valueOf(failedTestCount));
+        testInfo.properties().add("ats_test_total_count", String.valueOf(totalTestCount));
+
+        jobTotalTestCount += totalTestCount;
+        jobPassedTestCount += passedTestCount;
+        jobFailedTestCount += failedTestCount;
+      }
+    }
+    jobInfo.properties().add("ats_job_passed_count", String.valueOf(jobPassedTestCount));
+    jobInfo.properties().add("ats_job_failed_count", String.valueOf(jobFailedTestCount));
+    jobInfo.properties().add("ats_job_total_count", String.valueOf(jobTotalTestCount));
+    updateCommandDetail(jobInfo);
+    addCommandAttemptDetails(jobInfo);
 
     // If a non-tradefed tests ended, that means all non-tradefed tests had already been created and
     // no need to create more.
@@ -152,6 +192,48 @@ final class AtsServerSessionPlugin {
     }
   }
 
+  private void addCommandAttemptDetails(JobInfo jobInfo) {
+    synchronized (requestDetailLock) {
+      ImmutableList<CommandAttemptDetail> attemptDetails =
+          jobInfo.tests().getAll().values().stream()
+              .map(this::generateCommandAttemptDetail)
+              .collect(toImmutableList());
+      requestDetail.addAllCommandAttemptDetails(attemptDetails);
+      requestDetail.setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
+      RequestDetail latestRequestDetail = requestDetail.build();
+      sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
+    }
+  }
+
+  private CommandAttemptDetail generateCommandAttemptDetail(TestInfo testInfo) {
+    CommandAttemptDetail.Builder builder = CommandAttemptDetail.newBuilder();
+    builder.setId(testInfo.locator().getId());
+    builder.setRequestId(sessionInfo.getSessionId());
+    builder.setCommandId(testInfo.jobInfo().locator().getId());
+    if (testInfo.properties().has(DIMENSION_ID)) {
+      builder.setDeviceSerial(testInfo.properties().get(DIMENSION_ID));
+    }
+    if (testInfo.properties().has("ats_test_passed_count")) {
+      logger.atInfo().log(
+          "Passed test count: %s", testInfo.properties().get("ats_test_passed_count"));
+      builder.setPassedTestCount(
+          Long.parseLong(testInfo.properties().get("ats_test_passed_count")));
+    }
+    if (testInfo.properties().has("ats_test_failed_count")) {
+      builder.setFailedTestCount(
+          Long.parseLong(testInfo.properties().get("ats_test_failed_count")));
+    }
+    if (testInfo.properties().has("ats_test_total_count")) {
+      builder.setTotalTestCount(Long.parseLong(testInfo.properties().get("ats_test_total_count")));
+    }
+    builder.setStartTime(TimeUtils.toProtoTimestamp(testInfo.timing().getStartTime()));
+    builder.setEndTime(TimeUtils.toProtoTimestamp(testInfo.timing().getEndTime()));
+    builder.setCreateTime(TimeUtils.toProtoTimestamp(testInfo.timing().getCreateTime()));
+    builder.setUpdateTime(TimeUtils.toProtoTimestamp(testInfo.timing().getModifyTime()));
+    builder.setState(convertStatusAndResultToCommandState(testInfo.status(), testInfo.result()));
+    return builder.build();
+  }
+
   private void updateCommandDetail(JobInfo jobInfo) {
     synchronized (requestDetailLock) {
       if (!requestDetail.containsCommandDetails(jobInfo.locator().getId())) {
@@ -161,16 +243,36 @@ final class AtsServerSessionPlugin {
       }
       CommandDetail oldCommandDetail =
           requestDetail.getCommandDetailsOrThrow(jobInfo.locator().getId());
-      CommandDetail newCommandDetail =
-          oldCommandDetail.toBuilder().setState(convertJobStatusToCommandState(jobInfo)).build();
-      requestDetail.putCommandDetails(jobInfo.locator().getId(), newCommandDetail);
+      CommandDetail.Builder newCommandDetail =
+          oldCommandDetail.toBuilder()
+              .setState(convertStatusAndResultToCommandState(jobInfo.status(), jobInfo.result()));
+      if (jobInfo.properties().has("ats_job_passed_count")) {
+        logger.atInfo().log(
+            "Passed job count: %s", jobInfo.properties().get("ats_job_passed_count"));
+        newCommandDetail.setPassedTestCount(
+            Long.parseLong(jobInfo.properties().get("ats_job_passed_count")));
+      }
+      if (jobInfo.properties().has("ats_job_failed_count")) {
+        newCommandDetail.setFailedTestCount(
+            Long.parseLong(jobInfo.properties().get("ats_job_failed_count")));
+      }
+      if (jobInfo.properties().has("ats_job_total_count")) {
+        newCommandDetail.setTotalTestCount(
+            Long.parseLong(jobInfo.properties().get("ats_job_total_count")));
+      }
+      newCommandDetail.setStartTime(TimeUtils.toProtoTimestamp(jobInfo.timing().getStartTime()));
+      newCommandDetail.setEndTime(TimeUtils.toProtoTimestamp(jobInfo.timing().getEndTime()));
+      newCommandDetail.setCreateTime(TimeUtils.toProtoTimestamp(jobInfo.timing().getCreateTime()));
+      newCommandDetail.setUpdateTime(TimeUtils.toProtoTimestamp(jobInfo.timing().getModifyTime()));
+      requestDetail.putCommandDetails(jobInfo.locator().getId(), newCommandDetail.build());
+      requestDetail.setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
       RequestDetail latestRequestDetail = requestDetail.build();
       sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
     }
   }
 
-  private CommandState convertJobStatusToCommandState(JobInfo jobInfo) {
-    switch (jobInfo.status().get()) {
+  private CommandState convertStatusAndResultToCommandState(Status status, Result result) {
+    switch (status.get()) {
       case NEW:
         return CommandState.UNKNOWN_STATE;
       case ASSIGNED:
@@ -178,7 +280,7 @@ final class AtsServerSessionPlugin {
       case RUNNING:
         return CommandState.RUNNING;
       case DONE:
-        if (jobInfo.result().get().equals(TestResult.PASS)) {
+        if (result.get().equals(TestResult.PASS)) {
           return CommandState.COMPLETED;
         } else {
           return CommandState.ERROR;

@@ -47,12 +47,14 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -73,8 +75,8 @@ public final class NewMultiCommandRequestHandlerTest {
   private static final String ANDROID_XTS_ZIP = "file:///path/to/xts/zip/file.zip";
   private static final String OUTPUT_FILE_UPLOAD_URL = "file:///path/to/output";
 
-  CommandInfo commandInfo = CommandInfo.getDefaultInstance();
-  NewMultiCommandRequest request = NewMultiCommandRequest.getDefaultInstance();
+  private CommandInfo commandInfo = CommandInfo.getDefaultInstance();
+  private NewMultiCommandRequest request = NewMultiCommandRequest.getDefaultInstance();
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
@@ -82,6 +84,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
   @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private CommandExecutor commandExecutor;
+  @Bind @Mock private Clock clock;
 
   @Mock private SessionInfo sessionInfo;
   @Mock private JobInfo jobInfo;
@@ -127,10 +130,12 @@ public final class NewMultiCommandRequestHandlerTest {
             .setTestEnvironment(
                 TestEnvironment.newBuilder().setOutputFileUploadUrl(OUTPUT_FILE_UPLOAD_URL).build())
             .build();
+    when(clock.millis()).thenReturn(1000L);
   }
 
   @Test
   public void addTradefedJobs_success() throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
         .thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
@@ -142,6 +147,9 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(requestDetail.getId()).isEqualTo("session_id");
     assertThat(requestDetail.getState()).isEqualTo(RequestState.RUNNING);
     assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
+    assertThat(requestDetail.getCreateTime()).isEqualTo(Timestamps.fromMillis(1000L));
+    assertThat(requestDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(2000L));
+    assertThat(requestDetail.getUpdateTime()).isEqualTo(Timestamps.fromMillis(3000L));
 
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     String jobId = requestDetail.getCommandDetailsMap().keySet().iterator().next();

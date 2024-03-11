@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.X
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
@@ -82,6 +83,7 @@ public final class RunCommandHandlerTest {
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private CompatibilityReportMerger compatibilityReportMerger;
+  @Bind @Mock private CompatibilityReportParser compatibilityReportParser;
   @Bind @Mock private CompatibilityReportCreator reportCreator;
 
   @Inject private RunCommandHandler runCommandHandler;

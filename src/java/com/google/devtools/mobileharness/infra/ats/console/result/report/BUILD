@@ -19,7 +19,10 @@ java_library(
     name = "compatibility_report_parser",
     srcs = ["CompatibilityReportParser.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     deps = [

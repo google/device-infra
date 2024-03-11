@@ -1010,6 +1010,7 @@ public class JobRunner implements Runnable {
 
       logger.atFine().log("Post JobEndEvent");
       try {
+        jobInfo.timing().end();
         JobEndEvent jobEndEvent = new JobEndEvent(jobInfo, jobError);
         scopedEventBus.post(
             jobEndEvent,

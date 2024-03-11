@@ -82,6 +82,7 @@ message SessionPluginConfigs {
 // 2. DeviceQuerier.
 // 3. @ServerStartTime Instant.
 // 4. ListeningExecutorService.
+// 5. Clock.
 message SessionPluginConfig {
   // Required.
   SessionPluginLoadingConfig loading_config = 1;

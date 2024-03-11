@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
@@ -95,7 +96,7 @@ public class SessionRequestHandlerUtil {
   private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
   private static final Pattern MODULE_PARAMETER_PATTERN =
       Pattern.compile(".*\\[(?<moduleParam>.*)]$");
-  private static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
+  public static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
   private static final ImmutableSet<String> MOBLY_TEST_RESULT_FILE_NAMES =
       ImmutableSet.of(
           "test_summary.yaml",
@@ -110,6 +111,7 @@ public class SessionRequestHandlerUtil {
   private final CertificationSuiteInfoFactory certificationSuiteInfoFactory;
   private final CompatibilityReportMerger compatibilityReportMerger;
   private final CompatibilityReportCreator reportCreator;
+  private final CompatibilityReportParser compatibilityReportParser;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -119,7 +121,8 @@ public class SessionRequestHandlerUtil {
       ModuleConfigurationHelper moduleConfigurationHelper,
       CertificationSuiteInfoFactory certificationSuiteInfoFactory,
       CompatibilityReportMerger compatibilityReportMerger,
-      CompatibilityReportCreator reportCreator) {
+      CompatibilityReportCreator reportCreator,
+      CompatibilityReportParser compatibilityReportParser) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
@@ -127,6 +130,7 @@ public class SessionRequestHandlerUtil {
     this.certificationSuiteInfoFactory = certificationSuiteInfoFactory;
     this.compatibilityReportMerger = compatibilityReportMerger;
     this.reportCreator = reportCreator;
+    this.compatibilityReportParser = compatibilityReportParser;
   }
 
   /**
@@ -341,6 +345,22 @@ public class SessionRequestHandlerUtil {
                     .setDimensions(StringMap.newBuilder().putContent("serial", serial))
                     .build())
         .collect(toImmutableList());
+  }
+
+  public Optional<Result> getTestResultFromTest(TestInfo testInfo) throws MobileHarnessException {
+    // TODO: Stop reading from lab's gen dir after file transfer is ready.
+    if (!testInfo.properties().has(Test.LAB_TEST_GEN_FILE_DIR)) {
+      return Optional.empty();
+    }
+    List<Path> testResultXmlFiles =
+        localFileUtil.listFilePaths(
+            Path.of(testInfo.properties().get(Test.LAB_TEST_GEN_FILE_DIR)),
+            /* recursively= */ true,
+            path -> path.getFileName().toString().equals(TEST_RESULT_XML_FILE_NAME));
+    if (!testResultXmlFiles.isEmpty()) {
+      return compatibilityReportParser.parse(testResultXmlFiles.get(0));
+    }
+    return Optional.empty();
   }
 
   private ImmutableList<SubDeviceSpec> pickAndroidOnlineDevices(
@@ -1111,7 +1131,7 @@ public class SessionRequestHandlerUtil {
     return Optional.of(nonTradefedTestResultBuilder.build());
   }
 
-  private ImmutableList<Path> getGenFilesFromTest(TestInfo test) throws MobileHarnessException {
+  public ImmutableList<Path> getGenFilesFromTest(TestInfo test) throws MobileHarnessException {
     String testGenFileDir = test.getGenFileDir();
     List<Path> genFiles = localFileUtil.listFilesOrDirs(Path.of(testGenFileDir), path -> true);
 
