@@ -71,6 +71,8 @@ public class CompatibilityReportCreator {
   @VisibleForTesting static final String REPORT_XSL_FILE_NAME = "compatibility_result.xsl";
   @VisibleForTesting static final String TEST_RECORD_PROTO_FILE_NAME = "test-record.pb";
 
+  @VisibleForTesting static final String TEST_RESULT_PB_FILE_NAME = "test_result.pb";
+
   @VisibleForTesting
   static final ImmutableList<String> RESULT_RESOURCES =
       ImmutableList.of("compatibility_result.css", REPORT_XSL_FILE_NAME, "logo.png");
@@ -269,6 +271,12 @@ public class CompatibilityReportCreator {
     }
 
     serializer.endDocument();
+
+    // Writes to test_result.pb
+    Path testResultProtoPath = parentDir.toPath().resolve(TEST_RESULT_PB_FILE_NAME);
+    try (FileOutputStream fos = new FileOutputStream(testResultProtoPath.toFile())) {
+      report.writeTo(fos);
+    }
   }
 
   private static void serializeTestCases(XmlSerializer serializer, List<TestCase> testCases)

@@ -195,3 +195,12 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info",
     ],
 )
+
+java_library(
+    name = "test_result_proto_util",
+    srcs = ["TestResultProtoUtil.java"],
+    deps = [
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "@com_google_protobuf//:protobuf_java",
+    ],
+)

@@ -84,6 +84,8 @@ message Module {
   optional Reason reason = 7;
   // List of detailed info for the executed test classes in the module.
   repeated TestCase test_case = 8;
+  // Whether this module for a Non-TF module
+  optional bool is_non_tf_module = 9;
 }
 
 // Stores the info for the module not done reason

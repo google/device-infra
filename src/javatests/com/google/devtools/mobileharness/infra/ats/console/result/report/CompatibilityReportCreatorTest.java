@@ -103,6 +103,7 @@ public final class CompatibilityReportCreatorTest {
                 .add(CompatibilityReportCreator.TEST_RESULT_FILE_NAME)
                 .add(CompatibilityReportCreator.HTML_REPORT_NAME)
                 .add("checksum-suite.data")
+                .add(CompatibilityReportCreator.TEST_RESULT_PB_FILE_NAME)
                 .build());
 
     assertThat(

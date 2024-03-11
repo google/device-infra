@@ -91,6 +91,7 @@ public final class MoblyReportParserTest {
         .isEqualTo(
             Module.newBuilder()
                 .setName("mobly-package-name[module-parameter]")
+                .setIsNonTfModule(true)
                 .setAbi("module-abi")
                 .setDone(true)
                 .setTotalTests(3)
