@@ -92,6 +92,7 @@ message TestEnvironment {
   }
 
   optional LogLevel log_level = 13;
+  optional string upload_file_pattern = 14;
 }
 
 // Command detail returned by session service.
