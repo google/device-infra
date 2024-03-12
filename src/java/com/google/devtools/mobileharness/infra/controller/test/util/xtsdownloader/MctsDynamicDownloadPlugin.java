@@ -19,8 +19,10 @@ package com.google.devtools.mobileharness.infra.controller.test.util.xtsdownload
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ListMultimap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.ByteStreams;
@@ -45,8 +47,9 @@ import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 import javax.annotation.Nullable;
 
 /** Built in lab plugin for MCTS test suites dynamic downloading. */
@@ -99,9 +102,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   public XtsDynamicDownloadInfo parse(TestInfo test, Device device)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(device);
-    ImmutableList<String> mctsNamesOfPreloadedMainlineModules =
+    ListMultimap<String, String> mctsNamesOfPreloadedMainlineModules =
         getMctsNamesOfPreloadedMainlineModules(preloadedMainlineModules);
-    String preloadedMainlineVersion = getPreloadedMainlineVersion(device);
     String deviceAbi =
         DEVICEABI_MAP.get(adbUtil.getProperty(device.getDeviceId(), AndroidProperty.ABI));
     if (deviceAbi == null) {
@@ -111,24 +113,33 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
               "The ABI of device %s is not compatible with the xts dynamic downloader.",
               device.getDeviceId()));
     }
-    // Update the Lorry download link url of MCTS file. For example:
-    // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
+    String aospVersion = adbUtil.getProperty(device.getDeviceId(), AndroidProperty.SDK_VERSION);
     List<String> downloadLinkUrls = new ArrayList<>();
-    for (String mctsName : mctsNamesOfPreloadedMainlineModules) {
+    // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
+    // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
+    if (!preloadedMainlineModules.isEmpty()) {
+      String preloadedMainlineVersion = getPreloadedMainlineVersion(device);
+      for (String mctsName : mctsNamesOfPreloadedMainlineModules.get("preloaded")) {
+        String downloadUrl =
+            String.format(
+                "https://dl.google.com/dl/android/xts/mcts/%s/%s/%s.zip",
+                preloadedMainlineVersion, deviceAbi, mctsName);
+        downloadLinkUrls.add(downloadUrl);
+      }
+    }
+    // Add the Lorry download link url of MCTS file for non-preloaded mainline modules. For example:
+    // https://dl.google.com/dl/android/xts/mcts/{SDK_VERSION}/arm64/android-mcts-<module_name>.zip
+    for (String mctsName : mctsNamesOfPreloadedMainlineModules.get("non-preloaded")) {
       String downloadUrl =
           String.format(
               "https://dl.google.com/dl/android/xts/mcts/%s/%s/%s.zip",
-              preloadedMainlineVersion, deviceAbi, mctsName);
+              aospVersion, deviceAbi, mctsName);
       downloadLinkUrls.add(downloadUrl);
     }
     return XtsDynamicDownloadInfo.newBuilder()
         .setXtsType("cts")
         .setProject(XtsDynamicDownloadInfo.Project.MAINLINE)
         .addAllDownloadUrl(downloadLinkUrls)
-        .addDownloadUrl(
-            String.format(
-                "https://dl.google.com/dl/android/xts/mcts/%s/%s/%s.zip",
-                preloadedMainlineVersion, deviceAbi, "android-mcts-mainline-infra"))
         .build();
   }
 
@@ -156,13 +167,20 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   }
 
   private ImmutableList<String> getPreloadedMainlineModules(Device device)
-      throws MobileHarnessException, InterruptedException {
-    return androidPackageManagerUtil.listModuleInfos(device.getDeviceId()).stream()
-        .map(ModuleInfo::packageName)
-        .collect(toImmutableList());
+      throws InterruptedException {
+    try {
+      return androidPackageManagerUtil.listModuleInfos(device.getDeviceId()).stream()
+          .map(ModuleInfo::packageName)
+          .collect(toImmutableList());
+    } catch (MobileHarnessException e) {
+      logger.atInfo().log(
+          "Cannot get preloaded moduleinfo, handle this exception since this device might be built"
+              + " from AOSP.");
+      return ImmutableList.of();
+    }
   }
 
-  private ImmutableList<String> getMctsNamesOfPreloadedMainlineModules(
+  private ListMultimap<String, String> getMctsNamesOfPreloadedMainlineModules(
       ImmutableList<String> moduleList) throws MobileHarnessException {
     String configFilePath =
         resUtil.getResourceFile(
@@ -179,10 +197,31 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           e);
     }
     ModuleInfoMap moduleInfoMap = moduleInfoMapBuilder.build();
-    return moduleInfoMap.getModulePackageToModuleInfoMap().entrySet().stream()
-        .filter(entry -> moduleList.contains(entry.getKey()))
-        .map(Map.Entry::getValue)
-        .collect(toImmutableList());
+    // To save two lists, one contains all the mcts names of preloaded modules, the other contain
+    // the ones of non-preloaded modules.
+    ListMultimap<String, String> mctsNamesOfAllModules = ArrayListMultimap.create();
+    Set<String> preloadedModules = new HashSet<>(); // Track modules added to 'preloaded'
+    moduleInfoMap
+        .getModulePackageToModuleInfoMap()
+        .entrySet()
+        .forEach(
+            entry -> {
+              String moduleName = entry.getKey();
+              String mctsName = entry.getValue();
+
+              if (moduleList.contains(moduleName)) {
+                mctsNamesOfAllModules.put("preloaded", mctsName);
+                preloadedModules.add(mctsName);
+              } else {
+                mctsNamesOfAllModules.put("non-preloaded", mctsName);
+              }
+
+              // If a module is later found in 'preloaded', remove it from 'non-preloaded'
+              if (preloadedModules.contains(mctsName)) {
+                mctsNamesOfAllModules.remove("non-preloaded", mctsName);
+              }
+            });
+    return mctsNamesOfAllModules;
   }
 
   private String getPreloadedMainlineVersion(Device device)
@@ -214,6 +253,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       // mh_res_files/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
       String filePath = PathUtil.join(ResUtil.getResDir(), subDirName);
       try {
+        // TODO: Add a file checker.
         fileUtil.checkFile(filePath);
         logger.atInfo().log("Resource %s is already downloaded to %s", downloadUrl, filePath);
         return filePath;

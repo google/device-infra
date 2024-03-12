@@ -81,6 +81,7 @@ public final class MctsDynamicDownloadPluginTest {
             any(), eq("com.google.android.modulemetadata")))
         .thenReturn(341050004);
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.ABI))).thenReturn("arm64-v8a");
+    when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_VERSION))).thenReturn("30");
     when(mockAndroidPackageManagerUtil.listModuleInfos(any()))
         .thenReturn(
             ImmutableSortedSet.of(
@@ -110,8 +111,77 @@ public final class MctsDynamicDownloadPluginTest {
         "/tmp/android-mcts-configinfrastructure.zip",
         "https://dl\\.google\\.com/dl/android/xts/mcts/2023-10/arm64/android-mcts-configinfrastructure\\.zip");
     mockDownloadPublicUrlFiles(
-        "/tmp/android-mcts-mainline-infra.zip",
-        "https://dl\\.google\\.com/dl/android/xts/mcts/2023-10/arm64/android-mcts-mainline-infra\\.zip");
+        "/tmp/android-mcts-documentsui.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-documentsui\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-media.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-media\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-dnsresolver.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-dnsresolver\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-adbd.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-adbd\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-cellbroadcast.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-cellbroadcast\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-extservices.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-extservices\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-ipsec.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-ipsec\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-mediaprovider.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-mediaprovider\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-neuralnetworks.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-neuralnetworks\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-statsd.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-statsd\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-permission.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-permission\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-sdkextensions.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-sdkextensions\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-tethering.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-tethering\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-wifi.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-wifi\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-tzdata.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-tzdata\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-art.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-art\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-scheduling.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-scheduling\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-adservices.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-adservices\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-appsearch.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-appsearch\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-bluetooth.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-bluetooth\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-ondevicepersonalization.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-ondevicepersonalization\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-uwb.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-uwb\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-healthfitness.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-healthfitness\\.zip");
+    mockDownloadPublicUrlFiles(
+        "/tmp/android-mcts-rkpd.zip",
+        "https://dl\\.google\\.com/dl/android/xts/mcts/30/arm64/android-mcts-rkpd\\.zip");
   }
 
   @Test
@@ -119,7 +189,31 @@ public final class MctsDynamicDownloadPluginTest {
     generateTestZipFile("android-mcts-networking", "networking.txt", "/tmp");
     generateTestZipFile("android-mcts-conscrypt", "conscrypt.txt", "/tmp");
     generateTestZipFile("android-mcts-configinfrastructure", "configinfrastructure.txt", "/tmp");
-    generateTestZipFile("android-mcts-mainline-infra", "mainline-infra.txt", "/tmp");
+    generateTestZipFile("android-mcts-documentsui", "documentsui.txt", "/tmp");
+    generateTestZipFile("android-mcts-media", "media.txt", "/tmp");
+    generateTestZipFile("android-mcts-dnsresolver", "dnsresolver.txt", "/tmp");
+    generateTestZipFile("android-mcts-adbd", "adbd.txt", "/tmp");
+    generateTestZipFile("android-mcts-cellbroadcast", "cellbroadcast.txt", "/tmp");
+    generateTestZipFile("android-mcts-extservices", "extservices.txt", "/tmp");
+    generateTestZipFile("android-mcts-ipsec", "ipsec.txt", "/tmp");
+    generateTestZipFile("android-mcts-mediaprovider", "mediaprovider.txt", "/tmp");
+    generateTestZipFile("android-mcts-neuralnetworks", "neuralnetworks.txt", "/tmp");
+    generateTestZipFile("android-mcts-statsd", "statsd.txt", "/tmp");
+    generateTestZipFile("android-mcts-permission", "permission.txt", "/tmp");
+    generateTestZipFile("android-mcts-sdkextensions", "sdkextensions.txt", "/tmp");
+    generateTestZipFile("android-mcts-tethering", "tethering.txt", "/tmp");
+    generateTestZipFile("android-mcts-wifi", "wifi.txt", "/tmp");
+    generateTestZipFile("android-mcts-tzdata", "tzdata.txt", "/tmp");
+    generateTestZipFile("android-mcts-art", "art.txt", "/tmp");
+    generateTestZipFile("android-mcts-scheduling", "scheduling.txt", "/tmp");
+    generateTestZipFile("android-mcts-adservices", "adservices.txt", "/tmp");
+    generateTestZipFile("android-mcts-appsearch", "appsearch.txt", "/tmp");
+    generateTestZipFile("android-mcts-bluetooth", "bluetooth.txt", "/tmp");
+    generateTestZipFile(
+        "android-mcts-ondevicepersonalization", "ondevicepersonalization.txt", "/tmp");
+    generateTestZipFile("android-mcts-uwb", "uwb.txt", "/tmp");
+    generateTestZipFile("android-mcts-healthfitness", "healthfitness.txt", "/tmp");
+    generateTestZipFile("android-mcts-rkpd", "rkpd.txt", "/tmp");
 
     spyMctsDynamicDownloadPlugin.onDriverStarting(mockEvent);
 
@@ -137,7 +231,33 @@ public final class MctsDynamicDownloadPluginTest {
             : stream(files).map(File::getName).collect(toImmutableSet());
     assertThat(actualFileNames)
         .containsExactly(
-            "networking.txt", "conscrypt.txt", "configinfrastructure.txt", "mainline-infra.txt");
+            "networking.txt",
+            "conscrypt.txt",
+            "configinfrastructure.txt",
+            "documentsui.txt",
+            "media.txt",
+            "dnsresolver.txt",
+            "adbd.txt",
+            "cellbroadcast.txt",
+            "extservices.txt",
+            "ipsec.txt",
+            "mediaprovider.txt",
+            "neuralnetworks.txt",
+            "statsd.txt",
+            "permission.txt",
+            "sdkextensions.txt",
+            "tethering.txt",
+            "wifi.txt",
+            "tzdata.txt",
+            "art.txt",
+            "scheduling.txt",
+            "adservices.txt",
+            "appsearch.txt",
+            "bluetooth.txt",
+            "ondevicepersonalization.txt",
+            "uwb.txt",
+            "healthfitness.txt",
+            "rkpd.txt");
     localFileUtil.removeFileOrDir(directory.getAbsolutePath());
   }
 
