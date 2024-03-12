@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.platform.android.shared.constant.Packag
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.android.AndroidPackages;
 import com.google.wireless.qa.mobileharness.shared.android.Sqlite;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
@@ -146,7 +147,7 @@ public abstract class AndroidDeviceDelegate {
 
   /** Fetches language and locale if missing. */
   @VisibleForTesting
-  void checkLocaleLanguageDimensions() throws MobileHarnessException, InterruptedException {
+  void checkLocaleLanguageDimensions() throws InterruptedException {
     boolean hasLoc = hasDimension(AndroidProperty.LOCALE);
     boolean hasLan = hasDimension(AndroidProperty.LANGUAGE);
     if (hasLoc && hasLan) {
@@ -163,7 +164,7 @@ public abstract class AndroidDeviceDelegate {
   private boolean hasDimension(AndroidProperty key) {
     ImmutableSet<String> values =
         ImmutableSet.copyOf(device.getDimension(Ascii.toLowerCase(key.name())));
-    return values != null && !values.isEmpty();
+    return !values.isEmpty();
   }
 
   private boolean updateDimension(AndroidProperty key, String value) {
@@ -173,9 +174,9 @@ public abstract class AndroidDeviceDelegate {
 
   /** Updates language from locale. Return true if success. */
   private boolean updateLanguageDimensionFromLocale() {
-    ImmutableSet<String> locs =
+    ImmutableSet<String> locales =
         ImmutableSet.copyOf(device.getDimension(Ascii.toLowerCase(AndroidProperty.LOCALE.name())));
-    String loc = Iterables.get(locs, 0);
+    String loc = Iterables.get(locales, 0);
     if (loc != null && loc.matches(PROPERTY_NAME_LOCALE_PATTERN)) {
       ActivityManager.Locale locale = ActivityManager.Locale.create(loc);
       updateDimension(AndroidProperty.LANGUAGE, locale.language());
@@ -204,19 +205,19 @@ public abstract class AndroidDeviceDelegate {
   private boolean updateLocaleDimensionFromLanguageRegion() {
     ImmutableSet<AndroidProperty> keySet =
         ImmutableSet.of(AndroidProperty.LANGUAGE, AndroidProperty.REGION);
-    String loc = "";
+    StringBuilder locale = new StringBuilder();
     for (AndroidProperty key : keySet) {
       ImmutableSet<String> values =
           ImmutableSet.copyOf(device.getDimension(Ascii.toLowerCase(key.name())));
-      if (values != null && !values.isEmpty()) {
-        if (loc.length() > 0) {
-          loc += '-';
+      if (!values.isEmpty()) {
+        if (locale.length() > 0) {
+          locale.append('-');
         }
-        loc += Iterables.get(values, 0);
+        locale.append(Iterables.get(values, 0));
       }
     }
-    if (loc.matches(PROPERTY_NAME_LOCALE_PATTERN)) {
-      updateDimension(AndroidProperty.LOCALE, loc);
+    if (locale.toString().matches(PROPERTY_NAME_LOCALE_PATTERN)) {
+      updateDimension(AndroidProperty.LOCALE, locale.toString());
       logger.atInfo().log("Update device %s locale from language and region.", deviceId);
       return true;
     }
@@ -233,7 +234,7 @@ public abstract class AndroidDeviceDelegate {
 
     // Update GMS version in the dimension because specific lab may update gms version when reset
     // the device.
-    boolean isDimensionChanged = updateGMSVersionDimensions();
+    boolean isDimensionChanged = updateGmsVersionDimensions();
 
     // Update system property dimension in case some property changed.
     isDimensionChanged =
@@ -243,7 +244,7 @@ public abstract class AndroidDeviceDelegate {
           || isDimensionChanged;
     } else if (device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION).get()
         >= 18) {
-      return updateGServicesAndroidID(deviceId) || isDimensionChanged;
+      return updateGServicesAndroidId(deviceId) || isDimensionChanged;
     }
     return isDimensionChanged;
   }
@@ -315,7 +316,8 @@ public abstract class AndroidDeviceDelegate {
    *
    * @return true iff its value has changed
    */
-  public boolean updateGServicesAndroidID(String deviceId) throws InterruptedException {
+  @CanIgnoreReturnValue
+  public boolean updateGServicesAndroidId(String deviceId) throws InterruptedException {
     if (device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION).orElse(0)
         < 18) {
       logger.atWarning().log("GService Android ID is not available below API level 18.");
@@ -415,20 +417,20 @@ public abstract class AndroidDeviceDelegate {
     }
   }
 
-  private boolean updateGMSVersionDimensions() throws InterruptedException {
+  private boolean updateGmsVersionDimensions() throws InterruptedException {
     return updateAppVersion(
         deviceId, Dimension.Name.GMS_VERSION, AndroidPackages.GMS.getPackageName());
   }
 
   /** List of decorators/drivers that should be supported by root/non-root devices. */
-  public void basicAndroidDeviceConfiguration(boolean isRooted)
-      throws MobileHarnessException, InterruptedException {
-
+  public void basicAndroidDeviceConfiguration(boolean isRooted) throws InterruptedException {
     // Checks root.
     device.addDimension(Dimension.Name.ROOTED, String.valueOf(isRooted));
 
     // Adds general drivers.
+    // go/keep-sorted start
     device.addSupportedDriver("AndroidChopin");
+    device.addSupportedDriver("AndroidCopycatRemoteControlledMoblySnippetTest");
     device.addSupportedDriver("AndroidGUnit");
     device.addSupportedDriver("AndroidHawkeyeBaselineExperiment");
     device.addSupportedDriver("AndroidInstrumentation");
@@ -439,12 +441,13 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDriver("AndroidUIAutomator");
     device.addSupportedDriver("FlutterDriver");
     device.addSupportedDriver("ManekiTest");
-    device.addSupportedDriver("VegaTest");
-    device.addSupportedDriver("YtsTest");
     device.addSupportedDriver("MoblyTest");
-    device.addSupportedDriver("VinsonDriver");
     device.addSupportedDriver("NoOpDriver");
-    device.addSupportedDriver("AndroidCopycatRemoteControlledMoblySnippetTest");
+    device.addSupportedDriver("VegaTest");
+    device.addSupportedDriver("VinsonDriver");
+    device.addSupportedDriver("XtsTradefedTest");
+    device.addSupportedDriver("YtsTest");
+    // go/keep-sorted end
 
     basicAndroidDecoratorConfiguration();
   }
@@ -452,6 +455,7 @@ public abstract class AndroidDeviceDelegate {
   /** List of decorators that should be supported by root/non-root devices. */
   public void basicAndroidDecoratorConfiguration() throws InterruptedException {
     // Adds general decorators.
+    // go/keep-sorted start
     device.addSupportedDecorator("AndroidAccountDecorator");
     device.addSupportedDecorator("AndroidAdbShellDecorator");
     device.addSupportedDecorator("AndroidAppVersionDecorator");
@@ -470,14 +474,15 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidFrameRenderDecorator");
     device.addSupportedDecorator("AndroidGmsCoreConfigDecorator");
     device.addSupportedDecorator("AndroidGmsCoreNetworkStatsDecorator");
-    device.addSupportedDecorator("AndroidKillProcessDecorator");
     device.addSupportedDecorator("AndroidInstallAppsDecorator");
     device.addSupportedDecorator("AndroidInstallMultipleApksDecorator");
+    device.addSupportedDecorator("AndroidKillProcessDecorator");
     device.addSupportedDecorator("AndroidLogCatDecorator");
     device.addSupportedDecorator("AndroidMainlineModulesCheckDecorator");
     device.addSupportedDecorator("AndroidNuwaDecorator");
     device.addSupportedDecorator("AndroidOrientationDecorator");
     device.addSupportedDecorator("AndroidPackageStatsDecorator");
+    device.addSupportedDecorator("AndroidPerfettoDecorator");
     device.addSupportedDecorator("AndroidResMonitorDecorator");
     device.addSupportedDecorator("AndroidScreenshotDecorator");
     device.addSupportedDecorator("AndroidSdVideoDecorator");
@@ -487,12 +492,12 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidSwitchLanguageDecorator");
     device.addSupportedDecorator("AndroidSwitchUserDecorator");
     device.addSupportedDecorator("AndroidSystemHealthMemoryDecorator");
-    device.addSupportedDecorator("AndroidPerfettoDecorator");
     device.addSupportedDecorator("AndroidWebviewBridgeDecorator");
-    device.addSupportedDecorator("ManekiYouTubeLauncherDecorator");
-    device.addSupportedDecorator("ManekiAndroidWebdriverPortForwardDecorator");
     device.addSupportedDecorator("KimonoAccountSelectorDecorator");
+    device.addSupportedDecorator("ManekiAndroidWebdriverPortForwardDecorator");
+    device.addSupportedDecorator("ManekiYouTubeLauncherDecorator");
     device.addSupportedDecorator("MaskImageDecorator");
+    // go/keep-sorted end
 
     // This will replace `AndroidChromeWebViewInstallerDecorator` when it's ready. DO NOT USE YET!
     device.addSupportedDecorator("AndroidChromeInstallerDecorator");
@@ -500,7 +505,6 @@ public abstract class AndroidDeviceDelegate {
 
   /** List of additional decorators/drivers that should be supported by root/non-root devices. */
   private void additionalAndroidDeviceConfiguration() throws InterruptedException {
-
     // Adds decorators validating sdk version. Not supported by GCE AVD place holders.
     device.addSupportedDecorator("AndroidLocationDecorator");
     device.addSupportedDecorator("NoOpDecorator");
@@ -558,7 +562,7 @@ public abstract class AndroidDeviceDelegate {
     // Gets GServices Android ID(go/android-id).
     if (device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION).orElse(0)
         >= 18) {
-      updateGServicesAndroidID(deviceId);
+      updateGServicesAndroidId(deviceId);
     }
 
     // Gets the version of Google play service on the device.

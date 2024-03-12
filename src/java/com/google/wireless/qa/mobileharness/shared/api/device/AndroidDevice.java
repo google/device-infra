@@ -117,7 +117,7 @@ public abstract class AndroidDevice extends BaseDevice {
    */
   @CanIgnoreReturnValue
   public boolean updateGServicesAndroidID(String deviceId) throws InterruptedException {
-    return delegate.updateGServicesAndroidID(deviceId);
+    return delegate.updateGServicesAndroidId(deviceId);
   }
 
   /**

@@ -591,9 +591,6 @@ public abstract class AndroidRealDeviceDelegate {
     // Add support for Platform Tradefed tests execution through the ATE library
     device.addSupportedDriver("AndroidTradefedTest");
 
-    // Add support for running xTS tradefed test.
-    device.addSupportedDriver("XtsTradefedTest");
-
     // *************** More decorators ***************
 
     // Disable auto-updates in Play Store before running any tests
@@ -1860,7 +1857,7 @@ public abstract class AndroidRealDeviceDelegate {
   /**
    * Checks network connection stability.
    *
-   * @return whethere there is any dimension changed
+   * @return whether there is any dimension changed
    */
   @VisibleForTesting
   boolean checkPingGoogle() throws InterruptedException {
@@ -1880,7 +1877,7 @@ public abstract class AndroidRealDeviceDelegate {
    * of space.
    *
    * @param isExternal whether checks external storage or internal storage
-   * @return whethere there is any dimension changed
+   * @return whether there is any dimension changed
    */
   @CanIgnoreReturnValue
   @VisibleForTesting
@@ -2022,7 +2019,7 @@ public abstract class AndroidRealDeviceDelegate {
    * ("launcher_1"), the newer launcher ("launcher_3") and the Google Experience Launcher
    * ("launcher_gel").
    *
-   * @return whethere there is any dimension changed
+   * @return whether there is any dimension changed
    */
   private boolean checkLaunchers() throws InterruptedException {
     boolean isDimensionChanged = false;
