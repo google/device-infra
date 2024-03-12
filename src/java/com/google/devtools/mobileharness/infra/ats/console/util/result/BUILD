@@ -20,12 +20,24 @@ java_library(
     srcs = ["ResultLister.java"],
     visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__"],
     deps = [
+        ":result_lister_helper",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "result_lister_helper",
+    srcs = ["ResultListerHelper.java"],
+    deps = [
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_parser",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",

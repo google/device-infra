@@ -17,78 +17,43 @@
 package com.google.devtools.mobileharness.infra.ats.console.util.result;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.Arrays.stream;
-import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.mapping;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
-import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Optional;
 import javax.inject.Inject;
 
 /** Lister for listing results. */
 public class ResultLister {
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private final ResultListerHelper resultListerHelper;
 
-  private final CompatibilityReportParser compatibilityReportParser;
-  private final LocalFileUtil localFileUtil;
   private final ConsoleInfo consoleInfo;
 
   @Inject
-  ResultLister(
-      CompatibilityReportParser compatibilityReportParser,
-      LocalFileUtil localFileUtil,
-      ConsoleInfo consoleInfo) {
-    this.compatibilityReportParser = compatibilityReportParser;
-    this.localFileUtil = localFileUtil;
+  ResultLister(ResultListerHelper resultListerHelper, ConsoleInfo consoleInfo) {
+    this.resultListerHelper = resultListerHelper;
     this.consoleInfo = consoleInfo;
   }
 
   public String listResults() throws MobileHarnessException {
-    Map<Result, File> results = new LinkedHashMap<>();
-
     // Lists all result dirs.
     String rootDir =
         consoleInfo
             .getXtsRootDirectory()
             .orElseThrow(() -> new IllegalStateException("XTS root directory not set"));
-    // Lists all dirs under XTS_ROOT_DIR/android-cts/results and sorts by dir name.
-    ImmutableList<File> resultDirs =
-        stream(localFileUtil.listDirs(PathUtil.join(rootDir, "android-cts", "results")))
-            .sorted(comparing(File::getName))
-            .collect(toImmutableList());
-
-    // Parses test_result.xml under each result dir.
-    for (File resultDir : resultDirs) {
-      if (resultDir.getName().equals("latest")) {
-        continue;
-      }
-      File resultFile = new File(resultDir, "test_result.xml");
-      try {
-        Optional<Result> result = compatibilityReportParser.parse(resultFile.toPath());
-        result.ifPresent(value -> results.put(value, resultDir));
-      } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to parse result file: %s", resultFile.getAbsolutePath());
-      }
-    }
+    Map<Result, File> results = resultListerHelper.listResults(rootDir);
 
     if (results.isEmpty()) {
       return "No results found";
