@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.util.version;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
-import com.google.devtools.mobileharness.infra.ats.console.command.CommandHelper;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
 import javax.inject.Inject;
 

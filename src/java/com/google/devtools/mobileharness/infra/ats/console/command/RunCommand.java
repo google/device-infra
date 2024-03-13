@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.xml.MoblyResul
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultFormatter;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultUtil;
 import com.google.devtools.mobileharness.infra.ats.console.testbed.config.YamlTestbedUpdater;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;

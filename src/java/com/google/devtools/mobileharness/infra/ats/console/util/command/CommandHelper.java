@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console.command;
+package com.google.devtools.mobileharness.infra.ats.console.util.command;
 
 import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;

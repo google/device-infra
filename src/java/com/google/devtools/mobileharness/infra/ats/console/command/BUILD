@@ -31,7 +31,6 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
     ],
     deps = [
-        ":command_helper",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
@@ -48,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_result_formatter",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_result_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/testbed/config:yaml_testbed_updater",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/log:log_dumper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:plan_lister",
@@ -68,19 +68,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
-    name = "command_helper",
-    srcs = ["CommandHelper.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__"],
-    deps = [
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
