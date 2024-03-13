@@ -71,6 +71,10 @@ enum ConverterIncompatibleReason {
   // Range: 10_001 ~ 10_100
   NODV_NO_OP_DEVICE_CONVERSION_DISABLED = 10001;
 
+  // IosSimulator
+  // Range: 10_101 ~ 10_200
+  IOS_SIMULATOR_UNSUPPORTED = 10101;
+
   // ******************************
   // Decorator converters.
   // Range: 20_001 ~ MAX
