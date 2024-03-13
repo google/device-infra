@@ -20,8 +20,10 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.primitives.Ints.saturatedCast;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
@@ -44,6 +46,8 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Compati
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
@@ -51,9 +55,11 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
+import com.google.inject.Provider;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -69,6 +75,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Devic
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -94,6 +101,7 @@ public class SessionRequestHandlerUtil {
   public static final String XTS_MODULE_PARAMETER_PROP = "xts-module-parameter";
 
   private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
+  private static final String ANDROID_DEVICE_TYPE = "AndroidDevice";
   private static final Pattern MODULE_PARAMETER_PATTERN =
       Pattern.compile(".*\\[(?<moduleParam>.*)]$");
   public static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
@@ -112,6 +120,7 @@ public class SessionRequestHandlerUtil {
   private final CompatibilityReportMerger compatibilityReportMerger;
   private final CompatibilityReportCreator reportCreator;
   private final CompatibilityReportParser compatibilityReportParser;
+  private final Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -122,7 +131,8 @@ public class SessionRequestHandlerUtil {
       CertificationSuiteInfoFactory certificationSuiteInfoFactory,
       CompatibilityReportMerger compatibilityReportMerger,
       CompatibilityReportCreator reportCreator,
-      CompatibilityReportParser compatibilityReportParser) {
+      CompatibilityReportParser compatibilityReportParser,
+      Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
@@ -131,6 +141,7 @@ public class SessionRequestHandlerUtil {
     this.compatibilityReportMerger = compatibilityReportMerger;
     this.reportCreator = reportCreator;
     this.compatibilityReportParser = compatibilityReportParser;
+    this.androidAdbInternalUtilProvider = androidAdbInternalUtilProvider;
   }
 
   /**
@@ -312,10 +323,10 @@ public class SessionRequestHandlerUtil {
   }
 
   /**
-   * Gets a list of SubDeviceSpec for the job. One SubDeviceSpec maps to one subdevice used for
+   * Gets a list of SubDeviceSpec for the job. One SubDeviceSpec maps to one sub device used for
    * running the job as the job may need multiple devices to run the test.
    */
-  public ImmutableList<SubDeviceSpec> getSubDeviceSpecList(
+  private ImmutableList<SubDeviceSpec> getSubDeviceSpecListForTradefed(
       List<String> passedInDeviceSerials, int shardCount)
       throws MobileHarnessException, InterruptedException {
     ImmutableSet<String> allAndroidDevices = getAllAndroidDevices();
@@ -341,7 +352,7 @@ public class SessionRequestHandlerUtil {
         .map(
             serial ->
                 SubDeviceSpec.newBuilder()
-                    .setType(ANDROID_REAL_DEVICE_TYPE)
+                    .setType(getTradefedRequiredDeviceType())
                     .setDimensions(StringMap.newBuilder().putContent("serial", serial))
                     .build())
         .collect(toImmutableList());
@@ -366,17 +377,46 @@ public class SessionRequestHandlerUtil {
   private ImmutableList<SubDeviceSpec> pickAndroidOnlineDevices(
       Set<String> allAndroidOnlineDevices, int shardCount) {
     if (shardCount <= 1 && !allAndroidOnlineDevices.isEmpty()) {
-      return ImmutableList.of(SubDeviceSpec.newBuilder().setType(ANDROID_REAL_DEVICE_TYPE).build());
+      return ImmutableList.of(
+          SubDeviceSpec.newBuilder().setType(getTradefedRequiredDeviceType()).build());
     }
     int numOfNeededDevices = min(allAndroidOnlineDevices.size(), shardCount);
     ImmutableList.Builder<SubDeviceSpec> deviceSpecList = ImmutableList.builder();
     for (int i = 0; i < numOfNeededDevices; i++) {
-      deviceSpecList.add(SubDeviceSpec.newBuilder().setType(ANDROID_REAL_DEVICE_TYPE).build());
+      deviceSpecList.add(
+          SubDeviceSpec.newBuilder().setType(getTradefedRequiredDeviceType()).build());
     }
     return deviceSpecList.build();
   }
 
+  private static String getTradefedRequiredDeviceType() {
+    return Flags.instance().atsRunTfOnAndroidRealDevice.getNonNull()
+        ? ANDROID_REAL_DEVICE_TYPE
+        : ANDROID_DEVICE_TYPE;
+  }
+
   private ImmutableSet<String> getAllAndroidDevices()
+      throws MobileHarnessException, InterruptedException {
+    if (Flags.instance().enableAtsMode.getNonNull()) {
+      return getAllAndroidDevicesFromMaster();
+    } else {
+      return getAllLocalAndroidDevices();
+    }
+  }
+
+  private ImmutableSet<String> getAllLocalAndroidDevices()
+      throws MobileHarnessException, InterruptedException {
+    if (Flags.instance().detectAdbDevice.getNonNull()) {
+      return ImmutableSet.copyOf(
+          androidAdbInternalUtilProvider
+              .get()
+              .getDeviceSerialsByState(DeviceState.DEVICE, /* timeout= */ null));
+    } else {
+      return ImmutableSet.of();
+    }
+  }
+
+  private ImmutableSet<String> getAllAndroidDevicesFromMaster()
       throws MobileHarnessException, InterruptedException {
     DeviceQueryResult queryResult;
     try {
@@ -443,7 +483,7 @@ public class SessionRequestHandlerUtil {
     ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
 
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
-        getSubDeviceSpecList(deviceSerials, shardCount);
+        getSubDeviceSpecListForTradefed(deviceSerials, shardCount);
     if (subDeviceSpecList.isEmpty()) {
       logger.atInfo().log("Found no devices to create the job config.");
       return Optional.empty();
@@ -453,9 +493,9 @@ public class SessionRequestHandlerUtil {
         JobConfig.newBuilder()
             .setName("xts-tradefed-test-job")
             .setExecMode("local")
-            .setJobTimeoutSec(3 * 24 * 60 * 60)
-            .setTestTimeoutSec(3 * 24 * 60 * 60)
-            .setStartTimeoutSec(5 * 60)
+            .setJobTimeoutSec(saturatedCast(Duration.ofDays(3L).toSeconds()))
+            .setTestTimeoutSec(saturatedCast(Duration.ofDays(3L).toSeconds()))
+            .setStartTimeoutSec(Duration.ofMinutes(5L).toSeconds())
             .setPriority(Priority.HIGH)
             .setTestAttempts(1)
             .setTests(
@@ -635,7 +675,7 @@ public class SessionRequestHandlerUtil {
                 Path.of(xtsRootDir),
                 xtsType,
                 testPlan,
-                Path.of(moduleNameToConfigFilePathMap.get(originalModuleName)),
+                Path.of(requireNonNull(moduleNameToConfigFilePathMap.get(originalModuleName))),
                 entry.getValue(),
                 expandedModuleName,
                 moduleAbi,
@@ -643,22 +683,17 @@ public class SessionRequestHandlerUtil {
         if (jobInfoOpt.isPresent()) {
           JobInfo jobInfo = jobInfoOpt.get();
           if (!androidDeviceSerials.isEmpty()) {
+            String serialDimensionValue =
+                String.format("regex:(%s)", Joiner.on('|').join(androidDeviceSerials));
             jobInfo
                 .subDeviceSpecs()
                 .getAllSubDevices()
                 .forEach(
-                    subDeviceSpec -> {
-                      if (!subDeviceSpec.type().equals(ANDROID_REAL_DEVICE_TYPE)) {
-                        return;
-                      }
-                      subDeviceSpec
-                          .deviceRequirement()
-                          .dimensions()
-                          .add(
-                              "serial",
-                              String.format(
-                                  "regex:(%s)", Joiner.on('|').join(androidDeviceSerials)));
-                    });
+                    subDeviceSpec ->
+                        subDeviceSpec
+                            .deviceRequirement()
+                            .dimensions()
+                            .add("serial", serialDimensionValue));
           }
           jobInfos.add(jobInfo);
         }
@@ -741,9 +776,9 @@ public class SessionRequestHandlerUtil {
                 String.format(
                     "xts-mobly-aosp-package-job-%s", expandedModuleName.replace(' ', '_')))
             .setExecMode("local")
-            .setJobTimeoutSec(5 * 24 * 60 * 60)
-            .setTestTimeoutSec(5 * 24 * 60 * 60)
-            .setStartTimeoutSec(1 * 60 * 60)
+            .setJobTimeoutSec(saturatedCast(Duration.ofDays(5L).toSeconds()))
+            .setTestTimeoutSec(saturatedCast(Duration.ofDays(5L).toSeconds()))
+            .setStartTimeoutSec(Duration.ofHours(1L).toSeconds())
             .setPriority(Priority.HIGH)
             .setTestAttempts(1)
             .setTests(
@@ -910,7 +945,7 @@ public class SessionRequestHandlerUtil {
    *        command_history.txt
    *        mobly_command_output.log
    *        mobly_run_build_attributes.textproto
-   *        mobly_run_result_attrubutes.textproto
+   *        mobly_run_result_attributes.textproto
    *        ...
    *        raw_mobly_logs/
    * </pre>
@@ -1032,7 +1067,7 @@ public class SessionRequestHandlerUtil {
    *        command_history.txt
    *        mobly_command_output.log
    *        mobly_run_build_attributes.textproto
-   *        mobly_run_result_attrubutes.textproto
+   *        mobly_run_result_attributes.textproto
    *        ...
    *        raw_mobly_logs/
    * </pre>
@@ -1104,14 +1139,12 @@ public class SessionRequestHandlerUtil {
     // TODO: Stop reading from lab's gen dir after file transfer is ready.
     // Directly read lab side gen file directory to copy the test result and log files. This is a
     // temporary solution before file transfer functionality is enabled.
-    if (nonTradefedTestInfo.properties().has(Test.LAB_TEST_GEN_FILE_DIR)
-        && !nonTradefedTestInfo
-            .properties()
-            .get(Test.LAB_TEST_GEN_FILE_DIR)
-            .equals(testGenFileDir)) {
+    Optional<String> labTestGenFileDir =
+        nonTradefedTestInfo.properties().getOptional(Test.LAB_TEST_GEN_FILE_DIR);
+    if (labTestGenFileDir.isPresent() && !labTestGenFileDir.get().equals(testGenFileDir)) {
       moblyTestResultFiles.addAll(
           localFileUtil.listFilePaths(
-              Path.of(nonTradefedTestInfo.properties().get(Test.LAB_TEST_GEN_FILE_DIR)),
+              Path.of(labTestGenFileDir.get()),
               /* recursively= */ true,
               path -> MOBLY_TEST_RESULT_FILE_NAMES.contains(path.getFileName().toString())));
     }
@@ -1138,11 +1171,10 @@ public class SessionRequestHandlerUtil {
     // TODO: Stop reading from lab's gen dir after file transfer is ready.
     // Directly read lab side gen file directory to copy the test result and log files. This is a
     // temporary solution before file transfer functionality is enabled.
-    if (test.properties().has(Test.LAB_TEST_GEN_FILE_DIR)
-        && !test.properties().get(Test.LAB_TEST_GEN_FILE_DIR).equals(testGenFileDir)) {
+    Optional<String> labTestGenFileDir = test.properties().getOptional(Test.LAB_TEST_GEN_FILE_DIR);
+    if (labTestGenFileDir.isPresent() && !labTestGenFileDir.get().equals(testGenFileDir)) {
       genFiles.addAll(
-          localFileUtil.listFilesOrDirs(
-              Path.of(test.properties().get(Test.LAB_TEST_GEN_FILE_DIR)), path -> true));
+          localFileUtil.listFilesOrDirs(Path.of(labTestGenFileDir.get()), path -> true));
     }
     return ImmutableList.copyOf(genFiles);
   }
@@ -1200,14 +1232,18 @@ public class SessionRequestHandlerUtil {
     public abstract Path testSummaryFile();
 
     /**
-     * The path of the text proto file that stores {@link AttributeList} which will be set in the
-     * {@link Result}.{@code attribute}.
+     * The path of the text proto file that stores {@link
+     * com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.AttributeList}
+     * which will be set in the {@link Result}.{@code attribute}.
      */
     public abstract Path resultAttributesFile();
 
     /**
-     * The path of the text proto file that stores {@link AttributeList} which will be set in the
-     * {@link BuildInfo}.{@code attribute}.
+     * The path of the text proto file that stores {@link
+     * com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.AttributeList}
+     * which will be set in the {@link
+     * com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo}.{@code
+     * attribute}.
      */
     public abstract Path buildAttributesFile();
 
@@ -1218,6 +1254,7 @@ public class SessionRequestHandlerUtil {
     /** Builder for {@link NonTradefedTestResult}. */
     @AutoValue.Builder
     public abstract static class Builder {
+
       public abstract Builder setModuleName(String moduleName);
 
       public abstract Builder setModuleAbi(String moduleAbi);

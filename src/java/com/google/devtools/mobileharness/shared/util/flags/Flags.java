@@ -182,6 +182,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> atsConsolePrintAboveInput = atsConsolePrintAboveInputDefault;
 
+  private static final Flag<Boolean> atsRunTfOnAndroidRealDeviceDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_run_tf_on_android_real_device",
+      description =
+          "Whether to require to run ATS TF jobs on Android real device. Otherwise Android emulator"
+              + " is allowed. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> atsRunTfOnAndroidRealDevice = atsRunTfOnAndroidRealDeviceDefault;
+
   private static final Flag<Boolean> cacheInstalledApksDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

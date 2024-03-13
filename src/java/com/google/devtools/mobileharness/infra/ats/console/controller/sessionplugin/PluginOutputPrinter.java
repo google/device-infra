@@ -21,8 +21,6 @@ import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.FutureCallback;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
@@ -38,31 +36,8 @@ import picocli.CommandLine.ExitCode;
 /** Printer for printing {@code AtsSessionPluginOutput} to console. */
 public class PluginOutputPrinter {
 
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
   private static final ImmutableList<String> LIST_INVOCATIONS_HEADER =
       ImmutableList.of("Command Id", "Exec Time", "Device", "State");
-
-  /** Future callback which prints {@code AtsSessionPluginOutput} to console. */
-  public static class PrintPluginOutputFutureCallback
-      implements FutureCallback<AtsSessionPluginOutput> {
-
-    private final ConsoleUtil consoleUtil;
-
-    public PrintPluginOutputFutureCallback(ConsoleUtil consoleUtil) {
-      this.consoleUtil = consoleUtil;
-    }
-
-    @Override
-    public void onSuccess(AtsSessionPluginOutput output) {
-      printOutput(output, consoleUtil);
-    }
-
-    @Override
-    public void onFailure(Throwable error) {
-      logger.atWarning().withCause(error).log("Failed to execute command");
-    }
-  }
 
   /**
    * Prints {@code AtsSessionPluginOutput} to ATS console.

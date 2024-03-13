@@ -20,7 +20,6 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.Futures.addCallback;
-import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Ascii;
@@ -39,7 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
-import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter.PrintPluginOutputFutureCallback;
+import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.MoblyResultInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultFormatter;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultUtil;
@@ -128,6 +127,7 @@ final class RunCommand implements Callable<Integer> {
       names = {"-s", "--serial"},
       paramLabel = "<device_id>",
       description = "Run test on the specific device.")
+  @SuppressWarnings("PreferredInterfaceType")
   private List<String> serialOpt;
 
   @Option(
@@ -139,6 +139,7 @@ final class RunCommand implements Callable<Integer> {
               + " comma). For example, `--serials <device_a>,<device_b>`. No spaces around the"
               + " comma. Note: the order of pass-in device serial numbers will be kept when passing"
               + " them to the test infra.")
+  @SuppressWarnings("PreferredInterfaceType")
   private List<String> androidDeviceSerialList;
 
   @Option(
@@ -157,6 +158,7 @@ final class RunCommand implements Callable<Integer> {
               + " cts --include-filter \"CtsCalendarcommon2TestCases"
               + " android.calendarcommon2.cts.Calendarcommon2Test#testStaticLinking\" includes the"
               + " specified module.")
+  @SuppressWarnings("PreferredInterfaceType")
   private List<String> includeFilters;
 
   @Option(
@@ -167,6 +169,7 @@ final class RunCommand implements Callable<Integer> {
               + " example, run cts --exclude-filter \"CtsCalendarcommon2Test"
               + " android.calendarcommon2.cts.Calendarcommon2Test#testStaticLinking\" excludes the"
               + " specified module.")
+  @SuppressWarnings("PreferredInterfaceType")
   private List<String> excludeFilters;
 
   @Option(
@@ -422,14 +425,9 @@ final class RunCommand implements Callable<Integer> {
             AtsSessionPluginConfig.newBuilder().setRunCommand(runCommand).build());
     RUNNING_COMMAND_COUNT.incrementAndGet();
     addCallback(
-        atsRunSessionFuture, new PrintPluginOutputFutureCallback(consoleUtil), directExecutor());
-    addCallback(
         atsRunSessionFuture,
-        new DisableServerLogPrinterFutureCallback(serverLogPrinter),
+        new RunCommandFutureCallback(consoleUtil, serverLogPrinter, systemUtil, exitAfterRun),
         executorService);
-    if (exitAfterRun) {
-      addCallback(atsRunSessionFuture, new ExitAfterRunFutureCallback(), executorService);
-    }
     consoleUtil.printlnStdout("Command submitted.");
     return ExitCode.OK;
   }
@@ -671,8 +669,7 @@ final class RunCommand implements Callable<Integer> {
     abstract String moblyTestZipPath();
 
     static Builder builder() {
-      return new com.google.devtools.mobileharness.infra.ats.console.command
-          .AutoValue_RunCommand_MoblyTestRunEntry.Builder();
+      return new AutoValue_RunCommand_MoblyTestRunEntry.Builder();
     }
 
     @AutoValue.Builder
@@ -685,58 +682,54 @@ final class RunCommand implements Callable<Integer> {
     }
   }
 
-  /** Future callback which disables server log printer. */
-  private static class DisableServerLogPrinterFutureCallback
-      implements FutureCallback<AtsSessionPluginOutput> {
+  /** Future callback which prints {@code AtsSessionPluginOutput} to console. */
+  private static class RunCommandFutureCallback implements FutureCallback<AtsSessionPluginOutput> {
 
+    private final ConsoleUtil consoleUtil;
     private final ServerLogPrinter serverLogPrinter;
+    private final SystemUtil systemUtil;
+    private final boolean exitAfterRun;
 
-    public DisableServerLogPrinterFutureCallback(ServerLogPrinter serverLogPrinter) {
+    public RunCommandFutureCallback(
+        ConsoleUtil consoleUtil,
+        ServerLogPrinter serverLogPrinter,
+        SystemUtil systemUtil,
+        boolean exitAfterRun) {
+      this.consoleUtil = consoleUtil;
       this.serverLogPrinter = serverLogPrinter;
+      this.systemUtil = systemUtil;
+      this.exitAfterRun = exitAfterRun;
     }
-
-    @Override
-    public void onSuccess(AtsSessionPluginOutput unused) {
-      disableServerLogPrinter();
-    }
-
-    @Override
-    public void onFailure(Throwable unused) {
-      disableServerLogPrinter();
-    }
-
-    private void disableServerLogPrinter() {
-      try {
-        // Only disable server log printer when there is no in-process run commands.
-        if (RUNNING_COMMAND_COUNT.decrementAndGet() == 0) {
-          serverLogPrinter.enable(false);
-        }
-      } catch (MobileHarnessException | InterruptedException e) {
-        logger.atWarning().withCause(e).log("Failed to disable server log printer");
-        if (e instanceof InterruptedException) {
-          Thread.currentThread().interrupt();
-        }
-      }
-    }
-  }
-
-  /** Future callback which exits the console after the run command finishes. */
-  private class ExitAfterRunFutureCallback implements FutureCallback<AtsSessionPluginOutput> {
 
     @Override
     public void onSuccess(AtsSessionPluginOutput output) {
-      exit(output != null && output.hasSuccess() ? 0 : 1);
+      PluginOutputPrinter.printOutput(output, consoleUtil);
+
+      disableServerLogPrinterAndExitIfNecessary(output.hasSuccess() ? 0 : 1);
     }
 
     @Override
-    public void onFailure(Throwable unused) {
-      exit(/* exitCode= */ 1);
+    public void onFailure(Throwable error) {
+      logger.atWarning().withCause(error).log("Failed to execute command");
+
+      disableServerLogPrinterAndExitIfNecessary(/* exitCode= */ 1);
     }
 
-    private void exit(int exitCode) {
-      if (RUNNING_COMMAND_COUNT.get() == 0) {
-        logger.atInfo().log("Exiting after the run command finishes");
-        systemUtil.exit(exitCode);
+    private void disableServerLogPrinterAndExitIfNecessary(int exitCode) {
+      if (RUNNING_COMMAND_COUNT.decrementAndGet() == 0) {
+        try {
+          serverLogPrinter.enable(false);
+        } catch (MobileHarnessException | InterruptedException e) {
+          logger.atWarning().withCause(e).log("Failed to disable server log printer");
+          if (e instanceof InterruptedException) {
+            Thread.currentThread().interrupt();
+          }
+        }
+
+        if (exitAfterRun) {
+          logger.atInfo().log("Exiting after the run command finishes");
+          systemUtil.exit(exitCode);
+        }
       }
     }
   }

@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -41,6 +42,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
@@ -58,6 +60,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -71,6 +74,7 @@ import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public final class SessionRequestHandlerUtilTest {
+
   private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
   private static final String ANDROID_XTS_ZIP_PATH = "/path/to/android_xts.zip";
 
@@ -90,8 +94,21 @@ public final class SessionRequestHandlerUtilTest {
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
   @Before
-  public void doBeforeEachTest() {
+  public void setUp() {
+    // Sets flags.
+    ImmutableMap<String, String> flagMap = ImmutableMap.of("enable_ats_mode", "true");
+    Flags.parse(
+        flagMap.entrySet().stream()
+            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
+            .collect(toImmutableList())
+            .toArray(new String[0]));
+
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+  }
+
+  @After
+  public void tearDown() {
+    Flags.resetToDefault();
   }
 
   @Test
