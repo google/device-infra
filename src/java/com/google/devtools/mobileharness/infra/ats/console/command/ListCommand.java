@@ -184,7 +184,9 @@ public class ListCommand implements Callable<Integer> {
       aliases = {"r"},
       description = "List all results")
   public int results() throws MobileHarnessException {
-    consoleUtil.printlnStdout(resultLister.listResults());
+    consoleUtil.printlnStdout(
+        resultLister.listResults(
+            commandHelper.getXtsType(consoleInfo.getXtsRootDirectory().orElse(""))));
     return ExitCode.OK;
   }
 }

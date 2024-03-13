@@ -192,6 +192,7 @@ final class RunCommand implements Callable<Integer> {
 
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
+  private final CommandHelper commandHelper;
   private final AndroidAdbInternalUtil androidAdbInternalUtil;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
@@ -212,6 +213,7 @@ final class RunCommand implements Callable<Integer> {
       ConsoleInfo consoleInfo,
       CommandExecutor commandExecutor,
       ConsoleUtil consoleUtil,
+      CommandHelper commandHelper,
       AndroidAdbInternalUtil androidAdbInternalUtil,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
@@ -227,6 +229,7 @@ final class RunCommand implements Callable<Integer> {
     this.consoleInfo = consoleInfo;
     this.commandExecutor = commandExecutor;
     this.consoleUtil = consoleUtil;
+    this.commandHelper = commandHelper;
     this.androidAdbInternalUtil = androidAdbInternalUtil;
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
@@ -388,11 +391,13 @@ final class RunCommand implements Callable<Integer> {
     ImmutableList<String> extraArgs =
         extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
 
+    String xtsRootDirectory = consoleInfo.getXtsRootDirectory().orElse("");
+    XtsType xtsType = commandHelper.getXtsType(xtsRootDirectory);
     // Asynchronously runs the session.
     SessionPluginProto.RunCommand.Builder runCommand =
         SessionPluginProto.RunCommand.newBuilder()
-            .setXtsRootDir(consoleInfo.getXtsRootDirectory().orElse(""))
-            .setXtsType(XtsType.CTS)
+            .setXtsRootDir(xtsRootDirectory)
+            .setXtsType(xtsType)
             .addAllDeviceSerial(deviceSerials)
             .addAllIncludeFilter(includeFilters)
             .addAllExcludeFilter(excludeFilters);
