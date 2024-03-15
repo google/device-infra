@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
@@ -106,6 +107,7 @@ public class XtsTradefedTest extends BaseDriver
   private final SystemUtil systemUtil;
   private final Adb adb;
   private final Fastboot fastboot;
+  private final Aapt aapt;
   private final LogRecorder logRecorder;
 
   @Inject
@@ -116,7 +118,8 @@ public class XtsTradefedTest extends BaseDriver
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
       Adb adb,
-      Fastboot fastboot) {
+      Fastboot fastboot,
+      Aapt aapt) {
     this(
         device,
         testInfo,
@@ -125,6 +128,7 @@ public class XtsTradefedTest extends BaseDriver
         systemUtil,
         adb,
         fastboot,
+        aapt,
         LogRecorder.getInstance());
   }
 
@@ -137,6 +141,7 @@ public class XtsTradefedTest extends BaseDriver
       SystemUtil systemUtil,
       Adb adb,
       Fastboot fastboot,
+      Aapt aapt,
       LogRecorder logRecorder) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
@@ -144,6 +149,7 @@ public class XtsTradefedTest extends BaseDriver
     this.systemUtil = systemUtil;
     this.adb = adb;
     this.fastboot = fastboot;
+    this.aapt = aapt;
     this.logRecorder = logRecorder;
   }
 
@@ -522,37 +528,44 @@ public class XtsTradefedTest extends BaseDriver
 
   private String getEnvPath() throws MobileHarnessException, InterruptedException {
     List<String> envPathSegments = new ArrayList<>();
-    String adbPath = adb.getAdbPath();
-    envPathSegments.add(
-        Ascii.equalsIgnoreCase(adbPath, "adb")
-            ? getSdkToolPath("adb").getParent().toString()
-            : new File(adbPath).getParent());
 
-    String fastbootPath = fastboot.getFastbootPath();
-    envPathSegments.add(
-        Ascii.equalsIgnoreCase(fastbootPath, "fastboot")
-            ? getSdkToolPath("fastboot").getParent().toString()
-            : new File(fastbootPath).getParent());
+    // Adds adb path.
+    envPathSegments.add(getSdkToolDirPath(adb.getAdbPath(), "adb"));
 
-    if (systemUtil.getEnv("PATH") != null) {
-      envPathSegments.add(systemUtil.getEnv("PATH"));
+    // Adds fastboot path.
+    envPathSegments.add(getSdkToolDirPath(fastboot.getFastbootPath(), "fastboot"));
+
+    // Adds aapt path.
+    envPathSegments.add(getSdkToolDirPath(aapt.getAaptPath(), "aapt"));
+
+    // Adds existing paths.
+    String existingPaths = systemUtil.getEnv("PATH");
+    if (existingPaths != null) {
+      envPathSegments.add(existingPaths);
     }
 
     return Joiner.on(':').join(envPathSegments);
   }
 
-  private Path getSdkToolPath(String sdkToolName)
+  private String getSdkToolDirPath(String sdkToolPath, String sdkToolName)
+      throws MobileHarnessException, InterruptedException {
+    return Ascii.equalsIgnoreCase(sdkToolPath, sdkToolName)
+        ? getSdkToolAbsolutePath(sdkToolName).getParent().toString()
+        : new File(sdkToolPath).getParent();
+  }
+
+  private Path getSdkToolAbsolutePath(String sdkToolPath)
       throws MobileHarnessException, InterruptedException {
     CommandResult result =
-        cmdExecutor.exec(Command.of("which", sdkToolName).successExitCodes(0, 1));
+        cmdExecutor.exec(Command.of("which", sdkToolPath).successExitCodes(0, 1));
 
     if (result.exitCode() != 0) {
-      String possibleSdkTool = cmdExecutor.run(Command.of("whereis", sdkToolName));
+      String possibleSdkTool = cmdExecutor.run(Command.of("whereis", sdkToolPath));
       throw new MobileHarnessException(
           AndroidErrorId.XTS_TRADEFED_SDK_TOOL_NOT_FOUND_ERROR,
           String.format(
               "Unable to find the sdk tool \"%s\". Executables found: %s",
-              sdkToolName, possibleSdkTool));
+              sdkToolPath, possibleSdkTool));
     }
     return Path.of(result.stdout().trim());
   }

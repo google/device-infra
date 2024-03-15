@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import java.io.IOException;
 import java.io.InputStream;
@@ -101,6 +102,7 @@ public class ResUtil {
    * @return path of the local copy of the resource file
    * @throws MobileHarnessException if failed to read or copy the resource file
    */
+  @CanIgnoreReturnValue
   public String getResourceFile(Class<?> relativeClass, String resPathInJar)
       throws MobileHarnessException {
     synchronized (resFiles) {

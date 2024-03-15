@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.api.devicemanager.detector;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -33,12 +34,12 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 /** Detector for adb. */
 public class BaseAdbDetector implements Detector {
@@ -143,7 +144,11 @@ public class BaseAdbDetector implements Detector {
 
   /** Gets the cached device id from DeviceCache. */
   Set<String> getCachedDevices() {
-    return new HashSet<>(DeviceCacheManager.getInstance().getCachedDevices("AndroidRealDevice"));
+    DeviceCacheManager deviceCacheManager = DeviceCacheManager.getInstance();
+    return Stream.concat(
+            deviceCacheManager.getCachedDevices("AndroidRealDevice").stream(),
+            deviceCacheManager.getCachedDevices("AndroidLocalEmulator").stream())
+        .collect(toImmutableSet());
   }
 
   /** Returns whether the detector need to check adb process. */
