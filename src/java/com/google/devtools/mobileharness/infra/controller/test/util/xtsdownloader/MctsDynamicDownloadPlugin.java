@@ -146,13 +146,19 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   @Override
   public void downloadXtsFiles(XtsDynamicDownloadInfo xtsDynamicDownloadInfo, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
+    Set<String> allTestModules = new HashSet<>();
     for (String downloadUrl : xtsDynamicDownloadInfo.getDownloadUrlList()) {
       logger.atInfo().log("Start to download: %s", downloadUrl);
       String subDirName = downloadUrl.replace("https://dl.google.com/dl", "");
       String filePath = downloadPublicUrlFiles(downloadUrl, subDirName);
-      unzipDownloadedTestCases(testInfo, filePath, subDirName);
+      allTestModules.addAll(unzipDownloadedTestCases(testInfo, filePath, subDirName));
     }
     testInfo.properties().add(XTS_DYNAMIC_DOWNLOAD_PATH_KEY, TMP_MCTS_TESTCASES_PATH);
+    // Print out all the downloaded MCTS test modules
+    logger.atInfo().log("Downloaded MCTS test modules:");
+    for (String testModule : allTestModules) {
+      logger.atInfo().log("%s", testModule);
+    }
   }
 
   @Subscribe
@@ -308,10 +314,11 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     }
   }
 
-  private void unzipDownloadedTestCases(TestInfo testInfo, String filePath, String subDirName)
+  private Set<String> unzipDownloadedTestCases(
+      TestInfo testInfo, String filePath, String subDirName)
       throws MobileHarnessException, InterruptedException {
     if (filePath == null) {
-      return;
+      return new HashSet<>();
     }
     // unzip the file to /tmp/android/xts/mcts/android-mcts-<module>/testcases
     String unzipDirPath = testInfo.getTmpFileDir() + STATIC_MCTS_TESTCASES_PATH;
@@ -320,6 +327,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     List<String> listPaths =
         fileUtil.listFileOrDirPaths(
             unzipDirPath + "/" + PathUtil.basename(subDirName).replace(".zip", "") + "/testcases");
+    Set<String> testModules = new HashSet<>(); // Track MCTS test modules.
     for (String path : listPaths) {
       String desPath = unzipDirPath + "/testcases";
       // Skip moving the files that already existed. For example, CtsDeviceInfo contained in all the
@@ -327,8 +335,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       if (!fileUtil.getFileOrDir(desPath + "/" + PathUtil.basename(path)).exists()) {
         fileUtil.moveFileOrDir(path, desPath);
         logger.atInfo().log("Moved test cases from link [%s] to [%s]", path, unzipDirPath);
+        testModules.add(PathUtil.basename(path));
       }
     }
     logger.atInfo().log("Unzipped resource to %s", unzipDirPath);
+    return testModules;
   }
 }
