@@ -42,6 +42,25 @@ java_grpc_library(
 )
 
 proto_library(
+    name = "device_status_serv_proto",
+    srcs = ["device_status_serv.proto"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_proto",
+    ],
+)
+
+java_proto_library(
+    name = "device_status_serv_java_proto",
+    deps = [":device_status_serv_proto"],
+)
+
+java_grpc_library(
+    name = "device_status_serv_grpc",
+    srcs = [":device_status_serv_proto"],
+    deps = [":device_status_serv_java_proto"],
+)
+
+proto_library(
     name = "exec_test_serv_proto",
     srcs = ["exec_test_serv.proto"],
     deps = [
