@@ -135,6 +135,7 @@ java_library(
     srcs = ["DeviceStateChecker.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
 )
