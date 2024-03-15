@@ -501,7 +501,7 @@ public class LocalFileUtil {
     // Example:
     // $ du -sh /var/www/
     // 286M /var/www/
-    List<String> words = Splitter.on(SPACE_CHARS).splitToList(output);
+    List<String> words = Splitter.on(SPACE_CHARS).splitToList(output); // TODO: temp test
     if (words.size() != 2) {
       throw new MobileHarnessException(
           BasicErrorId.LOCAL_FILE_OR_DIR_GET_SIZE_ERROR,
