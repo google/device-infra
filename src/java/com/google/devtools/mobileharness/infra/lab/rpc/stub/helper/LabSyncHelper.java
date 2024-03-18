@@ -193,6 +193,10 @@ public class LabSyncHelper {
     // If multiple IP detected in Lab, then let master decide which one to use.
     netUtil.getUniqueHostIpOrEmpty().ifPresent(req::setLabIp);
 
+    logger.atInfo().log(
+        "Prepare the lab sign up request for devices [%s].",
+        devices.keySet().stream().map(Device::getDeviceControlId).collect(Collectors.joining(",")));
+
     List<String> deviceInfos = new ArrayList<>(devices.size());
     for (Map.Entry<Device, DeviceStatusInfo> entry : devices.entrySet()) {
       Device device = entry.getKey();
@@ -292,7 +296,9 @@ public class LabSyncHelper {
     }
 
     try {
-      return labSyncStub.signUpLab(req.build());
+      SignUpLabResponse response = labSyncStub.signUpLab(req.build());
+      logger.atInfo().log("Successfully Signed up lab.");
+      return response;
     } catch (RpcExceptionWithErrorId e) {
       // TODO: The following version check is useless because it is still checking the
       // old ErrorCode, while the Master is throwing the new ErrorIds. Need to upgrade this version

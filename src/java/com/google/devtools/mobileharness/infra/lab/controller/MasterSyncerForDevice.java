@@ -118,6 +118,7 @@ public class MasterSyncerForDevice implements Runnable, Observer {
           "Received event for device %s(%s) which doesn't exist", deviceControlId, deviceType);
       return;
     }
+    logger.atInfo().log("Got deviceWithStatusInfo for device %s", deviceControlId);
 
     DeviceStatusWithTimestamp deviceStatusWithTimestamp =
         deviceAndStatusInfo.deviceStatusInfo().getDeviceStatusWithTimestamp();
@@ -147,9 +148,13 @@ public class MasterSyncerForDevice implements Runnable, Observer {
   @Subscribe
   public void onDeviceChanged(LocalDeviceChangeEvent event) {
     // We sign up the device again when device is changed.
+    logger.atInfo().log(
+        "Start to process device change event for device %s", event.getDeviceControlId());
     onDeviceUp(
         new LocalDeviceUpEvent(
             event.getDeviceControlId(), event.getDeviceUuid(), event.getDeviceType()));
+    logger.atInfo().log(
+        "Complete processing device change event for device %s", event.getDeviceControlId());
   }
 
   /** Signs out the device when it is down. */
