@@ -37,7 +37,7 @@ message LabConfig {
   repeated OverSshDevice over_ssh = 6;
 
   // The USB device IDs the lab will try to detect by default.
-  repeated UsbDevice usb_device = 7;
+  repeated UsbDevice usb_device = 7 [deprecated = true];
 
   // The UUID of devices which will be monitored by the lab.
   repeated string monitored_device_uuid = 3;
