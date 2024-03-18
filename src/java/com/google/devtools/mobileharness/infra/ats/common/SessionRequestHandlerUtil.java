@@ -26,11 +26,9 @@ import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
 import com.google.auto.value.AutoValue;
-import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -53,6 +51,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.Configurati
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -237,88 +236,6 @@ public class SessionRequestHandlerUtil {
 
       public abstract Builder setEnableModuleOptionalParameter(
           boolean enableModuleOptionalParameter);
-    }
-  }
-
-  @AutoValue
-  abstract static class SuiteTestFilter {
-
-    /** The original filter string in --include-filter or --exclude-filter. */
-    abstract String filterString();
-
-    abstract Optional<String> abi();
-
-    /**
-     * Module name with module parameter (if any), e.g., "FooModuleName" or
-     * "FooModuleName[instant]".
-     */
-    abstract String moduleName();
-
-    abstract Optional<String> testName();
-
-    private static final Splitter FILTER_STRING_SPLITTER = Splitter.on(' ').omitEmptyStrings();
-
-    private static SuiteTestFilter create(String filterString) {
-      List<String> tokens = FILTER_STRING_SPLITTER.splitToList(filterString);
-      switch (tokens.size()) {
-        case 1:
-          return create(
-              filterString, /* abi= */ null, /* moduleName= */ tokens.get(0), /* testName= */ null);
-        case 2:
-          if (AbiUtil.isAbiSupportedByCompatibility(tokens.get(0))) {
-            return create(
-                filterString,
-                /* abi= */ tokens.get(0),
-                /* moduleName= */ tokens.get(1),
-                /* testName= */ null);
-          } else {
-            return create(
-                filterString,
-                /* abi= */ null,
-                /* moduleName= */ tokens.get(0),
-                /* testName= */ tokens.get(1));
-          }
-        case 3:
-          return create(
-              filterString,
-              /* abi= */ tokens.get(0),
-              /* moduleName= */ tokens.get(1),
-              /* testName= */ tokens.get(2));
-        default:
-          throw new IllegalArgumentException(
-              String.format("Invalid filter string: [%s]", filterString));
-      }
-    }
-
-    private static SuiteTestFilter create(
-        String filterString, @Nullable String abi, String moduleName, @Nullable String testName) {
-      return new AutoValue_SessionRequestHandlerUtil_SuiteTestFilter(
-          filterString, Optional.ofNullable(abi), moduleName, Optional.ofNullable(testName));
-    }
-
-    /**
-     * Exactly matches {@code originalModuleName} and {@code moduleParameter}. If {@link #abi()} is
-     * empty, matches any {@code moduleAbi}. Otherwise exactly matches {@code moduleAbi}.
-     */
-    private boolean matchModule(
-        String originalModuleName, @Nullable String moduleAbi, @Nullable String moduleParameter) {
-      String moduleName =
-          moduleParameter == null
-              ? originalModuleName
-              : String.format("%s[%s]", originalModuleName, moduleParameter);
-      if (!moduleName().equals(moduleName)) {
-        return false;
-      }
-      if (abi().isEmpty()) {
-        return true;
-      }
-      return abi().get().equals(moduleAbi);
-    }
-
-    @Memoized
-    @Override
-    public String toString() {
-      return filterString();
     }
   }
 

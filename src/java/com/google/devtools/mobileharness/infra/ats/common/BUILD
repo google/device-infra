@@ -49,6 +49,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",

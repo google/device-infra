@@ -92,8 +92,25 @@ java_library(
     srcs = ["SuiteCommon.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+    ],
+)
+
+java_library(
+    name = "suite_test_filter",
+    srcs = ["SuiteTestFilter.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
     ],
 )
