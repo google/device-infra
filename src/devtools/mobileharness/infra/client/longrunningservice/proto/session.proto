@@ -80,9 +80,11 @@ message SessionPluginConfigs {
 //
 // 1. SessionInfo.
 // 2. DeviceQuerier.
-// 3. @ServerStartTime Instant.
+// 3. @ServerStartTime java.time.Instant.
 // 4. ListeningExecutorService.
-// 5. Clock.
+// 5. java.time.Clock.
+// 6. @SessionTempDir Path.
+// 7. @SessionGenDir Path.
 message SessionPluginConfig {
   // Required.
   SessionPluginLoadingConfig loading_config = 1;

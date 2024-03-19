@@ -408,7 +408,8 @@ public class OlcServerIntegrationTest {
                             "--no_op_device_num=1",
                             "--olc_server_port=" + olcServerPort,
                             "--public_dir=" + tmpFolder.newFolder("olc_server_public_dir"),
-                            "--simplified_log_format=true"),
+                            "--simplified_log_format=true",
+                            "--tmp_dir_root=" + tmpFolder.newFolder("olc_server_tmp_dir")),
                         ImmutableList.of()))
             .onStdout(
                 does(

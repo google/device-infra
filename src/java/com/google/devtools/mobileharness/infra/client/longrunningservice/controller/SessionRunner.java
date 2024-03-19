@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionEnvironmentPreparer.SessionEnvironment;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
@@ -42,6 +43,7 @@ public class SessionRunner implements Callable<Void> {
   }
 
   private final SessionDetailHolder sessionDetailHolder;
+  private final SessionEnvironmentPreparer sessionEnvironmentPreparer;
   private final SessionJobCreator sessionJobCreator;
   private final SessionJobRunner sessionJobRunner;
   private final SessionPluginLoader sessionPluginLoader;
@@ -51,11 +53,13 @@ public class SessionRunner implements Callable<Void> {
   SessionRunner(
       @Assisted SessionDetail sessionDetail,
       @Assisted Runnable sessionDetailListener,
+      SessionEnvironmentPreparer sessionEnvironmentPreparer,
       SessionJobCreator sessionJobCreator,
       SessionJobRunner sessionJobRunner,
       SessionPluginLoader sessionPluginLoader,
       SessionPluginRunner sessionPluginRunner) {
     this.sessionDetailHolder = new SessionDetailHolder(sessionDetail, sessionDetailListener);
+    this.sessionEnvironmentPreparer = sessionEnvironmentPreparer;
     this.sessionJobCreator = sessionJobCreator;
     this.sessionJobRunner = sessionJobRunner;
     this.sessionPluginLoader = sessionPluginLoader;
@@ -64,39 +68,43 @@ public class SessionRunner implements Callable<Void> {
 
   @Override
   public Void call() throws MobileHarnessException, InterruptedException {
-    // Creates OmniLab jobs.
-    sessionJobCreator.createAndAddJobs(sessionDetailHolder);
+    // Prepares environment.
+    try (SessionEnvironment sessionEnvironment =
+        sessionEnvironmentPreparer.prepareEnvironment(sessionDetailHolder)) {
 
-    // Loads session plugins.
-    ImmutableList<SessionPlugin> sessionPlugins =
-        sessionPluginLoader.loadSessionPlugins(sessionDetailHolder);
-    sessionPluginRunner.initialize(sessionDetailHolder, sessionPlugins);
+      // Creates OmniLab jobs.
+      sessionJobCreator.createAndAddJobs(sessionDetailHolder);
 
-    // Calls sessionPlugin.onStarting().
-    sessionPluginRunner.onSessionStarting();
+      // Loads session plugins.
+      ImmutableList<SessionPlugin> sessionPlugins =
+          sessionPluginLoader.loadSessionPlugins(sessionDetailHolder, sessionEnvironment);
+      sessionPluginRunner.initialize(sessionDetailHolder, sessionPlugins);
 
-    Throwable sessionError = null;
-    try {
-      // Starts all jobs and wait until they finish.
-      sessionJobRunner.runJobs(
-          sessionDetailHolder,
-          sessionPlugins.stream()
-              .map(SessionPlugin::subscriber)
-              .map(Subscriber::subscriberObject)
-              .collect(toImmutableList()));
-    } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
-      sessionError = e;
-      throw e;
-    } finally {
-      // Calls sessionPlugin.onEnded().
-      sessionPluginRunner.onSessionEnded(sessionError);
+      // Calls sessionPlugin.onStarting().
+      sessionPluginRunner.onSessionStarting();
 
-      // Closes session plugin resources.
-      sessionPlugins.stream()
-          .map(SessionPlugin::closeableResource)
-          .forEach(NonThrowingAutoCloseable::close);
+      Throwable sessionError = null;
+      try {
+        // Starts all jobs and wait until they finish.
+        sessionJobRunner.runJobs(
+            sessionDetailHolder,
+            sessionPlugins.stream()
+                .map(SessionPlugin::subscriber)
+                .map(Subscriber::subscriberObject)
+                .collect(toImmutableList()));
+      } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+        sessionError = e;
+        throw e;
+      } finally {
+        // Calls sessionPlugin.onEnded().
+        sessionPluginRunner.onSessionEnded(sessionError);
+
+        // Closes session plugin resources.
+        sessionPlugins.stream()
+            .map(SessionPlugin::closeableResource)
+            .forEach(NonThrowingAutoCloseable::close);
+      }
     }
-
     return null;
   }
 

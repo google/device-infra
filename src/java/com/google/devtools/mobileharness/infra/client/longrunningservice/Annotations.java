@@ -28,5 +28,15 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface ServerStartTime {}
 
+  /** Generated file dir of a session. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface SessionGenDir {}
+
+  /** Temp dir of a session. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface SessionTempDir {}
+
   private Annotations() {}
 }

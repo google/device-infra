@@ -78,6 +78,21 @@ java_library(
 )
 
 java_library(
+    name = "session_environment_preparer",
+    srcs = ["SessionEnvironmentPreparer.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
+        "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
     name = "session_job_creator",
     srcs = ["SessionJobCreator.java"],
     deps = [
@@ -134,6 +149,7 @@ java_library(
     name = "session_plugin_loader",
     srcs = ["SessionPluginLoader.java"],
     deps = [
+        ":session_environment_preparer",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
@@ -177,6 +193,7 @@ java_library(
     name = "session_runner",
     srcs = ["SessionRunner.java"],
     deps = [
+        ":session_environment_preparer",
         ":session_job_creator",
         ":session_job_runner",
         ":session_plugin_loader",

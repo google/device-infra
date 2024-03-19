@@ -27,6 +27,9 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionEnvironmentPreparer.SessionEnvironment;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
@@ -42,6 +45,7 @@ import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -76,7 +80,8 @@ public class SessionPluginLoader {
     this.serverStartTime = serverStartTime;
   }
 
-  public ImmutableList<SessionPlugin> loadSessionPlugins(SessionDetailHolder sessionDetailHolder)
+  public ImmutableList<SessionPlugin> loadSessionPlugins(
+      SessionDetailHolder sessionDetailHolder, SessionEnvironment sessionEnvironment)
       throws MobileHarnessException {
     ImmutableList.Builder<SessionPlugin> sessionPlugins = ImmutableList.builder();
 
@@ -118,7 +123,7 @@ public class SessionPluginLoader {
       CloseableResources closeableResources = new CloseableResources();
       SessionPluginDefaultModule defaultModule =
           new SessionPluginDefaultModule(
-              sessionInfo, deviceQuerier, serverStartTime, closeableResources);
+              sessionInfo, deviceQuerier, serverStartTime, sessionEnvironment, closeableResources);
 
       // Creates session plugin.
       Object sessionPlugin =
@@ -181,16 +186,19 @@ public class SessionPluginLoader {
     private final SessionInfo sessionInfo;
     private final DeviceQuerier deviceQuerier;
     private final Instant serverStartTime;
+    private final SessionEnvironment sessionEnvironment;
     private final CloseableResources closeableResources;
 
     private SessionPluginDefaultModule(
         SessionInfo sessionInfo,
         DeviceQuerier deviceQuerier,
         Instant serverStartTime,
+        SessionEnvironment sessionEnvironment,
         CloseableResources closeableResources) {
       this.sessionInfo = sessionInfo;
       this.deviceQuerier = deviceQuerier;
       this.serverStartTime = serverStartTime;
+      this.sessionEnvironment = sessionEnvironment;
       this.closeableResources = closeableResources;
     }
 
@@ -200,6 +208,12 @@ public class SessionPluginLoader {
       bind(DeviceQuerier.class).toInstance(deviceQuerier);
       bind(Instant.class).annotatedWith(ServerStartTime.class).toInstance(serverStartTime);
       bind(Clock.class).toInstance(Clock.systemUTC());
+      bind(Path.class)
+          .annotatedWith(SessionGenDir.class)
+          .toInstance(sessionEnvironment.sessionGenDir());
+      bind(Path.class)
+          .annotatedWith(SessionTempDir.class)
+          .toInstance(sessionEnvironment.sessionTempDir());
     }
 
     @Provides
