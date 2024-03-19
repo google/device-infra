@@ -220,7 +220,7 @@ public class PrepareTestServiceImpl {
             decorators);
 
     // Adds TestRunner to JobManager.
-    jobManager.addTestIfAbsent(proxyTestRunner);
+    proxyTestRunner = jobManager.addTestIfAbsent(proxyTestRunner);
 
     TestLocator testLocator =
         TestLocator.of(

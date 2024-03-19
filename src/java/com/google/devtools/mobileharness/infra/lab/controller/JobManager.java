@@ -172,12 +172,14 @@ public class JobManager {
           .collect(Collectors.toMap(Entry::getKey, e -> e.getValue().getTestExecutionUnit()));
     }
 
-    private synchronized void addTest(String testId, ProxyTestRunner testRunner) {
+    private synchronized ProxyTestRunner addTest(String testId, ProxyTestRunner testRunner) {
       TestLabExecutionUnit test = new TestLabExecutionUnit(testRunner);
       TestLabExecutionUnit previous = tests.putIfAbsent(testId, test);
       if (previous == null) {
         jobFileUnits.forEach(test::notifyJobFile);
+        return test.testRunner;
       }
+      return previous.testRunner;
     }
 
     private synchronized void markTestClientPostRunDone(String testId) {
@@ -318,10 +320,14 @@ public class JobManager {
                     String.format("Test %s does not exist", testId)));
   }
 
-  /** Adds a test to a job. */
-  public void addTestIfAbsent(ProxyTestRunner testRunner) throws MobileHarnessException {
+  /**
+   * Adds a test to a job. If the job already contains the testRunner for the test, it will return
+   * the previously stored testRunner. Otherwise, it will return the passed-in testRunner.
+   */
+  public ProxyTestRunner addTestIfAbsent(ProxyTestRunner testRunner) throws MobileHarnessException {
     TestLocator testLocator = testRunner.getTestExecutionUnit().locator();
-    getJobLabExecutionUnit(testLocator.jobLocator().id()).addTest(testLocator.id(), testRunner);
+    return getJobLabExecutionUnit(testLocator.jobLocator().id())
+        .addTest(testLocator.id(), testRunner);
   }
 
   /**
