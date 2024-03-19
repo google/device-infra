@@ -37,7 +37,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
-import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
 import com.google.protobuf.FieldMask;
 import com.google.protobuf.util.FieldMaskUtil;
 import io.grpc.stub.StreamObserver;
@@ -99,6 +100,12 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
   }
 
   @Override
+  public StreamObserver<SubscribeSessionRequest> subscribeSession(
+      StreamObserver<SubscribeSessionResponse> responseObserver) {
+    return sessionManager.subscribeSession(responseObserver);
+  }
+
+  @Override
   public void abortSession(
       AbortSessionRequest request, StreamObserver<AbortSessionResponse> responseObserver) {
     GrpcServiceUtil.invoke(
@@ -125,21 +132,12 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
 
   private GetSessionResponse doGetSession(GetSessionRequest request) throws MobileHarnessException {
     // Calculates sub field mask for SessionDetail.
-    FieldMask sessionDetailSubMask;
-    if (request.hasFieldMask()) {
-      sessionDetailSubMask =
-          FieldMaskUtils.subFieldMask(
-                  request.getFieldMask(),
-                  GetSessionResponse.getDescriptor()
-                      .findFieldByNumber(GetSessionResponse.SESSION_DETAIL_FIELD_NUMBER))
-              .orElse(null);
-    } else {
-      sessionDetailSubMask = null;
-    }
+    FieldMask sessionDetailFieldMask =
+        SessionManager.getSessionDetailFieldMask(request).orElse(null);
 
     // Gets the session.
     SessionDetail sessionDetail =
-        sessionManager.getSession(request.getSessionId().getId(), sessionDetailSubMask);
+        sessionManager.getSession(request.getSessionId().getId(), sessionDetailFieldMask);
     GetSessionResponse result =
         GetSessionResponse.newBuilder().setSessionDetail(sessionDetail).build();
 

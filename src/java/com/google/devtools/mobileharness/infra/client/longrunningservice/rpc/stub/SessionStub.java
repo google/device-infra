@@ -21,6 +21,8 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceGrpc;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceGrpc.SessionServiceBlockingStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceGrpc.SessionServiceStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
@@ -29,21 +31,26 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
 import io.grpc.Channel;
+import io.grpc.stub.StreamObserver;
 
 /** Stub of {@link SessionServiceGrpc}. */
 public class SessionStub {
 
-  private final SessionServiceBlockingStub sessionServiceStub;
+  private final SessionServiceBlockingStub sessionServiceBlockingStub;
+  private final SessionServiceStub sessionServiceStub;
 
   public SessionStub(Channel channel) {
-    this.sessionServiceStub = SessionServiceGrpc.newBlockingStub(channel);
+    this.sessionServiceBlockingStub = SessionServiceGrpc.newBlockingStub(channel);
+    this.sessionServiceStub = SessionServiceGrpc.newStub(channel);
   }
 
   public CreateSessionResponse createSession(CreateSessionRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        sessionServiceStub::createSession,
+        sessionServiceBlockingStub::createSession,
         request,
         InfraErrorId.OLCS_STUB_CREATE_SESSION_ERROR,
         "Failed to create session");
@@ -51,7 +58,7 @@ public class SessionStub {
 
   public RunSessionResponse runSession(RunSessionRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        sessionServiceStub::runSession,
+        sessionServiceBlockingStub::runSession,
         request,
         InfraErrorId.OLCS_STUB_RUN_SESSION_ERROR,
         "Failed to run session");
@@ -59,7 +66,7 @@ public class SessionStub {
 
   public GetSessionResponse getSession(GetSessionRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        sessionServiceStub::getSession,
+        sessionServiceBlockingStub::getSession,
         request,
         InfraErrorId.OLCS_STUB_GET_SESSION_ERROR,
         "Failed to get session");
@@ -68,9 +75,22 @@ public class SessionStub {
   public GetAllSessionsResponse getAllSessions(GetAllSessionsRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        sessionServiceStub::getAllSessions,
+        sessionServiceBlockingStub::getAllSessions,
         request,
         InfraErrorId.OLCS_STUB_GET_ALL_SESSIONS_ERROR,
         "Failed to get all sessions");
+  }
+
+  public StreamObserver<SubscribeSessionRequest> subscribeSession(
+      StreamObserver<SubscribeSessionResponse> responseObserver) {
+    return sessionServiceStub.subscribeSession(responseObserver);
+  }
+
+  public void abortSession(AbortSessionRequest request) throws GrpcExceptionWithErrorId {
+    GrpcStubUtil.invoke(
+        sessionServiceBlockingStub::abortSession,
+        request,
+        InfraErrorId.OLCS_STUB_ABORT_SESSION_ERROR,
+        "Failed to abort session");
   }
 }

@@ -39,6 +39,10 @@ service SessionService {
   // Gets information of all pending/running/archived sessions.
   rpc GetAllSessions(GetAllSessionsRequest) returns (GetAllSessionsResponse);
 
+  // Subscribes a session.
+  rpc SubscribeSession(stream SubscribeSessionRequest)
+      returns (stream SubscribeSessionResponse);
+
   // Aborts a session.
   //
   // If the session has not started, it will not be started.
@@ -109,6 +113,20 @@ message GetAllSessionsRequest {
 
   // Optional.
   SessionFilter session_filter = 2;
+}
+
+// Gets information of a session when this method is called or when the
+// SessionDetail is modified, until the request stream completes.
+//
+// The second and the following requests in a stream will be discarded.
+message SubscribeSessionRequest {
+  // Required.
+  GetSessionRequest get_session_request = 1;
+}
+
+message SubscribeSessionResponse {
+  // Required.
+  GetSessionResponse get_session_response = 1;
 }
 
 message AbortSessionRequest {

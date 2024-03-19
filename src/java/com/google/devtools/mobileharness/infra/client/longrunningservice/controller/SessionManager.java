@@ -38,14 +38,27 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
+import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.FieldMask;
+import com.google.protobuf.util.FieldMaskUtil;
+import io.grpc.stub.StreamObserver;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -65,7 +78,7 @@ public class SessionManager {
   private static final int SESSION_QUEUE_CAPACITY = 5000;
 
   /** Capacity for concurrently running sessions. */
-  private static final int RUNNING_SESSION_CAPACITY = 30;
+  private static final int RUNNING_SESSION_CAPACITY = 100;
 
   /** Capacity for archived sessions. */
   private static final int ARCHIVED_SESSION_CAPACITY = 500;
@@ -74,19 +87,18 @@ public class SessionManager {
   private final SessionRunner.Factory sessionRunnerFactory;
   private final ListeningExecutorService threadPool;
 
-  private final Object lock = new Object();
+  private final Object sessionsLock = new Object();
 
   /** Submitted and non-started sessions. */
-  @GuardedBy("lock")
-  private final LinkedHashMap<String, SessionDetailAndFinalResultFuture> sessionQueue =
-      new LinkedHashMap<>();
+  @GuardedBy("sessionsLock")
+  private final LinkedHashMap<String, PendingSession> pendingSessions = new LinkedHashMap<>();
 
   /** Running sessions. */
-  @GuardedBy("lock")
-  private final Map<String, SessionRunnerAndFinalResultFuture> sessionRunners = new HashMap<>();
+  @GuardedBy("sessionsLock")
+  private final Map<String, RunningSession> runningSessions = new HashMap<>();
 
   /** Archived sessions. */
-  @GuardedBy("lock")
+  @GuardedBy("sessionsLock")
   private final LinkedHashMap<String, SessionDetail> archivedSessions =
       new LinkedHashMap<>() {
         @Override
@@ -112,24 +124,26 @@ public class SessionManager {
    */
   @CanIgnoreReturnValue
   public SessionAddingResult addSession(SessionConfig sessionConfig) throws MobileHarnessException {
-    SessionDetail sessionDetail = sessionDetailCreator.create(sessionConfig);
-    logger.atInfo().log("Create session: %s", shortDebugString(sessionDetail));
-    SessionDetailAndFinalResultFuture sessionDetailAndFinalResultFuture =
-        SessionDetailAndFinalResultFuture.of(sessionDetail, SettableFuture.create());
-    synchronized (lock) {
+    SessionDetail pendingSessionDetail = sessionDetailCreator.create(sessionConfig);
+    logger.atInfo().log("Create session: %s", shortDebugString(pendingSessionDetail));
+    SessionSubscribers subscribers = new SessionSubscribers();
+    subscribers.setSessionDetailSupplier(fieldMask -> pendingSessionDetail);
+    PendingSession pendingSession =
+        PendingSession.of(pendingSessionDetail, SettableFuture.create(), subscribers);
+    synchronized (sessionsLock) {
       MobileHarnessExceptions.check(
-          sessionQueue.size() <= SESSION_QUEUE_CAPACITY,
+          pendingSessions.size() <= SESSION_QUEUE_CAPACITY,
           InfraErrorId.OLCS_CREATE_SESSION_ERROR_SESSION_QUEUE_FULL,
           () ->
               String.format(
                   "Session queue is full(%s), failed to add session [%s]",
-                  SESSION_QUEUE_CAPACITY, shortDebugString(sessionDetail)));
-      sessionQueue.put(sessionDetail.getSessionId().getId(), sessionDetailAndFinalResultFuture);
+                  SESSION_QUEUE_CAPACITY, shortDebugString(pendingSessionDetail)));
+      pendingSessions.put(pendingSessionDetail.getSessionId().getId(), pendingSession);
 
       // Tries to start new sessions.
       startSessions();
     }
-    return SessionAddingResult.of(sessionDetailAndFinalResultFuture);
+    return SessionAddingResult.of(pendingSession);
   }
 
   /**
@@ -145,16 +159,16 @@ public class SessionManager {
       throws MobileHarnessException {
     SessionDetail sessionDetail;
     // Checks the session from 3 places.
-    synchronized (lock) {
+    synchronized (sessionsLock) {
       sessionDetail = archivedSessions.get(sessionId);
       if (sessionDetail == null) {
-        SessionRunnerAndFinalResultFuture runningSession = sessionRunners.get(sessionId);
+        RunningSession runningSession = runningSessions.get(sessionId);
         if (runningSession != null) {
           sessionDetail = runningSession.sessionRunner().getSession(fieldMask);
         }
       }
       if (sessionDetail == null) {
-        SessionDetailAndFinalResultFuture pendingSession = sessionQueue.get(sessionId);
+        PendingSession pendingSession = pendingSessions.get(sessionId);
         if (pendingSession != null) {
           sessionDetail = pendingSession.sessionDetail();
         }
@@ -180,18 +194,18 @@ public class SessionManager {
       @Nullable FieldMask fieldMask, @Nullable SessionFilter sessionFilter) {
     Predicate<SessionStatus> sessionStatusFilter = getSessionStatusFilter(sessionFilter);
     Predicate<SessionConfig> sessionConfigFilter = getSessionConfigFilter(sessionFilter);
-    synchronized (lock) {
+    synchronized (sessionsLock) {
       return Streams.concat(
               sessionStatusFilter.test(SessionStatus.SESSION_SUBMITTED)
-                  ? sessionQueue.values().stream()
-                      .map(SessionDetailAndFinalResultFuture::sessionDetail)
+                  ? pendingSessions.values().stream()
+                      .map(PendingSession::sessionDetail)
                       .filter(
                           sessionDetail ->
                               sessionConfigFilter.test(sessionDetail.getSessionConfig()))
                   : Stream.empty(),
               sessionStatusFilter.test(SessionStatus.SESSION_RUNNING)
-                  ? sessionRunners.values().stream()
-                      .map(SessionRunnerAndFinalResultFuture::sessionRunner)
+                  ? runningSessions.values().stream()
+                      .map(RunningSession::sessionRunner)
                       .filter(
                           sessionRunner ->
                               sessionConfigFilter.test(sessionRunner.getSessionConfig()))
@@ -207,34 +221,43 @@ public class SessionManager {
     }
   }
 
+  public StreamObserver<SubscribeSessionRequest> subscribeSession(
+      StreamObserver<SubscribeSessionResponse> responseObserver) {
+    return new SessionSubscriber(responseObserver).getRequestObserver();
+  }
+
   public void abortSession(String sessionId) throws MobileHarnessException {
-    SessionDetailAndFinalResultFuture finalSession = null;
-    synchronized (lock) {
+    PendingSession finalPendingSession = null;
+    synchronized (sessionsLock) {
       if (archivedSessions.containsKey(sessionId)) {
         // If the session has ended, does nothing.
         logger.atInfo().log("Abort an archived session [%s]", sessionId);
         return;
       }
 
-      if (sessionQueue.containsKey(sessionId)) {
+      if (pendingSessions.containsKey(sessionId)) {
         // If the session has not started, archives its directly.
         logger.atInfo().log("Abort a pending session [%s], archive it", sessionId);
-        SessionDetailAndFinalResultFuture session = sessionQueue.remove(sessionId);
+        PendingSession pendingSession = pendingSessions.remove(sessionId);
 
         // Marks the session as FINISHED.
         SessionDetail finalSessionDetail =
-            createFinalSessionDetail(session.sessionDetail(), /* sessionRunnerError= */ null);
+            createFinalSessionDetail(
+                pendingSession.sessionDetail(), /* sessionRunnerError= */ null);
 
         // Archives the session.
         archiveSession(finalSessionDetail);
 
-        finalSession =
-            SessionDetailAndFinalResultFuture.of(finalSessionDetail, session.finalResultFuture());
-      } else if (sessionRunners.containsKey(sessionId)) {
+        finalPendingSession =
+            PendingSession.of(
+                finalSessionDetail,
+                pendingSession.finalResultFuture(),
+                pendingSession.sessionSubscribers());
+      } else if (runningSessions.containsKey(sessionId)) {
         // If the session is running, stops job polling and kills all running jobs.
         logger.atInfo().log("Abort a running session [%s]", sessionId);
 
-        SessionRunner sessionRunner = sessionRunners.get(sessionId).sessionRunner();
+        SessionRunner sessionRunner = runningSessions.get(sessionId).sessionRunner();
         sessionRunner.abortSession();
       } else {
         throw new MobileHarnessException(
@@ -244,57 +267,65 @@ public class SessionManager {
     }
 
     // Sets the future out of the lock.
-    if (finalSession != null) {
-      finalSession.finalResultFuture().set(finalSession.sessionDetail());
+    if (finalPendingSession != null) {
+      finalPendingSession.finalResultFuture().set(finalPendingSession.sessionDetail());
     }
   }
 
   /** Tries to poll as many as sessions from the session queue and starts them. */
-  @GuardedBy("lock")
+  @GuardedBy("sessionsLock")
   private void startSessions() {
     // Poll sessions from the session queue.
-    ImmutableList<SessionDetailAndFinalResultFuture> newSessions = pollSessions();
+    ImmutableList<PendingSession> newSessions = pollSessions();
 
     // Creates session runners.
-    ImmutableList<SessionRunnerAndFinalResultFuture> newSessionRunners =
+    ImmutableList<RunningSession> newRunningSessions =
         newSessions.stream()
             .map(
-                session ->
-                    SessionRunnerAndFinalResultFuture.of(
+                pendingSession ->
+                    RunningSession.of(
                         sessionRunnerFactory.create(
-                            session.sessionDetail().toBuilder()
+                            pendingSession.sessionDetail().toBuilder()
                                 .setSessionStatus(SessionStatus.SESSION_RUNNING)
-                                .build()),
-                        session.finalResultFuture()))
+                                .build(),
+                            pendingSession.sessionSubscribers().getSessionDetailListener()),
+                        pendingSession.finalResultFuture(),
+                        pendingSession.sessionSubscribers()))
             .collect(toImmutableList());
 
     // Starts session runners.
-    for (SessionRunnerAndFinalResultFuture sessionRunner : newSessionRunners) {
-      SessionDetail sessionDetail = sessionRunner.sessionRunner().getSession(/* fieldMask= */ null);
+    for (RunningSession runningSession : newRunningSessions) {
+      SessionRunner sessionRunner = runningSession.sessionRunner();
+
+      // Triggers subscribers after session status becomes SESSION_RUNNING.
+      SessionSubscribers subscribers = runningSession.sessionSubscribers();
+      subscribers.receiveSessionDetail(/* finalSessionDetail= */ false);
+      subscribers.setSessionDetailSupplier(sessionRunner::getSession);
+
+      SessionDetail sessionDetail = sessionRunner.getSession(/* fieldMask= */ null);
       logger.atInfo().log("Start session: %s", shortDebugString(sessionDetail));
+
       String sessionId = sessionDetail.getSessionId().getId();
-      sessionRunners.put(sessionId, sessionRunner);
+      runningSessions.put(sessionId, runningSession);
       addCallback(
-          threadPool.submit(
-              threadRenaming(sessionRunner.sessionRunner(), () -> "session-runner-" + sessionId)),
-          new SessionRunnerCallback(sessionRunner),
+          threadPool.submit(threadRenaming(sessionRunner, () -> "session-runner-" + sessionId)),
+          new SessionRunnerCallback(runningSession),
           directExecutor());
     }
   }
 
   /** Polls as many as sessions from the session queue. */
-  @GuardedBy("lock")
-  private ImmutableList<SessionDetailAndFinalResultFuture> pollSessions() {
-    int count = sessionQueue.size();
+  @GuardedBy("sessionsLock")
+  private ImmutableList<PendingSession> pollSessions() {
+    int count = pendingSessions.size();
     if (count > 0) {
-      count = min(count, RUNNING_SESSION_CAPACITY - sessionRunners.size());
+      count = min(count, RUNNING_SESSION_CAPACITY - runningSessions.size());
     }
     if (count <= 0) {
       return ImmutableList.of();
     }
-    ImmutableList.Builder<SessionDetailAndFinalResultFuture> result =
-        ImmutableList.builderWithExpectedSize(count);
-    Iterator<SessionDetailAndFinalResultFuture> iterator = sessionQueue.values().iterator();
+    ImmutableList.Builder<PendingSession> result = ImmutableList.builderWithExpectedSize(count);
+    Iterator<PendingSession> iterator = pendingSessions.values().iterator();
     for (int i = 0; i < count; i++) {
       result.add(iterator.next());
       iterator.remove();
@@ -305,10 +336,10 @@ public class SessionManager {
   /** Callback for {@link SessionRunner#call()}. */
   private class SessionRunnerCallback implements FutureCallback<Void> {
 
-    private final SessionRunnerAndFinalResultFuture sessionRunner;
+    private final RunningSession runningSession;
 
-    private SessionRunnerCallback(SessionRunnerAndFinalResultFuture sessionRunner) {
-      this.sessionRunner = sessionRunner;
+    private SessionRunnerCallback(RunningSession runningSession) {
+      this.runningSession = runningSession;
     }
 
     @Override
@@ -322,21 +353,27 @@ public class SessionManager {
     }
 
     private void afterSession(@Nullable Throwable sessionRunnerError) {
-      SessionDetail sessionDetail = sessionRunner.sessionRunner().getSession(/* fieldMask= */ null);
+      SessionDetail sessionDetail =
+          runningSession.sessionRunner().getSession(/* fieldMask= */ null);
       SessionDetail finalSessionDetail =
           createFinalSessionDetail(sessionDetail, sessionRunnerError);
 
       // Archives the session.
-      synchronized (lock) {
-        sessionRunners.remove(finalSessionDetail.getSessionId().getId());
+      synchronized (sessionsLock) {
+        runningSessions.remove(finalSessionDetail.getSessionId().getId());
         archiveSession(finalSessionDetail);
 
         // Tries to start new sessions if any.
         startSessions();
+
+        // Triggers subscribers after session status becomes SESSION_FINISHED.
+        SessionSubscribers subscribers = runningSession.sessionSubscribers();
+        subscribers.setSessionDetailSupplier(fieldMask -> finalSessionDetail);
+        subscribers.receiveSessionDetail(/* finalSessionDetail= */ true);
       }
 
       // Completes the final result future.
-      sessionRunner.finalResultFuture().set(finalSessionDetail);
+      runningSession.finalResultFuture().set(finalSessionDetail);
     }
   }
 
@@ -356,7 +393,7 @@ public class SessionManager {
     return sessionDetailBuilder.build();
   }
 
-  @GuardedBy("lock")
+  @GuardedBy("sessionsLock")
   private void archiveSession(SessionDetail finalSessionDetail) {
     if (!finalSessionDetail.getSessionConfig().getRemoveAfterFinish()) {
       archivedSessions.put(finalSessionDetail.getSessionId().getId(), finalSessionDetail);
@@ -412,37 +449,245 @@ public class SessionManager {
      */
     public abstract ListenableFuture<SessionDetail> finalResultFuture();
 
-    private static SessionAddingResult of(
-        SessionDetailAndFinalResultFuture sessionDetailAndFinalResultFuture) {
+    private static SessionAddingResult of(PendingSession pendingSession) {
       return new AutoValue_SessionManager_SessionAddingResult(
-          sessionDetailAndFinalResultFuture.sessionDetail(),
-          sessionDetailAndFinalResultFuture.finalResultFuture());
+          pendingSession.sessionDetail(), pendingSession.finalResultFuture());
     }
   }
 
   @AutoValue
-  abstract static class SessionDetailAndFinalResultFuture {
+  abstract static class PendingSession {
     abstract SessionDetail sessionDetail();
 
     abstract SettableFuture<SessionDetail> finalResultFuture();
 
-    private static SessionDetailAndFinalResultFuture of(
-        SessionDetail sessionDetail, SettableFuture<SessionDetail> finalResultFuture) {
-      return new AutoValue_SessionManager_SessionDetailAndFinalResultFuture(
-          sessionDetail, finalResultFuture);
+    abstract SessionSubscribers sessionSubscribers();
+
+    private static PendingSession of(
+        SessionDetail sessionDetail,
+        SettableFuture<SessionDetail> finalResultFuture,
+        SessionSubscribers sessionSubscribers) {
+      return new AutoValue_SessionManager_PendingSession(
+          sessionDetail, finalResultFuture, sessionSubscribers);
     }
   }
 
   @AutoValue
-  abstract static class SessionRunnerAndFinalResultFuture {
+  abstract static class RunningSession {
     abstract SessionRunner sessionRunner();
 
     abstract SettableFuture<SessionDetail> finalResultFuture();
 
-    private static SessionRunnerAndFinalResultFuture of(
-        SessionRunner sessionRunner, SettableFuture<SessionDetail> finalResultFuture) {
-      return new AutoValue_SessionManager_SessionRunnerAndFinalResultFuture(
-          sessionRunner, finalResultFuture);
+    abstract SessionSubscribers sessionSubscribers();
+
+    private static RunningSession of(
+        SessionRunner sessionRunner,
+        SettableFuture<SessionDetail> finalResultFuture,
+        SessionSubscribers sessionSubscribers) {
+      return new AutoValue_SessionManager_RunningSession(
+          sessionRunner, finalResultFuture, sessionSubscribers);
     }
+  }
+
+  /** Subscriber of a session. */
+  private class SessionSubscriber {
+
+    private final StreamObserver<SubscribeSessionRequest> requestObserver =
+        new SubscribeSessionRequestObserver();
+    private final StreamObserver<SubscribeSessionResponse> responseObserver;
+
+    private final String subscriberId = UUID.randomUUID().toString();
+    private final AtomicReference<SubscribeSessionRequest> request = new AtomicReference<>();
+
+    /** Set in {@link #start(SubscribeSessionRequest)}. */
+    @Nullable private volatile FieldMask getSessionResponseFieldMask;
+
+    /** Set in {@link #start(SubscribeSessionRequest)}. */
+    @Nullable private volatile FieldMask sessionDetailFieldMask;
+
+    /** {@link SessionSubscribers} which contains this subscriber. */
+    @GuardedBy("sessionsLock")
+    private SessionSubscribers subscribers;
+
+    @GuardedBy("sessionsLock")
+    private boolean closed;
+
+    private SessionSubscriber(StreamObserver<SubscribeSessionResponse> responseObserver) {
+      this.responseObserver = responseObserver;
+    }
+
+    private StreamObserver<SubscribeSessionRequest> getRequestObserver() {
+      return requestObserver;
+    }
+
+    private void start(SubscribeSessionRequest request) {
+      // Checks if it already started.
+      if (!this.request.compareAndSet(/* expectedValue= */ null, request)) {
+        logger.atWarning().log(
+            "SubscribeSessionRequest [%s] is ignored since session subscriber [%s] has already"
+                + " received a request",
+            shortDebugString(request), subscriberId);
+        return;
+      }
+      logger.atInfo().log(
+          "Session subscriber [%s] received SubscribeSessionRequest [%s]",
+          subscriberId, shortDebugString(request));
+
+      // Sets field masks.
+      GetSessionRequest getSessionRequest = request.getGetSessionRequest();
+      getSessionResponseFieldMask =
+          getSessionRequest.hasFieldMask() ? getSessionRequest.getFieldMask() : null;
+      sessionDetailFieldMask = getSessionDetailFieldMask(getSessionRequest).orElse(null);
+
+      synchronized (sessionsLock) {
+        // Checks if it already closed.
+        if (closed) {
+          logger.atWarning().log("Session subscriber [%s] has been closed", subscriberId);
+          return;
+        }
+        String sessionId = getSessionRequest.getSessionId().getId();
+
+        // Finds an archived session if any.
+        if (archivedSessions.containsKey(sessionId)) {
+          logger.atInfo().log("Sending SessionDetail of the archived session [%s]", sessionId);
+          SessionDetail finalSessionDetail = archivedSessions.get(sessionId);
+          receiveSessionDetail(fieldMask -> finalSessionDetail, /* finalSessionDetail= */ true);
+          return;
+        }
+
+        // Finds a running/pending session if any.
+        if (runningSessions.containsKey(sessionId)) {
+          subscribers = runningSessions.get(sessionId).sessionSubscribers();
+        } else if (pendingSessions.containsKey(sessionId)) {
+          subscribers = pendingSessions.get(sessionId).sessionSubscribers();
+        } else {
+          logger.atWarning().log("Session [%s] is not found", sessionId);
+          responseObserver.onError(
+              new MobileHarnessException(
+                  InfraErrorId.OLCS_SUBSCRIBE_SESSION_SESSION_NOT_FOUND,
+                  String.format("Session not found, id=[%s]", sessionId)));
+          return;
+        }
+
+        // Subscribes the session.
+        logger.atInfo().log(
+            "Session subscriber [%s] starting subscribing session [%s]", subscriberId, sessionId);
+        subscribers.addSubscriber(this);
+
+        // Sends the first SessionDetail.
+        receiveSessionDetail(subscribers.sessionDetailSupplier, /* finalSessionDetail= */ false);
+      }
+    }
+
+    private void end() {
+      logger.atInfo().log("Closing session subscriber [%s]", subscriberId);
+      responseObserver.onCompleted();
+      synchronized (sessionsLock) {
+        closed = true;
+        if (subscribers != null) {
+          subscribers.removeSubscriber(this);
+          subscribers = null;
+        }
+      }
+    }
+
+    private void receiveSessionDetail(
+        Function<FieldMask, SessionDetail> sessionDetailSupplier, boolean finalSessionDetail) {
+      // Creates SubscribeSessionResponse.
+      SessionDetail sessionDetail = sessionDetailSupplier.apply(sessionDetailFieldMask);
+      GetSessionResponse getSessionResponse =
+          GetSessionResponse.newBuilder().setSessionDetail(sessionDetail).build();
+      if (getSessionResponseFieldMask != null) {
+        getSessionResponse = FieldMaskUtil.trim(getSessionResponseFieldMask, getSessionResponse);
+      }
+      SubscribeSessionResponse subscribeSessionResponse =
+          SubscribeSessionResponse.newBuilder().setGetSessionResponse(getSessionResponse).build();
+
+      // Sends SubscribeSessionResponse.
+      responseObserver.onNext(subscribeSessionResponse);
+      logger.atInfo().log(
+          "Session subscriber [%s] sent SubscribeSessionResponse [%s]",
+          subscriberId, shortDebugString(subscribeSessionResponse));
+
+      // Closes the stream if it is the last SessionDetail.
+      if (finalSessionDetail) {
+        responseObserver.onCompleted();
+        logger.atInfo().log(
+            "Session subscriber [%s] has sent the last SessionDetail", subscriberId);
+      }
+    }
+
+    private class SubscribeSessionRequestObserver
+        implements StreamObserver<SubscribeSessionRequest> {
+
+      @Override
+      public void onNext(SubscribeSessionRequest request) {
+        start(request);
+      }
+
+      @Override
+      public void onError(Throwable error) {
+        logger.atWarning().withCause(error).log(
+            "Received an error from request stream of session subscriber [%s]", subscriberId);
+        end();
+      }
+
+      @Override
+      public void onCompleted() {
+        end();
+      }
+    }
+  }
+
+  /** All {@link SessionSubscriber}s of a session. */
+  static class SessionSubscribers {
+
+    private final Runnable sessionDetailListener = new SessionDetailListener();
+    private final Set<SessionSubscriber> subscribers = ConcurrentHashMap.newKeySet();
+    private volatile Function<FieldMask, SessionDetail> sessionDetailSupplier;
+
+    /** Returns a listener which should be invoked when the {@link SessionDetail} is modified. */
+    private Runnable getSessionDetailListener() {
+      return sessionDetailListener;
+    }
+
+    private void addSubscriber(SessionSubscriber subscriber) {
+      subscribers.add(subscriber);
+    }
+
+    private void removeSubscriber(SessionSubscriber subscriber) {
+      subscribers.remove(subscriber);
+    }
+
+    private void setSessionDetailSupplier(
+        Function<FieldMask, SessionDetail> sessionDetailSupplier) {
+      this.sessionDetailSupplier = sessionDetailSupplier;
+    }
+
+    private void receiveSessionDetail(boolean finalSessionDetail) {
+      Function<FieldMask, SessionDetail> sessionDetailSupplier =
+          SessionSubscribers.this.sessionDetailSupplier;
+      for (SessionSubscriber subscriber : subscribers) {
+        subscriber.receiveSessionDetail(sessionDetailSupplier, finalSessionDetail);
+      }
+    }
+
+    private class SessionDetailListener implements Runnable {
+
+      @Override
+      public void run() {
+        receiveSessionDetail(/* finalSessionDetail= */ false);
+      }
+    }
+  }
+
+  public static Optional<FieldMask> getSessionDetailFieldMask(GetSessionRequest request) {
+    return Optional.ofNullable(request.hasFieldMask() ? request.getFieldMask() : null)
+        .flatMap(
+            getSessionResponseFieldMask ->
+                FieldMaskUtils.subFieldMask(
+                    getSessionResponseFieldMask,
+                    GetSessionResponse.getDescriptor()
+                        .findFieldByNumber(GetSessionResponse.SESSION_DETAIL_FIELD_NUMBER)));
   }
 }

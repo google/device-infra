@@ -34,8 +34,10 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.UnaryOperator;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -71,16 +73,19 @@ public class SessionDetailHolder {
   @GuardedBy("sessionDetailLock")
   private final Map<String, SessionPluginOutput> sessionPluginOutputs = new HashMap<>();
 
+  private final Runnable sessionDetailListener;
+
   /**
    * Constructor with an initial {@link SessionDetail}. {@link
    * SessionOutput#getSessionPropertyMap()} will be copied from {@link
    * SessionConfig#getSessionPropertyMap()}.
    */
-  public SessionDetailHolder(SessionDetail sessionDetail) {
+  public SessionDetailHolder(SessionDetail sessionDetail, Runnable sessionDetailListener) {
     this.jobs = new ArrayList<>();
     this.sessionDetailBuilder = sessionDetail.toBuilder();
     this.sessionProperties =
         new HashMap<>(sessionDetail.getSessionConfig().getSessionPropertyMap());
+    this.sessionDetailListener = sessionDetailListener;
   }
 
   public void addJob(JobInfo jobInfo) {
@@ -167,24 +172,38 @@ public class SessionDetailHolder {
   }
 
   public Optional<String> putSessionProperty(String key, String value) {
+    String previousValue;
     synchronized (sessionDetailLock) {
-      return Optional.ofNullable(sessionProperties.put(key, value));
+      previousValue = sessionProperties.put(key, value);
     }
+    if (!Objects.equals(value, previousValue)) {
+      sessionDetailListener.run();
+    }
+    return Optional.ofNullable(previousValue);
   }
 
   public void addSessionPluginError(SessionPluginError sessionPluginError) {
     synchronized (sessionDetailLock) {
       sessionPluginErrors.add(sessionPluginError);
     }
+    sessionDetailListener.run();
   }
 
   public void setSessionPluginOutput(
       SessionPluginLabel sessionPluginLabel,
       UnaryOperator<SessionPluginOutput> outputComputingFunction) {
+    AtomicBoolean updated = new AtomicBoolean();
     synchronized (sessionDetailLock) {
       sessionPluginOutputs.compute(
           sessionPluginLabel.getLabel(),
-          (key, oldValue) -> outputComputingFunction.apply(oldValue));
+          (key, oldValue) -> {
+            SessionPluginOutput newValue = outputComputingFunction.apply(oldValue);
+            updated.set(!Objects.equals(oldValue, newValue));
+            return newValue;
+          });
+    }
+    if (updated.get()) {
+      sessionDetailListener.run();
     }
   }
 

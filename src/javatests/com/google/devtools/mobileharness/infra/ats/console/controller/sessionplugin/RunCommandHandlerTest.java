@@ -21,7 +21,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
@@ -29,11 +31,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Compati
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.Guice;
@@ -46,7 +44,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.io.File;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -69,12 +66,12 @@ public final class RunCommandHandlerTest {
 
   // For tradefed job
   private static final Path JOB_1_GEN_DIR =
-      Paths.get(
+      Path.of(
           RunfilesUtil.getRunfilesLocation(
               "javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin/testdata/runcommand/resultprocessing/job-1_gen/"));
   // For non-tradefed job
   private static final Path JOB_2_GEN_DIR =
-      Paths.get(
+      Path.of(
           RunfilesUtil.getRunfilesLocation(
               "javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin/testdata/runcommand/resultprocessing/job-2_gen/"));
 
@@ -85,6 +82,8 @@ public final class RunCommandHandlerTest {
   @Bind @Mock private CompatibilityReportMerger compatibilityReportMerger;
   @Bind @Mock private CompatibilityReportParser compatibilityReportParser;
   @Bind @Mock private CompatibilityReportCreator reportCreator;
+
+  @Mock private SessionInfo sessionInfo;
 
   @Inject private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -146,13 +145,8 @@ public final class RunCommandHandlerTest {
         .add(SessionRequestHandlerUtil.XTS_MODULE_NAME_PROP, "mobly_test_module_name");
     nonTradefedJobInfo.tests().add("2", "test_name");
 
-    SessionInfo sessionInfo =
-        new SessionInfo(
-            new SessionDetailHolder(SessionDetail.getDefaultInstance()),
-            SessionPluginLabel.getDefaultInstance(),
-            SessionPluginExecutionConfig.getDefaultInstance());
-    sessionInfo.addJob(tradefedJobInfo);
-    sessionInfo.addJob(nonTradefedJobInfo);
+    when(sessionInfo.getAllJobs())
+        .thenReturn(ImmutableList.of(tradefedJobInfo, nonTradefedJobInfo));
 
     runCommandHandler.handleResultProcessing(command, sessionInfo);
 

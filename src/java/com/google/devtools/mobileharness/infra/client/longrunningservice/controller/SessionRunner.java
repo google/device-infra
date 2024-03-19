@@ -38,7 +38,7 @@ public class SessionRunner implements Callable<Void> {
   /** Factory for creating {@link SessionRunner}. */
   public interface Factory {
 
-    SessionRunner create(SessionDetail sessionDetail);
+    SessionRunner create(SessionDetail sessionDetail, Runnable sessionDetailListener);
   }
 
   private final SessionDetailHolder sessionDetailHolder;
@@ -50,11 +50,12 @@ public class SessionRunner implements Callable<Void> {
   @Inject
   SessionRunner(
       @Assisted SessionDetail sessionDetail,
+      @Assisted Runnable sessionDetailListener,
       SessionJobCreator sessionJobCreator,
       SessionJobRunner sessionJobRunner,
       SessionPluginLoader sessionPluginLoader,
       SessionPluginRunner sessionPluginRunner) {
-    this.sessionDetailHolder = new SessionDetailHolder(sessionDetail);
+    this.sessionDetailHolder = new SessionDetailHolder(sessionDetail, sessionDetailListener);
     this.sessionJobCreator = sessionJobCreator;
     this.sessionJobRunner = sessionJobRunner;
     this.sessionPluginLoader = sessionPluginLoader;

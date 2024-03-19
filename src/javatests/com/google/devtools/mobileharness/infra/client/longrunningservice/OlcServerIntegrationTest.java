@@ -22,12 +22,14 @@ import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static com.google.devtools.mobileharness.shared.util.command.LineCallback.does;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
-import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
@@ -53,6 +55,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
@@ -75,13 +79,11 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Any;
-import com.google.protobuf.FieldMask;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -530,23 +532,47 @@ public class OlcServerIntegrationTest {
 
   private static GetSessionResponse waitUntilSessionFinish(
       SessionStub sessionStub, SessionId sessionId, Duration timeout)
-      throws GrpcExceptionWithErrorId, InterruptedException {
-    GetSessionResponse getSessionResponse;
-    Instant startTime = Instant.now();
-    do {
-      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1L));
-      getSessionResponse =
-          sessionStub.getSession(
-              GetSessionRequest.newBuilder()
-                  .setSessionId(sessionId)
-                  .setFieldMask(FieldMask.newBuilder().addPaths("session_detail.session_status"))
-                  .build());
-    } while (!getSessionResponse
-            .getSessionDetail()
-            .getSessionStatus()
-            .equals(SessionStatus.SESSION_FINISHED)
-        && Instant.now().isBefore(startTime.plus(timeout)));
-    return sessionStub.getSession(GetSessionRequest.newBuilder().setSessionId(sessionId).build());
+      throws ExecutionException, TimeoutException, InterruptedException {
+    SubscribeSessionResponseObserver subscribeSessionResponseObserver =
+        new SubscribeSessionResponseObserver();
+    StreamObserver<SubscribeSessionRequest> subscribeSessionRequestObserver =
+        sessionStub.subscribeSession(subscribeSessionResponseObserver);
+    subscribeSessionRequestObserver.onNext(
+        SubscribeSessionRequest.newBuilder()
+            .setGetSessionRequest(GetSessionRequest.newBuilder().setSessionId(sessionId))
+            .build());
+    ListenableFuture<GetSessionResponse> resultFuture =
+        subscribeSessionResponseObserver.getResultFuture();
+    return resultFuture.get(timeout.toMillis(), MILLISECONDS);
+  }
+
+  private static class SubscribeSessionResponseObserver
+      implements StreamObserver<SubscribeSessionResponse> {
+
+    private final SettableFuture<GetSessionResponse> resultFuture = SettableFuture.create();
+
+    private ListenableFuture<GetSessionResponse> getResultFuture() {
+      return resultFuture;
+    }
+
+    @Override
+    public void onNext(SubscribeSessionResponse value) {
+      if (value.getGetSessionResponse().getSessionDetail().getSessionStatus()
+          == SessionStatus.SESSION_FINISHED) {
+        resultFuture.set(value.getGetSessionResponse());
+      }
+    }
+
+    @Override
+    public void onError(Throwable t) {
+      resultFuture.setException(t);
+    }
+
+    @Override
+    public void onCompleted() {
+      resultFuture.setException(
+          new IllegalStateException("Session subscriber closed without a finished session"));
+    }
   }
 
   private static CreateSessionRequest createCreateSessionRequest(
