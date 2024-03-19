@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.infra.controller.test;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static java.util.stream.Collectors.toCollection;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -31,8 +30,10 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.model.proto.Test;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
 import com.google.devtools.mobileharness.infra.controller.test.TestContext.WithTestContext;
 import com.google.devtools.mobileharness.infra.controller.test.exception.TestRunnerLauncherConnectedException;
@@ -73,7 +74,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceInfoUtil;
 import java.time.Clock;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -120,7 +120,10 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
   private volatile ImmutableList<DeviceFeature> deviceFeatures;
 
   /** Set by {@link #updateDeviceStatus}. */
-  private volatile List<DeviceInfo> deviceInfos;
+  private volatile ImmutableList<DeviceInfo> deviceInfos;
+
+  /** Set by {@link #updateDeviceStatus}. */
+  private volatile ImmutableList<LabQueryProto.DeviceInfo> newDeviceInfos;
 
   /**
    * Plugins items loaded when the test runner is initialized (passed from outside) rather than
@@ -484,7 +487,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
    * scenarios:
    *
    * <ul>
-   *   <li>After initialization
+   *   <li>After initialization (after checkDevice(), before preRunTest()).
    *   <li>When test is finished running for local test runner.
    *   <li>When there are deviceFeatures in test status for remote test runner.
    * </ul>
@@ -504,22 +507,31 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
         testInfo.locator().getName(), allocation.getAllDeviceLocators());
 
     this.deviceFeatures = ImmutableList.copyOf(deviceFeatures);
-    this.deviceInfos =
+    this.newDeviceInfos =
         Streams.zip(
                 allocation.getAllDeviceLocators().stream(),
                 deviceFeatures.stream(),
                 (deviceLocator, deviceFeature) ->
+                    LabQueryProto.DeviceInfo.newBuilder()
+                        .setDeviceLocator(deviceLocator.toNewDeviceLocator().toProto())
+                        .setDeviceStatus(DeviceStatus.BUSY)
+                        .setDeviceFeature(deviceFeature)
+                        .build())
+            .collect(toImmutableList());
+    this.deviceInfos =
+        newDeviceInfos.stream()
+            .map(
+                newDeviceInfo ->
                     DeviceInfoUtil.getDeviceInfoForCurrentTest(
-                        deviceLocator.getSerial(), deviceFeature, testInfo))
-            .collect(toCollection(ArrayList::new));
-
+                        newDeviceInfo.getDeviceLocator().getId(),
+                        newDeviceInfo.getDeviceFeature(),
+                        testInfo))
+            .collect(toImmutableList());
     this.allocation =
         new Allocation(
             allocation.getTest(),
             allocation.getAllDeviceLocators(),
-            deviceInfos.stream()
-                .map(DeviceInfoUtil::getDimensions)
-                .collect(toCollection(ArrayList::new)));
+            deviceInfos.stream().map(DeviceInfoUtil::getDimensions).collect(toImmutableList()));
   }
 
   /** Returns the name of the component in which the test runner runs. */
@@ -551,6 +563,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
       boolean isTestSkipped,
       TestInfo testInfo,
       Allocation allocation,
+      ImmutableList<LabQueryProto.DeviceInfo> newDeviceInfos,
       List<DeviceFeature> deviceFeatures)
       throws MobileHarnessException, InterruptedException;
 
@@ -606,12 +619,19 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
                 testInfo,
                 allocation,
                 deviceInfos,
+                newDeviceInfos,
                 deviceFeatures,
                 null),
             createTestEvent(
-                TestStartingEvent.class, testInfo, allocation, deviceInfos, deviceFeatures, null));
+                TestStartingEvent.class,
+                testInfo,
+                allocation,
+                deviceInfos,
+                newDeviceInfos,
+                deviceFeatures,
+                null));
 
-    preRunTest(isTestSkipped, testInfo, allocation, deviceFeatures);
+    preRunTest(isTestSkipped, testInfo, allocation, newDeviceInfos, deviceFeatures);
     testMessagePoster.asyncDisableAndHandleCache();
 
     testInfo.log().atInfo().alsoTo(logger).log("Post TestStartedEvent to test %s", testLocator);
@@ -631,14 +651,27 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             /* eventType= */ "test started event",
             /* afterDriverExecution= */ false,
             createTestEvent(
-                TestStartEvent.class, testInfo, allocation, deviceInfos, deviceFeatures, null),
+                TestStartEvent.class,
+                testInfo,
+                allocation,
+                deviceInfos,
+                newDeviceInfos,
+                deviceFeatures,
+                null),
             createTestEvent(
-                TestStartedEvent.class, testInfo, allocation, deviceInfos, deviceFeatures, null),
+                TestStartedEvent.class,
+                testInfo,
+                allocation,
+                deviceInfos,
+                newDeviceInfos,
+                deviceFeatures,
+                null),
             createTestEvent(
                 com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class,
                 testInfo,
                 allocation,
                 deviceInfos,
+                newDeviceInfos,
                 deviceFeatures,
                 null));
     return isTestSkipped;
@@ -682,6 +715,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             testInfo,
             allocation,
             deviceInfos,
+            newDeviceInfos,
             deviceFeatures,
             testException),
         createTestEvent(
@@ -689,6 +723,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
             testInfo,
             allocation,
             deviceInfos,
+            newDeviceInfos,
             deviceFeatures,
             testException));
     // Marks the test as finished.
@@ -751,6 +786,7 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
               testInfo,
               allocation,
               deviceInfos,
+              newDeviceInfos,
               deviceFeatures,
               testException));
       logger.atInfo().log("Stopped");
@@ -768,16 +804,13 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     return testMessagePoster;
   }
 
-  /**
-   * Creates test events.
-   *
-   * <p>TODO: Supports multiple devices in test events.
-   */
+  /** Creates test events. */
   protected Object createTestEvent(
       Class<?> eventType,
       TestInfo testInfo,
       Allocation allocation,
       @Nullable List<DeviceInfo> deviceInfos,
+      @Nullable List<LabQueryProto.DeviceInfo> newDeviceInfos,
       @Nullable List<DeviceFeature> deviceFeatures,
       @Nullable Throwable testError) {
     if (eventType == TestStartingEvent.class) {
@@ -785,10 +818,17 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     } else if (eventType
         == com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent.class) {
       DeviceFeature primaryDeviceFeature = checkNotNull(deviceFeatures).get(0);
+      ImmutableList<LabQueryProto.DeviceInfo> finalNewDeviceInfos =
+          ImmutableList.copyOf(checkNotNull(newDeviceInfos));
       return new com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent() {
         @Override
         public DeviceFeature getDeviceFeature() {
           return primaryDeviceFeature;
+        }
+
+        @Override
+        public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
+          return finalNewDeviceInfos;
         }
 
         @Override
@@ -808,10 +848,17 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
     } else if (eventType
         == com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class) {
       DeviceFeature primaryDeviceFeature = checkNotNull(deviceFeatures).get(0);
+      ImmutableList<LabQueryProto.DeviceInfo> finalNewDeviceInfos =
+          ImmutableList.copyOf(checkNotNull(newDeviceInfos));
       return new com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent() {
         @Override
         public DeviceFeature getDeviceFeature() {
           return primaryDeviceFeature;
+        }
+
+        @Override
+        public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
+          return finalNewDeviceInfos;
         }
 
         @Override

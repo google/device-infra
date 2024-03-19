@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.util.LabRpcProtoConverter;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.ContainerModePreference;
 import com.google.devtools.mobileharness.infra.container.proto.ModeSettingProto.SandboxModePreference;
@@ -318,6 +319,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       boolean isTestSkipped,
       TestInfo testInfo,
       Allocation allocation,
+      ImmutableList<LabQueryProto.DeviceInfo> newDeviceInfos,
       List<DeviceFeature> deviceFeatures)
       throws MobileHarnessException, InterruptedException {
     String testId = testInfo.locator().getId();

@@ -31,12 +31,15 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.collect.Streams;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.infra.controller.plugin.CommonPluginCreatorFactory;
 import com.google.devtools.mobileharness.infra.controller.plugin.PluginCreator;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
@@ -331,6 +334,7 @@ public class LocalTestFlow {
       List<Device> devices,
       Allocation allocation,
       @Nullable List<DeviceInfo> deviceInfos,
+      @Nullable List<LabQueryProto.DeviceInfo> newDeviceInfos,
       @Nullable List<DeviceFeature> deviceFeatures,
       @Nullable Throwable testError) {
     ImmutableMap<String, Device> devicesById =
@@ -341,10 +345,17 @@ public class LocalTestFlow {
     } else if (eventType
         == com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent.class) {
       DeviceFeature primaryDeviceFeature = checkNotNull(deviceFeatures).get(0);
+      ImmutableList<LabQueryProto.DeviceInfo> finalNewDeviceInfos =
+          ImmutableList.copyOf(checkNotNull(newDeviceInfos));
       return new com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent() {
         @Override
         public DeviceFeature getDeviceFeature() {
           return primaryDeviceFeature;
+        }
+
+        @Override
+        public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
+          return finalNewDeviceInfos;
         }
 
         @Override
@@ -366,10 +377,17 @@ public class LocalTestFlow {
     } else if (eventType
         == com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent.class) {
       DeviceFeature primaryDeviceFeature = checkNotNull(deviceFeatures).get(0);
+      ImmutableList<LabQueryProto.DeviceInfo> finalNewDeviceInfos =
+          ImmutableList.copyOf(checkNotNull(newDeviceInfos));
       return new com.google.devtools.mobileharness.api.testrunner.event.test.TestStartedEvent() {
         @Override
         public DeviceFeature getDeviceFeature() {
           return primaryDeviceFeature;
+        }
+
+        @Override
+        public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
+          return finalNewDeviceInfos;
         }
 
         @Override
@@ -402,7 +420,21 @@ public class LocalTestFlow {
         || eventType
             == com.google.devtools.mobileharness.api.testrunner.event.test.LocalTestEndingEvent
                 .class) {
-      DeviceFeature primaryDeviceFeature = deviceFeatures == null ? null : deviceFeatures.get(0);
+      DeviceFeature primaryDeviceFeature =
+          deviceFeatures == null ? devices.get(0).toFeature() : deviceFeatures.get(0);
+      ImmutableList<LabQueryProto.DeviceInfo> finalNewDeviceInfos =
+          newDeviceInfos == null
+              ? Streams.zip(
+                      devices.stream(),
+                      allocation.getAllDeviceLocators().stream(),
+                      (device, deviceLocator) ->
+                          LabQueryProto.DeviceInfo.newBuilder()
+                              .setDeviceLocator(deviceLocator.toNewDeviceLocator().toProto())
+                              .setDeviceStatus(DeviceStatus.BUSY)
+                              .setDeviceFeature(device.toFeature())
+                              .build())
+                  .collect(toImmutableList())
+              : ImmutableList.copyOf(newDeviceInfos);
       return new com.google.devtools.mobileharness.api.testrunner.event.test
           .LocalTestEndingEvent() {
 
@@ -419,6 +451,11 @@ public class LocalTestFlow {
         @Override
         public DeviceFeature getDeviceFeature() {
           return primaryDeviceFeature;
+        }
+
+        @Override
+        public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
+          return finalNewDeviceInfos;
         }
 
         @Override

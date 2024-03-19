@@ -48,6 +48,7 @@ java_library(
         ":lab_server_locator",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:mode_setting_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:sandbox_setting_java_proto",
         "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",

@@ -25,6 +25,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDecoratorPostForwardEvent;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDecoratorPreForwardEvent;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverEndedEvent;
@@ -150,6 +151,7 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
       boolean isTestSkipped,
       TestInfo testInfo,
       Allocation allocation,
+      ImmutableList<LabQueryProto.DeviceInfo> newDeviceInfos,
       List<DeviceFeature> deviceFeatures)
       throws MobileHarnessException, InterruptedException {
     if (isTestSkipped) {
@@ -162,13 +164,13 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
             devices,
             testInfo,
             allocation.toNewAllocation(),
-            // TODO: Supports multiple devices for driver event.
             (driver, driverName) ->
                 new DriverEventGenerator(
                     driver,
                     driverName,
                     testInfo,
                     allocation,
+                    newDeviceInfos,
                     deviceFeatures.get(0),
                     devices.get(0)),
             (decorated, decoratorClass) ->
@@ -176,6 +178,7 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
                     decorated,
                     testInfo,
                     allocation,
+                    newDeviceInfos,
                     deviceFeatures.get(0),
                     devices.get(0),
                     decoratorClass));
@@ -209,10 +212,18 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
       TestInfo testInfo,
       Allocation allocation,
       @Nullable List<DeviceInfo> deviceInfos,
+      @Nullable List<LabQueryProto.DeviceInfo> newDeviceInfos,
       @Nullable List<DeviceFeature> deviceFeatures,
       @Nullable Throwable testError) {
     return testFlow.createLocalTestEvent(
-        eventType, testInfo, devices, allocation, deviceInfos, deviceFeatures, testError);
+        eventType,
+        testInfo,
+        devices,
+        allocation,
+        deviceInfos,
+        newDeviceInfos,
+        deviceFeatures,
+        testError);
   }
 
   /**
@@ -227,6 +238,7 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
 
     private final TestInfo testInfo;
     private final com.google.devtools.mobileharness.api.model.allocation.Allocation allocation;
+    private final ImmutableList<LabQueryProto.DeviceInfo> newDeviceInfos;
     private final DeviceFeature deviceFeature;
     private final Device device;
     private final String decoratedDriverName;
@@ -236,11 +248,13 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
         String decoratedDriverName,
         TestInfo testInfo,
         Allocation allocation,
+        ImmutableList<LabQueryProto.DeviceInfo> newDeviceInfos,
         DeviceFeature deviceFeature,
         Device device) {
       super(decorated, testInfo);
       this.testInfo = testInfo;
       this.allocation = allocation.toNewAllocation();
+      this.newDeviceInfos = newDeviceInfos;
       this.deviceFeature = deviceFeature;
       this.device = device;
       this.decoratedDriverName = decoratedDriverName;
@@ -294,6 +308,11 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
             }
 
             @Override
+            public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
+              return newDeviceInfos;
+            }
+
+            @Override
             public Device getDevice() {
               return device;
             }
@@ -337,6 +356,11 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
             }
 
             @Override
+            public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
+              return newDeviceInfos;
+            }
+
+            @Override
             public Device getDevice() {
               return device;
             }
@@ -371,6 +395,7 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
 
     private final TestInfo testInfo;
     private final com.google.devtools.mobileharness.api.model.allocation.Allocation allocation;
+    private final ImmutableList<LabQueryProto.DeviceInfo> newDeviceInfos;
     private final DeviceFeature deviceFeature;
     private final Device device;
     private final Class<? extends Decorator> decoratorClass;
@@ -379,12 +404,14 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
         Driver decorated,
         TestInfo testInfo,
         Allocation allocation,
+        ImmutableList<LabQueryProto.DeviceInfo> newDeviceInfos,
         DeviceFeature deviceFeature,
         Device device,
         Class<? extends Decorator> decoratorClass) {
       super(decorated, testInfo);
       this.testInfo = testInfo;
       this.allocation = allocation.toNewAllocation();
+      this.newDeviceInfos = newDeviceInfos;
       this.deviceFeature = deviceFeature;
       this.device = device;
       this.decoratorClass = decoratorClass;
@@ -433,6 +460,11 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
             }
 
             @Override
+            public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
+              return newDeviceInfos;
+            }
+
+            @Override
             public Device getDevice() {
               return device;
             }
@@ -474,6 +506,11 @@ public class LocalTestRunner extends BaseTestRunner<LocalTestRunner> {
             @Override
             public DeviceFeature getDeviceFeature() {
               return deviceFeature;
+            }
+
+            @Override
+            public ImmutableList<LabQueryProto.DeviceInfo> getAllDeviceInfos() {
+              return newDeviceInfos;
             }
 
             @Override

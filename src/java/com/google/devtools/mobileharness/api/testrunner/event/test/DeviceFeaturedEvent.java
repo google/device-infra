@@ -16,10 +16,19 @@
 
 package com.google.devtools.mobileharness.api.testrunner.event.test;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
+import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 
-/** Event which contains the feature information of the device of a test. */
+/** Event which contains the feature information of the devices of a test. */
 interface DeviceFeaturedEvent {
 
   DeviceFeature getDeviceFeature();
+
+  /**
+   * Gets {@link DeviceInfo} of all devices of the test.
+   *
+   * @since MH client 4.31.0 and MH lab 4.268.0
+   */
+  ImmutableList<DeviceInfo> getAllDeviceInfos();
 }
