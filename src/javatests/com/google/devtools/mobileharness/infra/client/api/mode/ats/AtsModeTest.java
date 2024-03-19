@@ -273,8 +273,7 @@ public class AtsModeTest {
                                                     LabQueryProto.DeviceInfo.newBuilder()
                                                         .setDeviceLocator(
                                                             Device.DeviceLocator.newBuilder()
-                                                                .setId("fake_uuid"))
-                                                        .setDeviceUuid("fake_uuid"))))))
+                                                                .setId("fake_uuid")))))))
                 .build());
   }
 }

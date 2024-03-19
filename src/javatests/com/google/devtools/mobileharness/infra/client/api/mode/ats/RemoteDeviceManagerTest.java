@@ -146,7 +146,6 @@ public class RemoteDeviceManagerTest {
                           .setHostName("fake_lab_host_name")
                           .addPort(
                               LabPort.newBuilder().setType(PortType.LAB_SERVER_HTTP).setNum(1234))))
-          .setDeviceUuid("fake_uuid")
           .setDeviceStatus(DeviceStatus.IDLE)
           .setDeviceFeature(
               DeviceFeature.newBuilder()

@@ -92,8 +92,7 @@ public class LabInfoServiceTest {
   private static final DeviceInfo DEVICE_INFO_1 =
       DeviceInfo.newBuilder()
           .setDeviceLocator(
-              DeviceLocator.newBuilder().setId("fake_control_id_1").setLabLocator(LAB_LOCATOR))
-          .setDeviceUuid("fake_uuid_1")
+              DeviceLocator.newBuilder().setId("fake_uuid_1").setLabLocator(LAB_LOCATOR))
           .setDeviceStatus(DeviceStatus.BUSY)
           .setDeviceFeature(
               DeviceFeature.newBuilder()
@@ -115,8 +114,7 @@ public class LabInfoServiceTest {
   private static final DeviceInfo DEVICE_INFO_2 =
       DeviceInfo.newBuilder()
           .setDeviceLocator(
-              DeviceLocator.newBuilder().setId("fake_control_id_2").setLabLocator(LAB_LOCATOR))
-          .setDeviceUuid("fake_uuid_2")
+              DeviceLocator.newBuilder().setId("fake_uuid_2").setLabLocator(LAB_LOCATOR))
           .setDeviceStatus(DeviceStatus.IDLE)
           .setDeviceFeature(
               DeviceFeature.newBuilder()

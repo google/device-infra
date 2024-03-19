@@ -737,7 +737,6 @@ class RemoteDeviceManager {
     private LabQueryProto.DeviceInfo toLabQueryDeviceInfo() {
       return LabQueryProto.DeviceInfo.newBuilder()
           .setDeviceLocator(dataFromLab.locator().toProto())
-          .setDeviceUuid(deviceKey.deviceUuid())
           .setDeviceStatus(statusFromLab)
           .setDeviceFeature(dataFromLab.toFeature())
           .build();

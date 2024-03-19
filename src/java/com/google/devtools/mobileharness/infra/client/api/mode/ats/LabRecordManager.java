@@ -304,7 +304,6 @@ class LabRecordManager {
           .setDeviceInfo(
               LabQueryProto.DeviceInfo.newBuilder()
                   .setDeviceLocator(deviceLocator().toProto())
-                  .setDeviceUuid(deviceUuid())
                   .setDeviceStatus(deviceStatus())
                   .setDeviceFeature(deviceScheduleUnit().toFeature()))
           .build();

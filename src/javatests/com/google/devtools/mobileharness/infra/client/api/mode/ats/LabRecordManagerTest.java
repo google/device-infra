@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.DeviceRe
 import com.google.devtools.mobileharness.api.query.proto.LabRecordProto.LabRecord;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.DeviceRecordData;
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.LabRecordManager.LabRecordData;
+import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -206,7 +207,7 @@ public final class LabRecordManagerTest {
                 .build(),
             LabRecord.newBuilder()
                 .setLabInfo(labInfo1.toBuilder().setLabStatus(LabStatus.LAB_MISSING).build())
-                .setTimestamp(Timestamp.newBuilder().setSeconds(660).build())
+                .setTimestamp(TimeUtils.toProtoTimestamp(Instant.ofEpochSecond(660L)))
                 .build());
   }
 
@@ -216,10 +217,9 @@ public final class LabRecordManagerTest {
 
     DeviceInfo deviceInfo1 =
         DeviceInfo.newBuilder()
-            .setDeviceUuid("device_uuid")
             .setDeviceLocator(
                 DeviceLocator.newBuilder()
-                    .setId("device_id")
+                    .setId("device_uuid")
                     .setLabLocator(LabLocator.getDefaultInstance())
                     .build())
             .setDeviceStatus(DeviceStatus.BUSY)
@@ -234,7 +234,7 @@ public final class LabRecordManagerTest {
             Instant.ofEpochMilli(1),
             com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
                 deviceInfo1.getDeviceLocator()),
-            deviceInfo1.getDeviceUuid(),
+            deviceInfo1.getDeviceLocator().getId(),
             new DeviceScheduleUnit(
                     com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
                         deviceInfo1.getDeviceLocator()))
@@ -249,10 +249,9 @@ public final class LabRecordManagerTest {
 
     DeviceInfo deviceInfo2 =
         DeviceInfo.newBuilder()
-            .setDeviceUuid("device_uuid")
             .setDeviceLocator(
                 DeviceLocator.newBuilder()
-                    .setId("device_id")
+                    .setId("device_uuid")
                     .setLabLocator(LabLocator.getDefaultInstance())
                     .build())
             .setDeviceStatus(DeviceStatus.IDLE)
@@ -267,7 +266,7 @@ public final class LabRecordManagerTest {
             Instant.ofEpochMilli(2),
             com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
                 deviceInfo2.getDeviceLocator()),
-            deviceInfo2.getDeviceUuid(),
+            deviceInfo2.getDeviceLocator().getId(),
             new DeviceScheduleUnit(
                     com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
                         deviceInfo2.getDeviceLocator()))
@@ -289,10 +288,9 @@ public final class LabRecordManagerTest {
   public void addDeviceRecordWhenBecomeMissing() {
     DeviceInfo deviceInfo1 =
         DeviceInfo.newBuilder()
-            .setDeviceUuid("device_uuid")
             .setDeviceLocator(
                 DeviceLocator.newBuilder()
-                    .setId("device_id")
+                    .setId("device_uuid")
                     .setLabLocator(LabLocator.getDefaultInstance())
                     .build())
             .setDeviceStatus(DeviceStatus.BUSY)
@@ -308,7 +306,7 @@ public final class LabRecordManagerTest {
             Instant.ofEpochMilli(1),
             com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
                 deviceInfo1.getDeviceLocator()),
-            deviceInfo1.getDeviceUuid(),
+            deviceInfo1.getDeviceLocator().getId(),
             new DeviceScheduleUnit(
                     com.google.devtools.mobileharness.api.model.lab.DeviceLocator.of(
                         deviceInfo1.getDeviceLocator()))
@@ -326,10 +324,9 @@ public final class LabRecordManagerTest {
 
     DeviceInfo deviceInfo2 =
         DeviceInfo.newBuilder()
-            .setDeviceUuid("device_uuid")
             .setDeviceLocator(
                 DeviceLocator.newBuilder()
-                    .setId("device_id")
+                    .setId("device_uuid")
                     .setLabLocator(LabLocator.getDefaultInstance())
                     .build())
             .setDeviceStatus(DeviceStatus.MISSING)
@@ -346,7 +343,7 @@ public final class LabRecordManagerTest {
                 .build(),
             DeviceRecord.newBuilder()
                 .setDeviceInfo(deviceInfo2)
-                .setTimestamp(Timestamp.newBuilder().setSeconds(660).build())
+                .setTimestamp(TimeUtils.toProtoTimestamp(Instant.ofEpochSecond(660L)))
                 .build());
   }
 }

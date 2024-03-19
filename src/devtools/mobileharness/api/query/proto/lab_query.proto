@@ -299,8 +299,7 @@ message DeviceInfo {
   // Optional.
   mobileharness.api.model.DeviceLocator device_locator = 1;
 
-  // Optional.
-  string device_uuid = 2;
+  reserved 2;
 
   // Optional.
   mobileharness.api.model.DeviceStatus device_status = 3;

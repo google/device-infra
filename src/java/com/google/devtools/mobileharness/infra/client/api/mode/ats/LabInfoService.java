@@ -418,14 +418,11 @@ class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
                 dimensionValues.stream()
                     .flatMap(
                         dimensionValue ->
-                            Optional.ofNullable(
-                                deviceGroupsByDimensionValue.get(Optional.of(dimensionValue)))
-                                .stream()),
+                            Stream.ofNullable(
+                                deviceGroupsByDimensionValue.get(Optional.of(dimensionValue)))),
                 // If the device doesn't have the dimension, adds it to the "no dimension" group.
                 dimensionValues.isEmpty()
-                    ? Optional.ofNullable(
-                        deviceGroupsByDimensionValue.get(Optional.<String>empty()))
-                        .stream()
+                    ? Stream.ofNullable(deviceGroupsByDimensionValue.get(Optional.<String>empty()))
                     : Stream.empty())
             .forEach(
                 deviceGroupBuilder ->
@@ -565,7 +562,7 @@ class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
   private static class DeviceInfoComparator implements Comparator<DeviceInfo> {
 
     private static final Comparator<DeviceInfo> UUID_COMPARATOR =
-        comparing(DeviceInfo::getDeviceUuid);
+        comparing(deviceInfo -> deviceInfo.getDeviceLocator().getId());
 
     @SuppressWarnings({"FieldCanBeLocal", "unused"})
     private final DeviceOrder deviceOrder;
