@@ -49,8 +49,8 @@ java_library(
     name = "lab_info",
     srcs = ["LabInfoGrpcStub.java"],
     deps = [
-        "//src/devtools/mobileharness/infra/master/rpc/proto:lab_info_service_java_grpc_proto",
-        "//src/devtools/mobileharness/infra/master/rpc/proto:lab_info_service_java_proto",
+        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_grpc_proto",
+        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

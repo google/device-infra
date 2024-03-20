@@ -17,8 +17,8 @@
 package com.google.devtools.mobileharness.infra.master.rpc.stub;
 
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
-import com.google.devtools.mobileharness.infra.master.rpc.proto.LabInfoServiceProto.GetLabInfoRequest;
-import com.google.devtools.mobileharness.infra.master.rpc.proto.LabInfoServiceProto.GetLabInfoResponse;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
+import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 
 /** Stub of LabInfoService. */
 public interface LabInfoStub {
