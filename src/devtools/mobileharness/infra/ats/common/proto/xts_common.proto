@@ -24,4 +24,5 @@ option java_outer_classname = "XtsCommonProto";
 enum XtsType {
   XTS_TYPE_UNSPECIFIED = 0;
   CTS = 1;
+  GTS = 2;
 }
