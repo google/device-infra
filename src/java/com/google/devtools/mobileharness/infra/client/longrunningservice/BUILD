@@ -32,9 +32,8 @@ java_library(
     name = "olc_server",
     srcs = ["OlcServer.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
     deps = [

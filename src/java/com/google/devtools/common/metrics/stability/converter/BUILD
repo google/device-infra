@@ -15,7 +15,7 @@
 
 DEFAULT_VISIBILITY = [
     #  DO NOT public all libs to user projects.
-    "//:deviceinfra_metrics_pkg",
+    "//:deviceinfra_all_pkg",
 ]
 
 package(
@@ -29,7 +29,7 @@ java_library(
         "DeserializedException.java",
     ],
     visibility = [
-        "//:deviceinfra_metrics_pkg",
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
         ":internal",
@@ -44,8 +44,7 @@ java_library(
         "ErrorModelConverter.java",
     ],
     visibility = [
-        "//:deviceinfra_metrics_pkg",
-        "//:deviceinfra_pkg",
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
         "deserialized_exception",

@@ -48,16 +48,6 @@ package_group(
 )
 
 package_group(
-    name = "deviceinfra_metrics_pkg",
-    packages = [
-        "//src/java/com/google/devtools/common/metrics/stability/...",
-        "//src/java/com/google/devtools/mobileharness/api/model/job/...",
-        "//src/java/com/google/devtools/mobileharness/shared/util/error/...",
-        "//src/javatests/com/google/devtools/common/metrics/stability/...",
-    ],
-)
-
-package_group(
     name = "deviceinfra_devicemanagement_pkg",
     packages = [
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/...",

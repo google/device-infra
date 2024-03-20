@@ -30,7 +30,7 @@ java_library(
 java_library(
     name = "ats",
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
     runtime_deps = [

@@ -16,10 +16,8 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
 )
@@ -27,14 +25,6 @@ package(
 java_library(
     name = "control_stub",
     srcs = ["ControlStub.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-    ],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_grpc",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",

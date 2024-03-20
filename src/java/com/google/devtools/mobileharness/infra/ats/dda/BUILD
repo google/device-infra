@@ -13,22 +13,17 @@
 # limitations under the License.
 #
 
-DEFAULT_VISIBILITY = [
-    "//:deviceinfra_all_pkg",
-]
+load("//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:server.bzl", "olc_server_binary")
 
-package(
-    default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
-)
+package(default_applicable_licenses = ["//:license"])
 
-java_library(
-    name = "error_id",
-    srcs = [
-        "ErrorId.java",
-        "ErrorIdProvider.java",
+olc_server_binary(
+    name = "ats_dda_olc_server",
+    extra_runtime_deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/dda/sessionplugin:ats_dda_session_plugin",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
     ],
-    deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/dda:__subpackages__",
     ],
 )

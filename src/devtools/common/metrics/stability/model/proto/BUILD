@@ -17,7 +17,6 @@ load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
 
 DEFAULT_VISIBILITY = [
     "//:deviceinfra_all_pkg",
-    "//:deviceinfra_metrics_pkg",
 ]
 
 package(

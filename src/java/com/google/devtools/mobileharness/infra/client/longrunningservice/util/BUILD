@@ -13,30 +13,20 @@
 # limitations under the License.
 #
 
-DEFAULT_VISIBILITY = [
-    "//:deviceinfra_all_pkg",
-]
-
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
-)
-
-java_library(
-    name = "error_id_comparator",
-    srcs = ["ErrorIdComparator.java"],
-    deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
-        "//src/java/com/google/devtools/common/metrics/stability/converter",
-        "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
-        "@maven//:com_google_code_findbugs_jsr305",
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
     ],
 )
 
 java_library(
-    name = "error_id_formatter",
-    srcs = ["ErrorIdFormatter.java"],
+    name = "session_error_util",
+    srcs = ["SessionErrorUtil.java"],
     deps = [
-        "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/converter",
+        "//src/java/com/google/devtools/common/metrics/stability/converter:deserialized_exception",
+        "@maven//:com_google_guava_guava",
     ],
 )

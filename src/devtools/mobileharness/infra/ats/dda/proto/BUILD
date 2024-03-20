@@ -13,22 +13,21 @@
 # limitations under the License.
 #
 
-DEFAULT_VISIBILITY = [
-    "//:deviceinfra_all_pkg",
-]
+package(default_applicable_licenses = ["//:license"])
 
-package(
-    default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
+proto_library(
+    name = "session_plugin_proto",
+    srcs = ["session_plugin.proto"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:job_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_proto",
+    ],
 )
 
-java_library(
-    name = "error_id",
-    srcs = [
-        "ErrorId.java",
-        "ErrorIdProvider.java",
+java_proto_library(
+    name = "session_plugin_java_proto",
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/dda:__subpackages__",
     ],
-    deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
-    ],
+    deps = [":session_plugin_proto"],
 )
