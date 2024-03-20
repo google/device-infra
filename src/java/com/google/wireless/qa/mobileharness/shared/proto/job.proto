@@ -90,12 +90,11 @@ enum TestStatus {
 }
 
 // Job timeout setting.
+//
+// Deprecated. Use
+// //src/devtools/mobileharness/api/model/proto/job.proto
+// instead.
 message Timeout {
-  // Use
-  // //src/devtools/mobileharness/api/model/proto/job.proto
-  // instead.
-  option deprecated = true;
-
   // Max execution time of a job. By default, it is 1 hour.
   optional int64 job_timeout_ms = 1 [default = 3600000];
   // Max execution time of a single test. By default, it is 5 minutes.
@@ -153,12 +152,11 @@ message ResultCounter {
 }
 
 // Job priority.
+//
+// Deprecated. Use
+// //src/devtools/mobileharness/api/model/proto/job.proto
+// instead.
 enum Priority {
-  // Use
-  // //src/devtools/mobileharness/api/model/proto/job.proto
-  // instead.
-  option deprecated = true;
-
   MIN = 0;
   LOW = 10;
   DEFAULT = 20;
