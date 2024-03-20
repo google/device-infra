@@ -49,6 +49,11 @@ proto_library(
     srcs = ["communication.proto"],
 )
 
+kt_jvm_proto_library(
+    name = "communication_kt_proto",
+    deps = [":communication_proto"],
+)
+
 java_proto_library(
     name = "communication_java_proto",
     deps = [":communication_proto"],
