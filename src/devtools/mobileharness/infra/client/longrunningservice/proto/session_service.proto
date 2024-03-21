@@ -43,6 +43,9 @@ service SessionService {
   rpc SubscribeSession(stream SubscribeSessionRequest)
       returns (stream SubscribeSessionResponse);
 
+  // Notifies a pending/running session asynchronously.
+  rpc NotifySession(NotifySessionRequest) returns (NotifySessionResponse);
+
   // Aborts a session.
   //
   // If the session has not started, it will not be started.
@@ -115,6 +118,11 @@ message GetAllSessionsRequest {
   SessionFilter session_filter = 2;
 }
 
+message GetAllSessionsResponse {
+  // Required.
+  repeated SessionDetail session_detail = 1;
+}
+
 // Gets information of a session when this method is called or when the
 // SessionDetail is modified, until the request stream completes.
 //
@@ -129,17 +137,33 @@ message SubscribeSessionResponse {
   GetSessionResponse get_session_response = 1;
 }
 
+// Notifies a pending/running session asynchronously.
+//
+// If the session is not found or has finished, returns immediately.
+//
+// If the session is pending or has not created session plugins, the
+// notification will be sent after session plugins are created and before
+// SessionStartingEvent is posted.
+message NotifySessionRequest {
+  // Required.
+  SessionId session_id = 1;
+
+  // Required.
+  SessionNotification session_notification = 2;
+}
+
+message NotifySessionResponse {
+  // True if the pending/running session is found and the notification will be
+  // sent. False if the session is not found or has finished.
+  bool successful = 1;
+}
+
 message AbortSessionRequest {
   // Required.
   SessionId session_id = 1;
 }
 
 message AbortSessionResponse {}
-
-message GetAllSessionsResponse {
-  // Required.
-  repeated SessionDetail session_detail = 1;
-}
 
 message SessionFilter {
   // Optional.

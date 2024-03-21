@@ -204,3 +204,16 @@ message SessionDetail {
   // Exception thrown from the session runner (if necessary).
   stability.model.ExceptionDetail session_runner_error = 5;
 }
+
+// Notification to a pending/running session.
+message SessionNotification {
+  // Optional.
+  //
+  // The plugin to receive the notification.
+  //
+  // If empty, all plugins of the session will receive the notification.
+  SessionPluginLabel plugin_label = 1;
+
+  // Required.
+  google.protobuf.Any notification = 2;
+}

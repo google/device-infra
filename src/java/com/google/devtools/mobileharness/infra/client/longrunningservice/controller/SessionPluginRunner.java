@@ -22,12 +22,15 @@ import com.google.devtools.common.metrics.stability.converter.ErrorModelConverte
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginError;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.SubscriberMethod;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import javax.annotation.Nullable;
 
 /** Runner for running session plugins. */
@@ -50,18 +53,41 @@ public class SessionPluginRunner {
 
   /** Posts {@link SessionStartingEvent} to session plugins. */
   public void onSessionStarting() {
-    postEvent(SessionStartingEvent::new, SessionStartingEvent.class);
+    postEvent(SessionStartingEvent::new, SessionStartingEvent.class, sessionPlugin -> true);
   }
 
   /** Posts {@link SessionEndedEvent} to session plugins. */
   public void onSessionEnded(@Nullable Throwable error) {
-    postEvent(sessionInfo -> new SessionEndedEvent(sessionInfo, error), SessionEndedEvent.class);
+    postEvent(
+        sessionInfo -> new SessionEndedEvent(sessionInfo, error),
+        SessionEndedEvent.class,
+        sessionPlugin -> true);
   }
 
-  private <T> void postEvent(Function<SessionInfo, T> eventGenerator, Class<T> eventClass) {
+  /** Posts {@link SessionNotificationEvent} to session plugins with the given label. */
+  public void onSessionNotification(SessionNotification sessionNotification) {
+    postEvent(
+        sessionInfo -> new SessionNotificationEvent(sessionInfo, sessionNotification),
+        SessionNotificationEvent.class,
+        sessionNotification.hasPluginLabel()
+            ? sessionPlugin ->
+                sessionPlugin
+                    .sessionInfo()
+                    .getSessionPluginLabel()
+                    .equals(sessionNotification.getPluginLabel())
+            : sessionPlugin -> true);
+  }
+
+  private <T> void postEvent(
+      Function<SessionInfo, T> eventGenerator,
+      Class<T> eventClass,
+      Predicate<SessionPlugin> sessionPluginFilter) {
     logger.atInfo().log("Posting %s", eventClass.getSimpleName());
     // TODO: Supports skipping session.
     for (SessionPlugin sessionPlugin : sessionPlugins) {
+      if (!sessionPluginFilter.test(sessionPlugin)) {
+        continue;
+      }
       T event = eventGenerator.apply(sessionPlugin.sessionInfo());
       for (SubscriberMethod subscriberMethod : sessionPlugin.subscriber().subscriberMethods()) {
         if (subscriberMethod.canReceiveEvent(eventClass)) {

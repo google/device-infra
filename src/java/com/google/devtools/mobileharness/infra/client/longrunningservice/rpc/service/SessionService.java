@@ -35,6 +35,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
@@ -106,6 +108,17 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
   }
 
   @Override
+  public void notifySession(
+      NotifySessionRequest request, StreamObserver<NotifySessionResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        this::doNotifySession,
+        SessionServiceGrpc.getServiceDescriptor(),
+        SessionServiceGrpc.getNotifySessionMethod());
+  }
+
+  @Override
   public void abortSession(
       AbortSessionRequest request, StreamObserver<AbortSessionResponse> responseObserver) {
     GrpcServiceUtil.invoke(
@@ -164,6 +177,13 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
               .collect(toImmutableList());
     }
     return GetAllSessionsResponse.newBuilder().addAllSessionDetail(sessions).build();
+  }
+
+  private NotifySessionResponse doNotifySession(NotifySessionRequest request) {
+    boolean successful =
+        sessionManager.notifySession(
+            request.getSessionId().getId(), request.getSessionNotification());
+    return NotifySessionResponse.newBuilder().setSuccessful(successful).build();
   }
 
   private AbortSessionResponse doAbortSession(AbortSessionRequest request)

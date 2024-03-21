@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
@@ -48,9 +49,11 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.FieldMask;
 import com.google.protobuf.util.FieldMaskUtil;
 import io.grpc.stub.StreamObserver;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
@@ -129,7 +132,11 @@ public class SessionManager {
     SessionSubscribers subscribers = new SessionSubscribers();
     subscribers.setSessionDetailSupplier(fieldMask -> pendingSessionDetail);
     PendingSession pendingSession =
-        PendingSession.of(pendingSessionDetail, SettableFuture.create(), subscribers);
+        PendingSession.of(
+            pendingSessionDetail,
+            SettableFuture.create(),
+            subscribers,
+            /* cachedSessionNotifications= */ new ArrayList<>());
     synchronized (sessionsLock) {
       MobileHarnessExceptions.check(
           pendingSessions.size() <= SESSION_QUEUE_CAPACITY,
@@ -226,6 +233,28 @@ public class SessionManager {
     return new SessionSubscriber(responseObserver).getRequestObserver();
   }
 
+  public boolean notifySession(String sessionId, SessionNotification sessionNotification) {
+    synchronized (sessionsLock) {
+      RunningSession runningSession = runningSessions.get(sessionId);
+      if (runningSession != null) {
+        logger.atInfo().log(
+            "Notify running session [%s]: [%s]", sessionId, shortDebugString(sessionNotification));
+        return runningSession.sessionRunner().notifySession(sessionNotification);
+      }
+      PendingSession pendingSession = pendingSessions.get(sessionId);
+      if (pendingSession != null) {
+        logger.atInfo().log(
+            "Notify pending session [%s]: [%s]", sessionId, shortDebugString(sessionNotification));
+        pendingSession.cachedSessionNotifications().add(sessionNotification);
+        return true;
+      }
+      logger.atInfo().log(
+          "Discard notification to session [%s]: [%s]",
+          sessionId, shortDebugString(sessionNotification));
+      return false;
+    }
+  }
+
   public void abortSession(String sessionId) throws MobileHarnessException {
     PendingSession finalPendingSession = null;
     synchronized (sessionsLock) {
@@ -252,7 +281,8 @@ public class SessionManager {
             PendingSession.of(
                 finalSessionDetail,
                 pendingSession.finalResultFuture(),
-                pendingSession.sessionSubscribers());
+                pendingSession.sessionSubscribers(),
+                pendingSession.cachedSessionNotifications());
       } else if (runningSessions.containsKey(sessionId)) {
         // If the session is running, stops job polling and kills all running jobs.
         logger.atInfo().log("Abort a running session [%s]", sessionId);
@@ -288,7 +318,8 @@ public class SessionManager {
                             pendingSession.sessionDetail().toBuilder()
                                 .setSessionStatus(SessionStatus.SESSION_RUNNING)
                                 .build(),
-                            pendingSession.sessionSubscribers().getSessionDetailListener()),
+                            pendingSession.sessionSubscribers().getSessionDetailListener(),
+                            ImmutableList.copyOf(pendingSession.cachedSessionNotifications())),
                         pendingSession.finalResultFuture(),
                         pendingSession.sessionSubscribers()))
             .collect(toImmutableList());
@@ -463,12 +494,17 @@ public class SessionManager {
 
     abstract SessionSubscribers sessionSubscribers();
 
+    /** Must be guarded by {@link #sessionsLock}. */
+    @SuppressWarnings("AutoValueImmutableFields")
+    abstract List<SessionNotification> cachedSessionNotifications();
+
     private static PendingSession of(
         SessionDetail sessionDetail,
         SettableFuture<SessionDetail> finalResultFuture,
-        SessionSubscribers sessionSubscribers) {
+        SessionSubscribers sessionSubscribers,
+        List<SessionNotification> cachedSessionNotifications) {
       return new AutoValue_SessionManager_PendingSession(
-          sessionDetail, finalResultFuture, sessionSubscribers);
+          sessionDetail, finalResultFuture, sessionSubscribers, cachedSessionNotifications);
     }
   }
 

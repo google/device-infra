@@ -40,6 +40,7 @@ java_library(
     srcs = [
         "SessionEndedEvent.java",
         "SessionEvent.java",
+        "SessionNotificationEvent.java",
         "SessionStartingEvent.java",
     ],
     visibility = [
@@ -50,6 +51,8 @@ java_library(
     ],
     deps = [
         ":session_info",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
