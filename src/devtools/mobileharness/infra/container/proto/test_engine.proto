@@ -43,8 +43,20 @@ message TestEngineLocator {
   }
 
   message GrpcLocator {
+    // Required.
+    //
     // A target string that io.grpc.ManagedChannelBuilder.forTarget() accepts.
     string grpc_target = 1;
+
+    // Required.
+    //
+    // Since lab 4.268.0.
+    string host_name = 2;
+
+    // Required.
+    //
+    // Since lab 4.268.0.
+    int32 grpc_port = 3;
   }
 }
 

@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.infra.container.proto.TestEngine.TestEn
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.ExecTestStub;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.PrepareTestStub;
 import com.google.devtools.mobileharness.shared.constant.environment.MobileHarnessServerEnvironment;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.version.rpc.stub.VersionStub;
 
 /** Shared master and lab server service stubs. */
@@ -51,7 +52,10 @@ public class StubManager {
 
   public ExecTestStub getTestEngineExecTestStub(
       TestEngineLocator testEngineLocator, MobileHarnessServerEnvironment mhEnvironment) {
-    return grpcStubManager.getExecTestGrpcStub(testEngineLocator.getGrpcLocator().getGrpcTarget());
+    return grpcStubManager.getExecTestGrpcStub(
+        getGrpcTarget(
+            testEngineLocator.getGrpcLocator().getHostName(),
+            testEngineLocator.getGrpcLocator().getGrpcPort()));
   }
 
   /**
@@ -61,7 +65,8 @@ public class StubManager {
    */
   public PrepareTestStub getPrepareTestStub(
       LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
-    return grpcStubManager.getPrepareTestStub(labServerLocator.grpcTarget());
+    return grpcStubManager.getPrepareTestStub(
+        getGrpcTarget(labServerLocator.hostName(), labServerLocator.grpcPort()));
   }
 
   /**
@@ -71,6 +76,13 @@ public class StubManager {
    */
   public VersionStub getLabVersionStub(
       LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
-    return grpcStubManager.getVersionStub(labServerLocator.grpcTarget());
+    return grpcStubManager.getVersionStub(
+        getGrpcTarget(labServerLocator.hostName(), labServerLocator.grpcPort()));
+  }
+
+  private static String getGrpcTarget(String hostName, int grpcPort) {
+    return String.format(
+        "dns:///%s:%s",
+        Flags.instance().reverseTunnelingLabServer.getNonNull() ? "localhost" : hostName, grpcPort);
   }
 }

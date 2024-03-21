@@ -794,6 +794,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> resDirName = resDirNameDefault;
 
+  private static final Flag<Boolean> reverseTunnelingLabServerDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--reverse_tunneling_lab_server",
+      description = "Whether lab servers have been reverse tunneled to client. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> reverseTunnelingLabServer = reverseTunnelingLabServerDefault;
+
   private static final Flag<Integer> rpcPortDefault = Flag.value(9999);
 
   @com.beust.jcommander.Parameter(

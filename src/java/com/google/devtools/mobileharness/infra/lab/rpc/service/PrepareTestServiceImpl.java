@@ -461,7 +461,9 @@ public class PrepareTestServiceImpl {
     }
     builder.setGrpcLocator(
         GrpcLocator.newBuilder()
-            .setGrpcTarget(String.format("dns:///%s:%s", labHostName, labGrpcPort)));
+            .setGrpcTarget(String.format("dns:///%s:%s", labHostName, labGrpcPort))
+            .setHostName(labHostName)
+            .setGrpcPort(labGrpcPort));
     builder.setEnableGrpc(true);
 
     return builder.build();

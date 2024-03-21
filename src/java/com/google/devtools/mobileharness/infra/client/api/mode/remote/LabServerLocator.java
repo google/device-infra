@@ -50,6 +50,10 @@ public abstract class LabServerLocator {
     return labLocator().ip();
   }
 
+  public String hostName() {
+    return labLocator().hostName();
+  }
+
   /**
    * Note that {@link #perTestLabServer} may not provide correct services based on IP and ports, and
    * these methods is just for interface compatibility.
@@ -66,11 +70,7 @@ public abstract class LabServerLocator {
     return labLocator().ports().getNonNull(PortType.LAB_SERVER_SOCKET);
   }
 
-  public String grpcTarget() {
-    return String.format("dns:///%s:%s", labLocator().hostName(), grpcPort());
-  }
-
-  private int grpcPort() {
+  public int grpcPort() {
     return labLocator().ports().getNonNull(PortType.LAB_SERVER_GRPC);
   }
 
