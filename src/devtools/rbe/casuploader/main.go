@@ -18,7 +18,7 @@ import (
 	"github.com/google/device-infra/src/devtools/rbe/rbeclient"
 )
 
-const version = "1.1"
+const version = "1.2"
 
 // multiStringFlag is a slice of strings for parsing command flags into a string list.
 type multiStringFlag []string
@@ -50,7 +50,9 @@ var (
 	useADC          = flag.Bool("use-adc", false, "True to use Application Default Credentials (ADC).")
 	dumpDigest      = flag.String("dump-digest", "", "Output the digest to file")
 	dumpFileDetails = flag.String("dump-file-details", "", "Export information of all uploaded files to a file")
-	excludeFilters  multiStringFlag
+	// Flags for concurrency (affects peak memory), specify 0 for default.
+	casConcurrency = flag.Int("cas-concurrency", 0, "the maximum number of concurrent upload operations.")
+	excludeFilters multiStringFlag
 )
 
 func checkFlags() error {
@@ -117,7 +119,7 @@ func main() {
 	start := time.Now()
 
 	// Create a new RBE client.
-	client, err := rbeclient.New(ctx, rbeclient.Opts{*casInstance, *casAddr, *serviceAccount, *useADC})
+	client, err := rbeclient.New(ctx, rbeclient.Opts{Instance: *casInstance, ServiceAddress: *casAddr, ServiceAccountJSON: *serviceAccount, UseApplicationDefault: *useADC, CASConcurrency: *casConcurrency})
 	if err != nil {
 		log.Exit(err)
 	}
