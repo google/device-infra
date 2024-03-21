@@ -37,3 +37,11 @@ message AtsDdaSessionPluginOutput {
   // Becomes present when the device is allocated.
   mobileharness.api.query.DeviceInfo allocated_device = 1;
 }
+
+message AtsDdaSessionNotification {
+  oneof notification {
+    CancelSession cancel_session = 1;
+  }
+}
+
+message CancelSession {}

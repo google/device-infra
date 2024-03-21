@@ -21,11 +21,14 @@ import com.google.devtools.common.metrics.stability.converter.DeserializedExcept
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionPluginOutput;
+import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.CancelSession;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfigs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
@@ -37,6 +40,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionErrorUtil;
 import com.google.protobuf.Any;
@@ -140,6 +145,31 @@ public class AtsDdaStub {
         sessionDetail.getSessionStatus(),
         deviceInfo.orElse(null),
         sessionError.orElse(null));
+  }
+
+  /**
+   * Cancels a session.
+   *
+   * @return true if a pending/running session is found and cancelled, false if no session is found
+   *     or the session has finished
+   * @throws GrpcExceptionWithErrorId if there is network error
+   */
+  public boolean cancelSession(String sessionId) throws GrpcExceptionWithErrorId {
+    NotifySessionResponse notifySessionResponse =
+        sessionStub.notifySession(
+            NotifySessionRequest.newBuilder()
+                .setSessionId(SessionId.newBuilder().setId(sessionId))
+                .setSessionNotification(
+                    SessionNotification.newBuilder()
+                        .setPluginLabel(
+                            SessionPluginLabel.newBuilder().setLabel(SESSION_PLUGIN_LABEL))
+                        .setNotification(
+                            Any.pack(
+                                AtsDdaSessionNotification.newBuilder()
+                                    .setCancelSession(CancelSession.getDefaultInstance())
+                                    .build())))
+                .build());
+    return notifySessionResponse.getSuccessful();
   }
 
   private static Optional<AtsDdaSessionPluginOutput> getPluginOutput(SessionDetail sessionDetail) {

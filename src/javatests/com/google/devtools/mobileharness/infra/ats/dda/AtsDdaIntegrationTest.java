@@ -138,6 +138,7 @@ public class AtsDdaIntegrationTest {
   private final StringBuilder labServerStderrBuilder = new StringBuilder();
 
   private final CountDownLatch driverStarted = new CountDownLatch(1);
+  private final CountDownLatch driverWokeUp = new CountDownLatch(1);
 
   private SessionInfo sessionInfo;
 
@@ -205,6 +206,14 @@ public class AtsDdaIntegrationTest {
     // Verifies the driver started successfully.
     assertWithMessage("The driver has not started in 15 seconds")
         .that(driverStarted.await(15L, SECONDS))
+        .isTrue();
+
+    // Cancels the session
+    assertThat(atsDdaStub.cancelSession(sessionId)).isTrue();
+
+    // Verifies the driver is woke up successfully.
+    assertWithMessage("The driver has not been woke up in 15 seconds")
+        .that(driverWokeUp.await(15L, SECONDS))
         .isTrue();
 
     // Checks warnings in logs.
@@ -319,6 +328,8 @@ public class AtsDdaIntegrationTest {
                         labServerLocalDeviceFound.countDown();
                       } else if (stderr.contains("Sleep for ")) {
                         driverStarted.countDown();
+                      } else if (stderr.contains("Wake up from sleep")) {
+                        driverWokeUp.countDown();
                       }
                     }))
             .successfulStartCondition(line -> line.contains("Lab server successfully started"))

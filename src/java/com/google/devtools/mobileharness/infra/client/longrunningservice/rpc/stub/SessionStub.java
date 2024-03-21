@@ -29,6 +29,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
@@ -84,6 +86,15 @@ public class SessionStub {
   public StreamObserver<SubscribeSessionRequest> subscribeSession(
       StreamObserver<SubscribeSessionResponse> responseObserver) {
     return sessionServiceStub.subscribeSession(responseObserver);
+  }
+
+  public NotifySessionResponse notifySession(NotifySessionRequest request)
+      throws GrpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        sessionServiceBlockingStub::notifySession,
+        request,
+        InfraErrorId.OLCS_STUB_ABORT_SESSION_ERROR,
+        "Failed to notify session");
   }
 
   public void abortSession(AbortSessionRequest request) throws GrpcExceptionWithErrorId {

@@ -18,20 +18,26 @@ package com.google.devtools.mobileharness.infra.ats.dda.sessionplugin;
 
 import static com.google.protobuf.TextFormat.shortDebugString;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent;
+import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionNotification;
+import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionNotification.NotificationCase;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
@@ -39,6 +45,9 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import java.time.Duration;
+import java.util.Optional;
+import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
 /** Session plugin for ATS DDA. */
@@ -54,15 +63,31 @@ public class AtsDdaSessionPlugin {
   private static final Duration START_TIMEOUT = Duration.ofMinutes(1L);
   private static final Duration TEST_TIMEOUT = JOB_TIMEOUT.minusMinutes(1L);
   private static final Duration DRIVER_SLEEP_TIME = TEST_TIMEOUT.minusMinutes(1L);
+  private static final ImmutableMap<String, String> CANCEL_TEST_MESSAGE =
+      ImmutableMap.of("namespace", "mobileharness:driver:NoOpDriver", "type", "wake_up");
 
   private final SessionInfo sessionInfo;
+  private final TestMessageUtil testMessageUtil;
+
+  private final Object cancelSessionLock = new Object();
+
+  @GuardedBy("cancelSessionLock")
+  private boolean sessionCancelled;
+
+  @GuardedBy("cancelSessionLock")
+  @Nullable
+  private String startedTestId;
+
+  @GuardedBy("cancelSessionLock")
+  private boolean cancelTestMessageSent;
 
   /** Set in {@link #onSessionStarting(SessionStartingEvent)}. */
   private volatile AtsDdaSessionPluginConfig config;
 
   @Inject
-  AtsDdaSessionPlugin(SessionInfo sessionInfo) {
+  AtsDdaSessionPlugin(SessionInfo sessionInfo, TestMessageUtil testMessageUtil) {
     this.sessionInfo = sessionInfo;
+    this.testMessageUtil = testMessageUtil;
   }
 
   @Subscribe
@@ -76,14 +101,23 @@ public class AtsDdaSessionPlugin {
             .unpack(AtsDdaSessionPluginConfig.class);
     logger.atInfo().log("Config: %s", shortDebugString(config));
 
-    JobInfo jobInfo = createJobInfo();
-    sessionInfo.addJob(jobInfo);
+    synchronized (cancelSessionLock) {
+      if (sessionCancelled) {
+        logger.atInfo().log(
+            "Skip creating job since the session [%s] has been cancelled",
+            sessionInfo.getSessionId());
+      } else {
+        JobInfo jobInfo = createJobInfo();
+        sessionInfo.addJob(jobInfo);
+        logger.atInfo().log(
+            "Added job [%s] to session [%s]", jobInfo.locator(), sessionInfo.getSessionId());
+      }
+    }
   }
 
   private JobInfo createJobInfo() throws MobileHarnessException {
     DeviceRequirement deviceRequirement = config.getDeviceRequirement();
     // TODO: Adds default decorators here.
-    // TODO: Sets AllocationExitStrategy here.
     JobInfo jobInfo =
         JobInfo.newBuilder()
             .setLocator(new JobLocator(JOB_NAME))
@@ -104,6 +138,7 @@ public class AtsDdaSessionPlugin {
                             .build())
                     .setRetry(Retry.newBuilder().setTestAttempts(1).build())
                     .setPriority(Priority.MAX)
+                    .setAllocationExitStrategy(AllocationExitStrategy.FAIL_FAST_NO_IDLE)
                     .build())
             .build();
     jobInfo.params().add("sleep_time_sec", Long.toString(DRIVER_SLEEP_TIME.toSeconds()));
@@ -119,5 +154,57 @@ public class AtsDdaSessionPlugin {
     sessionInfo.setSessionPluginOutput(
         oldOutput -> AtsDdaSessionPluginOutput.newBuilder().setAllocatedDevice(deviceInfo).build(),
         AtsDdaSessionPluginOutput.class);
+
+    // Sends cached cancel test message if any.
+    Optional<String> testIdToSendCancelTestMessage;
+    synchronized (cancelSessionLock) {
+      startedTestId = event.getTest().locator().getId();
+      testIdToSendCancelTestMessage = getTestIdToSendCancelTestMessage();
+      if (testIdToSendCancelTestMessage.isPresent()) {
+        cancelTestMessageSent = true;
+      }
+    }
+    testIdToSendCancelTestMessage.ifPresent(this::sendCancelTestMessage);
+  }
+
+  @Subscribe
+  private void onSessionNotification(SessionNotificationEvent event)
+      throws InvalidProtocolBufferException {
+    AtsDdaSessionNotification notification =
+        event.sessionNotification().getNotification().unpack(AtsDdaSessionNotification.class);
+    logger.atInfo().log("Notification: %s", shortDebugString(notification));
+
+    if (notification.getNotificationCase() == NotificationCase.CANCEL_SESSION) {
+      // Sends cancel test message.
+      Optional<String> testIdToSendCancelTestMessage;
+      synchronized (cancelSessionLock) {
+        sessionCancelled = true;
+        testIdToSendCancelTestMessage = getTestIdToSendCancelTestMessage();
+        if (testIdToSendCancelTestMessage.isPresent()) {
+          cancelTestMessageSent = true;
+        }
+      }
+      testIdToSendCancelTestMessage.ifPresent(this::sendCancelTestMessage);
+    }
+  }
+
+  @GuardedBy("cancelSessionLock")
+  private Optional<String> getTestIdToSendCancelTestMessage() {
+    if (sessionCancelled && startedTestId != null && !cancelTestMessageSent) {
+      return Optional.of(startedTestId);
+    } else {
+      return Optional.empty();
+    }
+  }
+
+  private void sendCancelTestMessage(String testId) {
+    logger.atInfo().log(
+        "Sending cancel test message to test [%s], message=%s", testId, CANCEL_TEST_MESSAGE);
+    try {
+      testMessageUtil.sendMessageToTest(testId, CANCEL_TEST_MESSAGE);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to send cancel test message to test [%s]", testId);
+    }
   }
 }
