@@ -200,6 +200,17 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> cacheInstalledApks = cacheInstalledApksDefault;
 
+  private static final Flag<Duration> checkDeviceIntervalDefault =
+      DurationFlag.value(Duration.ofMinutes(5L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--check_device_interval",
+      description =
+          "Interval to check device in local device runner when the device is IDLE. "
+              + "Default is \"5m\"",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> checkDeviceInterval = checkDeviceIntervalDefault;
+
   private static final Flag<Boolean> clearAndroidDeviceMultiUsersDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.infra.controller.device.external.Extern
 import com.google.devtools.mobileharness.infra.controller.device.util.DeviceRebootUtil;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -69,9 +70,6 @@ import javax.annotation.concurrent.GuardedBy;
 public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  /** Time interval of two round of checking device change. */
-  public static final Duration CHECK_DEVICE_INTERVAL = Duration.ofMinutes(5);
 
   /** Ask the DeviceInfoManager to keep the device info for this long. */
   public static final Duration DEVICE_INFO_REMOVE_DELAY = Duration.ofMinutes(5L);
@@ -711,7 +709,10 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
    * @return whether the device is changed, to notify the device management framework
    */
   private boolean checkDevice() throws InterruptedException, MobileHarnessException {
-    if (clock.instant().minus(CHECK_DEVICE_INTERVAL).isBefore(lastCheckDeviceTime)) {
+    if (clock
+        .instant()
+        .minus(Flags.instance().checkDeviceInterval.getNonNull())
+        .isBefore(lastCheckDeviceTime)) {
       return false;
     }
     logger.atInfo().log("Start periodical check");

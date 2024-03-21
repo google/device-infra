@@ -202,6 +202,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/event",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:tag",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
