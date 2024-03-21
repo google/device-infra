@@ -40,7 +40,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/allocation/allocator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:ats_mode",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:lab_info_service",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:lab_record_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:module",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats:remote_device_manager",

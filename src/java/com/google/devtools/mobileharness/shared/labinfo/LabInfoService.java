@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.api.mode.ats;
+package com.google.devtools.mobileharness.shared.labinfo;
 
 import static com.google.common.collect.ImmutableList.sortedCopyOf;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -79,11 +79,11 @@ import javax.inject.Singleton;
 
 /** An in-memory implementation of {@code LabInfoService}. */
 @Singleton
-class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
+public class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final RemoteDeviceManager remoteDeviceManager;
+  private final LabInfoProvider labInfoProvider;
 
   /**
    * Unpaged query result cache for sessions. Each session is associated with a unique query proto
@@ -101,8 +101,8 @@ class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
       CacheBuilder.newBuilder().expireAfterWrite(Duration.ofSeconds(5L)).softValues().build();
 
   @Inject
-  LabInfoService(RemoteDeviceManager remoteDeviceManager) {
-    this.remoteDeviceManager = remoteDeviceManager;
+  LabInfoService(LabInfoProvider labInfoProvider) {
+    this.labInfoProvider = labInfoProvider;
   }
 
   @Override
@@ -174,7 +174,7 @@ class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
         LabQueryResult.newBuilder().setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()));
 
     // Gets filtered lab/device info from device manager.
-    LabView rawLabView = remoteDeviceManager.getLabInfo(query.getFilter());
+    LabView rawLabView = labInfoProvider.getLabInfos(query.getFilter());
 
     // Sets lab view / device view, sorts all LabInfo/DeviceInfo in it.
     setViewAndSort(result, rawLabView, query);

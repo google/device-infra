@@ -55,6 +55,8 @@ import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.LabSyncHelper
 import com.google.devtools.mobileharness.infra.master.rpc.stub.JobSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
+import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
+import com.google.devtools.mobileharness.shared.labinfo.LocalLabInfoProvider;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -64,6 +66,8 @@ import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSigna
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.rpc.service.VersionServiceImpl;
 import com.google.devtools.mobileharness.shared.version.rpc.service.grpc.VersionGrpcImpl;
+import com.google.inject.AbstractModule;
+import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
@@ -214,6 +218,16 @@ public class LabServer {
       List<BindableService> localGrpcServices = new ArrayList<>(grpcServices);
 
       localGrpcServices.add(ProtoReflectionService.newInstance());
+      localGrpcServices.add(
+          Guice.createInjector(
+                  new AbstractModule() {
+                    @Override
+                    protected void configure() {
+                      bind(LabInfoProvider.class)
+                          .toInstance(new LocalLabInfoProvider(deviceManager));
+                    }
+                  })
+              .getInstance(com.google.devtools.mobileharness.shared.labinfo.LabInfoService.class));
 
       // Starts gRPC server for local requests only.
       NettyServerBuilder localGrpcServerBuilder =

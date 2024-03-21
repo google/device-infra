@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.api.mode.ats;
+package com.google.devtools.mobileharness.shared.labinfo;
 
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -125,7 +125,7 @@ public class LabInfoServiceTest {
                   .setCompositeDimension(DeviceCompositeDimension.getDefaultInstance()))
           .build();
 
-  @Bind @Mock private RemoteDeviceManager remoteDeviceManager;
+  @Bind @Mock private LabInfoProvider labInfoProvider;
 
   @Inject private LabInfoService labInfoService;
 
@@ -133,7 +133,7 @@ public class LabInfoServiceTest {
   public void setUp() {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
-    when(remoteDeviceManager.getLabInfo(any(Filter.class)))
+    when(labInfoProvider.getLabInfos(any(Filter.class)))
         .thenReturn(
             LabView.newBuilder()
                 .setLabTotalCount(1)

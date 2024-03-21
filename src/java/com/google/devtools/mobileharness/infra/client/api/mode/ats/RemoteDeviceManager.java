@@ -68,6 +68,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
+import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
 import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
@@ -96,7 +97,7 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 @Singleton
-class RemoteDeviceManager {
+class RemoteDeviceManager implements LabInfoProvider {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -171,7 +172,8 @@ class RemoteDeviceManager {
     }
   }
 
-  LabQueryResult.LabView getLabInfo(LabQuery.Filter filter) {
+  @Override
+  public LabQueryResult.LabView getLabInfos(LabQuery.Filter filter) {
     ImmutableMap<LabKey, LabQueryProto.LabData.Builder> filteredLabs;
     Instant timestamp = Instant.now();
     synchronized (lock) {

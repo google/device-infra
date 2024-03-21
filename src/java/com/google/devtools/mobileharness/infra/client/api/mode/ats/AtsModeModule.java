@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.A
 import com.google.devtools.mobileharness.infra.client.api.mode.ats.Annotations.AtsModeDeviceQuerier;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
+import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
 import com.google.inject.AbstractModule;
 import javax.inject.Singleton;
 
@@ -29,6 +30,7 @@ public class AtsModeModule extends AbstractModule {
 
   @Override
   protected void configure() {
+    bind(LabInfoProvider.class).to(RemoteDeviceManager.class);
     bind(DeviceQuerier.class).annotatedWith(AtsModeDeviceQuerier.class).to(DeviceQuerierImpl.class);
     bind(AbstractScheduler.class)
         .annotatedWith(AtsModeAbstractScheduler.class)

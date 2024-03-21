@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractSche
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
 import com.google.devtools.mobileharness.shared.constant.environment.MobileHarnessServerEnvironment;
+import com.google.devtools.mobileharness.shared.labinfo.LabInfoService;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import io.grpc.BindableService;
 import javax.inject.Inject;

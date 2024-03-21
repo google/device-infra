@@ -200,7 +200,7 @@ public class RemoteDeviceManagerTest {
   public void getLabInfo() throws Exception {
     labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
-    LabView labInfo = remoteDeviceManager.getLabInfo(Filter.getDefaultInstance());
+    LabView labInfo = remoteDeviceManager.getLabInfos(Filter.getDefaultInstance());
 
     assertThat(labInfo).isEqualTo(LAB_VIEW);
   }
@@ -210,7 +210,7 @@ public class RemoteDeviceManagerTest {
     labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     LabView labInfo =
-        remoteDeviceManager.getLabInfo(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setLabFilter(
                     LabFilter.newBuilder()
@@ -229,7 +229,7 @@ public class RemoteDeviceManagerTest {
     assertThat(labInfo).isEqualTo(LAB_VIEW);
 
     labInfo =
-        remoteDeviceManager.getLabInfo(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setLabFilter(
                     LabFilter.newBuilder()
@@ -252,7 +252,7 @@ public class RemoteDeviceManagerTest {
     labSyncGrpcStub.signUpLab(SIGN_UP_LAB_REQUEST);
 
     LabView labInfo =
-        remoteDeviceManager.getLabInfo(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -270,7 +270,7 @@ public class RemoteDeviceManagerTest {
     assertThat(labInfo).isEqualTo(LAB_VIEW);
 
     labInfo =
-        remoteDeviceManager.getLabInfo(
+        remoteDeviceManager.getLabInfos(
             Filter.newBuilder()
                 .setDeviceFilter(
                     DeviceFilter.newBuilder()
@@ -295,7 +295,7 @@ public class RemoteDeviceManagerTest {
   }
 
   @Test
-  public void singUpLab_heatbeatLab_addLabAndDeviceRecord() throws Exception {
+  public void singUpLab_heartbeatLab_addLabAndDeviceRecord() throws Exception {
     ArgumentCaptor<DeviceRecordData> deviceRecordData1 =
         ArgumentCaptor.forClass(DeviceRecordData.class);
     ArgumentCaptor<LabRecordData> labRecordData1 = ArgumentCaptor.forClass(LabRecordData.class);
