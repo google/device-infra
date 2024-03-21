@@ -24,7 +24,7 @@ java_library(
     name = "dda",
     srcs = glob(["*.java"]),
     data = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/dda:ats_dda_olc_server_deploy.jar",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server_oss_deploy.jar",
     ],
     deps = [

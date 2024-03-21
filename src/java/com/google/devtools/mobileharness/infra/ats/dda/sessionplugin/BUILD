@@ -19,7 +19,7 @@ java_library(
     name = "ats_dda_session_plugin",
     srcs = ["AtsDdaSessionPlugin.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/dda:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",

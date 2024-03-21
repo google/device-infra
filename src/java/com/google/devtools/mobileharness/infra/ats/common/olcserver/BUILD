@@ -18,10 +18,8 @@ load("//src/java/com/google/devtools/mobileharness/infra/client/longrunningservi
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/local:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
 )
@@ -29,6 +27,7 @@ package(
 olc_server_binary(
     name = "ats_olc_server",
     extra_runtime_deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/dda/sessionplugin:ats_dda_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:ats_server_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:ats_test_client",

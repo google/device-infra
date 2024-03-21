@@ -122,7 +122,8 @@ public class AtsDdaIntegrationTest {
 
   private static final String OLC_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
-          "java/com/google/devtools/mobileharness/infra/ats/dda/ats_dda_olc_server_deploy.jar");
+          "java/com/google/devtools/mobileharness/"
+              + "infra/ats/common/olcserver/ats_olc_server_deploy.jar");
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_deploy.jar");
