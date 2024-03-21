@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -24,7 +25,6 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Test;
-import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.TestAnnotation;
@@ -35,9 +35,10 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.NoOpDriverSpec;
-import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.CountDownLatch;
 import javax.inject.Inject;
 
 /**
@@ -55,7 +56,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
 
   private static final String MESSAGE_NAMESPACE = "mobileharness:driver:NoOpDriver";
 
-  private final Sleeper sleeper;
+  private final CountDownLatch wakeupLatch = new CountDownLatch(1);
 
   private volatile Test.TestResult testResultFromMessage;
   private volatile com.google.devtools.mobileharness.api.model.error.MobileHarnessException
@@ -63,9 +64,8 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
 
   @VisibleForTesting
   @Inject
-  public NoOpDriver(Device device, TestInfo testInfo, Sleeper sleeper) {
+  public NoOpDriver(Device device, TestInfo testInfo) {
     super(device, testInfo);
-    this.sleeper = sleeper;
   }
 
   @Override
@@ -74,7 +74,10 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
     int sleepTimeSec = spec.getSleepTimeSec();
     testInfo.log().atInfo().alsoTo(logger).log("Sleep for %d seconds", sleepTimeSec);
     try {
-      sleeper.sleep(Duration.ofSeconds(sleepTimeSec));
+      boolean wakeup = wakeupLatch.await(sleepTimeSec, SECONDS);
+      if (wakeup) {
+        testInfo.log().atInfo().alsoTo(logger).log("Wake up from sleep");
+      }
     } catch (IllegalArgumentException e) {
       testInfo
           .log()
@@ -145,8 +148,11 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
   private void onTestMessage(TestMessageEvent testMessageEvent) {
     Map<String, String> message = testMessageEvent.getMessage();
     if (MESSAGE_NAMESPACE.equals(message.get("namespace"))) {
-      String resultString = message.get("result");
-      if ("set_result".equals(message.get("type")) && resultString != null) {
+      if (Objects.equals(message.get("type"), "wake_up")) {
+        wakeupLatch.countDown();
+      } else if (Objects.equals(message.get("type"), "set_result")
+          && message.containsKey("result")) {
+        String resultString = message.get("result");
         testMessageEvent
             .getTest()
             .log()
