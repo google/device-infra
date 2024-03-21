@@ -414,7 +414,7 @@ public class SessionManager {
     sessionDetailBuilder.setSessionStatus(SessionStatus.SESSION_FINISHED);
 
     logger.atInfo().withCause(sessionRunnerError).log(
-        "Session finished: %s", shortDebugString(sessionDetail));
+        "Session finished: %s", shortDebugString(sessionDetailBuilder));
 
     // Adds the error thrown from the session runner to SessionDetail, if any.
     if (sessionRunnerError != null) {
