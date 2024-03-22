@@ -16,28 +16,14 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "sub_plan",
-    srcs = ["SubPlan.java"],
+    name = "test_status",
+    srcs = ["TestStatus.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__pkg__",
-    ],
-    runtime_deps = [
-        "@maven//:net_sf_kxml_kxml2",
     ],
     deps = [
-        ":abstract_xml_parser",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
         "@maven//:com_google_guava_guava",
-        "@maven//:xmlpull_xmlpull",
-    ],
-)
-
-java_library(
-    name = "abstract_xml_parser",
-    srcs = ["AbstractXmlParser.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
 )

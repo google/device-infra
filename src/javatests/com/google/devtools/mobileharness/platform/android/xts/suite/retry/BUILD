@@ -18,14 +18,23 @@ load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suite
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "subplan",
+    name = "retry",
     testonly = 1,
-    srcs = ["SubPlanTest.java"],
+    srcs = glob(["*.java"]),
     deps = [
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_args",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_generator",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_testlib",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 
@@ -34,5 +43,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":subplan"],
+    deps = [":retry"],
 )

@@ -31,5 +31,7 @@ public final class SuiteCommon {
 
   public static final String SUITE_REPORT_VERSION = "suite_report_version";
 
+  public static final String TEST_RESULT_PB_FILE_NAME = "test_result.pb";
+
   private SuiteCommon() {}
 }

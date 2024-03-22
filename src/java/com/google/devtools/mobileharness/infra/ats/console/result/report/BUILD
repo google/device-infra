@@ -132,6 +132,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/mobly:mobly_doc_entry",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/mobly:parser",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
@@ -199,6 +200,9 @@ java_library(
 java_library(
     name = "test_result_proto_util",
     srcs = ["TestResultProtoUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
+    ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "@com_google_protobuf//:protobuf_java",

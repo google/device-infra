@@ -20,7 +20,6 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.lang.Math.max;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.flogger.FluentLogger;
@@ -38,6 +37,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.MoblyResult;
+import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.protobuf.TextFormat;
@@ -195,14 +195,7 @@ public class MoblyReportParser {
   }
 
   private static String getTestStatus(MoblyResult moblyResult) {
-    switch (moblyResult) {
-      case PASS:
-        return "pass";
-      case FAIL:
-        return "fail";
-      default:
-        return Ascii.toLowerCase(moblyResult.toString());
-    }
+    return TestStatus.convertMoblyResultToTestStatusCompatibilityString(moblyResult);
   }
 
   /** Data class for the xTS report parse result. */

@@ -21,6 +21,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",

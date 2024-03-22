@@ -19,6 +19,9 @@ package com.google.devtools.mobileharness.platform.android.xts.suite.subplan;
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -73,7 +76,7 @@ public final class SubPlanTest {
 
     File subPlanFile = temporaryFolder.newFile("test-subPlan-serialization.txt");
     try (OutputStream subPlanOutputStream = new FileOutputStream(subPlanFile)) {
-      subPlan.serialize(subPlanOutputStream);
+      subPlan.serialize(subPlanOutputStream, /* tfFiltersOnly= */ false);
     }
     // Parse subPlan and assert correctness
     checkSubPlan(subPlanFile);
@@ -123,25 +126,27 @@ public final class SubPlanTest {
     SubPlan subPlan = new SubPlan();
     subPlan.parse(subPlanInputStream);
 
-    Set<String> subPlanIncludes = subPlan.getIncludeFilters();
-    Set<String> subPlanExcludes = subPlan.getExcludeFilters();
+    SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
 
-    assertThat(subPlanIncludes)
+    assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
-            String.format(FILTER_STRING_TEMPLATE, ABI, MODULE_A, TEST_1),
-            String.format(FILTER_STRING_TEMPLATE, ABI, MODULE_A, TEST_2),
-            String.format(FILTER_STRING_TEMPLATE, ABI, MODULE_A, TEST_3),
-            MODULE_B);
-    assertThat(subPlanExcludes)
-        .containsExactly(MODULE_B + " " + TEST_1, MODULE_B + " " + TEST_2, MODULE_B + " " + TEST_3);
+            ABI + " " + MODULE_A,
+            ImmutableSet.of(TEST_1, TEST_2, TEST_3),
+            MODULE_B,
+            ImmutableSet.of(SubPlan.ALL_TESTS_IN_MODULE));
+    assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
+        .containsExactly(MODULE_B, ImmutableSet.of(TEST_1, TEST_2, TEST_3));
 
-    Set<String> subPlanNonTfIncludes = subPlan.getNonTfIncludeFilters();
-    Set<String> subPlanNonTfExcludes = subPlan.getNonTfExcludeFilters();
+    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
+        subPlan.getNonTfIncludeFiltersMultimap();
+    SetMultimap<String, String> subPlanNonTfExcludeFiltersMultimap =
+        subPlan.getNonTfExcludeFiltersMultimap();
 
-    assertThat(subPlanNonTfIncludes)
-        .containsExactly(String.format(FILTER_STRING_TEMPLATE, ABI, NON_TF_MODULE_C, TEST_1));
-    assertThat(subPlanNonTfExcludes)
-        .containsExactly(String.format(FILTER_STRING_TEMPLATE, ABI, NON_TF_MODULE_C, TEST_2));
+    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
+        .containsExactly(ABI + " " + NON_TF_MODULE_C, ImmutableSet.of(TEST_1));
+    assertThat(Multimaps.asMap(subPlanNonTfExcludeFiltersMultimap))
+        .containsExactly(ABI + " " + NON_TF_MODULE_C, ImmutableSet.of(TEST_2));
   }
 
   // Helper for generating Entry XML tags

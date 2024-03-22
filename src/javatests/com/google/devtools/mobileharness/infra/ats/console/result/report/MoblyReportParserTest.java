@@ -116,7 +116,7 @@ public final class MoblyReportParserTest {
                         .addTest(
                             com.google.devtools.mobileharness.infra.ats.console.result.proto
                                 .ReportProto.Test.newBuilder()
-                                .setResult("skip")
+                                .setResult("skipped")
                                 .setSkipped(true)
                                 .setName("test_hello_world2_1")))
                 .build());

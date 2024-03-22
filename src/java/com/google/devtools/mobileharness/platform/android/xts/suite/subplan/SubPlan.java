@@ -16,14 +16,17 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite.subplan;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.SetMultimap;
+import com.google.common.collect.TreeMultimap;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.SortedSet;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
@@ -34,11 +37,11 @@ import org.xmlpull.v1.XmlSerializer;
 /** Container, parser, and generator of SubPlan info. */
 public class SubPlan extends AbstractXmlParser {
 
-  private final Set<String> includeFilters;
-  private final Set<String> excludeFilters;
+  private final TreeMultimap<String, String> includeFiltersMultimap;
+  private final TreeMultimap<String, String> excludeFiltersMultimap;
 
-  private final Set<String> nonTfIncludeFilters;
-  private final Set<String> nonTfExcludeFilters;
+  private final TreeMultimap<String, String> nonTfIncludeFiltersMultimap;
+  private final TreeMultimap<String, String> nonTfExcludeFiltersMultimap;
 
   private static final String ENCODING = "UTF-8";
   private static final String NS = null; // namespace used for XML serializer
@@ -53,73 +56,88 @@ public class SubPlan extends AbstractXmlParser {
   private static final String NAME_ATTR = "name";
   private static final String IS_NON_TF_ATTR = "isNonTf";
 
+  @VisibleForTesting static final String ALL_TESTS_IN_MODULE = "ALL";
+
   public SubPlan() {
-    includeFilters = new HashSet<>();
-    excludeFilters = new HashSet<>();
-    nonTfIncludeFilters = new HashSet<>();
-    nonTfExcludeFilters = new HashSet<>();
+    includeFiltersMultimap = TreeMultimap.create();
+    excludeFiltersMultimap = TreeMultimap.create();
+
+    nonTfIncludeFiltersMultimap = TreeMultimap.create();
+    nonTfExcludeFiltersMultimap = TreeMultimap.create();
   }
 
   /** Adds a filter of which TF tests to include. */
   public void addIncludeFilter(String filter) {
-    includeFilters.add(filter);
+    addFilterHelper(includeFiltersMultimap, filter);
   }
 
   /** Adds the {@link Set} of filters of which TF tests to include. */
   public void addAllIncludeFilters(Set<String> filters) {
-    includeFilters.addAll(filters);
+    for (String filter : filters) {
+      addIncludeFilter(filter);
+    }
   }
 
   /** Adds a filter of which non-TF tests to include. */
   public void addNonTfIncludeFilter(String filter) {
-    nonTfIncludeFilters.add(filter);
+    addFilterHelper(nonTfIncludeFiltersMultimap, filter);
   }
 
   /** Adds a filter of which TF tests to exclude. */
   public void addExcludeFilter(String filter) {
-    excludeFilters.add(filter);
+    addFilterHelper(excludeFiltersMultimap, filter);
   }
 
   /** Adds the {@link Set} of filters of which TF tests to exclude. */
   public void addAllExcludeFilters(Set<String> filters) {
-    excludeFilters.addAll(filters);
+    for (String filter : filters) {
+      addExcludeFilter(filter);
+    }
   }
 
   /** Adds a filter of which non-TF tests to exclude. */
   public void addNonTfExcludeFilter(String filter) {
-    nonTfExcludeFilters.add(filter);
+    addFilterHelper(nonTfExcludeFiltersMultimap, filter);
   }
 
-  /** Gets the current {@link Set} of include filters for TF tests. */
-  public Set<String> getIncludeFilters() {
-    return new HashSet<>(includeFilters);
+  private static void addFilterHelper(TreeMultimap<String, String> multiMap, String filter) {
+    SuiteTestFilter suiteTestFilter = SuiteTestFilter.create(filter);
+    multiMap.put(
+        (suiteTestFilter.abi().isPresent() ? suiteTestFilter.abi().get() + " " : "")
+            + suiteTestFilter.moduleName(),
+        suiteTestFilter.testName().orElse(ALL_TESTS_IN_MODULE));
   }
 
-  /** Gets the current {@link Set} of include filters for non-TF tests. */
-  public Set<String> getNonTfIncludeFilters() {
-    return new HashSet<>(nonTfIncludeFilters);
+  /** Gets the current {@link SetMultimap} of include filters for TF tests. */
+  public SetMultimap<String, String> getIncludeFiltersMultimap() {
+    return TreeMultimap.create(includeFiltersMultimap);
   }
 
-  /** Gets the current {@link Set} of exclude filters for TF tests. */
-  public Set<String> getExcludeFilters() {
-    return new HashSet<>(excludeFilters);
+  /** Gets the current {@link SetMultimap} of include filters for non-TF tests. */
+  public SetMultimap<String, String> getNonTfIncludeFiltersMultimap() {
+    return TreeMultimap.create(nonTfIncludeFiltersMultimap);
   }
 
-  /** Gets the current {@link Set} of exclude filters for non-TF tests. */
-  public Set<String> getNonTfExcludeFilters() {
-    return new HashSet<>(nonTfExcludeFilters);
+  /** Gets the current {@link SetMultimap} of exclude filters for TF tests. */
+  public SetMultimap<String, String> getExcludeFiltersMultimap() {
+    return TreeMultimap.create(excludeFiltersMultimap);
+  }
+
+  /** Gets the current {@link SetMultimap} of exclude filters for non-TF tests. */
+  public SetMultimap<String, String> getNonTfExcludeFiltersMultimap() {
+    return TreeMultimap.create(nonTfExcludeFiltersMultimap);
   }
 
   /** Deletes all the include filters currently tracked. */
   public void clearIncludeFilters() {
-    includeFilters.clear();
-    nonTfIncludeFilters.clear();
+    includeFiltersMultimap.clear();
+    nonTfIncludeFiltersMultimap.clear();
   }
 
   /** Deletes all the exclude filters currently tracked. */
   public void clearExcludeFilters() {
-    excludeFilters.clear();
-    nonTfExcludeFilters.clear();
+    includeFiltersMultimap.clear();
+    nonTfExcludeFiltersMultimap.clear();
   }
 
   /**
@@ -127,7 +145,7 @@ public class SubPlan extends AbstractXmlParser {
    *
    * @param xmlOutputStream the {@link OutputStream} to receive subplan XML
    */
-  public void serialize(OutputStream xmlOutputStream) throws IOException {
+  public void serialize(OutputStream xmlOutputStream, boolean tfFiltersOnly) throws IOException {
     XmlSerializer serializer = null;
     try {
       serializer = XmlPullParserFactory.newInstance().newSerializer();
@@ -146,40 +164,57 @@ public class SubPlan extends AbstractXmlParser {
     serializer.startTag(NS, SUBPLAN_TAG);
     serializer.attribute(NS, VERSION_ATTR, SUBPLAN_VERSION);
 
-    ArrayList<String> sortedIncludes = new ArrayList<>(includeFilters);
-    ArrayList<String> sortedExcludes = new ArrayList<>(excludeFilters);
-    Collections.sort(sortedIncludes);
-    Collections.sort(sortedExcludes);
-    for (String include : sortedIncludes) {
-      serializer.startTag(NS, ENTRY_TAG);
-      serializer.attribute(NS, INCLUDE_ATTR, include);
-      serializer.endTag(NS, ENTRY_TAG);
-    }
-    for (String exclude : sortedExcludes) {
-      serializer.startTag(NS, ENTRY_TAG);
-      serializer.attribute(NS, EXCLUDE_ATTR, exclude);
-      serializer.endTag(NS, ENTRY_TAG);
-    }
+    serializeFiltersMultimap(
+        serializer, includeFiltersMultimap, /* isIncludeFilter= */ true, /* isNonTf= */ false);
+    serializeFiltersMultimap(
+        serializer, excludeFiltersMultimap, /* isIncludeFilter= */ false, /* isNonTf= */ false);
 
-    ArrayList<String> sortedNonTfIncludes = new ArrayList<>(nonTfIncludeFilters);
-    ArrayList<String> sortedNonTfExcludes = new ArrayList<>(nonTfExcludeFilters);
-    Collections.sort(sortedNonTfIncludes);
-    Collections.sort(sortedNonTfExcludes);
-    for (String include : sortedNonTfIncludes) {
-      serializer.startTag(NS, ENTRY_TAG);
-      serializer.attribute(NS, INCLUDE_ATTR, include);
-      serializer.attribute(NS, IS_NON_TF_ATTR, "true");
-      serializer.endTag(NS, ENTRY_TAG);
-    }
-    for (String exclude : sortedNonTfExcludes) {
-      serializer.startTag(NS, ENTRY_TAG);
-      serializer.attribute(NS, EXCLUDE_ATTR, exclude);
-      serializer.attribute(NS, IS_NON_TF_ATTR, "true");
-      serializer.endTag(NS, ENTRY_TAG);
+    if (!tfFiltersOnly) {
+      serializeFiltersMultimap(
+          serializer,
+          nonTfIncludeFiltersMultimap,
+          /* isIncludeFilter= */ true,
+          /* isNonTf= */ true);
+      serializeFiltersMultimap(
+          serializer,
+          nonTfExcludeFiltersMultimap,
+          /* isIncludeFilter= */ false,
+          /* isNonTf= */ true);
     }
 
     serializer.endTag(NS, SUBPLAN_TAG);
     serializer.endDocument();
+  }
+
+  private void serializeFiltersMultimap(
+      XmlSerializer serializer,
+      TreeMultimap<String, String> filtersMultimap,
+      boolean isIncludeFilter,
+      boolean isNonTf)
+      throws IOException {
+    for (Entry<String, SortedSet<String>> entry : Multimaps.asMap(filtersMultimap).entrySet()) {
+      if (entry.getValue().contains(ALL_TESTS_IN_MODULE) && entry.getValue().size() == 1) {
+        serializer.startTag(NS, ENTRY_TAG);
+        serializer.attribute(NS, isIncludeFilter ? INCLUDE_ATTR : EXCLUDE_ATTR, entry.getKey());
+        if (isNonTf) {
+          serializer.attribute(NS, IS_NON_TF_ATTR, "true");
+        }
+        serializer.endTag(NS, ENTRY_TAG);
+      } else {
+        for (String testName : entry.getValue()) {
+          if (testName.equals(ALL_TESTS_IN_MODULE)) {
+            continue;
+          }
+          serializer.startTag(NS, ENTRY_TAG);
+          serializer.attribute(
+              NS, isIncludeFilter ? INCLUDE_ATTR : EXCLUDE_ATTR, entry.getKey() + " " + testName);
+          if (isNonTf) {
+            serializer.attribute(NS, IS_NON_TF_ATTR, "true");
+          }
+          serializer.endTag(NS, ENTRY_TAG);
+        }
+      }
+    }
   }
 
   /** Creates a {@link DefaultHandler} to process the xml. */
@@ -207,20 +242,27 @@ public class SubPlan extends AbstractXmlParser {
 
         if (excludeString == null) {
           parseFilter(
-              abiString, nameString, includeString, isNonTf ? nonTfIncludeFilters : includeFilters);
+              abiString,
+              nameString,
+              includeString,
+              isNonTf ? nonTfIncludeFiltersMultimap : includeFiltersMultimap);
         } else {
           parseFilter(
-              abiString, nameString, excludeString, isNonTf ? nonTfExcludeFilters : excludeFilters);
+              abiString,
+              nameString,
+              excludeString,
+              isNonTf ? nonTfExcludeFiltersMultimap : excludeFiltersMultimap);
         }
       }
     }
 
-    private void parseFilter(String abi, String name, String filter, Set<String> filterSet) {
+    private void parseFilter(
+        String abi, String name, String filter, TreeMultimap<String, String> filtersMultimap) {
       if (name == null) {
         // ignore name and abi attributes, 'filter' should contain all necessary parts
-        filterSet.add(filter);
+        addFilterHelper(filtersMultimap, filter);
       } else {
-        // 'filter' is name of test. Build TestFilter and convert back to string
+        // 'filter' is name of test. Build filter string
         StringBuilder newFilter = new StringBuilder();
         if (abi != null) {
           newFilter.append(abi.trim());
@@ -234,7 +276,7 @@ public class SubPlan extends AbstractXmlParser {
           newFilter.append(filter.trim());
         }
 
-        filterSet.add(SuiteTestFilter.create(newFilter.toString()).toString());
+        addFilterHelper(filtersMultimap, newFilter.toString());
       }
     }
   }
