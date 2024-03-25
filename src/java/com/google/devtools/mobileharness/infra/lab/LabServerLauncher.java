@@ -68,6 +68,11 @@ public class LabServerLauncher {
       SYSTEM_UTIL.exit(ExitCode.Shared.OK);
     }
 
+    // Sleeps forever for no-op lab server.
+    if (Flags.instance().noOpLabServer.getNonNull()) {
+      Thread.currentThread().join();
+    }
+
     try {
       // Initializes lab server.
       LabServerLauncher labServerLauncher = new LabServerLauncher(allLabArgs);

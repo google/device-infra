@@ -29,7 +29,12 @@ import java.util.List;
  * <p>Remember to sort all flags by @FlagSpec.name.
  */
 @com.beust.jcommander.Parameters(separators = "=")
-@SuppressWarnings({"NonPrivateFlag", "UnnecessarilyFullyQualified", "unused"})
+@SuppressWarnings({
+  "BooleanFlagNameStartingWithNo",
+  "NonPrivateFlag",
+  "UnnecessarilyFullyQualified",
+  "unused"
+})
 public class Flags {
 
   private static final Flag<String> aaptPathDefault = Flag.value("");
@@ -741,6 +746,16 @@ public class Flags {
           "Device type string supported, e.g. AndroidRealDevice, only for debug/test purpose.",
       converter = Flag.StringConverter.class)
   public Flag<String> noOpDeviceType = noOpDeviceTypeDefault;
+
+  private static final Flag<Boolean> noOpLabServerDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--no_op_lab_server",
+      description =
+          "If true, the lab server will sleep forever rather than starting services and connecting"
+              + " to master. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> noOpLabServer = noOpLabServerDefault;
 
   private static final Flag<Integer> olcServerPortDefault = Flag.value(7030);
 
