@@ -9,8 +9,12 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 )
 
-// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
-const RBECASConcurrency = 500
+const (
+	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
+	RBECASConcurrency = 500
+	// RBECASMaxBatchSize is the default max batch size for RBE clients.
+	RBECASMaxBatchSize = 4*1024*1024 - 1024
+)
 
 // Opts contains options for creating a new RBE client.
 type Opts struct {
@@ -25,6 +29,8 @@ type Opts struct {
 	UseApplicationDefault bool
 	// CASConcurrency is the maximum number of concurrent upload and download operations.
 	CASConcurrency int
+	// CASMaxBatchSize is the max batch size.
+	CASMaxBatchSize int64
 }
 
 // New creates a new RBE client with given options.
@@ -33,8 +39,13 @@ func New(ctx context.Context, clientOpts Opts) (*client.Client, error) {
 	if casConcurrency <= 0 {
 		casConcurrency = RBECASConcurrency
 	}
+	casMaxBatchSize := clientOpts.CASMaxBatchSize
+	if casMaxBatchSize <= 0 {
+		casMaxBatchSize = RBECASMaxBatchSize
+	}
 	opts := []client.Opt{
 		client.CASConcurrency(casConcurrency),
+		client.MaxBatchSize(casMaxBatchSize),
 		client.StartupCapabilities(true),
 	}
 
