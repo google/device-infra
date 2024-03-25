@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.dda;
+package com.google.devtools.mobileharness.infra.ats.dda.stub;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
@@ -25,12 +25,12 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.infra.ats.dda.stub.AtsDdaStub;
 import com.google.devtools.mobileharness.infra.ats.dda.stub.AtsDdaStub.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
@@ -42,7 +42,6 @@ import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
-import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import io.grpc.ManagedChannel;
 import java.io.IOException;
 import java.time.Duration;
@@ -127,7 +126,6 @@ public class AtsDdaIntegrationTest {
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_deploy.jar");
-  private static final String DEVICE_CONTROL_ID = "AndroidRealDevice-0";
 
   private final CommandExecutor commandExecutor = new CommandExecutor();
   private final SystemUtil systemUtil = new SystemUtil();
@@ -174,7 +172,11 @@ public class AtsDdaIntegrationTest {
     startServers();
 
     // Creates session.
-    String sessionId = atsDdaStub.createSession("fake_session", "pixel", 24);
+    String sessionId =
+        atsDdaStub.createSession(
+            "fake_session",
+            ImmutableMap.of(
+                "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"));
 
     // Gets session info.
     for (int i = 0; i < 30; i++) {
@@ -199,8 +201,8 @@ public class AtsDdaIntegrationTest {
                             DeviceCompositeDimension.newBuilder()
                                 .addSupportedDimension(
                                     DeviceDimension.newBuilder()
-                                        .setName(Name.CONTROL_ID.lowerCaseName())
-                                        .setValue(DEVICE_CONTROL_ID))))
+                                        .setName("control_id")
+                                        .setValue("AndroidRealDevice-2"))))
                 .build());
 
     // Verifies the driver started successfully.
@@ -230,8 +232,10 @@ public class AtsDdaIntegrationTest {
 
   private void startServers()
       throws IOException, CommandStartException, InterruptedException, ExecutionException {
+    int deviceNum = 5;
+
     // Starts the OLC server.
-    CountDownLatch olcServerRemoteDeviceFound = new CountDownLatch(1);
+    CountDownLatch olcServerAllRemoteDevicesFound = new CountDownLatch(deviceNum);
     Command olcServerCommand =
         Command.of(
                 systemUtil
@@ -259,8 +263,8 @@ public class AtsDdaIntegrationTest {
                       System.err.printf("olc_server_stderr %s\n", stderr);
                       olcServerStderrBuilder.append(stderr).append('\n');
 
-                      if (stderr.contains("Sign up lab") && stderr.contains(DEVICE_CONTROL_ID)) {
-                        olcServerRemoteDeviceFound.countDown();
+                      if (stderr.contains("Sign up lab") && stderr.contains("AndroidRealDevice-")) {
+                        olcServerAllRemoteDevicesFound.countDown();
                       }
                     }))
             .successfulStartCondition(line -> line.contains("OLC server started"))
@@ -280,7 +284,7 @@ public class AtsDdaIntegrationTest {
     }
 
     // Starts the lab server.
-    CountDownLatch labServerLocalDeviceFound = new CountDownLatch(1);
+    CountDownLatch labServerAllLocalDevicesFound = new CountDownLatch(deviceNum);
 
     int labServerGrpcPort = PortProber.pickUnusedPort();
     int labServerRpcPort = PortProber.pickUnusedPort();
@@ -304,7 +308,7 @@ public class AtsDdaIntegrationTest {
                             "--external_adb_initializer_template=true",
                             "--grpc_port=" + labServerGrpcPort,
                             "--master_grpc_target=localhost:" + olcServerPort,
-                            "--no_op_device_num=1",
+                            "--no_op_device_num=" + deviceNum,
                             "--no_op_device_type=AndroidRealDevice",
                             "--public_dir=" + tmpFolder.newFolder("lab_server_public_dir"),
                             "--rpc_port=" + labServerRpcPort,
@@ -324,8 +328,8 @@ public class AtsDdaIntegrationTest {
                       System.err.printf("lab_server_stderr %s\n", stderr);
                       labServerStderrBuilder.append(stderr).append('\n');
 
-                      if (stderr.contains("New device " + DEVICE_CONTROL_ID)) {
-                        labServerLocalDeviceFound.countDown();
+                      if (stderr.contains("New device AndroidRealDevice-")) {
+                        labServerAllLocalDevicesFound.countDown();
                       } else if (stderr.contains("Sleep for ")) {
                         driverStarted.countDown();
                       } else if (stderr.contains("Wake up from sleep")) {
@@ -348,13 +352,13 @@ public class AtsDdaIntegrationTest {
     } catch (TimeoutException e) {
       throw new AssertionError("Lab server didn't start in 60 seconds", e);
     }
-    assertWithMessage("Lab server didn't detect devices in 15 seconds")
-        .that(labServerLocalDeviceFound.await(15L, SECONDS))
+    assertWithMessage("Lab server didn't detect all devices in 15 seconds")
+        .that(labServerAllLocalDevicesFound.await(15L, SECONDS))
         .isTrue();
 
     // Verifies the remote device manager receives device signup successfully.
-    assertWithMessage("The remote device manager has not received device signup in 15 seconds")
-        .that(olcServerRemoteDeviceFound.await(15L, SECONDS))
+    assertWithMessage("The remote device manager has not received all device signups in 15 seconds")
+        .that(olcServerAllRemoteDevicesFound.await(15L, SECONDS))
         .isTrue();
   }
 }

@@ -141,6 +141,7 @@ public class AtsDdaSessionPlugin {
                     .setAllocationExitStrategy(AllocationExitStrategy.FAIL_FAST_NO_IDLE)
                     .build())
             .build();
+    jobInfo.dimensions().addAll(deviceRequirement.getDimensionsMap());
     jobInfo.params().add("sleep_time_sec", Long.toString(DRIVER_SLEEP_TIME.toSeconds()));
     jobInfo.tests().add(TEST_NAME);
     return jobInfo;

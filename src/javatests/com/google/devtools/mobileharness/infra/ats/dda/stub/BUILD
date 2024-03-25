@@ -21,7 +21,7 @@ package(
 )
 
 java_library(
-    name = "dda",
+    name = "stub",
     srcs = glob(["*.java"]),
     data = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
@@ -38,7 +38,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@io_grpc_grpc_java//core",
@@ -53,5 +52,5 @@ junit_test_suites(
     sizes = [
         "medium",
     ],
-    deps = [":dda"],
+    deps = [":stub"],
 )

@@ -24,6 +24,7 @@ option java_outer_classname = "SessionPluginForTestingProto";
 message SessionPluginForTestingConfig {
   int32 no_op_driver_sleep_time_sec = 1;
   map<string, string> extra_job_files = 2;
+  map<string, string> job_device_dimensions = 3;
 }
 
 message SessionPluginForTestingOutput {

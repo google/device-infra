@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.infra.ats.dda.stub;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.common.metrics.stability.converter.DeserializedException;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
@@ -93,13 +95,24 @@ public class AtsDdaStub {
   /** Creates a session and returns the session ID. */
   public String createSession(String sessionName, String model, int version)
       throws GrpcExceptionWithErrorId {
+    return createSession(
+        sessionName,
+        ImmutableMap.of(
+            Name.MODEL.lowerCaseName(),
+            model,
+            Name.SDK_VERSION.lowerCaseName(),
+            Integer.toString(version)));
+  }
+
+  @VisibleForTesting
+  String createSession(String sessionName, ImmutableMap<String, String> dimensions)
+      throws GrpcExceptionWithErrorId {
     AtsDdaSessionPluginConfig pluginConfig =
         AtsDdaSessionPluginConfig.newBuilder()
             .setDeviceRequirement(
                 DeviceRequirement.newBuilder()
                     .setDeviceType("AndroidRealDevice")
-                    .putDimensions(Name.MODEL.lowerCaseName(), model)
-                    .putDimensions(Name.SDK_VERSION.lowerCaseName(), Integer.toString(version)))
+                    .putAllDimensions(dimensions))
             .build();
     CreateSessionResponse createSessionResponse =
         sessionStub.createSession(

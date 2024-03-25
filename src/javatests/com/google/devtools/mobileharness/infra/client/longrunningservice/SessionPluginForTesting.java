@@ -16,13 +16,16 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
+import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.protobuf.TextFormat.shortDebugString;
+import static java.util.Objects.requireNonNull;
 
-import com.google.common.collect.Iterables;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
+import com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
@@ -30,6 +33,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionPluginForTestingProto.SessionPluginForTestingOutput;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
@@ -67,11 +71,27 @@ public class SessionPluginForTesting {
                     .setRetry(Retry.newBuilder().setTestAttempts(1).build())
                     .build())
             .build();
+    jobInfo.dimensions().addAll(config.getJobDeviceDimensionsMap());
     jobInfo.params().add("sleep_time_sec", Integer.toString(config.getNoOpDriverSleepTimeSec()));
     jobInfo.files().addAll(config.getExtraJobFilesMap());
 
     sessionInfo.addJob(jobInfo);
     logger.atInfo().log("JobInfo added");
+  }
+
+  @Subscribe
+  public void onTestStarting(TestStartingEvent event) {
+    logger.atInfo().log("Handling TestStartingEvent");
+
+    sessionInfo.putSessionProperty(
+        "allocated_device_control_id",
+        event.getDeviceFeature().getCompositeDimension().getSupportedDimensionList().stream()
+            .filter(dimension -> dimension.getName().equals(Name.CONTROL_ID.lowerCaseName()))
+            .map(DeviceDimension::getValue)
+            .findFirst()
+            .orElse("n/a"));
+
+    logger.atInfo().log("TestStartingEvent handled");
   }
 
   @Subscribe
@@ -88,7 +108,7 @@ public class SessionPluginForTesting {
   public void onSessionEnded(SessionEndedEvent event) {
     logger.atInfo().log("Parsing job result");
 
-    JobInfo jobInfo = Iterables.getOnlyElement(sessionInfo.getAllJobs());
+    JobInfo jobInfo = requireNonNull(getOnlyElement(sessionInfo.getAllJobs()));
     String jobResultTypeName = jobInfo.resultWithCause().get().type().name();
     sessionInfo.putSessionProperty("job_result", jobResultTypeName);
 

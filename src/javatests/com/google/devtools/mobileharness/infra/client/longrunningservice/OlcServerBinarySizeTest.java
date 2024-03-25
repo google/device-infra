@@ -46,10 +46,10 @@ public class OlcServerBinarySizeTest {
   private static final String BASE_OLC_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "javatests/com/google/devtools/mobileharness"
-              + "/infra/client/longrunningservice/olc_server_for_testing_deploy.jar");
+              + "/infra/client/longrunningservice/base_olc_server_deploy.jar");
   private static final String BASE_OLC_SERVER_BINARY_SOURCE_PATH =
       "google3/third_party/deviceinfra/src/javatests/com/google/devtools/mobileharness"
-          + "/infra/client/longrunningservice:olc_server_for_testing_deploy.jar";
+          + "/infra/client/longrunningservice:base_olc_server_deploy.jar";
 
   private static final String ATS_OLC_SERVER_BINARY_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
@@ -70,7 +70,7 @@ public class OlcServerBinarySizeTest {
   @Test
   public void checkBaseOlcServerBinarySize() throws Exception {
     BinarySizeChecker.checkBinarySize(
-        "olc_server_for_testing_deploy.jar",
+        "base_olc_server_deploy.jar",
         MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE,
         BASE_OLC_SERVER_BINARY_FILE_PATH,
         BASE_OLC_SERVER_BINARY_SOURCE_PATH);

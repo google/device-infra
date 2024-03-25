@@ -30,6 +30,7 @@ java_library(
         ],
     ),
     data = [
+        ":base_olc_server_deploy.jar",
         ":olc_server_for_testing_deploy.jar",
         ":olc_server_for_testing_local_mode_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
@@ -91,17 +92,27 @@ olc_server_binary(
     ],
 )
 
+olc_server_binary(
+    name = "base_olc_server",
+    extra_runtime_deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
+    ],
+)
+
 java_library(
     name = "session_plugin_for_testing",
     srcs = ["SessionPluginForTesting.java"],
     deps = [
         ":session_plugin_for_testing_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_event",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@com_google_protobuf//:protobuf_java",

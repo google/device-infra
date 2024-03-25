@@ -174,6 +174,7 @@ public class OlcServerIntegrationTest {
                       SessionOutput.newBuilder()
                           .putSessionProperty("job_result", "PASS")
                           .putSessionProperty("job_result_from_job_event", "PASS")
+                          .putSessionProperty("allocated_device_control_id", "NoOpDevice-4")
                           .putSessionPluginOutput(
                               PLUGIN_CLASS_NAME,
                               SessionPluginOutput.newBuilder()
@@ -184,6 +185,8 @@ public class OlcServerIntegrationTest {
                                               .build()))
                                   .build())))
           .build();
+
+  private final CommandExecutor commandExecutor = new CommandExecutor();
 
   private StringBuilder olcServerStdoutBuilder;
   private StringBuilder olcServerStderrBuilder;
@@ -231,7 +234,7 @@ public class OlcServerIntegrationTest {
 
   @Test
   public void noOpTest_localMode() throws Exception {
-    startServers(false);
+    startServers(/* enableAtsMode= */ false);
 
     // Checks the server version.
     VersionStub versionStub = new VersionStub(olcServerChannel);
@@ -249,7 +252,10 @@ public class OlcServerIntegrationTest {
     SessionStub sessionStub = new SessionStub(olcServerChannel);
     CreateSessionRequest createSessionRequest =
         createCreateSessionRequest(
-            SessionPluginForTestingConfig.newBuilder().setNoOpDriverSleepTimeSec(2).build());
+            SessionPluginForTestingConfig.newBuilder()
+                .setNoOpDriverSleepTimeSec(2)
+                .putJobDeviceDimensions("control_id", "NoOpDevice-4")
+                .build());
     CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
     SessionId sessionId = createSessionResponse.getSessionId();
 
@@ -312,7 +318,7 @@ public class OlcServerIntegrationTest {
 
   @Test
   public void noOpTest_atsMode() throws Exception {
-    startServers(true);
+    startServers(/* enableAtsMode= */ true);
 
     // Checks the server version.
     VersionStub versionStub = new VersionStub(olcServerChannel);
@@ -336,7 +342,8 @@ public class OlcServerIntegrationTest {
                         .getId()
                         .endsWith(requireNonNull(uuidSuffix)),
                 "has a device UUID ending with"))
-        .containsExactly("NoOpDevice-0");
+        .containsExactly(
+            "NoOpDevice-0", "NoOpDevice-1", "NoOpDevice-2", "NoOpDevice-3", "NoOpDevice-4");
 
     // Creates a session.
     SessionStub sessionStub = new SessionStub(olcServerChannel);
@@ -346,6 +353,7 @@ public class OlcServerIntegrationTest {
             SessionPluginForTestingConfig.newBuilder()
                 .setNoOpDriverSleepTimeSec(2)
                 .putExtraJobFiles("fake_job_file_tag", fakeJobFilePath)
+                .putJobDeviceDimensions("control_id", "NoOpDevice-4")
                 .build());
     CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
     SessionId sessionId = createSessionResponse.getSessionId();
@@ -362,6 +370,11 @@ public class OlcServerIntegrationTest {
 
     // Verifies the driver has run.
     assertWithMessage("lab server stderr").that(labServerStderr).contains("Sleep for 2 seconds");
+
+    // Verifies the allocation is correct.
+    assertWithMessage("olc server stderr")
+        .that(olcServerStderr)
+        .containsMatch("Allocated devices.*NoOpDevice-4");
 
     // Verifies job/test files have been transferred.
     assertWithMessage("lab server stderr")
@@ -385,11 +398,11 @@ public class OlcServerIntegrationTest {
 
   private void startServers(boolean enableAtsMode)
       throws IOException, CommandStartException, InterruptedException, ExecutionException {
-    CommandExecutor commandExecutor = new CommandExecutor();
+    int noOpDeviceNum = 5;
 
     // Starts the OLC server.
-    CountDownLatch olcServerLocalDeviceFound = new CountDownLatch(1);
-    CountDownLatch olcServerRemoteDeviceFound = new CountDownLatch(1);
+    CountDownLatch olcServerAllLocalDevicesFound = new CountDownLatch(noOpDeviceNum);
+    CountDownLatch olcServerAllRemoteDevicesFound = new CountDownLatch(noOpDeviceNum);
 
     Command olcServerCommand =
         Command.of(
@@ -405,7 +418,7 @@ public class OlcServerIntegrationTest {
                             "--enable_grpc_lab_server=true",
                             "--external_adb_initializer_template=true",
                             "--log_file_size_no_limit=true",
-                            "--no_op_device_num=1",
+                            "--no_op_device_num=" + noOpDeviceNum,
                             "--olc_server_port=" + olcServerPort,
                             "--public_dir=" + tmpFolder.newFolder("olc_server_public_dir"),
                             "--simplified_log_format=true",
@@ -423,11 +436,10 @@ public class OlcServerIntegrationTest {
                       System.err.printf("olc_server_stderr %s\n", stderr);
                       olcServerStderrBuilder.append(stderr).append('\n');
 
-                      if (stderr.contains("New device NoOpDevice-0")) {
-                        olcServerLocalDeviceFound.countDown();
-                      } else if (stderr.contains("Sign up lab")
-                          && stderr.contains("NoOpDevice-0")) {
-                        olcServerRemoteDeviceFound.countDown();
+                      if (stderr.contains("New device NoOpDevice-")) {
+                        olcServerAllLocalDevicesFound.countDown();
+                      } else if (stderr.contains("Sign up lab") && stderr.contains("NoOpDevice-")) {
+                        olcServerAllRemoteDevicesFound.countDown();
                       }
                     }))
             .successfulStartCondition(line -> line.contains("OLC server started"))
@@ -448,7 +460,7 @@ public class OlcServerIntegrationTest {
 
     // Starts the lab server.
     if (enableAtsMode) {
-      CountDownLatch labServerLocalDeviceFound = new CountDownLatch(1);
+      CountDownLatch labServerAllLocalDevicesFound = new CountDownLatch(noOpDeviceNum);
 
       int labServerGrpcPort = PortProber.pickUnusedPort();
       int labServerRpcPort = PortProber.pickUnusedPort();
@@ -473,7 +485,7 @@ public class OlcServerIntegrationTest {
                               "--grpc_port=" + labServerGrpcPort,
                               "--log_file_size_no_limit=true",
                               "--master_grpc_target=localhost:" + olcServerPort,
-                              "--no_op_device_num=1",
+                              "--no_op_device_num=" + noOpDeviceNum,
                               "--public_dir=" + tmpFolder.newFolder("lab_server_public_dir"),
                               "--rpc_port=" + labServerRpcPort,
                               "--serv_via_cloud_rpc=false",
@@ -493,8 +505,8 @@ public class OlcServerIntegrationTest {
                         System.err.printf("lab_server_stderr %s\n", stderr);
                         labServerStderrBuilder.append(stderr).append('\n');
 
-                        if (stderr.contains("New device NoOpDevice-0")) {
-                          labServerLocalDeviceFound.countDown();
+                        if (stderr.contains("New device NoOpDevice-")) {
+                          labServerAllLocalDevicesFound.countDown();
                         }
                       }))
               .successfulStartCondition(line -> line.contains("Lab server successfully started"))
@@ -513,20 +525,21 @@ public class OlcServerIntegrationTest {
       } catch (TimeoutException e) {
         throw new AssertionError("Lab server didn't start in 60 seconds", e);
       }
-      assertWithMessage("Lab server didn't detect devices in 15 seconds")
-          .that(labServerLocalDeviceFound.await(15L, SECONDS))
+      assertWithMessage("Lab server didn't detect all devices in 15 seconds")
+          .that(labServerAllLocalDevicesFound.await(15L, SECONDS))
           .isTrue();
     }
 
     if (enableAtsMode) {
       // Verifies the remote device manager receives device signup successfully.
-      assertWithMessage("The remote device manager has not received device signup in 15 seconds")
-          .that(olcServerRemoteDeviceFound.await(15L, SECONDS))
+      assertWithMessage(
+              "The remote device manager has not received all device signups in 15 seconds")
+          .that(olcServerAllRemoteDevicesFound.await(15L, SECONDS))
           .isTrue();
     } else {
       // Verifies the local device manager starts successfully.
-      assertWithMessage("The local device manager has not started in 15 seconds")
-          .that(olcServerLocalDeviceFound.await(15L, SECONDS))
+      assertWithMessage("The local device manager has not detected all devices in 15 seconds")
+          .that(olcServerAllLocalDevicesFound.await(15L, SECONDS))
           .isTrue();
     }
   }
