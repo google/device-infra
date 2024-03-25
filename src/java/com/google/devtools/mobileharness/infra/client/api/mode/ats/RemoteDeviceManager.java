@@ -267,7 +267,7 @@ class RemoteDeviceManager implements LabInfoProvider {
         if (labs.containsKey(labKey)) {
           // Updates lab data.
           labData = labs.get(labKey);
-          labData.updateBySignUp(request);
+          labData.updateBySignUp(labLocator, request);
         } else {
           // Adds lab data.
           labData = new LabData(labLocator, request);
@@ -562,7 +562,7 @@ class RemoteDeviceManager implements LabInfoProvider {
   /** All access to this class must be guarded by {@link #lock}. */
   private static class LabData {
 
-    private final LabLocator labLocator;
+    private LabLocator labLocator;
 
     private LabServerSetting labServerSetting;
 
@@ -575,11 +575,11 @@ class RemoteDeviceManager implements LabInfoProvider {
     private Instant updateFromLabLocalTimestamp;
 
     private LabData(LabLocator labLocator, SignUpLabRequest lab) {
-      this.labLocator = labLocator;
-      updateBySignUp(lab);
+      updateBySignUp(labLocator, lab);
     }
 
-    private void updateBySignUp(SignUpLabRequest lab) {
+    private void updateBySignUp(LabLocator labLocator, SignUpLabRequest lab) {
+      this.labLocator = labLocator;
       labServerSetting = lab.getLabServerSetting();
       labServerFeature = lab.getLabServerFeature();
       updateFromLabLocalTimestamp = Instant.now();
