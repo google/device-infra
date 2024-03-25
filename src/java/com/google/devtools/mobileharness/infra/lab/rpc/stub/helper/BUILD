@@ -55,6 +55,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
