@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.DIMENSION_ID;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.DEVICE_ID_LIST;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -143,7 +143,16 @@ public final class AtsServerSessionPluginTest {
         CommandInfo.newBuilder()
             .setName("command")
             .setCommandLine("cts -m module1 --logcat-on-failure")
-            .putDeviceDimensions("device_serial", "device_id_1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_1")
+                    .build())
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_2")
+                    .build())
             .build();
     request =
         NewMultiCommandRequest.newBuilder()
@@ -173,7 +182,7 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.locator()).thenReturn(testLocator);
     when(testLocator.getId()).thenReturn("test_id");
     testProperties = new Properties(timing);
-    testProperties.add(DIMENSION_ID, "device_serial");
+    testProperties.add(DEVICE_ID_LIST, "device_id_1,device_id_2");
     when(testInfo.properties()).thenReturn(testProperties);
     when(jobInfo.tests()).thenReturn(testInfos);
     when(jobInfo2.tests()).thenReturn(testInfos);
@@ -320,7 +329,8 @@ public final class AtsServerSessionPluginTest {
     assertThat(commandAttemptDetail.getId()).isEqualTo("test_id");
     assertThat(commandAttemptDetail.getRequestId()).isEqualTo("session_id");
     assertThat(commandAttemptDetail.getCommandId()).isEqualTo("job_id");
-    assertThat(commandAttemptDetail.getDeviceSerial()).isEqualTo("device_serial");
+    assertThat(commandAttemptDetail.getDeviceSerialsList())
+        .containsExactly("device_id_1", "device_id_2");
     assertThat(commandAttemptDetail.getState()).isEqualTo(CommandState.COMPLETED);
     assertThat(commandAttemptDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(1001));
     assertThat(commandAttemptDetail.getEndTime()).isEqualTo(Timestamps.fromMillis(1002));

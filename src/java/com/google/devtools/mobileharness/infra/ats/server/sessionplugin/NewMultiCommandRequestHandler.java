@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.X
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo.DeviceDimension;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
@@ -55,7 +56,6 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -238,8 +238,8 @@ final class NewMultiCommandRequestHandler {
       throws MobileHarnessException, InterruptedException {
     // TODO: need to handle sharding.
     List<String> deviceSerials = new ArrayList<>();
-    for (Entry<String, String> entry : commandInfo.getDeviceDimensionsMap().entrySet()) {
-      if (entry.getKey().equals("device_serial")) {
+    for (DeviceDimension entry : commandInfo.getDeviceDimensionsList()) {
+      if (entry.getName().equals("device_serial")) {
         deviceSerials.add(entry.getValue());
       }
       // TODO: need to handle non device serial case.
@@ -278,7 +278,13 @@ final class NewMultiCommandRequestHandler {
             Files.getNameWithoutExtension(androidXtsZipPath));
     localFileUtil.prepareDir(xtsRootDir);
     mountZip(androidXtsZipPath, xtsRootDir);
-    int shardCount = commandInfo.getShardCount();
+    ImmutableList<String> commandLineTokens =
+        ImmutableList.copyOf(Splitter.on(' ').split(commandInfo.getCommandLine()));
+    int shardCountIndex = commandLineTokens.indexOf("--shard-count");
+    int shardCount = 0;
+    if (shardCountIndex != -1 && shardCountIndex + 1 < commandLineTokens.size()) {
+      shardCount = Integer.parseInt(commandLineTokens.get(shardCountIndex + 1));
+    }
     String xtsType = Iterables.get(Splitter.on(' ').split(commandInfo.getCommandLine()), 0);
     String testPlan = xtsType;
     SessionRequestHandlerUtil.SessionRequestInfo.Builder sessionRequestInfoBuilder =
@@ -291,8 +297,6 @@ final class NewMultiCommandRequestHandler {
     sessionRequestInfoBuilder.setShardCount(shardCount);
 
     // module argument only supports specifying one single module name.
-    ImmutableList<String> commandLineTokens =
-        ImmutableList.copyOf(commandInfo.getCommandLine().split(" "));
     int moduleArgIndex = commandLineTokens.indexOf("-m");
     if (moduleArgIndex != -1 && moduleArgIndex + 1 < commandLineTokens.size()) {
       sessionRequestInfoBuilder.setModuleNames(

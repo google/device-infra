@@ -116,8 +116,17 @@ public final class NewMultiCommandRequestHandlerTest {
     commandInfo =
         CommandInfo.newBuilder()
             .setName("command")
-            .setCommandLine("cts -m module1 --logcat-on-failure")
-            .putDeviceDimensions("device_serial", "device_id_1")
+            .setCommandLine("cts -m module1 --logcat-on-failure --shard-count 2")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_1")
+                    .build())
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_2")
+                    .build())
             .build();
     request =
         NewMultiCommandRequest.newBuilder()
@@ -175,11 +184,12 @@ public final class NewMultiCommandRequestHandlerTest {
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
     assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
-    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1");
     assertThat(sessionRequestInfo.xtsType()).isEqualTo(XtsType.CTS);
     assertThat(sessionRequestInfo.androidXtsZip()).isEqualTo(Optional.of(zipFile));
     assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
     assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
+    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =
@@ -369,7 +379,11 @@ public final class NewMultiCommandRequestHandlerTest {
         CommandInfo.newBuilder()
             .setName("command")
             .setCommandLine("cts -m module1 --logcat-on-failure")
-            .putDeviceDimensions("device_serial", "device_id_1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_1")
+                    .build())
             .build();
     NewMultiCommandRequest request =
         NewMultiCommandRequest.newBuilder()
@@ -459,7 +473,11 @@ public final class NewMultiCommandRequestHandlerTest {
         CommandInfo.newBuilder()
             .setName("command")
             .setCommandLine("cts -m module1 --logcat-on-failure")
-            .putDeviceDimensions("device_serial", "device_id_1")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_1")
+                    .build())
             .build();
     NewMultiCommandRequest request =
         NewMultiCommandRequest.newBuilder()

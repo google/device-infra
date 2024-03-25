@@ -18,7 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.protobuf.TextFormat.shortDebugString;
-import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.DIMENSION_ID;
+import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.DEVICE_ID_LIST;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
@@ -210,8 +210,10 @@ final class AtsServerSessionPlugin {
     builder.setId(testInfo.locator().getId());
     builder.setRequestId(sessionInfo.getSessionId());
     builder.setCommandId(testInfo.jobInfo().locator().getId());
-    if (testInfo.properties().has(DIMENSION_ID)) {
-      builder.setDeviceSerial(testInfo.properties().get(DIMENSION_ID));
+    if (testInfo.properties().has(DEVICE_ID_LIST)) {
+      ImmutableList<String> deviceSerials =
+          ImmutableList.copyOf(testInfo.properties().get(DEVICE_ID_LIST).split(","));
+      builder.addAllDeviceSerials(deviceSerials);
     }
     if (testInfo.properties().has("ats_test_passed_count")) {
       logger.atInfo().log(
