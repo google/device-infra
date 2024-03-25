@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
@@ -122,13 +123,17 @@ public final class NewMultiCommandRequestHandlerTest {
         NewMultiCommandRequest.newBuilder()
             .setUserId("user_id")
             .addCommands(commandInfo)
+            .setQueueTimeout(toProtoDuration(Duration.ofSeconds(1000L)))
             .addTestResources(
                 TestResource.newBuilder()
                     .setUrl(ANDROID_XTS_ZIP)
                     .setName("android-cts.zip")
                     .build())
             .setTestEnvironment(
-                TestEnvironment.newBuilder().setOutputFileUploadUrl(OUTPUT_FILE_UPLOAD_URL).build())
+                TestEnvironment.newBuilder()
+                    .setInvocationTimeout(toProtoDuration(Duration.ofSeconds(2000L)))
+                    .setOutputFileUploadUrl(OUTPUT_FILE_UPLOAD_URL)
+                    .build())
             .build();
     when(clock.millis()).thenReturn(1000L);
   }
@@ -173,6 +178,8 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1");
     assertThat(sessionRequestInfo.xtsType()).isEqualTo(XtsType.CTS);
     assertThat(sessionRequestInfo.androidXtsZip()).isEqualTo(Optional.of(zipFile));
+    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
+    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =

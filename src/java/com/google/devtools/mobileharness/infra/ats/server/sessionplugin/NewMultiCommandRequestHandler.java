@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -119,7 +120,7 @@ final class NewMultiCommandRequestHandler {
             && sessionRequestHandlerUtil.canCreateNonTradefedJobs(
                 sessionRequestInfoCache.get(commandInfo))) {
           logger.atInfo().log(
-              "Skip creating tradefed jobs for this caommand as this is a non-tradefed only"
+              "Skip creating tradefed jobs for this command as this is a non-tradefed only"
                   + " command. Command: %s",
               commandInfo.getCommandLine());
           continue;
@@ -300,6 +301,12 @@ final class NewMultiCommandRequestHandler {
 
     // TODO: add extra args
     sessionRequestInfoBuilder.setExtraArgs(ImmutableList.of());
+
+    // Insert timeout.
+    sessionRequestInfoBuilder.setJobTimeout(
+        toJavaDuration(request.getTestEnvironment().getInvocationTimeout()));
+    sessionRequestInfoBuilder.setStartTimeout(toJavaDuration(request.getQueueTimeout()));
+
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(sessionRequestInfoBuilder.build());
   }
 

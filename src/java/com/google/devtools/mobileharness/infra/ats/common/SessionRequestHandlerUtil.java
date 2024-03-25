@@ -181,6 +181,10 @@ public class SessionRequestHandlerUtil {
 
     public abstract boolean enableModuleOptionalParameter();
 
+    public abstract Duration jobTimeout();
+
+    public abstract Duration startTimeout();
+
     public static Builder builder() {
       return new AutoValue_SessionRequestHandlerUtil_SessionRequestInfo.Builder()
           .setModuleNames(ImmutableList.of())
@@ -192,7 +196,9 @@ public class SessionRequestHandlerUtil {
           .setV2ConfigsMap(ImmutableMap.of())
           .setExpandedModules(ImmutableMap.of())
           .setEnableModuleParameter(false)
-          .setEnableModuleOptionalParameter(false);
+          .setEnableModuleOptionalParameter(false)
+          .setJobTimeout(Duration.ZERO)
+          .setStartTimeout(Duration.ZERO);
     }
 
     public abstract Builder toBuilder();
@@ -236,6 +242,10 @@ public class SessionRequestHandlerUtil {
 
       public abstract Builder setEnableModuleOptionalParameter(
           boolean enableModuleOptionalParameter);
+
+      public abstract Builder setJobTimeout(Duration jobTimeout);
+
+      public abstract Builder setStartTimeout(Duration startTimeout);
     }
   }
 
@@ -406,13 +416,24 @@ public class SessionRequestHandlerUtil {
       return Optional.empty();
     }
 
+    Duration jobTimeout =
+        sessionRequestInfo.jobTimeout().isZero()
+            ? Duration.ofDays(3L)
+            : sessionRequestInfo.jobTimeout();
+    // Temporarily reuse job timeout to be test timeout.
+    Duration testTimeout = jobTimeout;
+    Duration startTimeout =
+        sessionRequestInfo.startTimeout().isZero()
+            ? Duration.ofMinutes(5L)
+            : sessionRequestInfo.startTimeout();
+
     JobConfig.Builder jobConfigBuilder =
         JobConfig.newBuilder()
             .setName("xts-tradefed-test-job")
             .setExecMode("local")
-            .setJobTimeoutSec(saturatedCast(Duration.ofDays(3L).toSeconds()))
-            .setTestTimeoutSec(saturatedCast(Duration.ofDays(3L).toSeconds()))
-            .setStartTimeoutSec(Duration.ofMinutes(5L).toSeconds())
+            .setJobTimeoutSec(saturatedCast(jobTimeout.toSeconds()))
+            .setTestTimeoutSec(saturatedCast(testTimeout.toSeconds()))
+            .setStartTimeoutSec(saturatedCast(startTimeout.toSeconds()))
             .setPriority(Priority.HIGH)
             .setTestAttempts(1)
             .setTests(
@@ -558,6 +579,17 @@ public class SessionRequestHandlerUtil {
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
 
+    Duration jobTimeout =
+        sessionRequestInfo.jobTimeout().isZero()
+            ? Duration.ofDays(5L)
+            : sessionRequestInfo.jobTimeout();
+    // Temporarily reuse job timeout to be test timeout.
+    Duration testTimeout = jobTimeout;
+    Duration startTimeout =
+        sessionRequestInfo.startTimeout().isZero()
+            ? Duration.ofHours(1L)
+            : sessionRequestInfo.startTimeout();
+
     for (Entry<String, Configuration> entry :
         sessionRequestInfo.expandedModules().entrySet().stream()
             .filter(e -> e.getValue().getMetadata().getIsConfigV2())
@@ -596,7 +628,10 @@ public class SessionRequestHandlerUtil {
                 entry.getValue(),
                 expandedModuleName,
                 moduleAbi,
-                moduleParameter);
+                moduleParameter,
+                jobTimeout,
+                testTimeout,
+                startTimeout);
         if (jobInfoOpt.isPresent()) {
           JobInfo jobInfo = jobInfoOpt.get();
           if (!androidDeviceSerials.isEmpty()) {
@@ -628,9 +663,14 @@ public class SessionRequestHandlerUtil {
       Configuration moduleConfig,
       String expandedModuleName,
       @Nullable String moduleAbi,
-      @Nullable String moduleParameter)
+      @Nullable String moduleParameter,
+      Duration jobTimeout,
+      Duration testTimeout,
+      Duration startTimeout)
       throws MobileHarnessException, InterruptedException {
-    Optional<JobInfo> jobInfoOpt = createBaseXtsNonTradefedJob(moduleConfig, expandedModuleName);
+    Optional<JobInfo> jobInfoOpt =
+        createBaseXtsNonTradefedJob(
+            moduleConfig, expandedModuleName, jobTimeout, testTimeout, startTimeout);
     if (jobInfoOpt.isEmpty()) {
       return Optional.empty();
     }
@@ -666,7 +706,11 @@ public class SessionRequestHandlerUtil {
   }
 
   private Optional<JobInfo> createBaseXtsNonTradefedJob(
-      Configuration moduleConfig, String expandedModuleName)
+      Configuration moduleConfig,
+      String expandedModuleName,
+      Duration jobTimeout,
+      Duration testTimeout,
+      Duration startTimeout)
       throws MobileHarnessException, InterruptedException {
     List<Device> moduleDevices = moduleConfig.getDevicesList();
     if (moduleDevices.isEmpty()) {
@@ -693,9 +737,9 @@ public class SessionRequestHandlerUtil {
                 String.format(
                     "xts-mobly-aosp-package-job-%s", expandedModuleName.replace(' ', '_')))
             .setExecMode("local")
-            .setJobTimeoutSec(saturatedCast(Duration.ofDays(5L).toSeconds()))
-            .setTestTimeoutSec(saturatedCast(Duration.ofDays(5L).toSeconds()))
-            .setStartTimeoutSec(Duration.ofHours(1L).toSeconds())
+            .setJobTimeoutSec(saturatedCast(jobTimeout.toSeconds()))
+            .setTestTimeoutSec(saturatedCast(testTimeout.toSeconds()))
+            .setStartTimeoutSec(saturatedCast(startTimeout.toSeconds()))
             .setPriority(Priority.HIGH)
             .setTestAttempts(1)
             .setTests(

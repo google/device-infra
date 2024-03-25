@@ -57,6 +57,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -109,6 +110,34 @@ public final class SessionRequestHandlerUtilTest {
   @After
   public void tearDown() {
     Flags.resetToDefault();
+  }
+
+  @Test
+  public void createXtsTradefedTestJobConfig_calculateTimeout() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
+
+    Optional<JobConfig> jobConfigOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setJobTimeout(Duration.ofSeconds(3000))
+                .setStartTimeout(Duration.ofSeconds(1000))
+                .build(),
+            ImmutableList.of());
+
+    assertThat(jobConfigOpt).isPresent();
+    assertThat(jobConfigOpt.get().getJobTimeoutSec()).isEqualTo(3000L);
+    assertThat(jobConfigOpt.get().getTestTimeoutSec()).isEqualTo(3000L);
+    assertThat(jobConfigOpt.get().getStartTimeoutSec()).isEqualTo(1000L);
   }
 
   @Test
