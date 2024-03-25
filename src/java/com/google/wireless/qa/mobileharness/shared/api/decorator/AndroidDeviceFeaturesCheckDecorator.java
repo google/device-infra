@@ -42,6 +42,8 @@ import javax.inject.Inject;
 public class AndroidDeviceFeaturesCheckDecorator extends BaseDecorator
     implements SpecConfigable<AndroidDeviceFeaturesCheckDecoratorSpec> {
 
+  private static final String FEATURE_PREFIX = "feature:";
+
   private final AndroidSystemSpecUtil androidSystemSpecUtil;
 
   @Inject
@@ -65,10 +67,14 @@ public class AndroidDeviceFeaturesCheckDecorator extends BaseDecorator
     // Calculates nonexistent required features and existent forbidden features.
     ImmutableList<String> nonexistentRequiredFeatures =
         requiredFeatures.stream()
+            .map(AndroidDeviceFeaturesCheckDecorator::formatFeature)
             .filter(not(supportedFeatures::contains))
             .collect(toImmutableList());
     ImmutableList<String> existentForbiddenFeatures =
-        forbiddenFeatures.stream().filter(supportedFeatures::contains).collect(toImmutableList());
+        forbiddenFeatures.stream()
+            .map(AndroidDeviceFeaturesCheckDecorator::formatFeature)
+            .filter(supportedFeatures::contains)
+            .collect(toImmutableList());
 
     if (nonexistentRequiredFeatures.isEmpty() && existentForbiddenFeatures.isEmpty()) {
       // The check passes.
@@ -91,5 +97,9 @@ public class AndroidDeviceFeaturesCheckDecorator extends BaseDecorator
                   deviceId));
       testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
     }
+  }
+
+  private static String formatFeature(String feature) {
+    return feature.startsWith(FEATURE_PREFIX) ? feature : FEATURE_PREFIX + feature;
   }
 }
