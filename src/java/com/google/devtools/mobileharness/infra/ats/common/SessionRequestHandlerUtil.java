@@ -22,6 +22,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.primitives.Ints.saturatedCast;
 import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.wireless.qa.mobileharness.shared.api.driver.MoblyGenericTest.TEST_SELECTOR_KEY;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
@@ -29,6 +30,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -401,14 +403,40 @@ public class SessionRequestHandlerUtil {
             ImmutableList.of(getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
 
     ImmutableList<String> modules = sessionRequestInfo.moduleNames();
-    ImmutableSet<String> allTfModules =
+    ImmutableList<String> allTfModules =
         configsMap.values().stream()
             .map(config -> config.getMetadata().getXtsModule())
-            .collect(toImmutableSet());
+            .collect(toImmutableList());
     ImmutableList<String> givenMatchedTfModules =
-        modules.stream().filter(allTfModules::contains).collect(toImmutableList());
-    boolean noGivenModuleForTf = !modules.isEmpty() && givenMatchedTfModules.isEmpty();
-    if (noGivenModuleForTf) {
+        modules.isEmpty()
+            ? allTfModules
+            : modules.stream().filter(allTfModules::contains).collect(toImmutableList());
+
+    // Filter modules by include/exclude filters.
+    ImmutableList<SuiteTestFilter> includeFilters =
+        sessionRequestInfo.includeFilters().stream()
+            .map(SuiteTestFilter::create)
+            .collect(toImmutableList());
+    ImmutableList<SuiteTestFilter> excludeFilters =
+        sessionRequestInfo.excludeFilters().stream()
+            .map(SuiteTestFilter::create)
+            .collect(toImmutableList());
+    ImmutableList.Builder<String> filteredModulesBuilder = ImmutableList.builder();
+    for (String module : givenMatchedTfModules) {
+      if (excludeFilters.stream()
+          .anyMatch(
+              filter -> filter.testName().isEmpty() && filter.matchModule(module, null, null))) {
+        continue;
+      }
+      if (!includeFilters.isEmpty()
+          && includeFilters.stream().noneMatch(filter -> filter.matchModule(module, null, null))) {
+        continue;
+      }
+      filteredModulesBuilder.add(module);
+    }
+    ImmutableList<String> filteredModules = filteredModulesBuilder.build();
+
+    if (filteredModules.isEmpty()) {
       logger.atInfo().log(
           "Skip creating tradefed jobs as none of given modules is for tradefed module: %s",
           modules);
@@ -416,7 +444,8 @@ public class SessionRequestHandlerUtil {
     }
 
     Optional<JobConfig> jobConfig =
-        createXtsTradefedTestJobConfig(sessionRequestInfo, givenMatchedTfModules);
+        createXtsTradefedTestJobConfig(
+            sessionRequestInfo, modules.isEmpty() ? ImmutableList.of() : filteredModules);
     if (jobConfig.isEmpty()) {
       return Optional.empty();
     }
@@ -505,7 +534,7 @@ public class SessionRequestHandlerUtil {
                             .map(
                                 includeFilter ->
                                     String.format("--include-filter \"%s\"", includeFilter)),
-                        sessionRequestInfo.includeFilters().stream()
+                        sessionRequestInfo.excludeFilters().stream()
                             .map(
                                 excludeFilter ->
                                     String.format("--exclude-filter \"%s\"", excludeFilter)),
@@ -672,6 +701,7 @@ public class SessionRequestHandlerUtil {
             .collect(toImmutableList())) {
       String originalModuleName = entry.getValue().getMetadata().getXtsModule();
       String expandedModuleName = entry.getKey();
+      ImmutableList.Builder<String> matchedTestCasesBuilder = ImmutableList.builder();
       if (givenMatchedNonTfModules.isEmpty()
           || givenMatchedNonTfModules.contains(originalModuleName)) {
         // Gets module abi
@@ -680,19 +710,34 @@ public class SessionRequestHandlerUtil {
         String moduleParameter = getModuleParameter(expandedModuleName).orElse(null);
 
         // Filters the module by include-filter and exclude-filter.
-        if (!includeFilters.isEmpty()
-            && includeFilters.stream()
-                .noneMatch(
-                    includeFilter ->
-                        includeFilter.matchModule(
-                            originalModuleName, moduleAbi, moduleParameter))) {
-          continue;
-        }
         if (excludeFilters.stream()
             .anyMatch(
                 excludeFilter ->
                     excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))) {
           continue;
+        }
+        if (!includeFilters.isEmpty()) {
+          boolean matched = false;
+          for (SuiteTestFilter filter : includeFilters) {
+            if (filter.matchModule(originalModuleName, moduleAbi, moduleParameter)) {
+              matched = true;
+              if (filter.testName().isPresent()) {
+                // Testname is set with pattern TestClass#TestName while Mobly needs the test name
+                // without the test class name only.
+                List<String> testname =
+                    Splitter.on('#')
+                        .trimResults()
+                        .omitEmptyStrings()
+                        .splitToList(filter.testName().get());
+                if (testname.size() == 2) {
+                  matchedTestCasesBuilder.add(testname.get(1));
+                }
+              }
+            }
+          }
+          if (!matched) {
+            continue;
+          }
         }
 
         Optional<JobInfo> jobInfoOpt =
@@ -705,6 +750,7 @@ public class SessionRequestHandlerUtil {
                 expandedModuleName,
                 moduleAbi,
                 moduleParameter,
+                matchedTestCasesBuilder.build(),
                 jobTimeout,
                 testTimeout,
                 startTimeout);
@@ -740,6 +786,7 @@ public class SessionRequestHandlerUtil {
       String expandedModuleName,
       @Nullable String moduleAbi,
       @Nullable String moduleParameter,
+      ImmutableList<String> matchedTestCases,
       Duration jobTimeout,
       Duration testTimeout,
       Duration startTimeout)
@@ -765,6 +812,9 @@ public class SessionRequestHandlerUtil {
     }
     if (moduleParameter != null) {
       jobInfo.properties().add(XTS_MODULE_PARAMETER_PROP, moduleParameter);
+    }
+    if (!matchedTestCases.isEmpty()) {
+      jobInfo.params().add(TEST_SELECTOR_KEY, Joiner.on(" ").join(matchedTestCases));
     }
     jobInfo.params().add("run_certification_test_suite", "true");
     jobInfo

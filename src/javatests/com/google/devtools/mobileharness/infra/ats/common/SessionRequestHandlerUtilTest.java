@@ -449,6 +449,85 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void createXtsTradefedTestJob_testFilters() throws Exception {
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(false))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    Configuration config2 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(false))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
+                .build());
+    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(configurationUtil.getConfigsFromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests())
+        .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
+
+    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfoWithIncludeFilters =
+        SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setXtsType(XtsType.CTS)
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setIncludeFilters(ImmutableList.of("module3 TestClass#TestCase"))
+            .build();
+    Optional<JobInfo> jobInfoOptWithIncludeFilters =
+        sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfoWithIncludeFilters);
+
+    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfoWithExcludeFilters =
+        SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setXtsType(XtsType.CTS)
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setExcludeFilters(ImmutableList.of("module1", "module2"))
+            .build();
+    Optional<JobInfo> jobInfoOptWithExcludeFilters =
+        sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfoWithExcludeFilters);
+
+    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfoWithMixedFilters =
+        SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setXtsType(XtsType.CTS)
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setIncludeFilters(ImmutableList.of("module1"))
+            .setExcludeFilters(ImmutableList.of("module2"))
+            .build();
+    Optional<JobInfo> jobInfoOptWithMixedFilters =
+        sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfoWithMixedFilters);
+
+    assertThat(jobInfoOptWithIncludeFilters).isEmpty();
+    assertThat(jobInfoOptWithExcludeFilters).isEmpty();
+    assertThat(jobInfoOptWithMixedFilters).isPresent();
+  }
+
+  @Test
   public void createXtsNonTradefedJobs() throws Exception {
     Configuration config1 =
         Configuration.newBuilder()
@@ -583,6 +662,78 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
 
     assertThat(jobInfos).hasSize(1);
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_testFilters() throws Exception {
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    Configuration config2 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    Configuration config3 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module3").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(
+            ImmutableMap.of(
+                "/path/to/config1",
+                config1,
+                "/path/to/config2",
+                config2,
+                "/path/to/config3",
+                config3));
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests())
+        .thenReturn(ImmutableMap.of("module1", config1, "module2", config2, "module3", config3));
+
+    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setIncludeFilters(
+                    ImmutableList.of(
+                        "module1 test_class1#test1",
+                        "module1 test_class2#test2",
+                        "module1 test_class2#test3",
+                        "module2",
+                        "module3 test_class1#test1"))
+                .setExcludeFilters(ImmutableList.of("module3"))
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1 test2 test3");
+    assertThat(jobInfos.get(1).params().get("test_case_selector")).isNull();
   }
 
   @Test
