@@ -150,6 +150,34 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void addTradefedJobs_includeAndExcludeFilter() throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    commandInfo =
+        commandInfo.toBuilder()
+            .setCommandLine(
+                "cts --logcat-on-failure --shard-count 2 --include-filter module1 module2"
+                    + " --exclude-filter module3 module4")
+            .build();
+    request = request.toBuilder().clearCommands().addCommands(commandInfo).build();
+
+    // Trigger the handler.
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+
+    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify sessionRequestInfo has been correctly generated.
+    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
+        sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.moduleNames()).isEmpty();
+    assertThat(sessionRequestInfo.includeFilters()).containsExactly("module1", "module2");
+    assertThat(sessionRequestInfo.excludeFilters()).containsExactly("module3", "module4");
+  }
+
+  @Test
   public void addTradefedJobs_success() throws Exception {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
@@ -193,6 +221,8 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
+    assertThat(sessionRequestInfo.includeFilters()).isEmpty();
+    assertThat(sessionRequestInfo.excludeFilters()).isEmpty();
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =

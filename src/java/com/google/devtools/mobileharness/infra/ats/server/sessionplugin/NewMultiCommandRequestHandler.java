@@ -281,11 +281,40 @@ final class NewMultiCommandRequestHandler {
     mountZip(androidXtsZipPath, xtsRootDir);
     ImmutableList<String> commandLineTokens =
         ImmutableList.copyOf(Splitter.on(' ').split(commandInfo.getCommandLine()));
+
+    // Get shard count from TF command.
     int shardCountIndex = commandLineTokens.indexOf("--shard-count");
     int shardCount = 0;
     if (shardCountIndex != -1 && shardCountIndex + 1 < commandLineTokens.size()) {
       shardCount = Integer.parseInt(commandLineTokens.get(shardCountIndex + 1));
     }
+
+    // Get include filter from TF command.
+    List<String> includeFilter = new ArrayList<>();
+    int includeFilterIndex = commandLineTokens.indexOf("--include-filter");
+    if (includeFilterIndex != -1) {
+      for (int i = includeFilterIndex + 1; i < commandLineTokens.size(); i++) {
+        // Skip if hit another command line option keyword.
+        if (commandLineTokens.get(i).startsWith("--")) {
+          break;
+        }
+        includeFilter.add(commandLineTokens.get(i));
+      }
+    }
+
+    // Get exclude filter from TF command.
+    List<String> excludeFilter = new ArrayList<>();
+    int excludeFilterIndex = commandLineTokens.indexOf("--exclude-filter");
+    if (excludeFilterIndex != -1) {
+      for (int i = excludeFilterIndex + 1; i < commandLineTokens.size(); i++) {
+        // Skip if hit another command line option keyword.
+        if (commandLineTokens.get(i).startsWith("--")) {
+          break;
+        }
+        excludeFilter.add(commandLineTokens.get(i));
+      }
+    }
+
     String xtsType = Iterables.get(Splitter.on(' ').split(commandInfo.getCommandLine()), 0);
     String testPlan = xtsType;
     SessionRequestHandlerUtil.SessionRequestInfo.Builder sessionRequestInfoBuilder =
@@ -298,6 +327,8 @@ final class NewMultiCommandRequestHandler {
     sessionRequestInfoBuilder.setShardCount(shardCount);
     sessionRequestInfoBuilder.setEnvVars(
         ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
+    sessionRequestInfoBuilder.setIncludeFilters(includeFilter);
+    sessionRequestInfoBuilder.setExcludeFilters(excludeFilter);
 
     // module argument only supports specifying one single module name.
     int moduleArgIndex = commandLineTokens.indexOf("-m");
