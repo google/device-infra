@@ -64,6 +64,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import com.google.devtools.mobileharness.shared.version.rpc.service.VersionServiceImpl;
 import com.google.devtools.mobileharness.shared.version.rpc.service.grpc.VersionGrpcImpl;
 import com.google.inject.AbstractModule;
@@ -183,7 +184,8 @@ public class LabServer {
         apiConfig.addObserver(masterSyncerForDevice);
       }
 
-      VersionServiceImpl versionService = new VersionServiceImpl(Version.LAB_VERSION);
+      VersionServiceImpl versionService =
+          new VersionServiceImpl(Version.LAB_VERSION, VersionUtil.getGitHubVersion().orElse(null));
 
       logger.atInfo().log("Lab server %s starts.", Version.LAB_VERSION);
 

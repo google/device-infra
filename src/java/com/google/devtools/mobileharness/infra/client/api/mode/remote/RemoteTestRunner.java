@@ -570,6 +570,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             e);
       }
     }
+    logger.atInfo().log(
+        "GetVersionResponse of [%s]: %s", labServerLocator, shortDebugString(response));
     Version version = new Version(response.getVersion());
     logger.atInfo().log("Lab version of [%s] is %s", labServerLocator, version);
     return version;

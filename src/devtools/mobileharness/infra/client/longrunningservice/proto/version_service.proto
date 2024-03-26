@@ -33,4 +33,9 @@ message GetVersionResponse {
   //
   // Version.LAB_VERSION.toString().
   string lab_version = 1;
+
+  // Optional.
+  //
+  // GitHub commit ID from which the server was built, if any.
+  string github_version = 2;
 }

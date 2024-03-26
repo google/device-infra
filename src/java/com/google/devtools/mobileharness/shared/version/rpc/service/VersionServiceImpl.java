@@ -19,17 +19,23 @@ package com.google.devtools.mobileharness.shared.version.rpc.service;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.shared.version.proto.VersionServiceProto.GetVersionResponse;
+import javax.annotation.Nullable;
 
 /** Implementation of {@code VersionService}. */
 public class VersionServiceImpl {
 
-  private final Version version;
+  private final GetVersionResponse response;
 
-  public VersionServiceImpl(Version version) {
-    this.version = version;
+  public VersionServiceImpl(Version version, @Nullable String gitHubVersion) {
+    GetVersionResponse.Builder response =
+        GetVersionResponse.newBuilder().setVersion(version.toString());
+    if (gitHubVersion != null) {
+      response.setGithubVersion(gitHubVersion);
+    }
+    this.response = response.build();
   }
 
   public GetVersionResponse getVersion(@SuppressWarnings("unused") GetVersionRequest request) {
-    return GetVersionResponse.newBuilder().setVersion(version.toString()).build();
+    return response;
   }
 }

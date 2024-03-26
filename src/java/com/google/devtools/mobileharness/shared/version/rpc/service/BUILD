@@ -23,5 +23,6 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/shared/version/proto:version_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/version",
+        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )

@@ -24,9 +24,16 @@ option java_outer_classname = "VersionServiceProto";
 message GetVersionRequest {}
 
 message GetVersionResponse {
+  // Required.
+  //
   // A serialized MH version like 2.34.5
   // (com.google.wireless.qa.mobileharness.shared.version.Version.toString()).
   string version = 1;
+
+  // Optional.
+  //
+  // GitHub commit ID from which the server was built, if any.
+  string github_version = 2;
 }
 
 service VersionService {

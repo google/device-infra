@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.V
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.devtools.mobileharness.shared.version.VersionUtil;
 import io.grpc.stub.StreamObserver;
 
 /** Implementation of {@link VersionServiceGrpc}. */
@@ -38,6 +39,9 @@ public class VersionService extends VersionServiceGrpc.VersionServiceImplBase {
   }
 
   private GetVersionResponse getVersion(GetVersionRequest request) {
-    return GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build();
+    GetVersionResponse.Builder result =
+        GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString());
+    VersionUtil.getGitHubVersion().ifPresent(result::setGithubVersion);
+    return result.build();
   }
 }

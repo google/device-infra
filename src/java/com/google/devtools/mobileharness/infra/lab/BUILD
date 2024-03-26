@@ -96,6 +96,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/devtools/mobileharness/shared/version",
+        "//src/java/com/google/devtools/mobileharness/shared/version:version_util",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/service",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/service/grpc",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",

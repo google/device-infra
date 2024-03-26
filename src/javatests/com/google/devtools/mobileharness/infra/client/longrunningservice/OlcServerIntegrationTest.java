@@ -239,6 +239,7 @@ public class OlcServerIntegrationTest {
     // Checks the server version.
     VersionStub versionStub = new VersionStub(olcServerChannel);
     assertThat(versionStub.getVersion())
+        .comparingExpectedFieldsOnly()
         .isEqualTo(
             GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
 
@@ -323,6 +324,7 @@ public class OlcServerIntegrationTest {
     // Checks the server version.
     VersionStub versionStub = new VersionStub(olcServerChannel);
     assertThat(versionStub.getVersion())
+        .comparingExpectedFieldsOnly()
         .isEqualTo(
             GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString()).build());
 

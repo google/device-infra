@@ -234,6 +234,7 @@ public class LabServerIntegrationTest {
         new VersionGrpcStub(labServerChannel).getVersion(GetVersionRequest.getDefaultInstance());
 
     assertThat(getVersionResponse)
+        .comparingExpectedFieldsOnly()
         .isEqualTo(
             GetVersionResponse.newBuilder().setVersion(Version.LAB_VERSION.toString()).build());
   }
