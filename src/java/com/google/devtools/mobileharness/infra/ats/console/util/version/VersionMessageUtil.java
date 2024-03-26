@@ -41,7 +41,14 @@ public class VersionMessageUtil {
     this.versionParser = versionParser;
   }
 
-  /** Returns a version message like "Android Compatibility Test Suite 14_r2 (11179914)". */
+  /**
+   * Returns a version message like:
+   *
+   * <pre>{@code
+   * Android Compatibility Test Suite 14_r2 (11179914)
+   * OmniLab lab-4.268.0 github-fece030c657cddecc2cf7a122aa1fc4976dfed9c
+   * }</pre>
+   */
   public String getVersionMessage() throws MobileHarnessException {
     String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     XtsType xtsType = commandHelper.getXtsType(xtsRootDir);
@@ -56,6 +63,6 @@ public class VersionMessageUtil {
         testSuiteInfo.getVersion(),
         buildNumber,
         labVersion,
-        gitHubVersion.map(version -> String.format(" (github-%s)", version)).orElse(""));
+        gitHubVersion.map(version -> String.format(" github-%s", version)).orElse(""));
   }
 }

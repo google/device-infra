@@ -18,7 +18,9 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "version_message_util",
     srcs = ["VersionMessageUtil.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+    ],
     deps = [
         ":version_parser",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",

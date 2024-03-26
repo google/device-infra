@@ -52,7 +52,7 @@ public class VersionUtil {
       if (inputStream == null) {
         return Optional.empty();
       }
-      return Optional.of(CharStreams.toString(new InputStreamReader(inputStream, UTF_8)));
+      return Optional.of(CharStreams.toString(new InputStreamReader(inputStream, UTF_8)).trim());
     } catch (IOException e) {
       logger.atWarning().withCause(e).log("Failed to get GitHub version");
       return Optional.empty();
