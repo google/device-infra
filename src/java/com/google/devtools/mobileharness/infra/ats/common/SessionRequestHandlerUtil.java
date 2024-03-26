@@ -505,7 +505,7 @@ public class SessionRequestHandlerUtil {
                             .map(
                                 includeFilter ->
                                     String.format("--include-filter \"%s\"", includeFilter)),
-                        sessionRequestInfo.includeFilters().stream()
+                        sessionRequestInfo.excludeFilters().stream()
                             .map(
                                 excludeFilter ->
                                     String.format("--exclude-filter \"%s\"", excludeFilter)),
