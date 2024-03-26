@@ -28,3 +28,12 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "version_util",
+    srcs = ["VersionUtil.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+    ],
+)

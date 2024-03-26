@@ -26,6 +26,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info",
+        "//src/java/com/google/devtools/mobileharness/shared/version",
+        "//src/java/com/google/devtools/mobileharness/shared/version:version_util",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

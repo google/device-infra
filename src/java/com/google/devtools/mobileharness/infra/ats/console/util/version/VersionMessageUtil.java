@@ -21,6 +21,9 @@ import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.X
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
+import com.google.devtools.mobileharness.shared.version.Version;
+import com.google.devtools.mobileharness.shared.version.VersionUtil;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** Utility for getting version information. */
@@ -45,7 +48,14 @@ public class VersionMessageUtil {
     TestSuiteInfo testSuiteInfo = TestSuiteInfo.getInstance(xtsRootDir, xtsType);
     String buildNumber =
         versionParser.fetchVersion(testSuiteInfo).orElseGet(testSuiteInfo::getBuildNumber);
+    String labVersion = Version.LAB_VERSION.toString();
+    Optional<String> gitHubVersion = VersionUtil.getGitHubVersion();
     return String.format(
-        "Android %s %s (%s)", testSuiteInfo.getFullName(), testSuiteInfo.getVersion(), buildNumber);
+        "Android %s %s (%s)\nOmniLab lab-%s%s",
+        testSuiteInfo.getFullName(),
+        testSuiteInfo.getVersion(),
+        buildNumber,
+        labVersion,
+        gitHubVersion.map(version -> String.format(" (github-%s)", version)).orElse(""));
   }
 }
