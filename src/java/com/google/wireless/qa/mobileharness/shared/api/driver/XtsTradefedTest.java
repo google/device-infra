@@ -346,6 +346,8 @@ public class XtsTradefedTest extends BaseDriver
                     }
                   })
               .redirectStderr(true)
+              .needStdoutInResult(false)
+              .needStderrInResult(false)
               .timeout(getXtsTimeout(testInfo)));
     } catch (IOException | CommandStartException e) {
       throw new MobileHarnessException(
