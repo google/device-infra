@@ -45,7 +45,7 @@ import picocli.CommandLine.Option;
     subcommands = {
       HelpCommand.class,
     })
-public class SetCommand implements Callable<Integer> {
+class SetCommand implements Callable<Integer> {
 
   @Option(
       names = "--mobly_testcases_dir",

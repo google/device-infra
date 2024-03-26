@@ -30,5 +30,6 @@ import picocli.CommandLine.HelpCommand;
       LogCommand.class,
       RunCommand.class,
       SetCommand.class,
+      VersionCommand.class,
     })
 public final class RootCommand {}

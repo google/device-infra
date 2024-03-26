@@ -54,7 +54,7 @@ import picocli.CommandLine.Spec;
     subcommands = {
       HelpCommand.class,
     })
-public class ListCommand implements Callable<Integer> {
+class ListCommand implements Callable<Integer> {
 
   @Spec private CommandSpec spec;
 
