@@ -58,4 +58,7 @@ message XtsTradefedTestDriverSpec {
           "TF. For example, 'tradefed.jar' means the JARs have name "
           "'tradefed.jar' will be moved to the front of the classpath."
   }];
+
+  optional string subplan_xml = 7
+      [(file_detail) = { help: "The subplan xml file to run." }];
 }

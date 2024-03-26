@@ -36,6 +36,8 @@ java_library(
     name = "retry_generator",
     srcs = ["RetryGenerator.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
     ],
     deps = [
@@ -56,6 +58,9 @@ java_library(
     name = "retry_type",
     srcs = ["RetryType.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
     ],
 )
@@ -64,6 +69,7 @@ java_library(
     name = "retry_args",
     srcs = ["RetryArgs.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
     ],
     deps = [

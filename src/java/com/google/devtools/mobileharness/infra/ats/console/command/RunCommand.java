@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandH
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyAospPackageTestSetupUtil;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
@@ -181,11 +182,6 @@ final class RunCommand implements Callable<Integer> {
   @Parameters(index = "1..*", hidden = true)
   private List<String> extraRunCmdArgs;
 
-  private enum RetryType {
-    FAILED,
-    NOT_EXECUTED
-  }
-
   @Spec private CommandSpec spec;
 
   static final String RUN_COMMAND_SESSION_NAME = "run_command";
@@ -193,6 +189,9 @@ final class RunCommand implements Callable<Integer> {
   private static final String CTSV_CONFIG = "cts-v";
   private static final String DEFAULT_MOBLY_LOGPATH = "/tmp/logs/mobly";
   private static final String MOBLY_TEST_ZIP_DEFAULT_TEST = "suite_main.py";
+
+  private static final String RUN_RETRY_SESSION_ID = "retry_session_id";
+  private static final String RUN_RETRY_TYPE = "retry_type";
 
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
@@ -253,7 +252,7 @@ final class RunCommand implements Callable<Integer> {
     try {
       if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
         validateConfig();
-        return runInM1(/* isRunRetry= */ false, /* extraRunRetryCmdArgs= */ ImmutableList.of());
+        return runInM1(/* isRunRetry= */ false, /* extraRunRetryCmdArgs= */ ImmutableMap.of());
       } else {
         validateM0Config();
         return runInM0();
@@ -277,11 +276,10 @@ final class RunCommand implements Callable<Integer> {
       @Option(names = "--retry-type", description = "Supported values: ${COMPLETION-CANDIDATES}")
           RetryType retryType)
       throws MobileHarnessException, InterruptedException {
-    ImmutableList.Builder<String> extraRunRetryCmdArgs = ImmutableList.builder();
-    extraRunRetryCmdArgs.addAll(ImmutableList.of("--retry", String.valueOf(sessionId)));
+    ImmutableMap.Builder<String, String> extraRunRetryCmdArgs = ImmutableMap.builder();
+    extraRunRetryCmdArgs.put(RUN_RETRY_SESSION_ID, String.valueOf(sessionId));
     if (retryType != null) {
-      extraRunRetryCmdArgs.addAll(
-          ImmutableList.of("--retry-type", Ascii.toUpperCase(retryType.name())));
+      extraRunRetryCmdArgs.put(RUN_RETRY_TYPE, Ascii.toUpperCase(retryType.name()));
     }
     return runInM1(/* isRunRetry= */ true, extraRunRetryCmdArgs.build());
   }
@@ -369,7 +367,7 @@ final class RunCommand implements Callable<Integer> {
     return ExitCode.OK;
   }
 
-  private int runInM1(boolean isRunRetry, ImmutableList<String> extraRunRetryCmdArgs)
+  private int runInM1(boolean isRunRetry, ImmutableMap<String, String> extraRunRetryCmdArgs)
       throws InterruptedException, MobileHarnessException {
     serverPreparer.prepareOlcServer();
 
@@ -413,7 +411,14 @@ final class RunCommand implements Callable<Integer> {
     }
 
     if (isRunRetry) {
-      runCommand.setTestPlan("retry").addAllExtraArg(extraRunRetryCmdArgs);
+      runCommand.setTestPlan("retry");
+      if (extraRunRetryCmdArgs.containsKey(RUN_RETRY_SESSION_ID)) {
+        runCommand.setRetrySessionId(
+            Integer.parseInt(extraRunRetryCmdArgs.get(RUN_RETRY_SESSION_ID)));
+      }
+      if (extraRunRetryCmdArgs.containsKey(RUN_RETRY_TYPE)) {
+        runCommand.setRetryType(extraRunRetryCmdArgs.get(RUN_RETRY_TYPE));
+      }
     } else {
       runCommand.setTestPlan(config).addAllModuleName(modules).addAllExtraArg(extraArgs);
     }

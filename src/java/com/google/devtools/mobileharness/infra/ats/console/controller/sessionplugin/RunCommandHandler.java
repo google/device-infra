@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -169,6 +170,12 @@ class RunCommandHandler {
     }
     if (runCommand.hasPythonPkgIndexUrl()) {
       builder.setPythonPkgIndexUrl(runCommand.getPythonPkgIndexUrl());
+    }
+    if (runCommand.hasRetrySessionId()) {
+      builder.setRetrySessionId(runCommand.getRetrySessionId());
+    }
+    if (runCommand.hasRetryType()) {
+      builder.setRetryType(RetryType.valueOf(Ascii.toUpperCase(runCommand.getRetryType())));
     }
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(builder.build());
   }

@@ -83,6 +83,11 @@ message RunCommand {
   repeated string include_filter = 9;
 
   repeated string exclude_filter = 10;
+
+  // Optional.
+  optional int32 retry_session_id = 11;
+  // Optional.
+  optional string retry_type = 12;
 }
 
 message RunCommandState {

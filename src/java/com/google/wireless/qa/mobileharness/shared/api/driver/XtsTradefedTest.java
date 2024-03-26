@@ -165,7 +165,8 @@ public class XtsTradefedTest extends BaseDriver
     Path tmpXtsRootDir = null;
     try {
       tmpXtsRootDir = prepareXtsWorkDir(xtsType);
-      setUpXtsWorkDir(getXtsRootDir(spec, testInfo), tmpXtsRootDir, xtsType, isRunRetry, testInfo);
+      setUpXtsWorkDir(
+          spec, getXtsRootDir(spec, testInfo), tmpXtsRootDir, xtsType, isRunRetry, testInfo);
       logger.atInfo().log("xTS Tradefed temp working root directory is %s", tmpXtsRootDir);
 
       boolean xtsRunCommandSuccess = runXtsCommand(testInfo, spec, tmpXtsRootDir, xtsType);
@@ -402,6 +403,25 @@ public class XtsTradefedTest extends BaseDriver
                   restOfJars.add(newJarPath);
                 }
               });
+      // In setUpXtsWorkDir, it created symlinks for files and directories directly under the
+      // "testcases" folder.
+      // Currently we cannot list files within a symlinked sub-directory, so we handle sub-files and
+      // sub-directories separately.
+      localFileUtil
+          .listFilesOrDirs(
+              linkXtsTestcasesDirRealPath,
+              fileOrDir ->
+                  Files.isRegularFile(fileOrDir)
+                      && fileOrDir.getFileName().toString().endsWith(".jar"))
+          .forEach(
+              jar -> {
+                if (leadingJarsSet.contains(jar.getFileName().toString())) {
+                  foundLeadingJars.put(jar.getFileName().toString(), jar);
+                } else {
+                  restOfJars.add(jar);
+                }
+              });
+
       List<Path> linkXtsTestcasesSubDirPaths = localFileUtil.listDirs(linkXtsTestcasesDirRealPath);
       for (Path linkXtsTestcasesSubDirPath : linkXtsTestcasesSubDirPaths) {
         Path linkXtsTestcasesSubDirRealPath = linkXtsTestcasesSubDirPath.toRealPath();
@@ -440,8 +460,10 @@ public class XtsTradefedTest extends BaseDriver
 
   private LinkedHashSet<String> getLeadingJarsInClasspath(XtsTradefedTestDriverSpec spec) {
     LinkedHashSet<String> leadingJarsSet = new LinkedHashSet<>();
+    // Always put tradefed.jar at the beginning
+    leadingJarsSet.add("tradefed.jar");
     if (!spec.getLeadingJarsInClasspathList().isEmpty()) {
-      leadingJarsSet = new LinkedHashSet<>(spec.getLeadingJarsInClasspathList());
+      leadingJarsSet.addAll(spec.getLeadingJarsInClasspathList());
     }
     return leadingJarsSet;
   }
@@ -500,6 +522,11 @@ public class XtsTradefedTest extends BaseDriver
 
   private Path getXtsLogsDir(Path xtsRootDir, XtsType xtsType) {
     return xtsRootDir.resolve(String.format("android-%s/logs", Ascii.toLowerCase(xtsType.name())));
+  }
+
+  private Path getXtsSubPlansDir(Path xtsRootDir, XtsType xtsType) {
+    return xtsRootDir.resolve(
+        String.format("android-%s/subplans", Ascii.toLowerCase(xtsType.name())));
   }
 
   private ImmutableMap<String, String> getSystemPropsToTradefedConsole(
@@ -571,8 +598,18 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   private ImmutableList<String> getXtsRunCommandArgs(XtsTradefedTestDriverSpec spec) {
+    boolean isRunRetryWithSubPlan = isRunRetryWithSubPlan(spec);
+
     ImmutableList.Builder<String> xtsRunCommand =
-        ImmutableList.<String>builder().add("run", "commandAndExit", getXtsTestPlan(spec));
+        isRunRetryWithSubPlan
+            ? ImmutableList.<String>builder()
+                .add(
+                    "run",
+                    "commandAndExit",
+                    Ascii.toLowerCase(spec.getXtsType()),
+                    "--subplan",
+                    com.google.common.io.Files.getNameWithoutExtension(spec.getSubplanXml()))
+            : ImmutableList.<String>builder().add("run", "commandAndExit", getXtsTestPlan(spec));
 
     xtsRunCommand.addAll(getExtraRunCommandArgs(spec));
 
@@ -637,12 +674,13 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   private void setUpXtsWorkDir(
+      XtsTradefedTestDriverSpec spec,
       Path sourceXtsRootDir,
       Path tmpXtsWorkDir,
       XtsType xtsType,
       boolean isRunRetry,
       TestInfo testInfo)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     Path sourceXtsBundledJdkDir = getXtsJdkDir(sourceXtsRootDir, xtsType);
     Path sourceXtsBundledTestcasesDir = getXtsTestcasesDir(sourceXtsRootDir, xtsType);
     Path sourceXtsBundledToolsDir = getXtsToolsDir(sourceXtsRootDir, xtsType);
@@ -668,7 +706,9 @@ public class XtsTradefedTest extends BaseDriver
               testInfo.getTmpFileDir() + testInfo.properties().get(XTS_DYNAMIC_DOWNLOAD_PATH_KEY)));
     }
 
-    if (isRunRetry && localFileUtil.isDirExist(sourceXtsBundledResultsDir)) {
+    if (isRunRetry
+        && localFileUtil.isDirExist(sourceXtsBundledResultsDir)
+        && !isRunRetryWithSubPlan(spec)) {
       // For "run retry", TF looks for the corresponding previous result dir per given session id.
       // So it needs to "copy" previous result dirs and their content so TF can locate the needed
       // files to start the retry.
@@ -692,6 +732,14 @@ public class XtsTradefedTest extends BaseDriver
               resultDirInTmpXtsWorkDir.resolve(fileOrDir.getFileName().toString()), fileOrDir);
         }
       }
+    }
+
+    if (isRunRetryWithSubPlan(spec)) {
+      Path subplansDirInTmpXtsWorkDir = getXtsSubPlansDir(tmpXtsWorkDir, xtsType);
+      localFileUtil.prepareDir(subplansDirInTmpXtsWorkDir);
+      localFileUtil.grantFileOrDirFullAccess(subplansDirInTmpXtsWorkDir);
+      localFileUtil.copyFileOrDir(
+          spec.getSubplanXml(), subplansDirInTmpXtsWorkDir.toAbsolutePath().toString());
     }
   }
 
@@ -725,8 +773,7 @@ public class XtsTradefedTest extends BaseDriver
       return;
     }
 
-    // Only create symlink to the immediate subdirectories of the xts test cases, which are
-    // /android-xts/testcases/<test module A>, <test module B>, ...
+    // Create symlink to the immediate subfiles and subdirectories of the xts test cases
     List<String> subTestCases = localFileUtil.listFileOrDirPaths(target.toString());
     for (String subTestCase : subTestCases) {
       Path subTestCasePath = Path.of(subTestCase);
@@ -735,5 +782,9 @@ public class XtsTradefedTest extends BaseDriver
     }
     logger.atInfo().log(
         "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
+  }
+
+  private boolean isRunRetryWithSubPlan(XtsTradefedTestDriverSpec spec) {
+    return getXtsTestPlan(spec).equals("retry") && !spec.getSubplanXml().isEmpty();
   }
 }

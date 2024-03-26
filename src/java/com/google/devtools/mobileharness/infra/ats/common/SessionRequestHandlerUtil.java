@@ -53,6 +53,10 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
+import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
@@ -73,7 +77,11 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Devic
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -81,6 +89,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -119,6 +128,7 @@ public class SessionRequestHandlerUtil {
   private final CompatibilityReportMerger compatibilityReportMerger;
   private final CompatibilityReportCreator reportCreator;
   private final CompatibilityReportParser compatibilityReportParser;
+  private final RetryGenerator retryGenerator;
   private final Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider;
 
   @Inject
@@ -131,6 +141,7 @@ public class SessionRequestHandlerUtil {
       CompatibilityReportMerger compatibilityReportMerger,
       CompatibilityReportCreator reportCreator,
       CompatibilityReportParser compatibilityReportParser,
+      RetryGenerator retryGenerator,
       Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
@@ -140,6 +151,7 @@ public class SessionRequestHandlerUtil {
     this.compatibilityReportMerger = compatibilityReportMerger;
     this.reportCreator = reportCreator;
     this.compatibilityReportParser = compatibilityReportParser;
+    this.retryGenerator = retryGenerator;
     this.androidAdbInternalUtilProvider = androidAdbInternalUtilProvider;
   }
 
@@ -164,6 +176,10 @@ public class SessionRequestHandlerUtil {
     public abstract ImmutableList<String> includeFilters();
 
     public abstract ImmutableList<String> excludeFilters();
+
+    public abstract OptionalInt retrySessionId();
+
+    public abstract Optional<RetryType> retryType();
 
     public abstract ImmutableList<String> extraArgs();
 
@@ -219,6 +235,10 @@ public class SessionRequestHandlerUtil {
       public abstract Builder setIncludeFilters(List<String> includeFilters);
 
       public abstract Builder setExcludeFilters(List<String> excludeFilters);
+
+      public abstract Builder setRetrySessionId(int retrySessionId);
+
+      public abstract Builder setRetryType(RetryType retryType);
 
       public abstract Builder setExtraArgs(List<String> extraArgs);
 
@@ -451,6 +471,18 @@ public class SessionRequestHandlerUtil {
       driverParams.put("xts_root_dir", xtsRootDir);
     }
     driverParams.put("xts_test_plan", testPlan);
+    if (testPlan.equals("retry")) {
+      Optional<Path> runRetryTfSubPlan =
+          prepareRunRetryTfSubPlan(
+              xtsRootDir,
+              sessionRequestInfo.xtsType(),
+              sessionRequestInfo.retrySessionId().getAsInt(),
+              sessionRequestInfo.retryType().orElse(null));
+      if (runRetryTfSubPlan.isEmpty()) {
+        return Optional.empty();
+      }
+      driverParams.put("subplan_xml", runRetryTfSubPlan.get().toAbsolutePath().toString());
+    }
 
     ImmutableList<String> shardCountArg =
         shardCount > 0
@@ -483,6 +515,43 @@ public class SessionRequestHandlerUtil {
     logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
 
     return Optional.of(jobConfig);
+  }
+
+  private Optional<Path> prepareRunRetryTfSubPlan(
+      String xtsRootDir, XtsType xtsType, int previousSessionId, @Nullable RetryType retryType)
+      throws MobileHarnessException {
+    RetryArgs.Builder retryArgs =
+        RetryArgs.builder()
+            .setResultsDir(getXtsResultsDir(Path.of(xtsRootDir), xtsType))
+            .setPreviousSessionId(previousSessionId);
+    if (retryType != null) {
+      retryArgs.setRetryType(retryType);
+    }
+    SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
+    if (subPlan.getIncludeFiltersMultimap().isEmpty()
+        && subPlan.getExcludeFiltersMultimap().isEmpty()) {
+      logger.atInfo().log(
+          "No include or exclude filters found for TF retry session %s with retry type %s",
+          previousSessionId, retryType);
+      return Optional.empty();
+    }
+
+    Path xtsSubPlansDir = getXtsSubPlansDir(Path.of(xtsRootDir), xtsType);
+    localFileUtil.prepareDir(xtsSubPlansDir);
+    Path subPlanPath =
+        xtsSubPlansDir.resolve(
+            String.format(
+                "retry_session_%d_%d.xml", previousSessionId, Clock.systemUTC().millis()));
+    try (OutputStream outputStream = new FileOutputStream(subPlanPath.toFile())) {
+      subPlan.serialize(outputStream, /* tfFiltersOnly= */ true);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_RETRY_COMMAND_PREPARE_SUBPLAN_ERROR,
+          String.format(
+              "Failed to write the subplan xml file when retrying session %s", previousSessionId),
+          e);
+    }
+    return Optional.of(subPlanPath);
   }
 
   /**
@@ -761,6 +830,16 @@ public class SessionRequestHandlerUtil {
   private Path getXtsTestCasesDir(Path xtsRootDir, XtsType xtsType) {
     return xtsRootDir.resolve(
         String.format("android-%s/testcases", Ascii.toLowerCase(xtsType.name())));
+  }
+
+  private Path getXtsResultsDir(Path xtsRootDir, XtsType xtsType) {
+    return xtsRootDir.resolve(
+        String.format("android-%s/results", Ascii.toLowerCase(xtsType.name())));
+  }
+
+  private Path getXtsSubPlansDir(Path xtsRootDir, XtsType xtsType) {
+    return xtsRootDir.resolve(
+        String.format("android-%s/subplans", Ascii.toLowerCase(xtsType.name())));
   }
 
   @VisibleForTesting

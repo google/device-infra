@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -41,6 +42,8 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
+import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.gson.Gson;
@@ -56,6 +59,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.Map;
@@ -88,6 +92,7 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @Mock private ConfigurationUtil configurationUtil;
   @Bind @Mock private CompatibilityReportMerger compatibilityReportMerger;
   @Bind @Mock private CompatibilityReportParser compatibilityReportParser;
+  @Bind @Mock private RetryGenerator retryGenerator;
   @Bind @Mock private CompatibilityReportCreator reportCreator;
   @Bind @Mock private CertificationSuiteInfoFactory certificationSuiteInfoFactory;
   @Mock private TestSuiteHelper testSuiteHelper;
@@ -205,6 +210,52 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(driverParamsMap)
         .containsExactly(
             "xts_type", "CTS", "android_xts_zip", ANDROID_XTS_ZIP_PATH, "xts_test_plan", "cts");
+  }
+
+  @Test
+  public void createXtsTradefedTestJobConfig_addSubPlanXmlPathForRetry() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .build());
+    SubPlan subPlan = new SubPlan();
+    subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+    doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
+
+    File xtsRootDir = folder.newFolder("xts_root_dir");
+
+    Optional<JobConfig> jobConfigOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+                .setTestPlan("retry")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setRetrySessionId(0)
+                .build(),
+            ImmutableList.of());
+
+    assertThat(jobConfigOpt).isPresent();
+    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+
+    // Asserts the driver
+    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
+    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    Map<String, String> driverParamsMap =
+        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
+    assertThat(driverParamsMap).hasSize(4);
+    assertThat(driverParamsMap)
+        .containsAtLeast(
+            "xts_type",
+            "CTS",
+            "xts_root_dir",
+            xtsRootDir.getAbsolutePath(),
+            "xts_test_plan",
+            "retry");
+    assertThat(driverParamsMap.get("subplan_xml")).startsWith(xtsRootDir.getAbsolutePath());
   }
 
   @Test
