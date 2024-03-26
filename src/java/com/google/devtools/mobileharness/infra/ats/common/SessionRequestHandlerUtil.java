@@ -201,6 +201,8 @@ public class SessionRequestHandlerUtil {
 
     public abstract Duration startTimeout();
 
+    public abstract ImmutableMap<String, String> envVars();
+
     public static Builder builder() {
       return new AutoValue_SessionRequestHandlerUtil_SessionRequestInfo.Builder()
           .setModuleNames(ImmutableList.of())
@@ -212,6 +214,7 @@ public class SessionRequestHandlerUtil {
           .setV2ConfigsMap(ImmutableMap.of())
           .setExpandedModules(ImmutableMap.of())
           .setEnableModuleParameter(false)
+          .setEnvVars(ImmutableMap.of())
           .setEnableModuleOptionalParameter(false)
           .setJobTimeout(Duration.ZERO)
           .setStartTimeout(Duration.ZERO);
@@ -247,6 +250,8 @@ public class SessionRequestHandlerUtil {
       public abstract Builder setPythonPkgIndexUrl(String pythonPkgIndexUrl);
 
       public abstract Builder setAndroidXtsZip(String androidXtsZip);
+
+      public abstract Builder setEnvVars(ImmutableMap<String, String> envVars);
 
       public abstract SessionRequestInfo build();
 
@@ -483,7 +488,9 @@ public class SessionRequestHandlerUtil {
       }
       driverParams.put("subplan_xml", runRetryTfSubPlan.get().toAbsolutePath().toString());
     }
-
+    if (!sessionRequestInfo.envVars().isEmpty()) {
+      driverParams.put("env_vars", new Gson().toJson(sessionRequestInfo.envVars()));
+    }
     ImmutableList<String> shardCountArg =
         shardCount > 0
             ? ImmutableList.of(String.format("--shard-count %s", shardCount))

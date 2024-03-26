@@ -22,6 +22,7 @@ import static com.google.protobuf.TextFormat.shortDebugString;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
@@ -295,6 +296,8 @@ final class NewMultiCommandRequestHandler {
     sessionRequestInfoBuilder.setAndroidXtsZip(androidXtsZipPath);
     sessionRequestInfoBuilder.setDeviceSerials(deviceSerials);
     sessionRequestInfoBuilder.setShardCount(shardCount);
+    sessionRequestInfoBuilder.setEnvVars(
+        ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
 
     // module argument only supports specifying one single module name.
     int moduleArgIndex = commandLineTokens.indexOf("-m");

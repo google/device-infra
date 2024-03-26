@@ -348,6 +348,7 @@ public final class SessionRequestHandlerUtilTest {
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
                 .setDeviceSerials(ImmutableList.of("device_id_1"))
                 .setModuleNames(ImmutableList.of("module1"))
                 .setShardCount(2)
@@ -376,6 +377,8 @@ public final class SessionRequestHandlerUtilTest {
             XTS_ROOT_DIR_PATH,
             "xts_test_plan",
             "cts",
+            "env_vars",
+            "{\"env_key1\":\"env_value1\"}",
             "run_command_args",
             "-m module1 --shard-count 2 --logcat-on-failure");
   }

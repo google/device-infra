@@ -61,4 +61,9 @@ message XtsTradefedTestDriverSpec {
 
   optional string subplan_xml = 7
       [(file_detail) = { help: "The subplan xml file to run." }];
+
+  optional string env_vars = 8 [(field_detail) = {
+    help: "The environment variables passed to xTS 'run' command. This is a "
+          "Map<String, String> encoded as a JSON string."
+  }];
 }

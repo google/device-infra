@@ -26,6 +26,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
@@ -142,6 +143,7 @@ public final class NewMultiCommandRequestHandlerTest {
                 TestEnvironment.newBuilder()
                     .setInvocationTimeout(toProtoDuration(Duration.ofSeconds(2000L)))
                     .setOutputFileUploadUrl(OUTPUT_FILE_UPLOAD_URL)
+                    .putAllEnvVars(ImmutableMap.of("env_key1", "env_value1"))
                     .build())
             .build();
     when(clock.millis()).thenReturn(1000L);
@@ -190,6 +192,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
+    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =

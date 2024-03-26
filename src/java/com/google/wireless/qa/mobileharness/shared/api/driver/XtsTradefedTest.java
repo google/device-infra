@@ -55,6 +55,8 @@ import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
@@ -71,6 +73,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -293,7 +296,8 @@ public class XtsTradefedTest extends BaseDriver
       TestInfo testInfo, XtsTradefedTestDriverSpec spec, Path tmpXtsRootDir, XtsType xtsType)
       throws MobileHarnessException, InterruptedException {
     String[] cmd = getXtsCommand(spec, tmpXtsRootDir, xtsType);
-    ImmutableMap<String, String> env = getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType);
+    ImmutableMap<String, String> env =
+        getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType, spec);
     // Logs command string for debug purpose
     StringBuilder cmdString =
         new StringBuilder(Joiner.on(' ').withKeyValueSeparator("=").join(env));
@@ -540,12 +544,26 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   private ImmutableMap<String, String> getEnvironmentToTradefedConsole(
-      Path tmpXtsRootDir, XtsType xtsType) throws MobileHarnessException, InterruptedException {
-    ImmutableMap.Builder<String, String> environmentToTradefedConsole = ImmutableMap.builder();
+      Path tmpXtsRootDir, XtsType xtsType, XtsTradefedTestDriverSpec spec)
+      throws MobileHarnessException, InterruptedException {
+    Map<String, String> environmentToTradefedConsole = new HashMap<>();
     environmentToTradefedConsole.put(
         "LD_LIBRARY_PATH", getConcatenatedLdLibraryPath(tmpXtsRootDir, xtsType));
     environmentToTradefedConsole.put("PATH", getEnvPath());
-    return environmentToTradefedConsole.buildOrThrow();
+    if (!spec.getEnvVars().isEmpty()) {
+      String envVarJson = spec.getEnvVars();
+      Map<String, String> envVar =
+          new Gson().fromJson(envVarJson, new TypeToken<Map<String, String>>() {}.getType());
+      for (Map.Entry<String, String> entry : envVar.entrySet()) {
+        if (entry.getKey().isEmpty() || entry.getValue().isEmpty()) {
+          continue;
+        }
+        String value = entry.getValue().replace("${TF_WORK_DIR}", tmpXtsRootDir.toString());
+        // This will override the existing entry if it exists.
+        environmentToTradefedConsole.put(entry.getKey(), value);
+      }
+    }
+    return ImmutableMap.copyOf(environmentToTradefedConsole);
   }
 
   private String getConcatenatedLdLibraryPath(Path tmpXtsRootDir, XtsType xtsType) {
