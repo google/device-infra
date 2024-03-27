@@ -627,16 +627,28 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
 
     // gtalk_wifi_max_heartbeat_ping_interval_sec
     if (spec.hasGtalkWifiMaxHeartbeatPingIntervalSec()) {
-      commandsAfterSettings.gservice.add(
-          "gtalk_wifi_max_heartbeat_ping_interval_ms",
-          Duration.ofSeconds(spec.getGtalkWifiMaxHeartbeatPingIntervalSec()).toMillis());
+      commandsAfterSettings.add(
+          "am broadcast -a com.google.android.gms.phenotype.FLAG_OVERRIDE",
+          "--es package com.google.android.gms.gcm",
+          "--es user \\*",
+          "--esa flags gtalk_wifi_max_heartbeat_ping_interval_ms",
+          "--esa values "
+              + Duration.ofSeconds(spec.getGtalkWifiMaxHeartbeatPingIntervalSec()).toMillis(),
+          "--esa types long",
+          "com.google.android.gms");
     }
 
     // gtalk_nosync_heartbeat_ping_interval_sec
     if (spec.hasGtalkNosyncHeartbeatPingIntervalSec()) {
-      commandsAfterSettings.gservice.add(
-          "gtalk_nosync_heartbeat_ping_interval_ms",
-          Duration.ofSeconds(spec.getGtalkNosyncHeartbeatPingIntervalSec()).toMillis());
+      commandsAfterSettings.add(
+          "am broadcast -a com.google.android.gms.phenotype.FLAG_OVERRIDE",
+          "--es package com.google.android.gms.gcm",
+          "--es user \\*",
+          "--esa flags gtalk_nosync_heartbeat_ping_interval_ms",
+          "--esa values "
+              + Duration.ofSeconds(spec.getGtalkNosyncHeartbeatPingIntervalSec()).toMillis(),
+          "--esa types long",
+          "com.google.android.gms");
     }
 
     // enable_adaptive_wifi_heartbeat
@@ -785,7 +797,14 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
 
     // enable_net_scheduler
     if (spec.hasEnableNetScheduler()) {
-      commandsAfterSettings.gservice.add("nts.scheduler_active", spec.getEnableNetScheduler());
+      commandsAfterSettings.add(
+          "am broadcast -a com.google.android.gms.phenotype.FLAG_OVERRIDE",
+          "--es package com.google.android.gms.gcm",
+          "--es user \\*",
+          "--esa flags nts.scheduler_active",
+          "--esa values " + (spec.getEnableNetScheduler() ? "true" : "false"),
+          "--esa types boolean",
+          "com.google.android.gms");
     }
 
     // use_location_for_services
@@ -858,12 +877,12 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
           "location:compact_log_enabled", spec.getEnableLocationCompactLogging());
       commandsAfterSettings.add(
           "am broadcast -a com.google.android.gms.phenotype.FLAG_OVERRIDE",
-          " --es package com.google.android.location",
-          " --es user \\*",
-          " --esa flags compact_log_enabled",
-          " --esa values true",
+          "--es package com.google.android.location",
+          "--es user \\*",
+          "--esa flags compact_log_enabled",
+          "--esa values true",
           "--esa types boolean",
-          " com.google.android.gms");
+          "com.google.android.gms");
     }
 
     // enable_camera_hdr
