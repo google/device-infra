@@ -16,12 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.controller;
 
-import com.google.auto.value.AutoValue;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import java.nio.file.Path;
 import javax.inject.Inject;
@@ -32,28 +32,50 @@ class SessionEnvironmentPreparer {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Environment settings of a session. */
-  @AutoValue
-  abstract static class SessionEnvironment implements NonThrowingAutoCloseable {
+  class SessionEnvironment implements NonThrowingAutoCloseable {
 
-    abstract Path sessionGenDir();
+    private final Path sessionGenDir;
+    private final Path sessionTempDir;
 
-    abstract Path sessionTempDir();
+    private volatile NonThrowingAutoCloseable sessionLogHandlerRemover;
+    private volatile Path sessionLogFile;
 
-    abstract LocalFileUtil localFileUtil();
+    private SessionEnvironment(Path sessionGenDir, Path sessionTempDir) {
+      this.sessionGenDir = sessionGenDir;
+      this.sessionTempDir = sessionTempDir;
+    }
 
-    static SessionEnvironment of(
-        Path sessionGenDir, Path sessionTempDir, LocalFileUtil localFileUtil) {
-      return new AutoValue_SessionEnvironmentPreparer_SessionEnvironment(
-          sessionGenDir, sessionTempDir, localFileUtil);
+    private void setSessionLog(
+        NonThrowingAutoCloseable sessionLogHandlerRemover, Path sessionLogFile) {
+      this.sessionLogHandlerRemover = sessionLogHandlerRemover;
+      this.sessionLogFile = sessionLogFile;
+    }
+
+    Path sessionGenDir() {
+      return sessionGenDir;
+    }
+
+    Path sessionTempDir() {
+      return sessionTempDir;
+    }
+
+    Path sessionLogFile() {
+      return sessionLogFile;
     }
 
     @Override
     public void close() {
       boolean interrupted = Thread.interrupted();
+
+      removeLogHandler();
+      interrupted |= Thread.interrupted();
+
       removeDir(sessionGenDir());
       interrupted |= Thread.interrupted();
+
       removeDir(sessionTempDir());
       interrupted |= Thread.interrupted();
+
       if (interrupted) {
         Thread.currentThread().interrupt();
       }
@@ -62,12 +84,20 @@ class SessionEnvironmentPreparer {
     private void removeDir(Path dir) {
       logger.atInfo().log("Removing %s", dir);
       try {
-        localFileUtil().removeFileOrDir(dir);
+        localFileUtil.removeFileOrDir(dir);
       } catch (MobileHarnessException | InterruptedException e) {
         logger.atWarning().withCause(e).log("Failed to remove %s", dir);
         if (e instanceof InterruptedException) {
           Thread.currentThread().interrupt();
         }
+      }
+    }
+
+    private void removeLogHandler() {
+      NonThrowingAutoCloseable sessionLogHandlerRemover = this.sessionLogHandlerRemover;
+      if (sessionLogHandlerRemover != null) {
+        logger.atInfo().log("Removing session log handler");
+        sessionLogHandlerRemover.close();
       }
     }
   }
@@ -86,10 +116,26 @@ class SessionEnvironmentPreparer {
         Path.of(DirCommon.getPublicDirRoot(), "olc_server_gen_files", "session_" + sessionId);
     Path sessionTempDir =
         Path.of(DirCommon.getPublicDirRoot(), "olc_server_temp_files", "session_" + sessionId);
-    localFileUtil.prepareDir(sessionGenDir.toString());
-    localFileUtil.prepareDir(sessionTempDir.toString());
-    localFileUtil.grantFileOrDirFullAccess(sessionGenDir);
-    localFileUtil.grantFileOrDirFullAccess(sessionTempDir);
-    return SessionEnvironment.of(sessionGenDir, sessionTempDir, localFileUtil);
+    SessionEnvironment sessionEnvironment = new SessionEnvironment(sessionGenDir, sessionTempDir);
+
+    try {
+      // Prepares session dirs.
+      localFileUtil.prepareDir(sessionGenDir.toString());
+      localFileUtil.prepareDir(sessionTempDir.toString());
+      localFileUtil.grantFileOrDirFullAccess(sessionGenDir);
+      localFileUtil.grantFileOrDirFullAccess(sessionTempDir);
+
+      // Adds session log handler.
+      Path sessionLogDir = sessionTempDir.resolve("olc_server_session_log");
+      Path sessionLogFile = sessionLogDir.resolve("olc_server_session_log_0.txt");
+      NonThrowingAutoCloseable sessionLogHandlerRemover =
+          MobileHarnessLogger.addSingleFileHandler(
+              sessionLogDir.toString(), "olc_server_session_log_%g.txt");
+      sessionEnvironment.setSessionLog(sessionLogHandlerRemover, sessionLogFile);
+    } catch (MobileHarnessException | RuntimeException | Error e) {
+      sessionEnvironment.close();
+      throw e;
+    }
+    return sessionEnvironment;
   }
 }

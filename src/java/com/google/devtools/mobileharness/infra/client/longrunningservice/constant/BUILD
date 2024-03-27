@@ -30,3 +30,12 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
     ],
 )
+
+java_library(
+    name = "session_properties",
+    srcs = ["SessionProperties.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+    ],
+)

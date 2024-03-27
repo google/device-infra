@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogFormatter;
@@ -130,9 +131,7 @@ public class MobileHarnessLogger {
       }
 
       // Sets formatter/filter/level.
-      handler.setFormatter(MobileHarnessLogFormatter.getDefaultFormatter());
-      handler.setFilter(FILTER);
-      handler.setLevel(Level.INFO);
+      configureHandler(handler);
     }
   }
 
@@ -167,6 +166,35 @@ public class MobileHarnessLogger {
     }
   }
 
+  /**
+   * Prepares the dir {@code logFileDir}, creates and adds a {@link FileHandler} to the root logger,
+   * and returns a {@link NonThrowingAutoCloseable} which removes the handler from the logger and
+   * then closes the handler.
+   *
+   * <p>The handler writes logs into only one file in the dir, whose file name is specified by
+   * {@code logFileNamePattern}. See {@link FileHandler} for more details about the pattern. For
+   * example, "{@code log_%g.txt}" will make the handler write logs into "{@code
+   * <logFileDir>/log_0.txt}".
+   */
+  public static NonThrowingAutoCloseable addSingleFileHandler(
+      String logFileDir, String logFileNamePattern) throws MobileHarnessException {
+    prepareDir(logFileDir);
+    String logFilePattern = PathUtil.join(logFileDir, logFileNamePattern);
+    Handler logFileHandler;
+    try {
+      logFileHandler = new FileHandler(logFilePattern);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.MOBILE_HARNESS_LOGGER_CREATE_FILE_HANDLER_ERROR,
+          "Failed to create file handler",
+          e);
+    }
+    configureHandler(logFileHandler);
+    Logger rootLogger = getLoggerByName(/* loggerName= */ "");
+    rootLogger.addHandler(logFileHandler);
+    return new HandlerRemover(rootLogger, logFileHandler);
+  }
+
   private static Optional<Handler> createFileHandler(
       String subDir, String logFileNamePattern, int fileNum) throws MobileHarnessException {
     String logFileDirName = MobileHarnessLogger.logFileDirName;
@@ -174,9 +202,7 @@ public class MobileHarnessLogger {
       return Optional.empty();
     }
     String logDir = PathUtil.join(logFileDirName, subDir);
-    LocalFileUtil localFileUtil = new LocalFileUtil();
-    localFileUtil.prepareDir(logDir);
-    localFileUtil.grantFileOrDirFullAccess(logDir);
+    prepareDir(logDir);
     String logFilePattern = PathUtil.join(logDir, logFileNamePattern);
     try {
       if (Flags.instance().logFileSizeNoLimit.getNonNull()) {
@@ -192,6 +218,19 @@ public class MobileHarnessLogger {
     }
   }
 
+  /** Sets formatter/filter/level of a {@link Handler}. */
+  private static void configureHandler(Handler handler) {
+    handler.setFormatter(MobileHarnessLogFormatter.getDefaultFormatter());
+    handler.setFilter(FILTER);
+    handler.setLevel(Level.INFO);
+  }
+
+  private static void prepareDir(String dir) throws MobileHarnessException {
+    LocalFileUtil localFileUtil = new LocalFileUtil();
+    localFileUtil.prepareDir(dir);
+    localFileUtil.grantFileOrDirFullAccess(dir);
+  }
+
   private static Logger getLoggerByClass(@Nullable Class<?> loggerClass) {
     return getLoggerByName(loggerClass == null ? "" : loggerClass.getName().replace('$', '.'));
   }
@@ -200,5 +239,22 @@ public class MobileHarnessLogger {
     Logger logger = Logger.getLogger(loggerName);
     configuredLoggers.put(loggerName, logger);
     return logger;
+  }
+
+  private static class HandlerRemover implements NonThrowingAutoCloseable {
+
+    private final Logger logger;
+    private final Handler handler;
+
+    private HandlerRemover(Logger logger, Handler handler) {
+      this.logger = logger;
+      this.handler = handler;
+    }
+
+    @Override
+    public void close() {
+      logger.removeHandler(handler);
+      handler.close();
+    }
   }
 }

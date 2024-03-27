@@ -22,6 +22,7 @@ import static com.google.common.util.concurrent.Futures.whenAllComplete;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -37,6 +38,7 @@ import com.google.inject.assistedinject.Assisted;
 import com.google.protobuf.FieldMask;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -44,6 +46,8 @@ import javax.inject.Inject;
 
 /** Session runner for running a session. */
 public class SessionRunner implements Callable<Void> {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Factory for creating {@link SessionRunner}. */
   public interface Factory {
@@ -69,6 +73,8 @@ public class SessionRunner implements Callable<Void> {
   @GuardedBy("sessionNotifyingFutures")
   private boolean receiveSessionNotification = true;
 
+  private volatile SessionEnvironment sessionEnvironment;
+
   @Inject
   SessionRunner(
       @Assisted SessionDetail sessionDetail,
@@ -93,49 +99,56 @@ public class SessionRunner implements Callable<Void> {
   @Override
   public Void call() throws MobileHarnessException, InterruptedException {
     // Prepares environment.
-    try (SessionEnvironment sessionEnvironment =
-        sessionEnvironmentPreparer.prepareEnvironment(sessionDetailHolder)) {
+    sessionEnvironment = sessionEnvironmentPreparer.prepareEnvironment(sessionDetailHolder);
 
-      // Creates OmniLab jobs.
-      sessionJobCreator.createAndAddJobs(sessionDetailHolder);
+    logger.atInfo().log(
+        "Starting session runner %s, session_detail:\n%s",
+        sessionDetailHolder.getSessionId(),
+        sessionDetailHolder.buildSessionDetail(/* fieldMask= */ null));
 
-      // Loads session plugins.
-      ImmutableList<SessionPlugin> sessionPlugins =
-          sessionPluginLoader.loadSessionPlugins(sessionDetailHolder, sessionEnvironment);
-      sessionPluginRunner.initialize(sessionDetailHolder, sessionPlugins);
+    // Creates OmniLab jobs.
+    sessionJobCreator.createAndAddJobs(sessionDetailHolder);
 
-      // Sends cached session notifications synchronously.
-      cachedSessionNotifications.forEach(sessionPluginRunner::onSessionNotification);
+    // Loads session plugins.
+    ImmutableList<SessionPlugin> sessionPlugins =
+        sessionPluginLoader.loadSessionPlugins(sessionDetailHolder, sessionEnvironment);
+    sessionPluginRunner.initialize(sessionDetailHolder, sessionPlugins);
 
-      // Calls sessionPlugin.onStarting().
-      sessionPluginRunner.onSessionStarting();
+    // Sends cached session notifications synchronously.
+    cachedSessionNotifications.forEach(sessionPluginRunner::onSessionNotification);
 
-      Throwable sessionError = null;
-      try {
-        // Starts all jobs and wait until they finish.
-        sessionJobRunner.runJobs(
-            sessionDetailHolder,
-            sessionPlugins.stream()
-                .map(SessionPlugin::subscriber)
-                .map(Subscriber::subscriberObject)
-                .collect(toImmutableList()));
-      } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
-        sessionError = e;
-        throw e;
-      } finally {
-        // Calls sessionPlugin.onEnded().
-        sessionPluginRunner.onSessionEnded(sessionError);
+    // Calls sessionPlugin.onStarting().
+    sessionPluginRunner.onSessionStarting();
 
-        // Waits until all session notifications have been sent.
-        waitSessionNotifying();
+    Throwable sessionError = null;
+    try {
+      // Starts all jobs and wait until they finish.
+      sessionJobRunner.runJobs(
+          sessionDetailHolder,
+          sessionPlugins.stream()
+              .map(SessionPlugin::subscriber)
+              .map(Subscriber::subscriberObject)
+              .collect(toImmutableList()));
+    } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+      sessionError = e;
+      throw e;
+    } finally {
+      // Calls sessionPlugin.onEnded().
+      sessionPluginRunner.onSessionEnded(sessionError);
 
-        // Closes session plugin resources.
-        sessionPlugins.stream()
-            .map(SessionPlugin::closeableResource)
-            .forEach(NonThrowingAutoCloseable::close);
-      }
+      // Waits until all session notifications have been sent.
+      waitSessionNotifying();
+
+      // Closes session plugin resources.
+      sessionPlugins.stream()
+          .map(SessionPlugin::closeableResource)
+          .forEach(NonThrowingAutoCloseable::close);
     }
     return null;
+  }
+
+  public Optional<SessionEnvironment> getSessionEnvironment() {
+    return Optional.ofNullable(sessionEnvironment);
   }
 
   /**

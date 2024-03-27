@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.model;
 
+import static com.google.protobuf.TextFormat.shortDebugString;
+
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
@@ -28,6 +30,7 @@ import com.google.protobuf.Message;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 
@@ -112,6 +115,11 @@ public class SessionInfo {
 
           // Calls the given computing function.
           T newPluginOutput = outputComputingFunction.apply(oldPluginOutput);
+          if (!Objects.equals(newPluginOutput, oldPluginOutput)) {
+            logger.atInfo().log(
+                "New session plugin output, session_id=%s, plugin_label=%s, new_plugin_output=[%s]",
+                getSessionId(), sessionPluginLabel.getLabel(), shortDebugString(newPluginOutput));
+          }
 
           // Packs the new output.
           SessionPluginOutput newOutput;

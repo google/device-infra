@@ -32,6 +32,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
@@ -70,6 +71,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -82,6 +84,7 @@ import com.google.protobuf.Any;
 import io.grpc.ManagedChannel;
 import io.grpc.stub.StreamObserver;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
@@ -187,12 +190,13 @@ public class OlcServerIntegrationTest {
           .build();
 
   private final CommandExecutor commandExecutor = new CommandExecutor();
+  private final LocalFileUtil localFileUtil = new LocalFileUtil();
 
-  private StringBuilder olcServerStdoutBuilder;
-  private StringBuilder olcServerStderrBuilder;
+  private final StringBuilder olcServerStdoutBuilder = new StringBuilder();
+  private final StringBuilder olcServerStderrBuilder = new StringBuilder();
 
-  private StringBuilder labServerStdoutBuilder;
-  private StringBuilder labServerStderrBuilder;
+  private final StringBuilder labServerStdoutBuilder = new StringBuilder();
+  private final StringBuilder labServerStderrBuilder = new StringBuilder();
 
   private int olcServerPort;
   private ManagedChannel olcServerChannel;
@@ -200,24 +204,24 @@ public class OlcServerIntegrationTest {
 
   private CommandProcess labServerProcess;
 
+  private Path sessionLogFile;
+
   @Bind private MasterGrpcStubHelper masterGrpcStubHelper;
-  @Bind private Clock clock;
+  @Bind private final Clock clock = Clock.systemUTC();
 
   @Inject private LabInfoGrpcStub labInfoGrpcStub;
 
   @Before
   public void setUp() throws Exception {
-    clock = Clock.systemUTC();
-
-    olcServerStdoutBuilder = new StringBuilder();
-    olcServerStderrBuilder = new StringBuilder();
-
-    labServerStdoutBuilder = new StringBuilder();
-    labServerStderrBuilder = new StringBuilder();
-
     olcServerPort = PortProber.pickUnusedPort();
     olcServerChannel = ChannelFactory.createLocalChannel(olcServerPort, directExecutor());
     masterGrpcStubHelper = new MasterGrpcStubHelper(olcServerChannel);
+
+    sessionLogFile =
+        tmpFolder
+            .newFolder("olc_server_session_log")
+            .toPath()
+            .resolve("olc_server_session_log.txt");
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
@@ -281,7 +285,10 @@ public class OlcServerIntegrationTest {
         waitUntilSessionFinish(sessionStub, sessionId, Duration.ofMinutes(1L));
 
     // Checks the session output.
-    assertThat(getSessionResponse).comparingExpectedFieldsOnly().isEqualTo(GET_SESSION_RESPONSE);
+    assertThat(getSessionResponse)
+        .comparingExpectedFieldsOnly()
+        .ignoringExtraRepeatedFieldElements()
+        .isEqualTo(GET_SESSION_RESPONSE);
 
     List<SessionDetail> allSessions =
         sessionStub
@@ -315,6 +322,11 @@ public class OlcServerIntegrationTest {
     // Checks the OLC server log.
     String olcServerLog = olcServerLogCollector.getLog();
     assertWithMessage("server log").that(olcServerLog).contains("Sleep for 2 seconds");
+
+    // Checks the session log.
+    String sessionLog = localFileUtil.readFile(sessionLogFile);
+    assertThat(sessionLog).contains("Starting session runner " + sessionId.getId());
+    assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());
   }
 
   @Test
@@ -365,7 +377,10 @@ public class OlcServerIntegrationTest {
         waitUntilSessionFinish(sessionStub, sessionId, Duration.ofMinutes(1L));
 
     // Checks the session output.
-    assertThat(getSessionResponse).comparingExpectedFieldsOnly().isEqualTo(GET_SESSION_RESPONSE);
+    assertThat(getSessionResponse)
+        .comparingExpectedFieldsOnly()
+        .ignoringExtraRepeatedFieldElements()
+        .isEqualTo(GET_SESSION_RESPONSE);
 
     String olcServerStderr = olcServerStderrBuilder.toString();
     String labServerStderr = labServerStderrBuilder.toString();
@@ -396,6 +411,11 @@ public class OlcServerIntegrationTest {
     assertWithMessage(errorMessagePrefix + "lab server stderr")
         .that(labServerStderr)
         .doesNotContain("\tat ");
+
+    // Checks the session log.
+    String sessionLog = localFileUtil.readFile(sessionLogFile);
+    assertThat(sessionLog).contains("Starting session runner " + sessionId.getId());
+    assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());
   }
 
   private void startServers(boolean enableAtsMode)
@@ -591,12 +611,15 @@ public class OlcServerIntegrationTest {
     }
   }
 
-  private static CreateSessionRequest createCreateSessionRequest(
+  private CreateSessionRequest createCreateSessionRequest(
       SessionPluginForTestingConfig sessionPluginConfig) {
     return CreateSessionRequest.newBuilder()
         .setSessionConfig(
             SessionConfig.newBuilder()
                 .setSessionName("session_with_no_op_test")
+                .putSessionProperty(
+                    SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
+                    sessionLogFile.toString())
                 .setSessionPluginConfigs(
                     SessionPluginConfigs.newBuilder()
                         .addSessionPluginConfig(

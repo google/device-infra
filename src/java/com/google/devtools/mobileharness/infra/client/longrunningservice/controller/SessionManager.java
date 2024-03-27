@@ -35,6 +35,8 @@ import com.google.devtools.common.metrics.stability.converter.ErrorModelConverte
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionEnvironmentPreparer.SessionEnvironment;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
@@ -44,6 +46,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.FieldMask;
@@ -88,6 +91,7 @@ public class SessionManager {
 
   private final SessionDetailCreator sessionDetailCreator;
   private final SessionRunner.Factory sessionRunnerFactory;
+  private final LocalFileUtil localFileUtil;
   private final ListeningExecutorService threadPool;
 
   private final Object sessionsLock = new Object();
@@ -114,9 +118,11 @@ public class SessionManager {
   SessionManager(
       SessionDetailCreator sessionDetailCreator,
       SessionRunner.Factory sessionRunnerFactory,
+      LocalFileUtil localFileUtil,
       ListeningExecutorService threadPool) {
     this.sessionDetailCreator = sessionDetailCreator;
     this.sessionRunnerFactory = sessionRunnerFactory;
+    this.localFileUtil = localFileUtil;
     this.threadPool = threadPool;
   }
 
@@ -334,13 +340,15 @@ public class SessionManager {
       subscribers.setSessionDetailSupplier(sessionRunner::getSession);
 
       SessionDetail sessionDetail = sessionRunner.getSession(/* fieldMask= */ null);
-      logger.atInfo().log("Start session: %s", shortDebugString(sessionDetail));
+      logger.atInfo().log("Starting session: %s", shortDebugString(sessionDetail));
 
       String sessionId = sessionDetail.getSessionId().getId();
       runningSessions.put(sessionId, runningSession);
       addCallback(
           threadPool.submit(threadRenaming(sessionRunner, () -> "session-runner-" + sessionId)),
-          new SessionRunnerCallback(runningSession),
+          threadRenaming(
+              new SessionRunnerCallback(runningSession),
+              () -> "session-runner-post-run" + sessionId),
           directExecutor());
     }
   }
@@ -405,6 +413,18 @@ public class SessionManager {
 
       // Completes the final result future.
       runningSession.finalResultFuture().set(finalSessionDetail);
+
+      Optional<SessionEnvironment> sessionEnvironment =
+          runningSession.sessionRunner().getSessionEnvironment();
+      if (sessionEnvironment.isPresent()) {
+        try {
+          // Copies session logs.
+          copySessionLog(sessionEnvironment.get(), finalSessionDetail);
+        } finally {
+          // Cleans up session environment.
+          sessionEnvironment.get().close();
+        }
+      }
     }
   }
 
@@ -414,7 +434,8 @@ public class SessionManager {
     sessionDetailBuilder.setSessionStatus(SessionStatus.SESSION_FINISHED);
 
     logger.atInfo().withCause(sessionRunnerError).log(
-        "Session finished: %s", shortDebugString(sessionDetailBuilder));
+        "Session finished, session_id=%s, final_session_detail=[%s]",
+        sessionDetailBuilder.getSessionId().getId(), shortDebugString(sessionDetailBuilder));
 
     // Adds the error thrown from the session runner to SessionDetail, if any.
     if (sessionRunnerError != null) {
@@ -428,6 +449,31 @@ public class SessionManager {
   private void archiveSession(SessionDetail finalSessionDetail) {
     if (!finalSessionDetail.getSessionConfig().getRemoveAfterFinish()) {
       archivedSessions.put(finalSessionDetail.getSessionId().getId(), finalSessionDetail);
+    }
+  }
+
+  private void copySessionLog(SessionEnvironment sessionEnvironment, SessionDetail sessionDetail) {
+    String sessionLogFileDestinationPath =
+        sessionDetail
+            .getSessionOutput()
+            .getSessionPropertyOrDefault(
+                SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH, "");
+    if (sessionLogFileDestinationPath.isEmpty()) {
+      return;
+    }
+    String sessionLogFileSourcePath = sessionEnvironment.sessionLogFile().toString();
+    logger.atInfo().log(
+        "Copying server session log file from %s to %s",
+        sessionLogFileSourcePath, sessionLogFileDestinationPath);
+    try {
+      localFileUtil.copyFileOrDir(sessionLogFileSourcePath, sessionLogFileDestinationPath);
+    } catch (MobileHarnessException | InterruptedException e) {
+      if (e instanceof InterruptedException) {
+        logger.atWarning().withCause(e).log(
+            "Failed to copy server session log file from %s to %s",
+            sessionLogFileSourcePath, sessionLogFileDestinationPath);
+        Thread.currentThread().interrupt();
+      }
     }
   }
 
