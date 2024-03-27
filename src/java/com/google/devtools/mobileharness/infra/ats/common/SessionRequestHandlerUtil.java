@@ -407,14 +407,12 @@ public class SessionRequestHandlerUtil {
             ImmutableList.of(getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
 
     ImmutableList<String> modules = sessionRequestInfo.moduleNames();
-    ImmutableList<String> allTfModules =
+    ImmutableSet<String> allTfModules =
         configsMap.values().stream()
             .map(config -> config.getMetadata().getXtsModule())
-            .collect(toImmutableList());
-    ImmutableList<String> givenMatchedTfModules =
-        modules.isEmpty()
-            ? allTfModules
-            : modules.stream().filter(allTfModules::contains).collect(toImmutableList());
+            .collect(toImmutableSet());
+    ImmutableSet<String> givenMatchedTfModules =
+        modules.isEmpty() ? allTfModules : matchModules(modules, allTfModules);
 
     // Filter modules by include/exclude filters.
     ImmutableList<SuiteTestFilter> includeFilters =
@@ -631,8 +629,7 @@ public class SessionRequestHandlerUtil {
         configsMap.values().stream()
             .map(config -> config.getMetadata().getXtsModule())
             .collect(toImmutableSet());
-    updatedSessionRequestInfo.setGivenMatchedNonTfModules(
-        modules.stream().filter(allNonTfModules::contains).collect(toImmutableSet()));
+    updatedSessionRequestInfo.setGivenMatchedNonTfModules(matchModules(modules, allNonTfModules));
     return updatedSessionRequestInfo.build();
   }
 
@@ -1328,6 +1325,40 @@ public class SessionRequestHandlerUtil {
         break;
       default:
         break;
+    }
+  }
+
+  private static ImmutableSet<String> matchModules(List<String> filters, Set<String> allModules)
+      throws MobileHarnessException {
+    ImmutableSet.Builder<String> modules = ImmutableSet.builder();
+    for (String filter : filters) {
+      matchModule(filter, allModules).ifPresent(modules::add);
+    }
+    return modules.build();
+  }
+
+  private static Optional<String> matchModule(String filter, Set<String> allModules)
+      throws MobileHarnessException {
+    // Do exact match first
+    if (allModules.contains(filter)) {
+      return Optional.of(filter);
+    }
+
+    Pattern pattern = Pattern.compile(filter);
+    ImmutableList<String> modules =
+        allModules.stream()
+            .filter(module -> pattern.matcher(module).find())
+            .collect(toImmutableList());
+    if (modules.isEmpty()) {
+      return Optional.empty();
+    } else if (modules.size() == 1) {
+      return Optional.of(modules.get(0));
+    } else {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_COMMAND_MULTIPLE_MODULES_FOUND_ERROR,
+          String.format(
+              "Multiple modules found matching %s:\n%s\nWhich one did you mean?\n",
+              filter, String.join("\n", modules)));
     }
   }
 
