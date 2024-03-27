@@ -40,3 +40,33 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "ats_lab_info_stub",
+    srcs = ["AtsLabInfoStub.java"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/dda:__subpackages__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_grpc_proto",
+        "//src/devtools/mobileharness/shared/labinfo/proto:lab_info_service_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
+        "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_info",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+# The binary is used for integrate with non-google3 environment.
+java_binary(
+    name = "dda_stub_bin",
+    main_class = "none",
+    runtime_deps = [
+        ":ats_dda_stub",
+        ":ats_lab_info_stub",
+    ],
+)
