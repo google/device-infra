@@ -117,7 +117,7 @@ public final class NewMultiCommandRequestHandlerTest {
     commandInfo =
         CommandInfo.newBuilder()
             .setName("command")
-            .setCommandLine("cts -m module1 --logcat-on-failure --shard-count 2")
+            .setCommandLine("cts --module module1 --test test1 --logcat-on-failure --shard-count 2")
             .addDeviceDimensions(
                 CommandInfo.DeviceDimension.newBuilder()
                     .setName("device_serial")
@@ -183,11 +183,12 @@ public final class NewMultiCommandRequestHandlerTest {
         sessionRequestInfoCaptor.getValue();
     assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts");
     assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
+    assertThat(sessionRequestInfo.testName()).hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
     assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
     assertThat(sessionRequestInfo.xtsType()).isEqualTo(XtsType.CTS);
-    assertThat(sessionRequestInfo.androidXtsZip()).isEqualTo(Optional.of(zipFile));
+    assertThat(sessionRequestInfo.androidXtsZip()).hasValue(zipFile);
     assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
     assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");

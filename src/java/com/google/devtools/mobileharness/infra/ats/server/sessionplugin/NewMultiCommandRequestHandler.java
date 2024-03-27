@@ -280,7 +280,8 @@ final class NewMultiCommandRequestHandler {
     localFileUtil.prepareDir(xtsRootDir);
     mountZip(androidXtsZipPath, xtsRootDir);
     ImmutableList<String> commandLineTokens =
-        ImmutableList.copyOf(Splitter.on(' ').split(commandInfo.getCommandLine()));
+        ImmutableList.copyOf(
+            Splitter.on(' ').trimResults().omitEmptyStrings().split(commandInfo.getCommandLine()));
     int shardCountIndex = commandLineTokens.indexOf("--shard-count");
     int shardCount = 0;
     if (shardCountIndex != -1 && shardCountIndex + 1 < commandLineTokens.size()) {
@@ -299,11 +300,56 @@ final class NewMultiCommandRequestHandler {
     sessionRequestInfoBuilder.setEnvVars(
         ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
 
-    // module argument only supports specifying one single module name.
-    int moduleArgIndex = commandLineTokens.indexOf("-m");
-    if (moduleArgIndex != -1 && moduleArgIndex + 1 < commandLineTokens.size()) {
-      sessionRequestInfoBuilder.setModuleNames(
-          ImmutableList.of(commandLineTokens.get(moduleArgIndex + 1)));
+    ImmutableList.Builder<String> modulesBuilder = ImmutableList.builder();
+    String test = "";
+    for (int index = 0; index < commandLineTokens.size() - 1; ++index) {
+      if (commandLineTokens.get(index).equals("-m")
+          || commandLineTokens.get(index).equals("--module")) {
+        modulesBuilder.add(commandLineTokens.get(index + 1));
+        if (index + 2 < commandLineTokens.size()
+            && (commandLineTokens.get(index + 2).equals("-t")
+                || commandLineTokens.get(index + 2).equals("--test"))) {
+          if (index + 3 >= commandLineTokens.size()) {
+            logger.atWarning().log(
+                "Specified empty test case by command: %s, session ID: %s ",
+                commandInfo.getCommandLine(), sessionInfo.getSessionId());
+            throw new MobileHarnessException(
+                InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
+                String.format(
+                    "Specified empty test case by command: %s, session ID: %s ",
+                    commandInfo.getCommandLine(), sessionInfo.getSessionId()));
+          }
+          if (!test.isEmpty()) {
+            logger.atWarning().log(
+                "Specified more than one test cases by command: %s, session ID: %s ",
+                commandInfo.getCommandLine(), sessionInfo.getSessionId());
+            throw new MobileHarnessException(
+                InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
+                String.format(
+                    "Specified more than one test cases by command: %s, session ID: %s ",
+                    commandInfo.getCommandLine(), sessionInfo.getSessionId()));
+          }
+          test = commandLineTokens.get(index + 3);
+        }
+      }
+    }
+    ImmutableList<String> modules = modulesBuilder.build();
+    if (!test.isEmpty() && modules.size() > 1) {
+      logger.atWarning().log(
+          "Multiple modules are unsupported if a test case is specified. Command: %s. Session"
+              + " ID: %s ",
+          commandInfo.getCommandLine(), sessionInfo.getSessionId());
+      throw new MobileHarnessException(
+          InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
+          String.format(
+              "Multiple modules are unsupported if a test case is specified. Command: %s. Session"
+                  + " ID: %s ",
+              commandInfo.getCommandLine(), sessionInfo.getSessionId()));
+    }
+
+    sessionRequestInfoBuilder.setModuleNames(modules);
+    if (!test.isEmpty()) {
+      sessionRequestInfoBuilder.setTestName(test);
     }
 
     // TODO: add extra args
