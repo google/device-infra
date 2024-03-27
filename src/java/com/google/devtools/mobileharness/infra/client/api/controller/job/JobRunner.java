@@ -1399,7 +1399,7 @@ public class JobRunner implements Runnable {
                 Test.TestResult.SKIP,
                 new MobileHarnessException(
                     InfraErrorId.CLIENT_JR_JOB_HAS_ALL_SKIPPED_TESTS,
-                    "ALl tests of the job are skipped"));
+                    "All tests of the job are skipped"));
       } else {
         jobInfo.result().toNewResult().setPass();
       }
