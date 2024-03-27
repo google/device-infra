@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.util.concurrent;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.FutureCallback;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -122,7 +123,12 @@ public final class Callables {
     }
 
     // Throws the error if any.
-    Throwables.propagateIfPossible(error, MobileHarnessException.class, InterruptedException.class);
+    if (error == null) {
+      return;
+    }
+    Throwables.throwIfInstanceOf(error, MobileHarnessException.class);
+    Throwables.throwIfInstanceOf(error, InterruptedException.class);
+    Throwables.throwIfUnchecked(error);
   }
 
   private static boolean isInterruptedException(Throwable e) {
@@ -167,6 +173,21 @@ public final class Callables {
   }
 
   /**
+   * Wraps the given future callback such that for the duration of {@link FutureCallback#onSuccess}
+   * or {@link FutureCallback#onFailure} the thread that is running will have the given name.
+   *
+   * @param futureCallback the future callback to wrap
+   * @param nameSupplier the supplier of thread names, {@link Supplier#get get} will be called once
+   *     for each invocation of the wrapped future callback.
+   */
+  public static <T> FutureCallback<T> threadRenaming(
+      FutureCallback<T> futureCallback, Supplier<String> nameSupplier) {
+    checkNotNull(nameSupplier);
+    checkNotNull(futureCallback);
+    return new ThreadRenamingFutureCallback<>(futureCallback, nameSupplier);
+  }
+
+  /**
    * Sets the thread name for a code block in the current thread, and restores the original thread
    * name when leaving the block (when the returned closeable is closed).
    *
@@ -178,6 +199,32 @@ public final class Callables {
    */
   public static NonThrowingAutoCloseable threadRenaming(String threadName) {
     return new ThreadRenamer(threadName);
+  }
+
+  private static class ThreadRenamingFutureCallback<V> implements FutureCallback<V> {
+
+    private final FutureCallback<V> futureCallback;
+    private final Supplier<String> nameSupplier;
+
+    private ThreadRenamingFutureCallback(
+        FutureCallback<V> futureCallback, Supplier<String> nameSupplier) {
+      this.futureCallback = futureCallback;
+      this.nameSupplier = nameSupplier;
+    }
+
+    @Override
+    public void onSuccess(V result) {
+      try (NonThrowingAutoCloseable ignored = threadRenaming(nameSupplier.get())) {
+        futureCallback.onSuccess(result);
+      }
+    }
+
+    @Override
+    public void onFailure(Throwable t) {
+      try (NonThrowingAutoCloseable ignored = threadRenaming(nameSupplier.get())) {
+        futureCallback.onFailure(t);
+      }
+    }
   }
 
   private static class ThreadRenamer implements NonThrowingAutoCloseable {
