@@ -15,8 +15,7 @@
 
 # RpcError related utils.
 
-load("@rules_python//python:defs.bzl", "py_library")
-load("@rules_python//python:defs.bzl", "py_test")
+load("@rules_python//python:defs.bzl", "py_library", "py_test")
 
 package(
     default_applicable_licenses = ["//:license"],
