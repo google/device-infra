@@ -25,6 +25,7 @@ java_library(
     srcs = glob(["*.java"]),
     runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:all_drivers_and_decorators_for_unit_tests",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/module:xts_tradefed_test_module",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

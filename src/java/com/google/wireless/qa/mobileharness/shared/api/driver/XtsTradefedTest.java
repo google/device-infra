@@ -32,9 +32,12 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
@@ -78,6 +81,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
 
@@ -107,6 +111,7 @@ public class XtsTradefedTest extends BaseDriver
 
   private final CommandExecutor cmdExecutor;
   private final LocalFileUtil localFileUtil;
+  private final CompatibilityReportParser compatibilityReportParser;
   private final SystemUtil systemUtil;
   private final Adb adb;
   private final Fastboot fastboot;
@@ -119,6 +124,7 @@ public class XtsTradefedTest extends BaseDriver
       TestInfo testInfo,
       CommandExecutor cmdExecutor,
       LocalFileUtil localFileUtil,
+      CompatibilityReportParser compatibilityReportParser,
       SystemUtil systemUtil,
       Adb adb,
       Fastboot fastboot,
@@ -128,6 +134,7 @@ public class XtsTradefedTest extends BaseDriver
         testInfo,
         cmdExecutor,
         localFileUtil,
+        compatibilityReportParser,
         systemUtil,
         adb,
         fastboot,
@@ -141,6 +148,7 @@ public class XtsTradefedTest extends BaseDriver
       TestInfo testInfo,
       CommandExecutor cmdExecutor,
       LocalFileUtil localFileUtil,
+      CompatibilityReportParser compatibilityReportParser,
       SystemUtil systemUtil,
       Adb adb,
       Fastboot fastboot,
@@ -149,6 +157,7 @@ public class XtsTradefedTest extends BaseDriver
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
     this.localFileUtil = localFileUtil;
+    this.compatibilityReportParser = compatibilityReportParser;
     this.systemUtil = systemUtil;
     this.adb = adb;
     this.fastboot = fastboot;
@@ -181,13 +190,50 @@ public class XtsTradefedTest extends BaseDriver
               "Finished running %s test. xTS run command exit status: %s",
               xtsType, xtsRunCommandSuccess);
 
-      if (xtsRunCommandSuccess) {
+      if (xtsRunCommandSuccess && isTestRunPass(tmpXtsRootDir, xtsType)) {
         testInfo.resultWithCause().setPass();
+      } else {
+        // The test run command exit in success but contains failure cases.
+        if (xtsRunCommandSuccess) {
+          testInfo
+              .resultWithCause()
+              .setNonPassing(
+                  TestResult.FAIL,
+                  new MobileHarnessException(
+                      BasicErrorId.TEST_RESULT_FAILED_IN_TEST_XML,
+                      "There's no test run or exists failure test cases. Please refer to the log"
+                          + " files under results directory for more details."));
+        }
       }
     } finally {
       CompositeDeviceUtil.uncacheTestbed(getDevice());
       postTest(tmpXtsRootDir, testInfo, xtsType);
     }
+  }
+
+  private boolean isTestRunPass(Path tmpXtsRootDir, XtsType xtsType) throws MobileHarnessException {
+    Path tmpXtsResultsDir = getXtsResultsDir(tmpXtsRootDir, xtsType);
+    if (localFileUtil.isDirExist(tmpXtsResultsDir)) {
+      List<Path> resultDirs =
+          localFileUtil.listFilesOrDirs(
+              tmpXtsResultsDir,
+              path ->
+                  localFileUtil.isDirExist(path)
+                      && !previousResultDirNames.contains(path.getFileName().toString())
+                      && !Objects.equals(path.getFileName().toString(), "latest"));
+      Path testResultXmlPath = resultDirs.get(0).resolve("test_result.xml");
+      if (localFileUtil.isFileExist(testResultXmlPath)) {
+        Optional<Result> result = compatibilityReportParser.parse(testResultXmlPath);
+        long passedNumber = result.get().getSummary().getPassed();
+        long failedNumber = result.get().getSummary().getFailed();
+        long doneNumber = result.get().getSummary().getModulesDone();
+        long totalNumber = result.get().getSummary().getModulesTotal();
+        if (doneNumber == totalNumber && failedNumber == 0 && passedNumber > 0) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private void postTest(Path tmpXtsRootDir, TestInfo testInfo, XtsType xtsType) {
