@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Compati
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
@@ -100,6 +101,7 @@ public final class SessionRequestHandlerUtilTest {
   @Mock private TestSuiteHelper testSuiteHelper;
   @Bind @SessionGenDir private Path sessionGenDir;
   @Bind @SessionTempDir private Path sessionTempDir;
+  @Bind @Mock private SessionInfo sessionInfo;
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
