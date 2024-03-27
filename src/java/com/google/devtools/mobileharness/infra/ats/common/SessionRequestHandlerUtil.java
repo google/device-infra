@@ -24,6 +24,7 @@ import static com.google.common.primitives.Ints.saturatedCast;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static com.google.wireless.qa.mobileharness.shared.api.driver.MoblyGenericTest.TEST_SELECTOR_KEY;
 import static java.lang.Math.min;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
 import com.google.auto.value.AutoValue;
@@ -46,6 +47,8 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Compati
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
@@ -82,6 +85,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URLEncoder;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
@@ -93,6 +97,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -132,6 +137,8 @@ public class SessionRequestHandlerUtil {
   private final CompatibilityReportParser compatibilityReportParser;
   private final RetryGenerator retryGenerator;
   private final Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider;
+  private final Path sessionGenDir;
+  private final Path sessionTempDir;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -144,7 +151,9 @@ public class SessionRequestHandlerUtil {
       CompatibilityReportCreator reportCreator,
       CompatibilityReportParser compatibilityReportParser,
       RetryGenerator retryGenerator,
-      Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider) {
+      Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider,
+      @SessionGenDir Path sessionGenDir,
+      @SessionTempDir Path sessionTempDir) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
@@ -155,12 +164,15 @@ public class SessionRequestHandlerUtil {
     this.compatibilityReportParser = compatibilityReportParser;
     this.retryGenerator = retryGenerator;
     this.androidAdbInternalUtilProvider = androidAdbInternalUtilProvider;
+    this.sessionGenDir = sessionGenDir;
+    this.sessionTempDir = sessionTempDir;
   }
 
   /**
    * Data holder used to create jobInfo. Data comes from session request handlers, like
    * RunCommandHandler.
    */
+  @SuppressWarnings("unused")
   @AutoValue
   public abstract static class SessionRequestInfo {
     public abstract String testPlan();
@@ -227,6 +239,7 @@ public class SessionRequestHandlerUtil {
     public abstract Builder toBuilder();
 
     /** Builder to create SessionRequestInfo. */
+    @SuppressWarnings("UnusedReturnValue")
     @AutoValue.Builder
     public abstract static class Builder {
       public abstract Builder setTestPlan(String testPlan);
@@ -318,12 +331,13 @@ public class SessionRequestHandlerUtil {
 
   public Optional<Result> getTestResultFromTest(TestInfo testInfo) throws MobileHarnessException {
     // TODO: Stop reading from lab's gen dir after file transfer is ready.
-    if (!testInfo.properties().has(Test.LAB_TEST_GEN_FILE_DIR)) {
+    String labTestGenFileDir = testInfo.properties().get(Test.LAB_TEST_GEN_FILE_DIR);
+    if (labTestGenFileDir == null) {
       return Optional.empty();
     }
     List<Path> testResultXmlFiles =
         localFileUtil.listFilePaths(
-            Path.of(testInfo.properties().get(Test.LAB_TEST_GEN_FILE_DIR)),
+            Path.of(labTestGenFileDir),
             /* recursively= */ true,
             path -> path.getFileName().toString().equals(TEST_RESULT_XML_FILE_NAME));
     if (!testResultXmlFiles.isEmpty()) {
@@ -451,7 +465,12 @@ public class SessionRequestHandlerUtil {
     if (jobConfig.isEmpty()) {
       return Optional.empty();
     }
-    return Optional.of(JobInfoCreator.createJobInfo(jobConfig.get(), ImmutableList.of(), null));
+    return Optional.of(
+        JobInfoCreator.createJobInfo(
+            jobConfig.get(),
+            ImmutableList.of(),
+            jobConfig.get().getGenFileDir(),
+            createJobTmpDir(jobConfig.get().getName()).toString()));
   }
 
   @VisibleForTesting
@@ -477,6 +496,7 @@ public class SessionRequestHandlerUtil {
             ? Duration.ofDays(3L)
             : sessionRequestInfo.jobTimeout();
     // Temporarily reuse job timeout to be test timeout.
+    @SuppressWarnings("UnnecessaryLocalVariable")
     Duration testTimeout = jobTimeout;
     Duration startTimeout =
         sessionRequestInfo.startTimeout().isZero()
@@ -512,7 +532,7 @@ public class SessionRequestHandlerUtil {
           prepareRunRetryTfSubPlan(
               xtsRootDir,
               sessionRequestInfo.xtsType(),
-              sessionRequestInfo.retrySessionId().getAsInt(),
+              sessionRequestInfo.retrySessionId().orElseThrow(),
               sessionRequestInfo.retryType().orElse(null));
       if (runRetryTfSubPlan.isEmpty()) {
         return Optional.empty();
@@ -554,6 +574,9 @@ public class SessionRequestHandlerUtil {
     jobConfigBuilder.setDriver(
         Driver.newBuilder().setName("XtsTradefedTest").setParam(new Gson().toJson(driverParams)));
 
+    Path jobGenDir = createJobGenDir(jobConfigBuilder.getName());
+    jobConfigBuilder.setGenFileDir(jobGenDir.toString());
+
     JobConfig jobConfig = jobConfigBuilder.build();
     logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
 
@@ -563,9 +586,10 @@ public class SessionRequestHandlerUtil {
   private Optional<Path> prepareRunRetryTfSubPlan(
       String xtsRootDir, XtsType xtsType, int previousSessionId, @Nullable RetryType retryType)
       throws MobileHarnessException {
+    Path xtsRootDirPath = Path.of(xtsRootDir);
     RetryArgs.Builder retryArgs =
         RetryArgs.builder()
-            .setResultsDir(getXtsResultsDir(Path.of(xtsRootDir), xtsType))
+            .setResultsDir(getXtsResultsDir(xtsRootDirPath, xtsType))
             .setPreviousSessionId(previousSessionId);
     if (retryType != null) {
       retryArgs.setRetryType(retryType);
@@ -579,7 +603,7 @@ public class SessionRequestHandlerUtil {
       return Optional.empty();
     }
 
-    Path xtsSubPlansDir = getXtsSubPlansDir(Path.of(xtsRootDir), xtsType);
+    Path xtsSubPlansDir = getXtsSubPlansDir(xtsRootDirPath, xtsType);
     localFileUtil.prepareDir(xtsSubPlansDir);
     Path subPlanPath =
         xtsSubPlansDir.resolve(
@@ -695,6 +719,7 @@ public class SessionRequestHandlerUtil {
             ? Duration.ofDays(5L)
             : sessionRequestInfo.jobTimeout();
     // Temporarily reuse job timeout to be test timeout.
+    @SuppressWarnings("UnnecessaryLocalVariable")
     Duration testTimeout = jobTimeout;
     Duration startTimeout =
         sessionRequestInfo.startTimeout().isZero()
@@ -898,12 +923,33 @@ public class SessionRequestHandlerUtil {
                             expandedModuleName.replace(' ', '_'))));
     jobConfigBuilder.setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList));
     jobConfigBuilder.setDriver(Driver.newBuilder().setName("MoblyAospPackageTest"));
+
+    Path jobGenDir = createJobGenDir(jobConfigBuilder.getName());
+    Path jobTmpDir = createJobTmpDir(jobConfigBuilder.getName());
+    jobConfigBuilder.setGenFileDir(jobGenDir.toString());
+
     JobConfig jobConfig = jobConfigBuilder.build();
     logger.atInfo().log(
         "Non-tradefed job base config for module '%s': %s",
         expandedModuleName, shortDebugString(jobConfig));
 
-    return Optional.of(JobInfoCreator.createJobInfo(jobConfig, ImmutableList.of(), null));
+    return Optional.of(
+        JobInfoCreator.createJobInfo(
+            jobConfig, ImmutableList.of(), jobGenDir.toString(), jobTmpDir.toString()));
+  }
+
+  private Path createJobGenDir(String jobName) {
+    return sessionGenDir.resolve(
+        String.format("job_gen_%s_%s", encodeJobName(jobName), UUID.randomUUID()));
+  }
+
+  private Path createJobTmpDir(String jobName) {
+    return sessionTempDir.resolve(
+        String.format("job_tmp_%s_%s", encodeJobName(jobName), UUID.randomUUID()));
+  }
+
+  private static String encodeJobName(String jobName) {
+    return URLEncoder.encode(jobName, UTF_8);
   }
 
   private Path getXtsTestCasesDir(Path xtsRootDir, XtsType xtsType) {
@@ -952,7 +998,8 @@ public class SessionRequestHandlerUtil {
    * @param logDir the directory to save the logs
    * @param jobs the jobs to process
    */
-  public void processResult(XtsType xtsType, Path resultDir, Path logDir, List<JobInfo> jobs)
+  public void processResult(
+      @SuppressWarnings("unused") XtsType xtsType, Path resultDir, Path logDir, List<JobInfo> jobs)
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<JobInfo, Optional<TestInfo>> tradefedTests =
         jobs.stream()
@@ -1405,6 +1452,7 @@ public class SessionRequestHandlerUtil {
     }
 
     /** Builder for {@link NonTradefedTestResult}. */
+    @SuppressWarnings("UnusedReturnValue")
     @AutoValue.Builder
     public abstract static class Builder {
 

@@ -188,7 +188,17 @@ public final class JobInfoCreator {
   public static JobInfo createJobInfo(
       com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
       List<String> nonstandardFlags,
-      @Nullable String genDirPath)
+      @Nullable String genFileDir)
+      throws MobileHarnessException, InterruptedException {
+    return createJobInfo(jobConfig, nonstandardFlags, genFileDir, /* tmpFileDir= */ null);
+  }
+
+  /** Creates JobInfo from MH JobConfig. */
+  public static JobInfo createJobInfo(
+      com.google.wireless.qa.mobileharness.shared.proto.JobConfig jobConfig,
+      List<String> nonstandardFlags,
+      @Nullable String genFileDir,
+      @Nullable String tmpFileDir)
       throws MobileHarnessException, InterruptedException {
     // Generates the job id.
     String jobId = UUID.randomUUID().toString();
@@ -196,10 +206,10 @@ public final class JobInfoCreator {
         jobId,
         jobConfig,
         nonstandardFlags,
-        JobSettingsCreator.createJobSetting(jobId, jobConfig),
+        JobSettingsCreator.createJobSetting(jobId, jobConfig, tmpFileDir),
         JobConfigHelper.finalizeUser(jobConfig),
-        null,
-        genDirPath,
+        tmpFileDir,
+        genFileDir,
         true);
   }
 

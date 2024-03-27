@@ -30,6 +30,7 @@ java_test(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_parser",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",

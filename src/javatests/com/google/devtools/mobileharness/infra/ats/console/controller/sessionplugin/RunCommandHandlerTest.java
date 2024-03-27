@@ -31,6 +31,8 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Compati
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -82,6 +84,8 @@ public final class RunCommandHandlerTest {
   @Bind @Mock private CompatibilityReportMerger compatibilityReportMerger;
   @Bind @Mock private CompatibilityReportParser compatibilityReportParser;
   @Bind @Mock private CompatibilityReportCreator reportCreator;
+  @Bind @SessionGenDir private Path sessionGenDir;
+  @Bind @SessionTempDir private Path sessionTempDir;
 
   @Mock private SessionInfo sessionInfo;
 
@@ -89,8 +93,12 @@ public final class RunCommandHandlerTest {
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
+    sessionGenDir = folder.newFolder("session_gen_dir").toPath();
+    sessionTempDir = folder.newFolder("session_temp_dir").toPath();
+
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     runCommandHandler = spy(runCommandHandler);
   }

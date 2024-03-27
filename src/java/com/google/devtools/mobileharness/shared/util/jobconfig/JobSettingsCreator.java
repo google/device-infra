@@ -26,14 +26,15 @@ import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
+import javax.annotation.Nullable;
 
 /** JobSettingsCreator creates the settings from a JobConfig */
 public final class JobSettingsCreator {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  public static JobSetting createJobSetting(String jobId, JobConfig jobConfig)
-      throws InterruptedException {
+  public static JobSetting createJobSetting(
+      String jobId, JobConfig jobConfig, @Nullable String tmpFileDir) throws InterruptedException {
     Timeout.Builder timeout = JobConfigHelper.finalizeTimeout(jobConfig);
 
     // Finalizes job retry setting.
@@ -79,7 +80,9 @@ public final class JobSettingsCreator {
     setting.setGenFileDir(genFileDir);
 
     // Finalizes the tmp file dir.
-    String tmpFileDir = getDefaultTmpDir() + "/" + jobId + "_tmp";
+    if (tmpFileDir == null) {
+      tmpFileDir = getDefaultTmpDir() + "/" + jobId + "_tmp";
+    }
     logger.atInfo().log("Tmp file dir: %s", tmpFileDir);
     setting.setTmpFileDir(tmpFileDir);
     return setting.build();

@@ -36,6 +36,8 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Compati
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
@@ -96,11 +98,13 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @Mock private CompatibilityReportCreator reportCreator;
   @Bind @Mock private CertificationSuiteInfoFactory certificationSuiteInfoFactory;
   @Mock private TestSuiteHelper testSuiteHelper;
+  @Bind @SessionGenDir private Path sessionGenDir;
+  @Bind @SessionTempDir private Path sessionTempDir;
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
   @Before
-  public void setUp() {
+  public void setUp() throws Exception {
     // Sets flags.
     ImmutableMap<String, String> flagMap = ImmutableMap.of("enable_ats_mode", "true");
     Flags.parse(
@@ -108,6 +112,9 @@ public final class SessionRequestHandlerUtilTest {
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
             .collect(toImmutableList())
             .toArray(new String[0]));
+
+    sessionGenDir = folder.newFolder("session_gen_dir").toPath();
+    sessionTempDir = folder.newFolder("session_temp_dir").toPath();
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
   }
