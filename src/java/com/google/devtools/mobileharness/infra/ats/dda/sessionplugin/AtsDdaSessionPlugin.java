@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.model.proto.Job.JobUser;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
+import com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent;
 import com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionNotification.NotificationCase;
@@ -166,6 +167,15 @@ public class AtsDdaSessionPlugin {
       }
     }
     testIdToSendCancelTestMessage.ifPresent(this::sendCancelTestMessage);
+  }
+
+  @Subscribe
+  private void onTestEnded(TestEndedEvent event) throws MobileHarnessException {
+    Optional<MobileHarnessException> testError =
+        event.getTest().resultWithCause().get().causeException();
+    if (testError.isPresent()) {
+      throw testError.get();
+    }
   }
 
   @Subscribe
