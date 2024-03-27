@@ -49,6 +49,8 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyRe
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
@@ -139,6 +141,7 @@ public class SessionRequestHandlerUtil {
   private final Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider;
   private final Path sessionGenDir;
   private final Path sessionTempDir;
+  private final SessionInfo sessionInfo;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -153,7 +156,8 @@ public class SessionRequestHandlerUtil {
       RetryGenerator retryGenerator,
       Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider,
       @SessionGenDir Path sessionGenDir,
-      @SessionTempDir Path sessionTempDir) {
+      @SessionTempDir Path sessionTempDir,
+      SessionInfo sessionInfo) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
@@ -166,6 +170,7 @@ public class SessionRequestHandlerUtil {
     this.androidAdbInternalUtilProvider = androidAdbInternalUtilProvider;
     this.sessionGenDir = sessionGenDir;
     this.sessionTempDir = sessionTempDir;
+    this.sessionInfo = sessionInfo;
   }
 
   /**
@@ -748,7 +753,7 @@ public class SessionRequestHandlerUtil {
           continue;
         }
         if (sessionRequestInfo.testName().isPresent()) {
-          String parsedTestName = parseTestName(sessionRequestInfo.testName());
+          String parsedTestName = parseTestName(sessionRequestInfo.testName().orElse(null));
           if (!parsedTestName.isEmpty()) {
             matchedTestCasesBuilder.add(parsedTestName);
           } else {
@@ -759,7 +764,7 @@ public class SessionRequestHandlerUtil {
           for (SuiteTestFilter filter : includeFilters) {
             if (filter.matchModule(originalModuleName, moduleAbi, moduleParameter)) {
               matched = true;
-              String parsedTestName = parseTestName(filter.testName());
+              String parsedTestName = parseTestName(filter.testName().orElse(null));
               if (!parsedTestName.isEmpty()) {
                 matchedTestCasesBuilder.add(parsedTestName);
               }
@@ -811,16 +816,15 @@ public class SessionRequestHandlerUtil {
    * TestName is set with pattern TestClassName#TestCaseName while Mobly needs the test case name
    * without the test class name.
    */
-  private String parseTestName(Optional<String> testName) {
-    if (testName.isEmpty()) {
+  private String parseTestName(@Nullable String testName) {
+    if (testName == null) {
       return "";
     }
-    List<String> list =
-        Splitter.on('#').trimResults().omitEmptyStrings().splitToList(testName.get());
+    List<String> list = Splitter.on('#').trimResults().omitEmptyStrings().splitToList(testName);
     if (list.size() == 2) {
       return list.get(1);
     }
-    logger.atWarning().log("Failed to parse test case name from [%s].", testName.get());
+    logger.atWarning().log("Failed to parse test case name from [%s].", testName);
     return "";
   }
 
@@ -1020,6 +1024,13 @@ public class SessionRequestHandlerUtil {
     Path nonTradefedTestResultsDir = resultDir.resolve("non-tradefed_results");
     Path tradefedTestLogsDir = logDir.resolve("tradefed_logs");
     Path nonTradefedTestLogsDir = logDir.resolve("non-tradefed_logs");
+    Path serverSessionLogsDir = logDir.resolve("olc_server_session_logs");
+
+    // Copies OLC server session logs.
+    localFileUtil.prepareDir(serverSessionLogsDir);
+    sessionInfo.putSessionProperty(
+        SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
+        serverSessionLogsDir.resolve("olc_server_session_log.txt").toString());
 
     List<Path> tradefedTestResultXmlFiles = new ArrayList<>();
     // Copies tradefed test relevant log and result files to dedicated locations

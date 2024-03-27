@@ -45,6 +45,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_parser",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
