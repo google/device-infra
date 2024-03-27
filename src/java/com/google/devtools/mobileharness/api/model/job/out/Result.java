@@ -175,7 +175,10 @@ public class Result {
       }
 
       logger.atInfo().withStackTrace(StackSize.FULL).log(
-          "Result %s -> %s", this, formatResultWithDetailedCause(result, cause));
+          "Result %s -> %s, caller=%s",
+          this,
+          formatResultWithDetailedCause(result, cause),
+          MoreThrowables.shortDebugCurrentStackTrace(4));
       this.result = result;
       if (this.cause == null) {
         this.cause = cause;
