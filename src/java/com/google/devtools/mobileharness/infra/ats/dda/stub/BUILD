@@ -70,3 +70,20 @@ java_binary(
         ":ats_lab_info_stub",
     ],
 )
+
+java_binary(
+    name = "dda_stub_test_main",
+    srcs = ["TestMain.java"],
+    main_class = "com.google.devtools.mobileharness.infra.ats.dda.stub.TestMain",
+    runtime_deps = [
+        ":ats_dda_stub",
+        ":ats_lab_info_stub",
+    ],
+    deps = [
+        ":ats_dda_stub",
+        ":ats_lab_info_stub",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "@io_grpc_grpc_java//core",
+        "@io_grpc_grpc_java//netty",
+    ],
+)
