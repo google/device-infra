@@ -81,7 +81,8 @@ public class AndroidMainlineModulesCheckDecorator extends BaseDecorator
                   "None of %s is active on device %s or error happened, skipping the test",
                   spec.getMainlineModulePackageNameList(), deviceId));
       testInfo.resultWithCause().setNonPassing(TestResult.SKIP, error);
-      return;
+      testInfo.getRootTest().resultWithCause().setNonPassing(TestResult.SKIP, error);
+      throw error;
     } else {
       try {
         getDecorated().run(testInfo);
