@@ -50,7 +50,8 @@ public enum AndroidProperty {
   SOC_ID("ro.boot.hw.soc.id"),
   SOC_REV("ro.boot.hw.soc.rev"),
   TYPE("ro.product.name"),
-  VERITYMODE("ro.boot.veritymode");
+  VERITYMODE("ro.boot.veritymode"),
+  OEM_KEY1("ro.oem.key1");
 
   /** Keys of the Android system property. */
   private final ImmutableList<String> keys;
