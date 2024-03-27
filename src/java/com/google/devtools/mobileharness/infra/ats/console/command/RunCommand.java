@@ -122,6 +122,13 @@ final class RunCommand implements Callable<Integer> {
         paramLabel = "<test_module_name>",
         description = "Run the specified module.")
     String module;
+
+    @Option(
+        names = {"-t", "--test"},
+        required = false,
+        paramLabel = "<test_case_name>",
+        description = "Run the specified test case.")
+    String test;
   }
 
   @Option(
@@ -251,7 +258,7 @@ final class RunCommand implements Callable<Integer> {
   public Integer call() throws MobileHarnessException, InterruptedException, IOException {
     try {
       if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
-        validateConfig();
+        validateCommandParameters();
         return runInM1(/* isRunRetry= */ false, /* extraRunRetryCmdArgs= */ ImmutableMap.of());
       } else {
         validateM0Config();
@@ -284,12 +291,30 @@ final class RunCommand implements Callable<Integer> {
     return runInM1(/* isRunRetry= */ true, extraRunRetryCmdArgs.build());
   }
 
-  private void validateConfig() {
+  private void validateCommandParameters() {
     if (isNullOrEmpty(config)) {
       throw new ParameterException(
           spec.commandLine(),
           Ansi.AUTO.string(
               "Param @|fg(yellow) <config>|@ right after 'run' command is required.\n"));
+    }
+
+    if (moduleTestOptionsGroups != null && !moduleTestOptionsGroups.isEmpty()) {
+      ImmutableList<String> tests =
+          moduleTestOptionsGroups.stream()
+              .map(group -> group.test)
+              .filter(test -> test != null)
+              .collect(toImmutableList());
+      if (tests.size() > 1) {
+        throw new ParameterException(
+            spec.commandLine(),
+            Ansi.AUTO.string("Only at most one test case could be specified.\n"));
+      }
+      if (tests.size() == 1 && moduleTestOptionsGroups.size() > 1) {
+        throw new ParameterException(
+            spec.commandLine(),
+            Ansi.AUTO.string("Multiple modules are unsupported if a test case is specified.\n"));
+      }
     }
   }
 
@@ -376,11 +401,13 @@ final class RunCommand implements Callable<Integer> {
 
     ImmutableList<String> modules =
         moduleTestOptionsGroups != null
-            ? moduleTestOptionsGroups.stream()
-                .map(module -> module.module)
-                .collect(toImmutableList())
+            ? moduleTestOptionsGroups.stream().map(group -> group.module).collect(toImmutableList())
             : ImmutableList.of();
 
+    String test =
+        moduleTestOptionsGroups != null && moduleTestOptionsGroups.get(0).test != null
+            ? moduleTestOptionsGroups.get(0).test
+            : "";
     ImmutableList<String> includeFilters =
         this.includeFilters == null
             ? ImmutableList.of()
@@ -421,6 +448,9 @@ final class RunCommand implements Callable<Integer> {
       }
     } else {
       runCommand.setTestPlan(config).addAllModuleName(modules).addAllExtraArg(extraArgs);
+      if (!test.isEmpty()) {
+        runCommand.setTestName(test);
+      }
     }
 
     serverLogPrinter.enable(true);

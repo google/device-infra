@@ -161,6 +161,9 @@ class RunCommandHandler {
 
     builder.setDeviceSerials(runCommand.getDeviceSerialList());
     builder.setModuleNames(runCommand.getModuleNameList());
+    if (runCommand.hasTestName()) {
+      builder.setTestName(runCommand.getTestName());
+    }
     builder.setIncludeFilters(runCommand.getIncludeFilterList());
     builder.setExcludeFilters(runCommand.getExcludeFilterList());
     builder.setExtraArgs(runCommand.getExtraArgList());

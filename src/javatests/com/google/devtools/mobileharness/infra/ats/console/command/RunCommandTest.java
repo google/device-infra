@@ -117,6 +117,22 @@ public final class RunCommandTest {
   }
 
   @Test
+  public void run_multipleModulesWithAtLeastOneTestSpecified() {
+    // Exiting with code 2 corresponds to picocli.CommandLine.ParameterException.
+    int exitCode = commandLine.execute("run", "cts", "-m", "m1", "-t", "t1", "-m", "m2");
+
+    assertThat(exitCode).isEqualTo(2);
+  }
+
+  @Test
+  public void run_testWithoutModule() {
+    // Exiting with code 2 corresponds to picocli.CommandLine.ParameterException.
+    int exitCode = commandLine.execute("run", "cts", "-t", "t1");
+
+    assertThat(exitCode).isEqualTo(2);
+  }
+
+  @Test
   public void run_unsupportedConfig() {
     // Exiting with code 2 corresponds to picocli.CommandLine.ParameterException.
     int exitCode = commandLine.execute("run", "cts");

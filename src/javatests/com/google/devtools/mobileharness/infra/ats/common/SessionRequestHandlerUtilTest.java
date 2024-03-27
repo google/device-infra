@@ -449,6 +449,52 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void createXtsTradefedTestJobConfig_withGivenTest() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
+
+    Optional<JobConfig> jobConfigOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
+                .setModuleNames(ImmutableList.of("module1"))
+                .setTestName("test1")
+                .setShardCount(2)
+                .setExtraArgs(ImmutableList.of("--logcat-on-failure"))
+                .build(),
+            ImmutableList.of("module1"));
+
+    assertThat(jobConfigOpt).isPresent();
+
+    // Asserts the driver
+    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
+    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    Map<String, String> driverParamsMap =
+        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
+    assertThat(driverParamsMap)
+        .containsExactly(
+            "xts_type",
+            "CTS",
+            "xts_root_dir",
+            XTS_ROOT_DIR_PATH,
+            "xts_test_plan",
+            "cts",
+            "env_vars",
+            "{\"env_key1\":\"env_value1\"}",
+            "run_command_args",
+            "-m module1 -t test1 --shard-count 2 --logcat-on-failure");
+  }
+
+  @Test
   public void createXtsTradefedTestJob_testFilters() throws Exception {
     Configuration config1 =
         Configuration.newBuilder()
@@ -734,6 +780,56 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1 test2 test3");
     assertThat(jobInfos.get(1).params().get("test_case_selector")).isNull();
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_withGivenTest() throws Exception {
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1));
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests()).thenReturn(ImmutableMap.of("module1", config1));
+
+    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setModuleNames(ImmutableList.of("module1"))
+                .setTestName("testclass#test1")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+
+    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfoWithInvalidTestName =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setModuleNames(ImmutableList.of("module1"))
+                .setTestName("test1")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .build());
+    ImmutableList<JobInfo> jobInfosWithInvalidTestName =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfoWithInvalidTestName);
+
+    assertThat(jobInfos).hasSize(1);
+    assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1");
+    assertThat(jobInfosWithInvalidTestName).isEmpty();
   }
 
   @Test

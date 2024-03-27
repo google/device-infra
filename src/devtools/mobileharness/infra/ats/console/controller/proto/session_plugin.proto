@@ -88,6 +88,9 @@ message RunCommand {
   optional int32 retry_session_id = 11;
   // Optional.
   optional string retry_type = 12;
+
+  // Optional.
+  optional string test_name = 13;
 }
 
 message RunCommandState {

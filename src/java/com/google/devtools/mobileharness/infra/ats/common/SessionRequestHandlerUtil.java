@@ -173,6 +173,8 @@ public class SessionRequestHandlerUtil {
 
     public abstract ImmutableList<String> moduleNames();
 
+    public abstract Optional<String> testName();
+
     public abstract Optional<Integer> shardCount();
 
     public abstract ImmutableList<String> includeFilters();
@@ -234,6 +236,8 @@ public class SessionRequestHandlerUtil {
       public abstract Builder setDeviceSerials(List<String> deviceSerials);
 
       public abstract Builder setModuleNames(List<String> moduleNames);
+
+      public abstract Builder setTestName(String testName);
 
       public abstract Builder setShardCount(int shardCount);
 
@@ -524,11 +528,16 @@ public class SessionRequestHandlerUtil {
         shardCount > 0
             ? ImmutableList.of(String.format("--shard-count %s", shardCount))
             : ImmutableList.of();
+
+    Optional<String> testNameArg =
+        sessionRequestInfo.testName().map((String value) -> String.format("-t %s", value));
+
     String sessionRequestInfoArgs =
         Joiner.on(' ')
             .join(
                 Streams.concat(
                         tfModules.stream().map(module -> String.format("-m %s", module)),
+                        testNameArg.stream(),
                         shardCountArg.stream(),
                         sessionRequestInfo.includeFilters().stream()
                             .map(
@@ -716,22 +725,21 @@ public class SessionRequestHandlerUtil {
                     excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))) {
           continue;
         }
-        if (!includeFilters.isEmpty()) {
+        if (sessionRequestInfo.testName().isPresent()) {
+          String parsedTestName = parseTestName(sessionRequestInfo.testName());
+          if (!parsedTestName.isEmpty()) {
+            matchedTestCasesBuilder.add(parsedTestName);
+          } else {
+            continue;
+          }
+        } else if (!includeFilters.isEmpty()) {
           boolean matched = false;
           for (SuiteTestFilter filter : includeFilters) {
             if (filter.matchModule(originalModuleName, moduleAbi, moduleParameter)) {
               matched = true;
-              if (filter.testName().isPresent()) {
-                // Testname is set with pattern TestClass#TestName while Mobly needs the test name
-                // without the test class name only.
-                List<String> testname =
-                    Splitter.on('#')
-                        .trimResults()
-                        .omitEmptyStrings()
-                        .splitToList(filter.testName().get());
-                if (testname.size() == 2) {
-                  matchedTestCasesBuilder.add(testname.get(1));
-                }
+              String parsedTestName = parseTestName(filter.testName());
+              if (!parsedTestName.isEmpty()) {
+                matchedTestCasesBuilder.add(parsedTestName);
               }
             }
           }
@@ -775,6 +783,23 @@ public class SessionRequestHandlerUtil {
     }
 
     return jobInfos.build();
+  }
+
+  /**
+   * TestName is set with pattern TestClassName#TestCaseName while Mobly needs the test case name
+   * without the test class name.
+   */
+  private String parseTestName(Optional<String> testName) {
+    if (testName.isEmpty()) {
+      return "";
+    }
+    List<String> list =
+        Splitter.on('#').trimResults().omitEmptyStrings().splitToList(testName.get());
+    if (list.size() == 2) {
+      return list.get(1);
+    }
+    logger.atWarning().log("Failed to parse test case name from [%s].", testName.get());
+    return "";
   }
 
   private Optional<JobInfo> createXtsNonTradefedJob(
