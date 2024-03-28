@@ -86,8 +86,7 @@ public final class RunCommandHandlerTest {
   @Bind @Mock private CompatibilityReportCreator reportCreator;
   @Bind @SessionGenDir private Path sessionGenDir;
   @Bind @SessionTempDir private Path sessionTempDir;
-
-  @Mock private SessionInfo sessionInfo;
+  @Bind @Mock private SessionInfo sessionInfo;
 
   @Inject private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
