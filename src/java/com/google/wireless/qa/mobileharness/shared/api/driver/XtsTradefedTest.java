@@ -341,9 +341,9 @@ public class XtsTradefedTest extends BaseDriver
   private CommandProcess runCommand(
       TestInfo testInfo, XtsTradefedTestDriverSpec spec, Path tmpXtsRootDir, XtsType xtsType)
       throws MobileHarnessException, InterruptedException {
-    String[] cmd = getXtsCommand(spec, tmpXtsRootDir, xtsType);
     ImmutableMap<String, String> env =
         getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType, spec);
+    String[] cmd = getXtsCommand(spec, tmpXtsRootDir, xtsType, env);
     // Logs command string for debug purpose
     StringBuilder cmdString =
         new StringBuilder(Joiner.on(' ').withKeyValueSeparator("=").join(env));
@@ -404,11 +404,14 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   private String[] getXtsCommand(
-      XtsTradefedTestDriverSpec spec, Path tmpXtsRootDir, XtsType xtsType)
+      XtsTradefedTestDriverSpec spec,
+      Path tmpXtsRootDir,
+      XtsType xtsType,
+      ImmutableMap<String, String> envVars)
       throws MobileHarnessException {
     ImmutableList.Builder<String> xtsCommand =
         ImmutableList.<String>builder()
-            .add(getJavaBinary(), "-Xmx6g", "-XX:+HeapDumpOnOutOfMemoryError");
+            .add(getJavaBinary(envVars), "-Xmx6g", "-XX:+HeapDumpOnOutOfMemoryError");
     xtsCommand.add("-cp", getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType));
 
     for (Map.Entry<String, String> systemProp :
@@ -422,7 +425,10 @@ public class XtsTradefedTest extends BaseDriver
     return xtsCommand.build().toArray(new String[0]);
   }
 
-  private String getJavaBinary() {
+  private String getJavaBinary(ImmutableMap<String, String> envVars) {
+    if (envVars.containsKey("JAVA_HOME")) {
+      return String.format("%s/bin/java", envVars.get("JAVA_HOME"));
+    }
     return systemUtil.getJavaBin();
   }
 
