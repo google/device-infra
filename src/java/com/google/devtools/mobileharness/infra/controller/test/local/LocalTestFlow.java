@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.
 import com.google.devtools.mobileharness.infra.controller.test.PluginLoadingResult.PluginItem;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandHistorySaver;
+import com.google.devtools.mobileharness.infra.controller.test.util.atsfileserveruploader.AtsFileServerUploaderPlugin;
 import com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader.MctsDynamicDownloadPlugin;
 import com.google.devtools.mobileharness.platform.testbed.adhoc.controller.AdhocTestbedDriverFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil;
@@ -140,6 +141,9 @@ public class LocalTestFlow {
     ImmutableList.Builder<Object> builtinPluginsBuilder = ImmutableList.builder();
     if (isXtsDynamicDownloaderEnabled()) {
       builtinPluginsBuilder.add(new MctsDynamicDownloadPlugin());
+    }
+    if (isAtsFileServerEnabled()) {
+      builtinPluginsBuilder.add(new AtsFileServerUploaderPlugin());
     }
     builtinPluginsBuilder.add(new TestCommandHistorySaver());
 
@@ -723,5 +727,9 @@ public class LocalTestFlow {
   /** Returns {@code true} if xts dynamic downloader is enabled. */
   private static boolean isXtsDynamicDownloaderEnabled() {
     return Flags.instance().enableXtsDynamicDownloader.getNonNull();
+  }
+
+  private static boolean isAtsFileServerEnabled() {
+    return Flags.instance().enableAtsFileServer.getNonNull();
   }
 }

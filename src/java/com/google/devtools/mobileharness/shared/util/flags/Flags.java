@@ -143,6 +143,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> alrTestConfig = alrTestConfigDefault;
 
+  private static final Flag<String> atsFileServerDefault = Flag.value("localhost:9990");
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_file_server",
+      description = "The ATS file server address:port, Default is localhost:8006.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> atsFileServer = atsFileServerDefault;
+
   private static final Flag<Boolean> enableDaemonDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -458,6 +466,14 @@ public class Flags {
       description = "Whether to enable file cleaner.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableFileCleaner = enableFileCleanerDefault;
+
+  private static final Flag<Boolean> enableAtsFileServerDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_ats_file_server",
+      description = "Whether to enable ATS file server. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableAtsFileServer = enableAtsFileServerDefault;
 
   private static final Flag<Boolean> enableGrpcLabServerDefault = Flag.value(false);
 
