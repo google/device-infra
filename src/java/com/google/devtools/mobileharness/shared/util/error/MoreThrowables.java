@@ -98,8 +98,36 @@ public class MoreThrowables {
    *     layers of the stack trace. 0 or negative for "no max length" (print the full stack trace)
    */
   public static String shortDebugCurrentStackTrace(long maxLength) {
-    // Removes the first two layers that Thread#getStackTrace() and this method create.
-    return shortDebugStackTrace(stream(Thread.currentThread().getStackTrace()).skip(2L), maxLength);
+    // 2L to remove the stack trace of this method.
+    return shortDebugCurrentStackTrace(maxLength, /* skip= */ 1L);
+  }
+
+  /**
+   * Returns a short debug string representing the stack trace of the current thread. For example,
+   * if {@code foo()} calls {@code goo()} and {@code goo()} calls this method, then the method will
+   * return a string like:
+   *
+   * <pre>
+   * {@code "[com.google.Goo.goo(Goo.java:10)  <-- com.google.Foo.foo(Foo.java:20)]"}
+   * </pre>
+   *
+   * <p>Note that the purpose of this method is "printing a stack trace but making the result string
+   * NOT be like an exception", for the cases in which you don't want the "\tat
+   * xxx.xxx.Xxx(Xxx.java:xxx)" in log confuse users that here is the root cause. The result string
+   * of this method may have bad readability. In most cases, you should use {@code
+   * logger.atInfo().withStackTrace().log()} instead.
+   *
+   * @param maxLength the max length of the stack trace. For example, 2 means printing the first two
+   *     layers of the stack trace. 0 or negative for "no max length" (print the full stack trace)
+   * @param skip the number of layers to remove from the top. For example, if foo() calls goo(),
+   *     goo() calls hoo(), and hoo() calls this method, if {@code skip} is {@code 1L}, the result
+   *     will be like "{@code [com.google.Goo.goo(Goo.java:10) <--
+   *     com.google.Foo.foo(Foo.java:20)]}"
+   */
+  public static String shortDebugCurrentStackTrace(long maxLength, long skip) {
+    // 2L to remove the stack traces of Thread#getStackTrace() and this method.
+    return shortDebugStackTrace(
+        stream(Thread.currentThread().getStackTrace()).skip(2L + skip), maxLength);
   }
 
   /**

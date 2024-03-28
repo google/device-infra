@@ -102,7 +102,9 @@ public class Result {
       if (logChangedResult) {
         if (params.getBool(PARAM_PRINT_STACK_TRACE_FOR_PASS_TEST, true)) {
           logger.atInfo().log(
-              "Result %s -> PASS, caller=%s", this, MoreThrowables.shortDebugCurrentStackTrace(4));
+              "Result %s -> PASS, caller=%s",
+              this,
+              MoreThrowables.shortDebugCurrentStackTrace(/* maxLength= */ 4L, /* skip= */ 1L));
         } else {
           logger.atInfo().log("Result %s -> PASS", this);
         }
@@ -175,10 +177,7 @@ public class Result {
       }
 
       logger.atInfo().withStackTrace(StackSize.FULL).log(
-          "Result %s -> %s, caller=%s",
-          this,
-          formatResultWithDetailedCause(result, cause),
-          MoreThrowables.shortDebugCurrentStackTrace(4));
+          "Result %s -> %s", this, formatResultWithDetailedCause(result, cause));
       this.result = result;
       if (this.cause == null) {
         this.cause = cause;
