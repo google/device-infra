@@ -68,13 +68,15 @@ java_library(
 )
 
 java_library(
-    name = "http_file_resolver",
-    srcs = ["HttpFileResolver.java"],
+    name = "ats_file_server_file_resolver",
+    srcs = ["AtsFileServerFileResolver.java"],
     deps = [
         ":abstract_file_resolver",
         ":file_resolver",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "@maven//:com_google_code_findbugs_jsr305",

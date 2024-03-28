@@ -20,7 +20,9 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.net.UrlEscapers;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
@@ -30,53 +32,58 @@ import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import javax.annotation.Nullable;
 
-/** The resolver for files in http server. */
-public class HttpFileResolver extends AbstractFileResolver {
+/** The resolver for files in ats file server. */
+public class AtsFileServerFileResolver extends AbstractFileResolver {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  public HttpFileResolver(@Nullable ListeningExecutorService executorService) {
+  public AtsFileServerFileResolver(@Nullable ListeningExecutorService executorService) {
     super(executorService);
   }
 
   @Override
   protected boolean shouldActuallyResolve(ResolveSource resolveSource) {
-    return resolveSource.path().startsWith("http://")
-        || resolveSource.path().startsWith("https://");
+    return resolveSource.path().startsWith(RemoteFileType.ATS_FILE_SERVER.prefix());
   }
 
   @Override
   protected ResolveResult actuallyResolve(ResolveSource resolveSource)
       throws InterruptedException, MobileHarnessException {
+    String sourcePath = resolveSource.path().replace(RemoteFileType.ATS_FILE_SERVER.prefix(), "");
+    String httpSourcePath =
+        String.join(
+            "/",
+            Flags.instance().atsFileServer.getNonNull(),
+            PathUtil.join("file", UrlEscapers.urlFragmentEscaper().escape(sourcePath)));
     try {
-      String destination =
-          PathUtil.join(resolveSource.targetDir(), new URI(resolveSource.path()).toURL().getPath());
+      httpSourcePath = new URI(httpSourcePath).normalize().toString();
+      String destination = PathUtil.join(resolveSource.targetDir(), sourcePath);
       String output =
-          createCommandExecutor()
-              .run(Command.of("curl", "-o", destination, "-fL", resolveSource.path()));
+          createCommandExecutor().run(Command.of("curl", "-o", destination, "-fL", httpSourcePath));
       logger.atInfo().log(
-          "Output of CAS downloader for downloading file %s: %s", resolveSource.path(), output);
+          "Output of ats file server downloader for downloading file %s: %s",
+          httpSourcePath, output);
       return ResolveResult.create(ImmutableList.of(destination), ImmutableMap.of(), resolveSource);
-    } catch (URISyntaxException | MalformedURLException e) {
+    } catch (URISyntaxException e) {
       throw new MobileHarnessException(
           BasicErrorId.HTTP_INVALID_FILE_PATH_ERROR,
-          String.format("Invalid file path %s in http", resolveSource.path()),
+          String.format("Invalid file path %s in ats file server.", httpSourcePath),
           e);
     } catch (CommandException e) {
       if (e instanceof CommandFailureException) {
         CommandResult result = ((CommandFailureException) e).result();
         logger.atWarning().log(
-            "Logs of failed http downloader: STDOUT: %s\nSTDERR: %s",
+            "Logs of failed ats file downloader: STDOUT: %s\nSTDERR: %s",
             result.stdout(), result.stderr());
       }
       throw new MobileHarnessException(
-          BasicErrorId.HTTP_RESOLVE_FILE_ERROR,
-          String.format("Failed to download file %s from http server.", resolveSource.path()),
+          BasicErrorId.ATS_FILE_SERVER_RESOLVE_FILE_ERROR,
+          String.format("Failed to download file %s from ats file server.", httpSourcePath),
           e);
     }
   }

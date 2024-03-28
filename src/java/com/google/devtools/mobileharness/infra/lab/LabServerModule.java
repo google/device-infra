@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunnerHolder;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.devtools.mobileharness.shared.file.resolver.AbstractFileResolver;
+import com.google.devtools.mobileharness.shared.file.resolver.AtsFileServerFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.FileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.LocalFileResolver;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -138,7 +139,9 @@ public class LabServerModule extends AbstractModule {
   @Singleton
   FileResolver provideFileResolver(
       ListeningExecutorService threadPool, LocalFileUtil localFileUtil) {
-    AbstractFileResolver fileResolver = new LocalFileResolver(threadPool, localFileUtil);
+    AbstractFileResolver fileResolver =
+        new LocalFileResolver(threadPool, localFileUtil)
+            .setSuccessor(new AtsFileServerFileResolver(threadPool));
 
     return fileResolver;
   }
