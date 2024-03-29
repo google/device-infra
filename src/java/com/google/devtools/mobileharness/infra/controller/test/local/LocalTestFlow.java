@@ -143,7 +143,7 @@ public class LocalTestFlow {
     if (isXtsDynamicDownloaderEnabled()) {
       builtinPluginsBuilder.add(new MctsDynamicDownloadPlugin());
     }
-    if (isAtsFileServerEnabled()) {
+    if (isAtsFileServerUploaderEnabled()) {
       builtinPluginsBuilder.add(new AtsFileServerUploaderPlugin());
     }
     builtinPluginsBuilder.add(new TestCommandHistorySaver());
@@ -731,7 +731,7 @@ public class LocalTestFlow {
     return Flags.instance().enableXtsDynamicDownloader.getNonNull();
   }
 
-  private static boolean isAtsFileServerEnabled() {
-    return Flags.instance().enableAtsFileServer.getNonNull();
+  private static boolean isAtsFileServerUploaderEnabled() {
+    return Flags.instance().enableAtsFileServerUploader.getNonNull();
   }
 }

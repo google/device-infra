@@ -143,13 +143,21 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> alrTestConfig = alrTestConfigDefault;
 
-  private static final Flag<String> atsFileServerDefault = Flag.value("localhost:9990");
+  private static final Flag<String> atsFileServerDefault = Flag.value("localhost:8006");
 
   @com.beust.jcommander.Parameter(
       names = "--ats_file_server",
       description = "The ATS file server address:port, Default is localhost:8006.",
       converter = Flag.StringConverter.class)
   public Flag<String> atsFileServer = atsFileServerDefault;
+
+  private static final Flag<String> atsStoragePathDefault = Flag.value("/data");
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_storage_path",
+      description = "The ATS storage path, Default is /data.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> atsStoragePath = atsStoragePathDefault;
 
   private static final Flag<Boolean> enableDaemonDefault = Flag.value(true);
 
@@ -467,13 +475,13 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableFileCleaner = enableFileCleanerDefault;
 
-  private static final Flag<Boolean> enableAtsFileServerDefault = Flag.value(false);
+  private static final Flag<Boolean> enableAtsFileServerUploaderDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
-      names = "--enable_ats_file_server",
-      description = "Whether to enable ATS file server. Default is false.",
+      names = "--enable_ats_file_server_uploader",
+      description = "Whether to enable ATS file server uploader. Default is false.",
       converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableAtsFileServer = enableAtsFileServerDefault;
+  public Flag<Boolean> enableAtsFileServerUploader = enableAtsFileServerUploaderDefault;
 
   private static final Flag<Boolean> enableGrpcLabServerDefault = Flag.value(false);
 

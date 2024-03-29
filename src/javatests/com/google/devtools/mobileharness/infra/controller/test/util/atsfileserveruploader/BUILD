@@ -24,10 +24,10 @@ java_library(
     name = "ats_file_server_uploader_plugin_test",
     srcs = glob(["*.java"]),
     deps = [
-        "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/atsfileserveruploader:ats_file_server_uploader_plugin",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",

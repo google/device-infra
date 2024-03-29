@@ -218,7 +218,12 @@ public final class SessionRequestHandlerUtilTest {
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap)
         .containsExactly(
-            "xts_type", "CTS", "android_xts_zip", ANDROID_XTS_ZIP_PATH, "xts_test_plan", "cts");
+            "xts_type",
+            "CTS",
+            "android_xts_zip",
+            "ats-file-server::" + ANDROID_XTS_ZIP_PATH,
+            "xts_test_plan",
+            "cts");
   }
 
   @Test

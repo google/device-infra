@@ -37,6 +37,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
@@ -67,6 +68,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubP
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
@@ -527,7 +529,13 @@ public class SessionRequestHandlerUtil {
 
     // Use android xts zip file path if specified in request. Otherwise use root directory path.
     if (sessionRequestInfo.androidXtsZip().isPresent()) {
-      driverParams.put("android_xts_zip", sessionRequestInfo.androidXtsZip().get());
+      driverParams.put(
+          "android_xts_zip",
+          PathUtil.join(
+              RemoteFileType.ATS_FILE_SERVER.prefix(),
+              PathUtil.makeRelative(
+                  Flags.instance().atsStoragePath.getNonNull(),
+                  sessionRequestInfo.androidXtsZip().get())));
     } else {
       driverParams.put("xts_root_dir", xtsRootDir);
     }
