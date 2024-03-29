@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
@@ -46,6 +47,7 @@ import org.jline.reader.LineReader;
 @SuppressWarnings("CloseableProvides")
 public class AtsConsoleModule extends AbstractModule {
 
+  private final String consoleId;
   private final ImmutableList<String> deviceInfraServiceFlags;
   private final ImmutableList<String> mainArgs;
   private final ImmutableMap<String, String> systemProperties;
@@ -55,6 +57,7 @@ public class AtsConsoleModule extends AbstractModule {
   private final Provider<Path> olcServerBinary;
 
   public AtsConsoleModule(
+      String consoleId,
       List<String> deviceInfraServiceFlags,
       List<String> mainArgs,
       Map<String, String> systemProperties,
@@ -62,6 +65,7 @@ public class AtsConsoleModule extends AbstractModule {
       PrintStream consoleOutputOut,
       PrintStream consoleOutputErr,
       Provider<Path> olcServerBinary) {
+    this.consoleId = consoleId;
     this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
     this.mainArgs = ImmutableList.copyOf(mainArgs);
     this.systemProperties = ImmutableMap.copyOf(systemProperties);
@@ -75,6 +79,12 @@ public class AtsConsoleModule extends AbstractModule {
   protected void configure() {
     install(new OlcServerModule(olcServerBinary, deviceInfraServiceFlags));
     install(new CompatibilityReportModule());
+  }
+
+  @Provides
+  @ConsoleId
+  String provideConsoleId() {
+    return consoleId;
   }
 
   @Provides

@@ -24,6 +24,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
@@ -51,6 +52,8 @@ public final class SetCommandTest {
 
   private static final String MOBLY_TESTCASES_DIR = "/path/to/mobly_testcases_dir";
   private static final String TEST_RESULTS_DIR = "/path/to/test_results";
+
+  @Bind @ConsoleId private static final String CONSOLE_ID = "fake_console_id";
 
   @Mock @Bind private LocalFileUtil localFileUtil;
   @Mock @Bind @ConsoleLineReader private LineReader lineReader;

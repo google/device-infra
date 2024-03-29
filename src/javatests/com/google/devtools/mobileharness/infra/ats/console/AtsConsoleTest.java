@@ -120,6 +120,7 @@ public final class AtsConsoleTest {
     Injector injector =
         Guice.createInjector(
             new AtsConsoleModule(
+                "fake_console_id",
                 deviceInfraServiceFlags,
                 ImmutableList.of(),
                 systemProperties,
@@ -141,6 +142,7 @@ public final class AtsConsoleTest {
     Injector injector =
         Guice.createInjector(
             new AtsConsoleModule(
+                "fake_console_id",
                 deviceInfraServiceFlags,
                 ImmutableList.of("help"),
                 systemProperties,

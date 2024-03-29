@@ -30,6 +30,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
@@ -79,6 +80,8 @@ public final class RunCommandTest {
   private static final String CONNECTED_DEVICE2_SERIAL = "device2";
   private static final ImmutableSet<String> CONNECTED_DEVICES =
       ImmutableSet.of(CONNECTED_DEVICE1_SERIAL, CONNECTED_DEVICE2_SERIAL);
+
+  @Bind @ConsoleId private static final String CONSOLE_ID = "fake_console_id";
 
   @Mock @Bind private CommandExecutor commandExecutor;
   @Mock @Bind private AndroidAdbInternalUtil androidAdbInternalUtil;

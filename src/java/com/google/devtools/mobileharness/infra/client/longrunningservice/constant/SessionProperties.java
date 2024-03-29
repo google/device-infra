@@ -19,6 +19,9 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.consta
 /** Constants of session properties. */
 public class SessionProperties {
 
+  /** A string property to identify the client of a session. */
+  public static final String PROPERTY_KEY_SESSION_CLIENT_ID = "olc_server_session_client_id";
+
   /**
    * If a session add this key to its properties (by its session plugins or in the request), then
    * after the session ends, a log file will be copied to the given path, which contains all logs of

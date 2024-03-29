@@ -130,6 +130,7 @@ public class ListCommandTest {
     Injector injector =
         Guice.createInjector(
             new AtsConsoleModule(
+                "fake_console_id",
                 deviceInfraServiceFlags,
                 /* mainArgs= */ ImmutableList.of(),
                 /* systemProperties= */ ImmutableMap.of("XTS_ROOT", xtsRootDirPath),

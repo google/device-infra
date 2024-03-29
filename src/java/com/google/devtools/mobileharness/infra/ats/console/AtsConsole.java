@@ -54,6 +54,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import javax.inject.Inject;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
@@ -87,6 +88,7 @@ public class AtsConsole {
     Injector injector =
         Guice.createInjector(
             new AtsConsoleModule(
+                "ats-console-" + UUID.randomUUID(),
                 deviceInfraServiceFlags,
                 asList(args),
                 systemProperties,
@@ -107,10 +109,7 @@ public class AtsConsole {
 
     // Adds shutdown hook.
     Runtime.getRuntime()
-        .addShutdownHook(
-            new Thread(
-                () -> System.out.println(LogDumper.dumpLog()), // Dump logs.
-                "ats-console-shutdown-hook"));
+        .addShutdownHook(new Thread(atsConsole::onShutdown, "ats-console-shutdown-hook"));
 
     // Starts ATS console.
     try (NonThrowingAutoCloseable ignored = threadRenaming("ats-console-main-thread")) {
@@ -270,5 +269,10 @@ public class AtsConsole {
         .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
         .history(new DefaultHistory())
         .build();
+  }
+
+  private void onShutdown() {
+    // Dump logs.
+    System.out.println(LogDumper.dumpLog());
   }
 }

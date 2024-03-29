@@ -33,8 +33,10 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithEr
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
@@ -94,15 +96,18 @@ public class AtsSessionStub {
   private static final Duration GET_SESSION_STATUS_LONG_INTERVAL = Duration.ofSeconds(30L);
 
   private final SessionStub sessionStub;
+  private final String consoleId;
   private final ListeningExecutorService threadPool;
   private final Sleeper sleeper;
 
   @Inject
   AtsSessionStub(
       @ServerStub(ServerStub.Type.SESSION_SERVICE) SessionStub sessionStub,
+      @ConsoleId String consoleId,
       ListeningExecutorService threadPool,
       Sleeper sleeper) {
     this.sessionStub = sessionStub;
+    this.consoleId = consoleId;
     this.threadPool = threadPool;
     this.sleeper = sleeper;
   }
@@ -257,10 +262,10 @@ public class AtsSessionStub {
     }
   }
 
-  private static SessionConfig createSessionConfig(
-      String sessionName, AtsSessionPluginConfig config) {
+  private SessionConfig createSessionConfig(String sessionName, AtsSessionPluginConfig config) {
     return SessionConfig.newBuilder()
         .setSessionName(sessionName)
+        .putSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID, consoleId)
         .setSessionPluginConfigs(
             SessionPluginConfigs.newBuilder()
                 .addSessionPluginConfig(

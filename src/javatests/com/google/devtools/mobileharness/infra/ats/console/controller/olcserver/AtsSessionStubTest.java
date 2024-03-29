@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
@@ -61,6 +62,8 @@ import org.junit.runners.JUnit4;
 public class AtsSessionStubTest {
 
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
+
+  @Bind @ConsoleId private static final String CONSOLE_ID = "fake_console_id";
 
   @Bind private ListeningExecutorService threadPool;
   @Bind private Sleeper sleeper;

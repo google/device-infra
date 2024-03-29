@@ -23,14 +23,10 @@ import javax.inject.Qualifier;
 /** Annotations for ATS console. */
 public class Annotations {
 
-  /** System properties. */
+  /** ID of the console. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
-  public @interface SystemProperties {}
-
-  @Qualifier
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface MainArgs {}
+  public @interface ConsoleId {}
 
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
@@ -50,6 +46,16 @@ public class Annotations {
 
     Type value();
   }
+
+  /** Arguments of the main() method of the console. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface MainArgs {}
+
+  /** System properties. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface SystemProperties {}
 
   private Annotations() {}
 }
