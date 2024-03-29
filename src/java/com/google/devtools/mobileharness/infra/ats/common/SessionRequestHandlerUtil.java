@@ -1075,7 +1075,7 @@ public class SessionRequestHandlerUtil {
                       res.moduleName(),
                       res.moduleAbi().orElse(null),
                       res.moduleParameter().orElse(null),
-                      res.testSummaryFile(),
+                      res.testSummaryFile().orElse(null),
                       res.resultAttributesFile(),
                       res.deviceBuildFingerprint(),
                       res.buildAttributesFile())));
@@ -1439,8 +1439,11 @@ public class SessionRequestHandlerUtil {
      */
     public abstract String deviceBuildFingerprint();
 
-    /** The path of the test summary file being parsed. */
-    public abstract Path testSummaryFile();
+    /**
+     * The path of the test summary file being parsed. It could be empty in some cases like the test
+     * is skipped.
+     */
+    public abstract Optional<Path> testSummaryFile();
 
     /**
      * The path of the text proto file that stores {@link

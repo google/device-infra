@@ -152,8 +152,10 @@ java_library(
     name = "mobly_report_helper",
     srcs = ["MoblyReportHelper.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
@@ -168,7 +170,6 @@ java_library(
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -176,7 +177,9 @@ java_library(
     name = "certification_suite_info",
     srcs = ["CertificationSuiteInfo.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
@@ -187,10 +190,12 @@ java_library(
     srcs = ["CertificationSuiteInfoFactory.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [

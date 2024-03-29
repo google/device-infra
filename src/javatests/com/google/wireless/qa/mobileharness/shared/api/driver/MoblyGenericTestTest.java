@@ -122,8 +122,7 @@ public class MoblyGenericTestTest {
             testInfo,
             moblyYamlParser,
             moblyTestInfoMapHelper,
-            mockCommandExecutor,
-            clock) {
+            mockCommandExecutor) {
           @Override
           protected void handleOutput(TestInfo testInfo)
               throws IOException, MobileHarnessException {}

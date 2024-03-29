@@ -65,9 +65,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Random;
@@ -134,7 +132,6 @@ public class MoblyGenericTest extends BaseDriver {
   private final MoblyYamlParser parser;
   private final MoblyTestInfoMapHelper mapper;
   private final CommandExecutor executor;
-  private final Clock clock;
 
   @Nullable protected String testbedName;
 
@@ -144,15 +141,13 @@ public class MoblyGenericTest extends BaseDriver {
       TestInfo testInfo,
       MoblyYamlParser parser,
       MoblyTestInfoMapHelper mapper,
-      CommandExecutor executor,
-      Clock clock) {
+      CommandExecutor executor) {
     super(device, testInfo);
     this.localFileUtil = new LocalFileUtil();
     this.systemUtil = new SystemUtil();
     this.parser = parser;
     this.mapper = mapper;
     this.executor = executor;
-    this.clock = clock;
   }
 
   @Override
@@ -160,8 +155,6 @@ public class MoblyGenericTest extends BaseDriver {
     File configFile = prepareMoblyConfig(testInfo);
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     boolean passed;
-    Instant startTime = clock.instant();
-    Instant endTime;
     try {
       passed = runMoblyCommand(testInfo, configFile);
       testInfo
@@ -171,9 +164,7 @@ public class MoblyGenericTest extends BaseDriver {
           .log("Finished running Mobly test. Success: %s", passed);
     } finally {
       CompositeDeviceUtil.uncacheTestbed(getDevice());
-      endTime = clock.instant();
     }
-    postMoblyCommandExec(startTime, endTime);
 
     if (!passed && TestResult.TIMEOUT.equals(testInfo.resultWithCause().get().type())) {
       // If we timed out there is a chance that the "latest" dir will not have been created so
@@ -240,11 +231,6 @@ public class MoblyGenericTest extends BaseDriver {
               new MobileHarnessException(
                   ExtErrorId.MOBLY_TEST_SCRIPT_ERROR, MOBLY_SIDE_ERROR_MESSAGE, e));
     }
-  }
-
-  protected void postMoblyCommandExec(Instant testStartTime, Instant testEndTime)
-      throws MobileHarnessException, InterruptedException {
-    // Do nothing by default.
   }
 
   protected File prepareMoblyConfig(TestInfo testInfo)

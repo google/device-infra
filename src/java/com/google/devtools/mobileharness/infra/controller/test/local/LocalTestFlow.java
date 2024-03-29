@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.control
 import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandHistorySaver;
 import com.google.devtools.mobileharness.infra.controller.test.util.atsfileserveruploader.AtsFileServerUploaderPlugin;
 import com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader.MctsDynamicDownloadPlugin;
+import com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator;
 import com.google.devtools.mobileharness.platform.testbed.adhoc.controller.AdhocTestbedDriverFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.SubTask;
@@ -146,6 +147,7 @@ public class LocalTestFlow {
       builtinPluginsBuilder.add(new AtsFileServerUploaderPlugin());
     }
     builtinPluginsBuilder.add(new TestCommandHistorySaver());
+    builtinPluginsBuilder.add(new NonTradefedReportGenerator());
 
     ImmutableList<Object> builtinPlugins = builtinPluginsBuilder.build();
     for (Object plugin : builtinPlugins) {

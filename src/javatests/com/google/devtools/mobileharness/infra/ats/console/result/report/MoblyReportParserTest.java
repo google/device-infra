@@ -25,7 +25,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
 import com.google.inject.Guice;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -65,10 +65,10 @@ public final class MoblyReportParserTest {
                 "mobly-package-name",
                 "module-abi",
                 "module-parameter",
-                Paths.get(MOBLY_TEST_SUMMARY_FILE),
-                Paths.get(RESULT_ATTR_FILE),
+                Path.of(MOBLY_TEST_SUMMARY_FILE),
+                Path.of(RESULT_ATTR_FILE),
                 DEVICE_BUILD_FINGERPRINT,
-                Paths.get(BUILD_ATTR_FILE)));
+                Path.of(BUILD_ATTR_FILE)));
 
     assertThat(res).isPresent();
 

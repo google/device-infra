@@ -30,13 +30,9 @@ import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstan
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.inject.Guice;
-import com.google.inject.testing.fieldbinder.Bind;
-import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.TextFormat;
 import java.io.File;
 import java.time.Instant;
-import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -158,15 +154,14 @@ public final class MoblyReportHelperTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
-  @Bind @Mock private Adb adb;
+  @Mock private Adb adb;
 
   private LocalFileUtil localFileUtil;
 
-  @Inject private MoblyReportHelper moblyReportHelper;
+  private MoblyReportHelper moblyReportHelper;
 
   @Before
   public void setUp() {
-    Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     localFileUtil = new LocalFileUtil();
   }
 
@@ -253,6 +248,8 @@ public final class MoblyReportHelperTest {
   @Test
   public void generateBuildAttributes() throws Exception {
     String devicePropertiesOutput = localFileUtil.readFile(DEVICE_PROPERTIES_FILE);
+    moblyReportHelper = new MoblyReportHelper(adb, localFileUtil);
+
     when(adb.runShellWithRetry(DEVICE_ID, "getprop")).thenReturn(devicePropertiesOutput);
     when(adb.runShellWithRetry(DEVICE_ID, "uname -a")).thenReturn(DEVICE_KERNEL_INFO);
 
@@ -266,6 +263,7 @@ public final class MoblyReportHelperTest {
   @Test
   public void generateBuildAttributesFile() throws Exception {
     File tempDir = temporaryFolder.newFolder("temp");
+    moblyReportHelper = new MoblyReportHelper(adb, localFileUtil);
 
     String devicePropertiesOutput = localFileUtil.readFile(DEVICE_PROPERTIES_FILE);
     when(adb.runShellWithRetry(DEVICE_ID, "getprop")).thenReturn(devicePropertiesOutput);

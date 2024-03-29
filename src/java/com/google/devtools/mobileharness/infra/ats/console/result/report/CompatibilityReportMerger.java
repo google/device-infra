@@ -474,7 +474,7 @@ public class CompatibilityReportMerger {
   }
 
   private ParseResult parseXmlReport(Path reportXmlFile) throws MobileHarnessException {
-    return ParseResult.of(reportXmlFile, reportParser.parse(reportXmlFile));
+    return ParseResult.of(Optional.of(reportXmlFile), reportParser.parse(reportXmlFile));
   }
 
   /** Parses multiple Mobly reports syncly. */
@@ -507,7 +507,7 @@ public class CompatibilityReportMerger {
     logger.atInfo().log(
         "Start to parse Mobly report files:\n - %s",
         moblyReports.stream()
-            .map(mr -> mr.moblySummaryFile().toString())
+            .map(mr -> mr.moblySummaryFile() == null ? "" : mr.moblySummaryFile().toString())
             .collect(joining(",\n - ")));
     for (MoblyReportInfo moblyReportInfo : moblyReports) {
       parseMoblyReportFutures.add(parseMoblyReportAsync(moblyReportInfo));
@@ -523,7 +523,7 @@ public class CompatibilityReportMerger {
   private ParseResult parseMoblyReport(MoblyReportInfo moblyReportInfo)
       throws MobileHarnessException {
     return ParseResult.of(
-        moblyReportInfo.moblySummaryFile(),
+        Optional.ofNullable(moblyReportInfo.moblySummaryFile()),
         moblyReportParser.parseMoblyTestResult(moblyReportInfo));
   }
 
@@ -532,13 +532,13 @@ public class CompatibilityReportMerger {
   public abstract static class ParseResult {
 
     /** Creates a {@link ParseResult}. */
-    public static ParseResult of(Path originalReportFile, Optional<Result> report) {
+    public static ParseResult of(Optional<Path> originalReportFile, Optional<Result> report) {
       return new com.google.devtools.mobileharness.infra.ats.console.result.report
           .AutoValue_CompatibilityReportMerger_ParseResult(originalReportFile, report);
     }
 
     /** The original report file being parsed. */
-    public abstract Path originalReportFile();
+    public abstract Optional<Path> originalReportFile();
 
     /** The parsed report. */
     public abstract Optional<Result> report();

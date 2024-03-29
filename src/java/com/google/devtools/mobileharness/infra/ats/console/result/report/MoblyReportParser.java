@@ -77,10 +77,6 @@ public class MoblyReportParser {
    */
   public Optional<Result> parseMoblyTestResult(MoblyReportInfo moblyReportInfo)
       throws MobileHarnessException {
-    if (!localFileUtil.isFileExist(moblyReportInfo.moblySummaryFile())) {
-      return Optional.empty();
-    }
-
     AttributeList resultAttributesList = AttributeList.getDefaultInstance();
     if (localFileUtil.isFileExist(moblyReportInfo.resultAttributesFile())) {
       try {
@@ -109,14 +105,16 @@ public class MoblyReportParser {
     }
 
     ImmutableList<MoblyYamlDocEntry> moblyDocEntries = ImmutableList.of();
-    try {
-      moblyDocEntries = moblyYamlParser.parse(moblyReportInfo.moblySummaryFile().toString());
-    } catch (MobileHarnessException | IOException e) {
-      throw new MobileHarnessException(
-          ExtErrorId.MOBLY_REPORT_PARSER_PARSE_SUMMARY_FILE_ERROR,
-          String.format(
-              "Failed to parse Mobly test summary file %s", moblyReportInfo.moblySummaryFile()),
-          e);
+    if (moblyReportInfo.moblySummaryFile() != null) {
+      try {
+        moblyDocEntries = moblyYamlParser.parse(moblyReportInfo.moblySummaryFile().toString());
+      } catch (MobileHarnessException | IOException e) {
+        throw new MobileHarnessException(
+            ExtErrorId.MOBLY_REPORT_PARSER_PARSE_SUMMARY_FILE_ERROR,
+            String.format(
+                "Failed to parse Mobly test summary file %s", moblyReportInfo.moblySummaryFile()),
+            e);
+      }
     }
 
     String moduleName =
@@ -207,7 +205,7 @@ public class MoblyReportParser {
         String moblyPackageName,
         @Nullable String moduleAbi,
         @Nullable String moduleParameter,
-        Path moblySummaryFile,
+        @Nullable Path moblySummaryFile,
         Path resultAttributesFile,
         String deviceBuildFingerprint,
         Path buildAttributesFile) {
@@ -233,7 +231,11 @@ public class MoblyReportParser {
     @Nullable
     public abstract String moduleParameter();
 
-    /** The path of the Mobly test summary file being parsed. */
+    /**
+     * The path of the Mobly test summary file being parsed. It could be empty in some cases like
+     * the test is skipped.
+     */
+    @Nullable
     public abstract Path moblySummaryFile();
 
     /**

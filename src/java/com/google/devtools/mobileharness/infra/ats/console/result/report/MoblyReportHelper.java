@@ -46,7 +46,6 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
-import javax.inject.Inject;
 
 /** Util to help generating a Mobly report. */
 public class MoblyReportHelper {
@@ -116,8 +115,7 @@ public class MoblyReportHelper {
   private final Adb adb;
   private final LocalFileUtil localFileUtil;
 
-  @Inject
-  MoblyReportHelper(Adb adb, LocalFileUtil localFileUtil) {
+  public MoblyReportHelper(Adb adb, LocalFileUtil localFileUtil) {
     this.adb = adb;
     this.localFileUtil = localFileUtil;
   }
