@@ -261,50 +261,50 @@ public class SessionManager {
     }
   }
 
-  public void abortSession(String sessionId) throws MobileHarnessException {
-    PendingSession finalPendingSession = null;
-    synchronized (sessionsLock) {
-      if (archivedSessions.containsKey(sessionId)) {
-        // If the session has ended, does nothing.
-        logger.atInfo().log("Abort an archived session [%s]", sessionId);
-        return;
+  public void abortSessions(List<String> sessionIds) {
+    for (String sessionId : sessionIds) {
+      PendingSession finalPendingSession = null;
+      synchronized (sessionsLock) {
+        if (archivedSessions.containsKey(sessionId)) {
+          // If the session has ended, does nothing.
+          logger.atInfo().log("Abort an archived session [%s]", sessionId);
+          return;
+        }
+
+        if (pendingSessions.containsKey(sessionId)) {
+          // If the session has not started, archives its directly.
+          logger.atInfo().log("Abort a pending session [%s], archive it", sessionId);
+          PendingSession pendingSession = pendingSessions.remove(sessionId);
+
+          // Marks the session as FINISHED.
+          SessionDetail finalSessionDetail =
+              createFinalSessionDetail(
+                  pendingSession.sessionDetail(), /* sessionRunnerError= */ null);
+
+          // Archives the session.
+          archiveSession(finalSessionDetail);
+
+          finalPendingSession =
+              PendingSession.of(
+                  finalSessionDetail,
+                  pendingSession.finalResultFuture(),
+                  pendingSession.sessionSubscribers(),
+                  pendingSession.cachedSessionNotifications());
+        } else if (runningSessions.containsKey(sessionId)) {
+          // If the session is running, stops job polling and kills all running jobs.
+          logger.atInfo().log("Abort a running session [%s]", sessionId);
+
+          SessionRunner sessionRunner = runningSessions.get(sessionId).sessionRunner();
+          sessionRunner.abortSession();
+        } else {
+          logger.atInfo().log("Session to abort is not found, id=[%s]", sessionId);
+        }
       }
 
-      if (pendingSessions.containsKey(sessionId)) {
-        // If the session has not started, archives its directly.
-        logger.atInfo().log("Abort a pending session [%s], archive it", sessionId);
-        PendingSession pendingSession = pendingSessions.remove(sessionId);
-
-        // Marks the session as FINISHED.
-        SessionDetail finalSessionDetail =
-            createFinalSessionDetail(
-                pendingSession.sessionDetail(), /* sessionRunnerError= */ null);
-
-        // Archives the session.
-        archiveSession(finalSessionDetail);
-
-        finalPendingSession =
-            PendingSession.of(
-                finalSessionDetail,
-                pendingSession.finalResultFuture(),
-                pendingSession.sessionSubscribers(),
-                pendingSession.cachedSessionNotifications());
-      } else if (runningSessions.containsKey(sessionId)) {
-        // If the session is running, stops job polling and kills all running jobs.
-        logger.atInfo().log("Abort a running session [%s]", sessionId);
-
-        SessionRunner sessionRunner = runningSessions.get(sessionId).sessionRunner();
-        sessionRunner.abortSession();
-      } else {
-        throw new MobileHarnessException(
-            InfraErrorId.OLCS_ABORT_SESSION_SESSION_NOT_FOUND,
-            String.format("Session not found, id=[%s]", sessionId));
+      // Sets the future out of the lock.
+      if (finalPendingSession != null) {
+        finalPendingSession.finalResultFuture().set(finalPendingSession.sessionDetail());
       }
-    }
-
-    // Sets the future out of the lock.
-    if (finalPendingSession != null) {
-      finalPendingSession.finalResultFuture().set(finalPendingSession.sessionDetail());
     }
   }
 

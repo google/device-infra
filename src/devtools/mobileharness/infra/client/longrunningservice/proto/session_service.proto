@@ -46,15 +46,15 @@ service SessionService {
   // Notifies a pending/running session asynchronously.
   rpc NotifySession(NotifySessionRequest) returns (NotifySessionResponse);
 
-  // Aborts a session.
+  // Aborts sessions.
   //
-  // If the session has not started, it will not be started.
+  // If a session has not started, it will not be started.
   //
-  // If the session is running, and no more jobs will be started and all
+  // If a session is running, and no more jobs will be started and all
   // running jobs will be killed. Session plugins will still be executed.
   //
-  // If the session has ended, nothing will happen.
-  rpc AbortSession(AbortSessionRequest) returns (AbortSessionResponse);
+  // If a session has ended, nothing will happen.
+  rpc AbortSessions(AbortSessionsRequest) returns (AbortSessionsResponse);
 }
 
 message CreateSessionRequest {
@@ -158,12 +158,12 @@ message NotifySessionResponse {
   bool successful = 1;
 }
 
-message AbortSessionRequest {
+message AbortSessionsRequest {
   // Required.
-  SessionId session_id = 1;
+  repeated SessionId session_id = 1;
 }
 
-message AbortSessionResponse {}
+message AbortSessionsResponse {}
 
 message SessionFilter {
   // Optional.

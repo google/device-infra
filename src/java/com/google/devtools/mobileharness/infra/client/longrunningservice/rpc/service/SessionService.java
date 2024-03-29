@@ -26,9 +26,10 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceGrpc;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionRequest;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
@@ -119,14 +120,14 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
   }
 
   @Override
-  public void abortSession(
-      AbortSessionRequest request, StreamObserver<AbortSessionResponse> responseObserver) {
+  public void abortSessions(
+      AbortSessionsRequest request, StreamObserver<AbortSessionsResponse> responseObserver) {
     GrpcServiceUtil.invoke(
         request,
         responseObserver,
-        this::doAbortSession,
+        this::doAbortSessions,
         SessionServiceGrpc.getServiceDescriptor(),
-        SessionServiceGrpc.getAbortSessionMethod());
+        SessionServiceGrpc.getAbortSessionsMethod());
   }
 
   private CreateSessionResponse doCreateSession(CreateSessionRequest request)
@@ -186,10 +187,10 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
     return NotifySessionResponse.newBuilder().setSuccessful(successful).build();
   }
 
-  private AbortSessionResponse doAbortSession(AbortSessionRequest request)
-      throws MobileHarnessException {
-    sessionManager.abortSession(request.getSessionId().getId());
-    return AbortSessionResponse.getDefaultInstance();
+  private AbortSessionsResponse doAbortSessions(AbortSessionsRequest request) {
+    sessionManager.abortSessions(
+        request.getSessionIdList().stream().map(SessionId::getId).collect(toImmutableList()));
+    return AbortSessionsResponse.getDefaultInstance();
   }
 
   private static RunSessionResponse createRunSessionResponse(SessionDetail finalResult) {

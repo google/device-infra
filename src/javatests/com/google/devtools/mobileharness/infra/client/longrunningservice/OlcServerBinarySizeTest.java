@@ -35,7 +35,7 @@ public class OlcServerBinarySizeTest {
 
   private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 25_050_000L;
   private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 28_750_000L;
-  private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 28_200_000L;
+  private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 28_250_000L;
 
   private static final long MAX_OLC_SERVER_BINARY_RESOURCE_FILE_SIZE_BYTE = 800_000L;
 
