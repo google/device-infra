@@ -24,12 +24,14 @@ import static java.util.stream.Collectors.toCollection;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Enums;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Streams;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.RpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.util.ErrorIdComparator;
+import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
@@ -106,6 +108,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /** For executing a single test allocated by calling remote lab. */
@@ -248,7 +251,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
   @CanIgnoreReturnValue
   @Override
   protected List<DeviceFeature> checkDevice(TestInfo testInfo, Allocation allocation)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     testInfo
         .log()
         .atInfo()
@@ -583,7 +586,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
       List<DeviceLocator> deviceLocators,
       ContainerModePreference containerModePreference,
       SandboxModePreference sandboxModePreference)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     ImmutableList<String> hostNames =
         deviceLocators.stream()
             .map(deviceLocator -> deviceLocator.getLabLocator().getHostName())
@@ -650,9 +653,13 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     return response;
   }
 
-  private static ImmutableList<ResolveFileItem> getUnresolvedJobFiles(JobInfo jobInfo) {
-    return jobInfo.files().getAll().entries().stream()
-        .filter(entry -> !shouldSendFile(entry.getValue()))
+  private ImmutableList<ResolveFileItem> getUnresolvedJobFiles(JobInfo jobInfo)
+      throws MobileHarnessException, InterruptedException {
+    return Streams.concat(
+            jobInfo.files().getAll().entries().stream(),
+            JobSpecHelper.getFiles(jobInfo.protoSpec().getProto()).entrySet().stream(),
+            jobInfo.scopedSpecs().getFiles(jobSpecHelper).entrySet().stream())
+        .filter(entry -> !isResolvedInClient(entry.getValue()))
         .map(
             entry ->
                 ResolveFileItem.newBuilder()
@@ -667,9 +674,9 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
    * metadata). If not, the client will only send the file metadata to the lab, and the lab will be
    * responsible for resolving the file.
    */
-  private static boolean shouldSendFile(String filePath) {
+  private static boolean isResolvedInClient(String filePath) {
     if (Flags.instance().enableClientFileTransfer.getNonNull()) {
-      return true;
+      return Stream.of(RemoteFileType.ATS_FILE_SERVER.prefix()).noneMatch(filePath::startsWith);
     } else {
       return false;
     }

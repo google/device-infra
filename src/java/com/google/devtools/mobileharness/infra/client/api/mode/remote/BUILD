@@ -58,6 +58,7 @@ java_library(
         "//src/devtools/mobileharness/shared/version/proto:version_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc:exception",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_comparator",
+        "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/in:timeout",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote/util:lab_rpc_proto_converter",
