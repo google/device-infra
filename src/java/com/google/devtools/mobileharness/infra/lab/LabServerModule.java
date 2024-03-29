@@ -139,11 +139,12 @@ public class LabServerModule extends AbstractModule {
   @Singleton
   FileResolver provideFileResolver(
       ListeningExecutorService threadPool, LocalFileUtil localFileUtil) {
-    AbstractFileResolver fileResolver =
-        new LocalFileResolver(threadPool, localFileUtil)
-            .setSuccessor(new AtsFileServerFileResolver(threadPool));
+    AbstractFileResolver localFileResolver = new LocalFileResolver(threadPool, localFileUtil);
+    AbstractFileResolver atsFileServerFileResolver =
+        new AtsFileServerFileResolver(threadPool, localFileUtil);
+    localFileResolver.setSuccessor(atsFileServerFileResolver);
 
-    return fileResolver;
+    return localFileResolver;
   }
 
   @Provides

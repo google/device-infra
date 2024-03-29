@@ -25,13 +25,12 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveResult;
-import com.google.devtools.mobileharness.shared.file.resolver.FileResolver.ResolveSource;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import java.net.URI;
@@ -42,8 +41,12 @@ import javax.annotation.Nullable;
 public class AtsFileServerFileResolver extends AbstractFileResolver {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  public AtsFileServerFileResolver(@Nullable ListeningExecutorService executorService) {
+  private final LocalFileUtil localFileUtil;
+
+  public AtsFileServerFileResolver(
+      @Nullable ListeningExecutorService executorService, LocalFileUtil localFileUtil) {
     super(executorService);
+    this.localFileUtil = localFileUtil;
   }
 
   @Override
@@ -63,6 +66,7 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
     try {
       httpSourcePath = new URI(httpSourcePath).normalize().toString();
       String destination = PathUtil.join(resolveSource.targetDir(), sourcePath);
+      localFileUtil.prepareParentDir(destination);
       String output =
           createCommandExecutor().run(Command.of("curl", "-o", destination, "-fL", httpSourcePath));
       logger.atInfo().log(
