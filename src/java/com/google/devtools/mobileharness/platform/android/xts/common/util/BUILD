@@ -20,7 +20,7 @@ java_library(
     srcs = ["AbiUtil.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",

@@ -56,7 +56,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import javax.inject.Inject;
 
-/** Merger to merge compatibitly xTS reports. */
+/** Merger to merge compatibility xTS reports. */
 public class CompatibilityReportMerger {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();

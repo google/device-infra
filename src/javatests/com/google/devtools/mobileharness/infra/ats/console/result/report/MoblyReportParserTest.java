@@ -96,6 +96,7 @@ public final class MoblyReportParserTest {
                 .setDone(true)
                 .setTotalTests(3)
                 .setPassed(1)
+                .setFailedTests(1)
                 .setRuntimeMillis(6046L)
                 .addTestCase(
                     TestCase.newBuilder()

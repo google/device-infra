@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
@@ -248,10 +249,14 @@ public final class NewMultiCommandRequestHandlerTest {
     newMultiCommandRequestHandler.handleResultProcessing(request, sessionInfo);
     verify(sessionRequestHandlerUtil)
         .processResult(
-            XtsType.CTS,
             Path.of("/path/to/output"),
             Path.of("/path/to/output"),
-            ImmutableList.of(jobInfo));
+            ImmutableList.of(jobInfo),
+            SessionRequestInfo.builder()
+                .setTestPlan("") // set the test plan as empty so it won't merge the retry result
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir("/fake/path")
+                .build());
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
   }

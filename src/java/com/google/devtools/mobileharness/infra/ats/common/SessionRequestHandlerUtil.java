@@ -63,6 +63,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFil
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -140,6 +141,7 @@ public class SessionRequestHandlerUtil {
   private final CompatibilityReportCreator reportCreator;
   private final CompatibilityReportParser compatibilityReportParser;
   private final RetryGenerator retryGenerator;
+  private final RetryReportMerger retryReportMerger;
   private final Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider;
   private final Path sessionGenDir;
   private final Path sessionTempDir;
@@ -156,6 +158,7 @@ public class SessionRequestHandlerUtil {
       CompatibilityReportCreator reportCreator,
       CompatibilityReportParser compatibilityReportParser,
       RetryGenerator retryGenerator,
+      RetryReportMerger retryReportMerger,
       Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider,
       @SessionGenDir Path sessionGenDir,
       @SessionTempDir Path sessionTempDir,
@@ -169,6 +172,7 @@ public class SessionRequestHandlerUtil {
     this.reportCreator = reportCreator;
     this.compatibilityReportParser = compatibilityReportParser;
     this.retryGenerator = retryGenerator;
+    this.retryReportMerger = retryReportMerger;
     this.androidAdbInternalUtilProvider = androidAdbInternalUtilProvider;
     this.sessionGenDir = sessionGenDir;
     this.sessionTempDir = sessionTempDir;
@@ -1005,13 +1009,13 @@ public class SessionRequestHandlerUtil {
    * <p>The results are merged and saved to the given result directory. The logs are saved to the
    * given log directory.
    *
-   * @param xtsType the xTS type
    * @param resultDir the directory to save the merged result
    * @param logDir the directory to save the logs
    * @param jobs the jobs to process
+   * @param sessionRequestInfo session request info stores info about the command
    */
   public void processResult(
-      @SuppressWarnings("unused") XtsType xtsType, Path resultDir, Path logDir, List<JobInfo> jobs)
+      Path resultDir, Path logDir, List<JobInfo> jobs, SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<JobInfo, Optional<TestInfo>> tradefedTests =
         jobs.stream()
@@ -1103,12 +1107,31 @@ public class SessionRequestHandlerUtil {
     mergedTradefedReport.ifPresent(reportList::add);
     mergedNonTradefedReport.ifPresent(reportList::add);
 
-    Optional<Result> finalReport =
+    Optional<Result> mergedReport =
         compatibilityReportMerger.mergeReports(reportList, /* validateReports= */ true);
-    if (finalReport.isEmpty()) {
+    boolean isRunRetry = Ascii.equalsIgnoreCase(sessionRequestInfo.testPlan(), "retry");
+    if (isRunRetry || mergedReport.isPresent()) {
+      @Nullable Result finalReport = mergedReport.orElse(null);
+      if (isRunRetry) {
+        int previousSessionId =
+            sessionRequestInfo
+                .retrySessionId()
+                .orElseThrow(
+                    () ->
+                        new MobileHarnessException(
+                            InfraErrorId.ATSC_RUN_RETRY_COMMAND_MISSING_SESSION_ID_ERROR,
+                            "Missing session id for retry"));
+        finalReport =
+            retryReportMerger.mergeReports(
+                getXtsResultsDir(
+                    Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
+                previousSessionId,
+                sessionRequestInfo.retryType().orElse(null),
+                mergedReport.orElse(null));
+      }
+      reportCreator.createReport(finalReport, resultDir, null);
+    } else if (mergedReport.isEmpty()) {
       logger.atWarning().log("Failed to merge reports.");
-    } else {
-      reportCreator.createReport(finalReport.get(), resultDir, null);
     }
   }
 

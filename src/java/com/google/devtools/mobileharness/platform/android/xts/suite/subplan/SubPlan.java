@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite.subplan;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.TreeMultimap;
@@ -56,7 +55,7 @@ public class SubPlan extends AbstractXmlParser {
   private static final String NAME_ATTR = "name";
   private static final String IS_NON_TF_ATTR = "isNonTf";
 
-  @VisibleForTesting static final String ALL_TESTS_IN_MODULE = "ALL";
+  public static final String ALL_TESTS_IN_MODULE = "ALL";
 
   public SubPlan() {
     includeFiltersMultimap = TreeMultimap.create();

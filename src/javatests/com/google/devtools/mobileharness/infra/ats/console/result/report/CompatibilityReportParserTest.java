@@ -140,6 +140,7 @@ public final class CompatibilityReportParserTest {
                 .setRuntimeMillis(7495L)
                 .setDone(true)
                 .setPassed(3)
+                .setFailedTests(1)
                 .setTotalTests(4)
                 .setReason(
                     Reason.newBuilder()
@@ -210,6 +211,7 @@ public final class CompatibilityReportParserTest {
                 .setRuntimeMillis(7495L)
                 .setDone(true)
                 .setPassed(6)
+                .setFailedTests(0)
                 .setTotalTests(6)
                 .addTestCase(
                     TestCase.newBuilder()

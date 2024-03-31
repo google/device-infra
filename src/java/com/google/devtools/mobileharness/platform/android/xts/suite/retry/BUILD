@@ -90,3 +90,29 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "retry_report_merger",
+    srcs = ["RetryReportMerger.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
+    ],
+    deps = [
+        ":previous_result_loader",
+        ":retry_args",
+        ":retry_generator",
+        ":retry_type",
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

@@ -20,6 +20,7 @@ import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJav
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -30,6 +31,7 @@ import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
@@ -383,11 +385,17 @@ final class NewMultiCommandRequestHandler {
                 0);
         Path resultDir = outputDirPath;
         Path logDir = outputDirPath;
+        // TODO: Create a correct session request info which has info to merge the retry result with
+        // the previous result.
         sessionRequestHandlerUtil.processResult(
-            XtsType.valueOf(xtsType.toUpperCase(Locale.ROOT)),
             resultDir,
             logDir,
-            sessionInfo.getAllJobs());
+            sessionInfo.getAllJobs(),
+            SessionRequestInfo.builder()
+                .setTestPlan("") // set the test plan as empty so it won't merge the retry result
+                .setXtsType(XtsType.valueOf(Ascii.toUpperCase(xtsType)))
+                .setXtsRootDir("/fake/path")
+                .build());
       } else {
         logger.atWarning().log(
             "Skip processing result for unsupported file output upload url: %s",

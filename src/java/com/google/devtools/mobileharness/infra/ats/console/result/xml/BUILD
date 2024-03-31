@@ -80,6 +80,7 @@ java_library(
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
     ],
 )

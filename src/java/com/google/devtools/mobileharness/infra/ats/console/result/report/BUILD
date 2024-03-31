@@ -32,6 +32,7 @@ java_library(
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",

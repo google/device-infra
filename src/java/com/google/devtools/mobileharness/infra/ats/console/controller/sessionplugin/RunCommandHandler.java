@@ -132,7 +132,8 @@ class RunCommandHandler {
       Path resultDir = getResultDir(xtsRootDir, xtsType, timestampDirName);
       Path logDir = getLogDir(xtsRootDir, xtsType, timestampDirName);
 
-      sessionRequestHandlerUtil.processResult(xtsType, resultDir, logDir, sessionInfo.getAllJobs());
+      sessionRequestHandlerUtil.processResult(
+          resultDir, logDir, sessionInfo.getAllJobs(), generateSessionRequestInfo(command));
     } finally {
       sessionRequestHandlerUtil.cleanUpJobGenDirs(sessionInfo.getAllJobs());
       // TODO: Sets success or failure based on the result.

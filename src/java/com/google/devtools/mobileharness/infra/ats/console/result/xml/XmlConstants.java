@@ -96,6 +96,7 @@ public final class XmlConstants {
   // <Metric> element
   public static final String METRIC_TAG = "Metric";
   public static final String METRIC_KEY = "key";
+  public static final String METRIC_CACHED_KEY = "cached";
 
   // Shared across elements
   public static final String COMMAND_LINE_ARGS = "command_line_args";

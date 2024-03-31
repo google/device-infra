@@ -108,6 +108,7 @@ public class CompatibilityReportCreator {
    */
   public void createReport(Result report, Path resultDir, @Nullable TestRecord testRecord)
       throws MobileHarnessException, InterruptedException {
+    localFileUtil.prepareDir(resultDir);
     try {
       writeReportToXml(report, resultDir.toFile());
     } catch (IOException e) {
