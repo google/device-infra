@@ -87,8 +87,8 @@ public class ServerPreparer {
   private final Sleeper sleeper;
   private final SystemUtil systemUtil;
   private final LocalFileUtil localFileUtil;
-  private final ControlStub controlStub;
-  private final VersionStub versionStub;
+  private final Provider<ControlStub> controlStub;
+  private final Provider<VersionStub> versionStub;
   private final Provider<Path> serverBinary;
   private final ImmutableList<String> deviceInfraServiceFlags;
 
@@ -101,8 +101,8 @@ public class ServerPreparer {
       Sleeper sleeper,
       SystemUtil systemUtil,
       LocalFileUtil localFileUtil,
-      @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlStub controlStub,
-      @ServerStub(ServerStub.Type.VERSION_SERVICE) VersionStub versionStub,
+      @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlStub> controlStub,
+      @ServerStub(ServerStub.Type.VERSION_SERVICE) Provider<VersionStub> versionStub,
       @ServerBinary Provider<Path> serverBinary,
       @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags) {
     this.serverStartingLogger = serverStartingLogger;
@@ -124,7 +124,7 @@ public class ServerPreparer {
     // Tries to get server version.
     GetVersionResponse version = null;
     try {
-      version = versionStub.getVersion();
+      version = versionStub.get().getVersion();
     } catch (GrpcExceptionWithErrorId e) {
       if (!e.getUnderlyingRpcException().getStatus().getCode().equals(Code.UNAVAILABLE)) {
         throw new MobileHarnessException(
@@ -219,7 +219,7 @@ public class ServerPreparer {
     serverStartingLogger.log("Killing existing OLC server...");
     KillServerResponse killServerResponse;
     try {
-      killServerResponse = controlStub.killServer();
+      killServerResponse = controlStub.get().killServer();
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SERVER_PREPARER_KILL_EXISTING_OLC_SERVER_RPC_ERROR,
@@ -242,7 +242,7 @@ public class ServerPreparer {
     for (int i = 0; i < 10; i++) {
       sleeper.sleep(Duration.ofSeconds(1L));
       try {
-        versionStub.getVersion();
+        versionStub.get().getVersion();
       } catch (GrpcExceptionWithErrorId e) {
         serverStartingLogger.log("Existing OLC server (pid=%s) killed", serverPid);
         return;
@@ -259,7 +259,7 @@ public class ServerPreparer {
     int count = 0;
     while (true) {
       try {
-        versionStub.getVersion();
+        versionStub.get().getVersion();
         return;
       } catch (GrpcExceptionWithErrorId e) {
         count++;

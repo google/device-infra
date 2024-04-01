@@ -69,6 +69,7 @@ import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.stream.Stream;
 import javax.inject.Inject;
+import javax.inject.Provider;
 
 /** Stub for running ATS sessions in OmniLab long-running client. */
 public class AtsSessionStub {
@@ -95,18 +96,18 @@ public class AtsSessionStub {
   private static final Duration GET_SESSION_STATUS_MEDIUM_INTERVAL = Duration.ofSeconds(5L);
   private static final Duration GET_SESSION_STATUS_LONG_INTERVAL = Duration.ofSeconds(30L);
 
-  private final SessionStub sessionStub;
+  private final Provider<SessionStub> sessionStubProvider;
   private final String consoleId;
   private final ListeningExecutorService threadPool;
   private final Sleeper sleeper;
 
   @Inject
   AtsSessionStub(
-      @ServerStub(ServerStub.Type.SESSION_SERVICE) SessionStub sessionStub,
+      @ServerStub(ServerStub.Type.SESSION_SERVICE) Provider<SessionStub> sessionStubProvider,
       @ConsoleId String consoleId,
       ListeningExecutorService threadPool,
       Sleeper sleeper) {
-    this.sessionStub = sessionStub;
+    this.sessionStubProvider = sessionStubProvider;
     this.consoleId = consoleId;
     this.threadPool = threadPool;
     this.sleeper = sleeper;
@@ -125,7 +126,7 @@ public class AtsSessionStub {
         shortDebugString(config), shortDebugString(createSessionRequest));
     CreateSessionResponse createSessionResponse;
     try {
-      createSessionResponse = sessionStub.createSession(createSessionRequest);
+      createSessionResponse = sessionStubProvider.get().createSession(createSessionRequest);
     } catch (GrpcExceptionWithErrorId e) {
       return immediateFailedFuture(
           new MobileHarnessException(
@@ -155,7 +156,7 @@ public class AtsSessionStub {
         shortDebugString(config), shortDebugString(runSessionRequest));
     RunSessionResponse runSessionResponse;
     try {
-      runSessionResponse = sessionStub.runSession(runSessionRequest);
+      runSessionResponse = sessionStubProvider.get().runSession(runSessionRequest);
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_RUN_SESSION_ERROR,
@@ -178,7 +179,7 @@ public class AtsSessionStub {
             .build();
     GetAllSessionsResponse getAllSessionsResponse;
     try {
-      getAllSessionsResponse = sessionStub.getAllSessions(getAllSessionsRequest);
+      getAllSessionsResponse = sessionStubProvider.get().getAllSessions(getAllSessionsRequest);
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_GET_ALL_SESSIONS_ERROR,
@@ -218,7 +219,8 @@ public class AtsSessionStub {
           count++;
           sleeper.sleep(calculateGetSessionStatusInterval(count));
           SessionStatus newSessionStatus =
-              sessionStub
+              sessionStubProvider
+                  .get()
                   .getSession(
                       GetSessionRequest.newBuilder()
                           .setSessionId(sessionId)
@@ -245,7 +247,8 @@ public class AtsSessionStub {
       SessionDetail sessionDetail;
       try {
         sessionDetail =
-            sessionStub
+            sessionStubProvider
+                .get()
                 .getSession(GetSessionRequest.newBuilder().setSessionId(sessionId).build())
                 .getSessionDetail();
       } catch (GrpcExceptionWithErrorId e) {

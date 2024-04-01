@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stu
 import io.grpc.stub.StreamObserver;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
+import javax.inject.Provider;
 import javax.inject.Singleton;
 import org.jline.utils.AttributedString;
 import org.jline.utils.AttributedStyle;
@@ -42,7 +43,7 @@ public class ServerLogPrinter {
       AttributedStyle.DEFAULT.italic().foreground(AttributedStyle.GREEN);
 
   private final ConsoleUtil consoleUtil;
-  private final ControlStub controlStub;
+  private final Provider<ControlStub> controlStubProvider;
   private final ServerPreparer serverPreparer;
 
   private final GetLogResponseObserver responseObserver = new GetLogResponseObserver();
@@ -58,10 +59,10 @@ public class ServerLogPrinter {
   @Inject
   ServerLogPrinter(
       ConsoleUtil consoleUtil,
-      @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlStub controlStub,
+      @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlStub> controlStubProvider,
       ServerPreparer serverPreparer) {
     this.consoleUtil = consoleUtil;
-    this.controlStub = controlStub;
+    this.controlStubProvider = controlStubProvider;
     this.serverPreparer = serverPreparer;
   }
 
@@ -81,7 +82,7 @@ public class ServerLogPrinter {
       if (enable) {
         serverPreparer.prepareOlcServer();
         if (requestObserver == null) {
-          requestObserver = controlStub.getLog(responseObserver);
+          requestObserver = controlStubProvider.get().getLog(responseObserver);
         }
         requestObserver.onNext(GetLogRequest.newBuilder().setEnable(true).build());
       } else {
