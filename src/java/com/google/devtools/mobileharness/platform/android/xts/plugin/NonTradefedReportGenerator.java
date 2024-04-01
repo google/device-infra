@@ -24,7 +24,9 @@ import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportHelper;
@@ -32,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
@@ -173,5 +176,18 @@ public final class NonTradefedReportGenerator {
         androidAdbUtil
             .getProperty(deviceIds.get(0), ImmutableList.of("ro.build.fingerprint"))
             .trim());
+
+    ResultTypeWithCause resultWithCause = testInfo.resultWithCause().get();
+    ModuleRunResult.Builder resultBuilder =
+        ModuleRunResult.newBuilder().setResult(resultWithCause.type());
+    if (resultWithCause.causeProto().isPresent()) {
+      resultBuilder.setCause(resultWithCause.toStringWithDetail());
+    }
+    localFileUtil.writeToFile(
+        Path.of(testInfo.getGenFileDir())
+            .resolve("ats_module_run_result.textproto")
+            .toAbsolutePath()
+            .toString(),
+        TextFormat.printer().printToString(resultBuilder.build()));
   }
 }

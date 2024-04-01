@@ -18,14 +18,19 @@ package(
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__subpackages__",
     ],
 )
 
 proto_library(
     name = "result_proto",
     srcs = ["result.proto"],
+    deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_proto",
+    ],
 )
 
 java_proto_library(

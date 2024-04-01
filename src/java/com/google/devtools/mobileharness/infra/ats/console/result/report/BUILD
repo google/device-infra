@@ -132,6 +132,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

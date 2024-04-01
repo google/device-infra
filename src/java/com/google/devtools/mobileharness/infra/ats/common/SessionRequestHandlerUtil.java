@@ -129,7 +129,8 @@ public class SessionRequestHandlerUtil {
           "test_summary.yaml",
           "device_build_fingerprint.txt",
           "mobly_run_build_attributes.textproto",
-          "mobly_run_result_attributes.textproto");
+          "mobly_run_result_attributes.textproto",
+          "ats_module_run_result.textproto");
 
   private final DeviceQuerier deviceQuerier;
   private final LocalFileUtil localFileUtil;
@@ -1022,7 +1023,8 @@ public class SessionRequestHandlerUtil {
                       res.testSummaryFile().orElse(null),
                       res.resultAttributesFile(),
                       res.deviceBuildFingerprint(),
-                      res.buildAttributesFile())));
+                      res.buildAttributesFile(),
+                      res.moduleResultFile())));
     }
 
     Optional<Result> mergedTradefedReport = Optional.empty();
@@ -1344,6 +1346,9 @@ public class SessionRequestHandlerUtil {
       case "mobly_run_build_attributes.textproto":
         resultBuilder.setBuildAttributesFile(filePath);
         break;
+      case "ats_module_run_result.textproto":
+        resultBuilder.setModuleResultFile(filePath);
+        break;
       default:
         break;
     }
@@ -1424,6 +1429,13 @@ public class SessionRequestHandlerUtil {
      */
     public abstract Path buildAttributesFile();
 
+    /**
+     * The path of the text proto file that stores {@link
+     * com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult}
+     * which is used as a backup result from ATS if the Mobly result file wasn't created.
+     */
+    public abstract Path moduleResultFile();
+
     public static Builder builder() {
       return new AutoValue_SessionRequestHandlerUtil_NonTradefedTestResult.Builder();
     }
@@ -1446,6 +1458,8 @@ public class SessionRequestHandlerUtil {
       public abstract Builder setResultAttributesFile(Path resultAttributesFile);
 
       public abstract Builder setBuildAttributesFile(Path buildAttributesFile);
+
+      public abstract Builder setModuleResultFile(Path moduleResultFile);
 
       public abstract NonTradefedTestResult build();
     }

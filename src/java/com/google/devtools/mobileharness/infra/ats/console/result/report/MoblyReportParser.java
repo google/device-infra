@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblySummaryEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyTestEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlDocEntry;
@@ -32,11 +33,13 @@ import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYam
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.AttributeList;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Reason;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.MoblyResult;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -104,6 +107,37 @@ public class MoblyReportParser {
       }
     }
 
+    ModuleRunResult moduleRunResult = null;
+    if (localFileUtil.isFileExist(moblyReportInfo.moduleResultFile())) {
+      try {
+        moduleRunResult =
+            TextFormat.parse(
+                localFileUtil.readFile(moblyReportInfo.moduleResultFile()), ModuleRunResult.class);
+      } catch (MobileHarnessException | ParseException e) {
+        logger.atWarning().log(
+            "Failed to parse ats module result file [%s]: %s",
+            moblyReportInfo.moduleResultFile(), MoreThrowables.shortDebugString(e));
+      }
+    }
+
+    Result.Builder resultBuilder =
+        Result.newBuilder()
+            .addAllAttribute(resultAttributesList.getAttributeList())
+            .setBuild(
+                BuildInfo.newBuilder()
+                    .setBuildFingerprint(moblyReportInfo.deviceBuildFingerprint())
+                    .addAllAttribute(buildAttributesList.getAttributeList()));
+
+    String moduleName =
+        moblyReportInfo.moblyPackageName()
+            + (!isNullOrEmpty(moblyReportInfo.moduleParameter())
+                ? String.format("[%s]", moblyReportInfo.moduleParameter())
+                : "");
+    Module.Builder moduleBuilder = Module.newBuilder().setName(moduleName).setIsNonTfModule(true);
+    if (moblyReportInfo.moduleAbi() != null) {
+      moduleBuilder.setAbi(moblyReportInfo.moduleAbi());
+    }
+
     ImmutableList<MoblyYamlDocEntry> moblyDocEntries = ImmutableList.of();
     if (moblyReportInfo.moblySummaryFile() != null) {
       try {
@@ -115,56 +149,60 @@ public class MoblyReportParser {
                 "Failed to parse Mobly test summary file %s", moblyReportInfo.moblySummaryFile()),
             e);
       }
-    }
 
-    String moduleName =
-        moblyReportInfo.moblyPackageName()
-            + (!isNullOrEmpty(moblyReportInfo.moduleParameter())
-                ? String.format("[%s]", moblyReportInfo.moduleParameter())
-                : "");
-    Module.Builder moduleBuilder = Module.newBuilder().setName(moduleName).setIsNonTfModule(true);
-    if (moblyReportInfo.moduleAbi() != null) {
-      moduleBuilder.setAbi(moblyReportInfo.moduleAbi());
-    }
-    long runtime = 0L;
-    // Test class to list of test methods in that test class
-    ImmutableMultimap.Builder<String, MoblyTestEntry> testEntriesMapBuilder =
-        ImmutableMultimap.builder();
-    int failedTestsInModule = 0;
-    for (MoblyYamlDocEntry moblyDocEntry : moblyDocEntries) {
-      if (moblyDocEntry instanceof MoblyTestEntry) {
-        MoblyTestEntry testEntry = (MoblyTestEntry) moblyDocEntry;
-        runtime += max(testEntry.getEndTime().orElse(0L) - testEntry.getBeginTime().orElse(0L), 0L);
-        testEntriesMapBuilder.put(testEntry.getTestClass(), testEntry);
-      } else if (moblyDocEntry instanceof MoblySummaryEntry) {
-        MoblySummaryEntry summaryEntry = (MoblySummaryEntry) moblyDocEntry;
-        moduleBuilder.setDone(true);
-        moduleBuilder.setTotalTests(summaryEntry.requested());
-        moduleBuilder.setPassed(summaryEntry.passed());
-        failedTestsInModule = summaryEntry.failed();
-        moduleBuilder.setFailedTests(failedTestsInModule);
-      } else {
-        // Do not handle other MoblyYamlDocEntry at this moment.
+      long runtime = 0L;
+      // Test class to list of test methods in that test class
+      ImmutableMultimap.Builder<String, MoblyTestEntry> testEntriesMapBuilder =
+          ImmutableMultimap.builder();
+      int failedTestsInModule = 0;
+      for (MoblyYamlDocEntry moblyDocEntry : moblyDocEntries) {
+        if (moblyDocEntry instanceof MoblyTestEntry) {
+          MoblyTestEntry testEntry = (MoblyTestEntry) moblyDocEntry;
+          runtime +=
+              max(testEntry.getEndTime().orElse(0L) - testEntry.getBeginTime().orElse(0L), 0L);
+          testEntriesMapBuilder.put(testEntry.getTestClass(), testEntry);
+        } else if (moblyDocEntry instanceof MoblySummaryEntry) {
+          MoblySummaryEntry summaryEntry = (MoblySummaryEntry) moblyDocEntry;
+          moduleBuilder
+              .setDone(true)
+              .setTotalTests(summaryEntry.requested())
+              .setPassed(summaryEntry.passed());
+          failedTestsInModule = summaryEntry.failed();
+          moduleBuilder.setFailedTests(failedTestsInModule);
+        } else {
+          // Do not handle other MoblyYamlDocEntry at this moment.
+        }
+      }
+      Module module =
+          moduleBuilder
+              .setRuntimeMillis(runtime)
+              .addAllTestCase(getTestCases(testEntriesMapBuilder.build()))
+              .build();
+      resultBuilder
+          .setSummary(
+              Summary.newBuilder()
+                  .setPassed(module.getPassed())
+                  .setFailed(failedTestsInModule)
+                  .setModulesDone(module.getDone() ? 1 : 0)
+                  .setModulesTotal(1))
+          .addModuleInfo(module);
+    } else if (moduleRunResult != null) {
+      if (moduleRunResult.getResult().equals(TestResult.ERROR)) {
+        Module module =
+            moduleBuilder.setReason(Reason.newBuilder().setMsg(moduleRunResult.getCause())).build();
+        resultBuilder
+            .setSummary(
+                Summary.newBuilder().setPassed(0).setFailed(0).setModulesDone(0).setModulesTotal(1))
+            .addModuleInfo(module);
+      } else if (!moduleRunResult.getResult().equals(TestResult.SKIP)) {
+        // Do nothing on SKIP state and print warning for unrecognized states.
+        logger.atWarning().log(
+            "Unrecognized module state: %s. Cause: %s.",
+            moduleRunResult.getResult(), moduleRunResult.getCause());
       }
     }
-    moduleBuilder.setRuntimeMillis(runtime);
-    moduleBuilder.addAllTestCase(getTestCases(testEntriesMapBuilder.build()));
-    Module module = moduleBuilder.build();
-    return Optional.of(
-        Result.newBuilder()
-            .addAllAttribute(resultAttributesList.getAttributeList())
-            .setBuild(
-                BuildInfo.newBuilder()
-                    .setBuildFingerprint(moblyReportInfo.deviceBuildFingerprint())
-                    .addAllAttribute(buildAttributesList.getAttributeList()))
-            .setSummary(
-                Summary.newBuilder()
-                    .setPassed(module.getPassed())
-                    .setFailed(failedTestsInModule)
-                    .setModulesDone(module.getDone() ? 1 : 0)
-                    .setModulesTotal(1))
-            .addModuleInfo(module)
-            .build());
+
+    return Optional.of(resultBuilder.build());
   }
 
   /**
@@ -209,7 +247,8 @@ public class MoblyReportParser {
         @Nullable Path moblySummaryFile,
         Path resultAttributesFile,
         String deviceBuildFingerprint,
-        Path buildAttributesFile) {
+        Path buildAttributesFile,
+        Path moduleResultFile) {
       return new com.google.devtools.mobileharness.infra.ats.console.result.report
           .AutoValue_MoblyReportParser_MoblyReportInfo(
           moblyPackageName,
@@ -218,7 +257,8 @@ public class MoblyReportParser {
           moblySummaryFile,
           resultAttributesFile,
           deviceBuildFingerprint,
-          buildAttributesFile);
+          buildAttributesFile,
+          moduleResultFile);
     }
 
     /** The name of Mobly package to which the {@code moblySummaryFile} belongs to. */
@@ -256,5 +296,12 @@ public class MoblyReportParser {
      * {@link BuildInfo}.{@code attribute}.
      */
     public abstract Path buildAttributesFile();
+
+    /**
+     * The path of the text proto file that stores {@link
+     * com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult}
+     * which is used as a backup result from ATS if the Mobly result file wasn't created.
+     */
+    public abstract Path moduleResultFile();
   }
 }

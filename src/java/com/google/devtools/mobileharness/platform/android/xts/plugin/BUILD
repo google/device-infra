@@ -21,8 +21,10 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness:__subpackages__",
     ],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
@@ -37,6 +39,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
+        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
     ],
 )

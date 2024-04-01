@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package mobileharness.infra.ats.console.result;
 
+import "src/devtools/mobileharness/api/model/proto/test.proto";
+
 option java_package = "com.google.devtools.mobileharness.infra.ats.console.result.proto";
 option java_outer_classname = "ResultProto";
 
@@ -100,4 +102,13 @@ enum MoblyResult {
   ERROR = 3;
   SKIP = 4;
   NULL = 5;
+}
+
+// ATS module result with cause. Mainly used as a backup result from ATS infra
+// if the result from Tradefed/Mobly isn't genereated successfully.
+message ModuleRunResult {
+  // Required. The result.
+  mobileharness.api.model.TestResult result = 1;
+  // Optional. The cause of failure.
+  optional string cause = 2;
 }

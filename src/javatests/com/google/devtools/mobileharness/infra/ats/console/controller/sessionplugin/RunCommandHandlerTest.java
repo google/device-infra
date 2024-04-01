@@ -202,6 +202,7 @@ public final class RunCommandHandlerTest {
             /* recursively= */ true);
     assertThat(newFilesInNonTradefedResultsDir.stream().map(f -> f.getFileName().toString()))
         .containsExactly(
+            "ats_module_run_result.textproto",
             "device_build_fingerprint.txt",
             "mobly_run_build_attributes.textproto",
             "mobly_run_result_attributes.textproto",
@@ -218,6 +219,7 @@ public final class RunCommandHandlerTest {
             /* recursively= */ true);
     assertThat(newFilesInNonTradefedLogsDir.stream().map(f -> f.getFileName().toString()))
         .containsExactly(
+            "ats_module_run_result.textproto",
             "command_history.txt",
             "mobly_command_output.log",
             "device_build_fingerprint.txt",

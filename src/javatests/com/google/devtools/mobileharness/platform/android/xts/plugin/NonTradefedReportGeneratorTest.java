@@ -19,26 +19,35 @@ package com.google.devtools.mobileharness.platform.android.xts.plugin;
 import static com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator.PARAM_RUN_CERTIFICATION_TEST_SUITE;
 import static com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator.PARAM_XTS_SUITE_INFO;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
+import com.google.devtools.mobileharness.api.model.job.out.Result;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportHelper;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.util.Optional;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -58,6 +67,8 @@ public final class NonTradefedReportGeneratorTest {
 
   @Mock private TestInfo testInfo;
   @Mock private JobInfo jobInfo;
+  @Mock private Result result;
+  @Mock private ResultTypeWithCause resultTypeWithCause;
   @Mock private Adb adb;
   @Mock private AndroidAdbUtil androidAdbUtil;
   @Mock private LocalFileUtil localFileUtil;
@@ -69,7 +80,7 @@ public final class NonTradefedReportGeneratorTest {
   private NonTradefedReportGenerator generator;
 
   @Before
-  public void setup() {
+  public void setup() throws Exception {
     generator =
         new NonTradefedReportGenerator(
             Clock.system(ZoneId.systemDefault()),
@@ -78,6 +89,12 @@ public final class NonTradefedReportGeneratorTest {
             localFileUtil,
             certificationSuiteInfoFactory,
             moblyReportHelper);
+    when(testInfo.jobInfo()).thenReturn(jobInfo);
+    when(testInfo.getGenFileDir()).thenReturn("/gen");
+    when(testInfo.resultWithCause()).thenReturn(result);
+    when(result.get()).thenReturn(resultTypeWithCause);
+    when(resultTypeWithCause.causeProto())
+        .thenReturn(Optional.of(ExceptionDetail.getDefaultInstance()));
   }
 
   @Test
@@ -104,10 +121,10 @@ public final class NonTradefedReportGeneratorTest {
             SuiteCommon.SUITE_BUILD));
 
     when(jobInfo.params()).thenReturn(params);
-    when(testInfo.jobInfo()).thenReturn(jobInfo);
-    when(testInfo.getGenFileDir()).thenReturn("/gen");
     when(androidAdbUtil.getProperty(SERIAL, ImmutableList.of("ro.build.fingerprint")))
         .thenReturn("");
+    when(resultTypeWithCause.type()).thenReturn(TestResult.PASS);
+    when(resultTypeWithCause.toStringWithDetail()).thenReturn("PASS");
     doCallRealMethod().when(certificationSuiteInfoFactory).createSuiteInfo(any());
 
     generator.createTestReport(
@@ -119,8 +136,22 @@ public final class NonTradefedReportGeneratorTest {
             Instant.ofEpochSecond(10),
             ImmutableList.of(SERIAL),
             certificationSuiteInfo,
-            Paths.get("/gen"));
-    verify(moblyReportHelper).generateBuildAttributesFile(SERIAL, Paths.get("/gen"));
+            Path.of("/gen"));
+    verify(moblyReportHelper).generateBuildAttributesFile(SERIAL, Path.of("/gen"));
+    verify(localFileUtil)
+        .writeToFile(
+            eq(
+                Path.of("/gen")
+                    .resolve("ats_module_run_result.textproto")
+                    .toAbsolutePath()
+                    .toString()),
+            eq(
+                TextFormat.printer()
+                    .printToString(
+                        ModuleRunResult.newBuilder()
+                            .setResult(TestResult.PASS)
+                            .setCause("PASS")
+                            .build())));
   }
 
   @Test
@@ -130,8 +161,8 @@ public final class NonTradefedReportGeneratorTest {
     params.add(PARAM_RUN_CERTIFICATION_TEST_SUITE, "false");
 
     when(jobInfo.params()).thenReturn(params);
-    when(testInfo.jobInfo()).thenReturn(jobInfo);
-    when(testInfo.getGenFileDir()).thenReturn("/gen");
+    when(resultTypeWithCause.type()).thenReturn(TestResult.SKIP);
+    when(resultTypeWithCause.toStringWithDetail()).thenReturn("SKIPPED");
 
     generator.createTestReport(
         testInfo, ImmutableList.of(SERIAL), Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
@@ -140,6 +171,14 @@ public final class NonTradefedReportGeneratorTest {
     verify(moblyReportHelper, never())
         .generateResultAttributesFile(any(), any(), any(), any(), any());
     verify(moblyReportHelper, never()).generateBuildAttributesFile(any(), any());
+    verify(localFileUtil, never())
+        .writeToFile(
+            eq(
+                Path.of("/gen")
+                    .resolve("ats_module_run_result.textproto")
+                    .toAbsolutePath()
+                    .toString()),
+            anyString());
   }
 
   @Test
@@ -149,8 +188,8 @@ public final class NonTradefedReportGeneratorTest {
     params.add(PARAM_RUN_CERTIFICATION_TEST_SUITE, "true");
 
     when(jobInfo.params()).thenReturn(params);
-    when(testInfo.jobInfo()).thenReturn(jobInfo);
-    when(testInfo.getGenFileDir()).thenReturn("/gen");
+    when(resultTypeWithCause.type()).thenReturn(TestResult.ERROR);
+    when(resultTypeWithCause.toStringWithDetail()).thenReturn("Exception");
 
     generator.createTestReport(
         testInfo, ImmutableList.of(), Instant.ofEpochSecond(1), Instant.ofEpochSecond(10));
@@ -159,5 +198,13 @@ public final class NonTradefedReportGeneratorTest {
     verify(moblyReportHelper, never())
         .generateResultAttributesFile(any(), any(), any(), any(), any());
     verify(moblyReportHelper, never()).generateBuildAttributesFile(any(), any());
+    verify(localFileUtil, never())
+        .writeToFile(
+            eq(
+                Path.of("/gen")
+                    .resolve("ats_module_run_result.textproto")
+                    .toAbsolutePath()
+                    .toString()),
+            anyString());
   }
 }

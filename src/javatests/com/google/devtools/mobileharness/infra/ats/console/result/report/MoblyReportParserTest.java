@@ -47,6 +47,10 @@ public final class MoblyReportParserTest {
       TestRunfilesUtil.getRunfilesLocation(
           "result/report/testdata/mobly/pass/build_attrs.textproto");
 
+  private static final String MODULE_RESULT_FILE =
+      TestRunfilesUtil.getRunfilesLocation(
+          "result/report/testdata/mobly/pass/ats_module_run_result.textproto");
+
   private static final String DEVICE_BUILD_FINGERPRINT =
       "google/bramble/bramble:UpsideDownCake/UP1A.220722.002/8859461:userdebug/dev-keys";
 
@@ -68,7 +72,8 @@ public final class MoblyReportParserTest {
                 Path.of(MOBLY_TEST_SUMMARY_FILE),
                 Path.of(RESULT_ATTR_FILE),
                 DEVICE_BUILD_FINGERPRINT,
-                Path.of(BUILD_ATTR_FILE)));
+                Path.of(BUILD_ATTR_FILE),
+                Path.of(MODULE_RESULT_FILE)));
 
     assertThat(res).isPresent();
 
