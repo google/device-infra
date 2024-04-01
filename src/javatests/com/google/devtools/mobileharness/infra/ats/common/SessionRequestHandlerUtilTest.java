@@ -55,8 +55,9 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
@@ -973,18 +974,11 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void getTestResultFromTest_success() throws Exception {
     TestInfo testInfo = Mockito.mock(TestInfo.class);
-    Properties properties = Mockito.mock(Properties.class);
-    when(properties.get(
-            com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test
-                .LAB_TEST_GEN_FILE_DIR))
-        .thenReturn("/test_gen_file_dir");
-    when(properties.has(
-            com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test
-                .LAB_TEST_GEN_FILE_DIR))
-        .thenReturn(true);
-    when(testInfo.properties()).thenReturn(properties);
-    Path resultFilePath = Path.of("/test_gen_file_dir/test_file.txt");
-    when(localFileUtil.listFilePaths(eq(Path.of("/test_gen_file_dir")), eq(true), any()))
+    Path resultFilePath = Path.of("/data/genfiles/test_id/test_result.xml");
+    when(testInfo.locator())
+        .thenReturn(new TestLocator("test_id", "test_name", new JobLocator("job_id", "job_name")));
+    when(localFileUtil.isDirExist("/data/genfiles/test_id")).thenReturn(true);
+    when(localFileUtil.listFilePaths(eq(Path.of("/data/genfiles/test_id")), eq(true), any()))
         .thenReturn(ImmutableList.of(resultFilePath));
     Optional<Result> result = Optional.of(Result.getDefaultInstance());
     when(compatibilityReportParser.parse(resultFilePath)).thenReturn(result);
@@ -995,34 +989,14 @@ public final class SessionRequestHandlerUtilTest {
   @Test
   public void getTestResultFromTest_parserFailed() throws Exception {
     TestInfo testInfo = Mockito.mock(TestInfo.class);
-    Properties properties = Mockito.mock(Properties.class);
-    when(properties.get(
-            com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test
-                .LAB_TEST_GEN_FILE_DIR))
-        .thenReturn("/test_gen_file_dir");
-    when(properties.has(
-            com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test
-                .LAB_TEST_GEN_FILE_DIR))
-        .thenReturn(true);
-    when(testInfo.properties()).thenReturn(properties);
-    Path resultFilePath = Path.of("/test_gen_file_dir/test_file.txt");
-    when(localFileUtil.listFilePaths(eq(Path.of("/test_gen_file_dir")), eq(true), any()))
+    Path resultFilePath = Path.of("/data/genfiles/test_id/test_result.xml");
+    when(testInfo.locator())
+        .thenReturn(new TestLocator("test_id", "test_name", new JobLocator("job_id", "job_name")));
+    when(localFileUtil.listFilePaths(eq(Path.of("/data/genfiles/test_id")), eq(true), any()))
         .thenReturn(ImmutableList.of(resultFilePath));
+    when(localFileUtil.isDirExist("/data/genfiles/test_id")).thenReturn(true);
     when(compatibilityReportParser.parse(resultFilePath)).thenReturn(Optional.empty());
 
-    assertThat(sessionRequestHandlerUtil.getTestResultFromTest(testInfo)).isEmpty();
-  }
-
-  @Test
-  public void getTestResultFromTest_noTestGenFileDir() throws Exception {
-    TestInfo testInfo = Mockito.mock(TestInfo.class);
-    Properties properties = Mockito.mock(Properties.class);
-
-    when(properties.has(
-            com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test
-                .LAB_TEST_GEN_FILE_DIR))
-        .thenReturn(false);
-    when(testInfo.properties()).thenReturn(properties);
     assertThat(sessionRequestHandlerUtil.getTestResultFromTest(testInfo)).isEmpty();
   }
 }

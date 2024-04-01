@@ -73,7 +73,6 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
-import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
@@ -216,14 +215,13 @@ public class SessionRequestHandlerUtil {
   }
 
   public Optional<Result> getTestResultFromTest(TestInfo testInfo) throws MobileHarnessException {
-    // TODO: Stop reading from lab's gen dir after file transfer is ready.
-    String labTestGenFileDir = testInfo.properties().get(Test.LAB_TEST_GEN_FILE_DIR);
-    if (labTestGenFileDir == null) {
+    Optional<String> labGenFileDir = getLabGenFileDir(testInfo);
+    if (labGenFileDir.isEmpty()) {
       return Optional.empty();
     }
     List<Path> testResultXmlFiles =
         localFileUtil.listFilePaths(
-            Path.of(labTestGenFileDir),
+            Path.of(labGenFileDir.get()),
             /* recursively= */ true,
             path -> path.getFileName().toString().equals(TEST_RESULT_XML_FILE_NAME));
     if (!testResultXmlFiles.isEmpty()) {
@@ -1278,15 +1276,11 @@ public class SessionRequestHandlerUtil {
             /* recursively= */ true,
             path -> MOBLY_TEST_RESULT_FILE_NAMES.contains(path.getFileName().toString()));
 
-    // TODO: Stop reading from lab's gen dir after file transfer is ready.
-    // Directly read lab side gen file directory to copy the test result and log files. This is a
-    // temporary solution before file transfer functionality is enabled.
-    Optional<String> labTestGenFileDir =
-        nonTradefedTestInfo.properties().getOptional(Test.LAB_TEST_GEN_FILE_DIR);
-    if (labTestGenFileDir.isPresent() && !labTestGenFileDir.get().equals(testGenFileDir)) {
+    Optional<String> labGenFileDir = getLabGenFileDir(nonTradefedTestInfo);
+    if (labGenFileDir.isPresent() && !labGenFileDir.get().equals(testGenFileDir)) {
       moblyTestResultFiles.addAll(
           localFileUtil.listFilePaths(
-              Path.of(labTestGenFileDir.get()),
+              Path.of(labGenFileDir.get()),
               /* recursively= */ true,
               path -> MOBLY_TEST_RESULT_FILE_NAMES.contains(path.getFileName().toString())));
     }
@@ -1306,19 +1300,26 @@ public class SessionRequestHandlerUtil {
     return Optional.of(nonTradefedTestResultBuilder.build());
   }
 
-  public ImmutableList<Path> getGenFilesFromTest(TestInfo test) throws MobileHarnessException {
+  private ImmutableList<Path> getGenFilesFromTest(TestInfo test) throws MobileHarnessException {
     String testGenFileDir = test.getGenFileDir();
     List<Path> genFiles = localFileUtil.listFilesOrDirs(Path.of(testGenFileDir), path -> true);
 
-    // TODO: Stop reading from lab's gen dir after file transfer is ready.
-    // Directly read lab side gen file directory to copy the test result and log files. This is a
-    // temporary solution before file transfer functionality is enabled.
-    Optional<String> labTestGenFileDir = test.properties().getOptional(Test.LAB_TEST_GEN_FILE_DIR);
-    if (labTestGenFileDir.isPresent() && !labTestGenFileDir.get().equals(testGenFileDir)) {
-      genFiles.addAll(
-          localFileUtil.listFilesOrDirs(Path.of(labTestGenFileDir.get()), path -> true));
+    Optional<String> labGenFilesDir = getLabGenFileDir(test);
+    if (labGenFilesDir.isPresent() && !labGenFilesDir.get().equals(testGenFileDir)) {
+      genFiles.addAll(localFileUtil.listFilesOrDirs(Path.of(labGenFilesDir.get()), path -> true));
     }
     return ImmutableList.copyOf(genFiles);
+  }
+
+  private Optional<String> getLabGenFileDir(TestInfo test) {
+    String path =
+        PathUtil.join(
+            Flags.instance().atsStoragePath.getNonNull(), "genfiles", test.locator().getId());
+    if (localFileUtil.isDirExist(path)) {
+      return Optional.of(path);
+    } else {
+      return Optional.empty();
+    }
   }
 
   private Path prepareLogOrResultDirForTest(TestInfo test, Path parentDir)
