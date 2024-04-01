@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginOutput;
 import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.FieldMask;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -117,6 +118,7 @@ public class SessionDetailHolder {
    *     required. It is acceptable that the implementation outputs more fields than the field mask
    *     requires.
    */
+  @SuppressWarnings("BuilderCollapser")
   public SessionDetail buildSessionDetail(@Nullable FieldMask fieldMask) {
     Set<Integer> sessionOutputFieldNumbers = getSessionOutputFieldNumbers(fieldMask).orElse(null);
     synchronized (sessionDetailLock) {
@@ -171,6 +173,7 @@ public class SessionDetailHolder {
     }
   }
 
+  @CanIgnoreReturnValue
   public Optional<String> putSessionProperty(String key, String value) {
     String previousValue;
     synchronized (sessionDetailLock) {

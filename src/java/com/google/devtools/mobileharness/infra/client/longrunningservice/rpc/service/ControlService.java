@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils.createFieldMaskPath;
@@ -27,6 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsConsumer;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionManager;
@@ -41,6 +43,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
@@ -58,6 +61,13 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final FieldMask SESSION_ID_FIELD_MASK =
+      FieldMask.newBuilder()
+          .addPaths(
+              createFieldMaskPath(
+                  SessionDetail.getDescriptor()
+                      .findFieldByNumber(SessionDetail.SESSION_ID_FIELD_NUMBER)))
+          .build();
   private static final FieldMask SESSION_SUMMARY_FIELD_MASK =
       FieldMask.newBuilder()
           .addPaths(
@@ -79,15 +89,23 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
                   SessionDetail.getDescriptor()
                       .findFieldByNumber(SessionDetail.SESSION_OUTPUT_FIELD_NUMBER),
                   SessionOutput.getDescriptor()
+                      .findFieldByNumber(SessionOutput.SESSION_PROPERTY_FIELD_NUMBER)))
+          .addPaths(
+              createFieldMaskPath(
+                  SessionDetail.getDescriptor()
+                      .findFieldByNumber(SessionDetail.SESSION_OUTPUT_FIELD_NUMBER),
+                  SessionOutput.getDescriptor()
                       .findFieldByNumber(SessionOutput.SESSION_TIMING_INFO_FIELD_NUMBER)))
           .build();
-  private static final SessionFilter UNFINISHED_SESSION_FILTER =
+  private static final String UNFINISHED_SESSION_STATUS_NAME_REGEX =
+      ImmutableList.of(SessionStatus.SESSION_SUBMITTED, SessionStatus.SESSION_RUNNING).stream()
+          .map(SessionStatus::name)
+          .collect(joining("|"));
+  private static final SessionFilter UNFINISHED_NOT_ABORTED_SESSION_FILTER =
       SessionFilter.newBuilder()
-          .setSessionStatusNameRegex(
-              ImmutableList.of(SessionStatus.SESSION_SUBMITTED, SessionStatus.SESSION_RUNNING)
-                  .stream()
-                  .map(SessionStatus::name)
-                  .collect(joining("|")))
+          .setSessionStatusNameRegex(UNFINISHED_SESSION_STATUS_NAME_REGEX)
+          .addExcludedSessionPropertyKey(
+              SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING)
           .build();
 
   private final LogManager<GetLogResponse> logManager;
@@ -139,13 +157,28 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
   }
 
   private KillServerResponse doKillServer(KillServerRequest request) {
-    KillServerResponse.Builder responseBuilder = KillServerResponse.newBuilder();
-    responseBuilder.setServerPid(ProcessHandle.current().pid());
+    KillServerResponse.Builder responseBuilder =
+        KillServerResponse.newBuilder().setServerPid(ProcessHandle.current().pid());
 
-    ImmutableList<SessionDetail> unfinishedSessions =
-        sessionManager.getAllSessions(SESSION_SUMMARY_FIELD_MASK, UNFINISHED_SESSION_FILTER);
+    if (request.hasAbortAllSessionsFromClient()) {
+      String clientId = request.getAbortAllSessionsFromClient().getClientId();
+      ImmutableList<String> unfinishedSessionIdsFromClient =
+          sessionManager
+              .getAllSessions(SESSION_ID_FIELD_MASK, getUnfinishedSessionFromClientFilter(clientId))
+              .stream()
+              .map(SessionDetail::getSessionId)
+              .map(SessionId::getId)
+              .collect(toImmutableList());
+      logger.atInfo().log(
+          "Unfinished sessions from client [%s]: %s", clientId, unfinishedSessionIdsFromClient);
+      sessionManager.abortSessions(unfinishedSessionIdsFromClient);
+    }
 
-    if (unfinishedSessions.isEmpty()) {
+    ImmutableList<SessionDetail> unfinishedNotAbortedSessions =
+        sessionManager.getAllSessions(
+            SESSION_SUMMARY_FIELD_MASK, UNFINISHED_NOT_ABORTED_SESSION_FILTER);
+
+    if (unfinishedNotAbortedSessions.isEmpty()) {
       logger.atInfo().log("Exiting by KillServerRequest");
       server.shutdown();
       logFailure(
@@ -157,13 +190,23 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
     } else {
       KillServerResponse response =
           responseBuilder
-              .setFailure(Failure.newBuilder().addAllUnfinishedSessions(unfinishedSessions))
+              .setFailure(
+                  Failure.newBuilder().addAllUnfinishedSessions(unfinishedNotAbortedSessions))
               .build();
       logger.atInfo().log(
-          "KillServerRequest is rejected due to unfinished sessions, response=[%s]",
+          "KillServerRequest is rejected due to unfinished (and not aborted) sessions,"
+              + " response=[%s]",
           shortDebugString(response));
       return response;
     }
+  }
+
+  private static SessionFilter getUnfinishedSessionFromClientFilter(String clientId) {
+    return SessionFilter.newBuilder()
+        .setSessionStatusNameRegex(UNFINISHED_SESSION_STATUS_NAME_REGEX)
+        .putIncludedSessionConfigProperty(
+            SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID, clientId)
+        .build();
   }
 
   private SetLogLevelResponse doSetLogLevel(SetLogLevelRequest request) {

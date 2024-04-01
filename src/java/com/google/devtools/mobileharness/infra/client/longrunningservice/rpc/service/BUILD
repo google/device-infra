@@ -29,6 +29,7 @@ java_library(
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_manager",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:session_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",

@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerBinary;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.ResultCase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
@@ -55,6 +56,7 @@ import io.grpc.Status.Code;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -219,7 +221,7 @@ public class ServerPreparer {
     serverStartingLogger.log("Killing existing OLC server...");
     KillServerResponse killServerResponse;
     try {
-      killServerResponse = controlStub.get().killServer();
+      killServerResponse = controlStub.get().killServer(KillServerRequest.getDefaultInstance());
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SERVER_PREPARER_KILL_EXISTING_OLC_SERVER_RPC_ERROR,
@@ -334,7 +336,7 @@ public class ServerPreparer {
 
     @Override
     public void onSuccess(Boolean result) {
-      if (Boolean.TRUE.equals(result)) {
+      if (Objects.equals(result, Boolean.TRUE)) {
         commandProcess.stopReadingOutput();
       }
     }

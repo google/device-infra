@@ -25,6 +25,7 @@ import static java.lang.Math.min;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
@@ -40,6 +41,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
@@ -59,6 +61,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -66,6 +69,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 import java.util.stream.Stream;
@@ -206,7 +210,8 @@ public class SessionManager {
   public ImmutableList<SessionDetail> getAllSessions(
       @Nullable FieldMask fieldMask, @Nullable SessionFilter sessionFilter) {
     Predicate<SessionStatus> sessionStatusFilter = getSessionStatusFilter(sessionFilter);
-    Predicate<SessionConfig> sessionConfigFilter = getSessionConfigFilter(sessionFilter);
+    Optional<Predicate<SessionConfig>> sessionConfigFilter = getSessionConfigFilter(sessionFilter);
+    Optional<Predicate<SessionOutput>> sessionOutputFilter = getSessionOutputFilter(sessionFilter);
     synchronized (sessionsLock) {
       return Streams.concat(
               sessionStatusFilter.test(SessionStatus.SESSION_SUBMITTED)
@@ -214,24 +219,48 @@ public class SessionManager {
                       .map(PendingSession::sessionDetail)
                       .filter(
                           sessionDetail ->
-                              sessionConfigFilter.test(sessionDetail.getSessionConfig()))
+                              testSession(
+                                  sessionConfigFilter.orElse(null),
+                                  sessionOutputFilter.orElse(null),
+                                  sessionDetail::getSessionConfig,
+                                  sessionDetail::getSessionOutput))
                   : Stream.empty(),
               sessionStatusFilter.test(SessionStatus.SESSION_RUNNING)
                   ? runningSessions.values().stream()
                       .map(RunningSession::sessionRunner)
                       .filter(
                           sessionRunner ->
-                              sessionConfigFilter.test(sessionRunner.getSessionConfig()))
+                              testSession(
+                                  sessionConfigFilter.orElse(null),
+                                  sessionOutputFilter.orElse(null),
+                                  sessionRunner::getSessionConfig,
+                                  () ->
+                                      sessionRunner
+                                          .getSession(/* fieldMask= */ null)
+                                          .getSessionOutput()))
                       .map(sessionRunner -> sessionRunner.getSession(fieldMask))
                   : Stream.empty(),
               sessionStatusFilter.test(SessionStatus.SESSION_FINISHED)
                   ? archivedSessions.values().stream()
                       .filter(
                           sessionDetail ->
-                              sessionConfigFilter.test(sessionDetail.getSessionConfig()))
+                              testSession(
+                                  sessionConfigFilter.orElse(null),
+                                  sessionOutputFilter.orElse(null),
+                                  sessionDetail::getSessionConfig,
+                                  sessionDetail::getSessionOutput))
                   : Stream.empty())
           .collect(toImmutableList());
     }
+  }
+
+  private static boolean testSession(
+      @Nullable Predicate<SessionConfig> sessionConfigFilter,
+      @Nullable Predicate<SessionOutput> sessionOutputFilter,
+      Supplier<SessionConfig> sessionConfigSupplier,
+      Supplier<SessionOutput> sessionOutputSupplier) {
+    return (sessionConfigFilter == null || sessionConfigFilter.test(sessionConfigSupplier.get()))
+        && (sessionOutputFilter == null || sessionOutputFilter.test(sessionOutputSupplier.get()));
   }
 
   public StreamObserver<SubscribeSessionRequest> subscribeSession(
@@ -262,16 +291,13 @@ public class SessionManager {
   }
 
   public void abortSessions(List<String> sessionIds) {
+    List<PendingSession> abortedPendingSessions = new ArrayList<>();
     for (String sessionId : sessionIds) {
-      PendingSession finalPendingSession = null;
       synchronized (sessionsLock) {
         if (archivedSessions.containsKey(sessionId)) {
           // If the session has ended, does nothing.
           logger.atInfo().log("Abort an archived session [%s]", sessionId);
-          return;
-        }
-
-        if (pendingSessions.containsKey(sessionId)) {
+        } else if (pendingSessions.containsKey(sessionId)) {
           // If the session has not started, archives its directly.
           logger.atInfo().log("Abort a pending session [%s], archive it", sessionId);
           PendingSession pendingSession = pendingSessions.remove(sessionId);
@@ -284,27 +310,29 @@ public class SessionManager {
           // Archives the session.
           archiveSession(finalSessionDetail);
 
-          finalPendingSession =
+          // Triggers subscribers after session status becomes SESSION_FINISHED.
+          pendingSession.sessionSubscribers().close(finalSessionDetail);
+
+          abortedPendingSessions.add(
               PendingSession.of(
                   finalSessionDetail,
                   pendingSession.finalResultFuture(),
                   pendingSession.sessionSubscribers(),
-                  pendingSession.cachedSessionNotifications());
+                  pendingSession.cachedSessionNotifications()));
         } else if (runningSessions.containsKey(sessionId)) {
           // If the session is running, stops job polling and kills all running jobs.
           logger.atInfo().log("Abort a running session [%s]", sessionId);
-
-          SessionRunner sessionRunner = runningSessions.get(sessionId).sessionRunner();
-          sessionRunner.abortSession();
+          RunningSession runningSession = runningSessions.get(sessionId);
+          runningSession.sessionRunner().abortSession();
         } else {
           logger.atInfo().log("Session to abort is not found, id=[%s]", sessionId);
         }
       }
+    }
 
-      // Sets the future out of the lock.
-      if (finalPendingSession != null) {
-        finalPendingSession.finalResultFuture().set(finalPendingSession.sessionDetail());
-      }
+    // Sets the future out of the lock.
+    for (PendingSession abortedPendingSession : abortedPendingSessions) {
+      abortedPendingSession.finalResultFuture().set(abortedPendingSession.sessionDetail());
     }
   }
 
@@ -406,9 +434,7 @@ public class SessionManager {
         startSessions();
 
         // Triggers subscribers after session status becomes SESSION_FINISHED.
-        SessionSubscribers subscribers = runningSession.sessionSubscribers();
-        subscribers.setSessionDetailSupplier(fieldMask -> finalSessionDetail);
-        subscribers.receiveSessionDetail(/* finalSessionDetail= */ true);
+        runningSession.sessionSubscribers().close(finalSessionDetail);
       }
 
       // Completes the final result future.
@@ -430,8 +456,8 @@ public class SessionManager {
 
   private static SessionDetail createFinalSessionDetail(
       SessionDetail sessionDetail, @Nullable Throwable sessionRunnerError) {
-    SessionDetail.Builder sessionDetailBuilder = sessionDetail.toBuilder();
-    sessionDetailBuilder.setSessionStatus(SessionStatus.SESSION_FINISHED);
+    SessionDetail.Builder sessionDetailBuilder =
+        sessionDetail.toBuilder().setSessionStatus(SessionStatus.SESSION_FINISHED);
 
     logger.atInfo().withCause(sessionRunnerError).log(
         "Session finished, session_id=%s, final_session_detail=[%s]",
@@ -494,22 +520,71 @@ public class SessionManager {
     return sessionStatus -> true;
   }
 
-  private static Predicate<SessionConfig> getSessionConfigFilter(
+  private static Optional<Predicate<SessionConfig>> getSessionConfigFilter(
       @Nullable SessionFilter sessionFilter) {
     if (sessionFilter != null) {
+      // Session name filter.
+      Predicate<SessionConfig> sessionNameFilter;
       String sessionNameRegexString = sessionFilter.getSessionNameRegex();
-      if (!sessionNameRegexString.isEmpty()) {
+      if (sessionNameRegexString.isEmpty()) {
+        sessionNameFilter = null;
+      } else {
         try {
           Pattern sessionNameRegex = Pattern.compile(sessionNameRegexString);
-          return sessionConfig ->
-              sessionNameRegex.matcher(sessionConfig.getSessionName()).matches();
+          sessionNameFilter =
+              sessionConfig -> sessionNameRegex.matcher(sessionConfig.getSessionName()).matches();
         } catch (PatternSyntaxException e) {
           logger.atWarning().withCause(e).log(
               "Invalid session name regex [%s]", sessionNameRegexString);
+          sessionNameFilter = null;
         }
       }
+
+      // Session config property filter.
+      Predicate<SessionConfig> sessionConfigPropertyFilter;
+      Map<String, String> includedSessionConfigProperties =
+          sessionFilter.getIncludedSessionConfigPropertyMap();
+      if (includedSessionConfigProperties.isEmpty()) {
+        sessionConfigPropertyFilter = null;
+      } else {
+        sessionConfigPropertyFilter =
+            sessionConfig -> {
+              Map<String, String> sessionConfigProperties = sessionConfig.getSessionPropertyMap();
+              return includedSessionConfigProperties.entrySet().stream()
+                  .allMatch(
+                      includedSessionConfigProperty ->
+                          Objects.equals(
+                              sessionConfigProperties.get(includedSessionConfigProperty.getKey()),
+                              includedSessionConfigProperty.getValue()));
+            };
+      }
+
+      if (sessionNameFilter != null) {
+        if (sessionConfigPropertyFilter != null) {
+          return Optional.of(sessionNameFilter.and(sessionConfigPropertyFilter));
+        } else {
+          return Optional.of(sessionNameFilter);
+        }
+      } else if (sessionConfigPropertyFilter != null) {
+        return Optional.of(sessionConfigPropertyFilter);
+      }
     }
-    return sessionConfig -> true;
+    return Optional.empty();
+  }
+
+  private static Optional<Predicate<SessionOutput>> getSessionOutputFilter(
+      @Nullable SessionFilter sessionFilter) {
+    if (sessionFilter != null) {
+      ImmutableSet<String> excludedSessionPropertyKeys =
+          ImmutableSet.copyOf(sessionFilter.getExcludedSessionPropertyKeyList());
+      if (!excludedSessionPropertyKeys.isEmpty()) {
+        return Optional.of(
+            sessionOutput ->
+                sessionOutput.getSessionPropertyMap().keySet().stream()
+                    .noneMatch(excludedSessionPropertyKeys::contains));
+      }
+    }
+    return Optional.empty();
   }
 
   /** {@link SessionDetail} and the future of the final result of the session. */
@@ -752,6 +827,11 @@ public class SessionManager {
       for (SessionSubscriber subscriber : subscribers) {
         subscriber.receiveSessionDetail(sessionDetailSupplier, finalSessionDetail);
       }
+    }
+
+    private void close(SessionDetail finalSessionDetail) {
+      setSessionDetailSupplier(fieldMask -> finalSessionDetail);
+      receiveSessionDetail(/* finalSessionDetail= */ true);
     }
 
     private class SessionDetailListener implements Runnable {

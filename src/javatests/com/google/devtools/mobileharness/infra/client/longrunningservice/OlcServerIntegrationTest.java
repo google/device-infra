@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.Failure;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.Success;
@@ -265,7 +266,8 @@ public class OlcServerIntegrationTest {
     SessionId sessionId = createSessionResponse.getSessionId();
 
     // Verifies the server cannot be killed.
-    KillServerResponse killServerResponse = controlStub.killServer();
+    KillServerResponse killServerResponse =
+        controlStub.killServer(KillServerRequest.getDefaultInstance());
     assertThat(killServerResponse)
         .comparingExpectedFieldsOnly()
         .isEqualTo(
@@ -298,7 +300,7 @@ public class OlcServerIntegrationTest {
 
     // Verifies the server is killed.
     assertThat(olcServerProcess.isAlive()).isTrue();
-    killServerResponse = controlStub.killServer();
+    killServerResponse = controlStub.killServer(KillServerRequest.getDefaultInstance());
     assertThat(killServerResponse)
         .comparingExpectedFieldsOnly()
         .isEqualTo(
@@ -324,6 +326,7 @@ public class OlcServerIntegrationTest {
     assertWithMessage("server log").that(olcServerLog).contains("Sleep for 2 seconds");
 
     // Checks the session log.
+    Thread.sleep(Duration.ofSeconds(2L).toMillis());
     String sessionLog = localFileUtil.readFile(sessionLogFile);
     assertThat(sessionLog).contains("Starting session runner " + sessionId.getId());
     assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());

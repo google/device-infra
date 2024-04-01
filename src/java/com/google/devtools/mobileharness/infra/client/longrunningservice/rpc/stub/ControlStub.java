@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.grpc.Channel;
 import io.grpc.stub.StreamObserver;
 
@@ -41,10 +42,11 @@ public class ControlStub {
     this.controlServiceStub = ControlServiceGrpc.newStub(channel);
   }
 
-  public KillServerResponse killServer() throws GrpcExceptionWithErrorId {
+  @CanIgnoreReturnValue
+  public KillServerResponse killServer(KillServerRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
         controlServiceBlockingStub::killServer,
-        KillServerRequest.getDefaultInstance(),
+        request,
         InfraErrorId.OLCS_STUB_KILL_SERVER_ERROR,
         "Failed to kill server");
   }

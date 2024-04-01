@@ -26,6 +26,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionEnvironmentPreparer.SessionEnvironment;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
@@ -182,6 +183,9 @@ public class SessionRunner implements Callable<Void> {
   }
 
   public void abortSession() {
+    sessionDetailHolder.putSessionProperty(
+        SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING, "true");
+
     sessionJobRunner.abort();
   }
 

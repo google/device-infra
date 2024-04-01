@@ -19,14 +19,21 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.consta
 /** Constants of session properties. */
 public class SessionProperties {
 
+  /** If the key is present, the session was aborted when it was running. */
+  public static final String PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING =
+      "olc_server_session_aborted_when_running";
+
   /** A string property to identify the client of a session. */
   public static final String PROPERTY_KEY_SESSION_CLIENT_ID = "olc_server_session_client_id";
 
   /**
    * If a session add this key to its properties (by its session plugins or in the request), then
    * after the session ends, a log file will be copied to the given path, which contains all logs of
-   * the server during the session execution. The plugins or the caller of the session are
-   * responsible for preparing the parent dir.
+   * the server during the session execution.
+   *
+   * <p>The plugins or the caller of the session are responsible for preparing the parent dir.
+   *
+   * <p>The copy operation may happen with a short latency after the session becomes finished.
    */
   public static final String PROPERTY_KEY_SERVER_SESSION_LOG_PATH =
       "olc_server_session_log_file_path";

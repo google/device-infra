@@ -33,6 +33,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",
+        "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )
 

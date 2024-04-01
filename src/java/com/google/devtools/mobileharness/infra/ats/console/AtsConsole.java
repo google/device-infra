@@ -26,10 +26,13 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
@@ -40,6 +43,9 @@ import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleU
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.version.VersionMessageUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest.AbortAllSessionsFromClient;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
@@ -127,6 +133,8 @@ public class AtsConsole {
   private final LineReader lineReader;
   private final PrintWriter outWriter;
   private final PrintWriter errWriter;
+  private final ControlStub controlStub;
+  private final String consoleId;
   private final Sleeper sleeper;
   private final ConsoleUtil consoleUtil;
   private final ConsoleInfo consoleInfo;
@@ -144,6 +152,8 @@ public class AtsConsole {
       @ConsoleLineReader LineReader lineReader,
       @ConsoleOutput(ConsoleOutput.Type.OUT_WRITER) PrintWriter outWriter,
       @ConsoleOutput(ConsoleOutput.Type.ERR_WRITER) PrintWriter errWriter,
+      @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlStub controlStub,
+      @ConsoleId String consoleId,
       Sleeper sleeper,
       ConsoleUtil consoleUtil,
       ConsoleInfo consoleInfo,
@@ -155,6 +165,8 @@ public class AtsConsole {
     this.lineReader = lineReader;
     this.outWriter = outWriter;
     this.errWriter = errWriter;
+    this.controlStub = controlStub;
+    this.consoleId = consoleId;
     this.sleeper = sleeper;
     this.consoleUtil = consoleUtil;
     this.consoleInfo = consoleInfo;
@@ -274,5 +286,16 @@ public class AtsConsole {
   private void onShutdown() {
     // Dump logs.
     System.out.println(LogDumper.dumpLog());
+
+    // Aborts all sessions of the console and kills the OLC server.
+    try {
+      controlStub.killServer(
+          KillServerRequest.newBuilder()
+              .setAbortAllSessionsFromClient(
+                  AbortAllSessionsFromClient.newBuilder().setClientId(consoleId))
+              .build());
+    } catch (GrpcExceptionWithErrorId e) {
+      // Does nothing.
+    }
   }
 }
