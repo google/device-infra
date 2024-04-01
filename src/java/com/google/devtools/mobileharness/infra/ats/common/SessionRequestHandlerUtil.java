@@ -418,7 +418,7 @@ public class SessionRequestHandlerUtil {
       driverParams.put("xts_root_dir", xtsRootDir);
     }
     driverParams.put("xts_test_plan", testPlan);
-    if (testPlan.equals("retry")) {
+    if (isRunRetry(testPlan)) {
       Optional<Path> runRetryTfSubPlan =
           prepareRunRetryTfSubPlan(
               xtsRootDir,
@@ -499,7 +499,7 @@ public class SessionRequestHandlerUtil {
     Path subPlanPath =
         xtsSubPlansDir.resolve(
             String.format(
-                "retry_session_%d_%d.xml", previousSessionId, Clock.systemUTC().millis()));
+                "tf_retry_session_%d_%d.xml", previousSessionId, Clock.systemUTC().millis()));
     try (OutputStream outputStream = new FileOutputStream(subPlanPath.toFile())) {
       subPlan.serialize(outputStream, /* tfFiltersOnly= */ true);
     } catch (IOException e) {
@@ -556,7 +556,7 @@ public class SessionRequestHandlerUtil {
   public boolean canCreateNonTradefedJobs(SessionRequestInfo sessionRequestInfo) {
     String testPlan = sessionRequestInfo.testPlan();
     // Currently only support CTS
-    if (!testPlan.equals("cts")) {
+    if (!testPlan.equals("cts") && !isRunRetry(testPlan)) {
       return false;
     }
     boolean noGivenModuleForNonTf =
@@ -587,6 +587,19 @@ public class SessionRequestHandlerUtil {
     }
 
     XtsType xtsType = sessionRequestInfo.xtsType();
+    Optional<SubPlan> subPlanOpt = Optional.empty();
+    if (isRunRetry(testPlan)) {
+      subPlanOpt =
+          prepareRunRetryNonTfSubPlan(
+              xtsRootDir,
+              sessionRequestInfo.xtsType(),
+              sessionRequestInfo.retrySessionId().orElseThrow(),
+              sessionRequestInfo.retryType().orElse(null));
+      if (subPlanOpt.isEmpty()) {
+        return ImmutableList.of();
+      }
+    }
+
     ImmutableSet<String> givenMatchedNonTfModules = sessionRequestInfo.givenMatchedNonTfModules();
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
 
@@ -600,6 +613,20 @@ public class SessionRequestHandlerUtil {
         sessionRequestInfo.includeFilters().stream()
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
+    boolean isRunRetry = isRunRetry(testPlan);
+    if (isRunRetry) {
+      includeFilters =
+          subPlanOpt.get().getNonTfIncludeFiltersMultimap().entries().stream()
+              .map(
+                  e ->
+                      SuiteTestFilter.create(
+                          e.getKey()
+                              + (e.getValue().equals(SubPlan.ALL_TESTS_IN_MODULE)
+                                  ? ""
+                                  : " " + e.getValue())))
+              .collect(toImmutableList());
+      logger.atInfo().log("Include filters for Non-TF retry: %s", includeFilters);
+    }
     ImmutableList<SuiteTestFilter> excludeFilters =
         sessionRequestInfo.excludeFilters().stream()
             .map(SuiteTestFilter::create)
@@ -623,6 +650,11 @@ public class SessionRequestHandlerUtil {
             .collect(toImmutableList())) {
       String originalModuleName = entry.getValue().getMetadata().getXtsModule();
       String expandedModuleName = entry.getKey();
+      // If it's a retry, do a early check for whether the module should be retried
+      if (isRunRetry
+          && !subPlanOpt.get().getNonTfIncludeFiltersMultimap().containsKey(expandedModuleName)) {
+        continue;
+      }
       ImmutableList.Builder<String> matchedTestCasesBuilder = ImmutableList.builder();
       if (givenMatchedNonTfModules.isEmpty()
           || givenMatchedNonTfModules.contains(originalModuleName)) {
@@ -875,6 +907,32 @@ public class SessionRequestHandlerUtil {
   private Optional<String> getModuleParameter(String expandedModuleName) {
     Matcher matcher = MODULE_PARAMETER_PATTERN.matcher(expandedModuleName);
     return matcher.find() ? Optional.of(matcher.group("moduleParam")) : Optional.empty();
+  }
+
+  private boolean isRunRetry(String testPlan) {
+    return testPlan.equals("retry");
+  }
+
+  private Optional<SubPlan> prepareRunRetryNonTfSubPlan(
+      String xtsRootDir, XtsType xtsType, int previousSessionId, @Nullable RetryType retryType)
+      throws MobileHarnessException {
+    Path xtsRootDirPath = Path.of(xtsRootDir);
+    RetryArgs.Builder retryArgs =
+        RetryArgs.builder()
+            .setResultsDir(getXtsResultsDir(xtsRootDirPath, xtsType))
+            .setPreviousSessionId(previousSessionId);
+    if (retryType != null) {
+      retryArgs.setRetryType(retryType);
+    }
+    SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
+    if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
+        && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
+      logger.atInfo().log(
+          "No include or exclude filters found for Non-TF retry session %s with retry type %s",
+          previousSessionId, retryType);
+      return Optional.empty();
+    }
+    return Optional.of(subPlan);
   }
 
   /**

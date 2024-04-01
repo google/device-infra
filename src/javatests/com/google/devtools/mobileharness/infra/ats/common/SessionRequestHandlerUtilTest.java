@@ -847,6 +847,130 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void createXtsNonTradefedJobs_retry_noNonTfFailedTestsFound_skipped() throws Exception {
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    Configuration config2 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests())
+        .thenReturn(ImmutableMap.of("arm64-v8a module1", config1, "arm64-v8a module2", config2));
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(new SubPlan());
+
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("retry")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setRetrySessionId(0)
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+
+    assertThat(jobInfos).isEmpty();
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_retry_nonTfFailedTests() throws Exception {
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    Configuration config2 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    Configuration config3 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder().setXtsModule("module3").setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(
+            ImmutableMap.of(
+                "/path/to/config1",
+                config1,
+                "/path/to/config2",
+                config2,
+                "/path/to/config3",
+                config3));
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests())
+        .thenReturn(
+            ImmutableMap.of(
+                "arm64-v8a module1",
+                config1,
+                "arm64-v8a module2",
+                config2,
+                "arm64-v8a module3",
+                config3));
+    SubPlan subPlan = new SubPlan();
+    subPlan.addNonTfIncludeFilter("arm64-v8a module1 android.test.Foo#test1");
+    subPlan.addNonTfIncludeFilter("arm64-v8a module1 android.test.Foo#test2");
+    subPlan.addNonTfIncludeFilter("arm64-v8a module2"); // retry entire module
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("retry")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setRetrySessionId(0)
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1 test2");
+    assertThat(jobInfos.get(1).params().get("test_case_selector")).isNull();
+  }
+
+  @Test
   public void getTestResultFromTest_success() throws Exception {
     TestInfo testInfo = Mockito.mock(TestInfo.class);
     Properties properties = Mockito.mock(Properties.class);
