@@ -139,7 +139,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -167,7 +167,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -199,7 +199,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -243,7 +243,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("retry")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(xtsRootDir.getAbsolutePath())
@@ -285,7 +285,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -314,7 +314,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -335,7 +335,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -358,7 +358,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -413,7 +413,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -451,7 +451,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -475,7 +475,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Optional<JobConfig> jobConfigOpt =
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -551,8 +551,8 @@ public final class SessionRequestHandlerUtilTest {
     when(testSuiteHelper.loadTests())
         .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
 
-    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfoWithIncludeFilters =
-        SessionRequestHandlerUtil.SessionRequestInfo.builder()
+    SessionRequestInfo sessionRequestInfoWithIncludeFilters =
+        SessionRequestInfo.builder()
             .setTestPlan("cts")
             .setXtsType(XtsType.CTS)
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -561,8 +561,8 @@ public final class SessionRequestHandlerUtilTest {
     Optional<JobInfo> jobInfoOptWithIncludeFilters =
         sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfoWithIncludeFilters);
 
-    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfoWithExcludeFilters =
-        SessionRequestHandlerUtil.SessionRequestInfo.builder()
+    SessionRequestInfo sessionRequestInfoWithExcludeFilters =
+        SessionRequestInfo.builder()
             .setTestPlan("cts")
             .setXtsType(XtsType.CTS)
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -571,8 +571,8 @@ public final class SessionRequestHandlerUtilTest {
     Optional<JobInfo> jobInfoOptWithExcludeFilters =
         sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfoWithExcludeFilters);
 
-    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfoWithMixedFilters =
-        SessionRequestHandlerUtil.SessionRequestInfo.builder()
+    SessionRequestInfo sessionRequestInfoWithMixedFilters =
+        SessionRequestInfo.builder()
             .setTestPlan("cts")
             .setXtsType(XtsType.CTS)
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -619,9 +619,9 @@ public final class SessionRequestHandlerUtilTest {
     when(testSuiteHelper.loadTests())
         .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
 
-    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
+    SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -668,7 +668,7 @@ public final class SessionRequestHandlerUtilTest {
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-                SessionRequestHandlerUtil.SessionRequestInfo.builder()
+                SessionRequestInfo.builder()
                     .setTestPlan("cts")
                     .setXtsType(XtsType.CTS)
                     .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -710,9 +710,9 @@ public final class SessionRequestHandlerUtilTest {
     when(testSuiteHelper.loadTests())
         .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
 
-    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
+    SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -773,9 +773,9 @@ public final class SessionRequestHandlerUtilTest {
     when(testSuiteHelper.loadTests())
         .thenReturn(ImmutableMap.of("module1", config1, "module2", config2, "module3", config3));
 
-    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
+    SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -817,9 +817,9 @@ public final class SessionRequestHandlerUtilTest {
         .getTestSuiteHelper(any(), any(), any());
     when(testSuiteHelper.loadTests()).thenReturn(ImmutableMap.of("module1", config1));
 
-    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
+    SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setModuleNames(ImmutableList.of("module1"))
@@ -829,9 +829,9 @@ public final class SessionRequestHandlerUtilTest {
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
 
-    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfoWithInvalidTestName =
+    SessionRequestInfo sessionRequestInfoWithInvalidTestName =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
-            SessionRequestHandlerUtil.SessionRequestInfo.builder()
+            SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setXtsType(XtsType.CTS)
                 .setModuleNames(ImmutableList.of("module1"))

@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
@@ -150,10 +151,10 @@ class RunCommandHandler {
     }
   }
 
-  private SessionRequestHandlerUtil.SessionRequestInfo generateSessionRequestInfo(
-      RunCommand runCommand) throws MobileHarnessException {
-    SessionRequestHandlerUtil.SessionRequestInfo.Builder builder =
-        SessionRequestHandlerUtil.SessionRequestInfo.builder()
+  private SessionRequestInfo generateSessionRequestInfo(RunCommand runCommand)
+      throws MobileHarnessException {
+    SessionRequestInfo.Builder builder =
+        SessionRequestInfo.builder()
             .setTestPlan(runCommand.getTestPlan())
             .setXtsRootDir(runCommand.getXtsRootDir())
             .setXtsType(runCommand.getXtsType())

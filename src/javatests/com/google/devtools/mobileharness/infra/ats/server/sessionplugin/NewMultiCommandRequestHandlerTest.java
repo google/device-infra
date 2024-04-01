@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
@@ -93,8 +93,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Mock private JobInfo jobInfo;
   @Mock private Properties properties;
 
-  @Captor
-  private ArgumentCaptor<SessionRequestHandlerUtil.SessionRequestInfo> sessionRequestInfoCaptor;
+  @Captor private ArgumentCaptor<SessionRequestInfo> sessionRequestInfoCaptor;
 
   @Inject private NewMultiCommandRequestHandler newMultiCommandRequestHandler;
 
@@ -180,8 +179,7 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
-    SessionRequestHandlerUtil.SessionRequestInfo sessionRequestInfo =
-        sessionRequestInfoCaptor.getValue();
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
     assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts");
     assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
     assertThat(sessionRequestInfo.testName()).hasValue("test1");
