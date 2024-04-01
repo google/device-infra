@@ -117,7 +117,9 @@ public final class NewMultiCommandRequestHandlerTest {
     commandInfo =
         CommandInfo.newBuilder()
             .setName("command")
-            .setCommandLine("cts --module module1 --test test1 --logcat-on-failure --shard-count 2")
+            .setCommandLine(
+                "cts --module module1 --test test1 --logcat-on-failure --shard-count 2"
+                    + " --parallel-setup true --parallel-setup-timeout 0")
             .addDeviceDimensions(
                 CommandInfo.DeviceDimension.newBuilder()
                     .setName("device_serial")
@@ -144,6 +146,7 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setInvocationTimeout(toProtoDuration(Duration.ofSeconds(2000L)))
                     .setOutputFileUploadUrl(OUTPUT_FILE_UPLOAD_URL)
                     .putAllEnvVars(ImmutableMap.of("env_key1", "env_value1"))
+                    .setUseParallelSetup(true)
                     .build())
             .build();
     when(clock.millis()).thenReturn(1000L);
@@ -193,6 +196,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
+    assertThat(sessionRequestInfo.useParallelSetup()).isTrue();
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =
