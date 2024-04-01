@@ -85,6 +85,7 @@ message TestEnvironment {
   optional string context_file_pattern = 10;
   repeated string extra_context_files = 11;
   optional string retry_command_line = 12;
+  optional bool use_parallel_setup = 14;
 
   enum LogLevel {
     UNKNOWN = 0;
