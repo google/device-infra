@@ -300,6 +300,8 @@ final class NewMultiCommandRequestHandler {
     sessionRequestInfoBuilder.setShardCount(shardCount);
     sessionRequestInfoBuilder.setEnvVars(
         ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
+    sessionRequestInfoBuilder.setUseParallelSetup(
+        request.getTestEnvironment().getUseParallelSetup());
 
     ImmutableList.Builder<String> modulesBuilder = ImmutableList.builder();
     String test = "";

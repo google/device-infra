@@ -79,6 +79,8 @@ public abstract class SessionRequestInfo {
 
   public abstract ImmutableMap<String, String> envVars();
 
+  public abstract boolean useParallelSetup();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -93,7 +95,8 @@ public abstract class SessionRequestInfo {
         .setEnvVars(ImmutableMap.of())
         .setEnableModuleOptionalParameter(false)
         .setJobTimeout(Duration.ZERO)
-        .setStartTimeout(Duration.ZERO);
+        .setStartTimeout(Duration.ZERO)
+        .setUseParallelSetup(false);
   }
 
   public abstract Builder toBuilder();
@@ -148,5 +151,7 @@ public abstract class SessionRequestInfo {
     public abstract Builder setJobTimeout(Duration jobTimeout);
 
     public abstract Builder setStartTimeout(Duration startTimeout);
+
+    public abstract Builder setUseParallelSetup(boolean useParallelSetup);
   }
 }

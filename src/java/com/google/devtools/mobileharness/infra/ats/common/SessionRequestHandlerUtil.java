@@ -104,6 +104,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -455,6 +456,11 @@ public class SessionRequestHandlerUtil {
                             .map(
                                 excludeFilter ->
                                     String.format("--exclude-filter \"%s\"", excludeFilter)),
+                        sessionRequestInfo.useParallelSetup()
+                            ? ImmutableList.of(
+                                "--parallel-setup", "true", "--parallel-setup-timeout", "0")
+                                .stream()
+                            : Stream.empty(),
                         extraArgs.stream())
                     .collect(toImmutableList()));
     if (!sessionRequestInfoArgs.isEmpty()) {

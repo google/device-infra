@@ -190,6 +190,48 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void createXtsTradefedTestJobConfig_verifyUseParallelSetup() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
+
+    Optional<JobConfig> jobConfigOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType(XtsType.CTS)
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setUseParallelSetup(true)
+                .build(),
+            ImmutableList.of());
+
+    assertThat(jobConfigOpt).isPresent();
+    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+
+    // Asserts the driver
+    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
+    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    Map<String, String> driverParamsMap =
+        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
+    assertThat(driverParamsMap)
+        .containsExactly(
+            "xts_type",
+            "CTS",
+            "xts_root_dir",
+            XTS_ROOT_DIR_PATH,
+            "xts_test_plan",
+            "cts",
+            "run_command_args",
+            "--parallel-setup true --parallel-setup-timeout 0");
+  }
+
+  @Test
   public void createXtsTradefedTestJobConfig_addAndroidXtsZipPathIfAvailable() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
