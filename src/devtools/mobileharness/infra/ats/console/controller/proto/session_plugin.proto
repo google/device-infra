@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.infra.ats.console.controller;
 
+import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
 import "src/devtools/mobileharness/infra/ats/common/proto/xts_common.proto";
 
@@ -100,18 +101,31 @@ message RunCommandState {
   // Required.
   string command_id = 1;
 
-  // Optional.
-  //
-  // The time that the first device is allocated.
-  google.protobuf.Timestamp start_time = 2;
-
-  // Optional.
-  repeated string device_id = 3;
+  // Required.
+  google.protobuf.Duration total_execution_time = 2;
 
   // Required.
-  //
-  // Example: "running cts on build(s) 'DeviceBuildInfo{bid=123, serial=12345}'"
-  string state_summary = 4;
+  string command_line_args = 3;
+
+  // Running invocations by ID (OmniLab test ID).
+  map<string, Invocation> running_invocation = 4;
+
+  message Invocation {
+    // Required.
+    string command_id = 1;
+
+    // Required.
+    google.protobuf.Timestamp start_time = 2;
+
+    // Required.
+    repeated string device_id = 3;
+
+    // Required.
+    //
+    // Example: "running cts on build(s) 'DeviceBuildInfo{bid=123,
+    // serial=12345}'"
+    string state_summary = 4;
+  }
 }
 
 message ListCommand {

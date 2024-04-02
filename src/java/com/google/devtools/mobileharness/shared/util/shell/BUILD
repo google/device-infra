@@ -21,4 +21,5 @@ package(
 java_library(
     name = "shell",
     srcs = ["ShellUtils.java"],
+    deps = ["@maven//:com_google_guava_guava"],
 )

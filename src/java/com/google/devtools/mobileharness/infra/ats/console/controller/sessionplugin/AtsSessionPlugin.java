@@ -17,13 +17,15 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.lab.DeviceLocator;
 import com.google.devtools.mobileharness.api.model.proto.Device;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent;
@@ -38,21 +40,20 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState.Invocation;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
-import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.UnaryOperator;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
@@ -77,13 +78,6 @@ public class AtsSessionPlugin {
 
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
-
-  /** Whether the first device is allocated. */
-  private final AtomicBoolean started = new AtomicBoolean();
-
-  /** Devices that are being allocated to tests of this session, sorted by adding order. */
-  @GuardedBy("itself")
-  private final Map<Device.DeviceLocator, DeviceInfo> allocatedDevices = new LinkedHashMap<>();
 
   @Inject
   AtsSessionPlugin(
@@ -120,12 +114,7 @@ public class AtsSessionPlugin {
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
       RunCommand runCommand = config.getRunCommand();
 
-      // Sets state.
-      setRunCommandState(
-          oldState ->
-              runCommand.getInitialState().toBuilder()
-                  .setStateSummary(String.format("running %s", runCommand.getTestPlan()))
-                  .build());
+      setRunCommandState(oldState -> runCommand.getInitialState());
 
       ImmutableList<String> tradefedJobIds =
           runCommandHandler.addTradefedJobs(runCommand, sessionInfo);
@@ -233,34 +222,23 @@ public class AtsSessionPlugin {
     }
 
     // Print out the xts test result summary.
-    StringBuilder summaryReport = new StringBuilder();
-    summaryReport.append("\n================= xTS total test result summary ================\n");
-    summaryReport.append("=============== xTS Tradefed test result summary ===============\n");
-    summaryReport.append(
-        String.format(
-            "%s/%s modules completed\n", tradefedDoneModuleNumber, tradefedTotalModuleNumber));
-    summaryReport.append(
-        String.format("PASSED TESTCASES           : %s\n", tradefedPassedTestNumber));
-    summaryReport.append(
-        String.format("FAILED TESTCASES           : %s\n", tradefedFailedTestNumber));
-    summaryReport.append("=============== xTS Non Tradefed test result summary ===========\n");
-    summaryReport.append(
-        String.format(
-            "%s/%s modules completed\n",
-            nonTradefedDoneModuleNumber, nonTradefedTotalModuleNumber));
-    summaryReport.append(
-        String.format(
+    return "\n================= xTS total test result summary ================\n"
+        + "=============== xTS Tradefed test result summary ===============\n"
+        + String.format(
+            "%s/%s modules completed\n", tradefedDoneModuleNumber, tradefedTotalModuleNumber)
+        + String.format("PASSED TESTCASES           : %s\n", tradefedPassedTestNumber)
+        + String.format("FAILED TESTCASES           : %s\n", tradefedFailedTestNumber)
+        + "=============== xTS Non Tradefed test result summary ===========\n"
+        + String.format(
+            "%s/%s modules completed\n", nonTradefedDoneModuleNumber, nonTradefedTotalModuleNumber)
+        + String.format(
             "%s/%s testcases completed\n",
-            nonTradefedDoneTestCaseNumber, nonTradefedTotalTestCaseNumber));
-    summaryReport.append(
-        String.format("PASSED TESTCASES           : %s\n", nonTradefedPassedTestNumber));
-    summaryReport.append(
-        String.format("FAILED TESTCASES           : %s\n", nonTradefedFailedTestNumber));
-    summaryReport.append(
-        String.format("SKIPPED TESTCASES          : %s\n", nonTradefedSkippedTestNumber));
-    summaryReport.append("=================== End of Results =============================\n");
-    summaryReport.append("================================================================\n");
-    return summaryReport.toString();
+            nonTradefedDoneTestCaseNumber, nonTradefedTotalTestCaseNumber)
+        + String.format("PASSED TESTCASES           : %s\n", nonTradefedPassedTestNumber)
+        + String.format("FAILED TESTCASES           : %s\n", nonTradefedFailedTestNumber)
+        + String.format("SKIPPED TESTCASES          : %s\n", nonTradefedSkippedTestNumber)
+        + "=================== End of Results =============================\n"
+        + "================================================================\n";
   }
 
   @Subscribe
@@ -277,15 +255,7 @@ public class AtsSessionPlugin {
 
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
       RunCommand runCommand = config.getRunCommand();
-      try {
-        runCommandHandler.handleResultProcessing(runCommand, sessionInfo, summaryReport);
-      } finally {
-        setRunCommandState(
-            oldState ->
-                oldState.toBuilder()
-                    .setStateSummary(String.format("finished %s", runCommand.getTestPlan()))
-                    .build());
-      }
+      runCommandHandler.handleResultProcessing(runCommand, sessionInfo, summaryReport);
     }
   }
 
@@ -308,48 +278,43 @@ public class AtsSessionPlugin {
 
   @Subscribe
   public void onTestStarting(TestStartingEvent event) {
-    // Sets start time.
-    if (started.compareAndSet(false, true)) {
-      setRunCommandState(
-          oldState ->
-              oldState.toBuilder().setStartTime(TimeUtils.toProtoTimestamp(Instant.now())).build());
-    }
-
-    // Updates allocated devices.
     ImmutableList<DeviceInfo> devices = event.getAllDeviceInfos();
-    synchronized (allocatedDevices) {
-      for (DeviceInfo device : devices) {
-        allocatedDevices.put(device.getDeviceLocator(), device);
-      }
-      updateAllocatedDevicesInState();
-    }
+    setRunCommandState(
+        oldState ->
+            oldState.toBuilder()
+                .putRunningInvocation(
+                    event.getTest().locator().getId(),
+                    Invocation.newBuilder()
+                        .setCommandId(oldState.getCommandId())
+                        .setStartTime(toProtoTimestamp(Instant.now()))
+                        .addAllDeviceId(
+                            devices.stream()
+                                .map(DeviceInfo::getDeviceLocator)
+                                .map(Device.DeviceLocator::getId)
+                                .collect(toImmutableList()))
+                        .setStateSummary(config.getRunCommand().getTestPlan())
+                        .build())
+                .build());
   }
 
   @Subscribe
   public void onTestEnded(TestEndedEvent event) {
-    // Updates allocated devices.
-    ImmutableList<DeviceLocator> devices = event.getAllocation().getAllDevices();
-    synchronized (allocatedDevices) {
-      for (DeviceLocator device : devices) {
-        allocatedDevices.remove(device.toProto());
-      }
-      updateAllocatedDevicesInState();
-    }
+    setRunCommandState(
+        oldState ->
+            oldState.toBuilder()
+                .setTotalExecutionTime(
+                    toProtoDuration(
+                        toJavaDuration(oldState.getTotalExecutionTime())
+                            .plus(
+                                Duration.between(
+                                    event.getTest().timing().getStartTime(), Instant.now()))))
+                .removeRunningInvocation(event.getTest().locator().getId())
+                .build());
   }
 
   private void setOutput(AtsSessionPluginOutput output) {
     sessionInfo.setSessionPluginOutput(oldOutput -> output, AtsSessionPluginOutput.class);
     logger.atInfo().log("Output: %s", shortDebugString(output));
-  }
-
-  @GuardedBy("allocatedDevices")
-  private void updateAllocatedDevicesInState() {
-    ImmutableList<String> deviceIds =
-        allocatedDevices.keySet().stream()
-            .map(Device.DeviceLocator::getId)
-            .collect(toImmutableList());
-    setRunCommandState(
-        oldState -> oldState.toBuilder().clearDeviceId().addAllDeviceId(deviceIds).build());
   }
 
   private void setRunCommandState(UnaryOperator<RunCommandState> runCommandStateUpdater) {

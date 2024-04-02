@@ -17,15 +17,18 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaInstant;
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toReadableDurationString;
 import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState.Invocation;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
-import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import java.time.Instant;
@@ -60,6 +63,15 @@ public class PluginOutputPrinter {
     return ExitCode.SOFTWARE;
   }
 
+  /** Prints output of "list commands" command. */
+  public static String listCommands(List<AtsSessionPluginConfigOutput> configOutputs) {
+    return configOutputs.stream()
+        .map(PluginOutputPrinter::getRunCommandState)
+        .sorted(comparing(RunCommandState::getCommandId))
+        .map(PluginOutputPrinter::formatCommand)
+        .collect(joining("\n"));
+  }
+
   /** Prints output of "list invocations" command. */
   public static String listInvocations(List<AtsSessionPluginConfigOutput> configOutputs) {
     ImmutableList<ImmutableList<String>> table =
@@ -67,8 +79,13 @@ public class PluginOutputPrinter {
                 Stream.of(LIST_INVOCATIONS_HEADER),
                 configOutputs.stream()
                     .map(PluginOutputPrinter::getRunCommandState)
-                    .sorted(comparing(RunCommandState::getCommandId))
-                    .map(PluginOutputPrinter::formatRunCommandState))
+                    .flatMap(
+                        runCommandState ->
+                            runCommandState.getRunningInvocationMap().values().stream())
+                    .sorted(
+                        comparing(Invocation::getCommandId)
+                            .thenComparing(invocation -> toJavaInstant(invocation.getStartTime())))
+                    .map(PluginOutputPrinter::formatInvocation))
             .collect(toImmutableList());
     return TableFormatter.displayTable(table);
   }
@@ -85,18 +102,21 @@ public class PluginOutputPrinter {
         .orElse(pluginConfigOutput.config().getRunCommand().getInitialState());
   }
 
-  private static ImmutableList<String> formatRunCommandState(RunCommandState runCommandState) {
-    return ImmutableList.of(
+  private static String formatCommand(RunCommandState runCommandState) {
+    return String.format(
+        "Command %s: [%s] %s",
         runCommandState.getCommandId(),
-        runCommandState.hasStartTime()
-            ? TimeUtils.toReadableDurationString(
-                Duration.between(
-                    TimeUtils.toJavaInstant(runCommandState.getStartTime()), Instant.now()))
-            : "n/a",
-        runCommandState.getDeviceIdCount() > 0
-            ? runCommandState.getDeviceIdList().stream().collect(joining(", ", "[", "]"))
-            : "n/a",
-        runCommandState.getStateSummary());
+        toReadableDurationString(toJavaDuration(runCommandState.getTotalExecutionTime())),
+        runCommandState.getCommandLineArgs());
+  }
+
+  private static ImmutableList<String> formatInvocation(Invocation invocation) {
+    return ImmutableList.of(
+        invocation.getCommandId(),
+        toReadableDurationString(
+            Duration.between(toJavaInstant(invocation.getStartTime()), Instant.now())),
+        invocation.getDeviceIdList().stream().collect(joining(", ", "[", "]")),
+        invocation.getStateSummary());
   }
 
   private PluginOutputPrinter() {}

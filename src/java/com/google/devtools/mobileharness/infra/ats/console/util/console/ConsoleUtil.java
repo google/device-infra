@@ -66,7 +66,9 @@ public class ConsoleUtil {
   public void printlnStdout(String format, Object... args) {
     String line = String.format(format, args);
     if (printAbove) {
-      lineReader.printAbove(line);
+      if (!line.isEmpty()) {
+        lineReader.printAbove(line);
+      }
     } else {
       System.out.print(addLineTerminatorIfNecessary(line));
     }
@@ -86,7 +88,9 @@ public class ConsoleUtil {
    */
   public void printlnStdout(String text) {
     if (printAbove) {
-      lineReader.printAbove(text);
+      if (!text.isEmpty()) {
+        lineReader.printAbove(text);
+      }
     } else {
       System.out.print(addLineTerminatorIfNecessary(text));
     }
@@ -139,7 +143,9 @@ public class ConsoleUtil {
    */
   public void printlnDirect(AttributedString attributedString) {
     if (printAbove) {
-      lineReader.printAbove(attributedString);
+      if (attributedString.length() > 0) {
+        lineReader.printAbove(attributedString);
+      }
     } else {
       System.err.print(addLineTerminatorIfNecessary(attributedString.toString()));
     }
@@ -183,6 +189,6 @@ public class ConsoleUtil {
   }
 
   private static String addLineTerminatorIfNecessary(String line) {
-    return line.endsWith("\n") ? line : line + "\n";
+    return line.endsWith("\n") || line.isEmpty() ? line : line + "\n";
   }
 }

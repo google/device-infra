@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.shell;
 
+import com.google.common.collect.ImmutableList;
 import java.util.List;
 
 /** Utility functions for Bourne shell commands, including escaping and tokenizing. */
@@ -75,12 +76,11 @@ public abstract class ShellUtils {
    * Populates the passed list of command-line options extracted from {@code optionString}, which is
    * a string containing multiple options, delimited in a Bourne shell-like manner.
    *
-   * @param options the list to be populated with tokens.
    * @param optionString the string to be tokenized.
    * @throws TokenizationException if there was an error (such as an unterminated quotation).
    */
-  public static void tokenize(List<String> options, String optionString)
-      throws TokenizationException {
+  public static ImmutableList<String> tokenize(String optionString) throws TokenizationException {
+    ImmutableList.Builder<String> result = ImmutableList.builder();
     // See test suite for examples.
     //
     // Note: backslash escapes the following character, except within a
@@ -112,7 +112,7 @@ public abstract class ShellUtils {
           forceToken = true;
         } else if (c == ' ' || c == '\t') { // space, not quoted
           if (forceToken || token.length() > 0) {
-            options.add(token.toString());
+            result.add(token.toString());
             token = new StringBuilder();
             forceToken = false;
           }
@@ -130,7 +130,9 @@ public abstract class ShellUtils {
       throw new TokenizationException("unterminated quotation");
     }
     if (forceToken || token.length() > 0) {
-      options.add(token.toString());
+      result.add(token.toString());
     }
+
+    return result.build();
   }
 }

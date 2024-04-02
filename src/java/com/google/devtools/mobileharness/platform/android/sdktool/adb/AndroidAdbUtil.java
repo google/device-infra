@@ -45,7 +45,6 @@ import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -1342,9 +1341,9 @@ public class AndroidAdbUtil {
    *     are unterminated quotations.
    */
   private static String[] tokenizeOptions(Optional<String> options) throws MobileHarnessException {
-    List<String> tokenizedOptions = new ArrayList<>();
+    ImmutableList<String> tokenizedOptions;
     try {
-      tokenize(tokenizedOptions, options.orElse(""));
+      tokenizedOptions = tokenize(options.orElse(""));
     } catch (TokenizationException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ADB_SHELL_COMMAND_INVALID_ARGS, e.getMessage(), e);

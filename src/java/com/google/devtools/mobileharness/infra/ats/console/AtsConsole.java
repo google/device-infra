@@ -57,8 +57,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
@@ -213,10 +211,10 @@ public class AtsConsole {
 
     // Starts to read input from console.
     ImmutableList<String> args = mainArgs;
-    String input;
-    List<String> tokens;
 
     do {
+      String input;
+      ImmutableList<String> tokens;
       if (args.isEmpty()) {
         input = getConsoleInput().orElse(null);
         if (input == null) {
@@ -225,9 +223,8 @@ public class AtsConsole {
           break;
         }
 
-        tokens = new ArrayList<>();
         try {
-          tokenize(tokens, input);
+          tokens = tokenize(input);
         } catch (TokenizationException e) {
           consoleUtil.printlnStderr("Invalid input: %s", input);
           continue;
@@ -246,6 +243,7 @@ public class AtsConsole {
         args = ImmutableList.of();
       }
 
+      consoleInfo.setLastCommand(tokens);
       commandLine.execute(tokens.toArray(new String[0]));
 
       sleeper.sleep(Duration.ofMillis(100L));

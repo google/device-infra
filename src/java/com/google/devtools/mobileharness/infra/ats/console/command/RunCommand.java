@@ -20,6 +20,8 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.Futures.addCallback;
+import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.joining;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Ascii;
@@ -258,16 +260,18 @@ final class RunCommand implements Callable<Integer> {
 
   @Override
   public Integer call() throws MobileHarnessException, InterruptedException, IOException {
+    ImmutableList<String> command = consoleInfo.getLastCommand();
     try {
       if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
         validateCommandParameters();
-        return runInM1(/* isRunRetry= */ false, /* extraRunRetryCmdArgs= */ ImmutableMap.of());
+        return runInM1(
+            /* isRunRetry= */ false, /* extraRunRetryCmdArgs= */ ImmutableMap.of(), command);
       } else {
         validateM0Config();
         return runInM0();
       }
     } finally {
-      moduleTestOptionsGroups = null; // reset the group to clear the history
+      moduleTestOptionsGroups = null; // Resets the group to clear the history
     }
   }
 
@@ -285,12 +289,13 @@ final class RunCommand implements Callable<Integer> {
       @Option(names = "--retry-type", description = "Supported values: ${COMPLETION-CANDIDATES}")
           RetryType retryType)
       throws MobileHarnessException, InterruptedException {
+    ImmutableList<String> command = consoleInfo.getLastCommand();
     ImmutableMap.Builder<String, String> extraRunRetryCmdArgs = ImmutableMap.builder();
     extraRunRetryCmdArgs.put(RUN_RETRY_SESSION_ID, String.valueOf(sessionId));
     if (retryType != null) {
       extraRunRetryCmdArgs.put(RUN_RETRY_TYPE, Ascii.toUpperCase(retryType.name()));
     }
-    return runInM1(/* isRunRetry= */ true, extraRunRetryCmdArgs.build());
+    return runInM1(/* isRunRetry= */ true, extraRunRetryCmdArgs.buildOrThrow(), command);
   }
 
   private void validateCommandParameters() {
@@ -305,7 +310,7 @@ final class RunCommand implements Callable<Integer> {
       ImmutableList<String> tests =
           moduleTestOptionsGroups.stream()
               .map(group -> group.test)
-              .filter(test -> test != null)
+              .filter(Objects::nonNull)
               .collect(toImmutableList());
       if (tests.size() > 1) {
         throw new ParameterException(
@@ -394,7 +399,10 @@ final class RunCommand implements Callable<Integer> {
     return ExitCode.OK;
   }
 
-  private int runInM1(boolean isRunRetry, ImmutableMap<String, String> extraRunRetryCmdArgs)
+  private int runInM1(
+      boolean isRunRetry,
+      ImmutableMap<String, String> extraRunRetryCmdArgs,
+      ImmutableList<String> command)
       throws InterruptedException, MobileHarnessException {
     serverPreparer.prepareOlcServer();
 
@@ -446,7 +454,7 @@ final class RunCommand implements Callable<Integer> {
             Integer.parseInt(extraRunRetryCmdArgs.get(RUN_RETRY_SESSION_ID)));
       }
       if (extraRunRetryCmdArgs.containsKey(RUN_RETRY_TYPE)) {
-        runCommand.setRetryType(extraRunRetryCmdArgs.get(RUN_RETRY_TYPE));
+        runCommand.setRetryType(requireNonNull(extraRunRetryCmdArgs.get(RUN_RETRY_TYPE)));
       }
     } else {
       runCommand.setTestPlan(config).addAllModuleName(modules).addAllExtraArg(extraArgs);
@@ -458,7 +466,7 @@ final class RunCommand implements Callable<Integer> {
     runCommand.setInitialState(
         RunCommandState.newBuilder()
             .setCommandId(Integer.toString(NEXT_COMMAND_ID.getAndIncrement()))
-            .setStateSummary(String.format("pending %s", runCommand.getTestPlan())));
+            .setCommandLineArgs(command.stream().skip(1L).collect(joining(" "))));
 
     serverLogPrinter.enable(true);
     ListenableFuture<AtsSessionPluginOutput> atsRunSessionFuture =

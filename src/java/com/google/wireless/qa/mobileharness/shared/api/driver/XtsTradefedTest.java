@@ -708,18 +708,16 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   private ImmutableList<String> getExtraRunCommandArgs(XtsTradefedTestDriverSpec spec) {
-    List<String> extraRunCommandArgs = new ArrayList<>();
-
     if (spec.hasRunCommandArgs()) {
       try {
-        ShellUtils.tokenize(extraRunCommandArgs, spec.getRunCommandArgs());
+        return ShellUtils.tokenize(spec.getRunCommandArgs());
       } catch (TokenizationException te) {
         logger.atWarning().withCause(te).log(
             "Failed to parse the run command args [%s]", spec.getRunCommandArgs());
         return ImmutableList.of();
       }
     }
-    return ImmutableList.copyOf(extraRunCommandArgs);
+    return ImmutableList.of();
   }
 
   private ImmutableList<String> getDeviceIds() {

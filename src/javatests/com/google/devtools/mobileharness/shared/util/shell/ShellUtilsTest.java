@@ -21,9 +21,8 @@ import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.pre
 import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.shellEscape;
 import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.tokenize;
 
-import java.util.ArrayList;
+import com.google.common.collect.ImmutableList;
 import java.util.Arrays;
-import java.util.List;
 import junit.framework.TestCase;
 
 /** Unit tests for the {@link ShellUtils} class. */
@@ -39,13 +38,12 @@ public class ShellUtilsTest extends TestCase {
     assertEquals("'<html!>'", shellEscape("<html!>"));
   }
 
-  public void testPrettyPrintArgv() throws Exception {
+  public void testPrettyPrintArgv() {
     assertEquals("echo '$US' 100", prettyPrintArgv(Arrays.asList("echo", "$US", "100")));
   }
 
   private void assertTokenize(String copts, String... expectedTokens) throws Exception {
-    List<String> actualTokens = new ArrayList<String>();
-    tokenize(actualTokens, copts);
+    ImmutableList<String> actualTokens = tokenize(copts);
     assertEquals(Arrays.asList(expectedTokens), actualTokens);
   }
 
@@ -121,7 +119,7 @@ public class ShellUtilsTest extends TestCase {
 
   private void assertTokenizeFails(String copts, String expectedError) {
     try {
-      tokenize(new ArrayList<String>(), copts);
+      ImmutableList<String> unused = tokenize(copts);
       fail();
     } catch (ShellUtils.TokenizationException e) {
       assertThat(e).hasMessageThat().isEqualTo(expectedError);

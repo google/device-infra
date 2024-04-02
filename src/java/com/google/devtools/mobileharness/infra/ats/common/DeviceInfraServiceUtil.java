@@ -22,7 +22,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
-import java.util.ArrayList;
 import java.util.List;
 
 /** Utility for device infra service. */
@@ -39,10 +38,10 @@ public class DeviceInfraServiceUtil {
    */
   public static ImmutableList<String> parseDeviceInfraServiceFlagsFromSystemProperty() {
     String property = System.getProperties().getProperty(DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY);
-    List<String> deviceInfraServiceFlags = new ArrayList<>();
+    ImmutableList<String> deviceInfraServiceFlags;
     if (!isNullOrEmpty(property)) {
       try {
-        ShellUtils.tokenize(deviceInfraServiceFlags, property);
+        deviceInfraServiceFlags = ShellUtils.tokenize(property);
       } catch (TokenizationException e) {
         throw new IllegalArgumentException(
             String.format(
@@ -50,8 +49,10 @@ public class DeviceInfraServiceUtil {
                 DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY, property),
             e);
       }
+    } else {
+      deviceInfraServiceFlags = ImmutableList.of();
     }
-    return ImmutableList.copyOf(deviceInfraServiceFlags);
+    return deviceInfraServiceFlags;
   }
 
   /**

@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.console;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import java.util.Optional;
@@ -43,6 +44,8 @@ public class ConsoleInfo {
 
   private final ImmutableMap<String, String> systemProperties;
 
+  private volatile ImmutableList<String> lastCommand = ImmutableList.of();
+
   @Inject
   @VisibleForTesting
   public ConsoleInfo(@SystemProperties ImmutableMap<String, String> systemProperties) {
@@ -50,6 +53,14 @@ public class ConsoleInfo {
     setMoblyTestCasesDir(systemProperties.get(MOBLY_TESTCASES_DIR_PROPERTY_KEY));
     setResultsDirectory(systemProperties.get(TEST_RESULTS_DIR_PROPERTY_KEY));
     setPythonPackageIndexUrl(systemProperties.get(PYTHON_PACKAGE_INDEX_URL_PROPERTY_KEY));
+  }
+
+  public void setLastCommand(ImmutableList<String> lastCommand) {
+    this.lastCommand = lastCommand;
+  }
+
+  public ImmutableList<String> getLastCommand() {
+    return lastCommand;
   }
 
   /** Sets whether exit the console. */

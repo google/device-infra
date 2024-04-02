@@ -26,6 +26,7 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
     ],
 )

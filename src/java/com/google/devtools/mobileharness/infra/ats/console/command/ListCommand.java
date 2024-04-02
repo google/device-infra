@@ -59,6 +59,10 @@ class ListCommand implements Callable<Integer> {
 
   @Spec private CommandSpec spec;
 
+  private static final String UNFINISHED_SESSION_STATUS_NAME_REGEX =
+      String.format(
+          "%s|%s", SessionStatus.SESSION_SUBMITTED.name(), SessionStatus.SESSION_RUNNING.name());
+
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
   private final ServerPreparer serverPreparer;
@@ -94,9 +98,14 @@ class ListCommand implements Callable<Integer> {
       name = "commands",
       aliases = {"c"},
       description = "List all commands currently waiting to be executed")
-  public int commands() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
+  public int commands() throws MobileHarnessException, InterruptedException {
+    serverPreparer.prepareOlcServer();
+    ImmutableList<AtsSessionPluginConfigOutput> sessionPluginConfigOutputs =
+        atsSessionStub.getAllSessions(
+            RunCommand.RUN_COMMAND_SESSION_NAME, UNFINISHED_SESSION_STATUS_NAME_REGEX);
+    String result = PluginOutputPrinter.listCommands(sessionPluginConfigOutputs);
+    consoleUtil.printlnStdout(result);
+    return ExitCode.OK;
   }
 
   @Command(
@@ -128,10 +137,7 @@ class ListCommand implements Callable<Integer> {
     serverPreparer.prepareOlcServer();
     ImmutableList<AtsSessionPluginConfigOutput> sessionPluginConfigOutputs =
         atsSessionStub.getAllSessions(
-            RunCommand.RUN_COMMAND_SESSION_NAME,
-            String.format(
-                "%s|%s",
-                SessionStatus.SESSION_SUBMITTED.name(), SessionStatus.SESSION_RUNNING.name()));
+            RunCommand.RUN_COMMAND_SESSION_NAME, UNFINISHED_SESSION_STATUS_NAME_REGEX);
     String result = PluginOutputPrinter.listInvocations(sessionPluginConfigOutputs);
     consoleUtil.printlnStdout(result);
     return ExitCode.OK;
