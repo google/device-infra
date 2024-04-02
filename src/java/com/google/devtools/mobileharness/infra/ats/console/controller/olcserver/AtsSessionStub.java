@@ -21,6 +21,7 @@ import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils.createFieldMaskPath;
 import static com.google.protobuf.TextFormat.shortDebugString;
+import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.partitioningBy;
 
 import com.google.common.collect.ImmutableList;
@@ -36,6 +37,7 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.AtsSessionPluginConfigOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
@@ -126,7 +128,8 @@ public class AtsSessionStub {
         shortDebugString(config), shortDebugString(createSessionRequest));
     CreateSessionResponse createSessionResponse;
     try {
-      createSessionResponse = sessionStubProvider.get().createSession(createSessionRequest);
+      createSessionResponse =
+          requireNonNull(sessionStubProvider.get()).createSession(createSessionRequest);
     } catch (GrpcExceptionWithErrorId e) {
       return immediateFailedFuture(
           new MobileHarnessException(
@@ -156,7 +159,7 @@ public class AtsSessionStub {
         shortDebugString(config), shortDebugString(runSessionRequest));
     RunSessionResponse runSessionResponse;
     try {
-      runSessionResponse = sessionStubProvider.get().runSession(runSessionRequest);
+      runSessionResponse = requireNonNull(sessionStubProvider.get()).runSession(runSessionRequest);
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_RUN_SESSION_ERROR,
@@ -167,8 +170,8 @@ public class AtsSessionStub {
     return getSessionPluginOutput(runSessionResponse.getSessionDetail());
   }
 
-  /** Returns all sessions which have set {@link AtsSessionPluginOutput}. */
-  public ImmutableList<AtsSessionPluginOutput> getAllSessions(
+  /** Returns all sessions. */
+  public ImmutableList<AtsSessionPluginConfigOutput> getAllSessions(
       String sessionNameRegex, String sessionStatusNameRegex) throws MobileHarnessException {
     GetAllSessionsRequest getAllSessionsRequest =
         GetAllSessionsRequest.newBuilder()
@@ -179,7 +182,8 @@ public class AtsSessionStub {
             .build();
     GetAllSessionsResponse getAllSessionsResponse;
     try {
-      getAllSessionsResponse = sessionStubProvider.get().getAllSessions(getAllSessionsRequest);
+      getAllSessionsResponse =
+          requireNonNull(sessionStubProvider.get()).getAllSessions(getAllSessionsRequest);
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_GET_ALL_SESSIONS_ERROR,
@@ -191,10 +195,15 @@ public class AtsSessionStub {
         .flatMap(
             sessionDetail -> {
               try {
-                return getSessionPluginOutputIfAny(sessionDetail).stream();
-              } catch (MobileHarnessException e) {
+                AtsSessionPluginConfig sessionPluginConfig = getSessionPluginConfig(sessionDetail);
+                Optional<AtsSessionPluginOutput> sessionPluginOutput =
+                    getSessionPluginOutputIfAny(sessionDetail);
+                return Stream.of(
+                    AtsSessionPluginConfigOutput.of(
+                        sessionPluginConfig, sessionPluginOutput.orElse(null)));
+              } catch (MobileHarnessException | RuntimeException e) {
                 logger.atWarning().withCause(e).log(
-                    "Failed to get session plugin output, session=[%s]",
+                    "Failed to get session plugin config/output, session=[%s]",
                     shortDebugString(sessionDetail));
                 return Stream.empty();
               }
@@ -219,8 +228,7 @@ public class AtsSessionStub {
           count++;
           sleeper.sleep(calculateGetSessionStatusInterval(count));
           SessionStatus newSessionStatus =
-              sessionStubProvider
-                  .get()
+              requireNonNull(sessionStubProvider.get())
                   .getSession(
                       GetSessionRequest.newBuilder()
                           .setSessionId(sessionId)
@@ -247,8 +255,7 @@ public class AtsSessionStub {
       SessionDetail sessionDetail;
       try {
         sessionDetail =
-            sessionStubProvider
-                .get()
+            requireNonNull(sessionStubProvider.get())
                 .getSession(GetSessionRequest.newBuilder().setSessionId(sessionId).build())
                 .getSessionDetail();
       } catch (GrpcExceptionWithErrorId e) {
@@ -292,6 +299,30 @@ public class AtsSessionStub {
     } else {
       return GET_SESSION_STATUS_LONG_INTERVAL;
     }
+  }
+
+  private static AtsSessionPluginConfig getSessionPluginConfig(SessionDetail sessionDetail) {
+    return sessionDetail
+        .getSessionConfig()
+        .getSessionPluginConfigs()
+        .getSessionPluginConfigList()
+        .stream()
+        .filter(
+            sessionPluginConfig ->
+                sessionPluginConfig.getExplicitLabel().getLabel().equals(SESSION_PLUGIN_LABEL))
+        .map(
+            sessionPluginConfig -> {
+              try {
+                return sessionPluginConfig
+                    .getExecutionConfig()
+                    .getConfig()
+                    .unpack(AtsSessionPluginConfig.class);
+              } catch (InvalidProtocolBufferException e) {
+                throw new IllegalStateException(e);
+              }
+            })
+        .findFirst()
+        .orElseThrow();
   }
 
   private static AtsSessionPluginOutput getSessionPluginOutput(SessionDetail sessionDetail)

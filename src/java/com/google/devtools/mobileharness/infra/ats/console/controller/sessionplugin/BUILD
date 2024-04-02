@@ -17,19 +17,14 @@ package(default_applicable_licenses = ["//:license"])
 
 java_library(
     name = "ats_session_plugin",
+    srcs = [
+        "AtsSessionPlugin.java",
+        "AtsSessionPluginModule.java",
+    ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller:__subpackages__",
     ],
-    runtime_deps = [
-        ":ats_session_plugin_lib",
-        ":ats_session_plugin_module",
-    ],
-)
-
-java_library(
-    name = "ats_session_plugin_lib",
-    srcs = ["AtsSessionPlugin.java"],
     deps = [
         ":dump_env_var_command_handler",
         ":dump_stack_trace_command_handler",
@@ -37,25 +32,37 @@ java_library(
         ":list_devices_command_handler",
         ":list_modules_command_handler",
         ":run_command_handler",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_event",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
     ],
 )
 
 java_library(
-    name = "ats_session_plugin_module",
-    srcs = ["AtsSessionPluginModule.java"],
+    name = "ats_session_plugin_config_output",
+    srcs = ["AtsSessionPluginConfigOutput.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:__pkg__",
+    ],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
-        "@maven//:com_google_inject_guice",
+        "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
 
@@ -150,6 +157,7 @@ java_library(
     srcs = ["PluginOutputPrinter.java"],
     visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__"],
     deps = [
+        ":ats_session_plugin_config_output",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",

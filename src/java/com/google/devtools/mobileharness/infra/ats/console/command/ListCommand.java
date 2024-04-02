@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListDevicesCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListModulesCommand;
+import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.AtsSessionPluginConfigOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
@@ -125,13 +126,13 @@ class ListCommand implements Callable<Integer> {
       description = "List all invocation threads")
   public int invocations() throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
-    ImmutableList<AtsSessionPluginOutput> sessionPluginOutputs =
+    ImmutableList<AtsSessionPluginConfigOutput> sessionPluginConfigOutputs =
         atsSessionStub.getAllSessions(
             RunCommand.RUN_COMMAND_SESSION_NAME,
             String.format(
                 "%s|%s",
                 SessionStatus.SESSION_SUBMITTED.name(), SessionStatus.SESSION_RUNNING.name()));
-    String result = PluginOutputPrinter.listInvocations(sessionPluginOutputs);
+    String result = PluginOutputPrinter.listInvocations(sessionPluginConfigOutputs);
     consoleUtil.printlnStdout(result);
     return ExitCode.OK;
   }

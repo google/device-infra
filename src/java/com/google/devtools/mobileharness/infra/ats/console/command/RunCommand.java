@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.MoblyResultInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultFormatter;
@@ -101,8 +102,6 @@ import picocli.CommandLine.Spec;
 final class RunCommand implements Callable<Integer> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static final AtomicInteger RUNNING_COMMAND_COUNT = new AtomicInteger(0);
 
   @Parameters(
       index = "0",
@@ -199,6 +198,9 @@ final class RunCommand implements Callable<Integer> {
 
   private static final String RUN_RETRY_SESSION_ID = "retry_session_id";
   private static final String RUN_RETRY_TYPE = "retry_type";
+
+  private static final AtomicInteger NEXT_COMMAND_ID = new AtomicInteger(1);
+  private static final AtomicInteger RUNNING_COMMAND_COUNT = new AtomicInteger(0);
 
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
@@ -452,6 +454,11 @@ final class RunCommand implements Callable<Integer> {
         runCommand.setTestName(test);
       }
     }
+
+    runCommand.setInitialState(
+        RunCommandState.newBuilder()
+            .setCommandId(Integer.toString(NEXT_COMMAND_ID.getAndIncrement()))
+            .setStateSummary(String.format("pending %s", runCommand.getTestPlan())));
 
     serverLogPrinter.enable(true);
     ListenableFuture<AtsSessionPluginOutput> atsRunSessionFuture =

@@ -91,16 +91,21 @@ message RunCommand {
 
   // Optional.
   optional string test_name = 13;
+
+  // Required.
+  RunCommandState initial_state = 14;
 }
 
 message RunCommandState {
   // Required.
   string command_id = 1;
 
-  // Required.
+  // Optional.
+  //
+  // The time that the first device is allocated.
   google.protobuf.Timestamp start_time = 2;
 
-  // Required.
+  // Optional.
   repeated string device_id = 3;
 
   // Required.

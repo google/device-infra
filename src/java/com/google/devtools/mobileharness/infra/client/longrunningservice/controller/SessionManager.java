@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.constan
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionEnvironmentPreparer.SessionEnvironment;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
@@ -212,46 +213,56 @@ public class SessionManager {
     Predicate<SessionStatus> sessionStatusFilter = getSessionStatusFilter(sessionFilter);
     Optional<Predicate<SessionConfig>> sessionConfigFilter = getSessionConfigFilter(sessionFilter);
     Optional<Predicate<SessionOutput>> sessionOutputFilter = getSessionOutputFilter(sessionFilter);
+    ImmutableList<SessionDetail> sessions;
     synchronized (sessionsLock) {
-      return Streams.concat(
-              sessionStatusFilter.test(SessionStatus.SESSION_SUBMITTED)
-                  ? pendingSessions.values().stream()
-                      .map(PendingSession::sessionDetail)
-                      .filter(
-                          sessionDetail ->
-                              testSession(
-                                  sessionConfigFilter.orElse(null),
-                                  sessionOutputFilter.orElse(null),
-                                  sessionDetail::getSessionConfig,
-                                  sessionDetail::getSessionOutput))
-                  : Stream.empty(),
-              sessionStatusFilter.test(SessionStatus.SESSION_RUNNING)
-                  ? runningSessions.values().stream()
-                      .map(RunningSession::sessionRunner)
-                      .filter(
-                          sessionRunner ->
-                              testSession(
-                                  sessionConfigFilter.orElse(null),
-                                  sessionOutputFilter.orElse(null),
-                                  sessionRunner::getSessionConfig,
-                                  () ->
-                                      sessionRunner
-                                          .getSession(/* fieldMask= */ null)
-                                          .getSessionOutput()))
-                      .map(sessionRunner -> sessionRunner.getSession(fieldMask))
-                  : Stream.empty(),
-              sessionStatusFilter.test(SessionStatus.SESSION_FINISHED)
-                  ? archivedSessions.values().stream()
-                      .filter(
-                          sessionDetail ->
-                              testSession(
-                                  sessionConfigFilter.orElse(null),
-                                  sessionOutputFilter.orElse(null),
-                                  sessionDetail::getSessionConfig,
-                                  sessionDetail::getSessionOutput))
-                  : Stream.empty())
-          .collect(toImmutableList());
+      sessions =
+          Streams.concat(
+                  sessionStatusFilter.test(SessionStatus.SESSION_SUBMITTED)
+                      ? pendingSessions.values().stream()
+                          .map(PendingSession::sessionDetail)
+                          .filter(
+                              sessionDetail ->
+                                  testSession(
+                                      sessionConfigFilter.orElse(null),
+                                      sessionOutputFilter.orElse(null),
+                                      sessionDetail::getSessionConfig,
+                                      sessionDetail::getSessionOutput))
+                      : Stream.empty(),
+                  sessionStatusFilter.test(SessionStatus.SESSION_RUNNING)
+                      ? runningSessions.values().stream()
+                          .map(RunningSession::sessionRunner)
+                          .filter(
+                              sessionRunner ->
+                                  testSession(
+                                      sessionConfigFilter.orElse(null),
+                                      sessionOutputFilter.orElse(null),
+                                      sessionRunner::getSessionConfig,
+                                      () ->
+                                          sessionRunner
+                                              .getSession(/* fieldMask= */ null)
+                                              .getSessionOutput()))
+                          .map(sessionRunner -> sessionRunner.getSession(fieldMask))
+                      : Stream.empty(),
+                  sessionStatusFilter.test(SessionStatus.SESSION_FINISHED)
+                      ? archivedSessions.values().stream()
+                          .filter(
+                              sessionDetail ->
+                                  testSession(
+                                      sessionConfigFilter.orElse(null),
+                                      sessionOutputFilter.orElse(null),
+                                      sessionDetail::getSessionConfig,
+                                      sessionDetail::getSessionOutput))
+                      : Stream.empty())
+              .collect(toImmutableList());
     }
+    logger.atInfo().log(
+        "Get sessions, filter=[%s], sessions=%s",
+        sessionFilter == null ? null : shortDebugString(sessionFilter),
+        sessions.stream()
+            .map(SessionDetail::getSessionId)
+            .map(SessionId::getId)
+            .collect(toImmutableList()));
+    return sessions;
   }
 
   private static boolean testSession(

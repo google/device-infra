@@ -30,6 +30,7 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Stream;
 import picocli.CommandLine.ExitCode;
 
@@ -60,29 +61,41 @@ public class PluginOutputPrinter {
   }
 
   /** Prints output of "list invocations" command. */
-  public static String listInvocations(List<AtsSessionPluginOutput> outputs) {
+  public static String listInvocations(List<AtsSessionPluginConfigOutput> configOutputs) {
     ImmutableList<ImmutableList<String>> table =
         Stream.concat(
                 Stream.of(LIST_INVOCATIONS_HEADER),
-                outputs.stream()
-                    .flatMap(
-                        pluginOutput ->
-                            pluginOutput.hasRunCommandState()
-                                ? Stream.of(pluginOutput.getRunCommandState())
-                                : Stream.empty())
+                configOutputs.stream()
+                    .map(PluginOutputPrinter::getRunCommandState)
                     .sorted(comparing(RunCommandState::getCommandId))
                     .map(PluginOutputPrinter::formatRunCommandState))
             .collect(toImmutableList());
     return TableFormatter.displayTable(table);
   }
 
+  private static RunCommandState getRunCommandState(
+      AtsSessionPluginConfigOutput pluginConfigOutput) {
+    return pluginConfigOutput
+        .output()
+        .flatMap(
+            pluginOutput ->
+                pluginOutput.hasRunCommandState()
+                    ? Optional.of(pluginOutput.getRunCommandState())
+                    : Optional.empty())
+        .orElse(pluginConfigOutput.config().getRunCommand().getInitialState());
+  }
+
   private static ImmutableList<String> formatRunCommandState(RunCommandState runCommandState) {
     return ImmutableList.of(
         runCommandState.getCommandId(),
-        TimeUtils.toReadableDurationString(
-            Duration.between(
-                TimeUtils.toJavaInstant(runCommandState.getStartTime()), Instant.now())),
-        runCommandState.getDeviceIdList().stream().collect(joining(", ", "[", "]")),
+        runCommandState.hasStartTime()
+            ? TimeUtils.toReadableDurationString(
+                Duration.between(
+                    TimeUtils.toJavaInstant(runCommandState.getStartTime()), Instant.now()))
+            : "n/a",
+        runCommandState.getDeviceIdCount() > 0
+            ? runCommandState.getDeviceIdList().stream().collect(joining(", ", "[", "]"))
+            : "n/a",
         runCommandState.getStateSummary());
   }
 

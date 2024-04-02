@@ -43,6 +43,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:ats_session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:server_log_printer",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:ats_session_plugin_config_output",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:plugin_output_printer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:mobly_result_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_result_formatter",
