@@ -119,7 +119,7 @@ class RunCommandHandler {
    * Copies xTS tradefed and non-tradefed generated logs/results into proper locations within the
    * given xts root dir.
    */
-  void handleResultProcessing(RunCommand command, SessionInfo sessionInfo)
+  void handleResultProcessing(RunCommand command, SessionInfo sessionInfo, String summaryReport)
       throws MobileHarnessException, InterruptedException {
     try {
       if (!localFileUtil.isDirExist(command.getXtsRootDir())) {
@@ -145,7 +145,8 @@ class RunCommandHandler {
                       Success.newBuilder()
                           .setOutputMessage(
                               String.format(
-                                  "run_command session [%s] ended", sessionInfo.getSessionId())))
+                                  "run_command session [%s] ended\n%s",
+                                  sessionInfo.getSessionId(), summaryReport)))
                   .build(),
           AtsSessionPluginOutput.class);
     }

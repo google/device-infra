@@ -91,6 +91,11 @@ public class XtsTradefedTest extends BaseDriver
     implements SpecConfigable<XtsTradefedTestDriverSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  public static final String TRADEFED_TESTS_PASSED = "tradefed_tests_passed";
+  public static final String TRADEFED_TESTS_FAILED = "tradefed_tests_failed";
+  public static final String TRADEFED_TESTS_DONE = "tradefed_tests_done";
+  public static final String TRADEFED_TESTS_TOTAL = "tradefed_tests_total";
+
   @VisibleForTesting
   static final String COMPATIBILITY_CONSOLE_CLASS =
       "com.android.compatibility.common.tradefed.command.CompatibilityConsole";
@@ -190,7 +195,7 @@ public class XtsTradefedTest extends BaseDriver
               "Finished running %s test. xTS run command exit status: %s",
               xtsType, xtsRunCommandSuccess);
 
-      if (xtsRunCommandSuccess && isTestRunPass(tmpXtsRootDir, xtsType)) {
+      if (xtsRunCommandSuccess && isTestRunPass(tmpXtsRootDir, xtsType, testInfo)) {
         testInfo.resultWithCause().setPass();
       } else {
         // The test run command exit in success but contains failure cases.
@@ -211,7 +216,8 @@ public class XtsTradefedTest extends BaseDriver
     }
   }
 
-  private boolean isTestRunPass(Path tmpXtsRootDir, XtsType xtsType) throws MobileHarnessException {
+  private boolean isTestRunPass(Path tmpXtsRootDir, XtsType xtsType, TestInfo testInfo)
+      throws MobileHarnessException {
     Path tmpXtsResultsDir = getXtsResultsDir(tmpXtsRootDir, xtsType);
     if (localFileUtil.isDirExist(tmpXtsResultsDir)) {
       List<Path> resultDirs =
@@ -224,10 +230,16 @@ public class XtsTradefedTest extends BaseDriver
       Path testResultXmlPath = resultDirs.get(0).resolve("test_result.xml");
       if (localFileUtil.isFileExist(testResultXmlPath)) {
         Optional<Result> result = compatibilityReportParser.parse(testResultXmlPath);
+        Map<String, String> tradefedTestSummary = new HashMap<>();
         long passedNumber = result.get().getSummary().getPassed();
         long failedNumber = result.get().getSummary().getFailed();
         long doneNumber = result.get().getSummary().getModulesDone();
         long totalNumber = result.get().getSummary().getModulesTotal();
+        tradefedTestSummary.put(TRADEFED_TESTS_PASSED, String.valueOf(passedNumber));
+        tradefedTestSummary.put(TRADEFED_TESTS_FAILED, String.valueOf(failedNumber));
+        tradefedTestSummary.put(TRADEFED_TESTS_DONE, String.valueOf(doneNumber));
+        tradefedTestSummary.put(TRADEFED_TESTS_TOTAL, String.valueOf(totalNumber));
+        testInfo.jobInfo().params().addAll(tradefedTestSummary);
         if (doneNumber == totalNumber && failedNumber == 0 && passedNumber > 0) {
           return true;
         }

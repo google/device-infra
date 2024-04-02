@@ -84,6 +84,7 @@ java_library(
     name = "mobly_test_info_map_helper",
     srcs = ["MoblyTestInfoMapHelper.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
     ],

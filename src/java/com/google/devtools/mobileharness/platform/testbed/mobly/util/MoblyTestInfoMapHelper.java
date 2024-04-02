@@ -22,6 +22,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblySummaryEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyTestEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyUserDataEntry;
 import com.google.devtools.mobileharness.infra.ats.console.result.mobly.MoblyYamlDocEntry;
@@ -32,6 +33,7 @@ import com.google.devtools.mobileharness.platform.testbed.mobly.MoblyConstant.Te
 import com.google.devtools.mobileharness.shared.util.error.ErrorModelConverter;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -95,6 +97,12 @@ public class MoblyTestInfoMapHelper {
           ExtErrorId.MOBLY_TEST_CASE_ERROR,
           MoblyResult.NULL,
           ExtErrorId.MOBLY_TEST_CASE_ERROR);
+
+  public static final String MOBLY_TESTS_PASSED = "mobly_tests_passed";
+  public static final String MOBLY_TESTS_FAILED_AND_ERROR = "mobly_tests_failed_and_error";
+  public static final String MOBLY_TESTS_DONE = "mobly_tests_done";
+  public static final String MOBLY_TESTS_SKIPPED = "mobly_tests_skipped";
+  public static final String MOBLY_TESTS_TOTAL = "mobly_tests_total";
 
   /**
    * Maps a single MoblyTestEntry to a child TestInfo under the given parent TestInfo.
@@ -227,6 +235,22 @@ public class MoblyTestInfoMapHelper {
     for (MoblyYamlDocEntry entry : moblyEntryList) {
       if (Objects.equals(entry.getType(), MoblyYamlDocEntry.Type.USERDATA)) {
         map(testInfo, (MoblyUserDataEntry) entry);
+      }
+    }
+
+    // Collect Mobly test summary.
+    for (MoblyYamlDocEntry entry : moblyEntryList) {
+      Map<String, String> moblyTestSummary = new HashMap<>();
+      if (Objects.equals(entry.getType(), MoblyYamlDocEntry.Type.SUMMARY)) {
+        MoblySummaryEntry summaryEntry = (MoblySummaryEntry) entry;
+        moblyTestSummary.put(MOBLY_TESTS_PASSED, String.valueOf(summaryEntry.passed()));
+        moblyTestSummary.put(
+            MOBLY_TESTS_FAILED_AND_ERROR,
+            String.valueOf(summaryEntry.failed() + summaryEntry.error()));
+        moblyTestSummary.put(MOBLY_TESTS_DONE, String.valueOf(summaryEntry.executed()));
+        moblyTestSummary.put(MOBLY_TESTS_SKIPPED, String.valueOf(summaryEntry.skipped()));
+        moblyTestSummary.put(MOBLY_TESTS_TOTAL, String.valueOf(summaryEntry.requested()));
+        testInfo.jobInfo().params().addAll(moblyTestSummary);
       }
     }
   }
