@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("//tools/build_defs/proto/cpp:cc_proto_library.bzl", "cc_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -30,6 +32,15 @@ proto_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_proto",
     ],
+)
+
+cc_proto_library(
+    name = "setting_cc_proto",
+    visibility = [
+        "//:deviceinfra_all_pkg",
+        "//speech/service/context/device/benchmark:__pkg__",
+    ],
+    deps = [":setting_proto"],
 )
 
 java_proto_library(
