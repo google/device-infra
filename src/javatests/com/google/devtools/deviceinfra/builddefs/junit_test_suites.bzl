@@ -24,7 +24,8 @@ def _package_from_path(package_path):
 def junit_test_suites(
         name,
         sizes = None,
-        deps = None):
+        deps = None,
+        jvm_flags = None):
     """ Generate junit suite from input
 
     Wrapper of native.test_suite for bazel tests.
@@ -33,6 +34,7 @@ def junit_test_suites(
       name: The name used for the genrule.
       sizes: (optional; ignored in bazel tests).
       deps: The deps that are needed by each of the generated java_test targets.
+      jvm_flags: A list of jvm flags for java tests.
 
     Returns:
       A rule definition that should be stored in a global whose name ends in
@@ -61,6 +63,7 @@ def junit_test_suites(
             name = test_name,
             test_class = package + "." + f,
             runtime_deps = deps,
+            jvm_flags = jvm_flags,
         )
     native.test_suite(
         name = name,

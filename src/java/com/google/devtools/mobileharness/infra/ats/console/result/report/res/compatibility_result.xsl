@@ -15,12 +15,16 @@
 -->
 
 <!DOCTYPE xsl:stylesheet [ <!ENTITY nbsp "&#160;"> ]>
-<xsl:stylesheet version="2.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:stylesheet version="2.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+                xmlns:redirect="http://xml.apache.org/xalan/redirect"
+                extension-element-prefixes="redirect">
 
     <xsl:output method="html" version="5.0" encoding="UTF-8" indent="yes"/>
 
-    <xsl:template match="/">
+    <xsl:param name="reportDir" select="'.'"/>
+    <xsl:param name="reportName" select="'test_result.html'"/>
 
+    <xsl:template match="/">
         <html>
             <head>
                 <title>Test Report</title>
@@ -137,8 +141,22 @@
                         <xsl:for-each select="Result/Module">
                             <tr>
                                 <td>
-                                    <xsl:variable name="href"><xsl:value-of select="@abi"/>&#xA0;<xsl:value-of select="@name"/></xsl:variable>
-                                    <a href="#{$href}"><xsl:value-of select="@abi"/>&#xA0;<xsl:value-of select="@name"/></a>
+                                    <xsl:variable name="href">
+                                        <xsl:value-of select="@abi"/>&#xA0;<xsl:value-of
+                                        select="@name"/>
+                                    </xsl:variable>
+                                    <xsl:choose>
+                                        <xsl:when test="count(TestCase/Test) &gt; 0">
+                                            <a href="module_reports/{$href}.html">
+                                                <xsl:value-of select="$href"/>
+                                            </a>
+                                        </xsl:when>
+                                        <xsl:otherwise>
+                                            <a>
+                                                <xsl:value-of select="$href"/>
+                                            </a>
+                                        </xsl:otherwise>
+                                    </xsl:choose>
                                 </td>
                                 <td>
                                     <xsl:value-of select="count(TestCase/Test[@result = 'pass'])"/>
@@ -177,151 +195,200 @@
                 </xsl:call-template>
 
                 <br/>
-                <xsl:call-template name="detailedTestReport" />
+                <xsl:call-template name="detailedTestReport"/>
 
             </body>
         </html>
     </xsl:template>
 
     <xsl:template name="filteredResultTestReport">
-        <xsl:param name="header" />
-        <xsl:param name="resultFilter" />
-        <xsl:variable name="numMatching" select="count(Result/Module/TestCase/Test[@result=$resultFilter])" />
+        <xsl:param name="header"/>
+        <xsl:param name="resultFilter"/>
+        <xsl:variable name="numMatching"
+                      select="count(Result/Module/TestCase/Test[@result=$resultFilter])"/>
         <xsl:if test="$numMatching &gt; 0">
-            <h2 align="center"><xsl:value-of select="$header" /> (<xsl:value-of select="$numMatching"/>)</h2>
-            <xsl:call-template name="detailedTestReport">
-                <xsl:with-param name="resultFilter" select="$resultFilter"/>
-                <xsl:with-param name="fullStackTrace" select="true()"/>
-            </xsl:call-template>
+            <h2 align="center">
+                <xsl:value-of select="$header"/> (<xsl:value-of select="$numMatching"/>)
+            </h2>
+            <div>
+                <xsl:for-each select="Result/Module">
+                    <xsl:if test="count(TestCase/Test[@result=$resultFilter]) &gt; 0">
+                        <table class="testdetails">
+                            <xsl:call-template name="moduleTableHeader"/>
+                            <xsl:apply-templates select="TestCase/Test[@result=$resultFilter]">
+                                <xsl:with-param name="fullStackTrace" select="true()"/>
+                            </xsl:apply-templates>
+                        </table>
+                    </xsl:if>
+                </xsl:for-each>
+            </div>
         </xsl:if>
     </xsl:template>
 
     <xsl:template name="detailedTestReport">
-        <xsl:param name="resultFilter" />
-        <xsl:param name="fullStackTrace" />
-        <div>
-            <xsl:for-each select="Result/Module">
-                <xsl:if test="$resultFilter=''
-                        or count(TestCase/Test[@result=$resultFilter]) &gt; 0">
+        <xsl:for-each select="Result/Module">
+            <xsl:variable name="testCount" select="count(TestCase/Test)"/>
+            <xsl:if test="$testCount &gt; 0">
+                <xsl:call-template name="detailedTestReportPage"/>
+            </xsl:if>
+        </xsl:for-each>
+    </xsl:template>
 
-                    <table class="testdetails">
-                        <tr>
-                            <td class="module" colspan="3">
-                                <xsl:variable name="href"><xsl:value-of select="@abi"/>&#xA0;<xsl:value-of select="@name"/></xsl:variable>
-                                <a name="{$href}"><xsl:value-of select="@abi"/>&#xA0;<xsl:value-of select="@name"/></a>
-                            </td>
-                        </tr>
+    <xsl:template name="detailedTestReportPage">
+        <xsl:variable name="href">
+            <xsl:value-of select="@abi"/>&#xA0;<xsl:value-of select="@name"/>
+        </xsl:variable>
+        <redirect:write file="{$reportDir}/module_reports/{$href}.html">
+            <html>
+                <head>
+                    <title>
+                    </title>
+                    <style type="text/css">
+                        @import "../compatibility_result.css";
+                    </style>
+                </head>
+                <body>
+                    <div>
+                        <table class="title">
+                            <tr>
+                                <td align="left">
+                                    <img src="../logo.png"/>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                    <!-- Paginator -->
+                    <div style="text-align: center">
+                        <a href="../{$reportName}">Home</a>
+                    </div>
+                    <div>
+                        <table class="testdetails">
+                            <xsl:call-template name="moduleTableHeader"/>
+                            <xsl:apply-templates select="descendant::Test"/>
+                        </table>
+                    </div>
+                </body>
+            </html>
+        </redirect:write>
+    </xsl:template>
 
-                        <tr>
-                            <th width="30%">Test</th>
-                            <th width="5%">Result</th>
-                            <th>Details</th>
-                        </tr>
+    <!-- Header for module result table -->
+    <xsl:template name="moduleTableHeader">
+        <tr>
+            <td class="module" colspan="3">
+                <xsl:variable name="href">
+                    <xsl:value-of select="@abi"/>&#xA0;<xsl:value-of select="@name"/>
+                </xsl:variable>
+                <a name="{$href}">
+                    <xsl:value-of select="$href"/>
+                </a>
+            </td>
+        </tr>
 
-                        <xsl:for-each select="TestCase">
-                            <xsl:variable name="TestCase" select="."/>
-                            <!-- test -->
-                            <xsl:for-each select="Test">
-                                <xsl:if test="$resultFilter='' or @result=$resultFilter">
-                                    <tr>
-                                        <td class="testname"> <xsl:value-of select="$TestCase/@name"/>#<xsl:value-of select="@name"/></td>
+        <tr>
+            <th width="30%">Test</th>
+            <th width="5%">Result</th>
+            <th>Details</th>
+        </tr>
+    </xsl:template>
 
-                                        <!-- test results -->
-                                        <xsl:if test="@result='pass'">
-                                            <td class="pass">
-                                                <div style="text-align: center; margin-left:auto; margin-right:auto;">
-                                                    <xsl:value-of select="@result"/>
-                                                </div>
-                                            </td>
-                                            <td class="failuredetails"/>
-                                        </xsl:if>
+    <!-- Table row for TestCase/Test -->
+    <xsl:template match="Test">
+        <xsl:param name="fullStackTrace"/>
+        <tr>
+            <td class="testname">
+                <xsl:value-of select="../@name"/>#<xsl:value-of select="@name"/>
+            </td>
 
-                                        <xsl:if test="@result='IGNORED'">
-                                            <td class="pass">
-                                                <div style="text-align: center; margin-left:auto; margin-right:auto;">
-                                                    <xsl:value-of select="@result"/>
-                                                </div>
-                                            </td>
-                                            <td class="failuredetails"/>
-                                        </xsl:if>
+            <!-- test results -->
+            <xsl:if test="@result='pass'">
+                <td class="pass">
+                    <div style="text-align: center; margin-left:auto; margin-right:auto;">
+                        <xsl:value-of select="@result"/>
+                    </div>
+                </td>
+                <td class="failuredetails"/>
+            </xsl:if>
 
-                                        <xsl:if test="@result='fail'">
-                                            <td class="failed">
-                                                <div style="text-align: center; margin-left:auto; margin-right:auto;">
-                                                    <xsl:value-of select="@result"/>
-                                                </div>
-                                            </td>
-                                            <td class="failuredetails">
-                                                <div class="details">
-                                                    <xsl:choose>
-                                                        <xsl:when test="boolean($fullStackTrace)=true()">
-                                                            <xsl:value-of select="Failure/StackTrace" />
-                                                        </xsl:when>
-                                                        <xsl:otherwise>
-                                                            <xsl:value-of select="Failure/@message"/>
-                                                        </xsl:otherwise>
-                                                    </xsl:choose>
-                                                </div>
-                                            </td>
-                                        </xsl:if>
+            <xsl:if test="@result='IGNORED'">
+                <td class="pass">
+                    <div style="text-align: center; margin-left:auto; margin-right:auto;">
+                        <xsl:value-of select="@result"/>
+                    </div>
+                </td>
+                <td class="failuredetails"/>
+            </xsl:if>
 
-                                        <xsl:if test="@result='ASSUMPTION_FAILURE'">
-                                            <td class="pass">
-                                                <div style="text-align: center; margin-left:auto; margin-right:auto;">
-                                                    <xsl:value-of select="@result"/>
-                                                </div>
-                                            </td>
-                                            <td class="failuredetails">
-                                                <div class="details">
-                                                    <xsl:choose>
-                                                        <xsl:when test="boolean($fullStackTrace)=true()">
-                                                            <xsl:value-of select="Failure/StackTrace" />
-                                                        </xsl:when>
-                                                        <xsl:otherwise>
-                                                            <xsl:value-of select="Failure/@message"/>
-                                                        </xsl:otherwise>
-                                                    </xsl:choose>
-                                                </div>
-                                            </td>
-                                        </xsl:if>
+            <xsl:if test="@result='fail'">
+                <td class="failed">
+                    <div style="text-align: center; margin-left:auto; margin-right:auto;">
+                        <xsl:value-of select="@result"/>
+                    </div>
+                </td>
+                <td class="failuredetails">
+                    <div class="details">
+                        <xsl:choose>
+                            <xsl:when test="boolean($fullStackTrace)=true()">
+                                <xsl:value-of select="Failure/StackTrace"/>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:value-of select="Failure/@message"/>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </div>
+                </td>
+            </xsl:if>
 
-                                        <xsl:if test="@result='not_executed'">
-                                            <td class="not_executed">
-                                                <div style="text-align: center; margin-left:auto; margin-right:auto;">
-                                                    <xsl:value-of select="@result"/>
-                                                </div>
-                                            </td>
-                                            <td class="failuredetails"></td>
-                                        </xsl:if>
-                                    </tr> <!-- finished with a row -->
-                                </xsl:if>
-                            </xsl:for-each> <!-- end test -->
-                        </xsl:for-each>
-                    </table>
-                </xsl:if>
-            </xsl:for-each> <!-- end test Module -->
-        </div>
+            <xsl:if test="@result='ASSUMPTION_FAILURE'">
+                <td class="pass">
+                    <div style="text-align: center; margin-left:auto; margin-right:auto;">
+                        <xsl:value-of select="@result"/>
+                    </div>
+                </td>
+                <td class="failuredetails">
+                    <div class="details">
+                        <xsl:choose>
+                            <xsl:when test="boolean($fullStackTrace)=true()">
+                                <xsl:value-of select="Failure/StackTrace"/>
+                            </xsl:when>
+                            <xsl:otherwise>
+                                <xsl:value-of select="Failure/@message"/>
+                            </xsl:otherwise>
+                        </xsl:choose>
+                    </div>
+                </td>
+            </xsl:if>
+
+            <xsl:if test="@result='not_executed'">
+                <td class="not_executed">
+                    <div style="text-align: center; margin-left:auto; margin-right:auto;">
+                        <xsl:value-of select="@result"/>
+                    </div>
+                </td>
+                <td class="failuredetails"/>
+            </xsl:if>
+        </tr> <!-- finished with a row -->
     </xsl:template>
 
     <!-- Take a delimited string and insert line breaks after a some number of elements. -->
     <xsl:template name="formatDelimitedString">
-        <xsl:param name="string" />
-        <xsl:param name="numTokensPerRow" select="10" />
-        <xsl:param name="tokenIndex" select="1" />
+        <xsl:param name="string"/>
+        <xsl:param name="numTokensPerRow" select="10"/>
+        <xsl:param name="tokenIndex" select="1"/>
         <xsl:if test="$string">
             <!-- Requires the last element to also have a delimiter after it. -->
-            <xsl:variable name="token" select="substring-before($string, ';')" />
-            <xsl:value-of select="$token" />
+            <xsl:variable name="token" select="substring-before($string, ';')"/>
+            <xsl:value-of select="$token"/>
             <xsl:text>&#160;</xsl:text>
 
             <xsl:if test="$tokenIndex mod $numTokensPerRow = 0">
-                <br />
+                <br/>
             </xsl:if>
 
             <xsl:call-template name="formatDelimitedString">
-                <xsl:with-param name="string" select="substring-after($string, ';')" />
-                <xsl:with-param name="numTokensPerRow" select="$numTokensPerRow" />
-                <xsl:with-param name="tokenIndex" select="$tokenIndex + 1" />
+                <xsl:with-param name="string" select="substring-after($string, ';')"/>
+                <xsl:with-param name="numTokensPerRow" select="$numTokensPerRow"/>
+                <xsl:with-param name="tokenIndex" select="$tokenIndex + 1"/>
             </xsl:call-template>
         </xsl:if>
     </xsl:template>

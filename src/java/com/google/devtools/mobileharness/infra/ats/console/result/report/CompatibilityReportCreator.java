@@ -397,6 +397,8 @@ public class CompatibilityReportCreator {
         OutputStream outputStream = new FileOutputStream(report)) {
       Transformer transformer =
           TransformerFactory.newInstance().newTransformer(new StreamSource(xslStream));
+      transformer.setParameter("reportDir", inputXml.getParentFile().toString());
+      transformer.setParameter("reportName", HTML_REPORT_NAME);
       transformer.transform(new StreamSource(inputXml), new StreamResult(outputStream));
     } catch (IOException | TransformerException ignored) {
       logger.atSevere().log(
