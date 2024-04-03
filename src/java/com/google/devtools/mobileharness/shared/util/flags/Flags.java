@@ -326,6 +326,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> disableCellBroadcastReceiver = disableCellBroadcastReceiverDefault;
 
+  private static final Flag<Boolean> enableAndroidDeviceReadyCheckDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_android_device_ready_check",
+      description = "Whether to enable android device ready check.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableAndroidDeviceReadyCheck = enableAndroidDeviceReadyCheckDefault;
+
   private static final Flag<Boolean> enableApiConfigDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.platform.android.shared.constant.Packag
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.android.AndroidPackages;
 import com.google.wireless.qa.mobileharness.shared.android.Sqlite;
@@ -114,7 +115,9 @@ public abstract class AndroidDeviceDelegate {
     try {
       DeviceCache.getInstance().cache(deviceId, device.getClass().getSimpleName(), CACHE_TIMEOUT);
       androidSystemStateUtil.waitForDevice(deviceId, WAIT_FOR_DEVICE_TIMEOUT);
-      androidSystemStateUtil.waitUntilReady(deviceId);
+      if (Flags.instance().enableAndroidDeviceReadyCheck.get()) {
+        androidSystemStateUtil.waitUntilReady(deviceId);
+      }
     } finally {
       DeviceCache.getInstance().invalidateCache(deviceId);
     }
