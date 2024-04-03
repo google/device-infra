@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.infra.controller.plugin.loader.PluginInstantiator;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
@@ -67,17 +68,20 @@ public class SessionPluginLoader {
   private final EventBusBackend eventBusBackend;
   private final DeviceQuerier deviceQuerier;
   private final Instant serverStartTime;
+  private final LocalSessionStub localSessionStub;
 
   @Inject
   SessionPluginLoader(
       ReflectionUtil reflectionUtil,
       EventBusBackend eventBusBackend,
       DeviceQuerier deviceQuerier,
-      @ServerStartTime Instant serverStartTime) {
+      @ServerStartTime Instant serverStartTime,
+      LocalSessionStub localSessionStub) {
     this.reflectionUtil = reflectionUtil;
     this.eventBusBackend = eventBusBackend;
     this.deviceQuerier = deviceQuerier;
     this.serverStartTime = serverStartTime;
+    this.localSessionStub = localSessionStub;
   }
 
   public ImmutableList<SessionPlugin> loadSessionPlugins(
@@ -123,7 +127,12 @@ public class SessionPluginLoader {
       CloseableResources closeableResources = new CloseableResources();
       SessionPluginDefaultModule defaultModule =
           new SessionPluginDefaultModule(
-              sessionInfo, deviceQuerier, serverStartTime, sessionEnvironment, closeableResources);
+              sessionInfo,
+              deviceQuerier,
+              serverStartTime,
+              localSessionStub,
+              sessionEnvironment,
+              closeableResources);
 
       // Creates session plugin.
       Object sessionPlugin =
@@ -186,6 +195,7 @@ public class SessionPluginLoader {
     private final SessionInfo sessionInfo;
     private final DeviceQuerier deviceQuerier;
     private final Instant serverStartTime;
+    private final LocalSessionStub localSessionStub;
     private final SessionEnvironment sessionEnvironment;
     private final CloseableResources closeableResources;
 
@@ -193,11 +203,13 @@ public class SessionPluginLoader {
         SessionInfo sessionInfo,
         DeviceQuerier deviceQuerier,
         Instant serverStartTime,
+        LocalSessionStub localSessionStub,
         SessionEnvironment sessionEnvironment,
         CloseableResources closeableResources) {
       this.sessionInfo = sessionInfo;
       this.deviceQuerier = deviceQuerier;
       this.serverStartTime = serverStartTime;
+      this.localSessionStub = localSessionStub;
       this.sessionEnvironment = sessionEnvironment;
       this.closeableResources = closeableResources;
     }
@@ -224,6 +236,12 @@ public class SessionPluginLoader {
               String.format("session-plugin-%s-thread-pool", sessionInfo.getSessionPluginLabel()));
       closeableResources.add(threadPool::shutdownNow);
       return threadPool;
+    }
+
+    @Provides
+    @Singleton
+    LocalSessionStub provideLocalSessionStub() {
+      return localSessionStub;
     }
   }
 

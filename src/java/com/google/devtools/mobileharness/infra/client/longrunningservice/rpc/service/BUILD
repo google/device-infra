@@ -17,6 +17,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
     ],
 )
 
@@ -41,6 +42,27 @@ java_library(
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",
         "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "local_session_stub",
+    srcs = ["LocalSessionStub.java"],
+    deps = [
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+    ],
+)
+
+java_library(
+    name = "local_session_stub_impl",
+    srcs = ["LocalSessionStubImpl.java"],
+    deps = [
+        ":local_session_stub",
+        ":session_service",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

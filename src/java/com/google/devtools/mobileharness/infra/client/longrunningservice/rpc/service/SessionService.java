@@ -130,7 +130,7 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
         SessionServiceGrpc.getAbortSessionsMethod());
   }
 
-  private CreateSessionResponse doCreateSession(CreateSessionRequest request)
+  CreateSessionResponse doCreateSession(CreateSessionRequest request)
       throws MobileHarnessException {
     SessionDetail sessionDetail =
         sessionManager.addSession(request.getSessionConfig()).sessionDetail();

@@ -20,7 +20,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import javax.inject.Qualifier;
 
-/** Annotations for ATS OLC server. */
+/** Annotations for ATS console / local runner that connect to ATS OLC server. */
 public class Annotations {
 
   @Qualifier

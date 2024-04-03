@@ -85,6 +85,7 @@ message SessionPluginConfigs {
 // 5. java.time.Clock.
 // 6. @SessionTempDir Path.
 // 7. @SessionGenDir Path.
+// 8. LocalSessionStub.
 message SessionPluginConfig {
   // Required.
   SessionPluginLoadingConfig loading_config = 1;
