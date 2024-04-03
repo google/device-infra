@@ -58,18 +58,15 @@ public class TestPlanLoader {
   private static final String INCLUDE_FILTER_ATTR_NAME = "compatibility:include-filter";
   private static final String EXCLUDE_FILTER_ATTR_NAME = "compatibility:exclude-filter";
 
-  private final JarFile xtsTradefedJarFile;
-
-  public TestPlanLoader(Path xtsRootPath, XtsType type) throws MobileHarnessException {
-    this.xtsTradefedJarFile = createXtsTradefedJarFile(xtsRootPath, type);
+  public static TestPlanFilter parseFilters(Path xtsRootPath, XtsType type, String rootTestPlan)
+      throws MobileHarnessException {
+    JarFile xtsTradefedJarFile = createXtsTradefedJarFile(xtsRootPath, type);
+    return parseFilters(xtsTradefedJarFile, rootTestPlan);
   }
 
   @VisibleForTesting
-  public TestPlanLoader(JarFile xtsTradefedJarFile) {
-    this.xtsTradefedJarFile = xtsTradefedJarFile;
-  }
-
-  public TestPlanFilter parseFilters(String rootTestPlan) throws MobileHarnessException {
+  static TestPlanFilter parseFilters(JarFile xtsTradefedJarFile, String rootTestPlan)
+      throws MobileHarnessException {
     HashSet<String> includeFilters = new HashSet<>();
     HashSet<String> excludeFilters = new HashSet<>();
     HashSet<String> parsedTestPlans = new HashSet<>();
@@ -81,7 +78,7 @@ public class TestPlanLoader {
 
     while (pendingTestPlans.peek() != null) {
       String testPlan = pendingTestPlans.poll();
-      Optional<Document> testPlanXml = parseTestPlan(testPlan);
+      Optional<Document> testPlanXml = parseTestPlan(xtsTradefedJarFile, testPlan);
       parsedTestPlans.add(testPlan);
 
       if (testPlanXml.isEmpty()) {
@@ -111,7 +108,7 @@ public class TestPlanLoader {
         ImmutableSet.copyOf(includeFilters), ImmutableSet.copyOf(excludeFilters));
   }
 
-  private JarFile createXtsTradefedJarFile(Path xtsRootPath, XtsType type)
+  private static JarFile createXtsTradefedJarFile(Path xtsRootPath, XtsType type)
       throws MobileHarnessException {
     String xtsTypeName = Ascii.toLowerCase(type.name());
     Path xtsTradefedPath =
@@ -201,7 +198,8 @@ public class TestPlanLoader {
     }
   }
 
-  private Optional<Document> parseTestPlan(String testPlan) throws MobileHarnessException {
+  private static Optional<Document> parseTestPlan(JarFile xtsTradefedJarFile, String testPlan)
+      throws MobileHarnessException {
     logger.atInfo().log("Start to parse the test plan: %s", testPlan);
 
     String testPlanPath = String.format("config/%s.xml", testPlan);
@@ -225,6 +223,8 @@ public class TestPlanLoader {
           e);
     }
   }
+
+  private TestPlanLoader() {}
 
   /** A data class for all filters collected from the test plan. */
   @AutoValue

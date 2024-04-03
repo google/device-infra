@@ -25,7 +25,6 @@ import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import java.io.FileInputStream;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,13 +51,6 @@ public final class TestPlanLoaderTest {
   @Mock private JarEntry entryB;
   @Mock private JarEntry entryC;
 
-  private TestPlanLoader testPlanLoader;
-
-  @Before
-  public void setup() {
-    testPlanLoader = new TestPlanLoader(xtsTradefedJarFile);
-  }
-
   @Test
   public void parseFilters_success() throws Exception {
     when(xtsTradefedJarFile.getJarEntry(eq("config/test-plan-a.xml"))).thenReturn(entryA);
@@ -71,7 +63,7 @@ public final class TestPlanLoaderTest {
     when(xtsTradefedJarFile.getInputStream(eq(entryC)))
         .thenReturn(new FileInputStream(TEST_PLAN_C_XML));
 
-    TestPlanFilter filter = testPlanLoader.parseFilters("test-plan-a");
+    TestPlanFilter filter = TestPlanLoader.parseFilters(xtsTradefedJarFile, "test-plan-a");
     assertThat(filter.includeFilters())
         .containsExactly(
             "CtsAppSecurityHostTestCases"
