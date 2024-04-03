@@ -69,38 +69,6 @@ class DumpCommand implements Callable<Integer> {
   }
 
   @Command(
-      name = "bugreport",
-      aliases = {"b"},
-      description = "Dump a bugreport for the running instance")
-  public int bugreport() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
-  }
-
-  @Command(name = "commandQueue", description = "Dump the contents of the command execution queue")
-  public int commandQueue() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
-  }
-
-  @Command(
-      name = "commands",
-      description = "Dump all the config XML for the commands waiting to be executed")
-  public int commands() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
-  }
-
-  @Command(
-      name = "config",
-      aliases = {"c"},
-      description = "Dump the content of the specified config")
-  public int config() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
-  }
-
-  @Command(
       name = "env",
       aliases = {"e"},
       description = "Dump the environment variables available to test harness process")
