@@ -53,3 +53,24 @@ java_test(
         "@maven//:org_mockito_mockito_core",
     ],
 )
+
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/**/*"]),
+)
+
+java_test(
+    name = "TestPlanLoaderTest",
+    size = "medium",
+    srcs = ["TestPlanLoaderTest.java"],
+    data = [
+        ":testdata",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:test_plan_loader",
+        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
+    ],
+)

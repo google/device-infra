@@ -111,3 +111,22 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "test_plan_loader",
+    srcs = ["TestPlanLoader.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
+    ],
+)
