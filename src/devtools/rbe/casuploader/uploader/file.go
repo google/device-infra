@@ -1,21 +1,14 @@
 package uploader
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 
 	log "github.com/golang/glog"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
-	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunker"
-)
-
-const (
-	// ChunksDirName is the name of the dir for chunk files.
-	ChunksDirName = "_chunks"
-	// ChunksIndexFileName is the name of the chunks index file.
-	ChunksIndexFileName = "_chunks_index.json"
+	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
 )
 
 // FileUploader is the uploader for uploading a file to CAS.
@@ -46,15 +39,15 @@ func (fu *FileUploader) DoUpload() (digest.Digest, error) {
 		}
 	}()
 
-	chunksDir := filepath.Join(targetDir, ChunksDirName)
+	chunksDir := filepath.Join(targetDir, chunkerutil.ChunksDirName)
 	os.MkdirAll(chunksDir, 0755)
 
-	chunks, err := chunker.ChunkFile(fu.path, chunksDir, fu.CommonConfig.avgChunkSize)
+	chunksIndex, err := chunkerutil.ChunkFile(fu.path, path.Base(fu.path), chunksDir, fu.CommonConfig.avgChunkSize)
 	if err != nil {
 		return digest.Digest{}, fmt.Errorf("failed to chunk the file %s: %v", fu.path, err)
 	}
 
-	if createIndexFile(fu.path, targetDir, chunks) != nil {
+	if err := chunkerutil.CreateIndexFile(targetDir, []chunkerutil.ChunksIndex{chunksIndex}); err != nil {
 		return digest.Digest{}, fmt.Errorf("failed to create index file for file %s: %v", fu.path, err)
 	}
 
@@ -64,30 +57,4 @@ func (fu *FileUploader) DoUpload() (digest.Digest, error) {
 		return rootDigest, fmt.Errorf("failed to upload the directory %s for file %s: %v", targetDir, fu.path, err)
 	}
 	return rootDigest, nil
-}
-
-// ChunksIndex is the index of all chunks for a file.
-// A chunks index file contains a list of chunks index entries, one for each file for the upload.
-// TODO: For restoration, add fields for file attributes like permissions settings, time etc.
-type ChunksIndex struct {
-	// Relative to target dir
-	Path   string              `json:"path"`
-	Chunks []chunker.ChunkInfo `json:"chunks"`
-}
-
-func createIndexFile(path string, targetDir string, chunks []chunker.ChunkInfo) error {
-	filename := filepath.Base(path)
-	chunksIndex := ChunksIndex{Path: filename, Chunks: chunks}
-	content := []ChunksIndex{chunksIndex}
-	outputContent, err := json.MarshalIndent(content, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshall chunk index for the file %s: %v", path, err)
-	}
-
-	indexPath := filepath.Join(targetDir, ChunksIndexFileName)
-	if err = os.WriteFile(indexPath, outputContent, 0644); err != nil {
-		return fmt.Errorf("failed to write chunk index file for the file %s: %v", path, err)
-	}
-
-	return nil
 }
