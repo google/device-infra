@@ -105,16 +105,12 @@ proto_library(
     srcs = [
         "android_device_spec.proto",
     ],
-    visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
-    ],
+    visibility = ["//visibility:private"],
 )
 
 cc_proto_library(
     name = "android_device_spec_cc_proto",
-    visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
-    ],
+    visibility = ["//visibility:private"],
     deps = [":android_device_spec"],
 )
 
@@ -126,8 +122,6 @@ java_proto_library(
 
 java_lite_proto_library(
     name = "android_device_spec_java_proto_lite",
-    visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
-    ],
+    visibility = ["//visibility:private"],
     deps = [":android_device_spec"],
 )

@@ -97,9 +97,7 @@ java_library(
 java_library(
     name = "exception",
     srcs = ["TestStartedException.java"],
-    visibility = [
-        "//visibility:private",  # Only private by automation, not intent. Owner may accept CLs adding visibility. See go/scheuklappen#explicit-private.
-    ],
+    visibility = ["//visibility:private"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
