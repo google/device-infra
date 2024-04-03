@@ -17,6 +17,8 @@
 Macros for generating OLC server java binaries.
 """
 
+load("@rules_java//java:java_binary.bzl", "java_binary")
+
 def olc_server_binary(name, extra_runtime_deps, visibility = None):
     """Macro for generating OLC server java binaries.
 
@@ -26,7 +28,7 @@ def olc_server_binary(name, extra_runtime_deps, visibility = None):
         supported OmniLab drivers/decorators/devices and exec modes
       visibility: java_binary.visibility
     """
-    native.java_binary(
+    java_binary(
         name = name,
         main_class = "com.google.devtools.mobileharness.infra.client.longrunningservice.OlcServer",
         visibility = visibility,

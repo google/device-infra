@@ -15,6 +15,8 @@
 
 """ Rule for junit suite generation """
 
+load("@rules_java//java:java_test.bzl", "java_test")
+
 def _package_from_path(package_path):
     package = "com.google"
     if not package_path.startswith("src/javatests/com/google"):
@@ -59,7 +61,7 @@ def junit_test_suites(
 
         test_name = name + "_" + f
         tests.append(test_name)
-        native.java_test(
+        java_test(
             name = test_name,
             test_class = package + "." + f,
             runtime_deps = deps,
