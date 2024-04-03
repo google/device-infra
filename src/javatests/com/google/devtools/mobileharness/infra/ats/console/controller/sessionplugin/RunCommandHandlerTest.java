@@ -155,7 +155,7 @@ public final class RunCommandHandlerTest {
     when(sessionInfo.getAllJobs())
         .thenReturn(ImmutableList.of(tradefedJobInfo, nonTradefedJobInfo));
 
-    runCommandHandler.handleResultProcessing(command, sessionInfo, "summary");
+    runCommandHandler.handleResultProcessing(command, sessionInfo, "summary", true);
 
     assertThat(
             xtsRootDir

@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
@@ -119,7 +120,8 @@ class RunCommandHandler {
    * Copies xTS tradefed and non-tradefed generated logs/results into proper locations within the
    * given xts root dir.
    */
-  void handleResultProcessing(RunCommand command, SessionInfo sessionInfo, String summaryReport)
+  void handleResultProcessing(
+      RunCommand command, SessionInfo sessionInfo, String summaryReport, boolean isSessionPassed)
       throws MobileHarnessException, InterruptedException {
     try {
       if (!localFileUtil.isDirExist(command.getXtsRootDir())) {
@@ -137,17 +139,26 @@ class RunCommandHandler {
           resultDir, logDir, sessionInfo.getAllJobs(), generateSessionRequestInfo(command));
     } finally {
       sessionRequestHandlerUtil.cleanUpJobGenDirs(sessionInfo.getAllJobs());
-      // TODO: Sets success or failure based on the result.
+      String sessionSummary =
+          String.format(
+              "run_command session_id: [%s], command_id: [%s], result: %s.\n"
+                  + "command_line_args: %s\n%s",
+              sessionInfo.getSessionId(),
+              command.getInitialState().getCommandId(),
+              isSessionPassed ? "SUCCESS" : "FAILURE",
+              command.getInitialState().getCommandLineArgs(),
+              summaryReport);
       sessionInfo.setSessionPluginOutput(
-          oldOutput ->
-              (oldOutput == null ? AtsSessionPluginOutput.newBuilder() : oldOutput.toBuilder())
-                  .setSuccess(
-                      Success.newBuilder()
-                          .setOutputMessage(
-                              String.format(
-                                  "run_command session [%s] ended\n%s",
-                                  sessionInfo.getSessionId(), summaryReport)))
-                  .build(),
+          oldOutput -> {
+            AtsSessionPluginOutput.Builder builder =
+                oldOutput == null ? AtsSessionPluginOutput.newBuilder() : oldOutput.toBuilder();
+            if (isSessionPassed) {
+              builder.setSuccess(Success.newBuilder().setOutputMessage(sessionSummary).build());
+            } else {
+              builder.setFailure(Failure.newBuilder().setErrorMessage(sessionSummary).build());
+            }
+            return builder.build();
+          },
           AtsSessionPluginOutput.class);
     }
   }

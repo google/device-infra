@@ -103,6 +103,7 @@ public class MoblyTestInfoMapHelper {
   public static final String MOBLY_TESTS_DONE = "mobly_tests_done";
   public static final String MOBLY_TESTS_SKIPPED = "mobly_tests_skipped";
   public static final String MOBLY_TESTS_TOTAL = "mobly_tests_total";
+  public static final String MOBLY_JOBS_PASSED = "mobly_jobs_passed";
 
   /**
    * Maps a single MoblyTestEntry to a child TestInfo under the given parent TestInfo.
@@ -251,6 +252,12 @@ public class MoblyTestInfoMapHelper {
         moblyTestSummary.put(MOBLY_TESTS_SKIPPED, String.valueOf(summaryEntry.skipped()));
         moblyTestSummary.put(MOBLY_TESTS_TOTAL, String.valueOf(summaryEntry.requested()));
         testInfo.jobInfo().params().addAll(moblyTestSummary);
+        // Only if failed number is 0 and number of passed + skipped = requested, then we treat the
+        // mobly job as PASS.
+        if ((summaryEntry.failed() == 0)
+            && (summaryEntry.skipped() + summaryEntry.passed() == summaryEntry.requested())) {
+          testInfo.properties().add(MOBLY_JOBS_PASSED, "true");
+        }
       }
     }
   }

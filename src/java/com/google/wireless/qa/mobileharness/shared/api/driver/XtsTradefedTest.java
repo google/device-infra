@@ -95,6 +95,7 @@ public class XtsTradefedTest extends BaseDriver
   public static final String TRADEFED_TESTS_FAILED = "tradefed_tests_failed";
   public static final String TRADEFED_TESTS_DONE = "tradefed_tests_done";
   public static final String TRADEFED_TESTS_TOTAL = "tradefed_tests_total";
+  public static final String TRADEFED_JOBS_PASSED = "tradefed_jobs_passed";
 
   @VisibleForTesting
   static final String COMPATIBILITY_CONSOLE_CLASS =
@@ -241,6 +242,7 @@ public class XtsTradefedTest extends BaseDriver
         tradefedTestSummary.put(TRADEFED_TESTS_TOTAL, String.valueOf(totalNumber));
         testInfo.jobInfo().params().addAll(tradefedTestSummary);
         if (doneNumber == totalNumber && failedNumber == 0 && passedNumber > 0) {
+          testInfo.properties().add(TRADEFED_JOBS_PASSED, "true");
           return true;
         }
       }
