@@ -17,9 +17,13 @@
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
@@ -28,6 +32,7 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import java.nio.file.Path;
+import java.util.function.Consumer;
 
 /** Console command module for testing. */
 public class ConsoleCommandTestModule extends AbstractModule {
@@ -62,5 +67,17 @@ public class ConsoleCommandTestModule extends AbstractModule {
   @Provides
   ServerStartingLogger provideOlcServerStartingLogger(ConsoleUtil consoleUtil) {
     return consoleUtil::printlnStderr;
+  }
+
+  @Provides
+  @RunCommandParsingResultFuture
+  Consumer<ListenableFuture<SessionRequestInfo.Builder>> provideResultFuture() {
+    return resultFuture -> {};
+  }
+
+  @Provides
+  @ParseCommandOnly
+  Boolean provideParseCommandOnly() {
+    return false;
   }
 }

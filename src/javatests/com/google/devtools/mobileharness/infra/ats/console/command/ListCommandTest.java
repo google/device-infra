@@ -137,7 +137,9 @@ public class ListCommandTest {
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
-                () -> olcServerBinary));
+                () -> olcServerBinary,
+                future -> {},
+                /* parseCommandOnly= */ false));
     injector.injectMembers(this);
     atsConsole.injector = injector;
   }

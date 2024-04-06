@@ -68,8 +68,10 @@ java_library(
     name = "console_command_test_module",
     srcs = ["ConsoleCommandTestModule.java"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",

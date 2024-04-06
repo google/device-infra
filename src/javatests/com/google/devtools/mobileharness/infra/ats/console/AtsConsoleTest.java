@@ -127,7 +127,9 @@ public final class AtsConsoleTest {
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
-                () -> olcServerBinary));
+                () -> olcServerBinary,
+                future -> {},
+                /* parseCommandOnly= */ false));
     injector.injectMembers(this);
     atsConsole.injector = injector;
   }
@@ -149,7 +151,9 @@ public final class AtsConsoleTest {
                 lineReader,
                 consoleOutPrintStream,
                 consoleErrPrintStream,
-                () -> olcServerBinary));
+                () -> olcServerBinary,
+                future -> {},
+                /* parseCommandOnly= */ false));
     injector.injectMembers(this);
     atsConsole.injector = injector;
 

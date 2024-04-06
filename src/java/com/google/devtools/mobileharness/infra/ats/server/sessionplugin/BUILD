@@ -61,6 +61,7 @@ java_library(
     srcs = ["NewMultiCommandRequestHandler.java"],
     visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__"],
     deps = [
+        ":command_line_parser",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -88,5 +89,25 @@ java_library(
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
         "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "command_line_parser",
+    srcs = ["CommandLineParser.java"],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_module",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:guice_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:run_command",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:command_line_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/shell",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:info_picocli_picocli",
+        "@maven//:org_jline_jline",
     ],
 )

@@ -20,13 +20,17 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
@@ -39,6 +43,7 @@ import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 import org.jline.reader.LineReader;
@@ -55,6 +60,8 @@ public class AtsConsoleModule extends AbstractModule {
   private final PrintStream consoleOutputOut;
   private final PrintStream consoleOutputErr;
   private final Provider<Path> olcServerBinary;
+  private final Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture;
+  private final boolean parseCommandOnly;
 
   public AtsConsoleModule(
       String consoleId,
@@ -64,7 +71,9 @@ public class AtsConsoleModule extends AbstractModule {
       LineReader consoleLineReader,
       PrintStream consoleOutputOut,
       PrintStream consoleOutputErr,
-      Provider<Path> olcServerBinary) {
+      Provider<Path> olcServerBinary,
+      Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture,
+      boolean parseCommandOnly) {
     this.consoleId = consoleId;
     this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
     this.mainArgs = ImmutableList.copyOf(mainArgs);
@@ -73,6 +82,8 @@ public class AtsConsoleModule extends AbstractModule {
     this.consoleOutputOut = consoleOutputOut;
     this.consoleOutputErr = consoleOutputErr;
     this.olcServerBinary = olcServerBinary;
+    this.resultFuture = resultFuture;
+    this.parseCommandOnly = parseCommandOnly;
   }
 
   @Override
@@ -91,6 +102,18 @@ public class AtsConsoleModule extends AbstractModule {
   @MainArgs
   ImmutableList<String> provideMainArgs() {
     return mainArgs;
+  }
+
+  @Provides
+  @RunCommandParsingResultFuture
+  Consumer<ListenableFuture<SessionRequestInfo.Builder>> provideResultFuture() {
+    return resultFuture;
+  }
+
+  @Provides
+  @ParseCommandOnly
+  boolean provideParseCommandOnly() {
+    return parseCommandOnly;
   }
 
   @Provides

@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.command.RootCommand;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.CommandLineUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
@@ -62,16 +63,12 @@ import java.util.UUID;
 import javax.inject.Inject;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
-import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
-import org.jline.reader.impl.history.DefaultHistory;
-import org.jline.terminal.TerminalBuilder;
 import picocli.CommandLine;
 
 /** ATS Console. */
 public class AtsConsole {
 
-  private static final String APPNAME = "AtsConsole";
   private static final String HELP_PATTERN = "h|help";
 
   public static void main(String[] args) throws IOException {
@@ -86,7 +83,7 @@ public class AtsConsole {
     DeviceInfraServiceUtil.parseFlags(deviceInfraServiceFlags);
 
     // Initializes line reader and stdout/stderr.
-    LineReader lineReader = initializeLineReaderAndStdout();
+    LineReader lineReader = CommandLineUtil.initializeLineReaderAndStdout();
 
     // Creates Guice injector.
     Injector injector =
@@ -99,7 +96,9 @@ public class AtsConsole {
                 lineReader,
                 System.out,
                 System.err,
-                AtsConsole::getOlcServerBinary));
+                AtsConsole::getOlcServerBinary,
+                resultFuture -> {},
+                /* parseCommandOnly= */ false));
 
     // Creates ATS console.
     AtsConsole atsConsole = injector.getInstance(AtsConsole.class);
@@ -270,15 +269,6 @@ public class AtsConsole {
 
   private static Path getOlcServerBinary() {
     return Path.of(Flags.instance().atsConsoleOlcServerPath.getNonNull());
-  }
-
-  /** Initializes line reader. */
-  private static LineReader initializeLineReaderAndStdout() throws IOException {
-    return LineReaderBuilder.builder()
-        .appName(APPNAME)
-        .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
-        .history(new DefaultHistory())
-        .build();
   }
 
   private void onShutdown() {

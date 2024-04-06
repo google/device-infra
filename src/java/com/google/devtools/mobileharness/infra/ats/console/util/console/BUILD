@@ -17,8 +17,15 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
     ],
+)
+
+java_library(
+    name = "command_line_util",
+    srcs = ["CommandLineUtil.java"],
+    deps = ["@maven//:org_jline_jline"],
 )
 
 java_library(

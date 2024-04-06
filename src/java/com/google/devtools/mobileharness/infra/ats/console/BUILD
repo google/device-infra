@@ -13,12 +13,14 @@
 # limitations under the License.
 #
 
+DEFAULT_VISIBILITY = [
+    "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+    "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+]
+
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-    ],
+    default_visibility = DEFAULT_VISIBILITY,
 )
 
 java_library(
@@ -52,6 +54,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/constant:dirs",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:server_log_printer",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:command_line_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/log:log_dumper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/notice:notice_message_util",
@@ -74,8 +77,13 @@ java_library(
 java_library(
     name = "ats_console_module",
     srcs = ["AtsConsoleModule.java"],
+    visibility = DEFAULT_VISIBILITY + [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__subpackages__",
+    ],
     deps = [
         ":annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
@@ -102,6 +110,10 @@ java_library(
 java_library(
     name = "guice_factory",
     srcs = ["GuiceFactory.java"],
+    visibility = DEFAULT_VISIBILITY + [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__subpackages__",
+    ],
     deps = [
         "@maven//:com_google_inject_guice",
         "@maven//:info_picocli_picocli",

@@ -153,6 +153,47 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void addTradefedJobs_invalidCommandLine() throws Exception {
+    CommandInfo commandInfoWithInvalidCommandLine =
+        CommandInfo.newBuilder()
+            .setName("command")
+            .setCommandLine("cts -m module1 --logcat-on-failure --shard-count")
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_1")
+                    .build())
+            .addDeviceDimensions(
+                CommandInfo.DeviceDimension.newBuilder()
+                    .setName("device_serial")
+                    .setValue("device_id_2")
+                    .build())
+            .build();
+    request =
+        request.toBuilder().clearCommands().addCommands(commandInfoWithInvalidCommandLine).build();
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+    // Verify request detail.
+    assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+
+    // Verify command detail.
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    CommandDetail commandDetail =
+        requestDetail.getCommandDetailsOrThrow(
+            "UNKNOWN_" + commandInfoWithInvalidCommandLine.getCommandLine());
+    assertThat(commandDetail.getCommandLine())
+        .isEqualTo(commandInfoWithInvalidCommandLine.getCommandLine());
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.CANCELED);
+    assertThat(commandDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
+  }
+
+  @Test
   public void addTradefedJobs_success() throws Exception {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))

@@ -97,10 +97,12 @@ java_library(
     name = "session_request_info",
     srcs = ["SessionRequestInfo.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],
     deps = [

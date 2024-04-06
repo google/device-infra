@@ -20,6 +20,8 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.Futures.addCallback;
+import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
+import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 
@@ -32,8 +34,11 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
@@ -73,6 +78,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import javax.inject.Inject;
@@ -101,7 +107,7 @@ import picocli.CommandLine.Spec;
     subcommands = {
       HelpCommand.class,
     })
-final class RunCommand implements Callable<Integer> {
+public final class RunCommand implements Callable<Integer> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -221,6 +227,8 @@ final class RunCommand implements Callable<Integer> {
   private final ServerLogPrinter serverLogPrinter;
   private final ListeningExecutorService executorService;
   private final AtsSessionStub atsSessionStub;
+  private final Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture;
+  private final boolean parseCommandOnly;
 
   @Inject
   RunCommand(
@@ -239,7 +247,10 @@ final class RunCommand implements Callable<Integer> {
       ServerPreparer serverPreparer,
       ServerLogPrinter serverLogPrinter,
       ListeningExecutorService executorService,
-      AtsSessionStub atsSessionStub) {
+      AtsSessionStub atsSessionStub,
+      @RunCommandParsingResultFuture
+          Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture,
+      @ParseCommandOnly boolean parseCommandOnly) {
     this.consoleInfo = consoleInfo;
     this.commandExecutor = commandExecutor;
     this.consoleUtil = consoleUtil;
@@ -256,12 +267,23 @@ final class RunCommand implements Callable<Integer> {
     this.serverLogPrinter = serverLogPrinter;
     this.executorService = executorService;
     this.atsSessionStub = atsSessionStub;
+    this.resultFuture = resultFuture;
+    this.parseCommandOnly = parseCommandOnly;
   }
 
   @Override
   public Integer call() throws MobileHarnessException, InterruptedException, IOException {
     ImmutableList<String> command = consoleInfo.getLastCommand();
     try {
+      if (parseCommandOnly) {
+        try {
+          resultFuture.accept(immediateFuture(createParseResult()));
+          return ExitCode.OK;
+        } catch (RuntimeException | Error e) {
+          resultFuture.accept(immediateFailedFuture(e));
+          return ExitCode.SOFTWARE;
+        }
+      }
       if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
         validateCommandParameters();
         return runInM1(
@@ -273,6 +295,30 @@ final class RunCommand implements Callable<Integer> {
     } finally {
       moduleTestOptionsGroups = null; // Resets the group to clear the history
     }
+  }
+
+  private SessionRequestInfo.Builder createParseResult() {
+    SessionRequestInfo.Builder sessionRequestBuilder = SessionRequestInfo.builder();
+    validateCommandParameters();
+    sessionRequestBuilder
+        .setModuleNames(getModules())
+        .setIncludeFilters(
+            this.includeFilters == null
+                ? ImmutableList.of()
+                : ImmutableList.copyOf(this.includeFilters))
+        .setExcludeFilters(
+            this.excludeFilters == null
+                ? ImmutableList.of()
+                : ImmutableList.copyOf(this.excludeFilters));
+    if (this.shardCount > 0) {
+      sessionRequestBuilder.setShardCount(this.shardCount);
+    }
+    if (!this.getTest().isEmpty()) {
+      sessionRequestBuilder.setTestName(this.getTest());
+    }
+    ImmutableList<String> extraArgs =
+        extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
+    return sessionRequestBuilder.setExtraArgs(extraArgs);
   }
 
   @Command(
@@ -305,7 +351,6 @@ final class RunCommand implements Callable<Integer> {
           Ansi.AUTO.string(
               "Param @|fg(yellow) <config>|@ right after 'run' command is required.\n"));
     }
-
     if (moduleTestOptionsGroups != null && !moduleTestOptionsGroups.isEmpty()) {
       ImmutableList<String> tests =
           moduleTestOptionsGroups.stream()
@@ -399,6 +444,18 @@ final class RunCommand implements Callable<Integer> {
     return ExitCode.OK;
   }
 
+  private ImmutableList<String> getModules() {
+    return moduleTestOptionsGroups != null
+        ? moduleTestOptionsGroups.stream().map(group -> group.module).collect(toImmutableList())
+        : ImmutableList.of();
+  }
+
+  private String getTest() {
+    return moduleTestOptionsGroups != null && moduleTestOptionsGroups.get(0).test != null
+        ? moduleTestOptionsGroups.get(0).test
+        : "";
+  }
+
   private int runInM1(
       boolean isRunRetry,
       ImmutableMap<String, String> extraRunRetryCmdArgs,
@@ -409,15 +466,9 @@ final class RunCommand implements Callable<Integer> {
     ImmutableList<String> deviceSerials =
         serialOpt != null ? ImmutableList.copyOf(serialOpt) : ImmutableList.of();
 
-    ImmutableList<String> modules =
-        moduleTestOptionsGroups != null
-            ? moduleTestOptionsGroups.stream().map(group -> group.module).collect(toImmutableList())
-            : ImmutableList.of();
+    ImmutableList<String> modules = getModules();
 
-    String test =
-        moduleTestOptionsGroups != null && moduleTestOptionsGroups.get(0).test != null
-            ? moduleTestOptionsGroups.get(0).test
-            : "";
+    String test = getTest();
     ImmutableList<String> includeFilters =
         this.includeFilters == null
             ? ImmutableList.of()

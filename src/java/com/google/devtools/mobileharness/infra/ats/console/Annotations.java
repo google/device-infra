@@ -28,10 +28,12 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface ConsoleId {}
 
+  /** Line reader for the console. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   public @interface ConsoleLineReader {}
 
+  /** Output of the console. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   public @interface ConsoleOutput {
@@ -47,10 +49,23 @@ public class Annotations {
     Type value();
   }
 
-  /** Arguments of the main() method of the console. */
+  /** Main arguments of the console. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   public @interface MainArgs {}
+
+  /** Whether to parse command only, or to run the command. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface ParseCommandOnly {}
+
+  /**
+   * A future for RunCommand to set command line parse result, which later can be used by caller of
+   * RunCommand.
+   */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface RunCommandParsingResultFuture {}
 
   /** System properties. */
   @Qualifier
