@@ -30,6 +30,7 @@ import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode.Lab;
 import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 /** Launcher of lab server. */
@@ -112,5 +113,7 @@ public class LabServerLauncher {
     Injector injector = Guice.createInjector(new LabServerModule(labArgs, globalInternalBus));
     LabServer.initializeEnv();
     labServer = injector.getInstance(LabServer.class);
+
+    logger.atInfo().log("Lab server arguments: %s", Arrays.toString(labArgs));
   }
 }
