@@ -20,7 +20,6 @@ package mobileharness.infra.ats.console.controller;
 
 import "google/protobuf/duration.proto";
 import "google/protobuf/timestamp.proto";
-import "src/devtools/mobileharness/infra/ats/common/proto/xts_common.proto";
 
 option java_package = "com.google.devtools.mobileharness.infra.ats.console.controller.proto";
 option java_outer_classname = "SessionPluginProto";
@@ -76,7 +75,7 @@ message RunCommand {
   repeated string extra_arg = 6;
 
   // Required for XtsTradefedTest
-  mobileharness.infra.ats.common.XtsType xts_type = 7;
+  string xts_type = 7;
 
   // Optional.
   optional string python_pkg_index_url = 8;
@@ -145,7 +144,7 @@ message ListModulesCommand {
   string xts_root_dir = 1;
 
   // Required.
-  mobileharness.infra.ats.common.XtsType xts_type = 2;
+  string xts_type = 2;
 
   string module_parameter = 3;
 }

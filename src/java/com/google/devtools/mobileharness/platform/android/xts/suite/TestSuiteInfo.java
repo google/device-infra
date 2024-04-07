@@ -16,10 +16,8 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite;
 
-import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.JarFileUtil;
 import java.io.IOException;
 import java.io.InputStream;
@@ -56,10 +54,10 @@ public class TestSuiteInfo {
   private final String xtsRootDir;
   private final String xtsTypeStr;
 
-  private TestSuiteInfo(String xtsRootDir, XtsType xtsType, JarFileUtil jarFileUtil) {
+  private TestSuiteInfo(String xtsRootDir, String xtsType, JarFileUtil jarFileUtil) {
     this.jarFileUtil = jarFileUtil;
     this.xtsRootDir = xtsRootDir;
-    this.xtsTypeStr = Ascii.toLowerCase(xtsType.name());
+    this.xtsTypeStr = xtsType;
     loadSuiteInfo();
   }
 
@@ -101,7 +99,7 @@ public class TestSuiteInfo {
    * Retrieves the singleton instance, which also triggers loading of the related test suite info
    * from embedded resource files
    */
-  public static TestSuiteInfo getInstance(String xtsRootDir, XtsType xtsType) {
+  public static TestSuiteInfo getInstance(String xtsRootDir, String xtsType) {
     if (instance == null) {
       synchronized (TestSuiteInfo.class) {
         if (instance == null) {

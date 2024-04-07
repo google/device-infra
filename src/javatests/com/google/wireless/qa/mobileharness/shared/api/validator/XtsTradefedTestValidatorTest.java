@@ -70,21 +70,6 @@ public final class XtsTradefedTestValidatorTest {
   }
 
   @Test
-  public void validateJob_unknownXtsType_error() throws Exception {
-    when(mockJobInfo.combinedSpec(any()))
-        .thenReturn(
-            XtsTradefedTestDriverSpec.newBuilder()
-                .setXtsType("unknown")
-                .setXtsTestPlan("cts")
-                .setXtsRootDir("/path/to/cts_root")
-                .build());
-
-    List<String> errors = validator.validateJob(mockJobInfo);
-    assertThat(errors).hasSize(1);
-    assertThat(errors.get(0)).startsWith("Unknown xTS type:");
-  }
-
-  @Test
   public void validateJob_missXtsType_error() throws Exception {
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(
@@ -122,9 +107,6 @@ public final class XtsTradefedTestValidatorTest {
     List<String> errors = validator.validateJob(mockJobInfo);
     assertThat(errors).hasSize(1);
     assertThat(errors)
-        .contains(
-            String.format(
-                "At least one of the %s, %s must be specified.",
-                "xts_root_dir", "android_xts_zip"));
+        .contains("At least one of the xts_root_dir, android_xts_zip must be specified.");
   }
 }

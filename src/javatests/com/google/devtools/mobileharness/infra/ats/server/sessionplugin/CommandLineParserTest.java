@@ -22,7 +22,6 @@ import static org.junit.Assert.assertThrows;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -48,7 +47,7 @@ public final class CommandLineParserTest {
         requestInfoBuilder1
             .setTestPlan("cts")
             .setXtsRootDir("xts_root_dir")
-            .setXtsType(XtsType.CTS)
+            .setXtsType("cts")
             .build();
 
     assertThat(requestInfo1.moduleNames()).containsExactly("module1");
@@ -68,7 +67,7 @@ public final class CommandLineParserTest {
         requestInfoBuilder1
             .setTestPlan("cts")
             .setXtsRootDir("xts_root_dir")
-            .setXtsType(XtsType.CTS)
+            .setXtsType("cts")
             .build();
 
     assertThat(requestInfo1.includeFilters()).containsExactly("test_module_name1 test_name1");
@@ -88,13 +87,13 @@ public final class CommandLineParserTest {
         requestInfoBuilder1
             .setTestPlan("cts")
             .setXtsRootDir("xts_root_dir")
-            .setXtsType(XtsType.CTS)
+            .setXtsType("cts")
             .build();
     SessionRequestInfo requestInfo2 =
         requestInfoBuilder2
             .setTestPlan("cts")
             .setXtsRootDir("xts_root_dir")
-            .setXtsType(XtsType.CTS)
+            .setXtsType("cts")
             .build();
 
     assertThat(requestInfo1.moduleNames()).containsExactly("module1");

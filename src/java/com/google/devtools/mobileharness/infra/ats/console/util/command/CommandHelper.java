@@ -16,17 +16,14 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.command;
 
-import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
 import javax.inject.Inject;
 
 /** Helper class for commands. */
 public class CommandHelper {
-
   private static final String ANDROID_XTS_DIR_NAME_PREFIX = "android-";
 
   private final LocalFileUtil localFileUtil;
@@ -37,7 +34,7 @@ public class CommandHelper {
   }
 
   /** Gets the xts type. */
-  public XtsType getXtsType(String xtsRootDir) throws MobileHarnessException {
+  public String getXtsType(String xtsRootDir) throws MobileHarnessException {
     if (xtsRootDir.isEmpty()) {
       throw new MobileHarnessException(
           ExtErrorId.COMMAND_HELPER_XTS_ROOT_DIR_NOT_EXIST, "XTS root directory is empty.");
@@ -59,18 +56,6 @@ public class CommandHelper {
                                 + " exist under directory %s.",
                             xtsRootDir)));
 
-    try {
-      return XtsType.valueOf(
-          Ascii.toUpperCase(
-              androidXtsDir
-                  .getFileName()
-                  .toString()
-                  .substring(ANDROID_XTS_DIR_NAME_PREFIX.length())));
-    } catch (IllegalArgumentException e) {
-      throw new MobileHarnessException(
-          ExtErrorId.COMMAND_HELPER_UNEXPECTED_XTS_TYPE,
-          String.format("The xts type in dir name %s is unexpected.", androidXtsDir.getFileName()),
-          e);
-    }
+    return androidXtsDir.getFileName().toString().substring(ANDROID_XTS_DIR_NAME_PREFIX.length());
   }
 }

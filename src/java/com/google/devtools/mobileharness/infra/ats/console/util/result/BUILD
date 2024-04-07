@@ -21,7 +21,6 @@ java_library(
     visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__"],
     deps = [
         ":result_lister_helper",
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",

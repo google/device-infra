@@ -24,10 +24,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
     deps = [
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

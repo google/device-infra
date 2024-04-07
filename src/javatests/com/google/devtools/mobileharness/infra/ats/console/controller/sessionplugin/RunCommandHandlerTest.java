@@ -25,7 +25,6 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
@@ -111,7 +110,7 @@ public final class RunCommandHandlerTest {
     File xtsRootDir = folder.newFolder(XTS_ROOT_DIR_NAME);
     RunCommand command =
         RunCommand.newBuilder()
-            .setXtsType(XtsType.CTS)
+            .setXtsType("cts")
             .setXtsRootDir(xtsRootDir.getAbsolutePath())
             .build();
 

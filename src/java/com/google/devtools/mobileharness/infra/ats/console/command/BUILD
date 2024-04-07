@@ -73,7 +73,6 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command/run:__pkg__",
     ],
     deps = [
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",

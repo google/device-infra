@@ -20,7 +20,6 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import java.time.Duration;
@@ -59,7 +58,7 @@ public abstract class SessionRequestInfo {
 
   public abstract ImmutableList<String> extraArgs();
 
-  public abstract XtsType xtsType();
+  public abstract String xtsType();
 
   public abstract Optional<String> pythonPkgIndexUrl();
 
@@ -127,7 +126,7 @@ public abstract class SessionRequestInfo {
 
     public abstract Builder setExtraArgs(List<String> extraArgs);
 
-    public abstract Builder setXtsType(XtsType xtsType);
+    public abstract Builder setXtsType(String xtsType);
 
     public abstract Builder setPythonPkgIndexUrl(String pythonPkgIndexUrl);
 

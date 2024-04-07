@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
 import java.util.HashMap;
@@ -85,7 +84,7 @@ public class CertificationSuiteInfoFactory {
    * com.android.compatibility.common.tradefed.result.suite.CertificationResultXml}
    */
   public Map<String, String> generateSuiteInfoMap(
-      String xtsRootDir, XtsType xtsType, String suitePlan) {
+      String xtsRootDir, String xtsType, String suitePlan) {
     TestSuiteInfo testSuiteInfo = TestSuiteInfo.getInstance(xtsRootDir, xtsType);
 
     Map<String, String> suiteInfoMap = new HashMap<>();

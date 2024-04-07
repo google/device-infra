@@ -16,11 +16,9 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters;
@@ -44,14 +42,14 @@ public class TestSuiteHelper {
   private boolean allowOptionalParameterizedModules = false;
 
   private final String xtsRootDir;
-  private final XtsType xtsType;
+  private final String xtsType;
   private final LocalFileUtil localFileUtil;
 
-  public TestSuiteHelper(String xtsRootDir, XtsType xtsType) {
+  public TestSuiteHelper(String xtsRootDir, String xtsType) {
     this(xtsRootDir, xtsType, new LocalFileUtil());
   }
 
-  TestSuiteHelper(String xtsRootDir, XtsType xtsType, LocalFileUtil localFileUtil) {
+  TestSuiteHelper(String xtsRootDir, String xtsType, LocalFileUtil localFileUtil) {
     this.xtsRootDir = xtsRootDir;
     this.xtsType = xtsType;
     this.localFileUtil = localFileUtil;
@@ -115,9 +113,7 @@ public class TestSuiteHelper {
       throw new MobileHarnessException(
           ExtErrorId.TEST_SUITE_ROOT_DIR_NOT_EXIST, "Test suite root dir does not exist.");
     }
-    return Path.of(xtsRootDir)
-        .resolve(String.format("android-%s/testcases", Ascii.toLowerCase(xtsType.name())))
-        .toFile();
+    return Path.of(xtsRootDir).resolve(String.format("android-%s/testcases", xtsType)).toFile();
   }
 
   /** Gets the possible abis from the TestSuiteInfo. */

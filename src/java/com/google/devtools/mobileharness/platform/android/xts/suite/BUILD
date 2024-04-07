@@ -27,7 +27,6 @@ java_library(
         ":abi",
         ":suite_module_loader",
         ":test_suite_info",
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
@@ -72,7 +71,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__",
     ],
     deps = [
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:jar_file_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",

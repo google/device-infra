@@ -16,9 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.validator;
 
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -44,7 +42,7 @@ public class XtsTradefedTestValidator extends BaseValidator
       errors.add("An xTS type must be specified, check xts_tradefed_test_spec.proto.");
     } else {
       try {
-        XtsType unused = XtsType.valueOf(Ascii.toUpperCase(spec.getXtsType()));
+        String unused = spec.getXtsType();
       } catch (IllegalArgumentException e) {
         errors.add("Unknown xTS type: " + e.getMessage());
       }

@@ -24,7 +24,6 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.TestPlanLoader.TestPlanFilter;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import java.io.FileInputStream;
 import java.nio.file.Path;
@@ -93,7 +92,7 @@ public final class TestPlanLoaderTest {
 
   @Test
   public void parseFilters_retry() throws Exception {
-    assertThat(TestPlanLoader.parseFilters(Path.of("mock"), XtsType.CTS, "retry"))
+    assertThat(TestPlanLoader.parseFilters(Path.of("mock"), "cts", "retry"))
         .isEqualTo(TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of()));
   }
 }

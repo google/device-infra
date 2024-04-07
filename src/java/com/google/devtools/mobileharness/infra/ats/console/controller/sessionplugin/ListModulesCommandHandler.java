@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
@@ -61,7 +60,7 @@ class ListModulesCommandHandler {
         .build();
   }
 
-  private TestSuiteHelper getTestSuiteHelper(String xtsRootDir, XtsType xtsType) {
+  private TestSuiteHelper getTestSuiteHelper(String xtsRootDir, String xtsType) {
     return new TestSuiteHelper(xtsRootDir, xtsType);
   }
 }

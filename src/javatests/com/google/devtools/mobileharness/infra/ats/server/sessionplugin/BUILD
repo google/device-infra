@@ -28,7 +28,6 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",

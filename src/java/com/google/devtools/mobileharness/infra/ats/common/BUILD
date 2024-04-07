@@ -36,7 +36,6 @@ java_library(
         ":session_request_info",
         ":test_plan_loader",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",
@@ -106,7 +105,6 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],
     deps = [
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
@@ -121,7 +119,6 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
     ],
     deps = [
-        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

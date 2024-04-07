@@ -36,7 +36,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
@@ -482,7 +481,7 @@ public final class RunCommand implements Callable<Integer> {
         extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
 
     String xtsRootDirectory = consoleInfo.getXtsRootDirectory().orElse("");
-    XtsType xtsType = commandHelper.getXtsType(xtsRootDirectory);
+    String xtsType = commandHelper.getXtsType(xtsRootDirectory);
     // Asynchronously runs the session.
     SessionPluginProto.RunCommand.Builder runCommand =
         SessionPluginProto.RunCommand.newBuilder()

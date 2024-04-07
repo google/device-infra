@@ -18,12 +18,10 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -58,7 +56,7 @@ public class TestPlanLoader {
   private static final String INCLUDE_FILTER_ATTR_NAME = "compatibility:include-filter";
   private static final String EXCLUDE_FILTER_ATTR_NAME = "compatibility:exclude-filter";
 
-  public static TestPlanFilter parseFilters(Path xtsRootPath, XtsType type, String rootTestPlan)
+  public static TestPlanFilter parseFilters(Path xtsRootPath, String type, String rootTestPlan)
       throws MobileHarnessException {
     if (rootTestPlan.equals("retry")) {
       // Skip parsing the retry test plan since it is not a valid XML.
@@ -122,12 +120,10 @@ public class TestPlanLoader {
         ImmutableSet.copyOf(includeFilters), ImmutableSet.copyOf(excludeFilters));
   }
 
-  private static JarFile createXtsTradefedJarFile(Path xtsRootPath, XtsType type)
+  private static JarFile createXtsTradefedJarFile(Path xtsRootPath, String type)
       throws MobileHarnessException {
-    String xtsTypeName = Ascii.toLowerCase(type.name());
     Path xtsTradefedPath =
-        xtsRootPath.resolve(
-            String.format("android-%s/tools/%s-tradefed.jar", xtsTypeName, xtsTypeName));
+        xtsRootPath.resolve(String.format("android-%s/tools/%s-tradefed.jar", type, type));
 
     try {
       return new JarFile(xtsRootPath.resolve(xtsTradefedPath).toString());

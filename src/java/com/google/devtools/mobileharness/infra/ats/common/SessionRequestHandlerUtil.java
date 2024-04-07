@@ -40,7 +40,6 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
@@ -300,7 +299,7 @@ public class SessionRequestHandlerUtil {
       return Optional.empty();
     }
 
-    XtsType xtsType = sessionRequestInfo.xtsType();
+    String xtsType = sessionRequestInfo.xtsType();
     ImmutableMap<String, Configuration> configsMap =
         configurationUtil.getConfigsFromDirs(
             ImmutableList.of(getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
@@ -364,7 +363,7 @@ public class SessionRequestHandlerUtil {
       throws MobileHarnessException, InterruptedException {
     String testPlan = sessionRequestInfo.testPlan();
     String xtsRootDir = sessionRequestInfo.xtsRootDir();
-    String xtsType = sessionRequestInfo.xtsType().name();
+    String xtsType = sessionRequestInfo.xtsType();
     ImmutableList<String> deviceSerials = sessionRequestInfo.deviceSerials();
     int shardCount = sessionRequestInfo.shardCount().orElse(0);
     ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
@@ -480,7 +479,7 @@ public class SessionRequestHandlerUtil {
   }
 
   private Optional<Path> prepareRunRetryTfSubPlan(
-      String xtsRootDir, XtsType xtsType, int previousSessionId, @Nullable RetryType retryType)
+      String xtsRootDir, String xtsType, int previousSessionId, @Nullable RetryType retryType)
       throws MobileHarnessException {
     Path xtsRootDirPath = Path.of(xtsRootDir);
     RetryArgs.Builder retryArgs =
@@ -534,7 +533,7 @@ public class SessionRequestHandlerUtil {
       return updatedSessionRequestInfo.build();
     }
 
-    XtsType xtsType = sessionRequestInfo.xtsType();
+    String xtsType = sessionRequestInfo.xtsType();
     ImmutableMap<String, Configuration> configsMap =
         configurationUtil.getConfigsV2FromDirs(
             ImmutableList.of(getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
@@ -598,7 +597,7 @@ public class SessionRequestHandlerUtil {
       return ImmutableList.of();
     }
 
-    XtsType xtsType = sessionRequestInfo.xtsType();
+    String xtsType = sessionRequestInfo.xtsType();
     Optional<SubPlan> subPlanOpt = Optional.empty();
     if (isRunRetry(testPlan)) {
       subPlanOpt =
@@ -764,7 +763,7 @@ public class SessionRequestHandlerUtil {
 
   private Optional<JobInfo> createXtsNonTradefedJob(
       Path xtsRootDir,
-      XtsType xtsType,
+      String xtsType,
       String testPlan,
       Path moduleConfigPath,
       Configuration moduleConfig,
@@ -810,7 +809,7 @@ public class SessionRequestHandlerUtil {
     return Optional.of(jobInfo);
   }
 
-  private String generateXtsSuiteInfoMap(String xtsRootDir, XtsType xtsType, String testPlan) {
+  private String generateXtsSuiteInfoMap(String xtsRootDir, String xtsType, String testPlan) {
     Map<String, String> xtsSuiteInfoMap =
         certificationSuiteInfoFactory.generateSuiteInfoMap(xtsRootDir, xtsType, testPlan);
     return Joiner.on(",").withKeyValueSeparator("=").join(xtsSuiteInfoMap);
@@ -890,24 +889,21 @@ public class SessionRequestHandlerUtil {
     return URLEncoder.encode(jobName, UTF_8);
   }
 
-  private Path getXtsTestCasesDir(Path xtsRootDir, XtsType xtsType) {
-    return xtsRootDir.resolve(
-        String.format("android-%s/testcases", Ascii.toLowerCase(xtsType.name())));
+  private Path getXtsTestCasesDir(Path xtsRootDir, String xtsType) {
+    return xtsRootDir.resolve(String.format("android-%s/testcases", xtsType));
   }
 
-  private Path getXtsResultsDir(Path xtsRootDir, XtsType xtsType) {
-    return xtsRootDir.resolve(
-        String.format("android-%s/results", Ascii.toLowerCase(xtsType.name())));
+  private Path getXtsResultsDir(Path xtsRootDir, String xtsType) {
+    return xtsRootDir.resolve(String.format("android-%s/results", xtsType));
   }
 
-  private Path getXtsSubPlansDir(Path xtsRootDir, XtsType xtsType) {
-    return xtsRootDir.resolve(
-        String.format("android-%s/subplans", Ascii.toLowerCase(xtsType.name())));
+  private Path getXtsSubPlansDir(Path xtsRootDir, String xtsType) {
+    return xtsRootDir.resolve(String.format("android-%s/subplans", xtsType));
   }
 
   @VisibleForTesting
   TestSuiteHelper getTestSuiteHelper(
-      String xtsRootDir, XtsType xtsType, SessionRequestInfo sessionRequestInfo) {
+      String xtsRootDir, String xtsType, SessionRequestInfo sessionRequestInfo) {
     TestSuiteHelper testSuiteHelper = new TestSuiteHelper(xtsRootDir, xtsType);
     testSuiteHelper.setParameterizedModules(sessionRequestInfo.enableModuleParameter());
     testSuiteHelper.setOptionalParameterizedModules(
@@ -930,7 +926,7 @@ public class SessionRequestHandlerUtil {
   }
 
   private Optional<SubPlan> prepareRunRetryNonTfSubPlan(
-      String xtsRootDir, XtsType xtsType, int previousSessionId, @Nullable RetryType retryType)
+      String xtsRootDir, String xtsType, int previousSessionId, @Nullable RetryType retryType)
       throws MobileHarnessException {
     Path xtsRootDirPath = Path.of(xtsRootDir);
     RetryArgs.Builder retryArgs =

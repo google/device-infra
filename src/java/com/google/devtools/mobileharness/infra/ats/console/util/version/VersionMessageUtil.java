@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.infra.ats.console.util.version;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
@@ -51,7 +50,7 @@ public class VersionMessageUtil {
    */
   public String getVersionMessage() throws MobileHarnessException {
     String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
-    XtsType xtsType = commandHelper.getXtsType(xtsRootDir);
+    String xtsType = commandHelper.getXtsType(xtsRootDir);
     TestSuiteInfo testSuiteInfo = TestSuiteInfo.getInstance(xtsRootDir, xtsType);
     String buildNumber =
         versionParser.fetchVersion(testSuiteInfo).orElseGet(testSuiteInfo::getBuildNumber);

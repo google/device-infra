@@ -30,7 +30,6 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
@@ -146,7 +145,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setJobTimeout(Duration.ofSeconds(3000))
                 .setStartTimeout(Duration.ofSeconds(1000))
@@ -174,7 +173,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build(),
             ImmutableList.of());
@@ -190,7 +189,7 @@ public final class SessionRequestHandlerUtilTest {
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap)
         .containsExactly(
-            "xts_type", "CTS", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
+            "xts_type", "cts", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
   }
 
   @Test
@@ -208,7 +207,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setUseParallelSetup(true)
                 .build(),
@@ -226,7 +225,7 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(driverParamsMap)
         .containsExactly(
             "xts_type",
-            "CTS",
+            "cts",
             "xts_root_dir",
             XTS_ROOT_DIR_PATH,
             "xts_test_plan",
@@ -248,7 +247,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
                 .build(),
@@ -266,7 +265,7 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(driverParamsMap)
         .containsExactly(
             "xts_type",
-            "CTS",
+            "cts",
             "android_xts_zip",
             "ats-file-server::" + ANDROID_XTS_ZIP_PATH,
             "xts_test_plan",
@@ -292,7 +291,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("retry")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(xtsRootDir.getAbsolutePath())
                 .setRetrySessionId(0)
                 .build(),
@@ -311,7 +310,7 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
-            "CTS",
+            "cts",
             "xts_root_dir",
             xtsRootDir.getAbsolutePath(),
             "xts_test_plan",
@@ -334,7 +333,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setShardCount(2)
                 .build(),
@@ -363,7 +362,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setShardCount(3)
                 .build(),
@@ -384,7 +383,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build(),
             ImmutableList.of());
@@ -407,7 +406,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
                 .setDeviceSerials(ImmutableList.of("device_id_1"))
@@ -433,7 +432,7 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(driverParamsMap)
         .containsExactly(
             "xts_type",
-            "CTS",
+            "cts",
             "xts_root_dir",
             XTS_ROOT_DIR_PATH,
             "xts_test_plan",
@@ -462,7 +461,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setDeviceSerials(
                     ImmutableList.of("device_id_1", "not_exist_device", "device_id_3"))
@@ -500,7 +499,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setDeviceSerials(ImmutableList.of("device_id_4", "device_id_5"))
                 .build(),
@@ -524,7 +523,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
                 .setModuleNames(ImmutableList.of("module1"))
@@ -544,7 +543,7 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(driverParamsMap)
         .containsExactly(
             "xts_type",
-            "CTS",
+            "cts",
             "xts_root_dir",
             XTS_ROOT_DIR_PATH,
             "xts_test_plan",
@@ -601,7 +600,7 @@ public final class SessionRequestHandlerUtilTest {
     SessionRequestInfo sessionRequestInfoWithIncludeFilters =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
-            .setXtsType(XtsType.CTS)
+            .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setIncludeFilters(ImmutableList.of("module3 TestClass#TestCase"))
             .build();
@@ -611,7 +610,7 @@ public final class SessionRequestHandlerUtilTest {
     SessionRequestInfo sessionRequestInfoWithExcludeFilters =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
-            .setXtsType(XtsType.CTS)
+            .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setExcludeFilters(ImmutableList.of("module1", "module2"))
             .build();
@@ -621,7 +620,7 @@ public final class SessionRequestHandlerUtilTest {
     SessionRequestInfo sessionRequestInfoWithMixedFilters =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
-            .setXtsType(XtsType.CTS)
+            .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setIncludeFilters(ImmutableList.of("module1"))
             .setExcludeFilters(ImmutableList.of("module2"))
@@ -670,7 +669,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build());
     ImmutableList<JobInfo> jobInfos =
@@ -717,7 +716,7 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestHandlerUtil.addNonTradefedModuleInfo(
                 SessionRequestInfo.builder()
                     .setTestPlan("cts")
-                    .setXtsType(XtsType.CTS)
+                    .setXtsType("cts")
                     .setXtsRootDir(XTS_ROOT_DIR_PATH)
                     .setModuleNames(ImmutableList.of("TfModule1"))
                     .build()),
@@ -762,7 +761,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setModuleNames(ImmutableList.of("TfModule1", "module2"))
                 .build());
@@ -825,7 +824,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setIncludeFilters(
                     ImmutableList.of(
@@ -869,7 +868,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setModuleNames(ImmutableList.of("module1"))
                 .setTestName("testclass#test1")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -881,7 +880,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setModuleNames(ImmutableList.of("module1"))
                 .setTestName("test1")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
@@ -932,7 +931,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("retry")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setRetrySessionId(0)
                 .build());
@@ -1007,7 +1006,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("retry")
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setRetrySessionId(0)
                 .build());

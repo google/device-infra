@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -230,7 +229,7 @@ public final class NewMultiCommandRequestHandlerTest {
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
     assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
-    assertThat(sessionRequestInfo.xtsType()).isEqualTo(XtsType.CTS);
+    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
     assertThat(sessionRequestInfo.androidXtsZip()).hasValue(zipFile);
     assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
     assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
@@ -297,7 +296,7 @@ public final class NewMultiCommandRequestHandlerTest {
             ImmutableList.of(jobInfo),
             SessionRequestInfo.builder()
                 .setTestPlan("") // set the test plan as empty so it won't merge the retry result
-                .setXtsType(XtsType.CTS)
+                .setXtsType("cts")
                 .setXtsRootDir("/fake/path")
                 .build());
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));

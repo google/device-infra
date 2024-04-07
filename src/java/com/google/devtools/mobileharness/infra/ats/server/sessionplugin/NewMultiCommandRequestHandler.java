@@ -20,7 +20,6 @@ import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJav
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -32,7 +31,6 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -58,7 +56,6 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
@@ -289,7 +286,7 @@ final class NewMultiCommandRequestHandler {
     SessionRequestInfo.Builder sessionRequestInfoBuilder =
         CommandLineParser.getInstance().parseCommandLine(commandInfo.getCommandLine());
     sessionRequestInfoBuilder.setTestPlan(testPlan);
-    sessionRequestInfoBuilder.setXtsType(XtsType.valueOf(xtsType.toUpperCase(Locale.ROOT)));
+    sessionRequestInfoBuilder.setXtsType(xtsType);
     sessionRequestInfoBuilder.setXtsRootDir(xtsRootDir);
     sessionRequestInfoBuilder.setAndroidXtsZip(androidXtsZipPath);
     sessionRequestInfoBuilder.setDeviceSerials(deviceSerials);
@@ -337,7 +334,7 @@ final class NewMultiCommandRequestHandler {
             sessionInfo.getAllJobs(),
             SessionRequestInfo.builder()
                 .setTestPlan("") // set the test plan as empty so it won't merge the retry result
-                .setXtsType(XtsType.valueOf(Ascii.toUpperCase(xtsType)))
+                .setXtsType(xtsType)
                 .setXtsRootDir("/fake/path")
                 .build());
       } else {
