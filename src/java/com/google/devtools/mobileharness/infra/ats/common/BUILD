@@ -34,6 +34,7 @@ java_library(
     ],
     deps = [
         ":session_request_info",
+        ":test_plan_loader",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
@@ -69,7 +70,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_generic_test",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
@@ -118,11 +118,7 @@ java_library(
     name = "test_plan_loader",
     srcs = ["TestPlanLoader.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",

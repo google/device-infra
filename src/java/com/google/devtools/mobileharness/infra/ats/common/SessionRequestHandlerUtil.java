@@ -559,11 +559,6 @@ public class SessionRequestHandlerUtil {
    * @return true if non-tradefed jobs can be created.
    */
   public boolean canCreateNonTradefedJobs(SessionRequestInfo sessionRequestInfo) {
-    String testPlan = sessionRequestInfo.testPlan();
-    // Currently only support CTS
-    if (!testPlan.equals("cts") && !isRunRetry(testPlan)) {
-      return false;
-    }
     boolean noGivenModuleForNonTf =
         !sessionRequestInfo.moduleNames().isEmpty()
             && sessionRequestInfo.givenMatchedNonTfModules().isEmpty();
@@ -576,6 +571,18 @@ public class SessionRequestHandlerUtil {
    * @return a list of added non-tradefed jobInfos.
    */
   public ImmutableList<JobInfo> createXtsNonTradefedJobs(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    return createXtsNonTradefedJobs(
+        sessionRequestInfo,
+        TestPlanLoader.parseFilters(
+            Path.of(sessionRequestInfo.xtsRootDir()),
+            sessionRequestInfo.xtsType(),
+            sessionRequestInfo.testPlan()));
+  }
+
+  @VisibleForTesting
+  ImmutableList<JobInfo> createXtsNonTradefedJobs(
+      SessionRequestInfo sessionRequestInfo, TestPlanLoader.TestPlanFilter testPlanFilter)
       throws MobileHarnessException, InterruptedException {
     if (!canCreateNonTradefedJobs(sessionRequestInfo)) {
       logger.atInfo().log(
@@ -615,7 +622,9 @@ public class SessionRequestHandlerUtil {
             .collect(toImmutableMap(e -> e.getValue().getMetadata().getXtsModule(), Entry::getKey));
 
     ImmutableList<SuiteTestFilter> includeFilters =
-        sessionRequestInfo.includeFilters().stream()
+        Stream.concat(
+                sessionRequestInfo.includeFilters().stream(),
+                testPlanFilter.includeFilters().stream())
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
     boolean isRunRetry = isRunRetry(testPlan);
@@ -633,7 +642,9 @@ public class SessionRequestHandlerUtil {
       logger.atInfo().log("Include filters for Non-TF retry: %s", includeFilters);
     }
     ImmutableList<SuiteTestFilter> excludeFilters =
-        sessionRequestInfo.excludeFilters().stream()
+        Stream.concat(
+                sessionRequestInfo.excludeFilters().stream(),
+                testPlanFilter.excludeFilters().stream())
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
 

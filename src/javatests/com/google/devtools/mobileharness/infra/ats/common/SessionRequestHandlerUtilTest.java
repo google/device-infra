@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
@@ -106,6 +107,8 @@ public final class SessionRequestHandlerUtilTest {
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
+  private TestPlanLoader.TestPlanFilter testPlanFilter;
+
   @Before
   public void setUp() throws Exception {
     // Sets flags.
@@ -120,6 +123,7 @@ public final class SessionRequestHandlerUtilTest {
     sessionTempDir = folder.newFolder("session_temp_dir").toPath();
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
+    testPlanFilter = TestPlanLoader.TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
   }
 
   @After
@@ -670,7 +674,7 @@ public final class SessionRequestHandlerUtilTest {
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build());
     ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
 
     assertThat(jobInfos).hasSize(2);
     verify(moduleConfigurationHelper, times(2)).updateJobInfo(any(), any(), any());
@@ -716,7 +720,8 @@ public final class SessionRequestHandlerUtilTest {
                     .setXtsType(XtsType.CTS)
                     .setXtsRootDir(XTS_ROOT_DIR_PATH)
                     .setModuleNames(ImmutableList.of("TfModule1"))
-                    .build()));
+                    .build()),
+            testPlanFilter);
 
     assertThat(jobInfos).isEmpty();
   }
@@ -762,7 +767,7 @@ public final class SessionRequestHandlerUtilTest {
                 .setModuleNames(ImmutableList.of("TfModule1", "module2"))
                 .build());
     ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
 
     assertThat(jobInfos).hasSize(1);
   }
@@ -832,7 +837,7 @@ public final class SessionRequestHandlerUtilTest {
                 .setExcludeFilters(ImmutableList.of("module3"))
                 .build());
     ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
 
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1 test2 test3");
@@ -870,7 +875,7 @@ public final class SessionRequestHandlerUtilTest {
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build());
     ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
 
     SessionRequestInfo sessionRequestInfoWithInvalidTestName =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
@@ -882,7 +887,8 @@ public final class SessionRequestHandlerUtilTest {
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build());
     ImmutableList<JobInfo> jobInfosWithInvalidTestName =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfoWithInvalidTestName);
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            sessionRequestInfoWithInvalidTestName, testPlanFilter);
 
     assertThat(jobInfos).hasSize(1);
     assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1");
@@ -931,7 +937,7 @@ public final class SessionRequestHandlerUtilTest {
                 .setRetrySessionId(0)
                 .build());
     ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
 
     assertThat(jobInfos).isEmpty();
   }
@@ -1006,7 +1012,7 @@ public final class SessionRequestHandlerUtilTest {
                 .setRetrySessionId(0)
                 .build());
     ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
 
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1 test2");
