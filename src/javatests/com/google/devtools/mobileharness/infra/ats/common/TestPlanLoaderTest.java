@@ -17,12 +17,17 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.TestPlanLoader.TestPlanFilter;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.XtsType;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import java.io.FileInputStream;
+import java.nio.file.Path;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import org.junit.Rule;
@@ -75,5 +80,20 @@ public final class TestPlanLoaderTest {
             "CtsNetTestCases android.net.cts.NetworkStatsManagerTest#testUidDetails",
             "CtsNetTestCases android.net.cts.NetworkStatsManagerTest#testUserSummary",
             "CtsContentSuggestionsTestCases");
+  }
+
+  @Test
+  public void parseFilters_invalidPlanName() throws Exception {
+    when(xtsTradefedJarFile.getJarEntry(eq("invalid-plan-name"))).thenReturn(null);
+
+    assertThrows(
+        MobileHarnessException.class,
+        () -> TestPlanLoader.parseFilters(xtsTradefedJarFile, "invalid-plan-name"));
+  }
+
+  @Test
+  public void parseFilters_retry() throws Exception {
+    assertThat(TestPlanLoader.parseFilters(Path.of("mock"), XtsType.CTS, "retry"))
+        .isEqualTo(TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of()));
   }
 }

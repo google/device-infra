@@ -60,6 +60,11 @@ public class TestPlanLoader {
 
   public static TestPlanFilter parseFilters(Path xtsRootPath, XtsType type, String rootTestPlan)
       throws MobileHarnessException {
+    if (rootTestPlan.equals("retry")) {
+      // Skip parsing the retry test plan since it is not a valid XML.
+      return TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
+    }
+
     JarFile xtsTradefedJarFile = createXtsTradefedJarFile(xtsRootPath, type);
     return parseFilters(xtsTradefedJarFile, rootTestPlan);
   }
@@ -67,6 +72,15 @@ public class TestPlanLoader {
   @VisibleForTesting
   static TestPlanFilter parseFilters(JarFile xtsTradefedJarFile, String rootTestPlan)
       throws MobileHarnessException {
+    // Check existence of the root test plan.
+    String testPlanPath = String.format("config/%s.xml", rootTestPlan);
+    JarEntry jarEntry = xtsTradefedJarFile.getJarEntry(testPlanPath);
+    if (jarEntry == null) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_XTS_TEST_PLAN_LOADER_TEST_PLAN_NOT_FOUND,
+          String.format("Root test plan %s not found in xts-tradefed.jar file", rootTestPlan));
+    }
+
     HashSet<String> includeFilters = new HashSet<>();
     HashSet<String> excludeFilters = new HashSet<>();
     HashSet<String> parsedTestPlans = new HashSet<>();
