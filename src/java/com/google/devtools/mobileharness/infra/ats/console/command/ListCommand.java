@@ -16,7 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import com.google.common.collect.ImmutableList;
+import com.google.common.io.Files;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
@@ -33,7 +36,10 @@ import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleU
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanLister;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultLister;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import java.nio.file.Path;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -70,6 +76,7 @@ class ListCommand implements Callable<Integer> {
   private final ResultLister resultLister;
   private final PlanLister planLister;
   private final CommandHelper commandHelper;
+  private final LocalFileUtil localFileUtil;
 
   @Inject
   ListCommand(
@@ -79,7 +86,8 @@ class ListCommand implements Callable<Integer> {
       AtsSessionStub atsSessionStub,
       ResultLister resultLister,
       PlanLister planLister,
-      CommandHelper commandHelper) {
+      CommandHelper commandHelper,
+      LocalFileUtil localFileUtil) {
     this.consoleInfo = consoleInfo;
     this.consoleUtil = consoleUtil;
     this.serverPreparer = serverPreparer;
@@ -87,6 +95,7 @@ class ListCommand implements Callable<Integer> {
     this.resultLister = resultLister;
     this.planLister = planLister;
     this.commandHelper = commandHelper;
+    this.localFileUtil = localFileUtil;
   }
 
   @Override
@@ -195,6 +204,39 @@ class ListCommand implements Callable<Integer> {
     consoleUtil.printlnStdout(
         resultLister.listResults(
             commandHelper.getXtsType(consoleInfo.getXtsRootDirectory().orElse(""))));
+    return ExitCode.OK;
+  }
+
+  @Command(
+      name = "subplans",
+      aliases = {"s"},
+      description = "List all available subplans")
+  public int subplans() throws MobileHarnessException {
+    String xtsRootDir = consoleInfo.getXtsRootDirectory().orElse("");
+    Path subPlansDir =
+        XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), commandHelper.getXtsType(xtsRootDir));
+    if (!subPlansDir.toFile().exists()) {
+      consoleUtil.printlnStderr(
+          "Subplans directory %s does not exist.", subPlansDir.toAbsolutePath());
+      return ExitCode.SOFTWARE;
+    }
+    ImmutableList<String> subPlanFileNames =
+        localFileUtil
+            .listFilePaths(
+                subPlansDir,
+                /* recursively= */ false,
+                path -> path.getFileName().toString().endsWith(".xml"))
+            .stream()
+            .map(path -> Files.getNameWithoutExtension(path.getFileName().toString()))
+            .sorted()
+            .collect(toImmutableList());
+
+    if (subPlanFileNames.isEmpty()) {
+      consoleUtil.printlnStdout("No subplans found");
+      return ExitCode.OK;
+    }
+
+    subPlanFileNames.forEach(consoleUtil::printlnStdout);
     return ExitCode.OK;
   }
 }

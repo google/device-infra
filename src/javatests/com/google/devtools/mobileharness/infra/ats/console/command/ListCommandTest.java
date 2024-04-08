@@ -21,6 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,6 +55,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
@@ -221,5 +223,30 @@ public class ListCommandTest {
                 + " serial(s)  Build ID            Product\n"
                 + "0        117   0     1 of 1            2023.11.30_12.34.56  cts        ABC, DEF "
                 + "         SQ3A.220705.003.A1  redfin");
+  }
+
+  @Test
+  public void listSubPlans() throws Exception {
+    String subPlanFilePath1 =
+        PathUtil.join(xtsRootDirPath, "android-cts", "subplans", "subplan1.xml");
+    String subPlanFilePath2 =
+        PathUtil.join(xtsRootDirPath, "android-cts", "subplans", "subplan2.xml");
+    String subPlanFilePath3 =
+        PathUtil.join(xtsRootDirPath, "android-cts", "subplans", "a_subplan.xml");
+
+    LocalFileUtil localFileUtil = new LocalFileUtil();
+    localFileUtil.prepareParentDir(subPlanFilePath1);
+    Files.createFile(Path.of(subPlanFilePath1));
+    Files.createFile(Path.of(subPlanFilePath2));
+    Files.createFile(Path.of(subPlanFilePath3));
+
+    when(lineReader.readLine(anyString())).thenReturn("list subplans").thenReturn("exit");
+
+    atsConsole.run();
+
+    InOrder lineReaderInOrder = inOrder(lineReader);
+    lineReaderInOrder.verify(lineReader).printAbove("a_subplan");
+    lineReaderInOrder.verify(lineReader).printAbove("subplan1");
+    lineReaderInOrder.verify(lineReader).printAbove("subplan2");
   }
 }
