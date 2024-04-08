@@ -32,6 +32,8 @@ import java.util.zip.ZipEntry;
 /** Checker for checking binary sizes. */
 public class BinarySizeChecker {
 
+  private static final double NEARLY_LARGE_FACTOR = 0.9;
+
   public static void checkBinarySize(
       String binaryName, long maxSizeByte, String binaryFilePath, String binarySourcePath)
       throws MobileHarnessException {
@@ -54,11 +56,19 @@ public class BinarySizeChecker {
       String allowlistSourcePath)
       throws IOException {
 
+    long nearlyMaxResourceFileSizeByte = (long) (maxResourceFileSizeByte * NEARLY_LARGE_FACTOR);
+
     ImmutableMap<String, Long> largeResourcesPathAndSize;
+    ImmutableMap<String, Long> nearlyLargeResourcesPathAndSize;
     try (JarFile jarFile = new JarFile(binaryFilePath)) {
       largeResourcesPathAndSize =
           jarFile.stream()
               .filter(jarEntry -> jarEntry.getSize() > maxResourceFileSizeByte)
+              .sorted(comparingLong(ZipEntry::getSize).reversed())
+              .collect(toImmutableMap(ZipEntry::getName, ZipEntry::getSize));
+      nearlyLargeResourcesPathAndSize =
+          jarFile.stream()
+              .filter(jarEntry -> jarEntry.getSize() > nearlyMaxResourceFileSizeByte)
               .sorted(comparingLong(ZipEntry::getSize).reversed())
               .collect(toImmutableMap(ZipEntry::getName, ZipEntry::getSize));
     }
@@ -83,18 +93,19 @@ public class BinarySizeChecker {
             "Please update %s large resource file allowlist to remove items that are not large"
                 + " resources in %s.\n\n"
                 + "large_resource_file_allowlist=%s\n"
-                + "resource_file_size_limit=%s(bytes)\n"
+                + "resource_file_size_limit * %s=%s(bytes)\n"
                 + "binary_path=%s\n\n"
                 + "Allowlist items that are not large resource files in %s:",
             binaryName,
             binaryName,
             allowlistSourcePath,
-            maxResourceFileSizeByte,
+            NEARLY_LARGE_FACTOR,
+            nearlyMaxResourceFileSizeByte,
             binarySourcePath,
             binaryName)
         .that(
             largeResourcePathAllowlist.stream()
-                .filter(path -> !largeResourcesPathAndSize.containsKey(path))
+                .filter(path -> !nearlyLargeResourcesPathAndSize.containsKey(path))
                 .collect(toImmutableList()))
         .isEmpty();
   }
