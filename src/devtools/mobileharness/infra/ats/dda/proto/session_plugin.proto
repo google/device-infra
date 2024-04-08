@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.infra.ats.dda;
 
+import "google/protobuf/duration.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/api/query/proto/lab_query.proto";
 
@@ -29,6 +30,12 @@ message AtsDdaSessionPluginConfig {
   //
   // Requirements of the device.
   mobileharness.api.model.DeviceRequirement device_requirement = 1;
+
+  // Optional.
+  //
+  // If empty, the timeout will be the default timeout. If present, the timeout
+  // will be the minimum of this one and the default one.
+  google.protobuf.Duration dda_timeout = 2;
 }
 
 message AtsDdaSessionPluginOutput {

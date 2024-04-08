@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.dda.sessionplugin;
 
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.collect.ImmutableMap;
@@ -60,10 +61,8 @@ public class AtsDdaSessionPlugin {
   private static final String JOB_USER = "ats-dda";
   private static final String TEST_NAME = "ats_dda_test";
   private static final String DRIVER_NAME = "NoOpDriver";
-  private static final Duration JOB_TIMEOUT = Duration.ofHours(1L);
+  private static final Duration MAX_DRIVER_SLEEP_TIME = Duration.ofHours(2L);
   private static final Duration START_TIMEOUT = Duration.ofMinutes(1L);
-  private static final Duration TEST_TIMEOUT = JOB_TIMEOUT.minusMinutes(1L);
-  private static final Duration DRIVER_SLEEP_TIME = TEST_TIMEOUT.minusMinutes(1L);
   private static final ImmutableMap<String, String> CANCEL_TEST_MESSAGE =
       ImmutableMap.of("namespace", "mobileharness:driver:NoOpDriver", "type", "wake_up");
 
@@ -117,6 +116,12 @@ public class AtsDdaSessionPlugin {
   }
 
   private JobInfo createJobInfo() throws MobileHarnessException {
+    // Calculates timeout.
+    Duration ddaTimeout =
+        finalizeDdaTimeout(config.hasDdaTimeout() ? toJavaDuration(config.getDdaTimeout()) : null);
+    Duration testTimeout = ddaTimeout.plusMinutes(1L);
+    Duration jobTimeout = testTimeout.plus(START_TIMEOUT);
+
     DeviceRequirement deviceRequirement = config.getDeviceRequirement();
     // TODO: Adds default decorators here.
     JobInfo jobInfo =
@@ -133,9 +138,9 @@ public class AtsDdaSessionPlugin {
                 JobSetting.newBuilder()
                     .setTimeout(
                         Timeout.newBuilder()
-                            .setJobTimeoutMs(JOB_TIMEOUT.toMillis())
+                            .setJobTimeoutMs(jobTimeout.toMillis())
                             .setStartTimeoutMs(START_TIMEOUT.toMillis())
-                            .setTestTimeoutMs(TEST_TIMEOUT.toMillis())
+                            .setTestTimeoutMs(testTimeout.toMillis())
                             .build())
                     .setRetry(Retry.newBuilder().setTestAttempts(1).build())
                     .setPriority(Priority.MAX)
@@ -143,7 +148,7 @@ public class AtsDdaSessionPlugin {
                     .build())
             .build();
     jobInfo.dimensions().addAll(deviceRequirement.getDimensionsMap());
-    jobInfo.params().add("sleep_time_sec", Long.toString(DRIVER_SLEEP_TIME.toSeconds()));
+    jobInfo.params().add("sleep_time_sec", Long.toString(ddaTimeout.toSeconds()));
     jobInfo.tests().add(TEST_NAME);
     return jobInfo;
   }
@@ -216,6 +221,16 @@ public class AtsDdaSessionPlugin {
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
           "Failed to send cancel test message to test [%s]", testId);
+    }
+  }
+
+  private static Duration finalizeDdaTimeout(@Nullable Duration ddaTimeout) {
+    if (ddaTimeout == null) {
+      return MAX_DRIVER_SLEEP_TIME;
+    } else if (ddaTimeout.compareTo(MAX_DRIVER_SLEEP_TIME) < 0) {
+      return ddaTimeout;
+    } else {
+      return MAX_DRIVER_SLEEP_TIME;
     }
   }
 }

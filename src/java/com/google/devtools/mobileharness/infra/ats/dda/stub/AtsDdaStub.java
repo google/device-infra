@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.dda.stub;
 
+import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
+
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
@@ -50,6 +52,7 @@ import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import io.grpc.Channel;
+import java.time.Duration;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -93,7 +96,7 @@ public class AtsDdaStub {
   }
 
   /** Creates a session and returns the session ID. */
-  public String createSession(String sessionName, String model, int version)
+  public String createSession(String sessionName, String model, int version, Duration ddaTimeout)
       throws GrpcExceptionWithErrorId {
     return createSession(
         sessionName,
@@ -101,11 +104,13 @@ public class AtsDdaStub {
             Name.MODEL.lowerCaseName(),
             model,
             Name.SDK_VERSION.lowerCaseName(),
-            Integer.toString(version)));
+            Integer.toString(version)),
+        ddaTimeout);
   }
 
   @VisibleForTesting
-  String createSession(String sessionName, ImmutableMap<String, String> dimensions)
+  String createSession(
+      String sessionName, ImmutableMap<String, String> dimensions, Duration ddaTimeout)
       throws GrpcExceptionWithErrorId {
     AtsDdaSessionPluginConfig pluginConfig =
         AtsDdaSessionPluginConfig.newBuilder()
@@ -113,6 +118,7 @@ public class AtsDdaStub {
                 DeviceRequirement.newBuilder()
                     .setDeviceType("AndroidRealDevice")
                     .putAllDimensions(dimensions))
+            .setDdaTimeout(toProtoDuration(ddaTimeout))
             .build();
     CreateSessionResponse createSessionResponse =
         sessionStub.createSession(

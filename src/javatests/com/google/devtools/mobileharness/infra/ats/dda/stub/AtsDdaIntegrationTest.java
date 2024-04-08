@@ -176,7 +176,8 @@ public class AtsDdaIntegrationTest {
         atsDdaStub.createSession(
             "fake_session",
             ImmutableMap.of(
-                "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"));
+                "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"),
+            Duration.ofHours(1L));
 
     // Gets session info.
     for (int i = 0; i < 30; i++) {
