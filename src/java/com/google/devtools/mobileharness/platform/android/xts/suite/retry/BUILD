@@ -19,7 +19,8 @@ java_library(
     name = "previous_result_loader",
     srcs = ["PreviousResultLoader.java"],
     visibility = [
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
@@ -43,12 +44,12 @@ java_library(
     deps = [
         ":previous_result_loader",
         ":retry_args",
-        ":retry_result_helper",
         ":retry_type",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan_helper",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -83,6 +84,9 @@ java_library(
 java_library(
     name = "retry_result_helper",
     srcs = ["RetryResultHelper.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__pkg__",
+    ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",

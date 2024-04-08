@@ -18,6 +18,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "command",
     srcs = [
+        "AddCommand.java",
         "DumpCommand.java",
         "ExitCommand.java",
         "ListCommand.java",
@@ -51,7 +52,11 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:result_lister",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:version_message_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:module_parameters",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:add_sub_plan_args",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:result_type",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan_creator",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
@@ -100,6 +105,23 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/path:file_name_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "@maven//:com_google_guava_guava",
+        "@maven//:info_picocli_picocli",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "add_command",
+    srcs = ["AddCommand.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:add_sub_plan_args",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:result_type",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan_creator",
         "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",
         "@maven//:javax_inject_jsr330_api",

@@ -14,23 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console.command;
+package com.google.devtools.mobileharness.platform.android.xts.suite.subplan;
 
-import picocli.CommandLine.Command;
-import picocli.CommandLine.HelpCommand;
-
-/** Empty root command. Business logic are delegated to the subcommands. */
-@Command(
-    name = "", // Set it as empty, so it won't show on the "--help" usage
-    subcommands = {
-      AddCommand.class,
-      DumpCommand.class,
-      ExitCommand.class,
-      HelpCommand.class,
-      ListCommand.class,
-      LogCommand.class,
-      RunCommand.class,
-      SetCommand.class,
-      VersionCommand.class,
-    })
-public final class RootCommand {}
+/** The result types of the tests to include for creating the subplan. */
+public enum ResultType {
+  PASSED,
+  FAILED,
+  NOT_EXECUTED,
+}

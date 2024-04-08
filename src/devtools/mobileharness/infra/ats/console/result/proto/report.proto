@@ -33,6 +33,12 @@ message Result {
   repeated Module module_info = 4;
   // Extra attributes in the <Result> element.
   repeated Attribute attribute = 5;
+  // Module filters from the command line. Not showing in xml report.
+  repeated string module_filter = 6;
+  // Include filters from the command line. Not showing in xml report.
+  repeated string include_filter = 7;
+  // Exclude filters from the command line. Not showing in xml report.
+  repeated string exclude_filter = 8;
 }
 
 // Stores info for the <Build> element in the compatibility report.

@@ -922,7 +922,7 @@ public class SessionRequestHandlerUtil {
   }
 
   private boolean isRunRetry(String testPlan) {
-    return testPlan.equals("retry");
+    return Ascii.equalsIgnoreCase(testPlan, "retry");
   }
 
   private Optional<SubPlan> prepareRunRetryNonTfSubPlan(
@@ -1054,28 +1054,37 @@ public class SessionRequestHandlerUtil {
 
     Optional<Result> mergedReport =
         compatibilityReportMerger.mergeReports(reportList, /* validateReports= */ true);
-    boolean isRunRetry = Ascii.equalsIgnoreCase(sessionRequestInfo.testPlan(), "retry");
-    if (isRunRetry || mergedReport.isPresent()) {
-      @Nullable Result finalReport = mergedReport.orElse(null);
-      if (isRunRetry) {
-        int previousSessionId =
-            sessionRequestInfo
-                .retrySessionId()
-                .orElseThrow(
-                    () ->
-                        new MobileHarnessException(
-                            InfraErrorId.ATSC_RUN_RETRY_COMMAND_MISSING_SESSION_ID_ERROR,
-                            "Missing session id for retry"));
-        finalReport =
-            retryReportMerger.mergeReports(
-                getXtsResultsDir(
-                    Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
-                previousSessionId,
-                sessionRequestInfo.retryType().orElse(null),
-                mergedReport.orElse(null));
+    boolean isRunRetry = isRunRetry(sessionRequestInfo.testPlan());
+    if (!isRunRetry && mergedReport.isPresent()) {
+      Result.Builder finalReportBuilder = mergedReport.get().toBuilder();
+      if (!sessionRequestInfo.moduleNames().isEmpty()) {
+        finalReportBuilder.addAllModuleFilter(sessionRequestInfo.moduleNames());
       }
+      if (!sessionRequestInfo.includeFilters().isEmpty()) {
+        finalReportBuilder.addAllIncludeFilter(sessionRequestInfo.includeFilters());
+      }
+      if (!sessionRequestInfo.excludeFilters().isEmpty()) {
+        finalReportBuilder.addAllExcludeFilter(sessionRequestInfo.excludeFilters());
+      }
+      reportCreator.createReport(finalReportBuilder.build(), resultDir, null);
+    } else if (isRunRetry) {
+      int previousSessionId =
+          sessionRequestInfo
+              .retrySessionId()
+              .orElseThrow(
+                  () ->
+                      new MobileHarnessException(
+                          InfraErrorId.ATSC_RUN_RETRY_COMMAND_MISSING_SESSION_ID_ERROR,
+                          "Missing session id for retry"));
+      Result finalReport =
+          retryReportMerger.mergeReports(
+              getXtsResultsDir(
+                  Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
+              previousSessionId,
+              sessionRequestInfo.retryType().orElse(null),
+              mergedReport.orElse(null));
       reportCreator.createReport(finalReport, resultDir, null);
-    } else if (mergedReport.isEmpty()) {
+    } else {
       logger.atWarning().log("Failed to merge reports.");
     }
   }

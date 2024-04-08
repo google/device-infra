@@ -43,3 +43,68 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
 )
+
+java_library(
+    name = "result_type",
+    srcs = ["ResultType.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__pkg__",
+    ],
+)
+
+java_library(
+    name = "add_sub_plan_args",
+    srcs = ["AddSubPlanArgs.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__pkg__",
+    ],
+    deps = [
+        ":result_type",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "sub_plan_helper",
+    srcs = ["SubPlanHelper.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
+    ],
+    deps = [
+        ":sub_plan",
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_result_helper",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "sub_plan_creator",
+    srcs = ["SubPlanCreator.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__pkg__",
+    ],
+    deps = [
+        ":add_sub_plan_args",
+        ":result_type",
+        ":sub_plan",
+        ":sub_plan_helper",
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

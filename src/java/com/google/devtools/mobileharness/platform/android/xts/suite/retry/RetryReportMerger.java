@@ -85,6 +85,18 @@ public class RetryReportMerger {
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
 
     Result.Builder mergedResult = Result.newBuilder();
+    // If the previous result was ran with some filters given by the user command, reflect them in
+    // the merged report too.
+    //
+    if (!previousResult.getModuleFilterList().isEmpty()) {
+      mergedResult.addAllModuleFilter(previousResult.getModuleFilterList());
+    }
+    if (!previousResult.getIncludeFilterList().isEmpty()) {
+      mergedResult.addAllIncludeFilter(previousResult.getIncludeFilterList());
+    }
+    if (!previousResult.getExcludeFilterList().isEmpty()) {
+      mergedResult.addAllExcludeFilter(previousResult.getExcludeFilterList());
+    }
 
     // If no tests were retried, mark tests as cached, and inherit some info from previous result
     if (retryResult == null

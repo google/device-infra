@@ -118,10 +118,7 @@ public final class CompatibilityReportMergerTest {
                 .setKey("end_display")
                 .setValue("Thu Apr 06 17:15:48 CST 2023")
                 .build(),
-            Attribute.newBuilder()
-                .setKey("devices")
-                .setValue("12241FDD4002Z6,12241FDD4002Z6")
-                .build());
+            Attribute.newBuilder().setKey("devices").setValue("12241FDD4002Z6").build());
     assertThat(result.getBuild())
         .isEqualTo(
             BuildInfo.newBuilder()

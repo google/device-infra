@@ -39,10 +39,10 @@ run_history {
   }
 }
 summary {
-  passed: 9
-  failed: 3
-  modules_done: 2
-  modules_total: 2
+  passed: 11
+  failed: 5
+  modules_done: 3
+  modules_total: 3
 }
 module_info {
   name: "CtsAccelerationTestCases"
@@ -127,6 +127,38 @@ module_info {
     }
   }
   failed_tests: 0
+}
+module_info {
+  name: "HelloWorldTest"
+  abi: "arm64-v8a"
+  runtime_millis: 28
+  done: true
+  passed: 2
+  total_tests: 4
+  test_case {
+    name: "HelloWorldTest"
+    test {
+      result: "pass"
+      name: "test_hello_1"
+    }
+    test {
+      result: "fail"
+      name: "test_hello_2"
+    }
+  }
+  test_case {
+    name: "HelloFooTest"
+    test {
+      result: "fail"
+      name: "test_foo_1"
+    }
+    test {
+      result: "pass"
+      name: "test_foo_2"
+    }
+  }
+  is_non_tf_module: true
+  failed_tests: 2
 }
 attribute {
   key: "start"

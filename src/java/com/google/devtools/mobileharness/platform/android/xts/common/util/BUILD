@@ -28,3 +28,16 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "xts_dir_util",
+    srcs = ["XtsDirUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+    ],
+    deps = [
+        "@maven//:com_google_guava_guava",
+    ],
+)

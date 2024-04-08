@@ -24,6 +24,7 @@ import static java.util.stream.Collectors.toMap;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
@@ -47,6 +48,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstan
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -298,7 +300,7 @@ public class CompatibilityReportMerger {
     AtomicReference<Long> endTime = new AtomicReference<>(null);
     AtomicReference<String> startTimeDisplay = new AtomicReference<>("");
     AtomicReference<String> endTimeDisplay = new AtomicReference<>("");
-    List<String> deviceSerials = new ArrayList<>();
+    LinkedHashSet<String> deviceSerials = new LinkedHashSet<>();
     LinkedHashMap<String, String> newAttrs =
         new LinkedHashMap<>(); // Use LinkedHashMap to keep entry order
     reports.forEach(
@@ -331,7 +333,11 @@ public class CompatibilityReportMerger {
                 endTimeDisplay.set(attrsMap.getOrDefault(XmlConstants.END_DISPLAY_TIME_ATTR, ""));
               }
             } else if (Objects.equals(attr.getKey(), XmlConstants.DEVICES_ATTR)) {
-              deviceSerials.add(attr.getValue().trim());
+              deviceSerials.addAll(
+                  Splitter.on(',')
+                      .omitEmptyStrings()
+                      .trimResults()
+                      .splitToList(attr.getValue().trim()));
             }
           }
         });

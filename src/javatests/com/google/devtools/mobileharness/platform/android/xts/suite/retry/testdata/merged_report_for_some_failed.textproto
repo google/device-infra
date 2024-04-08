@@ -244,4 +244,9 @@ attribute {
   key: "suite_version"
   value: "12.1_r7"
 }
-
+module_filter: "moduleA"
+module_filter: "moduleB"
+include_filter: "arm64-v8a CtsAccelerationTestCases"
+include_filter: "arm64-v8a CtsAccelerationTestCases[instant]"
+exclude_filter: "moduleC"
+exclude_filter: "moduleD"

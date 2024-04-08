@@ -17,15 +17,36 @@ load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suite
 
 package(default_applicable_licenses = ["//:license"])
 
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/**/*"]),
+)
+
 java_library(
     name = "subplan",
     testonly = 1,
-    srcs = ["SubPlanTest.java"],
+    srcs = glob(["*.java"]),
+    data = [
+        ":testdata",
+    ],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:add_sub_plan_args",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:result_type",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan_creator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
+        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_testlib",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 
