@@ -190,14 +190,6 @@ public class AtsConsole {
       consoleUtil.printlnStderr("Flags: %s", deviceInfraServiceFlags);
     }
 
-    // Initializes CLI.
-    CommandLine commandLine =
-        new CommandLine(RootCommand.class, new GuiceFactory(injector))
-            .setCaseInsensitiveEnumValuesAllowed(true)
-            .setOut(outWriter)
-            .setErr(errWriter)
-            .setUnmatchedOptionsArePositionalParams(true);
-
     // Prepares OLC server.
     if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
       serverPreparer.prepareOlcServer();
@@ -212,6 +204,8 @@ public class AtsConsole {
     ImmutableList<String> args = mainArgs;
 
     do {
+      // Have a new CommandLine instance to work around the issue of ArgGroup not reset(b/332503867)
+      CommandLine commandLine = getCommandLine();
       String input;
       ImmutableList<String> tokens;
       if (args.isEmpty()) {
@@ -247,6 +241,14 @@ public class AtsConsole {
 
       sleeper.sleep(Duration.ofMillis(100L));
     } while (!consoleInfo.getShouldExitConsole());
+  }
+
+  private CommandLine getCommandLine() {
+    return new CommandLine(RootCommand.class, new GuiceFactory(injector))
+        .setCaseInsensitiveEnumValuesAllowed(true)
+        .setOut(outWriter)
+        .setErr(errWriter)
+        .setUnmatchedOptionsArePositionalParams(true);
   }
 
   /**
