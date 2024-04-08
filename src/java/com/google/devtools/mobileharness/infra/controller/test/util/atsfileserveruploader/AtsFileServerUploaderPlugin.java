@@ -20,7 +20,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.net.UrlEscapers;
-import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -28,11 +27,13 @@ import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.devtools.mobileharness.shared.util.command.CommandResult;
+import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
@@ -58,53 +59,91 @@ public class AtsFileServerUploaderPlugin {
   @Subscribe
   public void onTestEnded(TestEndedEvent event)
       throws MobileHarnessException, SkipTestException, InterruptedException {
-    String genFileDir = event.getTest().getGenFileDir();
-    List<String> genFiles = localFileUtil.listFilePaths(genFileDir, true);
-    for (String genFile : genFiles) {
-      String relativePath = PathUtil.makeRelative(genFileDir, genFile);
-      String destination =
-          String.join(
-              "/",
-              atsFileServer,
-              "file",
-              "genfiles",
-              event.getTest().locator().getId(),
-              UrlEscapers.urlFragmentEscaper().escape(relativePath));
-
-      try {
-        destination = new URI(destination).normalize().toString();
-        String output =
-            createCommandExecutor()
-                .run(
-                    Command.of(
-                        "curl",
-                        "--request",
-                        "POST",
-                        "--form",
-                        "file=@" + genFile,
-                        "--fail",
-                        "--location",
-                        destination));
-        logger.atInfo().log("Output for uploading file %s to %s: %s", genFile, destination, output);
-      } catch (URISyntaxException e) {
-        throw new MobileHarnessException(
-            BasicErrorId.HTTP_INVALID_FILE_PATH_ERROR,
-            String.format("Invalid url address %s in file server.", destination),
-            e);
-      } catch (CommandException e) {
-        if (e instanceof CommandFailureException) {
-          CommandResult result = ((CommandFailureException) e).result();
-          logger.atWarning().log(
-              "Logs of failed ATS file uploader: STDOUT: %s\nSTDERR: %s",
-              result.stdout(), result.stderr());
-        }
-        throw new MobileHarnessException(
-            BasicErrorId.ATS_FILE_SERVER_UPLOAD_FILE_ERROR,
-            String.format(
-                "Failed to upload file %s to %s in ATS file server.", genFile, atsFileServer),
-            e);
+    try {
+      String genFileDir = event.getTest().getGenFileDir();
+      List<String> genFiles = localFileUtil.listFilePaths(genFileDir, true);
+      for (String genFile : genFiles) {
+        updateGenFile(genFileDir, genFile, event.getTest().locator().getId());
       }
+    } finally {
+      cleanFiles(event.getTest());
     }
+  }
+
+  private void updateGenFile(String genFileDir, String genFile, String testId)
+      throws InterruptedException {
+    String relativePath = PathUtil.makeRelative(genFileDir, genFile);
+    String destination =
+        String.join(
+            "/",
+            atsFileServer,
+            "file",
+            "genfiles",
+            testId,
+            UrlEscapers.urlFragmentEscaper().escape(relativePath));
+
+    try {
+      destination = new URI(destination).normalize().toString();
+      String output =
+          createCommandExecutor()
+              .run(
+                  Command.of(
+                      "curl",
+                      "--request",
+                      "POST",
+                      "--form",
+                      "file=@" + genFile,
+                      "--fail",
+                      "--location",
+                      destination));
+      logger.atInfo().log("Output for uploading file %s to %s: %s", genFile, destination, output);
+    } catch (URISyntaxException e) {
+      logger.atWarning().withCause(e).log("Invalid url address %s in file server.", destination);
+    } catch (CommandException e) {
+      if (e instanceof CommandFailureException) {
+        CommandResult result = ((CommandFailureException) e).result();
+        logger.atWarning().log(
+            "Logs of failed ATS file uploader: STDOUT: %s\nSTDERR: %s",
+            result.stdout(), result.stderr());
+      }
+      logger.atWarning().withCause(e).log(
+          "Failed to upload file %s to %s in ATS file server.", genFile, atsFileServer);
+    }
+  }
+
+  private void cleanFiles(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+    Callables.callAll(
+        () -> {
+          try {
+            localFileUtil.removeFileOrDir(testInfo.getGenFileDir());
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to clean up gen file dir for test %s.", testInfo.locator().getId());
+          }
+          return null;
+        },
+        () -> {
+          try {
+            localFileUtil.removeFileOrDir(testInfo.getTmpFileDir());
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to clean up tmp file dir for test %s.", testInfo.locator().getId());
+          }
+          return null;
+        },
+
+        // TODO: Make sure there are only one test for one job in the same lab server.
+        () -> {
+          try {
+            if (testInfo.jobInfo().setting().hasRunFileDir()) {
+              localFileUtil.removeFileOrDir(testInfo.jobInfo().setting().getRunFileDir());
+            }
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to clean up run file dir for test %s.", testInfo.locator().getId());
+          }
+          return null;
+        });
   }
 
   @VisibleForTesting

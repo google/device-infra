@@ -24,7 +24,9 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import org.junit.Before;
@@ -42,6 +44,8 @@ public class AtsFileServerUploaderPluginTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private TestEndedEvent testEndedEvent;
   @Mock private TestInfo testInfo;
+  @Mock private JobSetting jobSetting;
+  @Mock private JobInfo jobInfo;
   @Mock private CommandExecutor commandExecutor;
   @Mock private LocalFileUtil localFileUtil;
 
@@ -59,8 +63,13 @@ public class AtsFileServerUploaderPluginTest {
         };
     when(testEndedEvent.getTest()).thenReturn(testInfo);
     when(testInfo.getGenFileDir()).thenReturn("/var");
+    when(testInfo.getTmpFileDir()).thenReturn("/tmp");
+    when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(testInfo.locator())
         .thenReturn(new TestLocator("test_id", "test_name", new JobLocator("job_id", "job_name")));
+    when(jobInfo.setting()).thenReturn(jobSetting);
+    when(jobSetting.getRunFileDir()).thenReturn("/run");
+    when(jobSetting.hasRunFileDir()).thenReturn(true);
   }
 
   @Test
@@ -91,5 +100,8 @@ public class AtsFileServerUploaderPluginTest {
                 "--fail",
                 "--location",
                 "www.example.com:8006/file/genfiles/test_id/hello/world.txt"));
+    verify(localFileUtil).removeFileOrDir("/var");
+    verify(localFileUtil).removeFileOrDir("/tmp");
+    verify(localFileUtil).removeFileOrDir("/run");
   }
 }

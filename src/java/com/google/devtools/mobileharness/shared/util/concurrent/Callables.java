@@ -91,7 +91,7 @@ public final class Callables {
    * }
    * }</pre>
    */
-  public void callAll(MobileHarnessCallable<?>... callables)
+  public static void callAll(MobileHarnessCallable<?>... callables)
       throws MobileHarnessException, InterruptedException {
     boolean interrupted = false;
     List<Throwable> errors = new ArrayList<>();
