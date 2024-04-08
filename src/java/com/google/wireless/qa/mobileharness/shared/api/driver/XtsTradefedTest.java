@@ -72,7 +72,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -82,6 +81,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 
 /** Driver for running Tradefed based xTS test suites. */
@@ -111,6 +112,9 @@ public class XtsTradefedTest extends BaseDriver
           "ats_console_deploy.jar",
           "ats_olc_server_deploy.jar",
           "ats_olc_server_local_mode_deploy.jar");
+
+  private static final ImmutableList<String> EXCLUDED_JAR_FILE_PATTERNS =
+      ImmutableList.of("art-run-test.*", "art-gtest-jars.*");
 
   private volatile ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
 
@@ -263,7 +267,7 @@ public class XtsTradefedTest extends BaseDriver
     // |---- logs/YYYY.MM.DD_HH.MM.SS/
     try {
       Path xtsGenFileDir =
-          Paths.get(testInfo.getGenFileDir(), String.format("android-%s-gen-files", xtsType));
+          Path.of(testInfo.getGenFileDir(), String.format("android-%s-gen-files", xtsType));
 
       localFileUtil.prepareDir(xtsGenFileDir);
       localFileUtil.grantFileOrDirFullAccess(xtsGenFileDir);
@@ -423,9 +427,8 @@ public class XtsTradefedTest extends BaseDriver
     ImmutableList.Builder<String> xtsCommand =
         ImmutableList.<String>builder()
             .add(getJavaBinary(envVars), "-Xmx6g", "-XX:+HeapDumpOnOutOfMemoryError");
-    xtsCommand.add("-cp", getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType));
-
     xtsCommand
+        .add("-cp", getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType))
         .add(String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType), tmpXtsRootDir))
         .add(COMPATIBILITY_CONSOLE_CLASS)
         .addAll(getXtsRunCommandArgs(spec));
@@ -440,9 +443,18 @@ public class XtsTradefedTest extends BaseDriver
     return systemUtil.getJavaBin();
   }
 
+  private boolean isJarFileExcluded(
+      String fileName, ImmutableList<Pattern> excludedJarFilePatterns) {
+    return excludedJarFilePatterns.stream()
+        .map(pattern -> pattern.matcher(fileName))
+        .anyMatch(Matcher::matches);
+  }
+
   private String getConcatenatedJarPath(
       Path tmpXtsRootDir, XtsTradefedTestDriverSpec spec, String xtsType)
       throws MobileHarnessException {
+    ImmutableList<Pattern> excludedJarFilePatterns =
+        EXCLUDED_JAR_FILE_PATTERNS.stream().map(Pattern::compile).collect(toImmutableList());
     LinkedHashSet<String> leadingJarsSet = getLeadingJarsInClasspath(spec);
 
     ListMultimap<String, Path> foundLeadingJars = ArrayListMultimap.create();
@@ -478,7 +490,9 @@ public class XtsTradefedTest extends BaseDriver
               linkXtsTestcasesDirRealPath,
               fileOrDir ->
                   Files.isRegularFile(fileOrDir)
-                      && fileOrDir.getFileName().toString().endsWith(".jar"))
+                      && fileOrDir.getFileName().toString().endsWith(".jar")
+                      && !isJarFileExcluded(
+                          fileOrDir.getFileName().toString(), excludedJarFilePatterns))
           .forEach(
               jar -> {
                 if (leadingJarsSet.contains(jar.getFileName().toString())) {
@@ -495,7 +509,10 @@ public class XtsTradefedTest extends BaseDriver
             .listFilePaths(
                 linkXtsTestcasesSubDirRealPath,
                 /* recursively= */ true,
-                path -> path.getFileName().toString().endsWith(".jar"))
+                path ->
+                    path.getFileName().toString().endsWith(".jar")
+                        && !isJarFileExcluded(
+                            path.getFileName().toString(), excludedJarFilePatterns))
             .forEach(
                 jar -> {
                   Path newJarPath =
@@ -541,10 +558,10 @@ public class XtsTradefedTest extends BaseDriver
   private Path getXtsRootDir(XtsTradefedTestDriverSpec spec, TestInfo testInfo)
       throws MobileHarnessException {
     if (spec.hasXtsRootDir()) {
-      return Paths.get(spec.getXtsRootDir());
+      return Path.of(spec.getXtsRootDir());
     } else if (spec.hasAndroidXtsZip()) {
       // Unzip android-xts zip file and return the xts root dir
-      Path androidXtsZip = Paths.get(spec.getAndroidXtsZip());
+      Path androidXtsZip = Path.of(spec.getAndroidXtsZip());
       try {
         String unzippedPath =
             PathUtil.join(
@@ -723,13 +740,13 @@ public class XtsTradefedTest extends BaseDriver
   Path prepareXtsWorkDir(String xtsType) throws MobileHarnessException {
     try {
       Path dir =
-          Paths.get(
+          Path.of(
               JAVA_IO_TMPDIR.value(),
               String.format("xts-root-dir-%s", UUID.randomUUID()),
               String.format("android-%s", xtsType));
       // We need to preparer /xts-root-dir/android-xts/testcases since we create symlink to all the
       // sub test case directories.
-      localFileUtil.prepareDir(Paths.get(dir.toString(), "testcases"));
+      localFileUtil.prepareDir(Path.of(dir.toString(), "testcases"));
       localFileUtil.grantFileOrDirFullAccess(dir.getParent());
       return dir.getParent();
     } catch (MobileHarnessException e) {
@@ -767,7 +784,7 @@ public class XtsTradefedTest extends BaseDriver
       // Integrates the dynamic downloaded test cases with the temp XTS workspace.
       createSymlinksForTestCases(
           linkTestcasesDir,
-          Paths.get(
+          Path.of(
               testInfo.getTmpFileDir() + testInfo.properties().get(XTS_DYNAMIC_DOWNLOAD_PATH_KEY)));
     }
 
