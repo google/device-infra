@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.xts.suite;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -43,9 +44,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import org.xml.sax.SAXParseException;
 
 /** Retrieves compatibility test module definitions from the suite. */
 public class SuiteModuleLoader {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String TEST_SUITE_PARAMETER_KEY = "parameter";
 
@@ -118,6 +122,19 @@ public class SuiteModuleLoader {
     LinkedHashMap<String, Configuration> toRun = new LinkedHashMap<>();
     String name = Files.getNameWithoutExtension(configName);
     File configFile = new File(configFullName);
+    Configuration config;
+    try {
+      config = ConfigurationXmlParser.parse(configFile);
+    } catch (MobileHarnessException e) {
+      if (e.getCause() instanceof SAXParseException) {
+        // Ignore the exception since some config files are not XML files we want to parse.
+        logger.atInfo().withCause(e).log(
+            "Failed to parse config file %s", configFile.getAbsolutePath());
+        return toRun;
+      } else {
+        throw e;
+      }
+    }
     boolean primaryAbi = true;
     boolean shouldCreateMultiAbi = true;
     // If a particular parameter was requested to be run, find it.
@@ -151,7 +168,6 @@ public class SuiteModuleLoader {
       }
       // Base ID format: "<abi> <module_name>"
       String baseId = AbiUtil.createId(abi.name(), name);
-      Configuration config = ConfigurationXmlParser.parse(configFile);
 
       boolean skipCreatingBaseConfig = false;
       List<IModuleParameterHandler> paramHandlers = getModuleParameters(name, config);

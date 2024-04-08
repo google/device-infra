@@ -425,13 +425,10 @@ public class XtsTradefedTest extends BaseDriver
             .add(getJavaBinary(envVars), "-Xmx6g", "-XX:+HeapDumpOnOutOfMemoryError");
     xtsCommand.add("-cp", getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType));
 
-    for (Map.Entry<String, String> systemProp :
-        getSystemPropsToTradefedConsole(tmpXtsRootDir, xtsType).entrySet()) {
-      xtsCommand.add(String.format("-D%s=%s", systemProp.getKey(), systemProp.getValue()));
-    }
-
-    xtsCommand.add(COMPATIBILITY_CONSOLE_CLASS);
-    xtsCommand.addAll(getXtsRunCommandArgs(spec));
+    xtsCommand
+        .add(String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType), tmpXtsRootDir))
+        .add(COMPATIBILITY_CONSOLE_CLASS)
+        .addAll(getXtsRunCommandArgs(spec));
 
     return xtsCommand.build().toArray(new String[0]);
   }
@@ -593,16 +590,6 @@ public class XtsTradefedTest extends BaseDriver
 
   private Path getXtsSubPlansDir(Path xtsRootDir, String xtsType) {
     return xtsRootDir.resolve(String.format("android-%s/subplans", xtsType));
-  }
-
-  private ImmutableMap<String, String> getSystemPropsToTradefedConsole(
-      Path tmpXtsRootDir, String xtsType) {
-    switch (xtsType) {
-      case "cts":
-        return ImmutableMap.of("CTS_ROOT", tmpXtsRootDir.toString());
-      default:
-        return ImmutableMap.of();
-    }
   }
 
   private ImmutableMap<String, String> getEnvironmentToTradefedConsole(

@@ -53,6 +53,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:module_parameters_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:negative_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:not_multi_abi_handler",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )
