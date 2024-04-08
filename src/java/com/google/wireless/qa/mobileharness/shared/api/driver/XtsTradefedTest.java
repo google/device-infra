@@ -426,7 +426,7 @@ public class XtsTradefedTest extends BaseDriver
       throws MobileHarnessException {
     ImmutableList.Builder<String> xtsCommand =
         ImmutableList.<String>builder()
-            .add(getJavaBinary(envVars), "-Xmx6g", "-XX:+HeapDumpOnOutOfMemoryError");
+            .add(getJavaBinary(envVars), "-Xmx16g", "-XX:+HeapDumpOnOutOfMemoryError");
     xtsCommand
         .add("-cp", getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType))
         .add(String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType), tmpXtsRootDir))
