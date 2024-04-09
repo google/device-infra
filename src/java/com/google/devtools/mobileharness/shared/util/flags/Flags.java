@@ -143,6 +143,15 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> alrTestConfig = alrTestConfigDefault;
 
+  private static final Flag<Duration> atsDdaLeaseExpirationTimeDefault =
+      DurationFlag.value(Duration.ofMinutes(5L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_dda_lease_expiration_time",
+      description = "Lease expiration time of ATS DDA. Default is 5 minutes",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> atsDdaLeaseExpirationTime = atsDdaLeaseExpirationTimeDefault;
+
   private static final Flag<String> atsFileServerDefault = Flag.value("localhost:8006");
 
   @com.beust.jcommander.Parameter(

@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -63,23 +64,29 @@ public class AtsDdaSessionPlugin {
   private static final String DRIVER_NAME = "NoOpDriver";
   private static final Duration MAX_DRIVER_SLEEP_TIME = Duration.ofHours(2L);
   private static final Duration START_TIMEOUT = Duration.ofMinutes(1L);
+  private static final String TEST_MESSAGE_NAMESPACE = "mobileharness:driver:NoOpDriver";
   private static final ImmutableMap<String, String> CANCEL_TEST_MESSAGE =
-      ImmutableMap.of("namespace", "mobileharness:driver:NoOpDriver", "type", "wake_up");
+      ImmutableMap.of("namespace", TEST_MESSAGE_NAMESPACE, "type", "wake_up");
+  private static final ImmutableMap<String, String> HEARTBEAT_TEST_MESSAGE =
+      ImmutableMap.of("namespace", TEST_MESSAGE_NAMESPACE, "type", "extend_lease");
 
   private final SessionInfo sessionInfo;
   private final TestMessageUtil testMessageUtil;
 
-  private final Object cancelSessionLock = new Object();
+  private final Object sessionLock = new Object();
 
-  @GuardedBy("cancelSessionLock")
+  @GuardedBy("sessionLock")
   private boolean sessionCancelled;
 
-  @GuardedBy("cancelSessionLock")
+  @GuardedBy("sessionLock")
   @Nullable
   private String startedTestId;
 
-  @GuardedBy("cancelSessionLock")
+  @GuardedBy("sessionLock")
   private boolean cancelTestMessageSent;
+
+  @GuardedBy("sessionLock")
+  private boolean testEnded;
 
   /** Set in {@link #onSessionStarting(SessionStartingEvent)}. */
   private volatile AtsDdaSessionPluginConfig config;
@@ -101,7 +108,7 @@ public class AtsDdaSessionPlugin {
             .unpack(AtsDdaSessionPluginConfig.class);
     logger.atInfo().log("Config: %s", shortDebugString(config));
 
-    synchronized (cancelSessionLock) {
+    synchronized (sessionLock) {
       if (sessionCancelled) {
         logger.atInfo().log(
             "Skip creating job since the session [%s] has been cancelled",
@@ -149,6 +156,11 @@ public class AtsDdaSessionPlugin {
             .build();
     jobInfo.dimensions().addAll(deviceRequirement.getDimensionsMap());
     jobInfo.params().add("sleep_time_sec", Long.toString(ddaTimeout.toSeconds()));
+    jobInfo
+        .params()
+        .add(
+            "lease_expiration_time_sec",
+            Long.toString(Flags.instance().atsDdaLeaseExpirationTime.getNonNull().toSeconds()));
     jobInfo.tests().add(TEST_NAME);
     return jobInfo;
   }
@@ -164,7 +176,7 @@ public class AtsDdaSessionPlugin {
 
     // Sends cached cancel test message if any.
     Optional<String> testIdToSendCancelTestMessage;
-    synchronized (cancelSessionLock) {
+    synchronized (sessionLock) {
       startedTestId = event.getTest().locator().getId();
       testIdToSendCancelTestMessage = getTestIdToSendCancelTestMessage();
       if (testIdToSendCancelTestMessage.isPresent()) {
@@ -176,6 +188,9 @@ public class AtsDdaSessionPlugin {
 
   @Subscribe
   private void onTestEnded(TestEndedEvent event) throws MobileHarnessException {
+    synchronized (sessionLock) {
+      testEnded = true;
+    }
     Optional<MobileHarnessException> testError =
         event.getTest().resultWithCause().get().causeException();
     if (testError.isPresent()) {
@@ -193,7 +208,7 @@ public class AtsDdaSessionPlugin {
     if (notification.getNotificationCase() == NotificationCase.CANCEL_SESSION) {
       // Sends cancel test message.
       Optional<String> testIdToSendCancelTestMessage;
-      synchronized (cancelSessionLock) {
+      synchronized (sessionLock) {
         sessionCancelled = true;
         testIdToSendCancelTestMessage = getTestIdToSendCancelTestMessage();
         if (testIdToSendCancelTestMessage.isPresent()) {
@@ -201,10 +216,19 @@ public class AtsDdaSessionPlugin {
         }
       }
       testIdToSendCancelTestMessage.ifPresent(this::sendCancelTestMessage);
+    } else if (notification.getNotificationCase() == NotificationCase.HEARTBEAT_SESSION) {
+      // Sends heartbeat test message.
+      String testIdToSendHeartbeatTestMessage;
+      synchronized (sessionLock) {
+        testIdToSendHeartbeatTestMessage = testEnded ? null : startedTestId;
+      }
+      if (testIdToSendHeartbeatTestMessage != null) {
+        sendHeartbeatTestMessage(testIdToSendHeartbeatTestMessage);
+      }
     }
   }
 
-  @GuardedBy("cancelSessionLock")
+  @GuardedBy("sessionLock")
   private Optional<String> getTestIdToSendCancelTestMessage() {
     if (sessionCancelled && startedTestId != null && !cancelTestMessageSent) {
       return Optional.of(startedTestId);
@@ -221,6 +245,17 @@ public class AtsDdaSessionPlugin {
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
           "Failed to send cancel test message to test [%s]", testId);
+    }
+  }
+
+  private void sendHeartbeatTestMessage(String testId) {
+    logger.atInfo().log(
+        "Sending heartbeat test message to test [%s], message=%s", testId, HEARTBEAT_TEST_MESSAGE);
+    try {
+      testMessageUtil.sendMessageToTest(testId, HEARTBEAT_TEST_MESSAGE);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to send heartbeat test message to test [%s]", testId);
     }
   }
 

@@ -23,8 +23,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Test;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.TestAnnotation;
@@ -35,10 +39,13 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.NoOpDriverSpec;
+import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
 /**
@@ -52,11 +59,28 @@ import javax.inject.Inject;
         "Any words. Each word will create one run. If this tests field "
             + "is empty by default Mobile Harness will create one run.")
 public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverSpec> {
+
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private enum WakeupReason {
+    RECEIVE_MESSAGE,
+    LEASE_EXPIRE,
+  }
 
   private static final String MESSAGE_NAMESPACE = "mobileharness:driver:NoOpDriver";
 
-  private final CountDownLatch wakeupLatch = new CountDownLatch(1);
+  private final SettableFuture<WakeupReason> wakeupFuture = SettableFuture.create();
+
+  private final Object leaseLock = new Object();
+
+  @GuardedBy("leaseLock")
+  private Duration leaseExpirationTime;
+
+  @GuardedBy("leaseLock")
+  private ListeningScheduledExecutorService scheduledThreadPool;
+
+  @GuardedBy("leaseLock")
+  private ListenableFuture<?> leaseExpirationFuture;
 
   private volatile Test.TestResult testResultFromMessage;
   private volatile com.google.devtools.mobileharness.api.model.error.MobileHarnessException
@@ -71,20 +95,41 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
   @Override
   public void run(TestInfo testInfo) throws InterruptedException, MobileHarnessException {
     NoOpDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
-    int sleepTimeSec = spec.getSleepTimeSec();
-    testInfo.log().atInfo().alsoTo(logger).log("Sleep for %d seconds", sleepTimeSec);
-    try {
-      boolean wakeup = wakeupLatch.await(sleepTimeSec, SECONDS);
-      if (wakeup) {
-        testInfo.log().atInfo().alsoTo(logger).log("Wake up from sleep");
+
+    if (spec.hasLeaseExpirationTimeSec()) {
+      Duration leaseExpirationTime = Duration.ofSeconds(spec.getLeaseExpirationTimeSec());
+      testInfo.log().atInfo().alsoTo(logger).log("Lease expiration time: %s", leaseExpirationTime);
+      synchronized (leaseLock) {
+        this.leaseExpirationTime = leaseExpirationTime;
+        scheduledThreadPool =
+            ThreadPools.createStandardScheduledThreadPool(
+                /* threadNamePrefix= */ "no-op-driver-lease-monitor-" + testInfo.locator().getId(),
+                /* corePoolSize= */ 1);
+        extendLease();
       }
-    } catch (IllegalArgumentException e) {
-      testInfo
-          .log()
-          .atInfo()
-          .alsoTo(logger)
-          .log("Failed to sleep for %d seconds: %s", sleepTimeSec, e.getMessage());
+    }
+
+    try {
+      int sleepTimeSec = spec.getSleepTimeSec();
+      testInfo.log().atInfo().alsoTo(logger).log("Sleep for %d seconds", sleepTimeSec);
+      WakeupReason wakeupReason = wakeupFuture.get(sleepTimeSec, SECONDS);
+      testInfo.log().atInfo().alsoTo(logger).log("Wake up from sleep, reason=%s", wakeupReason);
+    } catch (ExecutionException e) {
+      throw new AssertionError(e); // The future will never be set with an exception.
+    } catch (TimeoutException e) {
+      // Does nothing. No wake_up message received and the lease is not expired.
     } finally {
+      synchronized (leaseLock) {
+        if (leaseExpirationFuture != null) {
+          leaseExpirationFuture.cancel(/* mayInterruptIfRunning= */ false);
+          leaseExpirationFuture = null;
+        }
+        if (scheduledThreadPool != null) {
+          scheduledThreadPool.shutdown();
+          scheduledThreadPool = null;
+        }
+      }
+
       // Sets the test result to:
       // 1. The result from the last test message.
       // 2. The result from job params.
@@ -145,20 +190,26 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
   }
 
   @Subscribe
-  private void onTestMessage(TestMessageEvent testMessageEvent) {
-    Map<String, String> message = testMessageEvent.getMessage();
+  private void onTestMessage(TestMessageEvent event) {
+    TestInfo testInfo = event.getTest();
+    Map<String, String> message = event.getMessage();
     if (MESSAGE_NAMESPACE.equals(message.get("namespace"))) {
       if (Objects.equals(message.get("type"), "wake_up")) {
-        wakeupLatch.countDown();
+        wakeupFuture.set(WakeupReason.RECEIVE_MESSAGE);
+      } else if (Objects.equals(message.get("type"), "extend_lease")) {
+        testInfo.log().atInfo().alsoTo(logger).log("Lease is extended");
+        synchronized (leaseLock) {
+          if (leaseExpirationTime != null
+              && scheduledThreadPool != null
+              && leaseExpirationFuture != null) {
+            leaseExpirationFuture.cancel(/* mayInterruptIfRunning= */ false);
+            extendLease();
+          }
+        }
       } else if (Objects.equals(message.get("type"), "set_result")
           && message.containsKey("result")) {
         String resultString = message.get("result");
-        testMessageEvent
-            .getTest()
-            .log()
-            .atInfo()
-            .alsoTo(logger)
-            .log("Set result to: [%s]", resultString);
+        testInfo.log().atInfo().alsoTo(logger).log("Set result to: [%s]", resultString);
         try {
           testResultFromMessage = Test.TestResult.valueOf(resultString.toUpperCase(Locale.ROOT));
           testResultCauseFromMessage =
@@ -166,8 +217,7 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
                   ExtErrorId.NO_OP_DRIVER_NON_PASSING_RESULT_SET_BY_MESSAGE,
                   "NoOpDriver non-passing result set by test message");
         } catch (IllegalArgumentException e) {
-          testMessageEvent
-              .getTest()
+          testInfo
               .errors()
               .addAndLog(
                   new MobileHarnessException(
@@ -177,14 +227,27 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
                   logger);
         }
       } else {
-        testMessageEvent
-            .getTest()
+        testInfo
             .errors()
             .addAndLog(
                 new MobileHarnessException(
-                    ErrorCode.TEST_MESSAGE_ERROR, "Invalid NoOpDriver test message: " + message),
+                    ErrorCode.TEST_MESSAGE_ERROR,
+                    "Unrecognized NoOpDriver test message: " + message),
                 logger);
       }
     }
+  }
+
+  @GuardedBy("leaseLock")
+  private void extendLease() {
+    if (leaseExpirationFuture != null) {
+      leaseExpirationFuture.cancel(/* mayInterruptIfRunning= */ false);
+    }
+    leaseExpirationFuture =
+        scheduledThreadPool.schedule(this::onLeaseExpiration, leaseExpirationTime);
+  }
+
+  private void onLeaseExpiration() {
+    wakeupFuture.set(WakeupReason.LEASE_EXPIRE);
   }
 }

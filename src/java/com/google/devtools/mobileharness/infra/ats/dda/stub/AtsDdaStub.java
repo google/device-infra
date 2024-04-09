@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.CancelSession;
+import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.HeartbeatSession;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
@@ -176,19 +177,41 @@ public class AtsDdaStub {
   public boolean cancelSession(String sessionId) throws GrpcExceptionWithErrorId {
     NotifySessionResponse notifySessionResponse =
         sessionStub.notifySession(
-            NotifySessionRequest.newBuilder()
-                .setSessionId(SessionId.newBuilder().setId(sessionId))
-                .setSessionNotification(
-                    SessionNotification.newBuilder()
-                        .setPluginLabel(
-                            SessionPluginLabel.newBuilder().setLabel(SESSION_PLUGIN_LABEL))
-                        .setNotification(
-                            Any.pack(
-                                AtsDdaSessionNotification.newBuilder()
-                                    .setCancelSession(CancelSession.getDefaultInstance())
-                                    .build())))
-                .build());
+            createNotifySessionRequest(
+                sessionId,
+                AtsDdaSessionNotification.newBuilder()
+                    .setCancelSession(CancelSession.getDefaultInstance())
+                    .build()));
     return notifySessionResponse.getSuccessful();
+  }
+
+  /**
+   * Heartbeats a session.
+   *
+   * @return true if a pending/running session is found and cancelled, false if no session is found
+   *     or the session has finished
+   * @throws GrpcExceptionWithErrorId if there is network error
+   */
+  public boolean heartbeatSession(String sessionId) throws GrpcExceptionWithErrorId {
+    NotifySessionResponse notifySessionResponse =
+        sessionStub.notifySession(
+            createNotifySessionRequest(
+                sessionId,
+                AtsDdaSessionNotification.newBuilder()
+                    .setHeartbeatSession(HeartbeatSession.getDefaultInstance())
+                    .build()));
+    return notifySessionResponse.getSuccessful();
+  }
+
+  private static NotifySessionRequest createNotifySessionRequest(
+      String sessionId, AtsDdaSessionNotification notification) {
+    return NotifySessionRequest.newBuilder()
+        .setSessionId(SessionId.newBuilder().setId(sessionId))
+        .setSessionNotification(
+            SessionNotification.newBuilder()
+                .setPluginLabel(SessionPluginLabel.newBuilder().setLabel(SESSION_PLUGIN_LABEL))
+                .setNotification(Any.pack(notification)))
+        .build();
   }
 
   private static Optional<AtsDdaSessionPluginOutput> getPluginOutput(SessionDetail sessionDetail) {

@@ -27,6 +27,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
@@ -136,7 +137,8 @@ public class AtsDdaIntegrationTest {
   private final StringBuilder labServerStderrBuilder = new StringBuilder();
 
   private final CountDownLatch driverStarted = new CountDownLatch(1);
-  private final CountDownLatch driverWokeUp = new CountDownLatch(1);
+  private final CountDownLatch driverCancelled = new CountDownLatch(1);
+  private final CountDownLatch driverLeaseExpired = new CountDownLatch(1);
 
   private SessionInfo sessionInfo;
 
@@ -168,8 +170,8 @@ public class AtsDdaIntegrationTest {
   }
 
   @Test
-  public void run() throws Exception {
-    startServers();
+  public void run_cancelSession() throws Exception {
+    startServers(/* ddaLeaseExpirationTime= */ Duration.ofMinutes(5L));
 
     // Creates session.
     String sessionId =
@@ -180,14 +182,7 @@ public class AtsDdaIntegrationTest {
             Duration.ofHours(1L));
 
     // Gets session info.
-    for (int i = 0; i < 30; i++) {
-      sessionInfo = atsDdaStub.getSession(sessionId);
-      if (sessionInfo.allocatedDevice().isPresent()
-          || sessionInfo.sessionStatus() == SessionStatus.SESSION_FINISHED) {
-        break;
-      }
-      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1L));
-    }
+    waitUntilDeviceAllocated(sessionId);
 
     // Verifies the session status and the allocated device.
     assertThat(sessionInfo.sessionStatus()).isEqualTo(SessionStatus.SESSION_RUNNING);
@@ -215,23 +210,82 @@ public class AtsDdaIntegrationTest {
     assertThat(atsDdaStub.cancelSession(sessionId)).isTrue();
 
     // Verifies the driver is woke up successfully.
-    assertWithMessage("The driver has not been woke up in 15 seconds")
-        .that(driverWokeUp.await(15L, SECONDS))
+    assertWithMessage("The driver has not been cancelled in 15 seconds")
+        .that(driverCancelled.await(15L, SECONDS))
         .isTrue();
 
-    // Checks warnings in logs.
-    String checkWarningsMessagePrefix =
-        "A successful run should not print exception stack traces, which will confuse"
-            + " users and affect debuggability when debugging a failed one.\n";
-    assertWithMessage(checkWarningsMessagePrefix + "OLC server stderr")
-        .that(olcServerStderrBuilder.toString())
-        .doesNotContain("\tat ");
-    assertWithMessage(checkWarningsMessagePrefix + "Lab server stderr")
-        .that(labServerStderrBuilder.toString())
-        .doesNotContain("\tat ");
+    verifyLogs();
   }
 
-  private void startServers()
+  @Test
+  public void run_leaseExpired() throws Exception {
+    startServers(/* ddaLeaseExpirationTime= */ Duration.ofSeconds(1L));
+
+    // Creates session.
+    String sessionId =
+        atsDdaStub.createSession(
+            "fake_session",
+            ImmutableMap.of(
+                "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"),
+            Duration.ofHours(1L));
+
+    // Gets session info.
+    waitUntilDeviceAllocated(sessionId);
+
+    // Verifies the session status and the allocated device.
+    assertThat(sessionInfo.sessionStatus()).isEqualTo(SessionStatus.SESSION_RUNNING);
+
+    // Verifies the driver started successfully.
+    assertWithMessage("The driver has not started in 15 seconds")
+        .that(driverStarted.await(15L, SECONDS))
+        .isTrue();
+
+    // Verifies the driver lease is expired.
+    assertWithMessage("The driver lease is not expired in 15 seconds")
+        .that(driverLeaseExpired.await(15L, SECONDS))
+        .isTrue();
+
+    verifyLogs();
+  }
+
+  @Test
+  public void run_heartbeatSession() throws Exception {
+    startServers(/* ddaLeaseExpirationTime= */ Duration.ofSeconds(2L));
+
+    // Creates session.
+    String sessionId =
+        atsDdaStub.createSession(
+            "fake_session",
+            ImmutableMap.of(
+                "model", "pixel", "sdk_version", "24", "control_id", "AndroidRealDevice-2"),
+            Duration.ofHours(1L));
+
+    // Gets session info.
+    waitUntilDeviceAllocated(sessionId);
+
+    // Verifies the session status and the allocated device.
+    assertThat(sessionInfo.sessionStatus()).isEqualTo(SessionStatus.SESSION_RUNNING);
+
+    // Verifies the driver started successfully.
+    assertWithMessage("The driver has not started in 15 seconds")
+        .that(driverStarted.await(15L, SECONDS))
+        .isTrue();
+
+    // Sends heartbeats.
+    for (int i = 0; i < 10; i++) {
+      assertThat(atsDdaStub.heartbeatSession(sessionId)).isTrue();
+      Sleeper.defaultSleeper().sleep(Duration.ofMillis(500L));
+    }
+
+    // Verifies the driver lease is not expired.
+    assertWithMessage("The driver lease is expired")
+        .that(driverLeaseExpired.getCount())
+        .isGreaterThan(0);
+
+    verifyLogs();
+  }
+
+  private void startServers(Duration ddaLeaseExpirationTime)
       throws IOException, CommandStartException, InterruptedException, ExecutionException {
     int deviceNum = 5;
 
@@ -244,6 +298,9 @@ public class AtsDdaIntegrationTest {
                     .createJavaCommand(
                         OLC_SERVER_FILE_PATH,
                         ImmutableList.of(
+                            String.format(
+                                "--ats_dda_lease_expiration_time=%ss",
+                                ddaLeaseExpirationTime.toSeconds()),
                             "--enable_ats_mode=true",
                             "--enable_client_experiment_manager=false",
                             "--enable_client_file_transfer=false",
@@ -334,7 +391,11 @@ public class AtsDdaIntegrationTest {
                       } else if (stderr.contains("Sleep for ")) {
                         driverStarted.countDown();
                       } else if (stderr.contains("Wake up from sleep")) {
-                        driverWokeUp.countDown();
+                        if (stderr.contains("reason=RECEIVE_MESSAGE")) {
+                          driverCancelled.countDown();
+                        } else if (stderr.contains("reason=LEASE_EXPIRE")) {
+                          driverLeaseExpired.countDown();
+                        }
                       }
                     }))
             .successfulStartCondition(line -> line.contains("Lab server successfully started"))
@@ -361,5 +422,30 @@ public class AtsDdaIntegrationTest {
     assertWithMessage("The remote device manager has not received all device signups in 15 seconds")
         .that(olcServerAllRemoteDevicesFound.await(15L, SECONDS))
         .isTrue();
+  }
+
+  private void waitUntilDeviceAllocated(String sessionId)
+      throws GrpcExceptionWithErrorId, InterruptedException {
+    for (int i = 0; i < 30; i++) {
+      sessionInfo = atsDdaStub.getSession(sessionId);
+      if (sessionInfo.allocatedDevice().isPresent()
+          || sessionInfo.sessionStatus() == SessionStatus.SESSION_FINISHED) {
+        break;
+      }
+      Sleeper.defaultSleeper().sleep(Duration.ofSeconds(1L));
+    }
+  }
+
+  /** Checks warnings in logs. */
+  private void verifyLogs() {
+    String checkWarningsMessagePrefix =
+        "A successful run should not print exception stack traces, which will confuse"
+            + " users and affect debuggability when debugging a failed one.\n";
+    assertWithMessage(checkWarningsMessagePrefix + "OLC server stderr")
+        .that(olcServerStderrBuilder.toString())
+        .doesNotContain("\tat ");
+    assertWithMessage(checkWarningsMessagePrefix + "Lab server stderr")
+        .that(labServerStderrBuilder.toString())
+        .doesNotContain("\tat ");
   }
 }

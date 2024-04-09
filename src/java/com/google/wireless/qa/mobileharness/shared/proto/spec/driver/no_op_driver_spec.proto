@@ -47,4 +47,11 @@ message NoOpDriverSpec {
   optional string test_result_reason = 6 [(field_detail) = {
     help: "The result reason for a non-passing test_result."
   }];
+
+  optional int32 lease_expiration_time_sec = 7 [(field_detail) = {
+    help: "If present, the driver will wake up from sleep (see sleep_time_sec)"
+          " if it has not received a test message (whose 'namespace' is"
+          " 'mobileharness:driver:NoOpDriver' and whose 'type' is "
+          "'extend_lease') for the given time."
+  }];
 }

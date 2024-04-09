@@ -48,7 +48,10 @@ message AtsDdaSessionPluginOutput {
 message AtsDdaSessionNotification {
   oneof notification {
     CancelSession cancel_session = 1;
+    HeartbeatSession heartbeat_session = 2;
   }
 }
 
 message CancelSession {}
+
+message HeartbeatSession {}
