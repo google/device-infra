@@ -416,6 +416,7 @@ public class OlcServerIntegrationTest {
         .doesNotContain("\tat ");
 
     // Checks the session log.
+    Thread.sleep(Duration.ofSeconds(2L).toMillis());
     String sessionLog = localFileUtil.readFile(sessionLogFile);
     assertThat(sessionLog).contains("Starting session runner " + sessionId.getId());
     assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());
