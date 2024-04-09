@@ -593,6 +593,8 @@ public class MoblyGenericTest extends BaseDriver {
                           .log("Unable to close writer for %s", RAW_MOBLY_LOG_ALL_IN_ONE);
                     }
                   })
+              .needStdoutInResult(false)
+              .needStderrInResult(false)
               .redirectStderr(true)
               .timeout(
                   // Use remaining time to run the Mobly command but leave 2 minutes for post
