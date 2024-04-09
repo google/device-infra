@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
-import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 
 import com.google.auto.value.AutoValue;
@@ -195,6 +194,20 @@ public final class RunCommand implements Callable<Integer> {
   @Parameters(index = "1..*", hidden = true)
   private List<String> extraRunCmdArgs;
 
+  // Command options for "run retry" command
+  @Option(
+      names = "--retry",
+      description =
+          "Id for the retry session. Use @|bold list results|@ to get the session id. Required when"
+              + " calling 'run retry' command")
+  private Integer retrySessionId; // Use Integer instead of int to check if it's set
+
+  @Option(
+      names = "--retry-type",
+      description =
+          "Test retry type for 'run retry' command. Supported values: ${COMPLETION-CANDIDATES}")
+  private RetryType retryType;
+
   @Spec private CommandSpec spec;
 
   static final String RUN_COMMAND_SESSION_NAME = "run_command";
@@ -202,9 +215,6 @@ public final class RunCommand implements Callable<Integer> {
   private static final String CTSV_CONFIG = "cts-v";
   private static final String DEFAULT_MOBLY_LOGPATH = "/tmp/logs/mobly";
   private static final String MOBLY_TEST_ZIP_DEFAULT_TEST = "suite_main.py";
-
-  private static final String RUN_RETRY_SESSION_ID = "retry_session_id";
-  private static final String RUN_RETRY_TYPE = "retry_type";
 
   private static final AtomicInteger NEXT_COMMAND_ID = new AtomicInteger(1);
   private static final AtomicInteger RUNNING_COMMAND_COUNT = new AtomicInteger(0);
@@ -285,8 +295,7 @@ public final class RunCommand implements Callable<Integer> {
       }
       if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
         validateCommandParameters();
-        return runInM1(
-            /* isRunRetry= */ false, /* extraRunRetryCmdArgs= */ ImmutableMap.of(), command);
+        return runInM1(command);
       } else {
         validateM0Config();
         return runInM0();
@@ -320,29 +329,6 @@ public final class RunCommand implements Callable<Integer> {
     return sessionRequestBuilder.setExtraArgs(extraArgs);
   }
 
-  @Command(
-      name = "retry",
-      description =
-          "Retry all the tests that failed or weren't executed from the previous sessions.")
-  public int execRunRetry(
-      @Option(
-              names = "--retry",
-              required = true,
-              description =
-                  "Id for the retry session. Use @|bold list results|@ to get the session id.")
-          int sessionId,
-      @Option(names = "--retry-type", description = "Supported values: ${COMPLETION-CANDIDATES}")
-          RetryType retryType)
-      throws MobileHarnessException, InterruptedException {
-    ImmutableList<String> command = consoleInfo.getLastCommand();
-    ImmutableMap.Builder<String, String> extraRunRetryCmdArgs = ImmutableMap.builder();
-    extraRunRetryCmdArgs.put(RUN_RETRY_SESSION_ID, String.valueOf(sessionId));
-    if (retryType != null) {
-      extraRunRetryCmdArgs.put(RUN_RETRY_TYPE, Ascii.toUpperCase(retryType.name()));
-    }
-    return runInM1(/* isRunRetry= */ true, extraRunRetryCmdArgs.buildOrThrow(), command);
-  }
-
   private void validateCommandParameters() {
     if (isNullOrEmpty(config)) {
       throw new ParameterException(
@@ -366,6 +352,12 @@ public final class RunCommand implements Callable<Integer> {
             spec.commandLine(),
             Ansi.AUTO.string("Multiple modules are unsupported if a test case is specified.\n"));
       }
+    }
+    if (config.equals("retry") && retrySessionId == null) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Option @|fg(red) --retry <retrySessionId>|@ is required for retry command.\n"));
     }
   }
 
@@ -455,10 +447,7 @@ public final class RunCommand implements Callable<Integer> {
         : "";
   }
 
-  private int runInM1(
-      boolean isRunRetry,
-      ImmutableMap<String, String> extraRunRetryCmdArgs,
-      ImmutableList<String> command)
+  private int runInM1(ImmutableList<String> command)
       throws InterruptedException, MobileHarnessException {
     serverPreparer.prepareOlcServer();
 
@@ -497,20 +486,15 @@ public final class RunCommand implements Callable<Integer> {
       runCommand.setPythonPkgIndexUrl(consoleInfo.getPythonPackageIndexUrl().get());
     }
 
-    if (isRunRetry) {
-      runCommand.setTestPlan("retry");
-      if (extraRunRetryCmdArgs.containsKey(RUN_RETRY_SESSION_ID)) {
-        runCommand.setRetrySessionId(
-            Integer.parseInt(extraRunRetryCmdArgs.get(RUN_RETRY_SESSION_ID)));
-      }
-      if (extraRunRetryCmdArgs.containsKey(RUN_RETRY_TYPE)) {
-        runCommand.setRetryType(requireNonNull(extraRunRetryCmdArgs.get(RUN_RETRY_TYPE)));
-      }
-    } else {
-      runCommand.setTestPlan(config).addAllModuleName(modules).addAllExtraArg(extraArgs);
-      if (!test.isEmpty()) {
-        runCommand.setTestName(test);
-      }
+    runCommand.setTestPlan(config).addAllModuleName(modules).addAllExtraArg(extraArgs);
+    if (!test.isEmpty()) {
+      runCommand.setTestName(test);
+    }
+    if (retrySessionId != null) {
+      runCommand.setRetrySessionId(retrySessionId);
+    }
+    if (retryType != null) {
+      runCommand.setRetryType(Ascii.toUpperCase(retryType.name()));
     }
 
     runCommand.setInitialState(
