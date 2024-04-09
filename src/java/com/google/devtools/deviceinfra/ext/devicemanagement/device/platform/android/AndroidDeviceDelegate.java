@@ -535,6 +535,19 @@ public abstract class AndroidDeviceDelegate {
 
     // More Decorators.
     device.addSupportedDecorator("AndroidCreateWorkProfileDecorator");
+
+    // Gets the current override size of the screen of the device.
+    try {
+      ScreenResolution screenResolution = androidSystemSettingUtil.getScreenResolution(deviceId);
+      logger.atInfo().log("Device %s screen resolution: %s", deviceId, screenResolution);
+      device.addDimension(
+          Dimension.Name.SCREEN_SIZE,
+          String.format("%sx%s", screenResolution.curWidth(), screenResolution.curHeight()));
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log(
+          "Failed to get screen size for device %s: %s",
+          deviceId, MoreThrowables.shortDebugString(e));
+    }
   }
 
   /** List of decorators/drivers that should be supported by rooted devices. */
@@ -579,19 +592,6 @@ public abstract class AndroidDeviceDelegate {
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to get device %s GMS version: %s", deviceId, MoreThrowables.shortDebugString(e));
-    }
-
-    // Gets the current override size of the screen of the device.
-    try {
-      ScreenResolution screenResolution = androidSystemSettingUtil.getScreenResolution(deviceId);
-      logger.atInfo().log("Device %s screen resolution: %s", deviceId, screenResolution);
-      device.addDimension(
-          Dimension.Name.SCREEN_SIZE,
-          String.format("%sx%s", screenResolution.curWidth(), screenResolution.curHeight()));
-    } catch (MobileHarnessException e) {
-      logger.atWarning().log(
-          "Failed to get screen size for device %s: %s",
-          deviceId, MoreThrowables.shortDebugString(e));
     }
   }
 
