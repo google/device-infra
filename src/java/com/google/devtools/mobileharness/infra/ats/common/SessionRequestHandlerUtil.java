@@ -65,6 +65,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryG
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
@@ -72,6 +73,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
+import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
@@ -1498,5 +1500,27 @@ public class SessionRequestHandlerUtil {
         localFileUtil.removeFileOrDir(jobInfo.setting().getGenFileDir());
       }
     }
+  }
+
+  public boolean isSessionPassed(List<JobInfo> jobInfos) {
+    for (JobInfo jobInfo : jobInfos) {
+      // Tradefed Jobs.
+      if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_TF_JOB_PROP)) {
+        for (TestInfo testInfo : jobInfo.getAllTests().values()) {
+          if (!testInfo.properties().has(XtsTradefedTest.TRADEFED_JOBS_PASSED)) {
+            return false;
+          }
+        }
+      }
+      // Non Tradefed Jobs.
+      if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_NON_TF_JOB_PROP)) {
+        for (TestInfo testInfo : jobInfo.getAllTests().values()) {
+          if (!testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_JOBS_PASSED)) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
   }
 }

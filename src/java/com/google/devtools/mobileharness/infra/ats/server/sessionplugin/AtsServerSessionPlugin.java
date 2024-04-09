@@ -166,7 +166,10 @@ final class AtsServerSessionPlugin {
     synchronized (requestDetailLock) {
       newMultiCommandRequestHandler.handleResultProcessing(
           requestDetail.getOriginalRequest(), sessionInfo);
-      requestDetail.setState(RequestState.COMPLETED);
+      requestDetail.setState(
+          sessionRequestHandlerUtil.isSessionPassed(sessionInfo.getAllJobs())
+              ? RequestState.COMPLETED
+              : RequestState.ERROR);
       logger.atInfo().log("RequestDetail: %s", shortDebugString(requestDetail.build()));
       RequestDetail latestRequestDetail = requestDetail.build();
       sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);

@@ -49,7 +49,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -76,6 +75,7 @@ public class AtsSessionPlugin {
   private final ListDevicesCommandHandler listDevicesCommandHandler;
   private final ListModulesCommandHandler listModulesCommandHandler;
   private final RunCommandHandler runCommandHandler;
+  private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
@@ -88,7 +88,8 @@ public class AtsSessionPlugin {
       DumpUptimeCommandHandler dumpUptimeCommandHandler,
       ListDevicesCommandHandler listDevicesCommandHandler,
       ListModulesCommandHandler listModulesCommandHandler,
-      RunCommandHandler runCommandHandler) {
+      RunCommandHandler runCommandHandler,
+      SessionRequestHandlerUtil sessionRequestHandlerUtil) {
     this.sessionInfo = sessionInfo;
     this.dumpEnvVarCommandHandler = dumpEnvVarCommandHandler;
     this.dumpStackCommandHandler = dumpStackCommandHandler;
@@ -96,6 +97,7 @@ public class AtsSessionPlugin {
     this.listDevicesCommandHandler = listDevicesCommandHandler;
     this.listModulesCommandHandler = listModulesCommandHandler;
     this.runCommandHandler = runCommandHandler;
+    this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
   }
 
   @Subscribe
@@ -257,7 +259,10 @@ public class AtsSessionPlugin {
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
       RunCommand runCommand = config.getRunCommand();
       runCommandHandler.handleResultProcessing(
-          runCommand, sessionInfo, summaryReport, isSessionPassed(sessionInfo.getAllJobs()));
+          runCommand,
+          sessionInfo,
+          summaryReport,
+          sessionRequestHandlerUtil.isSessionPassed(sessionInfo.getAllJobs()));
     }
   }
 
@@ -329,27 +334,5 @@ public class AtsSessionPlugin {
           return newOutput.setRunCommandState(newState).build();
         },
         AtsSessionPluginOutput.class);
-  }
-
-  private boolean isSessionPassed(List<JobInfo> jobInfos) {
-    for (JobInfo jobInfo : jobInfos) {
-      // Tradefed Jobs.
-      if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_TF_JOB_PROP)) {
-        for (TestInfo testInfo : jobInfo.getAllTests().values()) {
-          if (!testInfo.properties().has(XtsTradefedTest.TRADEFED_JOBS_PASSED)) {
-            return false;
-          }
-        }
-      }
-      // Non Tradefed Jobs.
-      if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_NON_TF_JOB_PROP)) {
-        for (TestInfo testInfo : jobInfo.getAllTests().values()) {
-          if (!testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_JOBS_PASSED)) {
-            return false;
-          }
-        }
-      }
-    }
-    return true;
   }
 }
