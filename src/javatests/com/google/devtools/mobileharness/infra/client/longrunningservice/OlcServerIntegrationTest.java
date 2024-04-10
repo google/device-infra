@@ -437,6 +437,7 @@ public class OlcServerIntegrationTest {
                     .createJavaCommand(
                         enableAtsMode ? OLC_SERVER_FILE_PATH : OLC_SERVER_WITH_LOCAL_MODE_FILE_PATH,
                         ImmutableList.of(
+                            "--android_device_daemon=false",
                             "--detect_adb_device=false",
                             "--enable_ats_mode=" + enableAtsMode,
                             "--enable_client_experiment_manager=false",
@@ -499,6 +500,7 @@ public class OlcServerIntegrationTest {
                       .createJavaCommand(
                           LAB_SERVER_FILE_PATH,
                           ImmutableList.of(
+                              "--android_device_daemon=false",
                               "--detect_adb_device=false",
                               "--enable_api_config=false",
                               "--enable_cloud_logging=false",

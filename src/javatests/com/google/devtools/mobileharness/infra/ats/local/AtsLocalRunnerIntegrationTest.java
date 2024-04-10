@@ -65,6 +65,7 @@ public class AtsLocalRunnerIntegrationTest {
     ImmutableList<String> deviceInfraServiceFlags =
         ImmutableList.of(
             "--alr_olc_server_path=" + OLC_SERVER_BINARY,
+            "--android_device_daemon=false",
             "--detect_adb_device=false",
             "--log_file_size_no_limit=true",
             "--no_op_device_num=2",

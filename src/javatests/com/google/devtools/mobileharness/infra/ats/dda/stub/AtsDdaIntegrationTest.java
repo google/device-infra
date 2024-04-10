@@ -355,6 +355,7 @@ public class AtsDdaIntegrationTest {
                     .createJavaCommand(
                         LAB_SERVER_FILE_PATH,
                         ImmutableList.of(
+                            "--android_device_daemon=false",
                             "--detect_adb_device=false",
                             "--enable_api_config=false",
                             "--enable_cloud_logging=false",
