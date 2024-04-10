@@ -80,6 +80,8 @@ public abstract class SessionRequestInfo {
 
   public abstract boolean useParallelSetup();
 
+  public abstract Optional<String> subPlanName();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -152,5 +154,7 @@ public abstract class SessionRequestInfo {
     public abstract Builder setStartTimeout(Duration startTimeout);
 
     public abstract Builder setUseParallelSetup(boolean useParallelSetup);
+
+    public abstract Builder setSubPlanName(String subPlanName);
   }
 }

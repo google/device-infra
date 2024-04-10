@@ -18,7 +18,6 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "command",
     srcs = [
-        "AddCommand.java",
         "DumpCommand.java",
         "ExitCommand.java",
         "ListCommand.java",
@@ -32,6 +31,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
     ],
     deps = [
+        ":add_command",
         ":run_command",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
@@ -50,13 +50,10 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/log:log_dumper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:plan_lister",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:result_lister",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/subplan:sub_plan_lister",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:version_message_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:module_parameters",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:add_sub_plan_args",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:result_type",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan_creator",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
@@ -93,6 +90,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/testbed/config:yaml_testbed_updater",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/subplan:sub_plan_lister",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",

@@ -13,16 +13,22 @@
 # limitations under the License.
 #
 
+load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
+
 package(default_applicable_licenses = ["//:license"])
 
-java_test(
-    name = "SessionRequestHandlerUtilTest",
-    size = "small",
-    srcs = ["SessionRequestHandlerUtilTest.java"],
+java_library(
+    name = "common",
+    testonly = True,
+    srcs = glob(["*.java"]),
+    data = [
+        ":testdata",
+    ],
     deps = [
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:test_plan_loader",
@@ -43,6 +49,7 @@ java_test(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_code_gson_gson",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",
@@ -58,20 +65,11 @@ filegroup(
     srcs = glob(["testdata/**/*"]),
 )
 
-java_test(
-    name = "TestPlanLoaderTest",
-    size = "medium",
-    srcs = ["TestPlanLoaderTest.java"],
-    data = [
-        ":testdata",
+junit_test_suites(
+    name = "tests",
+    sizes = [
+        "small",
+        "medium",
     ],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:test_plan_loader",
-        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
-        "@maven//:com_google_guava_guava",
-        "@maven//:junit_junit",
-        "@maven//:org_mockito_mockito_core",
-    ],
+    deps = [":common"],
 )

@@ -54,6 +54,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
@@ -87,8 +88,10 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Devic
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.file.Path;
@@ -430,7 +433,16 @@ public class SessionRequestHandlerUtil {
         return Optional.empty();
       }
       driverParams.put("subplan_xml", runRetryTfSubPlan.get().toAbsolutePath().toString());
+    } else if (sessionRequestInfo.subPlanName().isPresent()) {
+      Optional<Path> tfSubPlan =
+          prepareTfSubPlan(
+              xtsRootDir, sessionRequestInfo.xtsType(), sessionRequestInfo.subPlanName().get());
+      if (tfSubPlan.isEmpty()) {
+        return Optional.empty();
+      }
+      driverParams.put("subplan_xml", tfSubPlan.get().toAbsolutePath().toString());
     }
+
     if (!sessionRequestInfo.envVars().isEmpty()) {
       driverParams.put("env_vars", new Gson().toJson(sessionRequestInfo.envVars()));
     }
@@ -478,6 +490,54 @@ public class SessionRequestHandlerUtil {
     logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
 
     return Optional.of(jobConfig);
+  }
+
+  private Optional<Path> prepareTfSubPlan(String xtsRootDir, String xtsType, String subPlanName)
+      throws MobileHarnessException, InterruptedException {
+    Path subPlansDir = XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), xtsType);
+    Path subPlanPath = subPlansDir.resolve(subPlanName + ".xml");
+    if (!localFileUtil.isFileExist(subPlanPath)) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_SUBPLAN_XML_NOT_FOUND,
+          String.format("Subplan xml file %s doesn't exist", subPlanPath));
+    }
+
+    SubPlan subPlan = new SubPlan();
+    try (InputStream inputStream = new FileInputStream(subPlanPath.toFile())) {
+      subPlan.parse(inputStream);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_PARSE_SUBPLAN_XML_ERROR,
+          String.format("Failed to parse the subplan xml file at %s", subPlanPath),
+          e);
+    }
+
+    if (subPlan.getIncludeFiltersMultimap().isEmpty()
+        && subPlan.getExcludeFiltersMultimap().isEmpty()) {
+      logger.atInfo().log("No include or exclude filters found for TF modules and tests ");
+      return Optional.empty();
+    }
+
+    // If the subplan only includes TF modules and tests, use the subplan file directly
+    if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
+        && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
+      return Optional.of(subPlanPath);
+    }
+
+    Path tfOnlySubPlanPath = subPlansDir.resolve(String.format("%s_tf_auto_gen.xml", subPlanName));
+    if (localFileUtil.isFileExist(tfOnlySubPlanPath)) {
+      localFileUtil.removeFileOrDir(tfOnlySubPlanPath);
+    }
+    try (OutputStream outputStream = new FileOutputStream(tfOnlySubPlanPath.toFile())) {
+      subPlan.serialize(outputStream, /* tfFiltersOnly= */ true);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_WRITE_SUBPLAN_XML_ERROR,
+          String.format("Failed to write the TF subplan xml file at %s", tfOnlySubPlanPath),
+          e);
+    }
+
+    return Optional.of(tfOnlySubPlanPath);
   }
 
   private Optional<Path> prepareRunRetryTfSubPlan(
@@ -611,6 +671,13 @@ public class SessionRequestHandlerUtil {
       if (subPlanOpt.isEmpty()) {
         return ImmutableList.of();
       }
+    } else if (sessionRequestInfo.subPlanName().isPresent()) {
+      subPlanOpt =
+          prepareNonTfSubPlan(
+              xtsRootDir, sessionRequestInfo.xtsType(), sessionRequestInfo.subPlanName().get());
+      if (subPlanOpt.isEmpty()) {
+        return ImmutableList.of();
+      }
     }
 
     ImmutableSet<String> givenMatchedNonTfModules = sessionRequestInfo.givenMatchedNonTfModules();
@@ -628,8 +695,7 @@ public class SessionRequestHandlerUtil {
                 testPlanFilter.includeFilters().stream())
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
-    boolean isRunRetry = isRunRetry(testPlan);
-    if (isRunRetry) {
+    if (subPlanOpt.isPresent()) {
       includeFilters =
           subPlanOpt.get().getNonTfIncludeFiltersMultimap().entries().stream()
               .map(
@@ -640,7 +706,7 @@ public class SessionRequestHandlerUtil {
                                   ? ""
                                   : " " + e.getValue())))
               .collect(toImmutableList());
-      logger.atInfo().log("Include filters for Non-TF retry: %s", includeFilters);
+      logger.atInfo().log("Include filters for Non-TF retry/subplan run: %s", includeFilters);
     }
     ImmutableList<SuiteTestFilter> excludeFilters =
         Stream.concat(
@@ -667,8 +733,9 @@ public class SessionRequestHandlerUtil {
             .collect(toImmutableList())) {
       String originalModuleName = entry.getValue().getMetadata().getXtsModule();
       String expandedModuleName = entry.getKey();
-      // If it's a retry, do a early check for whether the module should be retried
-      if (isRunRetry
+      // If it has a subplan(either from the retry command or the subplan command), do a early check
+      // for whether the module should be ran
+      if (subPlanOpt.isPresent()
           && !subPlanOpt.get().getNonTfIncludeFiltersMultimap().containsKey(expandedModuleName)) {
         continue;
       }
@@ -925,6 +992,33 @@ public class SessionRequestHandlerUtil {
 
   private boolean isRunRetry(String testPlan) {
     return Ascii.equalsIgnoreCase(testPlan, "retry");
+  }
+
+  private Optional<SubPlan> prepareNonTfSubPlan(
+      String xtsRootDir, String xtsType, String subPlanName) throws MobileHarnessException {
+    Path subPlanPath =
+        XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), xtsType).resolve(subPlanName + ".xml");
+    if (!localFileUtil.isFileExist(subPlanPath)) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_SUBPLAN_XML_NOT_FOUND,
+          String.format("Subplan xml file %s doesn't exist", subPlanPath));
+    }
+
+    try (InputStream inputStream = new FileInputStream(subPlanPath.toFile())) {
+      SubPlan subPlan = new SubPlan();
+      subPlan.parse(inputStream);
+      if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
+          && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
+        logger.atInfo().log("No include or exclude filters found for Non-TF modules and tests");
+        return Optional.empty();
+      }
+      return Optional.of(subPlan);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_PARSE_SUBPLAN_XML_ERROR,
+          String.format("Failed to parse the subplan xml file at %s", subPlanPath),
+          e);
+    }
   }
 
   private Optional<SubPlan> prepareRunRetryNonTfSubPlan(

@@ -32,6 +32,11 @@ public class XtsDirUtil {
         .format(new Timestamp(time.toEpochMilli()));
   }
 
+  /** Gets the "logs" directory for the given {@code xtsType}. */
+  public static Path getXtsLogsDir(Path xtsRootDir, String xtsType) {
+    return xtsRootDir.resolve(String.format("android-%s/logs", Ascii.toLowerCase(xtsType)));
+  }
+
   /** Gets the "results" directory for the given {@code xtsType}. */
   public static Path getXtsResultsDir(Path xtsRootDir, String xtsType) {
     return xtsRootDir.resolve(String.format("android-%s/results", Ascii.toLowerCase(xtsType)));

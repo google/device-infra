@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultU
 import com.google.devtools.mobileharness.infra.ats.console.testbed.config.YamlTestbedUpdater;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
+import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
@@ -191,6 +192,12 @@ public final class RunCommand implements Callable<Integer> {
       description = "If true, exit the console after the command finishes. Default is false.")
   private boolean exitAfterRun;
 
+  @Option(
+      names = {"--subplan"},
+      paramLabel = "<subplan_name>",
+      description = "Run the specified subplan.")
+  private String subPlanName;
+
   @Parameters(index = "1..*", hidden = true)
   private List<String> extraRunCmdArgs;
 
@@ -222,6 +229,7 @@ public final class RunCommand implements Callable<Integer> {
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
   private final CommandHelper commandHelper;
+  private final SubPlanLister subPlanLister;
   private final AndroidAdbInternalUtil androidAdbInternalUtil;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
@@ -245,6 +253,7 @@ public final class RunCommand implements Callable<Integer> {
       CommandExecutor commandExecutor,
       ConsoleUtil consoleUtil,
       CommandHelper commandHelper,
+      SubPlanLister subPlanLister,
       AndroidAdbInternalUtil androidAdbInternalUtil,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil,
@@ -264,6 +273,7 @@ public final class RunCommand implements Callable<Integer> {
     this.commandExecutor = commandExecutor;
     this.consoleUtil = consoleUtil;
     this.commandHelper = commandHelper;
+    this.subPlanLister = subPlanLister;
     this.androidAdbInternalUtil = androidAdbInternalUtil;
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
@@ -305,7 +315,7 @@ public final class RunCommand implements Callable<Integer> {
     }
   }
 
-  private SessionRequestInfo.Builder createParseResult() {
+  private SessionRequestInfo.Builder createParseResult() throws MobileHarnessException {
     SessionRequestInfo.Builder sessionRequestBuilder = SessionRequestInfo.builder();
     validateCommandParameters();
     sessionRequestBuilder
@@ -329,7 +339,7 @@ public final class RunCommand implements Callable<Integer> {
     return sessionRequestBuilder.setExtraArgs(extraArgs);
   }
 
-  private void validateCommandParameters() {
+  private void validateCommandParameters() throws MobileHarnessException {
     if (isNullOrEmpty(config)) {
       throw new ParameterException(
           spec.commandLine(),
@@ -359,6 +369,18 @@ public final class RunCommand implements Callable<Integer> {
           Ansi.AUTO.string(
               "Option @|fg(red) --retry <retrySessionId>|@ is required for retry command.\n"));
     }
+    if (!isNullOrEmpty(subPlanName) && !isSubPlanExist(subPlanName)) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(String.format("Subplan [%s] doesn't exist.\n", subPlanName)));
+    }
+  }
+
+  private boolean isSubPlanExist(String subPlanName) throws MobileHarnessException {
+    String xtsRootDir = consoleInfo.getXtsRootDirectory().orElse("");
+    return subPlanLister
+        .listSubPlans(xtsRootDir, commandHelper.getXtsType(xtsRootDir))
+        .contains(subPlanName);
   }
 
   private int runInM0() throws MobileHarnessException, InterruptedException, IOException {
@@ -489,6 +511,9 @@ public final class RunCommand implements Callable<Integer> {
     runCommand.setTestPlan(config).addAllModuleName(modules).addAllExtraArg(extraArgs);
     if (!test.isEmpty()) {
       runCommand.setTestName(test);
+    }
+    if (!isNullOrEmpty(subPlanName)) {
+      runCommand.setSubPlanName(subPlanName);
     }
     if (retrySessionId != null) {
       runCommand.setRetrySessionId(retrySessionId);

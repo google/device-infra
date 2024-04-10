@@ -94,6 +94,9 @@ message RunCommand {
 
   // Required.
   RunCommandState initial_state = 14;
+
+  // Optional.
+  optional string sub_plan_name = 15;
 }
 
 message RunCommandState {

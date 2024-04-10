@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryG
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.google.inject.Guice;
@@ -84,6 +85,15 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class SessionRequestHandlerUtilTest {
 
+  private static final String TEST_DATA_PREFIX =
+      "javatests/com/google/devtools/mobileharness/infra/ats/common/testdata/subplans/";
+
+  private static final String SUBPLAN1_XML =
+      RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "subplan1.xml");
+
+  private static final String SUBPLAN2_XML =
+      RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "subplan2.xml");
+
   private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
   private static final String ANDROID_XTS_ZIP_PATH = "/path/to/android_xts.zip";
 
@@ -106,6 +116,7 @@ public final class SessionRequestHandlerUtilTest {
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
+  private LocalFileUtil realLocalFileUtil;
   private TestPlanLoader.TestPlanFilter testPlanFilter;
 
   @Before
@@ -123,6 +134,7 @@ public final class SessionRequestHandlerUtilTest {
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     testPlanFilter = TestPlanLoader.TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
+    realLocalFileUtil = new LocalFileUtil();
   }
 
   @After
@@ -316,6 +328,104 @@ public final class SessionRequestHandlerUtilTest {
             "xts_test_plan",
             "retry");
     assertThat(driverParamsMap.get("subplan_xml")).startsWith(xtsRootDir.getAbsolutePath());
+  }
+
+  @Test
+  public void createXtsTradefedTestJobConfig_addSubPlanXmlPathForSubPlanCommand() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .build());
+    doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
+    doCallRealMethod().when(localFileUtil).removeFileOrDir(any(Path.class));
+
+    File xtsRootDir = folder.newFolder("xts_root_dir");
+    Path subPlansDir = xtsRootDir.toPath().resolve("android-cts/subplans");
+    realLocalFileUtil.prepareDir(subPlansDir);
+    realLocalFileUtil.copyFileOrDir(SUBPLAN1_XML, subPlansDir.toAbsolutePath().toString());
+
+    Optional<JobConfig> jobConfigOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setSubPlanName("subplan1")
+                .build(),
+            ImmutableList.of());
+
+    assertThat(jobConfigOpt).isPresent();
+    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+
+    // Asserts the driver
+    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
+    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    Map<String, String> driverParamsMap =
+        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
+    assertThat(driverParamsMap).hasSize(4);
+    assertThat(driverParamsMap)
+        .containsAtLeast(
+            "xts_type",
+            "cts",
+            "xts_root_dir",
+            xtsRootDir.getAbsolutePath(),
+            "xts_test_plan",
+            "cts");
+    assertThat(driverParamsMap.get("subplan_xml"))
+        .isEqualTo(subPlansDir.resolve("subplan1_tf_auto_gen.xml").toString());
+  }
+
+  @Test
+  public void
+      createXtsTradefedTestJobConfig_addSubPlanXmlPathForSubPlanCommand_useOriginalSubPlanXml()
+          throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .build());
+    doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
+    doCallRealMethod().when(localFileUtil).removeFileOrDir(any(Path.class));
+
+    File xtsRootDir = folder.newFolder("xts_root_dir");
+    Path subPlansDir = xtsRootDir.toPath().resolve("android-cts/subplans");
+    realLocalFileUtil.prepareDir(subPlansDir);
+    realLocalFileUtil.copyFileOrDir(SUBPLAN2_XML, subPlansDir.toAbsolutePath().toString());
+
+    Optional<JobConfig> jobConfigOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setSubPlanName("subplan2")
+                .build(),
+            ImmutableList.of());
+
+    assertThat(jobConfigOpt).isPresent();
+    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+
+    // Asserts the driver
+    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
+    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    Map<String, String> driverParamsMap =
+        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
+    assertThat(driverParamsMap).hasSize(4);
+    assertThat(driverParamsMap)
+        .containsAtLeast(
+            "xts_type",
+            "cts",
+            "xts_root_dir",
+            xtsRootDir.getAbsolutePath(),
+            "xts_test_plan",
+            "cts");
+    assertThat(driverParamsMap.get("subplan_xml"))
+        .isEqualTo(subPlansDir.resolve("subplan2.xml").toString());
   }
 
   @Test
@@ -1016,6 +1126,100 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1 test2");
     assertThat(jobInfos.get(1).params().get("test_case_selector")).isNull();
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_subPlanCmd() throws Exception {
+    File xtsRootDir = folder.newFolder("xts_root_dir");
+    Path subPlansDir = xtsRootDir.toPath().resolve("android-cts/subplans");
+    realLocalFileUtil.prepareDir(subPlansDir);
+    realLocalFileUtil.copyFileOrDir(SUBPLAN1_XML, subPlansDir.toAbsolutePath().toString());
+
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder()
+                    .setXtsModule("HelloWorldTest")
+                    .setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1));
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests())
+        .thenReturn(
+            ImmutableMap.of(
+                "arm64-v8a HelloWorldTest", config1, "arm64-v8a HelloWorldTest[instant]", config1));
+    doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
+    doCallRealMethod().when(localFileUtil).isDirExist(any(String.class));
+
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setSubPlanName("subplan1")
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
+
+    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos.get(0).locator().getName()).endsWith("HelloWorldTest");
+    assertThat(jobInfos.get(1).locator().getName()).endsWith("HelloWorldTest[instant]");
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_noNonTfModulesAndTestsFound_skipped() throws Exception {
+    File xtsRootDir = folder.newFolder("xts_root_dir");
+    Path subPlansDir = xtsRootDir.toPath().resolve("android-cts/subplans");
+    realLocalFileUtil.prepareDir(subPlansDir);
+    realLocalFileUtil.copyFileOrDir(SUBPLAN2_XML, subPlansDir.toAbsolutePath().toString());
+
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder()
+                    .setXtsModule("HelloWorldTest")
+                    .setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1));
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests())
+        .thenReturn(
+            ImmutableMap.of(
+                "arm64-v8a HelloWorldTest", config1, "arm64-v8a HelloWorldTest[instant]", config1));
+    doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
+    doCallRealMethod().when(localFileUtil).isDirExist(any(String.class));
+
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setSubPlanName("subplan2")
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
+
+    assertThat(jobInfos).isEmpty();
   }
 
   @Test

@@ -93,7 +93,6 @@ class RunCommandHandler {
   @CanIgnoreReturnValue
   ImmutableList<String> addNonTradefedJobs(RunCommand runCommand, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
-    // TODO: Supports --include-filter and --exclude-filter.
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(generateSessionRequestInfo(runCommand));
     if (jobInfos.isEmpty()) {
@@ -192,6 +191,9 @@ class RunCommandHandler {
     }
     if (runCommand.hasRetryType()) {
       builder.setRetryType(RetryType.valueOf(Ascii.toUpperCase(runCommand.getRetryType())));
+    }
+    if (runCommand.hasSubPlanName()) {
+      builder.setSubPlanName(runCommand.getSubPlanName());
     }
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(builder.build());
   }

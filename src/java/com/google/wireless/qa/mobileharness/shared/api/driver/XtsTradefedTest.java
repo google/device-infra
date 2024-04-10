@@ -682,18 +682,16 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   private ImmutableList<String> getXtsRunCommandArgs(XtsTradefedTestDriverSpec spec) {
-    boolean isRunRetryWithSubPlan = isRunRetryWithSubPlan(spec);
+    String testPlan =
+        isRunRetryWithSubPlan(spec) ? Ascii.toLowerCase(spec.getXtsType()) : getXtsTestPlan(spec);
 
     ImmutableList.Builder<String> xtsRunCommand =
-        isRunRetryWithSubPlan
-            ? ImmutableList.<String>builder()
-                .add(
-                    "run",
-                    "commandAndExit",
-                    Ascii.toLowerCase(spec.getXtsType()),
-                    "--subplan",
-                    com.google.common.io.Files.getNameWithoutExtension(spec.getSubplanXml()))
-            : ImmutableList.<String>builder().add("run", "commandAndExit", getXtsTestPlan(spec));
+        ImmutableList.<String>builder().add("run", "commandAndExit", testPlan);
+
+    if (isRunWithSubPlan(spec)) {
+      xtsRunCommand.add(
+          "--subplan", com.google.common.io.Files.getNameWithoutExtension(spec.getSubplanXml()));
+    }
 
     xtsRunCommand.addAll(getExtraRunCommandArgs(spec));
 
@@ -816,7 +814,7 @@ public class XtsTradefedTest extends BaseDriver
       }
     }
 
-    if (isRunRetryWithSubPlan(spec)) {
+    if (isRunWithSubPlan(spec)) {
       Path subplansDirInTmpXtsWorkDir = getXtsSubPlansDir(tmpXtsWorkDir, xtsType);
       localFileUtil.prepareDir(subplansDirInTmpXtsWorkDir);
       localFileUtil.grantFileOrDirFullAccess(subplansDirInTmpXtsWorkDir);
@@ -868,5 +866,17 @@ public class XtsTradefedTest extends BaseDriver
 
   private boolean isRunRetryWithSubPlan(XtsTradefedTestDriverSpec spec) {
     return getXtsTestPlan(spec).equals("retry") && !spec.getSubplanXml().isEmpty();
+  }
+
+  /**
+   * Checks if it's passed with a subplan xml file to run the tradefed.
+   *
+   * <p>There are two cases that a subplan xml file passed to this driver. #1 is "run retry" which
+   * creates a subplan xml file and passes it to the driver and its test plan is "retry". #2 is
+   * running with a given subplan name, which may create a modified subplan xml file and pass it to
+   * the driver.
+   */
+  private boolean isRunWithSubPlan(XtsTradefedTestDriverSpec spec) {
+    return !spec.getSubplanXml().isEmpty();
   }
 }
