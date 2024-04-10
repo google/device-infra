@@ -16,41 +16,19 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
-import static java.util.Comparator.comparing;
-import static java.util.stream.Collectors.joining;
-
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DumpStackTraceCommand;
-import java.util.Map.Entry;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 
 /** Handler for "dump stack" commands. */
 class DumpStackTraceCommandHandler {
 
   AtsSessionPluginOutput handle(
       @SuppressWarnings("unused") DumpStackTraceCommand dumpStackTraceCommand) {
-    String result = formatStackTraces();
+    String result = MoreThrowables.formatStackTraces();
     return AtsSessionPluginOutput.newBuilder()
         .setSuccess(Success.newBuilder().setOutputMessage(result))
         .build();
-  }
-
-  private static String formatStackTraces() {
-    Thread currentThread = Thread.currentThread();
-    return Thread.getAllStackTraces().entrySet().stream()
-        .filter(threadEntry -> !threadEntry.getKey().equals(currentThread))
-        .sorted(comparing(threadEntry -> threadEntry.getKey().getName()))
-        .map(DumpStackTraceCommandHandler::formatThread)
-        .collect(joining("\n\n"));
-  }
-
-  private static String formatThread(Entry<Thread, StackTraceElement[]> threadEntry) {
-    StringBuilder result = new StringBuilder();
-    result.append(threadEntry.getKey());
-    for (StackTraceElement stackTraceElement : threadEntry.getValue()) {
-      result.append("\n\t");
-      result.append(stackTraceElement);
-    }
-    return result.toString();
   }
 }

@@ -16,8 +16,12 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static com.google.protobuf.TextFormat.shortDebugString;
+
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
+import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
@@ -28,6 +32,12 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
+import java.time.Instant;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -49,18 +59,31 @@ import picocli.CommandLine.Spec;
     })
 class DumpCommand implements Callable<Integer> {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   @Spec private CommandSpec spec;
+
+  private static final String DUMP_STACK_TRACE_SESSION_NAME = "dump_stack_trace_command";
+  private static final SessionPluginProto.DumpCommand DUMP_STACK_TRACE_COMMAND =
+      SessionPluginProto.DumpCommand.newBuilder()
+          .setDumpStackTraceCommand(DumpStackTraceCommand.getDefaultInstance())
+          .build();
 
   private final ConsoleUtil consoleUtil;
   private final ServerPreparer serverPreparer;
   private final AtsSessionStub atsSessionStub;
+  private final LocalFileUtil localFileUtil;
 
   @Inject
   DumpCommand(
-      ConsoleUtil consoleUtil, ServerPreparer serverPreparer, AtsSessionStub atsSessionStub) {
+      ConsoleUtil consoleUtil,
+      ServerPreparer serverPreparer,
+      AtsSessionStub atsSessionStub,
+      LocalFileUtil localFileUtil) {
     this.consoleUtil = consoleUtil;
     this.serverPreparer = serverPreparer;
     this.atsSessionStub = atsSessionStub;
+    this.localFileUtil = localFileUtil;
   }
 
   @Override
@@ -72,32 +95,35 @@ class DumpCommand implements Callable<Integer> {
       name = "bugreport",
       aliases = {"b"},
       description = "Dump a bugreport for the running instance")
-  public int bugreport() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
-  }
+  public int bugreport() throws MobileHarnessException, InterruptedException {
+    printLogDirs();
 
-  @Command(name = "commandQueue", description = "Dump the contents of the command execution queue")
-  public int commandQueue() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
-  }
+    // Copies files to bugreport dir.
+    String baseDirPath = PathUtil.join(DirCommon.getTempDirRoot(), "ats_bugreport");
+    String fileSuffix = Long.toString(Instant.now().toEpochMilli());
+    String bugreportName = "ats_bugreport_" + fileSuffix;
+    String bugreportDirPath = PathUtil.join(baseDirPath, bugreportName);
+    consoleUtil.printlnStdout("Bugreport dir: %s", bugreportDirPath);
+    localFileUtil.prepareDir(bugreportDirPath);
+    localFileUtil.copyFileOrDir(
+        AtsConsoleDirs.getLatestLogFile(),
+        PathUtil.join(bugreportDirPath, String.format("ats_console_log_%s.txt", fileSuffix)));
+    localFileUtil.copyFileOrDir(
+        OlcServerDirs.getLatestLogFile(),
+        PathUtil.join(bugreportDirPath, String.format("olc_server_log_%s.txt", fileSuffix)));
+    localFileUtil.writeToFile(
+        PathUtil.join(
+            bugreportDirPath, String.format("ats_console_stack_trace_%s.txt", fileSuffix)),
+        MoreThrowables.formatStackTraces());
+    String serverStackTraceFilePath =
+        PathUtil.join(bugreportDirPath, String.format("olc_server_stack_trace_%s.txt", fileSuffix));
+    createServerStackTraceFile(serverStackTraceFilePath);
 
-  @Command(
-      name = "commands",
-      description = "Dump all the config XML for the commands waiting to be executed")
-  public int commands() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
-  }
-
-  @Command(
-      name = "config",
-      aliases = {"c"},
-      description = "Dump the content of the specified config")
-  public int config() {
-    consoleUtil.printlnStderr("Unimplemented");
-    return ExitCode.SOFTWARE;
+    // Zips files.
+    String bugreportFilePath = PathUtil.join(baseDirPath, String.format("%s.zip", bugreportName));
+    localFileUtil.zipDir(bugreportDirPath, bugreportFilePath);
+    consoleUtil.printlnStdout("Output bugreport zip in %s", bugreportFilePath);
+    return ExitCode.OK;
   }
 
   @Command(
@@ -105,7 +131,7 @@ class DumpCommand implements Callable<Integer> {
       aliases = {"e"},
       description = "Dump the environment variables available to test harness process")
   public int env() throws MobileHarnessException, InterruptedException {
-    return runDumpCommandSession(
+    return runDumpCommandSessionAndPrint(
         "dump_env_var_command",
         SessionPluginProto.DumpCommand.newBuilder()
             .setDumpEnvVarCommand(DumpEnvVarCommand.getDefaultInstance())
@@ -117,7 +143,7 @@ class DumpCommand implements Callable<Integer> {
       aliases = {"l"},
       description = "Dump the logs of all invocations to files")
   public int logs() {
-    consoleUtil.printlnStdout(LogDumper.dumpLog());
+    printLogDirs();
     return ExitCode.OK;
   }
 
@@ -126,11 +152,7 @@ class DumpCommand implements Callable<Integer> {
       aliases = {"s"},
       description = "Dump the stack traces of all threads")
   public int stack() throws MobileHarnessException, InterruptedException {
-    return runDumpCommandSession(
-        "dump_stack_trace_command",
-        SessionPluginProto.DumpCommand.newBuilder()
-            .setDumpStackTraceCommand(DumpStackTraceCommand.getDefaultInstance())
-            .build());
+    return runDumpCommandSessionAndPrint(DUMP_STACK_TRACE_SESSION_NAME, DUMP_STACK_TRACE_COMMAND);
   }
 
   @Command(
@@ -138,19 +160,60 @@ class DumpCommand implements Callable<Integer> {
       aliases = {"u"},
       description = "Dump how long the process has been running")
   public int uptime() throws MobileHarnessException, InterruptedException {
-    return runDumpCommandSession(
+    return runDumpCommandSessionAndPrint(
         "dump_uptime_command",
         SessionPluginProto.DumpCommand.newBuilder()
             .setDumpUptimeCommand(DumpUptimeCommand.getDefaultInstance())
             .build());
   }
 
-  private int runDumpCommandSession(String sessionName, SessionPluginProto.DumpCommand dumpCommand)
+  private void printLogDirs() {
+    consoleUtil.printlnStdout(LogDumper.dumpLog());
+  }
+
+  private void createServerStackTraceFile(String filePath) {
+    try {
+      // Gets server stack trace.
+      AtsSessionPluginOutput output =
+          runDumpCommandSession(DUMP_STACK_TRACE_SESSION_NAME, DUMP_STACK_TRACE_COMMAND);
+      String serverStackTrace;
+      switch (output.getResultCase()) {
+        case SUCCESS:
+          serverStackTrace = output.getSuccess().getOutputMessage();
+          break;
+        case FAILURE:
+          logger.atWarning().log(
+              "Failed to get server stack trace, reason: %s",
+              output.getFailure().getErrorMessage());
+          return;
+        default:
+          logger.atWarning().log(
+              "Failed to get server stack trace, plugin_output=[%s]", shortDebugString(output));
+          return;
+      }
+
+      // Saves server stack trace to file.
+      localFileUtil.writeToFile(filePath, serverStackTrace);
+    } catch (MobileHarnessException | InterruptedException e) {
+      logger.atWarning().withCause(e).log("Failed to create server stack trace file");
+      if (e instanceof InterruptedException) {
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+
+  private int runDumpCommandSessionAndPrint(
+      String sessionName, SessionPluginProto.DumpCommand dumpCommand)
+      throws MobileHarnessException, InterruptedException {
+    AtsSessionPluginOutput output = runDumpCommandSession(sessionName, dumpCommand);
+    return PluginOutputPrinter.printOutput(output, consoleUtil);
+  }
+
+  private AtsSessionPluginOutput runDumpCommandSession(
+      String sessionName, SessionPluginProto.DumpCommand dumpCommand)
       throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
-    AtsSessionPluginOutput output =
-        atsSessionStub.runShortSession(
-            sessionName, AtsSessionPluginConfig.newBuilder().setDumpCommand(dumpCommand).build());
-    return PluginOutputPrinter.printOutput(output, consoleUtil);
+    return atsSessionStub.runShortSession(
+        sessionName, AtsSessionPluginConfig.newBuilder().setDumpCommand(dumpCommand).build());
   }
 }

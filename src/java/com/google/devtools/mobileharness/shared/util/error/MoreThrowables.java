@@ -17,12 +17,34 @@
 package com.google.devtools.mobileharness.shared.util.error;
 
 import static java.util.Arrays.stream;
+import static java.util.Comparator.comparing;
 import static java.util.stream.Collectors.joining;
 
+import java.util.Map.Entry;
 import java.util.stream.Stream;
 
 /** More utilities for {@link Throwable}. */
 public class MoreThrowables {
+
+  /** Returns a formatted string of stack traces of all threads of the current process. */
+  public static String formatStackTraces() {
+    Thread currentThread = Thread.currentThread();
+    return Thread.getAllStackTraces().entrySet().stream()
+        .filter(threadEntry -> !threadEntry.getKey().equals(currentThread))
+        .sorted(comparing(threadEntry -> threadEntry.getKey().getName()))
+        .map(MoreThrowables::formatThread)
+        .collect(joining("\n\n"));
+  }
+
+  private static String formatThread(Entry<Thread, StackTraceElement[]> threadEntry) {
+    StringBuilder result = new StringBuilder();
+    result.append(threadEntry.getKey());
+    for (StackTraceElement stackTraceElement : threadEntry.getValue()) {
+      result.append("\n\t");
+      result.append(stackTraceElement);
+    }
+    return result.toString();
+  }
 
   /**
    * Equivalent to {@linkplain #shortDebugString(Throwable, int) shortDebugString(e, 0)} (print

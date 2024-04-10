@@ -82,6 +82,7 @@ java_library(
     srcs = ["DumpStackTraceCommandHandler.java"],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
     ],
 )
 

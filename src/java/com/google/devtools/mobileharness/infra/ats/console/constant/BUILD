@@ -22,6 +22,7 @@ java_library(
     srcs = ["AtsConsoleDirs.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/log:__pkg__",
     ],
     deps = [
