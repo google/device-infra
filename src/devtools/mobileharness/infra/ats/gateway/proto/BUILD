@@ -13,31 +13,22 @@
 # limitations under the License.
 #
 
-load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
-
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//java/com/google/devtools/mobileharness/service/cloudatlas:__subpackages__",
-        "//javatests/com/google/devtools/mobileharness/service/cloudatlas:__subpackages__",
+        "//:deviceinfra_all_pkg",
     ],
 )
 
 proto_library(
-    name = "session_service_proto",
-    srcs = ["session_service.proto"],
+    name = "session_plugin_proto",
+    srcs = ["session_plugin.proto"],
     deps = [
         "//src/devtools/mobileharness/api/gateway/proto:setting_proto",
     ],
 )
 
 java_proto_library(
-    name = "session_service_java_proto",
-    deps = [":session_service_proto"],
-)
-
-java_grpc_library(
-    name = "session_service_java_grpc",
-    srcs = [":session_service_proto"],
-    deps = [":session_service_java_proto"],
+    name = "session_plugin_java_proto",
+    deps = [":session_plugin_proto"],
 )
