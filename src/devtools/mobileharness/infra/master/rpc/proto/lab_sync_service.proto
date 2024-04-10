@@ -148,6 +148,19 @@ message RemoveMissingDevicesRequest {
 
 message RemoveMissingDevicesResponse {}
 
+message RemoveMissingHostRequest {
+  // Required.
+  string lab_host_name = 1;
+}
+
+message RemoveMissingHostResponse {}
+
+message RemoveMissingHostsRequest {
+  repeated string lab_host_name = 1;
+}
+
+message RemoveMissingHostsResponse {}
+
 // Service for updating labs and device info to master.
 service LabSyncService {
   // Sends full information of the Lab Server and its devices to Master.
@@ -166,4 +179,12 @@ service LabSyncService {
   // Removes the missing devices in master.
   rpc RemoveMissingDevices(RemoveMissingDevicesRequest)
       returns (RemoveMissingDevicesResponse) {}
+
+  // Removes the missing host in master.
+  rpc RemoveMissingHost(RemoveMissingHostRequest)
+      returns (RemoveMissingHostResponse) {}
+
+  // Removes the missing hosts in master.
+  rpc RemoveMissingHosts(RemoveMissingHostsRequest)
+      returns (RemoveMissingHostsResponse) {}
 }

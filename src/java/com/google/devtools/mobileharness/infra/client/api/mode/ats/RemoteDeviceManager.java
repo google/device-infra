@@ -64,6 +64,10 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDeviceResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingDevicesResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostResponse;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostsRequest;
+import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.RemoveMissingHostsResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignOutDeviceResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
@@ -398,6 +402,17 @@ class RemoteDeviceManager implements LabInfoProvider {
       throw new UnsupportedOperationException();
     }
 
+    private RemoveMissingHostResponse doRemoveMissingHost(RemoveMissingHostRequest request) {
+      doRemoveMissingHosts(
+          RemoveMissingHostsRequest.newBuilder().addLabHostName(request.getLabHostName()).build());
+      return RemoveMissingHostResponse.getDefaultInstance();
+    }
+
+    @CanIgnoreReturnValue
+    private RemoveMissingHostsResponse doRemoveMissingHosts(RemoveMissingHostsRequest request) {
+      throw new UnsupportedOperationException();
+    }
+
     @Override
     public void signUpLab(
         SignUpLabRequest request, StreamObserver<SignUpLabResponse> responseObserver) {
@@ -453,6 +468,30 @@ class RemoteDeviceManager implements LabInfoProvider {
           this::doRemoveMissingDevices,
           LabSyncServiceGrpc.getServiceDescriptor(),
           LabSyncServiceGrpc.getRemoveMissingDevicesMethod());
+    }
+
+    @Override
+    public void removeMissingHost(
+        RemoveMissingHostRequest request,
+        StreamObserver<RemoveMissingHostResponse> responseObserver) {
+      GrpcServiceUtil.invoke(
+          request,
+          responseObserver,
+          this::doRemoveMissingHost,
+          LabSyncServiceGrpc.getServiceDescriptor(),
+          LabSyncServiceGrpc.getRemoveMissingHostMethod());
+    }
+
+    @Override
+    public void removeMissingHosts(
+        RemoveMissingHostsRequest request,
+        StreamObserver<RemoveMissingHostsResponse> responseObserver) {
+      GrpcServiceUtil.invoke(
+          request,
+          responseObserver,
+          this::doRemoveMissingHosts,
+          LabSyncServiceGrpc.getServiceDescriptor(),
+          LabSyncServiceGrpc.getRemoveMissingHostsMethod());
     }
   }
 
