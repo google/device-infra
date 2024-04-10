@@ -65,6 +65,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final String XTS_DYNAMIC_DOWNLOAD_PATH_KEY = "xts_dynamic_download_path";
 
+  private static final String MAINLINE_TVP_PKG = "com.google.android.modulemetadata";
+
   private static final ImmutableMap<String, Integer> SDKLEVEL_TO_YEAR =
       ImmutableMap.of(
           "30", 2020,
@@ -118,7 +120,14 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
     if (!preloadedMainlineModules.isEmpty()) {
-      String preloadedMainlineVersion = getPreloadedMainlineVersion(device);
+      String versioncode =
+          Integer.toString(
+              androidPackageManagerUtil.getAppVersionCode(device.getDeviceId(), MAINLINE_TVP_PKG));
+      // if the TVP version is 310000000, that means all the mainline modules were built
+      // from source, rather than prebuilt dropped. 310000000 is just the default value in
+      // http://ac/vendor/unbundled_google/modules/ModuleMetadataGoogle/Primary_AndroidManifest.xml
+      String preloadedMainlineVersion =
+          versioncode.equals("310000000") ? aospVersion : getPreloadedMainlineVersion(versioncode);
       for (String mctsName : mctsNamesOfPreloadedMainlineModules.get("preloaded")) {
         String downloadUrl =
             String.format(
@@ -230,12 +239,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     return mctsNamesOfAllModules;
   }
 
-  private String getPreloadedMainlineVersion(Device device)
+  private String getPreloadedMainlineVersion(String versioncode)
       throws MobileHarnessException, InterruptedException {
-    String versioncode =
-        Integer.toString(
-            androidPackageManagerUtil.getAppVersionCode(
-                device.getDeviceId(), "com.google.android.modulemetadata"));
     // Get the release time of the preloaded mainline train, the format is YYYY-MM.
     // Note that version codes must always increase to successfully install newer builds. For this
     // reason, the version code "wraps" in January, making the month digits wrap to 13, instead of
