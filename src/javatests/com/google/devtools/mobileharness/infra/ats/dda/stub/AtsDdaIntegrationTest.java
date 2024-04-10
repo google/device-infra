@@ -357,6 +357,7 @@ public class AtsDdaIntegrationTest {
                         ImmutableList.of(
                             "--android_device_daemon=false",
                             "--detect_adb_device=false",
+                            "--enable_android_device_ready_check=false",
                             "--enable_api_config=false",
                             "--enable_cloud_logging=false",
                             "--enable_device_config_manager=false",

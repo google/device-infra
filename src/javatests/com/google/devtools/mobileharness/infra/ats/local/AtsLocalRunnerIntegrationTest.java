@@ -61,17 +61,21 @@ public class AtsLocalRunnerIntegrationTest {
   @Test
   public void runTest() throws Exception {
     int serverPort = PortProber.pickUnusedPort();
-    String olcServerPublicDir = tmpFolder.newFolder("olc_server").toString();
+    String olcServerPublicDir = tmpFolder.newFolder("olc_server_public_dir").toString();
+    String olcServerTmpDir = tmpFolder.newFolder("olc_server_tmp_dir").toString();
     ImmutableList<String> deviceInfraServiceFlags =
         ImmutableList.of(
             "--alr_olc_server_path=" + OLC_SERVER_BINARY,
             "--android_device_daemon=false",
             "--detect_adb_device=false",
+            "--enable_android_device_ready_check=false",
+            "--enable_api_config=false",
             "--log_file_size_no_limit=true",
             "--no_op_device_num=2",
             "--olc_server_port=" + serverPort,
             "--public_dir=" + olcServerPublicDir,
-            "--simplified_log_format=true");
+            "--simplified_log_format=true",
+            "--tmp_dir_root=" + olcServerTmpDir);
     StringBuilder stdoutBuilder = new StringBuilder();
     Command command =
         Command.of(

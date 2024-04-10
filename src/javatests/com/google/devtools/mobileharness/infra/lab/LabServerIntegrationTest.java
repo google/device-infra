@@ -175,6 +175,7 @@ public class LabServerIntegrationTest {
                         ImmutableList.of(
                             "--android_device_daemon=false",
                             "--detect_adb_device=false",
+                            "--enable_android_device_ready_check=false",
                             "--enable_api_config=false",
                             "--enable_cloud_logging=false",
                             "--enable_device_config_manager=false",
@@ -189,7 +190,6 @@ public class LabServerIntegrationTest {
                             "--public_dir=" + labServerPublicDirPath,
                             "--rpc_port=" + labServerRpcPort,
                             "--serv_via_cloud_rpc=false",
-                            "--simplified_log_format=true",
                             "--socket_port=" + labServerSocketPort,
                             "--tmp_dir_root=" + labServerTmpDirPath),
                         ImmutableList.of()))
