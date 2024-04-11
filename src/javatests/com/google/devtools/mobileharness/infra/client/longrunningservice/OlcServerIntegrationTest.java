@@ -450,6 +450,7 @@ public class OlcServerIntegrationTest {
                             "--no_op_device_num=" + noOpDeviceNum,
                             "--olc_server_port=" + olcServerPort,
                             "--public_dir=" + tmpFolder.newFolder("olc_server_public_dir"),
+                            "--resource_dir_name=olc_server_res_files",
                             "--tmp_dir_root=" + tmpFolder.newFolder("olc_server_tmp_dir")),
                         ImmutableList.of()))
             .onStdout(
@@ -517,6 +518,7 @@ public class OlcServerIntegrationTest {
                               "--master_grpc_target=localhost:" + olcServerPort,
                               "--no_op_device_num=" + noOpDeviceNum,
                               "--public_dir=" + tmpFolder.newFolder("lab_server_public_dir"),
+                              "--resource_dir_name=lab_server_res_files",
                               "--rpc_port=" + labServerRpcPort,
                               "--serv_via_cloud_rpc=false",
                               "--socket_port=" + labServerSocketPort,
