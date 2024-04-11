@@ -184,6 +184,10 @@ public class CompatibilityReportCreator {
     for (Attribute attr : report.getAttributeList()) {
       serializer.attribute(NS, attr.getKey(), attr.getValue());
     }
+    if (report.getIsRetryResult()) {
+      serializer.attribute(
+          NS, XmlConstants.IS_RETRY_RESULT_ATTR, Boolean.toString(report.getIsRetryResult()));
+    }
 
     // Build Info
     serializer.startTag(NS, XmlConstants.BUILD_TAG);

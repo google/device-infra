@@ -57,12 +57,16 @@ public class SubPlan extends AbstractXmlParser {
 
   public static final String ALL_TESTS_IN_MODULE = "ALL";
 
+  private String prevSessionXtsTestPlan;
+
   public SubPlan() {
     includeFiltersMultimap = TreeMultimap.create();
     excludeFiltersMultimap = TreeMultimap.create();
 
     nonTfIncludeFiltersMultimap = TreeMultimap.create();
     nonTfExcludeFiltersMultimap = TreeMultimap.create();
+
+    prevSessionXtsTestPlan = "";
   }
 
   /** Adds a filter of which TF tests to include. */
@@ -137,6 +141,16 @@ public class SubPlan extends AbstractXmlParser {
   public void clearExcludeFilters() {
     includeFiltersMultimap.clear();
     nonTfExcludeFiltersMultimap.clear();
+  }
+
+  /** Sets the previous session's test plan. */
+  public void setPreviousSessionXtsTestPlan(String prevSessionXtsTestPlan) {
+    this.prevSessionXtsTestPlan = prevSessionXtsTestPlan;
+  }
+
+  /** Gets the previous session's test plan. */
+  public String getPreviousSessionXtsTestPlan() {
+    return prevSessionXtsTestPlan;
   }
 
   /**

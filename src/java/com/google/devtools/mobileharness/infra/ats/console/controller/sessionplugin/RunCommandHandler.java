@@ -169,16 +169,17 @@ class RunCommandHandler {
             .setXtsRootDir(runCommand.getXtsRootDir())
             .setXtsType(runCommand.getXtsType())
             .setEnableModuleParameter(true)
-            .setEnableModuleOptionalParameter(false);
-
-    builder.setDeviceSerials(runCommand.getDeviceSerialList());
-    builder.setModuleNames(runCommand.getModuleNameList());
+            .setEnableModuleOptionalParameter(false)
+            .setCommandLineArgs(runCommand.getInitialState().getCommandLineArgs())
+            .setDeviceSerials(runCommand.getDeviceSerialList())
+            .setModuleNames(runCommand.getModuleNameList());
     if (runCommand.hasTestName()) {
       builder.setTestName(runCommand.getTestName());
     }
-    builder.setIncludeFilters(runCommand.getIncludeFilterList());
-    builder.setExcludeFilters(runCommand.getExcludeFilterList());
-    builder.setExtraArgs(runCommand.getExtraArgList());
+    builder
+        .setIncludeFilters(runCommand.getIncludeFilterList())
+        .setExcludeFilters(runCommand.getExcludeFilterList())
+        .setExtraArgs(runCommand.getExtraArgList());
 
     if (runCommand.hasShardCount()) {
       builder.setShardCount(runCommand.getShardCount());

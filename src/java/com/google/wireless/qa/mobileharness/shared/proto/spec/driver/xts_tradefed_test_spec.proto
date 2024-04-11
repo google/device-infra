@@ -66,4 +66,9 @@ message XtsTradefedTestDriverSpec {
     help: "The environment variables passed to xTS 'run' command. This is a "
           "Map<String, String> encoded as a JSON string."
   }];
+
+  optional string prev_session_xts_test_plan = 9 [(field_detail) = {
+    help: "The test plan for xTS previous session. It must be set when the "
+          "'xts_test_plan' is 'retry'."
+  }];
 }

@@ -46,6 +46,7 @@ public final class CommandLineParserTest {
     SessionRequestInfo requestInfo1 =
         requestInfoBuilder1
             .setTestPlan("cts")
+            .setCommandLineArgs(tfCommand1)
             .setXtsRootDir("xts_root_dir")
             .setXtsType("cts")
             .build();
@@ -66,6 +67,7 @@ public final class CommandLineParserTest {
     SessionRequestInfo requestInfo1 =
         requestInfoBuilder1
             .setTestPlan("cts")
+            .setCommandLineArgs(tfCommand1)
             .setXtsRootDir("xts_root_dir")
             .setXtsType("cts")
             .build();
@@ -86,12 +88,14 @@ public final class CommandLineParserTest {
     SessionRequestInfo requestInfo1 =
         requestInfoBuilder1
             .setTestPlan("cts")
+            .setCommandLineArgs(tfCommand1)
             .setXtsRootDir("xts_root_dir")
             .setXtsType("cts")
             .build();
     SessionRequestInfo requestInfo2 =
         requestInfoBuilder2
             .setTestPlan("cts")
+            .setCommandLineArgs(tfCommand2)
             .setXtsRootDir("xts_root_dir")
             .setXtsType("cts")
             .build();

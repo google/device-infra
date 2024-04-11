@@ -41,6 +41,7 @@ public final class XmlConstants {
   public static final String SUITE_CTS_VERIFIER_AUTOMATED_MODE_VALUE = "automated";
   public static final String SUITE_CTS_VERIFIER_MERGED_MODE_VALUE = "merged";
   public static final String SUITE_PLAN_CTS_VERIFIER_VALUE = "verifier";
+  public static final String IS_RETRY_RESULT_ATTR = "is_retry_result";
 
   // <Build> element
   public static final String BUILD_TAG = "Build";

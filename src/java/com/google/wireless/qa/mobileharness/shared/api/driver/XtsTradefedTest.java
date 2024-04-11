@@ -683,7 +683,7 @@ public class XtsTradefedTest extends BaseDriver
 
   private ImmutableList<String> getXtsRunCommandArgs(XtsTradefedTestDriverSpec spec) {
     String testPlan =
-        isRunRetryWithSubPlan(spec) ? Ascii.toLowerCase(spec.getXtsType()) : getXtsTestPlan(spec);
+        isRunRetryWithSubPlan(spec) ? spec.getPrevSessionXtsTestPlan() : getXtsTestPlan(spec);
 
     ImmutableList.Builder<String> xtsRunCommand =
         ImmutableList.<String>builder().add("run", "commandAndExit", testPlan);

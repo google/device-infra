@@ -79,6 +79,7 @@ java_library(
         "XmlConstants.java",
     ],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__pkg__",

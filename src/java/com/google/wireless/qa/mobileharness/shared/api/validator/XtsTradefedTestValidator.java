@@ -52,6 +52,11 @@ public class XtsTradefedTestValidator extends BaseValidator
       errors.add("An xTS test plan must be specified.");
     }
 
+    if (spec.getXtsTestPlan().equals("retry") && spec.getPrevSessionXtsTestPlan().isEmpty()) {
+      errors.add(
+          "The 'prev_session_xts_test_plan' must be specified when the test plan is 'retry'.");
+    }
+
     if (spec.getXtsRootDir().isEmpty() && spec.getAndroidXtsZip().isEmpty()) {
       errors.add(
           String.format(

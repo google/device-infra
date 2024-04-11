@@ -77,6 +77,10 @@ public final class NewMultiCommandRequestHandlerTest {
   private static final String ANDROID_XTS_ZIP = "file:///path/to/xts/zip/file.zip";
   private static final String OUTPUT_FILE_UPLOAD_URL = "file:///path/to/output";
 
+  private static final String DEFAULT_COMMAND_LINE =
+      "cts --module module1 --test test1 --logcat-on-failure --shard-count 2"
+          + " --parallel-setup true --parallel-setup-timeout 0";
+
   private CommandInfo commandInfo = CommandInfo.getDefaultInstance();
   private NewMultiCommandRequest request = NewMultiCommandRequest.getDefaultInstance();
 
@@ -116,9 +120,7 @@ public final class NewMultiCommandRequestHandlerTest {
     commandInfo =
         CommandInfo.newBuilder()
             .setName("command")
-            .setCommandLine(
-                "cts --module module1 --test test1 --logcat-on-failure --shard-count 2"
-                    + " --parallel-setup true --parallel-setup-timeout 0")
+            .setCommandLine(DEFAULT_COMMAND_LINE)
             .addDeviceDimensions(
                 CommandInfo.DeviceDimension.newBuilder()
                     .setName("device_serial")
@@ -296,6 +298,7 @@ public final class NewMultiCommandRequestHandlerTest {
             ImmutableList.of(jobInfo),
             SessionRequestInfo.builder()
                 .setTestPlan("") // set the test plan as empty so it won't merge the retry result
+                .setCommandLineArgs(DEFAULT_COMMAND_LINE)
                 .setXtsType("cts")
                 .setXtsRootDir("/fake/path")
                 .build());

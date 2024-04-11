@@ -16,13 +16,17 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite.subplan;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
+import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryResultHelper;
+import java.util.Optional;
 import java.util.Set;
 
 /** SubPlan helper class. */
@@ -71,6 +75,20 @@ public class SubPlanHelper {
           }
         }
       }
+    }
+    // Need to retrieve the test plan from the COMMAND_LINE_ARGS in the previous result
+    Optional<Attribute> commandLineArgs =
+        previousResult.getAttributeList().stream()
+            .filter(attribute -> attribute.getKey().equals(XmlConstants.COMMAND_LINE_ARGS))
+            .findFirst();
+    if (commandLineArgs.isPresent()) {
+      subPlan.setPreviousSessionXtsTestPlan(
+          Splitter.on(' ')
+              .trimResults()
+              .omitEmptyStrings()
+              .splitToStream(commandLineArgs.get().getValue())
+              .findFirst()
+              .orElse(""));
     }
     return subPlan;
   }

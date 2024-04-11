@@ -39,6 +39,8 @@ message Result {
   repeated string include_filter = 7;
   // Exclude filters from the command line. Not showing in xml report.
   repeated string exclude_filter = 8;
+  // Whether the result is a retry result.
+  optional bool is_retry_result = 9;
 }
 
 // Stores info for the <Build> element in the compatibility report.

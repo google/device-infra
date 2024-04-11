@@ -157,6 +157,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setJobTimeout(Duration.ofSeconds(3000))
@@ -185,6 +186,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build(),
@@ -219,6 +221,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setUseParallelSetup(true)
@@ -259,6 +262,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
@@ -293,6 +297,7 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
                 .build());
     SubPlan subPlan = new SubPlan();
+    subPlan.setPreviousSessionXtsTestPlan("cts");
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
@@ -303,6 +308,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("retry")
+                .setCommandLineArgs("retry --retry 0")
                 .setXtsType("cts")
                 .setXtsRootDir(xtsRootDir.getAbsolutePath())
                 .setRetrySessionId(0)
@@ -318,7 +324,7 @@ public final class SessionRequestHandlerUtilTest {
     String driverParams = jobConfigOpt.get().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
-    assertThat(driverParamsMap).hasSize(4);
+    assertThat(driverParamsMap).hasSize(5);
     assertThat(driverParamsMap)
         .containsAtLeast(
             "xts_type",
@@ -326,7 +332,9 @@ public final class SessionRequestHandlerUtilTest {
             "xts_root_dir",
             xtsRootDir.getAbsolutePath(),
             "xts_test_plan",
-            "retry");
+            "retry",
+            "prev_session_xts_test_plan",
+            "cts");
     assertThat(driverParamsMap.get("subplan_xml")).startsWith(xtsRootDir.getAbsolutePath());
   }
 
@@ -350,6 +358,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts --subplan subplan1")
                 .setXtsType("cts")
                 .setXtsRootDir(xtsRootDir.getAbsolutePath())
                 .setSubPlanName("subplan1")
@@ -400,6 +409,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts --subplan subplan2")
                 .setXtsType("cts")
                 .setXtsRootDir(xtsRootDir.getAbsolutePath())
                 .setSubPlanName("subplan2")
@@ -443,6 +453,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts --shard-count 2")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setShardCount(2)
@@ -472,6 +483,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts --shard-count 3")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setShardCount(3)
@@ -493,6 +505,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build(),
@@ -516,6 +529,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
@@ -571,6 +585,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setDeviceSerials(
@@ -609,6 +624,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setDeviceSerials(ImmutableList.of("device_id_4", "device_id_5"))
@@ -633,6 +649,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setEnvVars(ImmutableMap.of("env_key1", "env_value1"))
@@ -710,6 +727,7 @@ public final class SessionRequestHandlerUtilTest {
     SessionRequestInfo sessionRequestInfoWithIncludeFilters =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
+            .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setIncludeFilters(ImmutableList.of("module3 TestClass#TestCase"))
@@ -720,6 +738,7 @@ public final class SessionRequestHandlerUtilTest {
     SessionRequestInfo sessionRequestInfoWithExcludeFilters =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
+            .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setExcludeFilters(ImmutableList.of("module1", "module2"))
@@ -730,6 +749,7 @@ public final class SessionRequestHandlerUtilTest {
     SessionRequestInfo sessionRequestInfoWithMixedFilters =
         SessionRequestInfo.builder()
             .setTestPlan("cts")
+            .setCommandLineArgs("cts")
             .setXtsType("cts")
             .setXtsRootDir(XTS_ROOT_DIR_PATH)
             .setIncludeFilters(ImmutableList.of("module1"))
@@ -779,6 +799,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .build());
@@ -826,6 +847,7 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestHandlerUtil.addNonTradefedModuleInfo(
                 SessionRequestInfo.builder()
                     .setTestPlan("cts")
+                    .setCommandLineArgs("cts")
                     .setXtsType("cts")
                     .setXtsRootDir(XTS_ROOT_DIR_PATH)
                     .setModuleNames(ImmutableList.of("TfModule1"))
@@ -871,6 +893,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setModuleNames(ImmutableList.of("TfModule1", "module2"))
@@ -934,6 +957,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setIncludeFilters(
@@ -978,6 +1002,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setModuleNames(ImmutableList.of("module1"))
                 .setTestName("testclass#test1")
@@ -990,6 +1015,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setModuleNames(ImmutableList.of("module1"))
                 .setTestName("test1")
@@ -1041,6 +1067,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("retry")
+                .setCommandLineArgs("retry")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setRetrySessionId(0)
@@ -1107,15 +1134,20 @@ public final class SessionRequestHandlerUtilTest {
                 "arm64-v8a module3",
                 config3));
     SubPlan subPlan = new SubPlan();
+    subPlan.setPreviousSessionXtsTestPlan("cts");
     subPlan.addNonTfIncludeFilter("arm64-v8a module1 android.test.Foo#test1");
     subPlan.addNonTfIncludeFilter("arm64-v8a module1 android.test.Foo#test2");
     subPlan.addNonTfIncludeFilter("arm64-v8a module2"); // retry entire module
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+    doCallRealMethod()
+        .when(certificationSuiteInfoFactory)
+        .generateSuiteInfoMap(any(), any(), any());
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("retry")
+                .setCommandLineArgs("retry")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
                 .setRetrySessionId(0)
@@ -1125,7 +1157,9 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1 test2");
+    assertThat(jobInfos.get(0).params().get("xts_suite_info")).contains("suite_plan=cts");
     assertThat(jobInfos.get(1).params().get("test_case_selector")).isNull();
+    assertThat(jobInfos.get(1).params().get("xts_suite_info")).contains("suite_plan=cts");
   }
 
   @Test
@@ -1164,6 +1198,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts --subplan subplan1")
                 .setXtsType("cts")
                 .setXtsRootDir(xtsRootDir.getAbsolutePath())
                 .setSubPlanName("subplan1")
@@ -1212,6 +1247,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
+                .setCommandLineArgs("cts --subplan subplan2")
                 .setXtsType("cts")
                 .setXtsRootDir(xtsRootDir.getAbsolutePath())
                 .setSubPlanName("subplan2")

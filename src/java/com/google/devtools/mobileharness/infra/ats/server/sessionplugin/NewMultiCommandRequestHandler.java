@@ -282,6 +282,7 @@ final class NewMultiCommandRequestHandler {
     SessionRequestInfo.Builder sessionRequestInfoBuilder =
         CommandLineParser.getInstance().parseCommandLine(commandInfo.getCommandLine());
     sessionRequestInfoBuilder.setTestPlan(testPlan);
+    sessionRequestInfoBuilder.setCommandLineArgs(commandInfo.getCommandLine());
     sessionRequestInfoBuilder.setXtsType(xtsType);
     sessionRequestInfoBuilder.setXtsRootDir(xtsRootDir);
     sessionRequestInfoBuilder.setAndroidXtsZip(androidXtsZipPath);
@@ -330,6 +331,8 @@ final class NewMultiCommandRequestHandler {
             sessionInfo.getAllJobs(),
             SessionRequestInfo.builder()
                 .setTestPlan("") // set the test plan as empty so it won't merge the retry result
+                .setCommandLineArgs(
+                    newMultiCommandRequest.getCommandsList().get(0).getCommandLine())
                 .setXtsType(xtsType)
                 .setXtsRootDir("/fake/path")
                 .build());

@@ -36,6 +36,8 @@ import java.util.OptionalInt;
 public abstract class SessionRequestInfo {
   public abstract String testPlan();
 
+  public abstract String commandLineArgs();
+
   public abstract String xtsRootDir();
 
   public abstract Optional<String> androidXtsZip();
@@ -107,6 +109,8 @@ public abstract class SessionRequestInfo {
   @AutoValue.Builder
   public abstract static class Builder {
     public abstract Builder setTestPlan(String testPlan);
+
+    public abstract Builder setCommandLineArgs(String commandLineArgs);
 
     public abstract Builder setXtsRootDir(String xtsRootDir);
 

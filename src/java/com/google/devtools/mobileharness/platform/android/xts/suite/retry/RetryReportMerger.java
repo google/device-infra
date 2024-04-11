@@ -39,8 +39,10 @@ import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import javax.annotation.Nullable;
@@ -106,6 +108,7 @@ public class RetryReportMerger {
           previousResult.toBuilder().getModuleInfoBuilderList();
       mergedResult =
           previousResult.toBuilder()
+              .setIsRetryResult(true)
               .clearModuleInfo()
               .addAllModuleInfo(
                   moduleBuildersFromPrevSession.stream()
@@ -119,9 +122,24 @@ public class RetryReportMerger {
       return mergedResult.build();
     }
 
+    // Update result attributes if needed
+    List<Attribute> attributes = new ArrayList<>();
+    // Need to retrieve COMMAND_LINE_ARGS from the previous result, and keep other attributes from
+    // the retry result
+    retryResult.getAttributeList().stream()
+        .filter(attribute -> !attribute.getKey().equals(XmlConstants.COMMAND_LINE_ARGS))
+        .forEach(attributes::add);
+    Optional<Attribute> commandLineArgs =
+        previousResult.getAttributeList().stream()
+            .filter(attribute -> attribute.getKey().equals(XmlConstants.COMMAND_LINE_ARGS))
+            .findFirst();
+    if (commandLineArgs.isPresent()) {
+      attributes.add(commandLineArgs.get());
+    }
     mergedResult
+        .setIsRetryResult(true)
         .setBuild(retryResult.toBuilder().getBuildBuilder())
-        .addAllAttribute(retryResult.toBuilder().getAttributeList());
+        .addAllAttribute(attributes);
     addRunHistoryForRetry(mergedResult, previousResult);
 
     // Map of module id to module

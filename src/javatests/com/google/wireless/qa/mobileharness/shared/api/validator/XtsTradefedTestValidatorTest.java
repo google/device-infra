@@ -99,6 +99,21 @@ public final class XtsTradefedTestValidatorTest {
   }
 
   @Test
+  public void validateJob_missPrevSessionXtsTestPlanWhenTestPlanIsRetry_error() throws Exception {
+    when(mockJobInfo.combinedSpec(any()))
+        .thenReturn(
+            XtsTradefedTestDriverSpec.newBuilder()
+                .setXtsType("cts")
+                .setXtsTestPlan("retry")
+                .setXtsRootDir("/path/to/cts_root")
+                .build());
+
+    List<String> errors = validator.validateJob(mockJobInfo);
+    assertThat(errors).hasSize(1);
+    assertThat(errors.get(0)).contains("The 'prev_session_xts_test_plan' must be specified");
+  }
+
+  @Test
   public void validateJob_missBothXtsRootDirAndAndroidXtsZip_error() throws Exception {
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(

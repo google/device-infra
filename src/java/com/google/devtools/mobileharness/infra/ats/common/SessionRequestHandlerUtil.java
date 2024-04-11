@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.common;
 
+import static com.google.common.base.Strings.emptyToNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -26,6 +27,7 @@ import static com.google.wireless.qa.mobileharness.shared.api.driver.MoblyGeneri
 import static java.lang.Math.min;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
+import static java.util.stream.Collectors.toCollection;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
@@ -40,12 +42,14 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
+import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
@@ -423,16 +427,27 @@ public class SessionRequestHandlerUtil {
     }
     driverParams.put("xts_test_plan", testPlan);
     if (isRunRetry(testPlan)) {
-      Optional<Path> runRetryTfSubPlan =
-          prepareRunRetryTfSubPlan(
+      Optional<SubPlan> runRetryTfSubPlan =
+          prepareRunRetrySubPlan(
               xtsRootDir,
               sessionRequestInfo.xtsType(),
               sessionRequestInfo.retrySessionId().orElseThrow(),
-              sessionRequestInfo.retryType().orElse(null));
+              sessionRequestInfo.retryType().orElse(null),
+              /* forTf= */ true);
       if (runRetryTfSubPlan.isEmpty()) {
         return Optional.empty();
       }
-      driverParams.put("subplan_xml", runRetryTfSubPlan.get().toAbsolutePath().toString());
+      driverParams.put(
+          "prev_session_xts_test_plan", runRetryTfSubPlan.get().getPreviousSessionXtsTestPlan());
+
+      Path runRetryTfSubPlanXmlFile =
+          prepareRunRetryTfSubPlanXmlFile(
+              xtsRootDir,
+              sessionRequestInfo.xtsType(),
+              sessionRequestInfo.retrySessionId().orElseThrow(),
+              runRetryTfSubPlan.get());
+
+      driverParams.put("subplan_xml", runRetryTfSubPlanXmlFile.toAbsolutePath().toString());
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
       Optional<Path> tfSubPlan =
           prepareTfSubPlan(
@@ -540,27 +555,10 @@ public class SessionRequestHandlerUtil {
     return Optional.of(tfOnlySubPlanPath);
   }
 
-  private Optional<Path> prepareRunRetryTfSubPlan(
-      String xtsRootDir, String xtsType, int previousSessionId, @Nullable RetryType retryType)
+  private Path prepareRunRetryTfSubPlanXmlFile(
+      String xtsRootDir, String xtsType, int previousSessionId, SubPlan subPlan)
       throws MobileHarnessException {
-    Path xtsRootDirPath = Path.of(xtsRootDir);
-    RetryArgs.Builder retryArgs =
-        RetryArgs.builder()
-            .setResultsDir(getXtsResultsDir(xtsRootDirPath, xtsType))
-            .setPreviousSessionId(previousSessionId);
-    if (retryType != null) {
-      retryArgs.setRetryType(retryType);
-    }
-    SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
-    if (subPlan.getIncludeFiltersMultimap().isEmpty()
-        && subPlan.getExcludeFiltersMultimap().isEmpty()) {
-      logger.atInfo().log(
-          "No include or exclude filters found for TF retry session %s with retry type %s",
-          previousSessionId, retryType);
-      return Optional.empty();
-    }
-
-    Path xtsSubPlansDir = getXtsSubPlansDir(xtsRootDirPath, xtsType);
+    Path xtsSubPlansDir = getXtsSubPlansDir(Path.of(xtsRootDir), xtsType);
     localFileUtil.prepareDir(xtsSubPlansDir);
     Path subPlanPath =
         xtsSubPlansDir.resolve(
@@ -575,7 +573,7 @@ public class SessionRequestHandlerUtil {
               "Failed to write the subplan xml file when retrying session %s", previousSessionId),
           e);
     }
-    return Optional.of(subPlanPath);
+    return subPlanPath;
   }
 
   /**
@@ -663,11 +661,12 @@ public class SessionRequestHandlerUtil {
     Optional<SubPlan> subPlanOpt = Optional.empty();
     if (isRunRetry(testPlan)) {
       subPlanOpt =
-          prepareRunRetryNonTfSubPlan(
+          prepareRunRetrySubPlan(
               xtsRootDir,
               sessionRequestInfo.xtsType(),
               sessionRequestInfo.retrySessionId().orElseThrow(),
-              sessionRequestInfo.retryType().orElse(null));
+              sessionRequestInfo.retryType().orElse(null),
+              /* forTf= */ false);
       if (subPlanOpt.isEmpty()) {
         return ImmutableList.of();
       }
@@ -782,6 +781,9 @@ public class SessionRequestHandlerUtil {
                 Path.of(xtsRootDir),
                 xtsType,
                 testPlan,
+                subPlanOpt
+                    .map(subPlan -> emptyToNull(subPlan.getPreviousSessionXtsTestPlan()))
+                    .orElse(null),
                 Path.of(requireNonNull(moduleNameToConfigFilePathMap.get(originalModuleName))),
                 entry.getValue(),
                 expandedModuleName,
@@ -834,6 +836,7 @@ public class SessionRequestHandlerUtil {
       Path xtsRootDir,
       String xtsType,
       String testPlan,
+      @Nullable String previousSessionTestPlan,
       Path moduleConfigPath,
       Configuration moduleConfig,
       String expandedModuleName,
@@ -874,7 +877,10 @@ public class SessionRequestHandlerUtil {
         .params()
         .add(
             "xts_suite_info",
-            generateXtsSuiteInfoMap(xtsRootDir.toAbsolutePath().toString(), xtsType, testPlan));
+            generateXtsSuiteInfoMap(
+                xtsRootDir.toAbsolutePath().toString(),
+                xtsType,
+                previousSessionTestPlan != null ? previousSessionTestPlan : testPlan));
     return Optional.of(jobInfo);
   }
 
@@ -1021,8 +1027,12 @@ public class SessionRequestHandlerUtil {
     }
   }
 
-  private Optional<SubPlan> prepareRunRetryNonTfSubPlan(
-      String xtsRootDir, String xtsType, int previousSessionId, @Nullable RetryType retryType)
+  private Optional<SubPlan> prepareRunRetrySubPlan(
+      String xtsRootDir,
+      String xtsType,
+      int previousSessionId,
+      @Nullable RetryType retryType,
+      boolean forTf)
       throws MobileHarnessException {
     Path xtsRootDirPath = Path.of(xtsRootDir);
     RetryArgs.Builder retryArgs =
@@ -1033,11 +1043,15 @@ public class SessionRequestHandlerUtil {
       retryArgs.setRetryType(retryType);
     }
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
-    if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
-        && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
+    if ((forTf
+            && subPlan.getIncludeFiltersMultimap().isEmpty()
+            && subPlan.getExcludeFiltersMultimap().isEmpty())
+        || (!forTf
+            && subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
+            && subPlan.getNonTfExcludeFiltersMultimap().isEmpty())) {
       logger.atInfo().log(
-          "No include or exclude filters found for Non-TF retry session %s with retry type %s",
-          previousSessionId, retryType);
+          "No include or exclude filters found for %s retry session %s with retry type %s",
+          forTf ? "TF" : "Non-TF", previousSessionId, retryType);
       return Optional.empty();
     }
     return Optional.of(subPlan);
@@ -1153,6 +1167,16 @@ public class SessionRequestHandlerUtil {
     boolean isRunRetry = isRunRetry(sessionRequestInfo.testPlan());
     if (!isRunRetry && mergedReport.isPresent()) {
       Result.Builder finalReportBuilder = mergedReport.get().toBuilder();
+      List<Attribute> attributes =
+          finalReportBuilder.getAttributeList().stream()
+              .filter(attribute -> !attribute.getKey().equals(XmlConstants.COMMAND_LINE_ARGS))
+              .collect(toCollection(ArrayList::new));
+      attributes.add(
+          Attribute.newBuilder()
+              .setKey(XmlConstants.COMMAND_LINE_ARGS)
+              .setValue(sessionRequestInfo.commandLineArgs())
+              .build());
+      finalReportBuilder.clearAttribute().addAllAttribute(attributes);
       if (!sessionRequestInfo.moduleNames().isEmpty()) {
         finalReportBuilder.addAllModuleFilter(sessionRequestInfo.moduleNames());
       }
