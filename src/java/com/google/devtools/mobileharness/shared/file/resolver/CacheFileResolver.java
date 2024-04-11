@@ -64,8 +64,7 @@ public class CacheFileResolver extends AbstractFileResolver {
 
   private final LocalFileUtil localFileUtil;
 
-  /** The class can only be created by {@link FileResolverBuilder}. */
-  CacheFileResolver(ListeningExecutorService executorService, LocalFileUtil localFileUtil) {
+  public CacheFileResolver(ListeningExecutorService executorService, LocalFileUtil localFileUtil) {
     super(executorService);
     this.localFileUtil = localFileUtil;
   }
