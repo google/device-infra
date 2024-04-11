@@ -284,6 +284,8 @@ public class ServerPreparer {
   private boolean needKillExistingServer(GetVersionResponse version) {
     // Checks flag.
     if (Flags.instance().atsConsoleAlwaysRestartOlcServer.getNonNull()) {
+      logger.atInfo().log(
+          "Need to kill existing OLC server because --ats_console_always_restart_olc_server=true");
       return true;
     }
 
