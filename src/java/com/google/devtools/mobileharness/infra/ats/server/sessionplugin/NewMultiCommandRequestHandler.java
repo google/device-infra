@@ -201,20 +201,16 @@ final class NewMultiCommandRequestHandler {
       sessionRequestInfo = generateSessionRequestInfo(request, commandInfo, sessionInfo);
       sessionRequestInfoCache.put(commandInfo, sessionRequestInfo);
     } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to generate sessionRequestInfo from commandInfo: %s. SessionID: %s",
+          shortDebugString(commandInfo), sessionInfo.getSessionId());
+      commandDetailBuilder.setState(CommandState.CANCELED);
       if (e.getErrorId() == BasicErrorId.LOCAL_MOUNT_ZIP_TO_DIR_ERROR) {
-        commandDetailBuilder
-            .setState(CommandState.CANCELED)
-            .setCancelReason(CancelReason.INVALID_RESOURCE);
-        return commandDetailBuilder.build();
+        commandDetailBuilder.setCancelReason(CancelReason.INVALID_RESOURCE);
       } else {
-        logger.atWarning().withCause(e).log(
-            "Failed to generate sessionRequestInfo from commandInfo: %s. SessionID: %s",
-            shortDebugString(commandInfo), sessionInfo.getSessionId());
-        commandDetailBuilder
-            .setState(CommandState.CANCELED)
-            .setCancelReason(CancelReason.INVALID_REQUEST);
-        return commandDetailBuilder.build();
+        commandDetailBuilder.setCancelReason(CancelReason.INVALID_REQUEST);
       }
+      return commandDetailBuilder.build();
     }
 
     Optional<JobInfo> jobInfo =
@@ -359,11 +355,14 @@ final class NewMultiCommandRequestHandler {
       throws InterruptedException, MobileHarnessException {
     sessionRequestHandlerUtil.cleanUpJobGenDirs(sessionInfo.getAllJobs());
     for (CommandInfo commandInfo : newMultiCommandRequest.getCommandsList()) {
-      String xtsRootDir = sessionRequestInfoCache.get(commandInfo).xtsRootDir();
-      try {
-        unmountZip(xtsRootDir);
-      } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log("Failed to unmount xts root directory: %s", xtsRootDir);
+      if (sessionRequestInfoCache.containsKey(commandInfo)) {
+        String xtsRootDir = sessionRequestInfoCache.get(commandInfo).xtsRootDir();
+        try {
+          unmountZip(xtsRootDir);
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to unmount xts root directory: %s", xtsRootDir);
+        }
       }
     }
   }
