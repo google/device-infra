@@ -16,8 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.command.backend;
 
-import static com.google.common.base.Preconditions.checkElementIndex;
-import static com.google.common.base.Preconditions.checkPositionIndex;
+import static com.google.common.base.Preconditions.checkPositionIndexes;
 import static com.google.common.base.Verify.verify;
 
 import com.google.common.math.LongMath;
@@ -77,9 +76,7 @@ final class CapturingOutputStream extends OutputStream {
   @SuppressWarnings("NonAtomicVolatileUpdate")
   @Override
   public void write(byte[] b, int off, int len) throws IOException {
-    // checkPositionIndex throws IndexOutOfBoundsException, as required by write contract
-    checkPositionIndex(off, b.length);
-    checkPositionIndex(len, b.length - off, "len < 0 or off + len > b.length");
+    checkPositionIndexes(off, off + len, b.length);
     ensureCapacityToWrite(len);
     System.arraycopy(b, off, data, size, len);
     size += len;
@@ -150,8 +147,7 @@ final class CapturingOutputStream extends OutputStream {
     @Override
     public int read(byte[] b, int off, int len) throws IOException {
       verifyPosition();
-      checkElementIndex(off, b.length);
-      checkPositionIndex(len, b.length - off);
+      checkPositionIndexes(off, off + len, b.length);
       if (len == 0) {
         return 0;
       }
