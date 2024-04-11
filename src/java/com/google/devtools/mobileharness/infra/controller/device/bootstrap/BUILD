@@ -50,6 +50,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector:base",
         "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher:base",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:dispatcher_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],

@@ -143,6 +143,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> alrTestConfig = alrTestConfigDefault;
 
+  private static final Flag<Boolean> alwaysUseOssDetectorAndDispatcherDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--always_use_oss_detector_and_dispatcher",
+      description = "True to always use OSS detectors and dispatchers. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> alwaysUseOssDetectorAndDispatcher = alwaysUseOssDetectorAndDispatcherDefault;
+
   private static final Flag<Duration> atsDdaLeaseExpirationTimeDefault =
       DurationFlag.value(Duration.ofMinutes(5L));
 

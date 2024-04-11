@@ -24,6 +24,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.Dispatcher;
 import com.google.devtools.mobileharness.infra.controller.device.DispatcherManager;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.util.List;
 
 /** Selector for selecting and preparing {@link DetectorsAndDispatchers} for a device manager. */
@@ -52,9 +53,15 @@ public final class DetectorDispatcherSelector {
   private ImmutableList<Detector> selectSupportedDetectors() throws InterruptedException {
     ImmutableList<Detector> detectorCandidates;
     if (component == Component.LOCAL_MODE) {
-      detectorCandidates = AllDetectorsAndDispatchers.detectorCandidatesForLocalModeOss();
+      detectorCandidates =
+          Flags.instance().alwaysUseOssDetectorAndDispatcher.getNonNull()
+              ? AllDetectorsAndDispatchers.detectorCandidatesForLocalModeOss()
+              : AllDetectorsAndDispatchers.detectorCandidatesForLocalModeOss();
     } else {
-      detectorCandidates = AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss();
+      detectorCandidates =
+          Flags.instance().alwaysUseOssDetectorAndDispatcher.getNonNull()
+              ? AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss()
+              : AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss();
     }
     return checkDetectors(detectorCandidates);
   }
@@ -62,9 +69,17 @@ public final class DetectorDispatcherSelector {
   private ImmutableList<Class<? extends Dispatcher>> selectSupportedDispatchers() {
     DispatcherManager dispatcherManager = DispatcherManager.getInstance();
     if (component == Component.LOCAL_MODE) {
-      AllDetectorsAndDispatchers.addDispatchersForLocalModeOss(dispatcherManager);
+      if (Flags.instance().alwaysUseOssDetectorAndDispatcher.getNonNull()) {
+        AllDetectorsAndDispatchers.addDispatchersForLocalModeOss(dispatcherManager);
+      } else {
+        AllDetectorsAndDispatchers.addDispatchersForLocalModeOss(dispatcherManager);
+      }
     } else {
-      AllDetectorsAndDispatchers.addDispatchersForLabServerOss(dispatcherManager);
+      if (Flags.instance().alwaysUseOssDetectorAndDispatcher.getNonNull()) {
+        AllDetectorsAndDispatchers.addDispatchersForLabServerOss(dispatcherManager);
+      } else {
+        AllDetectorsAndDispatchers.addDispatchersForLabServerOss(dispatcherManager);
+      }
     }
     return dispatcherManager.getAllDispatchersInOrder();
   }
