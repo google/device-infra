@@ -453,18 +453,20 @@ public class PrepareTestServiceImpl {
   private TestEngineLocator getProxiedTestEngineLocator() throws MobileHarnessException {
     TestEngineLocator.Builder builder = TestEngineLocator.newBuilder();
     String labHostName = netUtil.getLocalHostName();
+    Optional<String> labHostIp = netUtil.getUniqueHostIpOrEmpty();
     if (servViaStubby) {
       StubbyLocator.Builder stubbyLocator =
           StubbyLocator.newBuilder().setHostName(labHostName).setPort(labRpcPort);
-      netUtil.getUniqueHostIpOrEmpty().ifPresent(stubbyLocator::setIp);
+      labHostIp.ifPresent(stubbyLocator::setIp);
       builder.setEnableStubby(true).setStubbyLocator(stubbyLocator);
     }
-    builder.setGrpcLocator(
+    GrpcLocator.Builder grpcLocator =
         GrpcLocator.newBuilder()
             .setGrpcTarget(String.format("dns:///%s:%s", labHostName, labGrpcPort))
             .setHostName(labHostName)
-            .setGrpcPort(labGrpcPort));
-    builder.setEnableGrpc(true);
+            .setGrpcPort(labGrpcPort);
+    labHostIp.ifPresent(grpcLocator::setHostIp);
+    builder.setEnableGrpc(true).setGrpcLocator(grpcLocator);
 
     return builder.build();
   }

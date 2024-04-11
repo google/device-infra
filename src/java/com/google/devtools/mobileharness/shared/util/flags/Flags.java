@@ -265,6 +265,16 @@ public class Flags {
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> commandPort = commandPortDefault;
 
+  private static final Flag<Boolean> connectToLabServerUsingIpDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--connect_to_lab_server_using_ip",
+      description =
+          "True to use IP to connect to lab servers and false to use host name."
+              + "Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> connectToLabServerUsingIp = connectToLabServerUsingIpDefault;
+
   private static final Flag<String> daBundletoolDefault = Flag.value(null);
 
   @com.beust.jcommander.Parameter(

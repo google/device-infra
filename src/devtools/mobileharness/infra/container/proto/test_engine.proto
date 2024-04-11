@@ -57,6 +57,11 @@ message TestEngineLocator {
     //
     // Since lab 4.268.0.
     int32 grpc_port = 3;
+
+    // Required.
+    //
+    // Since lab 4.270.0.
+    string host_ip = 4;
   }
 }
 

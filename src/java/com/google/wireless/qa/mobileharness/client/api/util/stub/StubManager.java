@@ -52,10 +52,7 @@ public class StubManager {
 
   public ExecTestStub getTestEngineExecTestStub(
       TestEngineLocator testEngineLocator, MobileHarnessServerEnvironment mhEnvironment) {
-    return grpcStubManager.getExecTestGrpcStub(
-        getGrpcTarget(
-            testEngineLocator.getGrpcLocator().getHostName(),
-            testEngineLocator.getGrpcLocator().getGrpcPort()));
+    return grpcStubManager.getExecTestGrpcStub(getGrpcTarget(testEngineLocator));
   }
 
   /**
@@ -65,8 +62,7 @@ public class StubManager {
    */
   public PrepareTestStub getPrepareTestStub(
       LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
-    return grpcStubManager.getPrepareTestStub(
-        getGrpcTarget(labServerLocator.hostName(), labServerLocator.grpcPort()));
+    return grpcStubManager.getPrepareTestStub(getGrpcTarget(labServerLocator));
   }
 
   /**
@@ -76,11 +72,36 @@ public class StubManager {
    */
   public VersionStub getLabVersionStub(
       LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
-    return grpcStubManager.getVersionStub(
-        getGrpcTarget(labServerLocator.hostName(), labServerLocator.grpcPort()));
+    return grpcStubManager.getVersionStub(getGrpcTarget(labServerLocator));
   }
 
-  private static String getGrpcTarget(String hostName, int grpcPort) {
+  private static String getGrpcTarget(TestEngineLocator testEngineLocator) {
+    if (Flags.instance().connectToLabServerUsingIp.getNonNull()) {
+      return getGrpcTargetByIp(
+          testEngineLocator.getGrpcLocator().getHostIp(),
+          testEngineLocator.getGrpcLocator().getGrpcPort());
+    } else {
+      return getGrpcTargetByHostName(
+          testEngineLocator.getGrpcLocator().getHostName(),
+          testEngineLocator.getGrpcLocator().getGrpcPort());
+    }
+  }
+
+  private static String getGrpcTarget(LabServerLocator labServerLocator) {
+    if (Flags.instance().connectToLabServerUsingIp.getNonNull()) {
+      return getGrpcTargetByIp(labServerLocator.ip(), labServerLocator.grpcPort());
+    } else {
+      return getGrpcTargetByHostName(labServerLocator.hostName(), labServerLocator.grpcPort());
+    }
+  }
+
+  private static String getGrpcTargetByIp(String ip, int grpcPort) {
+    return String.format(
+        "%s:%s",
+        Flags.instance().reverseTunnelingLabServer.getNonNull() ? "localhost" : ip, grpcPort);
+  }
+
+  private static String getGrpcTargetByHostName(String hostName, int grpcPort) {
     return String.format(
         "dns:///%s:%s",
         Flags.instance().reverseTunnelingLabServer.getNonNull() ? "localhost" : hostName, grpcPort);
