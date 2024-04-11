@@ -85,7 +85,6 @@ message TestEnvironment {
   optional string context_file_pattern = 10;
   repeated string extra_context_files = 11;
   optional string retry_command_line = 12;
-  optional bool use_parallel_setup = 14;
 
   enum LogLevel {
     UNKNOWN = 0;
@@ -97,6 +96,26 @@ message TestEnvironment {
   }
 
   optional LogLevel log_level = 13;
+  optional bool use_parallel_setup = 14;
+  repeated DeviceActionConfigObject device_action_config_objects = 15;
+}
+
+message DeviceActionConfigObject {
+  enum DeviceActionConfigObjectType {
+    UNKNOWN_DEVICE_ACTION_CONFIG_OBJECT_TYPE = 0;
+    TARGET_PREPARER = 1;
+    RESULT_REPORTER = 2;
+  }
+
+  DeviceActionConfigObjectType type = 1;
+  string class_name = 2;
+
+  message Option {
+    string name = 1;
+    repeated string value = 2;
+  }
+
+  repeated Option option_values = 3;
 }
 
 // Command detail returned by session service.
