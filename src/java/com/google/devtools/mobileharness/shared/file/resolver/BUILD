@@ -54,6 +54,22 @@ java_library(
 )
 
 java_library(
+    name = "cache_file_resolver",
+    srcs = ["CacheFileResolver.java"],
+    deps = [
+        ":abstract_file_resolver",
+        ":file_resolver",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "local_file_resolver",
     srcs = ["LocalFileResolver.java"],
     deps = [
