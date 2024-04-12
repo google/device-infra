@@ -73,6 +73,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
 import com.google.devtools.mobileharness.shared.labinfo.LabInfoProvider;
+import com.google.devtools.mobileharness.shared.util.comm.server.GrpcContexts;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.checker.ServiceSideVersionChecker;
 import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckResponse;
@@ -82,6 +83,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import io.grpc.BindableService;
 import io.grpc.stub.StreamObserver;
+import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -90,6 +92,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Level;
@@ -253,7 +256,9 @@ class RemoteDeviceManager implements LabInfoProvider {
 
     private SignUpLabResponse doSignUpLab(SignUpLabRequest request)
         throws MobileHarnessException, InterruptedException {
-      logger.atInfo().log("Sign up lab, req=[%s]", shortDebugString(request));
+      Optional<SocketAddress> labAddress = GrpcContexts.clientAddress();
+      logger.atInfo().log(
+          "Sign up lab, req=[%s], lab_address=[%s]", shortDebugString(request), labAddress);
 
       // Checks version.
       VersionCheckResponse versionCheckResponse =
@@ -262,6 +267,7 @@ class RemoteDeviceManager implements LabInfoProvider {
       // Creates lab locator.
       LabLocator labLocator = LabLocator.of(request.getLabIp(), request.getLabHostName());
       labLocator.ports().addAll(request.getLabServerSetting().getPortList());
+      boolean labLocatorChanged;
 
       List<String> duplicatedUuids = new ArrayList<>();
       synchronized (lock) {
@@ -271,11 +277,21 @@ class RemoteDeviceManager implements LabInfoProvider {
         if (labs.containsKey(labKey)) {
           // Updates lab data.
           labData = labs.get(labKey);
+          labLocatorChanged = !labLocator.equals(labData.labLocator);
           labData.updateBySignUp(labLocator, request);
         } else {
           // Adds lab data.
           labData = new LabData(labLocator, request);
           labs.put(labKey, labData);
+          labLocatorChanged = false;
+        }
+
+        // TODO: Updates all devices if LabLocator is changed.
+        if (labLocatorChanged) {
+          logger.atWarning().log(
+              "Lab locator is changed, need to update devices not in SignUpLabRequest, lab=%s,"
+                  + " new_locator=[%s]",
+              labKey, labLocator);
         }
 
         // Handles information of each device.
@@ -305,7 +321,7 @@ class RemoteDeviceManager implements LabInfoProvider {
           if (devices.containsKey(deviceKey)) {
             // Updates device data.
             deviceData = devices.get(deviceKey);
-            deviceData.updateBySignUp(device);
+            deviceData.updateBySignUp(device, labLocator);
           } else {
             // Adds device data.
             deviceData = new DeviceData(deviceKey, labLocator, device);
@@ -328,7 +344,9 @@ class RemoteDeviceManager implements LabInfoProvider {
 
     private HeartbeatLabResponse doHeartbeatLab(HeartbeatLabRequest request)
         throws InterruptedException {
-      logger.atInfo().log("Heartbeat lab, req=[%s]", shortDebugString(request));
+      Optional<SocketAddress> labAddress = GrpcContexts.clientAddress();
+      logger.atInfo().log(
+          "Heartbeat lab, req=[%s], lab_address=[%s]", shortDebugString(request), labAddress);
 
       List<String> outdatedDeviceIds = new ArrayList<>();
       synchronized (lock) {
@@ -339,6 +357,13 @@ class RemoteDeviceManager implements LabInfoProvider {
           LabData labData = labs.get(labKey);
           labData.updateByHeartbeat();
           labRecordManager.addLabRecordIfLabInfoChanged(labData.createLabRecordData());
+
+          // Checks lab IP.
+          if (!request.getLabIp().equals(labData.labLocator.ip())) {
+            logger.atWarning().log(
+                "Lab reports a different IP, lab=%s, existing_ip=[%s], reported_ip=[%s]",
+                labKey, labData.labLocator.ip(), request.getLabIp());
+          }
         } else {
           logger.atWarning().log("Lab hasn't been signed up yet, lab=%s", labKey);
         }
@@ -689,7 +714,7 @@ class RemoteDeviceManager implements LabInfoProvider {
      *
      * <p>Lab locator port settings will not be changed.
      */
-    private void updateBySignUp(SignUpLabRequest.Device device) {
+    private void updateBySignUp(SignUpLabRequest.Device device, LabLocator labLocator) {
       updateFromLabLocalTimestamp = Instant.now();
 
       Instant timestamp = Instant.ofEpochMilli(device.getTimestampMs());
@@ -704,8 +729,7 @@ class RemoteDeviceManager implements LabInfoProvider {
       }
 
       if (dataFromLabTimestamp.isBefore(timestamp)) {
-        // TODO: Merges and updates lab server ports.
-        dataFromLab = new DeviceScheduleUnit(dataFromLab.locator());
+        dataFromLab = new DeviceScheduleUnit(DeviceLocator.of(device.getUuid(), labLocator));
         dataFromLab.addFeature(device.getFeature());
         dataFromLabTimestamp = timestamp;
       } else {

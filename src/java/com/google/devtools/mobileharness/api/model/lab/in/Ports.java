@@ -105,4 +105,9 @@ public class Ports {
         .map(e -> Lab.LabPort.newBuilder().setType(e.getKey()).setNum(e.getValue()).build())
         .collect(toImmutableList());
   }
+
+  @Override
+  public String toString() {
+    return getAll().toString();
+  }
 }

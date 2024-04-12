@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
+import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressServerInterceptor;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
@@ -124,6 +125,7 @@ public class OlcServer {
     NettyServerBuilder serverBuilder =
         NettyServerBuilder.forPort(port)
             .executor(threadPool)
+            .intercept(new ClientAddressServerInterceptor())
             .addService(controlService)
             .addService(sessionService)
             .addService(versionService);
