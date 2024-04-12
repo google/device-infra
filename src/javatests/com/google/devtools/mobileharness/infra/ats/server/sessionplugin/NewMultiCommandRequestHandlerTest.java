@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -27,6 +28,8 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
@@ -52,6 +55,7 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
@@ -94,6 +98,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Mock private SessionInfo sessionInfo;
   @Mock private JobInfo jobInfo;
+  @Mock private Files files;
   @Mock private Properties properties;
 
   @Captor private ArgumentCaptor<SessionRequestInfo> sessionRequestInfoCaptor;
@@ -106,6 +111,7 @@ public final class NewMultiCommandRequestHandlerTest {
     when(sessionInfo.getSessionId()).thenReturn("session_id");
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
     when(jobInfo.properties()).thenReturn(properties);
+    when(jobInfo.files()).thenReturn(files);
     doAnswer(invocation -> invocation.getArgument(0))
         .when(sessionRequestHandlerUtil)
         .addNonTradefedModuleInfo(any());
@@ -141,6 +147,16 @@ public final class NewMultiCommandRequestHandlerTest {
                 TestResource.newBuilder()
                     .setUrl(ANDROID_XTS_ZIP)
                     .setName("android-cts.zip")
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file://data/path/to/file1")
+                    .setName("test-name-1")
+                    .build())
+            .addTestResources(
+                TestResource.newBuilder()
+                    .setUrl("file://data/path/to/file2")
+                    .setName("test-name-2")
                     .build())
             .setTestEnvironment(
                 TestEnvironment.newBuilder()
@@ -244,6 +260,8 @@ public final class NewMultiCommandRequestHandlerTest {
     Command mountCommand =
         Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(mountCommand);
+    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
+    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
   }
 
   @Test
@@ -327,6 +345,7 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(sessionInfo).addJob(jobInfo);
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    when(files.getAll()).thenReturn(ImmutableMultimap.of());
     newMultiCommandRequestHandler.handleResultProcessing(request, sessionInfo);
     verify(sessionRequestHandlerUtil, never()).processResult(any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
@@ -495,7 +514,15 @@ public final class NewMultiCommandRequestHandlerTest {
         .thenReturn(ImmutableList.of(jobInfo));
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
+    when(files.getAll())
+        .thenReturn(
+            ImmutableMultimap.of(
+                "tag1",
+                "/data/tmp/test.json",
+                "tag1",
+                "/data/tmp/mobly.json",
+                "tag2",
+                "/data/tmp/mock.json"));
     // Trigger the handler.
     ImmutableList<CommandDetail> commandDetails =
         newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
@@ -516,6 +543,13 @@ public final class NewMultiCommandRequestHandlerTest {
         Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
             .timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(mountCommand);
+    verify(files)
+        .replaceAll(
+            eq("tag1"),
+            eq(
+                ImmutableSet.of(
+                    "ats-file-server::/tmp/test.json", "ats-file-server::/tmp/mobly.json")));
+    verify(files).replaceAll(eq("tag2"), eq(ImmutableSet.of("ats-file-server::/tmp/mock.json")));
   }
 
   @Test

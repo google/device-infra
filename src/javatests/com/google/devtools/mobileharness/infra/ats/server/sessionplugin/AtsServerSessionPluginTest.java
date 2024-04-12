@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
@@ -60,6 +61,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
@@ -106,6 +108,7 @@ public final class AtsServerSessionPluginTest {
   @Mock private JobInfo jobInfo2;
   @Mock private JobInfo moblyJobInfo;
   @Mock private JobInfo moblyJobInfo2;
+  @Mock private Files files;
   private Properties properties;
   @Mock private TestInfo testInfo;
   @Mock private TestInfos testInfos;
@@ -136,6 +139,11 @@ public final class AtsServerSessionPluginTest {
     when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any()))
         .thenReturn(ImmutableList.of(moblyJobInfo))
         .thenReturn(ImmutableList.of(moblyJobInfo2));
+    when(jobInfo.files()).thenReturn(files);
+    when(jobInfo2.files()).thenReturn(files);
+    when(moblyJobInfo.files()).thenReturn(files);
+    when(moblyJobInfo2.files()).thenReturn(files);
+    when(files.getAll()).thenReturn(ImmutableMultimap.of());
     doAnswer(invocation -> invocation.getArgument(0))
         .when(sessionRequestHandlerUtil)
         .addNonTradefedModuleInfo(any());

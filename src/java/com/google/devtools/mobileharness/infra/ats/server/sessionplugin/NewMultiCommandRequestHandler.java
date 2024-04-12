@@ -16,16 +16,20 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableCollection;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.io.Files;
+import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -45,11 +49,13 @@ import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -171,30 +177,43 @@ final class NewMultiCommandRequestHandler {
       return ImmutableList.of();
     }
     ImmutableList.Builder<CommandDetail> commandDetails = ImmutableList.builder();
-    jobInfos.forEach(
-        jobInfo -> {
-          sessionInfo.addJob(jobInfo);
-          CommandDetail commandDetail =
-              CommandDetail.newBuilder()
-                  .setCommandLine(commandInfo.getCommandLine())
-                  .setOriginalCommandInfo(commandInfo)
-                  .setId(jobInfo.locator().getId())
-                  .build();
-          commandDetails.add(commandDetail);
-          logger.atInfo().log(
-              "Added non-tradefed job[%s] to the session %s",
-              jobInfo.locator().getId(), sessionInfo.getSessionId());
-        });
+    for (JobInfo jobInfo : jobInfos) {
+      reformatResourcePathForNonTradefedJob(jobInfo);
+      sessionInfo.addJob(jobInfo);
+      CommandDetail commandDetail =
+          CommandDetail.newBuilder()
+              .setCommandLine(commandInfo.getCommandLine())
+              .setOriginalCommandInfo(commandInfo)
+              .setId(jobInfo.locator().getId())
+              .build();
+      commandDetails.add(commandDetail);
+      logger.atInfo().log(
+          "Added non-tradefed job[%s] to the session %s",
+          jobInfo.locator().getId(), sessionInfo.getSessionId());
+    }
     return commandDetails.build();
+  }
+
+  private void reformatResourcePathForNonTradefedJob(JobInfo jobInfo)
+      throws MobileHarnessException {
+    ImmutableMultimap<String, String> resources = jobInfo.files().getAll();
+    for (String tag : resources.keySet()) {
+      ImmutableCollection<String> files = resources.get(tag);
+      jobInfo
+          .files()
+          .replaceAll(
+              tag, files.stream().map(this::replacePathForRemoteRunner).collect(toImmutableSet()));
+    }
   }
 
   private CommandDetail createXtsTradefedTestJob(
       NewMultiCommandRequest request, CommandInfo commandInfo, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
     SessionRequestInfo sessionRequestInfo;
-    CommandDetail.Builder commandDetailBuilder = CommandDetail.newBuilder();
-    commandDetailBuilder.setCommandLine(commandInfo.getCommandLine());
-    commandDetailBuilder.setOriginalCommandInfo(commandInfo);
+    CommandDetail.Builder commandDetailBuilder =
+        CommandDetail.newBuilder()
+            .setCommandLine(commandInfo.getCommandLine())
+            .setOriginalCommandInfo(commandInfo);
 
     // Validates request and generate a sessionRequestInfo that is needed to create a jobInfo.
     try {
@@ -220,6 +239,7 @@ final class NewMultiCommandRequestHandler {
           .setId(jobInfo.get().locator().getId())
           .setState(CommandState.UNKNOWN_STATE);
       jobInfo.get().properties().add(XTS_TF_JOB_PROP, "true");
+      insertAdditionalTestResource(jobInfo.get(), request);
       sessionInfo.addJob(jobInfo.get());
       logger.atInfo().log(
           "Added job[%s] to the session %s",
@@ -230,6 +250,40 @@ final class NewMultiCommandRequestHandler {
           .setCancelReason(CancelReason.INVALID_REQUEST);
     }
     return commandDetailBuilder.build();
+  }
+
+  private void insertAdditionalTestResource(JobInfo jobInfo, NewMultiCommandRequest request)
+      throws MobileHarnessException {
+    for (TestResource testResource : request.getTestResourcesList()) {
+      URL testResourceUrl;
+      try {
+        testResourceUrl = URI.create(testResource.getUrl()).toURL();
+      } catch (IllegalArgumentException | MalformedURLException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to parse url from url: %s", testResource.getUrl());
+        continue;
+      }
+
+      if (testResourceUrl.getProtocol().equals("file")) {
+        if (!ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()) {
+          logger.atInfo().log(
+              "Adding additional test resource: %s %s",
+              testResource.getPath(), testResourceUrl.getPath());
+          jobInfo
+              .files()
+              .add(testResource.getName(), replacePathForRemoteRunner(testResourceUrl.getPath()));
+        }
+      }
+    }
+  }
+
+  private String replacePathForRemoteRunner(String path) {
+    if (path.startsWith(RemoteFileType.ATS_FILE_SERVER.prefix())) {
+      return path;
+    }
+    return PathUtil.join(
+        RemoteFileType.ATS_FILE_SERVER.prefix(),
+        PathUtil.makeRelative(Flags.instance().atsStoragePath.getNonNull(), path));
   }
 
   private SessionRequestInfo generateSessionRequestInfo(
@@ -247,8 +301,8 @@ final class NewMultiCommandRequestHandler {
     for (TestResource testResource : request.getTestResourcesList()) {
       URL testResourceUrl;
       try {
-        testResourceUrl = new URL(testResource.getUrl());
-      } catch (MalformedURLException e) {
+        testResourceUrl = URI.create(testResource.getUrl()).toURL();
+      } catch (IllegalArgumentException | MalformedURLException e) {
         logger.atWarning().withCause(e).log(
             "Failed to parse url from url: %s", testResource.getUrl());
         continue;
@@ -312,7 +366,8 @@ final class NewMultiCommandRequestHandler {
       throws MobileHarnessException, InterruptedException {
     URL outputUrl;
     try {
-      outputUrl = new URL(newMultiCommandRequest.getTestEnvironment().getOutputFileUploadUrl());
+      outputUrl =
+          URI.create(newMultiCommandRequest.getTestEnvironment().getOutputFileUploadUrl()).toURL();
       // Currently only supports local URL.
       if (outputUrl.getProtocol().equals("file")) {
         Path outputDirPath = Path.of(outputUrl.getPath());
@@ -341,7 +396,7 @@ final class NewMultiCommandRequestHandler {
             "Skip processing result for unsupported file output upload url: %s",
             newMultiCommandRequest.getTestEnvironment().getOutputFileUploadUrl());
       }
-    } catch (MalformedURLException e) {
+    } catch (IllegalArgumentException | MalformedURLException e) {
       logger.atWarning().withCause(e).log(
           "Failed to parse output file upload url: %s, skip processing result.",
           newMultiCommandRequest.getTestEnvironment().getOutputFileUploadUrl());
