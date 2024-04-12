@@ -471,6 +471,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidDisableAppsDecorator");
     device.addSupportedDecorator("AndroidDiskUsageMonitorDecorator");
     device.addSupportedDecorator("AndroidDumpSysDecorator");
+    device.addSupportedDecorator("AndroidFeatureFlagDecorator");
     device.addSupportedDecorator("AndroidFilePullerDecorator");
     device.addSupportedDecorator("AndroidFilePusherDecorator");
     device.addSupportedDecorator("AndroidForceInstallGmsCoreDecorator");
