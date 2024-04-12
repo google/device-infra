@@ -302,6 +302,11 @@ public class CompatibilityReportParser {
         .forEach(attributes::add);
 
     context.resultBuilder.addAllAttribute(attributes.build());
+    boolean isRetryResult =
+        Boolean.parseBoolean(attributeMap.getOrDefault(XmlConstants.IS_RETRY_RESULT_ATTR, "false"));
+    if (isRetryResult) {
+      context.resultBuilder.setIsRetryResult(true);
+    }
   }
 
   private static void handleBuildInfo(StartElement buildInfo, Context context) {

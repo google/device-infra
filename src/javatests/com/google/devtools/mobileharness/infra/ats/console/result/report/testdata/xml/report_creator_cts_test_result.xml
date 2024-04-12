@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8' standalone='no' ?><?xml-stylesheet type="text/xsl" href="compatibility_result.xsl"?>
-<Result start="1678951330449" end="1678951395733" start_display="Thu Mar 16 00:22:10 PDT 2023" end_display="Thu Mar 16 00:23:15 PDT 2023" command_line_args="cts -s 12241FDD4002Z6" devices="12241FDD4002Z6">
+<Result start="1678951330449" end="1678951395733" start_display="Thu Mar 16 00:22:10 PDT 2023" end_display="Thu Mar 16 00:23:15 PDT 2023" command_line_args="cts -s 12241FDD4002Z6" devices="12241FDD4002Z6" is_retry_result="false">
   <Build adb_version="1.0.41 install path: /usr/bin/adb" command_line_args="cts -s 12241FDD4002Z6" device_kernel_info="Linux localhost 5.10.149-android13-4-693040-g6422af733678-ab9739629 #1 SMP PREEMPT Fri Mar 10 01:44:38 UTC 2023 aarch64 Toybox" invocation-id="1" java_version="19.0.2" build_fingerprint="google/bramble/bramble:UpsideDownCake/UP1A.220722.002/8859461:userdebug/dev-keys" />
   <RunHistory>
     <Run start="1678951330449" end="1678951360449" pass="9" failed="1" command_line_args="cts -s 12241FDD4002Z6" host_name="myhostname" />

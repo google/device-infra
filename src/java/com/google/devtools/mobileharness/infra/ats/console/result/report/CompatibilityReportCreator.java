@@ -181,12 +181,19 @@ public class CompatibilityReportCreator {
 
     serializer.startTag(NS, XmlConstants.RESULT_TAG);
     // Result attributes
+    @Nullable Attribute isRetryResultAttrInList = null;
     for (Attribute attr : report.getAttributeList()) {
-      serializer.attribute(NS, attr.getKey(), attr.getValue());
+      if (attr.getKey().equals(XmlConstants.IS_RETRY_RESULT_ATTR)) {
+        isRetryResultAttrInList = attr;
+      } else {
+        serializer.attribute(NS, attr.getKey(), attr.getValue());
+      }
     }
     if (report.getIsRetryResult()) {
+      serializer.attribute(NS, XmlConstants.IS_RETRY_RESULT_ATTR, "true");
+    } else if (isRetryResultAttrInList != null) {
       serializer.attribute(
-          NS, XmlConstants.IS_RETRY_RESULT_ATTR, Boolean.toString(report.getIsRetryResult()));
+          NS, isRetryResultAttrInList.getKey(), isRetryResultAttrInList.getValue());
     }
 
     // Build Info
