@@ -30,6 +30,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -800,6 +801,11 @@ public class LocalFileUtil {
 
   /** Returns true only if the file/dir is local. */
   public boolean isLocalFileOrDir(String fileOrDirPath) {
+    for (RemoteFileType fileType : RemoteFileType.values()) {
+      if (fileOrDirPath.startsWith(fileType.prefix())) {
+        return false;
+      }
+    }
     return true;
   }
 
