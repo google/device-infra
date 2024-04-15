@@ -50,7 +50,6 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
-import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.errorprone.annotations.FormatMethod;
 import io.grpc.Status.Code;
 import java.nio.file.Path;
@@ -126,7 +125,7 @@ public class ServerPreparer {
     // Tries to get server version.
     GetVersionResponse version = null;
     try {
-      version = versionStub.get().getVersion();
+      version = requireNonNull(versionStub.get()).getVersion();
     } catch (GrpcExceptionWithErrorId e) {
       if (!e.getUnderlyingRpcException().getStatus().getCode().equals(Code.UNAVAILABLE)) {
         throw new MobileHarnessException(
@@ -139,7 +138,7 @@ public class ServerPreparer {
       serverStartingLogger.log(
           "Connected to existing OLC server, version=[%s]", shortDebugString(version));
 
-      if (needKillExistingServer(version)) {
+      if (needKillExistingServer()) {
         killExistingServer();
       } else {
         serverStartingLogger.log("Using existing OLC server");
@@ -221,7 +220,8 @@ public class ServerPreparer {
     serverStartingLogger.log("Killing existing OLC server...");
     KillServerResponse killServerResponse;
     try {
-      killServerResponse = controlStub.get().killServer(KillServerRequest.getDefaultInstance());
+      killServerResponse =
+          requireNonNull(controlStub.get()).killServer(KillServerRequest.getDefaultInstance());
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SERVER_PREPARER_KILL_EXISTING_OLC_SERVER_RPC_ERROR,
@@ -244,7 +244,7 @@ public class ServerPreparer {
     for (int i = 0; i < 10; i++) {
       sleeper.sleep(Duration.ofSeconds(1L));
       try {
-        versionStub.get().getVersion();
+        requireNonNull(versionStub.get()).getVersion();
       } catch (GrpcExceptionWithErrorId e) {
         serverStartingLogger.log("Existing OLC server (pid=%s) killed", serverPid);
         return;
@@ -261,7 +261,7 @@ public class ServerPreparer {
     int count = 0;
     while (true) {
       try {
-        versionStub.get().getVersion();
+        requireNonNull(versionStub.get()).getVersion();
         return;
       } catch (GrpcExceptionWithErrorId e) {
         count++;
@@ -281,7 +281,7 @@ public class ServerPreparer {
    * Whether the preparer needs to "kill an existing OLC server (if any) and restart a new one" when
    * preparing server, or just reuse the existing server (if any).
    */
-  private boolean needKillExistingServer(GetVersionResponse version) {
+  private boolean needKillExistingServer() {
     // Checks flag.
     if (Flags.instance().atsConsoleAlwaysRestartOlcServer.getNonNull()) {
       logger.atInfo().log(
@@ -289,23 +289,8 @@ public class ServerPreparer {
       return true;
     }
 
-    // Checks server version.
-    String serverVersionString = version.getLabVersion();
-    try {
-      Version serverVersion = new Version(serverVersionString);
-      Version requiredServerVersion = Version.LAB_VERSION;
-      if (serverVersion.compareTo(requiredServerVersion) < 0) {
-        serverStartingLogger.log(
-            "Existing OLC server version [%s] is older than [%s]",
-            serverVersion, requiredServerVersion);
-        return true;
-      } else {
-        return false;
-      }
-    } catch (MobileHarnessException e) {
-      logger.atWarning().log("Invalid OLC server version [%s]", serverVersionString);
-      return true;
-    }
+    // Always reuse the existing server no matter what its version is.
+    return false;
   }
 
   private static String createUnfinishedSessionsTable(KillServerResponse killServerResponse) {
