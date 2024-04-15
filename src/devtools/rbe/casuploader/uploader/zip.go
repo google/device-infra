@@ -73,7 +73,7 @@ func (zu *ZipUploader) DoUpload() (digest.Digest, error) {
 		return digest.Digest{}, fmt.Errorf("failed to extract %s to %s: %v", zu.zipPath, targetDir, err)
 	}
 
-	du := NewDirUploader(&zu.CommonConfig, targetDir, &zipFileLoader{Unarchiver: unarchiver})
+	du := NewDirUploader(&zu.CommonConfig, targetDir, WithFileLoader(&zipFileLoader{Unarchiver: unarchiver}))
 	rootDigest, err := du.DoUpload()
 	if err != nil {
 		return rootDigest, fmt.Errorf("failed to upload the directory %s for zip %s: %v", targetDir, zu.zipPath, err)

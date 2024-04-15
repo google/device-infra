@@ -51,7 +51,7 @@ func (fu *FileUploader) DoUpload() (digest.Digest, error) {
 		return digest.Digest{}, fmt.Errorf("failed to create index file for file %s: %v", fu.path, err)
 	}
 
-	du := NewDirUploader(&fu.CommonConfig, targetDir, nil)
+	du := NewDirUploader(&fu.CommonConfig, targetDir)
 	rootDigest, err := du.DoUpload()
 	if err != nil {
 		return rootDigest, fmt.Errorf("failed to upload the directory %s for file %s: %v", targetDir, fu.path, err)

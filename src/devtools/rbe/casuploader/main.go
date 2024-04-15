@@ -39,17 +39,19 @@ func (f *multiStringFlag) Get() any {
 var (
 	printVersion = flag.Bool("version", false, "Print version information")
 
-	zipPath         = flag.String("zip-path", "", "Path to a .zip file to upload")
-	dirPath         = flag.String("dir-path", "", "Path to a directory to upload")
-	filePath        = flag.String("file-path", "", "Path to a single file to upload")
-	chunk           = flag.Bool("chunk", false, "Chunk files when applicable")
-	avgChunkSizeKb  = flag.Int("avg-chunk-size", 1024, "Average chunk size in KiB")
-	casInstance     = flag.String("cas-instance", "", "RBE instance")
-	casAddr         = flag.String("cas-addr", "remotebuildexecution.googleapis.com:443", "RBE server addr")
-	serviceAccount  = flag.String("service-account-json", "", "Path to JSON file with service account credentials to use.")
-	useADC          = flag.Bool("use-adc", false, "True to use Application Default Credentials (ADC).")
-	dumpDigest      = flag.String("dump-digest", "", "Output the digest to file")
-	dumpFileDetails = flag.String("dump-file-details", "", "Export information of all uploaded files to a file")
+	zipPath                      = flag.String("zip-path", "", "Path to a .zip file to upload")
+	dirPath                      = flag.String("dir-path", "", "Path to a directory to upload")
+	filePath                     = flag.String("file-path", "", "Path to a single file to upload")
+	chunk                        = flag.Bool("chunk", false, "Chunk files when applicable")
+	avgChunkSizeKb               = flag.Int("avg-chunk-size", 1024, "Average chunk size in KiB")
+	casInstance                  = flag.String("cas-instance", "", "RBE instance")
+	casAddr                      = flag.String("cas-addr", "remotebuildexecution.googleapis.com:443", "RBE server addr")
+	serviceAccount               = flag.String("service-account-json", "", "Path to JSON file with service account credentials to use.")
+	useADC                       = flag.Bool("use-adc", false, "True to use Application Default Credentials (ADC).")
+	dumpDigest                   = flag.String("dump-digest", "", "Output the digest to file")
+	dumpFileDetails              = flag.String("dump-file-details", "", "Export information of all uploaded files to a file")
+	preCalculateDigests          = flag.Bool("pre-calculate-digests", false, "Pre-calculate digests of all files in the directory before uploading")
+	preCalculateDigestsMaxWorker = flag.Int("pre-calculate-digests-max-worker", 512, "Max number of workers to pre-calculate digests when -pre-calculate-digests is set")
 	// Flags for concurrency (affects peak memory), specify 0 for default.
 	casConcurrency = flag.Int("cas-concurrency", 0, "the maximum number of concurrent upload operations.")
 	excludeFilters multiStringFlag
@@ -134,7 +136,7 @@ func main() {
 			log.Exitf("Failed to upload the zip archive to CAS: %v", err)
 		}
 	} else if *dirPath != "" {
-		dirUploader := uploader.NewDirUploader(uploaderConfig, *dirPath, nil)
+		dirUploader := uploader.NewDirUploader(uploaderConfig, *dirPath, uploader.WithPreCalculateDigests(*preCalculateDigests, *preCalculateDigestsMaxWorker))
 		rootDigest, err = dirUploader.DoUpload()
 		if err != nil {
 			log.Exitf("Failed to upload the directory to CAS: %v", err)

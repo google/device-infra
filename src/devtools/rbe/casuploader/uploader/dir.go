@@ -1,10 +1,15 @@
 package uploader
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	log "github.com/golang/glog"
@@ -14,6 +19,7 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	repb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"google.golang.org/protobuf/proto"
+	"github.com/pkg/xattr"
 )
 
 // fileLoader is the common interface to load content of files
@@ -27,16 +33,39 @@ type DirUploader struct {
 	CommonConfig
 	dirPath string
 	// fileLoader specifies how to load a list of files from the file system.
-	fileLoader fileLoader
+	fileLoader                   fileLoader
+	preCalculateDigests          bool
+	preCalculateDigestsMaxWorker int
+}
+
+// DirUploaderOpts is the option to create a DirUploader.
+type DirUploaderOpts func(*DirUploader)
+
+// WithFileLoader specifies the file loader to load files from the file system.
+func WithFileLoader(fileLoader fileLoader) DirUploaderOpts {
+	return func(du *DirUploader) {
+		du.fileLoader = fileLoader
+	}
+}
+
+// WithPreCalculateDigests specifies whether to pre-calculate digests for all files in the directory.
+func WithPreCalculateDigests(preCalculateDigests bool, maxWorker int) DirUploaderOpts {
+	return func(du *DirUploader) {
+		du.preCalculateDigests = preCalculateDigests
+		du.preCalculateDigestsMaxWorker = maxWorker
+	}
 }
 
 // NewDirUploader creates a new directory uploader to upload a directory to CAS.
-func NewDirUploader(config *CommonConfig, dirPath string, fileLoader fileLoader) Uploader {
-	return &DirUploader{
+func NewDirUploader(config *CommonConfig, dirPath string, opts ...DirUploaderOpts) Uploader {
+	du := &DirUploader{
 		CommonConfig: *config,
 		dirPath:      dirPath,
-		fileLoader:   fileLoader,
 	}
+	for _, opt := range opts {
+		opt(du)
+	}
+	return du
 }
 
 func (du *DirUploader) inputSpec() command.InputSpec {
@@ -53,6 +82,17 @@ func (du *DirUploader) inputSpec() command.InputSpec {
 // DoUpload uploads the given directories to CAS, and returns the digest of the root directory.
 func (du *DirUploader) DoUpload() (digest.Digest, error) {
 	inputSpec := du.inputSpec()
+
+	if du.preCalculateDigests {
+		log.Infof("Begin calculating digests for all files in directory %s with %d workers", du.dirPath, du.preCalculateDigestsMaxWorker)
+		err := preCalculateDigests(du.dirPath, du.preCalculateDigestsMaxWorker)
+		if err != nil {
+			return digest.Digest{}, fmt.Errorf("failed to pre-calculate digests: %v", err)
+		}
+	}
+
+	filemetadata.XattrDigestName = XattrDigestName
+	log.Infof("Begin computing merkle tree for directory %s", du.dirPath)
 	rootDigest, uploadEntries, _, err := du.client.ComputeMerkleTree(
 		du.ctx, du.dirPath, "", "", &inputSpec, filemetadata.NewNoopCache())
 	if err != nil {
@@ -214,4 +254,56 @@ func (du *DirUploader) exportUploadFilesDetails(root digest.Digest, entries []*u
 	}
 	log.Infof("exported file digests to %s, size of files: %d", path, len(files))
 	return nil
+}
+
+func preCalculateDigests(root string, maxWorkers int) error {
+	var wg sync.WaitGroup
+	filePaths := make(chan string)
+
+	wg.Add(maxWorkers)
+	for i := 0; i < maxWorkers; i++ {
+		go func() {
+			defer wg.Done()
+			for path := range filePaths {
+				hash, err := calculateSHA256(path)
+				if err != nil {
+					log.Warningf("Error calculating hash for file %s: %v", path, err)
+					continue
+				}
+				xattr.Set(path, XattrDigestName, []byte(hex.EncodeToString(hash)))
+			}
+		}()
+	}
+
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return fmt.Errorf("failed to visit path %s: %v", path, err)
+		}
+		if !info.IsDir() {
+			filePaths <- path
+		}
+		return nil
+	})
+	close(filePaths)
+
+	if err != nil {
+		return fmt.Errorf("failed to walk path %s: %v", root, err)
+	}
+	wg.Wait()
+	return nil
+}
+
+func calculateSHA256(filePath string) ([]byte, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return nil, err
+	}
+
+	return hash.Sum(nil), nil
 }
