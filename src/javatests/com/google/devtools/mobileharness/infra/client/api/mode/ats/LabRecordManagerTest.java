@@ -146,10 +146,10 @@ public final class LabRecordManagerTest {
     labRecordManager.addLabRecordIfLabInfoChanged(
         LabRecordData.create(
             Instant.ofEpochMilli(3),
-            com.google.devtools.mobileharness.api.model.lab.LabLocator.of(labInfo1.getLabLocator()),
-            labInfo1.getLabServerSetting(),
-            labInfo1.getLabServerFeature(),
-            labInfo1.getLabStatus()));
+            com.google.devtools.mobileharness.api.model.lab.LabLocator.of(labInfo2.getLabLocator()),
+            labInfo2.getLabServerSetting(),
+            labInfo2.getLabServerFeature(),
+            labInfo2.getLabStatus()));
     assertThat(labRecordManager.getLabRecords("host_name"))
         .containsExactly(
             LabRecord.newBuilder()
@@ -212,7 +212,7 @@ public final class LabRecordManagerTest {
   }
 
   @Test
-  public void addDeviceRecordWhenLabInfoChanged() {
+  public void addDeviceRecordWhenDeviceInfoChanged() {
     assertThat(labRecordManager.getDeviceRecords("device_uuid")).isEmpty();
 
     DeviceInfo deviceInfo1 =

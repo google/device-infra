@@ -156,6 +156,9 @@ class LabRecordManager {
     @GuardedBy("itself")
     private final EvictingQueue<RecordDataT> recordQueue;
 
+    @GuardedBy("recordQueue")
+    private RecordDataT lastRecord;
+
     private RecordHistory(String id, Clock clock) {
       this.id = id;
       this.clock = clock;
@@ -167,23 +170,23 @@ class LabRecordManager {
       synchronized (recordQueue) {
         return ImmutableList.copyOf(recordQueue).stream()
             .map(RecordData::toRecordProto)
-            .collect(toImmutableList());
+            .collect(toImmutableList())
+            .reverse();
       }
     }
 
     private void addRecordIfInfoChanged(RecordDataT record) {
       synchronized (recordQueue) {
         lastUpdateTime = clock.instant();
-        RecordDataT lastRecord = recordQueue.peek();
         if (lastRecord == null || !record.isImportantInfoEqual(lastRecord)) {
           internalAddRecord(record);
+          lastRecord = record;
         }
       }
     }
 
     private void addRecordWhenBecomeMissing() {
       synchronized (recordQueue) {
-        RecordDataT lastRecord = recordQueue.peek();
         if (lastRecord == null) {
           return;
         }
@@ -318,7 +321,7 @@ class LabRecordManager {
     @Override
     public boolean isImportantInfoEqual(DeviceRecordData another) {
       return deviceStatus().equals(another.deviceStatus())
-          && deviceScheduleUnit().owners().equals(deviceScheduleUnit().owners());
+          && deviceScheduleUnit().owners().equals(another.deviceScheduleUnit().owners());
     }
 
     @Override
