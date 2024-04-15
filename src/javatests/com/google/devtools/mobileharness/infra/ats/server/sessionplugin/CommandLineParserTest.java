@@ -109,7 +109,7 @@ public final class CommandLineParserTest {
   }
 
   @Test
-  public void parseCommandLine_commandSyntaxError_throwExcpetion() throws Exception {
+  public void parseCommandLine_commandSyntaxError_throwException() {
     String tfCommand1 = "cts -m module1 -t testCase1 --shard-count";
     MobileHarnessException exception =
         assertThrows(

@@ -30,16 +30,13 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsoleModule;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
 import com.google.devtools.mobileharness.infra.ats.console.command.RunCommand;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.CommandLineUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
-import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
-import org.jline.reader.LineReader;
 import picocli.CommandLine;
 
 /** A parser that parses a xTS Tradefed command. */
@@ -77,7 +74,7 @@ final class CommandLineParser {
   }
 
   /** Gets the singleton instance of CommandLineParser. */
-  public static CommandLineParser getInstance() throws MobileHarnessException {
+  public static CommandLineParser getInstance() {
     if (instance == null) {
       synchronized (INSTANCE_LOCK) {
         if (instance == null) {
@@ -97,7 +94,7 @@ final class CommandLineParser {
   private final Object parseCommandLock = new Object();
 
   @VisibleForTesting
-  CommandLineParser() throws MobileHarnessException {
+  CommandLineParser() {
     // Gets system properties.
     ImmutableMap<String, String> systemProperties =
         System.getProperties().entrySet().stream()
@@ -107,24 +104,14 @@ final class CommandLineParser {
     ImmutableList<String> deviceInfraServiceFlags = ImmutableList.of();
     runCommandParseResult = new RunCommandParseResult();
 
-    // Initializes line reader and stdout/stderr.
-    LineReader lineReader;
-    try {
-      lineReader = CommandLineUtil.initializeLineReaderAndStdout();
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
-          "Failed to initalize line reader and stdout.",
-          e);
-    }
     injector =
         Guice.createInjector(
             new AtsConsoleModule(
-                "CommandLineParser_" + UUID.randomUUID(),
+                "command-line-parser-" + UUID.randomUUID(),
                 deviceInfraServiceFlags,
                 ImmutableList.of(),
                 systemProperties,
-                lineReader,
+                /* consoleLineReader= */ null,
                 System.out,
                 System.err,
                 () -> {
@@ -142,7 +129,7 @@ final class CommandLineParser {
    *
    * @param tfCommand the string of xTS tradefed command to parse
    * @return the SessionRequestInfo.Builder that has parsed information from the command.
-   * @throws MobileharnessException if the command cannot be parsed due to syntax or validation
+   * @throws MobileHarnessException if the command cannot be parsed due to syntax or validation
    *     error.
    */
   public SessionRequestInfo.Builder parseCommandLine(String tfCommand)

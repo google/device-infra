@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.logging.ErrorManager;
 import java.util.logging.Handler;
 import java.util.logging.LogRecord;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.jline.reader.LineReader;
@@ -42,11 +43,11 @@ public class ConsoleUtil {
       AttributedStyle.DEFAULT.italic().foreground(AttributedStyle.MAGENTA);
 
   private final LogHandler logHandler = new LogHandler();
-  private final LineReader lineReader;
+  @Nullable private final LineReader lineReader;
   private final boolean printAbove;
 
   @Inject
-  ConsoleUtil(@ConsoleLineReader LineReader lineReader) {
+  ConsoleUtil(@Nullable @ConsoleLineReader LineReader lineReader) {
     this.lineReader = lineReader;
     this.printAbove = Flags.instance().atsConsolePrintAboveInput.getNonNull();
   }
@@ -66,7 +67,7 @@ public class ConsoleUtil {
   public void printlnStdout(String format, Object... args) {
     String line = String.format(format, args);
     if (printAbove) {
-      if (!line.isEmpty()) {
+      if (!line.isEmpty() && lineReader != null) {
         lineReader.printAbove(line);
       }
     } else {
@@ -88,7 +89,7 @@ public class ConsoleUtil {
    */
   public void printlnStdout(String text) {
     if (printAbove) {
-      if (!text.isEmpty()) {
+      if (!text.isEmpty() && lineReader != null) {
         lineReader.printAbove(text);
       }
     } else {
@@ -143,7 +144,7 @@ public class ConsoleUtil {
    */
   public void printlnDirect(AttributedString attributedString) {
     if (printAbove) {
-      if (attributedString.length() > 0) {
+      if (attributedString.length() > 0 && lineReader != null) {
         lineReader.printAbove(attributedString);
       }
     } else {

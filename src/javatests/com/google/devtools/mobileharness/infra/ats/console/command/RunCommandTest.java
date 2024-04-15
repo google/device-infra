@@ -50,6 +50,7 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.io.File;
 import java.nio.file.Path;
+import javax.annotation.Nullable;
 import org.jline.reader.LineReader;
 import org.jline.utils.AttributedString;
 import org.junit.Before;
@@ -91,7 +92,7 @@ public final class RunCommandTest {
   @Mock @Bind private XmlResultFormatter xmlResultFormatter;
   @Mock @Bind private XmlResultUtil xmlResultUtil;
   @Mock @Bind private MoblyAospPackageTestSetupUtil moblyAospTestSetupUtil;
-  @Mock @Bind @ConsoleLineReader private LineReader lineReader;
+  @Mock @Bind @Nullable @ConsoleLineReader private LineReader lineReader;
 
   private CommandLine commandLine;
   private ConsoleInfo consoleInfo;

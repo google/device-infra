@@ -23,18 +23,13 @@ package(
 )
 
 java_library(
-    name = "command_line_util",
-    srcs = ["CommandLineUtil.java"],
-    deps = ["@maven//:org_jline_jline"],
-)
-
-java_library(
     name = "console_util",
     srcs = ["ConsoleUtil.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:org_jline_jline",

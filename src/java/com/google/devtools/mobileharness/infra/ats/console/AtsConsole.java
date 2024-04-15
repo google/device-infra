@@ -39,7 +39,6 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.command.RootCommand;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.CommandLineUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
@@ -63,7 +62,10 @@ import java.util.UUID;
 import javax.inject.Inject;
 import org.jline.reader.EndOfFileException;
 import org.jline.reader.LineReader;
+import org.jline.reader.LineReaderBuilder;
 import org.jline.reader.UserInterruptException;
+import org.jline.reader.impl.history.DefaultHistory;
+import org.jline.terminal.TerminalBuilder;
 import picocli.CommandLine;
 
 /** ATS Console. */
@@ -82,8 +84,8 @@ public class AtsConsole {
         DeviceInfraServiceUtil.parseDeviceInfraServiceFlagsFromSystemProperty();
     DeviceInfraServiceUtil.parseFlags(deviceInfraServiceFlags);
 
-    // Initializes line reader and stdout/stderr.
-    LineReader lineReader = CommandLineUtil.initializeLineReaderAndStdout();
+    // Initializes line reader.
+    LineReader lineReader = createLineReader();
 
     // Creates Guice injector.
     Injector injector =
@@ -271,6 +273,14 @@ public class AtsConsole {
 
   private static Path getOlcServerBinary() {
     return Path.of(Flags.instance().atsConsoleOlcServerPath.getNonNull());
+  }
+
+  private static LineReader createLineReader() throws IOException {
+    return LineReaderBuilder.builder()
+        .appName("AtsConsole")
+        .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
+        .history(new DefaultHistory())
+        .build();
   }
 
   private void onShutdown() {

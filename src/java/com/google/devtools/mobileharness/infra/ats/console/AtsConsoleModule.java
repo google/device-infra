@@ -44,6 +44,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
+import javax.annotation.Nullable;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 import org.jline.reader.LineReader;
@@ -56,7 +57,7 @@ public class AtsConsoleModule extends AbstractModule {
   private final ImmutableList<String> deviceInfraServiceFlags;
   private final ImmutableList<String> mainArgs;
   private final ImmutableMap<String, String> systemProperties;
-  private final LineReader consoleLineReader;
+  @Nullable private final LineReader consoleLineReader;
   private final PrintStream consoleOutputOut;
   private final PrintStream consoleOutputErr;
   private final Provider<Path> olcServerBinary;
@@ -68,7 +69,7 @@ public class AtsConsoleModule extends AbstractModule {
       List<String> deviceInfraServiceFlags,
       List<String> mainArgs,
       Map<String, String> systemProperties,
-      LineReader consoleLineReader,
+      @Nullable LineReader consoleLineReader,
       PrintStream consoleOutputOut,
       PrintStream consoleOutputErr,
       Provider<Path> olcServerBinary,
@@ -123,6 +124,7 @@ public class AtsConsoleModule extends AbstractModule {
   }
 
   @Provides
+  @Nullable
   @ConsoleLineReader
   LineReader provideConsoleLineReader() {
     return consoleLineReader;

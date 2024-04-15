@@ -53,6 +53,7 @@ java_library(
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/truth:correspondences",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",
         "@maven//:com_google_inject_guice",

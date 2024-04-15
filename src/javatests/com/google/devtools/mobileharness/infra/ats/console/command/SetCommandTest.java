@@ -33,6 +33,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import javax.annotation.Nullable;
 import org.jline.reader.LineReader;
 import org.jline.utils.AttributedString;
 import org.junit.Before;
@@ -56,7 +57,7 @@ public final class SetCommandTest {
   @Bind @ConsoleId private static final String CONSOLE_ID = "fake_console_id";
 
   @Mock @Bind private LocalFileUtil localFileUtil;
-  @Mock @Bind @ConsoleLineReader private LineReader lineReader;
+  @Mock @Bind @Nullable @ConsoleLineReader private LineReader lineReader;
 
   private CommandLine commandLine;
   private ConsoleInfo consoleInfo;
