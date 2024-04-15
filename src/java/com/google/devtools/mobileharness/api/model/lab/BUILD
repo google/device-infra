@@ -37,6 +37,7 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/lab/in:ports",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
     ],
 )

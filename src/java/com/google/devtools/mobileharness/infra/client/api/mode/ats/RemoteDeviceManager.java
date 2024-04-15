@@ -83,6 +83,8 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import io.grpc.BindableService;
 import io.grpc.stub.StreamObserver;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
 import java.time.Instant;
@@ -265,7 +267,11 @@ class RemoteDeviceManager implements LabInfoProvider {
           versionChecker.checkStub(request.getVersionCheckRequest());
 
       // Creates lab locator.
-      LabLocator labLocator = LabLocator.of(request.getLabIp(), request.getLabHostName());
+      LabLocator labLocator =
+          LabLocator.of(
+              request.getLabIp(),
+              request.getLabHostName(),
+              labAddress.flatMap(RemoteDeviceManager::getIp).orElse(null));
       labLocator.ports().addAll(request.getLabServerSetting().getPortList());
       boolean labLocatorChanged;
 
@@ -278,21 +284,20 @@ class RemoteDeviceManager implements LabInfoProvider {
           // Updates lab data.
           labData = labs.get(labKey);
           labLocatorChanged = !labLocator.equals(labData.labLocator);
+          if (labLocatorChanged) {
+            logger.atWarning().log(
+                "Lab locator is changed, need to update devices not in SignUpLabRequest, lab=%s,"
+                    + " new_locator=[%s], old_locator=[%s]",
+                labKey, labLocator.toFullString(), labData.labLocator.toFullString());
+          }
           labData.updateBySignUp(labLocator, request);
         } else {
           // Adds lab data.
           labData = new LabData(labLocator, request);
           labs.put(labKey, labData);
-          labLocatorChanged = false;
         }
 
         // TODO: Updates all devices if LabLocator is changed.
-        if (labLocatorChanged) {
-          logger.atWarning().log(
-              "Lab locator is changed, need to update devices not in SignUpLabRequest, lab=%s,"
-                  + " new_locator=[%s]",
-              labKey, labLocator);
-        }
 
         // Handles information of each device.
         for (SignUpLabRequest.Device device : request.getDeviceList()) {
@@ -943,6 +948,15 @@ class RemoteDeviceManager implements LabInfoProvider {
           "Invalid StringMatchCondition [%s], cause=[%s]",
           shortDebugString(condition), shortDebugString(e));
       return entity -> false;
+    }
+  }
+
+  private static Optional<String> getIp(SocketAddress address) {
+    if (address instanceof InetSocketAddress) {
+      return Optional.ofNullable(((InetSocketAddress) address).getAddress())
+          .map(InetAddress::getHostAddress);
+    } else {
+      return Optional.empty();
     }
   }
 }

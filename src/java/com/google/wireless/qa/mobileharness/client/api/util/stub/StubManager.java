@@ -51,8 +51,11 @@ public class StubManager {
   }
 
   public ExecTestStub getTestEngineExecTestStub(
-      TestEngineLocator testEngineLocator, MobileHarnessServerEnvironment mhEnvironment) {
-    return grpcStubManager.getExecTestGrpcStub(getGrpcTarget(testEngineLocator));
+      LabServerLocator labServerLocator,
+      TestEngineLocator testEngineLocator,
+      MobileHarnessServerEnvironment mhEnvironment) {
+    return grpcStubManager.getExecTestGrpcStub(
+        getTestEngineGrpcTarget(labServerLocator, testEngineLocator));
   }
 
   /**
@@ -62,7 +65,7 @@ public class StubManager {
    */
   public PrepareTestStub getPrepareTestStub(
       LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
-    return grpcStubManager.getPrepareTestStub(getGrpcTarget(labServerLocator));
+    return grpcStubManager.getPrepareTestStub(getLabServerGrpcTarget(labServerLocator));
   }
 
   /**
@@ -72,14 +75,22 @@ public class StubManager {
    */
   public VersionStub getLabVersionStub(
       LabServerLocator labServerLocator, MobileHarnessServerEnvironment mhEnvironment) {
-    return grpcStubManager.getVersionStub(getGrpcTarget(labServerLocator));
+    return grpcStubManager.getVersionStub(getLabServerGrpcTarget(labServerLocator));
   }
 
-  private static String getGrpcTarget(TestEngineLocator testEngineLocator) {
+  private static String getTestEngineGrpcTarget(
+      LabServerLocator labServerLocator, TestEngineLocator testEngineLocator) {
     if (Flags.instance().connectToLabServerUsingIp.getNonNull()) {
-      return getGrpcTargetByIp(
-          testEngineLocator.getGrpcLocator().getHostIp(),
-          testEngineLocator.getGrpcLocator().getGrpcPort());
+      if (Flags.instance().connectToLabServerUsingMasterDetectedIp.getNonNull()
+          && labServerLocator.masterDetectedIp().isPresent()) {
+        return getGrpcTargetByIp(
+            labServerLocator.masterDetectedIp().get(),
+            testEngineLocator.getGrpcLocator().getGrpcPort());
+      } else {
+        return getGrpcTargetByIp(
+            testEngineLocator.getGrpcLocator().getHostIp(),
+            testEngineLocator.getGrpcLocator().getGrpcPort());
+      }
     } else {
       return getGrpcTargetByHostName(
           testEngineLocator.getGrpcLocator().getHostName(),
@@ -87,9 +98,15 @@ public class StubManager {
     }
   }
 
-  private static String getGrpcTarget(LabServerLocator labServerLocator) {
+  private static String getLabServerGrpcTarget(LabServerLocator labServerLocator) {
     if (Flags.instance().connectToLabServerUsingIp.getNonNull()) {
-      return getGrpcTargetByIp(labServerLocator.ip(), labServerLocator.grpcPort());
+      if (Flags.instance().connectToLabServerUsingMasterDetectedIp.getNonNull()
+          && labServerLocator.masterDetectedIp().isPresent()) {
+        return getGrpcTargetByIp(
+            labServerLocator.masterDetectedIp().get(), labServerLocator.grpcPort());
+      } else {
+        return getGrpcTargetByIp(labServerLocator.ip(), labServerLocator.grpcPort());
+      }
     } else {
       return getGrpcTargetByHostName(labServerLocator.hostName(), labServerLocator.grpcPort());
     }

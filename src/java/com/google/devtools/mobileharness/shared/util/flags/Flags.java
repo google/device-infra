@@ -275,6 +275,18 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> connectToLabServerUsingIp = connectToLabServerUsingIpDefault;
 
+  private static final Flag<Boolean> connectToLabServerUsingMasterDetectedIpDefault =
+      Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--connect_to_lab_server_using_master_detected_ip",
+      description =
+          "True to use master-detected IP to connect to lab servers and false to use lab-reported"
+              + " IP. Need connect_to_lab_server_using_ip to be true. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> connectToLabServerUsingMasterDetectedIp =
+      connectToLabServerUsingMasterDetectedIpDefault;
+
   private static final Flag<String> daBundletoolDefault = Flag.value(null);
 
   @com.beust.jcommander.Parameter(

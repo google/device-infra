@@ -20,6 +20,8 @@ import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
 import com.google.devtools.mobileharness.api.model.lab.in.Ports;
 import com.google.devtools.mobileharness.api.model.proto.Lab;
+import java.util.Optional;
+import javax.annotation.Nullable;
 
 /** For locating a Mobile Harness lab. */
 @AutoValue
@@ -33,14 +35,26 @@ public abstract class LabLocator {
 
   public abstract Ports ports();
 
+  public abstract Optional<String> masterDetectedIp();
+
   /** Creates a locator for a lab. */
   public static LabLocator of(String ip, String hostName) {
-    return new AutoValue_LabLocator(ip, hostName, new Ports());
+    return of(ip, hostName, /* masterDetectedIp= */ null);
+  }
+
+  /** Creates a locator for a lab. */
+  public static LabLocator of(String ip, String hostName, @Nullable String masterDetectedIp) {
+    return new AutoValue_LabLocator(
+        ip, hostName, new Ports(), Optional.ofNullable(masterDetectedIp));
   }
 
   /** Creates the lab locator from the proto. */
   public static LabLocator of(Lab.LabLocator proto) {
-    LabLocator labLocator = LabLocator.of(proto.getIp(), proto.getHostName());
+    LabLocator labLocator =
+        LabLocator.of(
+            proto.getIp(),
+            proto.getHostName(),
+            proto.hasMasterDetectedIp() ? proto.getMasterDetectedIp() : null);
     labLocator.ports().addAll(proto.getPortList());
     return labLocator;
   }
@@ -51,16 +65,24 @@ public abstract class LabLocator {
     return ip() + "/" + hostName();
   }
 
-  /** DO NOT memorize this. Lab ports can be added afterwards. */
-  public Lab.LabLocator toProto() {
-    return Lab.LabLocator.newBuilder()
-        .setIp(ip())
-        .setHostName(hostName())
-        .addAllPort(ports().toProtos())
-        .build();
+  public String toFullString() {
+    return String.format(
+        "ip=[%s], host_name=[%s], master_detected_ip=%s, ports=%s",
+        ip(), hostName(), masterDetectedIp(), ports());
   }
 
-  /** Global unique lab id. */
+  /** DO NOT memorize this. Lab ports can be added afterwards. */
+  public Lab.LabLocator toProto() {
+    Lab.LabLocator.Builder result =
+        Lab.LabLocator.newBuilder()
+            .setIp(ip())
+            .setHostName(hostName())
+            .addAllPort(ports().toProtos());
+    masterDetectedIp().ifPresent(result::setMasterDetectedIp);
+    return result.build();
+  }
+
+  /** Global unique lab ID. */
   public String getId() {
     return hostName();
   }

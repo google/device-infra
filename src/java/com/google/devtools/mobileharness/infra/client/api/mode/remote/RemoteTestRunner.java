@@ -494,7 +494,8 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
   /** Gets the {@link ExecTestStub} to talk to lab ExecTestService. */
   private ExecTestStub getTestEngineExecTestStub() {
-    return stubManager.getTestEngineExecTestStub(testEngineLocator, mhEnvironment);
+    return stubManager.getTestEngineExecTestStub(
+        labServerLocator, testEngineLocator, mhEnvironment);
   }
 
   /**
@@ -792,7 +793,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
 
     int count = 0;
     while (!Thread.currentThread().isInterrupted()) {
-      if (Boolean.TRUE.equals(Flags.instance().realTimeTest.getNonNull())
+      if (Flags.instance().realTimeTest.getNonNull().equals(Boolean.TRUE)
           && count < NUM_USE_REAL_TIME_RPC_CALL_INTERVAL) {
         sleeper.sleep(REAL_TIME_RPC_CALL_INTERVAL);
       } else {

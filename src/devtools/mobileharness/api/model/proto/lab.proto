@@ -41,6 +41,7 @@ message LabLocator {
   string ip = 1;              // Required.
   string host_name = 2;       // Required.
   repeated LabPort port = 3;  // Lab port information.
+  optional string master_detected_ip = 4;
 }
 
 // Lab Server setting.

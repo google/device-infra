@@ -17,9 +17,11 @@
 package com.google.devtools.mobileharness.infra.client.api.mode.remote;
 
 import com.google.auto.value.AutoValue;
+import com.google.auto.value.extension.memoized.Memoized;
 import com.google.devtools.mobileharness.api.model.job.TestLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.proto.Lab.PortType;
+import java.util.Optional;
 
 /**
  * Locator where MH provides lab-side test runner controlling related services, e.g.,
@@ -42,12 +44,22 @@ public abstract class LabServerLocator {
 
   abstract LabLocator labLocator();
 
+  @Memoized
+  @Override
+  public String toString() {
+    return String.format("lab_server_locator[%s]", labLocator().toFullString());
+  }
+
   /**
    * Note that {@link #perTestLabServer} may not provide correct services based on IP and ports, and
    * these methods is just for interface compatibility.
    */
   public String ip() {
     return labLocator().ip();
+  }
+
+  public Optional<String> masterDetectedIp() {
+    return labLocator().masterDetectedIp();
   }
 
   public String hostName() {
