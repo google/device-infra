@@ -33,6 +33,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
@@ -49,7 +50,6 @@ import com.google.devtools.mobileharness.infra.ats.console.result.xml.MoblyResul
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultFormatter;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlResultUtil;
 import com.google.devtools.mobileharness.infra.ats.console.testbed.config.YamlTestbedUpdater;
-import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
@@ -319,6 +319,7 @@ public final class RunCommand implements Callable<Integer> {
     SessionRequestInfo.Builder sessionRequestBuilder = SessionRequestInfo.builder();
     validateCommandParameters();
     sessionRequestBuilder
+        .setTestPlan(config)
         .setModuleNames(getModules())
         .setIncludeFilters(
             this.includeFilters == null

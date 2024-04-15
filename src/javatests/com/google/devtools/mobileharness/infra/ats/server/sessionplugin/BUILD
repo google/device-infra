@@ -32,6 +32,7 @@ java_library(
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:ats_server_session_plugin_lib",

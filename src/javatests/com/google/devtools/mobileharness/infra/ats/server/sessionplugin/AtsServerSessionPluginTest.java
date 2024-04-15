@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
+import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -104,6 +105,7 @@ public final class AtsServerSessionPluginTest {
   @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
+  @Bind @Mock private CommandHelper commandHelper;
   @Mock private JobInfo jobInfo;
   @Mock private JobInfo jobInfo2;
   @Mock private JobInfo moblyJobInfo;
@@ -210,6 +212,7 @@ public final class AtsServerSessionPluginTest {
     when(sessionRequestHandlerUtil.getTestResultFromTest(testInfo))
         .thenReturn(Optional.of(resultProto));
     when(clock.instant()).thenReturn(baseTime);
+    when(commandHelper.getXtsType(any())).thenReturn("cts");
   }
 
   @Test

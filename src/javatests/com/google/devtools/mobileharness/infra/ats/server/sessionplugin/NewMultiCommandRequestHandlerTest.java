@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -82,7 +83,7 @@ public final class NewMultiCommandRequestHandlerTest {
   private static final String OUTPUT_FILE_UPLOAD_URL = "file:///path/to/output";
 
   private static final String DEFAULT_COMMAND_LINE =
-      "cts --module module1 --test test1 --logcat-on-failure --shard-count 2"
+      "cts-plan --module module1 --test test1 --logcat-on-failure --shard-count 2"
           + " --parallel-setup true --parallel-setup-timeout 0";
 
   private CommandInfo commandInfo = CommandInfo.getDefaultInstance();
@@ -95,6 +96,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
+  @Bind @Mock private CommandHelper commandHelper;
 
   @Mock private SessionInfo sessionInfo;
   @Mock private JobInfo jobInfo;
@@ -123,6 +125,7 @@ public final class NewMultiCommandRequestHandlerTest {
                 .addDeviceInfo(
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
+    when(commandHelper.getXtsType(any())).thenReturn("cts");
     commandInfo =
         CommandInfo.newBuilder()
             .setName("command")
@@ -241,7 +244,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
-    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts");
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts-plan");
     assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
     assertThat(sessionRequestInfo.testName()).hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
@@ -309,17 +312,13 @@ public final class NewMultiCommandRequestHandlerTest {
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     newMultiCommandRequestHandler.handleResultProcessing(request, sessionInfo);
+    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
     verify(sessionRequestHandlerUtil)
         .processResult(
             Path.of("/path/to/output"),
             Path.of("/path/to/output"),
             ImmutableList.of(jobInfo),
-            SessionRequestInfo.builder()
-                .setTestPlan("") // set the test plan as empty so it won't merge the retry result
-                .setCommandLineArgs(DEFAULT_COMMAND_LINE)
-                .setXtsType("cts")
-                .setXtsRootDir("/fake/path")
-                .build());
+            sessionRequestInfoCaptor.getValue());
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
   }

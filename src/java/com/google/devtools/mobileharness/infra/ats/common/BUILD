@@ -129,3 +129,18 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "command_helper",
+    srcs = ["CommandHelper.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
