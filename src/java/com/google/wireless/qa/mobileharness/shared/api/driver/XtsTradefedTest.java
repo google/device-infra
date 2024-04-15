@@ -243,7 +243,7 @@ public class XtsTradefedTest extends BaseDriver
         tradefedTestSummary.put(TRADEFED_TESTS_FAILED, String.valueOf(failedNumber));
         tradefedTestSummary.put(TRADEFED_TESTS_DONE, String.valueOf(doneNumber));
         tradefedTestSummary.put(TRADEFED_TESTS_TOTAL, String.valueOf(totalNumber));
-        testInfo.jobInfo().params().addAll(tradefedTestSummary);
+        testInfo.properties().addAll(tradefedTestSummary);
         if (doneNumber == totalNumber && failedNumber == 0 && passedNumber > 0) {
           testInfo.properties().add(TRADEFED_JOBS_PASSED, "true");
           return true;

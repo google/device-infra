@@ -49,6 +49,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -193,34 +194,62 @@ public class AtsSessionPlugin {
     int nonTradefedDoneTestCaseNumber = 0;
 
     for (JobInfo jobInfo : jobInfos) {
+      TestInfo testInfo = jobInfo.tests().getOnly();
+
       // Collect Tradefed Jobs test summary.
       if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_TF_JOB_PROP)) {
         tradefedDoneModuleNumber +=
-            Integer.parseInt(jobInfo.params().get(XtsTradefedTest.TRADEFED_TESTS_DONE, "0"));
+            Integer.parseInt(
+                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_DONE)
+                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_DONE)
+                    : "0");
         tradefedTotalModuleNumber +=
-            Integer.parseInt(jobInfo.params().get(XtsTradefedTest.TRADEFED_TESTS_TOTAL, "0"));
+            Integer.parseInt(
+                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_TOTAL)
+                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_TOTAL)
+                    : "0");
         tradefedPassedTestNumber +=
-            Integer.parseInt(jobInfo.params().get(XtsTradefedTest.TRADEFED_TESTS_PASSED, "0"));
+            Integer.parseInt(
+                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_PASSED)
+                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_PASSED)
+                    : "0");
         tradefedFailedTestNumber +=
-            Integer.parseInt(jobInfo.params().get(XtsTradefedTest.TRADEFED_TESTS_FAILED, "0"));
+            Integer.parseInt(
+                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_FAILED)
+                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_FAILED)
+                    : "0");
       }
       // Collect Non Tradefed Jobs test summary.
       if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_NON_TF_JOB_PROP)) {
         nonTradefedTotalModuleNumber++;
-        if (jobInfo.params().has(MoblyTestInfoMapHelper.MOBLY_TESTS_DONE)) {
+        if (testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_DONE)) {
           nonTradefedDoneModuleNumber++;
         }
         nonTradefedPassedTestNumber +=
-            Integer.parseInt(jobInfo.params().get(MoblyTestInfoMapHelper.MOBLY_TESTS_PASSED, "0"));
+            Integer.parseInt(
+                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_PASSED)
+                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_PASSED)
+                    : "0");
         nonTradefedFailedTestNumber +=
             Integer.parseInt(
-                jobInfo.params().get(MoblyTestInfoMapHelper.MOBLY_TESTS_FAILED_AND_ERROR, "0"));
+                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_FAILED_AND_ERROR)
+                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_FAILED_AND_ERROR)
+                    : "0");
         nonTradefedSkippedTestNumber +=
-            Integer.parseInt(jobInfo.params().get(MoblyTestInfoMapHelper.MOBLY_TESTS_SKIPPED, "0"));
+            Integer.parseInt(
+                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_SKIPPED)
+                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_SKIPPED)
+                    : "0");
         nonTradefedTotalTestCaseNumber +=
-            Integer.parseInt(jobInfo.params().get(MoblyTestInfoMapHelper.MOBLY_TESTS_TOTAL, "0"));
+            Integer.parseInt(
+                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_TOTAL)
+                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_TOTAL)
+                    : "0");
         nonTradefedDoneTestCaseNumber +=
-            Integer.parseInt(jobInfo.params().get(MoblyTestInfoMapHelper.MOBLY_TESTS_DONE, "0"));
+            Integer.parseInt(
+                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_DONE)
+                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_DONE)
+                    : "0");
       }
     }
 

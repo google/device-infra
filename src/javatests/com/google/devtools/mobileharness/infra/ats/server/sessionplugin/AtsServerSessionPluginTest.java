@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.DEVICE_ID_LIST;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -45,6 +46,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Ses
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
@@ -57,6 +59,7 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Any;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
+import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -76,6 +79,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Devic
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.function.UnaryOperator;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -193,6 +197,8 @@ public final class AtsServerSessionPluginTest {
     when(testLocator.getId()).thenReturn("test_id");
     testProperties = new Properties(timing);
     testProperties.add(DEVICE_ID_LIST, "device_id_1,device_id_2");
+    testProperties.add(XtsTradefedTest.TRADEFED_TESTS_PASSED, "10");
+    testProperties.add(XtsTradefedTest.TRADEFED_TESTS_FAILED, "10");
     when(testInfo.properties()).thenReturn(testProperties);
     when(jobInfo.tests()).thenReturn(testInfos);
     when(jobInfo2.tests()).thenReturn(testInfos);
@@ -212,6 +218,7 @@ public final class AtsServerSessionPluginTest {
     when(sessionRequestHandlerUtil.getTestResultFromTest(testInfo))
         .thenReturn(Optional.of(resultProto));
     when(clock.instant()).thenReturn(baseTime);
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(commandHelper.getXtsType(any())).thenReturn("cts");
   }
 
@@ -301,12 +308,15 @@ public final class AtsServerSessionPluginTest {
 
     // Verify added non tradefed jobs.
     verify(sessionInfo).addJob(moblyJobInfo);
-    verify(sessionInfo, times(4))
+    // Set 3 times when: session is started, commandDetail is updated, and try create non TF jobs.
+    verify(sessionInfo, times(3))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
-    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(2);
-    assertThat(requestDetail.containsCommandDetails("mobly_job_id")).isTrue();
-    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().get("mobly_job_id");
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(requestDetail.containsCommandDetails(commandId)).isTrue();
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().get(commandId);
     assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
   }
 
@@ -332,14 +342,17 @@ public final class AtsServerSessionPluginTest {
 
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
 
-    verify(sessionInfo, times(4))
+    // Set 3 times when: session is started, commandDetail is updated, and try create non TF jobs.
+    verify(sessionInfo, times(3))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     assertThat(requestDetail.getCommandAttemptDetailsCount()).isEqualTo(1);
     CommandAttemptDetail commandAttemptDetail = requestDetail.getCommandAttemptDetails(0);
     assertThat(commandAttemptDetail.getId()).isEqualTo("test_id");
     assertThat(commandAttemptDetail.getRequestId()).isEqualTo("session_id");
-    assertThat(commandAttemptDetail.getCommandId()).isEqualTo("job_id");
+    assertThat(commandAttemptDetail.getCommandId()).isEqualTo(commandId);
     assertThat(commandAttemptDetail.getDeviceSerialsList())
         .containsExactly("device_id_1", "device_id_2");
     assertThat(commandAttemptDetail.getState()).isEqualTo(CommandState.COMPLETED);
@@ -352,14 +365,9 @@ public final class AtsServerSessionPluginTest {
     assertThat(commandAttemptDetail.getFailedTestCount()).isEqualTo(10);
     assertThat(commandAttemptDetail.getTotalTestCount()).isEqualTo(20);
 
-    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().get("job_id");
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().get(commandId);
     assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
-    assertThat(commandDetail.getPassedTestCount()).isEqualTo(10);
-    assertThat(commandDetail.getFailedTestCount()).isEqualTo(10);
-    assertThat(commandDetail.getTotalTestCount()).isEqualTo(20);
-    assertThat(commandDetail.getUpdateTime())
-        .isEqualTo(TimeUtils.toProtoTimestamp(timing.getModifyTime()));
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.RUNNING);
     assertThat(commandDetail.getPassedTestCount()).isEqualTo(10);
     assertThat(commandDetail.getFailedTestCount()).isEqualTo(10);
     assertThat(commandDetail.getTotalTestCount()).isEqualTo(20);
@@ -376,6 +384,7 @@ public final class AtsServerSessionPluginTest {
                     Any.pack(
                         SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
                 .build());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo, jobInfo2));
     plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
     verify(sessionInfo).addJob(jobInfo);
     verify(sessionInfo).addJob(jobInfo2);
@@ -433,25 +442,29 @@ public final class AtsServerSessionPluginTest {
 
     // Verify that plugin didn't create any new job.
     verify(sessionInfo).addJob(jobInfo);
-    verify(sessionInfo, times(3))
+    verify(sessionInfo, times(2))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next()).isEqualTo("job_id");
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
+        .isEqualTo(commandId);
   }
 
   @Test
-  public void onJobEnded_jobCompleted_updateSessionOutput() throws Exception {
+  public void onSessionEnded_jobCompleted_updateSessionOutput() throws Exception {
     verifyState(TestStatus.DONE, TestResult.PASS, CommandState.COMPLETED);
   }
 
   @Test
-  public void onJobEnded_jobFailed_updateSessionOutput() throws Exception {
+  public void onSessionEnded_jobFailed_updateSessionOutput() throws Exception {
     verifyState(TestStatus.DONE, TestResult.FAIL, CommandState.ERROR);
   }
 
   private void verifyState(TestStatus teststatus, TestResult testResult, CommandState commandState)
       throws Exception {
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(
             SessionPluginExecutionConfig.newBuilder()
@@ -465,21 +478,29 @@ public final class AtsServerSessionPluginTest {
     when(jobInfo.timing()).thenReturn(timing);
     timing.start();
     var unused = timing.end();
-    when(jobInfo.status()).thenReturn(new Status(timing).set(teststatus));
+
+    when(testInfo.status()).thenReturn(new Status(timing).set(teststatus));
     Result result = new Result(timing, new Params(timing)).set(testResult);
+    when(testInfo.result()).thenReturn(result);
+
     when(jobInfo.result()).thenReturn(result);
-    JobType jobType = JobType.newBuilder().setDriver("NoOpDriver").build();
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
     when(jobInfo.type()).thenReturn(jobType);
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
 
+    plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+
     // sessionInfo.setSessionPluginOutput() is called 3 times. First time in
     // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
-    // after job ended signal trigger session output update.
-    verify(sessionInfo, times(3))
+    // after job ended signal trigger session output update. Fourth time in OnSessionEnded().
+    verify(sessionInfo, times(4))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next()).isEqualTo("job_id");
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
+        .isEqualTo(commandId);
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getState()).isEqualTo(commandState);
   }

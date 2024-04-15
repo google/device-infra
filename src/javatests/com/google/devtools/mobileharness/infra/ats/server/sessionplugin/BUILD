@@ -46,6 +46,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",

@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
+import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -64,6 +65,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Optional;
+import java.util.UUID;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -233,7 +235,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     String jobId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
-    assertThat(jobId).isEqualTo("job_id");
+    assertThat(jobId)
+        .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getId()).isEqualTo(jobId);
@@ -311,12 +314,15 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(sessionInfo).addJob(jobInfo);
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    newMultiCommandRequestHandler.handleResultProcessing(request, sessionInfo);
+    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    String outputPath = "/path/to/output/session_id/" + commandId;
     verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
     verify(sessionRequestHandlerUtil)
         .processResult(
-            Path.of("/path/to/output"),
-            Path.of("/path/to/output"),
+            Path.of(outputPath),
+            Path.of(outputPath),
             ImmutableList.of(jobInfo),
             sessionRequestInfoCaptor.getValue());
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
@@ -345,7 +351,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(files.getAll()).thenReturn(ImmutableMultimap.of());
-    newMultiCommandRequestHandler.handleResultProcessing(request, sessionInfo);
+    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
     verify(sessionRequestHandlerUtil, never()).processResult(any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
@@ -366,7 +372,7 @@ public final class NewMultiCommandRequestHandlerTest {
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     MobileHarnessException mhException = Mockito.mock(MobileHarnessException.class);
     doThrow(mhException).when(sessionRequestHandlerUtil).processResult(any(), any(), any(), any());
-    newMultiCommandRequestHandler.handleResultProcessing(request, sessionInfo);
+    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
   }
@@ -392,7 +398,7 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(sessionInfo).addJob(jobInfo);
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    newMultiCommandRequestHandler.handleResultProcessing(request, sessionInfo);
+    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
     verify(sessionRequestHandlerUtil, never()).processResult(any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
@@ -523,15 +529,16 @@ public final class NewMultiCommandRequestHandlerTest {
                 "tag2",
                 "/data/tmp/mock.json"));
     // Trigger the handler.
-    ImmutableList<CommandDetail> commandDetails =
+    Optional<CommandDetail> commandDetails =
         newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
 
-    assertThat(commandDetails).hasSize(1);
-    CommandDetail commandDetail = commandDetails.get(0);
+    assertThat(commandDetails).isPresent();
+    CommandDetail commandDetail = commandDetails.get();
 
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
-    assertThat(commandDetail.getId()).isEqualTo("job_id");
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.UNKNOWN_STATE);
+    assertThat(commandDetail.getId())
+        .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.RUNNING);
     assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
 
     verify(sessionInfo).addJob(jobInfo);
@@ -575,10 +582,10 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
 
     // Trigger the handler.
-    ImmutableList<CommandDetail> commandDetails =
+    Optional<CommandDetail> commandDetail =
         newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
 
-    assertThat(commandDetails).isEmpty();
+    assertThat(commandDetail).isEmpty();
   }
 
   @Test
@@ -589,10 +596,10 @@ public final class NewMultiCommandRequestHandlerTest {
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
 
     // Trigger the handler.
-    ImmutableList<CommandDetail> commandDetails =
+    Optional<CommandDetail> commandDetail =
         newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
 
-    assertThat(commandDetails).isEmpty();
+    assertThat(commandDetail).isEmpty();
   }
 
   @Test
@@ -604,10 +611,10 @@ public final class NewMultiCommandRequestHandlerTest {
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
 
     // Trigger the handler.
-    ImmutableList<CommandDetail> commandDetails =
+    Optional<CommandDetail> commandDetail =
         newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
 
-    assertThat(commandDetails).isEmpty();
+    assertThat(commandDetail).isEmpty();
     verify(sessionRequestHandlerUtil, never()).createXtsNonTradefedJobs(any());
   }
 }
