@@ -32,15 +32,15 @@ public abstract class AddSubPlanArgs {
   /** The xts type. */
   public abstract String xtsType();
 
-  /** The session id to derive from. */
-  public abstract int sessionId();
+  /** The session index to derive from. */
+  public abstract int sessionIndex();
 
   /** The name of the subplan to create. */
   public abstract Optional<String> subPlanName();
 
   /**
    * The result type to include for creating the subplan. Possible values include {@link
-   * ResultType.PASSED}, {@link ResultType.FAILED}, {@link ResultType.NOT_EXECUTED}.
+   * ResultType#PASSED}, {@link ResultType#FAILED}, {@link ResultType#NOT_EXECUTED}.
    */
   public abstract ImmutableSet<ResultType> resultTypes();
 
@@ -64,7 +64,7 @@ public abstract class AddSubPlanArgs {
 
     public abstract Builder setXtsType(String xtsType);
 
-    public abstract Builder setSessionId(int sessionId);
+    public abstract Builder setSessionIndex(int sessionIndex);
 
     public abstract Builder setSubPlanName(String subPlanName);
 

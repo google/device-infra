@@ -29,12 +29,12 @@ public abstract class RetryArgs {
   /** The path to the "results" directory. */
   public abstract Path resultsDir();
 
-  /** ID to the previous session. */
-  public abstract int previousSessionId();
+  /** Index to the previous session. */
+  public abstract int previousSessionIndex();
 
   /**
-   * Used to retry tests of a certain status. Possible values include {@link RetryType.FAILED},
-   * {@link RetryType.NOT_EXECUTED}.
+   * Used to retry tests of a certain status. Possible values include {@link RetryType#FAILED},
+   * {@link RetryType#NOT_EXECUTED}.
    */
   public abstract Optional<RetryType> retryType();
 
@@ -55,7 +55,7 @@ public abstract class RetryArgs {
   public abstract static class Builder {
     public abstract Builder setResultsDir(Path resultsDir);
 
-    public abstract Builder setPreviousSessionId(int previousSessionId);
+    public abstract Builder setPreviousSessionIndex(int previousSessionIndex);
 
     public abstract Builder setRetryType(RetryType retryType);
 

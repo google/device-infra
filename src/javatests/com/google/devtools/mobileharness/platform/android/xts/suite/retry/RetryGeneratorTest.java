@@ -125,15 +125,15 @@ public final class RetryGeneratorTest {
   @org.junit.Test
   public void generateRetrySubPlan_defaultRetryType() throws Exception {
     Path resultsDir = Path.of("/path/to/results_dir");
-    int previousSessionId = 0;
-    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionId))
+    int previousSessionIndex = 0;
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
         .thenReturn(REPORT_1);
 
     SubPlan subPlan =
         retryGenerator.generateRetrySubPlan(
             RetryArgs.builder()
                 .setResultsDir(resultsDir)
-                .setPreviousSessionId(previousSessionId)
+                .setPreviousSessionIndex(previousSessionIndex)
                 .build());
 
     SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
@@ -155,15 +155,15 @@ public final class RetryGeneratorTest {
   @org.junit.Test
   public void generateRetrySubPlan_retryTypeIsNotExecuted() throws Exception {
     Path resultsDir = Path.of("/path/to/results_dir");
-    int previousSessionId = 0;
-    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionId))
+    int previousSessionIndex = 0;
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
         .thenReturn(REPORT_1);
 
     SubPlan subPlan =
         retryGenerator.generateRetrySubPlan(
             RetryArgs.builder()
                 .setResultsDir(resultsDir)
-                .setPreviousSessionId(previousSessionId)
+                .setPreviousSessionIndex(previousSessionIndex)
                 .setRetryType(RetryType.NOT_EXECUTED)
                 .build());
 

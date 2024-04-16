@@ -311,7 +311,7 @@ public final class SessionRequestHandlerUtilTest {
                 .setCommandLineArgs("retry --retry 0")
                 .setXtsType("cts")
                 .setXtsRootDir(xtsRootDir.getAbsolutePath())
-                .setRetrySessionId(0)
+                .setRetrySessionIndex(0)
                 .build(),
             ImmutableList.of());
 
@@ -1070,7 +1070,7 @@ public final class SessionRequestHandlerUtilTest {
                 .setCommandLineArgs("retry")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setRetrySessionId(0)
+                .setRetrySessionIndex(0)
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
@@ -1150,7 +1150,7 @@ public final class SessionRequestHandlerUtilTest {
                 .setCommandLineArgs("retry")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setRetrySessionId(0)
+                .setRetrySessionIndex(0)
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);

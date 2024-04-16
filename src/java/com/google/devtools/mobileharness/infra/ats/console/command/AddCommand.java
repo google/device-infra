@@ -84,7 +84,7 @@ class AddCommand implements Callable<Integer> {
               names = "--session",
               required = true,
               description = "The session used to create a subplan.")
-          int sessionId,
+          int sessionIndex,
       @Option(
               names = {"--name", "-n"},
               required = false,
@@ -106,7 +106,7 @@ class AddCommand implements Callable<Integer> {
         AddSubPlanArgs.builder()
             .setXtsRootDir(Path.of(xtsRootDirectory))
             .setXtsType(xtsType)
-            .setSessionId(sessionId);
+            .setSessionIndex(sessionIndex);
     if (!Strings.isNullOrEmpty(name)) {
       addSubPlanArgsBuilder.setSubPlanName(name);
     }

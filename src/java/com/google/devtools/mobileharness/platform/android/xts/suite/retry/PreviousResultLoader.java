@@ -45,11 +45,11 @@ public class PreviousResultLoader {
    * Loads the result for the given session.
    *
    * @param resultsDir path to the "results" directory
-   * @param previousSessionId id of the previous session being loaded
+   * @param previousSessionIndex index of the previous session being loaded
    */
-  public Result loadPreviousResult(Path resultsDir, int previousSessionId)
+  public Result loadPreviousResult(Path resultsDir, int previousSessionIndex)
       throws MobileHarnessException {
-    Path testResultProtoFile = getPrevSessionTestResultProtoFile(resultsDir, previousSessionId);
+    Path testResultProtoFile = getPrevSessionTestResultProtoFile(resultsDir, previousSessionIndex);
 
     try {
       return TestResultProtoUtil.readFromFile(testResultProtoFile.toFile());
@@ -58,12 +58,12 @@ public class PreviousResultLoader {
           ExtErrorId.PREV_RESULT_LOADER_LOAD_TEST_RESULT_PROTO_FILE_ERROR,
           String.format(
               "Failed to load test result proto file %s for session %s.",
-              testResultProtoFile.toAbsolutePath(), previousSessionId),
+              testResultProtoFile.toAbsolutePath(), previousSessionIndex),
           e);
     }
   }
 
-  private Path getPrevSessionTestResultProtoFile(Path resultsDir, int previousSessionId)
+  private Path getPrevSessionTestResultProtoFile(Path resultsDir, int previousSessionIndex)
       throws MobileHarnessException {
     List<File> allResultDirs =
         resultListerHelper.listResultDirsInOrder(resultsDir.toAbsolutePath().toString());
@@ -71,21 +71,25 @@ public class PreviousResultLoader {
       throw new MobileHarnessException(
           ExtErrorId.PREV_RESULT_LOADER_NO_PREVIOUS_SESSION_FOUND, "No previous session found.");
     }
-    if (previousSessionId < 0 || previousSessionId >= allResultDirs.size()) {
+    if (previousSessionIndex < 0 || previousSessionIndex >= allResultDirs.size()) {
       throw new MobileHarnessException(
-          ExtErrorId.PREV_RESULT_LOADER_SESSION_ID_OUT_OF_RANGE,
+          ExtErrorId.PREV_RESULT_LOADER_SESSION_INDEX_OUT_OF_RANGE,
           String.format(
-              "The given previous session id %s is out of index. The session ID range is [%d, %d]",
-              previousSessionId, 0, allResultDirs.size() - 1));
+              "The given previous session index %s is out of index. The session index range is [%d,"
+                  + " %d]",
+              previousSessionIndex, 0, allResultDirs.size() - 1));
     }
     Path testResultProtoFile =
-        allResultDirs.get(previousSessionId).toPath().resolve(SuiteCommon.TEST_RESULT_PB_FILE_NAME);
+        allResultDirs
+            .get(previousSessionIndex)
+            .toPath()
+            .resolve(SuiteCommon.TEST_RESULT_PB_FILE_NAME);
     if (!localFileUtil.isFileExist(testResultProtoFile)) {
       throw new MobileHarnessException(
           ExtErrorId.PREV_RESULT_LOADER_MISSING_TEST_RESULT_PROTO_FILE_IN_SESSION,
           String.format(
               "The test result proto file %s does not exist for session %s.",
-              testResultProtoFile.toAbsolutePath(), previousSessionId));
+              testResultProtoFile.toAbsolutePath(), previousSessionIndex));
     }
     return testResultProtoFile;
   }

@@ -204,10 +204,11 @@ public final class RunCommand implements Callable<Integer> {
   // Command options for "run retry" command
   @Option(
       names = "--retry",
+      paramLabel = "<retry_session_id>",
       description =
-          "Id for the retry session. Use @|bold list results|@ to get the session id. Required when"
-              + " calling 'run retry' command")
-  private Integer retrySessionId; // Use Integer instead of int to check if it's set
+          "Index for the retry session. Use @|bold list results|@ to get the session index."
+              + " Required when calling 'run retry' command")
+  private Integer retrySessionIndex; // Use Integer instead of int to check if it's set
 
   @Option(
       names = "--retry-type",
@@ -364,11 +365,11 @@ public final class RunCommand implements Callable<Integer> {
             Ansi.AUTO.string("Multiple modules are unsupported if a test case is specified.\n"));
       }
     }
-    if (config.equals("retry") && retrySessionId == null) {
+    if (config.equals("retry") && retrySessionIndex == null) {
       throw new ParameterException(
           spec.commandLine(),
           Ansi.AUTO.string(
-              "Option @|fg(red) --retry <retrySessionId>|@ is required for retry command.\n"));
+              "Option @|fg(red) --retry <retry_session_id>|@ is required for retry command.\n"));
     }
     if (!isNullOrEmpty(subPlanName) && !isSubPlanExist(subPlanName)) {
       throw new ParameterException(
@@ -516,8 +517,8 @@ public final class RunCommand implements Callable<Integer> {
     if (!isNullOrEmpty(subPlanName)) {
       runCommand.setSubPlanName(subPlanName);
     }
-    if (retrySessionId != null) {
-      runCommand.setRetrySessionId(retrySessionId);
+    if (retrySessionIndex != null) {
+      runCommand.setRetrySessionIndex(retrySessionIndex);
     }
     if (retryType != null) {
       runCommand.setRetryType(Ascii.toUpperCase(retryType.name()));

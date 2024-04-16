@@ -187,8 +187,8 @@ class RunCommandHandler {
     if (runCommand.hasPythonPkgIndexUrl()) {
       builder.setPythonPkgIndexUrl(runCommand.getPythonPkgIndexUrl());
     }
-    if (runCommand.hasRetrySessionId()) {
-      builder.setRetrySessionId(runCommand.getRetrySessionId());
+    if (runCommand.hasRetrySessionIndex()) {
+      builder.setRetrySessionIndex(runCommand.getRetrySessionIndex());
     }
     if (runCommand.hasRetryType()) {
       builder.setRetryType(RetryType.valueOf(Ascii.toUpperCase(runCommand.getRetryType())));

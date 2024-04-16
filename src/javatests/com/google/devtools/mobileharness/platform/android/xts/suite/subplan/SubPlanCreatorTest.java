@@ -82,7 +82,7 @@ public final class SubPlanCreatorTest {
   @Test
   public void createAndSerializeSubPlan_allResultTypes() throws Exception {
     String subPlanName = "test-subplan";
-    int sessionId = 0;
+    int sessionIndex = 0;
     String xtsType = "cts";
     File xtsRootDir = temporaryFolder.newFolder("xts_root_dir");
     temporaryFolder.newFolder(xtsRootDir.getName(), String.format("android-%s", xtsType));
@@ -91,7 +91,7 @@ public final class SubPlanCreatorTest {
         TextFormat.parse(
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionId))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
         .thenReturn(prevReport);
 
     Optional<File> subPlanFile =
@@ -99,7 +99,7 @@ public final class SubPlanCreatorTest {
             AddSubPlanArgs.builder()
                 .setXtsRootDir(xtsRootDir.toPath())
                 .setXtsType(xtsType)
-                .setSessionId(sessionId)
+                .setSessionIndex(sessionIndex)
                 .setSubPlanName(subPlanName)
                 .build());
 
@@ -115,7 +115,7 @@ public final class SubPlanCreatorTest {
 
   @Test
   public void createAndSerializeSubPlan_resultTypePassed() throws Exception {
-    int sessionId = 0;
+    int sessionIndex = 0;
     String xtsType = "cts";
     File xtsRootDir = temporaryFolder.newFolder("xts_root_dir");
     temporaryFolder.newFolder(xtsRootDir.getName(), String.format("android-%s", xtsType));
@@ -124,7 +124,7 @@ public final class SubPlanCreatorTest {
         TextFormat.parse(
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionId))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
         .thenReturn(prevReport);
 
     Optional<File> subPlanFile =
@@ -132,7 +132,7 @@ public final class SubPlanCreatorTest {
             AddSubPlanArgs.builder()
                 .setXtsRootDir(xtsRootDir.toPath())
                 .setXtsType(xtsType)
-                .setSessionId(sessionId)
+                .setSessionIndex(sessionIndex)
                 .setResultTypes(ImmutableSet.of(ResultType.PASSED))
                 .build());
 
@@ -147,7 +147,7 @@ public final class SubPlanCreatorTest {
 
   @Test
   public void createAndSerializeSubPlan_resultTypeFailed() throws Exception {
-    int sessionId = 0;
+    int sessionIndex = 0;
     String xtsType = "cts";
     File xtsRootDir = temporaryFolder.newFolder("xts_root_dir");
     temporaryFolder.newFolder(xtsRootDir.getName(), String.format("android-%s", xtsType));
@@ -156,7 +156,7 @@ public final class SubPlanCreatorTest {
         TextFormat.parse(
             realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
     when(previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionId))
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
         .thenReturn(prevReport);
 
     Optional<File> subPlanFile =
@@ -164,7 +164,7 @@ public final class SubPlanCreatorTest {
             AddSubPlanArgs.builder()
                 .setXtsRootDir(xtsRootDir.toPath())
                 .setXtsType(xtsType)
-                .setSessionId(sessionId)
+                .setSessionIndex(sessionIndex)
                 .setResultTypes(ImmutableSet.of(ResultType.FAILED))
                 .build());
 

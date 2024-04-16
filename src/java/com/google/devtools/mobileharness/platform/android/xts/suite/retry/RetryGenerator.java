@@ -45,8 +45,9 @@ public class RetryGenerator {
   /** Generates a {@link SubPlan} that contains the retry modules and tests. */
   public SubPlan generateRetrySubPlan(RetryArgs retryArgs) throws MobileHarnessException {
     Path resultsDir = retryArgs.resultsDir();
-    int previousSessionId = retryArgs.previousSessionId();
-    Result previousResult = previousResultLoader.loadPreviousResult(resultsDir, previousSessionId);
+    int previousSessionIndex = retryArgs.previousSessionIndex();
+    Result previousResult =
+        previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex);
 
     Optional<RetryType> retryType = retryArgs.retryType();
     Set<RetryType> retryTypes =

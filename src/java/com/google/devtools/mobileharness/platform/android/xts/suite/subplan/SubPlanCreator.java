@@ -70,13 +70,13 @@ public class SubPlanCreator {
       throws MobileHarnessException {
     Path xtsRootDir = addSubPlanArgs.xtsRootDir();
     String xtsType = addSubPlanArgs.xtsType();
-    int sessionId = addSubPlanArgs.sessionId();
+    int sessionIndex = addSubPlanArgs.sessionIndex();
     Optional<String> subPlanName = addSubPlanArgs.subPlanName();
     ImmutableSet<String> resultTypes = getResultTypes(addSubPlanArgs.resultTypes());
 
     Result previousResult =
         previousResultLoader.loadPreviousResult(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType), sessionId);
+            XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType), sessionIndex);
 
     Optional<Attribute> startTimeAttr =
         previousResult.getAttributeList().stream()
@@ -91,7 +91,7 @@ public class SubPlanCreator {
             xtsRootDir,
             xtsType,
             subPlanName.orElse(null),
-            sessionId,
+            sessionIndex,
             resultTypes,
             startTimeMillis == null ? 0L : startTimeMillis);
 
@@ -140,7 +140,7 @@ public class SubPlanCreator {
       Path xtsRootDir,
       String xtsType,
       @Nullable String subPlanName,
-      int sessionId,
+      int sessionIndex,
       ImmutableSet<String> resultTypes,
       long prevSessionStartTime)
       throws MobileHarnessException {
@@ -151,7 +151,7 @@ public class SubPlanCreator {
 
     Path newSubPlanFile =
         subPlansDir.resolve(
-            getSubPlanName(subPlanName, sessionId, resultTypes, prevSessionStartTime) + XML_EXT);
+            getSubPlanName(subPlanName, sessionIndex, resultTypes, prevSessionStartTime) + XML_EXT);
     if (localFileUtil.isFileExist(newSubPlanFile)) {
       throw new MobileHarnessException(
           ExtErrorId.SUBPLAN_CREATOR_SUBPLAN_FILE_ALREADY_EXISTED,
@@ -162,20 +162,20 @@ public class SubPlanCreator {
 
   private String getSubPlanName(
       @Nullable String subPlanName,
-      int sessionId,
+      int sessionIndex,
       ImmutableSet<String> resultTypes,
       long prevSessionStartTime) {
     return subPlanName == null
-        ? createSubPlanName(sessionId, resultTypes, prevSessionStartTime)
+        ? createSubPlanName(sessionIndex, resultTypes, prevSessionStartTime)
         : subPlanName;
   }
 
   private String createSubPlanName(
-      int sessionId, ImmutableSet<String> resultTypes, long prevSessionStartTime) {
+      int sessionIndex, ImmutableSet<String> resultTypes, long prevSessionStartTime) {
     StringBuilder sb = new StringBuilder();
     Joiner.on("_").appendTo(sb, resultTypes);
     sb.append("_");
-    sb.append(sessionId);
+    sb.append(sessionIndex);
     sb.append("_");
 
     // use unique start time for name

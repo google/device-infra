@@ -789,9 +789,9 @@ public class XtsTradefedTest extends BaseDriver
     if (isRunRetry
         && localFileUtil.isDirExist(sourceXtsBundledResultsDir)
         && !isRunRetryWithSubPlan(spec)) {
-      // For "run retry", TF looks for the corresponding previous result dir per given session id.
-      // So it needs to "copy" previous result dirs and their content so TF can locate the needed
-      // files to start the retry.
+      // For "run retry", TF looks for the corresponding previous result dir per given session
+      // index. So it needs to "copy" previous result dirs and their content so TF can locate the
+      // needed files to start the retry.
       Path resultsDirInTmpXtsWorkDir = getXtsResultsDir(tmpXtsWorkDir, xtsType);
       localFileUtil.prepareDir(resultsDirInTmpXtsWorkDir);
       localFileUtil.grantFileOrDirFullAccess(resultsDirInTmpXtsWorkDir);

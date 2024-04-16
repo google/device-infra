@@ -54,7 +54,7 @@ public abstract class SessionRequestInfo {
 
   public abstract ImmutableList<String> excludeFilters();
 
-  public abstract OptionalInt retrySessionId();
+  public abstract OptionalInt retrySessionIndex();
 
   public abstract Optional<RetryType> retryType();
 
@@ -126,7 +126,7 @@ public abstract class SessionRequestInfo {
 
     public abstract Builder setExcludeFilters(List<String> excludeFilters);
 
-    public abstract Builder setRetrySessionId(int retrySessionId);
+    public abstract Builder setRetrySessionIndex(int retrySessionIndex);
 
     public abstract Builder setRetryType(RetryType retryType);
 

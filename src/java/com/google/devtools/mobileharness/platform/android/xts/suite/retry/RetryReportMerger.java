@@ -67,20 +67,21 @@ public class RetryReportMerger {
    *
    * @param resultsDir the path to the "results" directory which stores the results for the previous
    *     sessions
-   * @param previousSessionId id of the previous session being retried
+   * @param previousSessionIndex index of the previous session being retried
    * @param retryType test statuses for retry
    * @param retryResult the result report for the "retry" run
    */
   public Result mergeReports(
       Path resultsDir,
-      int previousSessionId,
+      int previousSessionIndex,
       @Nullable RetryType retryType,
       @Nullable Result retryResult)
       throws MobileHarnessException {
     // Loads the previous session result and its subplan used for the retry
-    Result previousResult = previousResultLoader.loadPreviousResult(resultsDir, previousSessionId);
+    Result previousResult =
+        previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex);
     RetryArgs.Builder retryArgs =
-        RetryArgs.builder().setResultsDir(resultsDir).setPreviousSessionId(previousSessionId);
+        RetryArgs.builder().setResultsDir(resultsDir).setPreviousSessionIndex(previousSessionIndex);
     if (retryType != null) {
       retryArgs.setRetryType(retryType);
     }
