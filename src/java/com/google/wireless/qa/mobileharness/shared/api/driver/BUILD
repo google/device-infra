@@ -161,6 +161,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_parser",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_recorder",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",

@@ -34,6 +34,7 @@ import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
@@ -209,10 +210,13 @@ public class XtsTradefedTest extends BaseDriver
               .resultWithCause()
               .setNonPassing(
                   TestResult.FAIL,
-                  new MobileHarnessException(
+                  MobileHarnessExceptionFactory.create(
                       BasicErrorId.TEST_RESULT_FAILED_IN_TEST_XML,
                       "There's no test run or exists failure test cases. Please refer to the log"
-                          + " files under results directory for more details."));
+                          + " files under results directory for more details.",
+                      /* cause= */ null,
+                      /* addErrorIdToMessage= */ false,
+                      /* clearStackTrace= */ true));
         }
       }
     } finally {
@@ -329,20 +333,24 @@ public class XtsTradefedTest extends BaseDriver
           .resultWithCause()
           .setNonPassing(
               TestResult.ERROR,
-              new MobileHarnessException(
+              MobileHarnessExceptionFactory.create(
                   AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
                   "Failed to run the xTS command: " + e.getMessage(),
-                  e));
+                  e,
+                  /* addErrorIdToMessage= */ false,
+                  /* clearStackTrace= */ true));
       return false;
     } catch (CommandTimeoutException e) {
       testInfo
           .resultWithCause()
           .setNonPassing(
               TestResult.TIMEOUT,
-              new MobileHarnessException(
+              MobileHarnessExceptionFactory.create(
                   AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_TIMEOUT,
                   "xTS run command timed out.",
-                  e));
+                  e,
+                  /* addErrorIdToMessage= */ false,
+                  /* clearStackTrace= */ true));
       return false;
     } catch (InterruptedException e) {
       testInfo.log().atWarning().alsoTo(logger).withCause(e).log("xTS Tradefed was interrupted.");
