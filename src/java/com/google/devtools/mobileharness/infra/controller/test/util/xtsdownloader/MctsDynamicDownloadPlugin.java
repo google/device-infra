@@ -28,7 +28,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.io.ByteStreams;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent;
+import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
+import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
@@ -37,7 +38,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.protobuf.TextFormat;
-import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
@@ -101,28 +102,25 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   }
 
   @Override
-  public XtsDynamicDownloadInfo parse(TestInfo test, Device device)
+  public XtsDynamicDownloadInfo parse(TestInfo test, String deviceId)
       throws MobileHarnessException, InterruptedException {
-    ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(device);
+    ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
     ListMultimap<String, String> mctsNamesOfPreloadedMainlineModules =
         getMctsNamesOfPreloadedMainlineModules(preloadedMainlineModules);
-    String deviceAbi =
-        DEVICEABI_MAP.get(adbUtil.getProperty(device.getDeviceId(), AndroidProperty.ABI));
+    String deviceAbi = DEVICEABI_MAP.get(adbUtil.getProperty(deviceId, AndroidProperty.ABI));
     if (deviceAbi == null) {
       throw new MobileHarnessException(
           AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_ABI_NOT_SUPPORT,
           String.format(
-              "The ABI of device %s is not compatible with the xts dynamic downloader.",
-              device.getDeviceId()));
+              "The ABI of device %s is not compatible with the xts dynamic downloader.", deviceId));
     }
-    String aospVersion = adbUtil.getProperty(device.getDeviceId(), AndroidProperty.SDK_VERSION);
+    String aospVersion = adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION);
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
     if (!preloadedMainlineModules.isEmpty()) {
       String versioncode =
-          Integer.toString(
-              androidPackageManagerUtil.getAppVersionCode(device.getDeviceId(), MAINLINE_TVP_PKG));
+          Integer.toString(androidPackageManagerUtil.getAppVersionCode(deviceId, MAINLINE_TVP_PKG));
       // if the TVP version is 310000000, that means all the mainline modules were built
       // from source, rather than prebuilt dropped. 310000000 is just the default value in
       // http://ac/vendor/unbundled_google/modules/ModuleMetadataGoogle/Primary_AndroidManifest.xml
@@ -171,20 +169,25 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   }
 
   @Subscribe
-  void onDriverStarting(LocalDriverStartingEvent event)
-      throws MobileHarnessException, InterruptedException {
-    if (!event.getDriverName().equals("XtsTradefedTest")) {
-      return;
+  void onTestStarting(LocalTestStartingEvent event) throws InterruptedException, SkipTestException {
+    try {
+      XtsDynamicDownloadInfo xtsDynamicDownloadInfo =
+          parse(event.getTest(), event.getDeviceLocator().getSerial());
+      downloadXtsFiles(xtsDynamicDownloadInfo, event.getTest());
+    } catch (MobileHarnessException e) {
+      throw SkipTestException.create(
+          "Failed to get Mainline CTS (MCTS). MCTS is part of full CTS, which is required to be"
+              + " downloaded for testing",
+          DesiredTestResult.ERROR,
+          AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_FILE_NOT_FOUND,
+          e);
     }
-    // TODO: add a check here to block using multi devices from different models.
-    XtsDynamicDownloadInfo xtsDynamicDownloadInfo = parse(event.getTest(), event.getDevice());
-    downloadXtsFiles(xtsDynamicDownloadInfo, event.getTest());
   }
 
-  private ImmutableList<String> getPreloadedMainlineModules(Device device)
+  private ImmutableList<String> getPreloadedMainlineModules(String deviceId)
       throws InterruptedException {
     try {
-      return androidPackageManagerUtil.listModuleInfos(device.getDeviceId()).stream()
+      return androidPackageManagerUtil.listModuleInfos(deviceId).stream()
           .map(ModuleInfo::packageName)
           .collect(toImmutableList());
     } catch (MobileHarnessException e) {

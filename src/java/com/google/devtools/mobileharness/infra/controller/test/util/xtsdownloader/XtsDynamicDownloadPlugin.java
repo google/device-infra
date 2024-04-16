@@ -17,13 +17,12 @@
 package com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 
 /** An interface for xts dynamic downloader built in plugin. */
 public interface XtsDynamicDownloadPlugin {
   /** Parses the device and test info to generate dynamic download file info */
-  XtsDynamicDownloadInfo parse(TestInfo test, Device device)
+  XtsDynamicDownloadInfo parse(TestInfo test, String deviceId)
       throws MobileHarnessException, InterruptedException;
 
   /** Downloads the xts files based on the download url link */

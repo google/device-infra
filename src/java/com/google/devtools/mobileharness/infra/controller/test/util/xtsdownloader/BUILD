@@ -27,7 +27,6 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/proto:xts_dynamic_download_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
 )
@@ -42,7 +41,7 @@ java_library(
         ":xts_dynamic_download_plugin",
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/proto:xts_dynamic_download_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:android_package_manager_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/packagemanager:info",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
@@ -51,7 +50,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_code_findbugs_jsr305",

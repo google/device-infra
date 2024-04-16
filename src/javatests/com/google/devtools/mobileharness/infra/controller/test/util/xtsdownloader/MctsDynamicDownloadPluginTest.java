@@ -28,16 +28,16 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent;
 import com.google.devtools.mobileharness.platform.android.packagemanager.AndroidPackageManagerUtil;
 import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -57,26 +57,25 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class MctsDynamicDownloadPluginTest {
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Mock private LocalDriverStartingEvent mockEvent;
+  @Mock private LocalTestStartingEvent mockEvent;
   @Mock private TestInfo mockTestInfo;
   @Mock private JobInfo mockJobInfo;
   @Mock private AndroidAdbUtil mockAdbUtil;
   @Mock private AndroidPackageManagerUtil mockAndroidPackageManagerUtil;
-  @Mock private Device mockDevice;
   @Mock private Properties testProperties;
+  @Mock private DeviceLocator mockDeviceLocator;
 
   private MctsDynamicDownloadPlugin spyMctsDynamicDownloadPlugin;
   private final LocalFileUtil localFileUtil = new LocalFileUtil();
 
   @Before
   public void setUp() throws MobileHarnessException, InterruptedException {
-    when(mockEvent.getDriverName()).thenReturn("XtsTradefedTest");
     when(mockEvent.getTest()).thenReturn(mockTestInfo);
-    when(mockEvent.getDevice()).thenReturn(mockDevice);
+    when(mockEvent.getDeviceLocator()).thenReturn(mockDeviceLocator);
+    when(mockDeviceLocator.getSerial()).thenReturn("device_id");
     when(mockTestInfo.jobInfo()).thenReturn(mockJobInfo);
     when(mockTestInfo.getTmpFileDir()).thenReturn("/tmp");
     when(mockTestInfo.properties()).thenReturn(testProperties);
-    when(mockDevice.getDeviceId()).thenReturn("device_id");
     when(mockAndroidPackageManagerUtil.getAppVersionCode(
             any(), eq("com.google.android.modulemetadata")))
         .thenReturn(341050004);
@@ -215,7 +214,7 @@ public final class MctsDynamicDownloadPluginTest {
     generateTestZipFile("android-mcts-healthfitness", "healthfitness.txt", "/tmp");
     generateTestZipFile("android-mcts-rkpd", "rkpd.txt", "/tmp");
 
-    spyMctsDynamicDownloadPlugin.onDriverStarting(mockEvent);
+    spyMctsDynamicDownloadPlugin.onTestStarting(mockEvent);
 
     verifyDownloadAndUnzipFile();
   }

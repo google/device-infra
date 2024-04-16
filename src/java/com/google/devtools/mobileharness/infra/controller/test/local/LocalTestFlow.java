@@ -151,7 +151,11 @@ public class LocalTestFlow {
 
     ImmutableList<Object> builtinPlugins = builtinPluginsBuilder.build();
     for (Object plugin : builtinPlugins) {
-      testRunner.registerTestEventSubscriber(plugin, EventScope.CLASS_INTERNAL);
+      testRunner.registerTestEventSubscriber(
+          plugin,
+          plugin instanceof MctsDynamicDownloadPlugin
+              ? EventScope.INTERNAL_PLUGIN
+              : EventScope.CLASS_INTERNAL);
       testRunner.registerTestEventSubscriber(plugin, EventScope.TEST_MESSAGE);
     }
     return builtinPlugins.stream()
