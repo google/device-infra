@@ -140,6 +140,9 @@ public class SessionRequestHandlerUtil {
           "mobly_run_result_attributes.textproto",
           "ats_module_run_result.textproto");
 
+  private static final ImmutableSet<String> TF_TEST_RESULT_FILE_NAMES_IN_ZIP =
+      ImmutableSet.of("invocation_summary.txt");
+
   private final DeviceQuerier deviceQuerier;
   private final LocalFileUtil localFileUtil;
   private final ConfigurationUtil configurationUtil;
@@ -1062,7 +1065,8 @@ public class SessionRequestHandlerUtil {
    * Processes the results of the given jobs.
    *
    * <p>The results are merged and saved to the given result directory. The logs are saved to the
-   * given log directory.
+   * given log directory. Also the content of {@code resultDir} will be zipped so ensure only needed
+   * files are put under {@code resultDir} before the zipping.
    *
    * @param resultDir the directory to save the merged result
    * @param logDir the directory to save the logs
@@ -1088,6 +1092,8 @@ public class SessionRequestHandlerUtil {
                     Function.identity(),
                     jobInfo -> jobInfo.tests().getAll().values().stream().findFirst()));
     Path tradefedTestResultsDir = resultDir.resolve("tradefed_results");
+    Path tmpTradefedTestResultsDir =
+        Path.of(localFileUtil.createTempDir(Flags.instance().tmpDirRoot.getNonNull()));
     Path nonTradefedTestResultsDir = resultDir.resolve("non-tradefed_results");
     Path tradefedTestLogsDir = logDir.resolve("tradefed_logs");
     Path nonTradefedTestLogsDir = logDir.resolve("non-tradefed_logs");
@@ -1112,7 +1118,7 @@ public class SessionRequestHandlerUtil {
 
       copyTradefedTestLogFiles(test, tradefedTestLogsDir);
       Optional<Path> tradefedTestResultXmlFile =
-          copyTradefedTestResultFiles(test, tradefedTestResultsDir);
+          copyTradefedTestResultFiles(test, tmpTradefedTestResultsDir, tradefedTestResultsDir);
       tradefedTestResultXmlFile.ifPresent(tradefedTestResultXmlFiles::add);
     }
 
@@ -1208,6 +1214,24 @@ public class SessionRequestHandlerUtil {
     } else {
       logger.atWarning().log("Failed to merge reports.");
     }
+
+    // It doesn't copy the TF raw result files before creating the result zip file, to make the
+    // result zip file smaller. It copies those TF raw result files to result directory after
+    // the zipping.
+    try {
+      localFileUtil.removeFileOrDir(tradefedTestResultsDir);
+      localFileUtil.prepareDir(tradefedTestResultsDir);
+      List<Path> resultFilesOrDirs =
+          localFileUtil.listFilesOrDirs(tmpTradefedTestResultsDir, path -> true);
+      for (Path resultFileOrDir : resultFilesOrDirs) {
+        localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+            resultFileOrDir, tradefedTestResultsDir, ImmutableList.of("-rf"));
+      }
+    } finally {
+      if (localFileUtil.isDirExist(tmpTradefedTestResultsDir)) {
+        localFileUtil.removeFileOrDir(tmpTradefedTestResultsDir);
+      }
+    }
   }
 
   /**
@@ -1272,6 +1296,8 @@ public class SessionRequestHandlerUtil {
    * Copies tradefed test relevant result files to directory {@code resultDir} for the given
    * tradefed test.
    *
+   * <p>Contents in the directory {@code resultDirInZip} will be put in the result zip file.
+   *
    * <p>The destination result files structure looks like:
    *
    * <pre>
@@ -1293,9 +1319,11 @@ public class SessionRequestHandlerUtil {
    * @return the path to the tradefed test result xml file if any
    */
   @CanIgnoreReturnValue
-  private Optional<Path> copyTradefedTestResultFiles(TestInfo tradefedTestInfo, Path resultDir)
+  private Optional<Path> copyTradefedTestResultFiles(
+      TestInfo tradefedTestInfo, Path resultDir, Path resultDirInZip)
       throws MobileHarnessException, InterruptedException {
     Path testResultDir = prepareLogOrResultDirForTest(tradefedTestInfo, resultDir);
+    Path testResultInZipDir = prepareLogOrResultDirForTest(tradefedTestInfo, resultDirInZip);
     ImmutableList<Path> genFiles = getGenFilesFromTest(tradefedTestInfo);
     for (Path genFile : genFiles) {
       if (genFile.getFileName().toString().endsWith("gen-files")) {
@@ -1316,6 +1344,17 @@ public class SessionRequestHandlerUtil {
                     resultFileOrDir, testResultDir);
                 localFileUtil.copyFileOrDirWithOverridingCopyOptions(
                     resultFileOrDir, testResultDir, ImmutableList.of("-rf"));
+              }
+              // Copy the needed TF result files to the result dir being zipped
+              for (Path resultFileOrDir : resultFilesOrDirs) {
+                if (TF_TEST_RESULT_FILE_NAMES_IN_ZIP.contains(
+                    resultFileOrDir.getFileName().toString())) {
+                  logger.atInfo().log(
+                      "Copying tradefed test result relevant file/dir [%s] into dir [%s]",
+                      resultFileOrDir, testResultInZipDir);
+                  localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                      resultFileOrDir, testResultInZipDir, ImmutableList.of("-rf"));
+                }
               }
             }
           }

@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
@@ -24,6 +25,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
@@ -34,6 +36,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotat
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -94,6 +97,16 @@ public final class RunCommandHandlerTest {
   public void setUp() throws Exception {
     sessionGenDir = folder.newFolder("session_gen_dir").toPath();
     sessionTempDir = folder.newFolder("session_temp_dir").toPath();
+
+    // Sets flags.
+    File tmpDir = folder.newFolder("lab_server_tmp_dir");
+    ImmutableMap<String, String> flagMap =
+        ImmutableMap.of("tmp_dir_root", tmpDir.getAbsolutePath());
+    Flags.parse(
+        flagMap.entrySet().stream()
+            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
+            .collect(toImmutableList())
+            .toArray(new String[0]));
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 

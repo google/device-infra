@@ -44,6 +44,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
