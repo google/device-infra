@@ -37,6 +37,8 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLi
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.command.RootCommand;
+import com.google.devtools.mobileharness.infra.ats.console.command.completer.CommandCompleter;
+import com.google.devtools.mobileharness.infra.ats.console.command.completer.CommandCompleterHolder;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
@@ -140,6 +142,7 @@ public class AtsConsole {
   private final ServerPreparer serverPreparer;
   private final ServerLogPrinter serverLogPrinter;
   private final VersionMessageUtil versionMessageUtil;
+  private final CommandCompleter commandCompleter;
 
   /** Set before {@link #run}; */
   @VisibleForTesting public volatile Injector injector;
@@ -158,7 +161,8 @@ public class AtsConsole {
       ConsoleInfo consoleInfo,
       ServerPreparer serverPreparer,
       ServerLogPrinter serverLogPrinter,
-      VersionMessageUtil versionMessageUtil) {
+      VersionMessageUtil versionMessageUtil,
+      CommandCompleter commandCompleter) {
     this.mainArgs = mainArgs;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.lineReader = lineReader;
@@ -172,9 +176,14 @@ public class AtsConsole {
     this.serverPreparer = serverPreparer;
     this.serverLogPrinter = serverLogPrinter;
     this.versionMessageUtil = versionMessageUtil;
+    this.commandCompleter = commandCompleter;
   }
 
   public void run() throws MobileHarnessException, InterruptedException {
+    // Starts getting test plans.
+    CommandCompleterHolder.getInstance().initialize(commandCompleter);
+    commandCompleter.startGettingTestPlans();
+
     // Prints notice message.
     consoleUtil.printlnStdout(NoticeMessageUtil.getNoticeMessage());
 
@@ -280,6 +289,7 @@ public class AtsConsole {
         .appName("AtsConsole")
         .terminal(TerminalBuilder.builder().system(true).dumb(true).build())
         .history(new DefaultHistory())
+        .completer(CommandCompleterHolder.getInstance())
         .build();
   }
 

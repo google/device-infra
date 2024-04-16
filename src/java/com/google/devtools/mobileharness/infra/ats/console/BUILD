@@ -52,6 +52,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/completer:command_completer",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command/completer:command_completer_holder",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/constant:dirs",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:server_log_printer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
