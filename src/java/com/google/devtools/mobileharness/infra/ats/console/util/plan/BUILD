@@ -18,11 +18,14 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "plan_lister",
     srcs = ["PlanLister.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
+    ],
     deps = [
         ":plan_config_util",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
@@ -31,7 +34,10 @@ java_library(
 java_library(
     name = "plan_config_util",
     srcs = ["PlanConfigUtil.java"],
-    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util/plan:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util/plan:__pkg__",
+    ],
     deps = [
         ":jar_file_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

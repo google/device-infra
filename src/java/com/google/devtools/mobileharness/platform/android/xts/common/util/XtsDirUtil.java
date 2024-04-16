@@ -16,7 +16,8 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.common.util;
 
-import com.google.common.base.Ascii;
+import static com.google.common.base.Ascii.toLowerCase;
+
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
@@ -32,19 +33,39 @@ public class XtsDirUtil {
         .format(new Timestamp(time.toEpochMilli()));
   }
 
-  /** Gets the "logs" directory for the given {@code xtsType}. */
+  /** Gets the JDK directory for the given {@code xtsType}. */
+  public static Path getXtsJdkDir(Path xtsRootDir, String xtsType) {
+    return xtsRootDir.resolve(String.format("android-%s/jdk", toLowerCase(xtsType)));
+  }
+
+  /** Gets the lib directory for the given {@code xtsType}. */
+  public static Path getXtsLibDir(Path xtsRootDir, String xtsType) {
+    return xtsRootDir.resolve(String.format("android-%s/lib", toLowerCase(xtsType)));
+  }
+
+  /** Gets the logs directory for the given {@code xtsType}. */
   public static Path getXtsLogsDir(Path xtsRootDir, String xtsType) {
-    return xtsRootDir.resolve(String.format("android-%s/logs", Ascii.toLowerCase(xtsType)));
+    return xtsRootDir.resolve(String.format("android-%s/logs", toLowerCase(xtsType)));
   }
 
   /** Gets the "results" directory for the given {@code xtsType}. */
   public static Path getXtsResultsDir(Path xtsRootDir, String xtsType) {
-    return xtsRootDir.resolve(String.format("android-%s/results", Ascii.toLowerCase(xtsType)));
+    return xtsRootDir.resolve(String.format("android-%s/results", toLowerCase(xtsType)));
   }
 
   /** Gets the subplans directory for the given {@code xtsType}. */
   public static Path getXtsSubPlansDir(Path xtsRootDir, String xtsType) {
-    return xtsRootDir.resolve(String.format("android-%s/subplans", Ascii.toLowerCase(xtsType)));
+    return xtsRootDir.resolve(String.format("android-%s/subplans", toLowerCase(xtsType)));
+  }
+
+  /** Gets the test cases directory for the given {@code xtsType}. */
+  public static Path getXtsTestCasesDir(Path xtsRootDir, String xtsType) {
+    return xtsRootDir.resolve(String.format("android-%s/testcases", xtsType));
+  }
+
+  /** Gets the tools directory for the given {@code xtsType}. */
+  public static Path getXtsToolsDir(Path xtsRootDir, String xtsType) {
+    return xtsRootDir.resolve(String.format("android-%s/tools", toLowerCase(xtsType)));
   }
 
   private XtsDirUtil() {}

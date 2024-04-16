@@ -26,9 +26,10 @@ import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -50,11 +51,8 @@ public class ResultLister {
 
   public String listResults(String xtsType) throws MobileHarnessException {
     // Lists all result dirs.
-    String rootDir =
-        consoleInfo
-            .getXtsRootDirectory()
-            .orElseThrow(() -> new IllegalStateException("XTS root directory not set"));
-    String resultsDir = PathUtil.join(rootDir, String.format("android-%s", xtsType), "results");
+    String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
+    String resultsDir = XtsDirUtil.getXtsResultsDir(Path.of(xtsRootDir), xtsType).toString();
     Map<Result, File> results = resultListerHelper.listResults(resultsDir);
 
     if (results.isEmpty()) {

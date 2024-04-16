@@ -18,14 +18,13 @@ package com.google.devtools.mobileharness.infra.ats.console.util.plan;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanConfigUtil.PlanConfigInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
-import java.util.Map;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -54,9 +53,8 @@ public final class PlanConfigUtilTest {
   }
 
   @Test
-  public void loadAllConfigs_success() throws Exception {
-    Map<String, PlanConfigInfo> configInfo =
-        planConfigUtil.loadAllConfigs(testJarDir, /* ignoreException= */ true);
+  public void loadAllConfigs_success() {
+    ImmutableMap<String, PlanConfigInfo> configInfo = planConfigUtil.loadAllConfigs(testJarDir);
 
     assertThat(configInfo)
         .containsExactly(
@@ -81,7 +79,7 @@ public final class PlanConfigUtilTest {
     testJarDir = temporaryFolder.newFolder("temp_jar").toPath();
 
     List<Path> testJars =
-        realLocalFileUtil.listFilePaths(Paths.get(TEST_JAR_DIR), /* recursively= */ false);
+        realLocalFileUtil.listFilePaths(Path.of(TEST_JAR_DIR), /* recursively= */ false);
     for (Path testJar : testJars) {
       realLocalFileUtil.copyFileOrDir(
           testJar, testJarDir.resolve(testJar.getFileName().toString().replace("_jar", ".jar")));

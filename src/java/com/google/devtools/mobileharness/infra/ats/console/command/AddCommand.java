@@ -99,7 +99,7 @@ class AddCommand implements Callable<Integer> {
               split = "\\s*,\\s*")
           List<ResultType> resultTypes)
       throws MobileHarnessException {
-    String xtsRootDirectory = consoleInfo.getXtsRootDirectory().orElse("");
+    String xtsRootDirectory = consoleInfo.getXtsRootDirectoryNonEmpty();
     String xtsType = commandHelper.getXtsType(xtsRootDirectory);
 
     AddSubPlanArgs.Builder addSubPlanArgsBuilder =

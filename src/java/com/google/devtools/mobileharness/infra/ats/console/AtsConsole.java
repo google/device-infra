@@ -180,10 +180,6 @@ public class AtsConsole {
   }
 
   public void run() throws MobileHarnessException, InterruptedException {
-    // Starts getting test plans.
-    CommandCompleterHolder.getInstance().initialize(commandCompleter);
-    commandCompleter.startGettingTestPlans();
-
     // Prints notice message.
     consoleUtil.printlnStdout(NoticeMessageUtil.getNoticeMessage());
 
@@ -200,6 +196,10 @@ public class AtsConsole {
     if (!deviceInfraServiceFlags.isEmpty()) {
       consoleUtil.printlnStderr("Flags: %s", deviceInfraServiceFlags);
     }
+
+    // Starts listing test plans.
+    CommandCompleterHolder.getInstance().initialize(commandCompleter);
+    commandCompleter.startListingTestPlans();
 
     // Prepares OLC server.
     if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {

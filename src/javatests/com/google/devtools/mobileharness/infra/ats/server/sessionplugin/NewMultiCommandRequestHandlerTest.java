@@ -317,14 +317,11 @@ public final class NewMultiCommandRequestHandlerTest {
     newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
     String commandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-    String outputPath = "/path/to/output/session_id/" + commandId;
+    Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
     verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
     verify(sessionRequestHandlerUtil)
         .processResult(
-            Path.of(outputPath),
-            Path.of(outputPath),
-            ImmutableList.of(jobInfo),
-            sessionRequestInfoCaptor.getValue());
+            outputPath, outputPath, ImmutableList.of(jobInfo), sessionRequestInfoCaptor.getValue());
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
   }
@@ -559,7 +556,7 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
-  public void addNonTradefedJob_invalidRequest_returnEmptyCommandist() throws Exception {
+  public void addNonTradefedJob_invalidRequest_returnEmptyCommandList() throws Exception {
     when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any()))
         .thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
@@ -589,7 +586,7 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
-  public void addNonTradefedJob_createdZeroJobInfo_returnEmptyCommandist() throws Exception {
+  public void addNonTradefedJob_createdZeroJobInfo_returnEmptyCommandList() throws Exception {
 
     when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
@@ -603,7 +600,7 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
-  public void addNonTradefedJob_cannotCreateNonTradefedJobs_returnEmptyCommandist()
+  public void addNonTradefedJob_cannotCreateNonTradefedJobs_returnEmptyCommandList()
       throws Exception {
 
     when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());

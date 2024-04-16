@@ -16,7 +16,11 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static java.util.Map.Entry.comparingByKey;
+import static java.util.stream.Collectors.joining;
+
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
@@ -30,11 +34,13 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.AtsSessionPluginConfigOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
+import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanConfigUtil.PlanConfigInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanLister;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultLister;
 import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters;
+import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -161,7 +167,7 @@ class ListCommand implements Callable<Integer> {
           ModuleParameters moduleParameter)
       throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
-    String xtsRootDir = consoleInfo.getXtsRootDirectory().orElse("");
+    String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
 
     ListModulesCommand.Builder listModulesCommandBuilder =
         ListModulesCommand.newBuilder()
@@ -187,7 +193,7 @@ class ListCommand implements Callable<Integer> {
       aliases = {"p", "configs"},
       description = "List all plans/configs available")
   public int plans() throws MobileHarnessException {
-    consoleUtil.printlnStdout(planLister.listPlans());
+    consoleUtil.printlnStdout(formatPlans(planLister.listPlans()));
     return ExitCode.OK;
   }
 
@@ -198,7 +204,7 @@ class ListCommand implements Callable<Integer> {
   public int results() throws MobileHarnessException {
     consoleUtil.printlnStdout(
         resultLister.listResults(
-            commandHelper.getXtsType(consoleInfo.getXtsRootDirectory().orElse(""))));
+            commandHelper.getXtsType(consoleInfo.getXtsRootDirectoryNonEmpty())));
     return ExitCode.OK;
   }
 
@@ -207,7 +213,7 @@ class ListCommand implements Callable<Integer> {
       aliases = {"s"},
       description = "List all available subplans")
   public int subplans() throws MobileHarnessException {
-    String xtsRootDir = consoleInfo.getXtsRootDirectory().orElse("");
+    String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     ImmutableList<String> subPlanFileNames =
         subPlanLister.listSubPlans(xtsRootDir, commandHelper.getXtsType(xtsRootDir));
 
@@ -218,5 +224,16 @@ class ListCommand implements Callable<Integer> {
 
     subPlanFileNames.forEach(consoleUtil::printlnStdout);
     return ExitCode.OK;
+  }
+
+  private String formatPlans(ImmutableMap<String, PlanConfigInfo> planConfigInfosByConfigName) {
+    return planConfigInfosByConfigName.entrySet().stream()
+        .sorted(comparingByKey())
+        .map(Entry::getValue)
+        .map(
+            planConfigInfo ->
+                String.format(
+                    "\n  %s: %s", planConfigInfo.configName(), planConfigInfo.description()))
+        .collect(joining("", "Available plans include:", ""));
   }
 }

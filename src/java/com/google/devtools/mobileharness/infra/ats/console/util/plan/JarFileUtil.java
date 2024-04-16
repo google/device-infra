@@ -36,7 +36,7 @@ public class JarFileUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** A filter for entry paths in a JAR file. */
-  public static interface EntryFilter {
+  public interface EntryFilter {
     /**
      * Tests whether or not the specified abstract pathname should be included in a entry list.
      *
@@ -60,7 +60,7 @@ public class JarFileUtil {
    * Gets the names of all entries contained in the given jar files, that match the given {@code
    * filter}.
    */
-  public Map<String, Path> getEntriesFromJars(List<Path> jars, EntryFilter filter) {
+  public ImmutableMap<String, Path> getEntriesFromJars(List<Path> jars, EntryFilter filter) {
     Map<String, Path> entryNames = new HashMap<>();
     for (Path jar : jars) {
       try {
@@ -79,20 +79,20 @@ public class JarFileUtil {
    */
   private ImmutableMap<String, Path> getEntriesFromJar(Path jar, EntryFilter filter)
       throws IOException {
-    JarFile jarFile = new JarFile(jar.toFile());
-    ImmutableMap.Builder<String, Path> entryNames = ImmutableMap.builder();
-    for (Enumeration<? extends ZipEntry> e = jarFile.entries(); e.hasMoreElements(); ) {
-      String entryName = e.nextElement().getName();
-      if (filter.accept(entryName)) {
-        entryNames.put(filter.transform(entryName), jar);
+    try (JarFile jarFile = new JarFile(jar.toFile())) {
+      ImmutableMap.Builder<String, Path> entryNames = ImmutableMap.builder();
+      for (Enumeration<? extends ZipEntry> e = jarFile.entries(); e.hasMoreElements(); ) {
+        String entryName = e.nextElement().getName();
+        if (filter.accept(entryName)) {
+          entryNames.put(filter.transform(entryName), jar);
+        }
       }
-      entryName = null;
+      return entryNames.buildOrThrow();
     }
-    jarFile.close();
-    return entryNames.buildOrThrow();
   }
 
   /** Gets the zip entry input stream from the {@code jar} file. */
+  @SuppressWarnings("resource")
   public Optional<InputStream> getZipEntryInputStream(Path jar, String entryName) {
     JarFile jarFile;
     try {

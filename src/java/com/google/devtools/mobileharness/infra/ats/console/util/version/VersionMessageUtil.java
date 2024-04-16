@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.version;
 
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteInfo;
@@ -48,7 +47,7 @@ public class VersionMessageUtil {
    * OmniLab lab-4.268.0 github-fece030c657cddecc2cf7a122aa1fc4976dfed9c
    * }</pre>
    */
-  public String getVersionMessage() throws MobileHarnessException {
+  public String getVersionMessage() {
     String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     String xtsType = commandHelper.getXtsType(xtsRootDir);
     TestSuiteInfo testSuiteInfo = TestSuiteInfo.getInstance(xtsRootDir, xtsType);

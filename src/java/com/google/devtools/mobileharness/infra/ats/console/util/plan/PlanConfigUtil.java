@@ -50,8 +50,7 @@ public class PlanConfigUtil {
 
     /** Creates a {@link PlanConfigInfo}. */
     public static PlanConfigInfo of(String configName, Path source, String description) {
-      return new com.google.devtools.mobileharness.infra.ats.console.util.plan
-          .AutoValue_PlanConfigUtil_PlanConfigInfo(configName, source, description);
+      return new AutoValue_PlanConfigUtil_PlanConfigInfo(configName, source, description);
     }
 
     /** The name for the plan config. */
@@ -114,19 +113,17 @@ public class PlanConfigUtil {
   /**
    * Loads all plan configs from the JAR files in {@code dir}.
    *
-   * @param ignoreException true if any MobileHarnessException should be ignored.
+   * @return all plan configs or empty if some error occurs
    */
-  public Map<String, PlanConfigInfo> loadAllConfigs(Path dir, boolean ignoreException)
-      throws MobileHarnessException {
+  public ImmutableMap<String, PlanConfigInfo> loadAllConfigs(Path dir) {
     ImmutableMap.Builder<String, PlanConfigInfo> configNameToPlanConfigInfo =
         ImmutableMap.builder();
-
     try {
       List<Path> jars =
           localFileUtil.listFilePaths(
               dir, /* recursively= */ false, p -> p.getFileName().toString().endsWith(".jar"));
 
-      Map<String, Path> configNameToJar = getConfigsFromJars(jars, /* subPath= */ null);
+      ImmutableMap<String, Path> configNameToJar = getConfigsFromJars(jars, /* subPath= */ null);
       for (Map.Entry<String, Path> entry : configNameToJar.entrySet()) {
         String configName = entry.getKey();
         Path jarPath = entry.getValue();
@@ -137,14 +134,10 @@ public class PlanConfigUtil {
         configNameToPlanConfigInfo.put(configName, planConfigInfo.get());
       }
     } catch (MobileHarnessException e) {
-      if (!ignoreException) {
-        throw e;
-      }
-      logger.atInfo().log(
+      logger.atWarning().log(
           "Failed to load plan configs from JAR files in dir %s: %s",
           dir, MoreThrowables.shortDebugString(e));
     }
-
     return configNameToPlanConfigInfo.buildOrThrow();
   }
 
@@ -175,7 +168,9 @@ public class PlanConfigUtil {
     return Optional.of(PlanConfigInfo.of(configName, jar, configDescription));
   }
 
-  private Map<String, Path> getConfigsFromJars(List<Path> jarFiles, @Nullable String subPath) {
+  @SuppressWarnings("SameParameterValue")
+  private ImmutableMap<String, Path> getConfigsFromJars(
+      List<Path> jarFiles, @Nullable String subPath) {
     return jarFileUtil.getEntriesFromJars(jarFiles, new ConfigInJarFilter(subPath));
   }
 

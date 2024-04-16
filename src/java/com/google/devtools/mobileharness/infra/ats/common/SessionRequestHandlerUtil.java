@@ -314,7 +314,7 @@ public class SessionRequestHandlerUtil {
     String xtsType = sessionRequestInfo.xtsType();
     ImmutableMap<String, Configuration> configsMap =
         configurationUtil.getConfigsFromDirs(
-            ImmutableList.of(getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
+            ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
 
     ImmutableList<String> modules = sessionRequestInfo.moduleNames();
     ImmutableSet<String> allTfModules =
@@ -561,7 +561,7 @@ public class SessionRequestHandlerUtil {
   private Path prepareRunRetryTfSubPlanXmlFile(
       String xtsRootDir, String xtsType, int previousSessionIndex, SubPlan subPlan)
       throws MobileHarnessException {
-    Path xtsSubPlansDir = getXtsSubPlansDir(Path.of(xtsRootDir), xtsType);
+    Path xtsSubPlansDir = XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), xtsType);
     localFileUtil.prepareDir(xtsSubPlansDir);
     Path subPlanPath =
         xtsSubPlansDir.resolve(
@@ -600,7 +600,7 @@ public class SessionRequestHandlerUtil {
     String xtsType = sessionRequestInfo.xtsType();
     ImmutableMap<String, Configuration> configsMap =
         configurationUtil.getConfigsV2FromDirs(
-            ImmutableList.of(getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
+            ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
     updatedSessionRequestInfo.setV2ConfigsMap(configsMap);
 
     // Gets expanded modules with abi and module parameters (if any).
@@ -861,7 +861,7 @@ public class SessionRequestHandlerUtil {
     ImmutableList<File> fileDepDirs =
         ImmutableList.of(
             moduleConfigPath.getParent().toFile(),
-            getXtsTestCasesDir(xtsRootDir, xtsType).toFile());
+            XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile());
 
     JobInfo jobInfo = jobInfoOpt.get();
     moduleConfigurationHelper.updateJobInfo(jobInfo, moduleConfig, fileDepDirs);
@@ -968,18 +968,6 @@ public class SessionRequestHandlerUtil {
     return URLEncoder.encode(jobName, UTF_8);
   }
 
-  private Path getXtsTestCasesDir(Path xtsRootDir, String xtsType) {
-    return xtsRootDir.resolve(String.format("android-%s/testcases", xtsType));
-  }
-
-  private Path getXtsResultsDir(Path xtsRootDir, String xtsType) {
-    return xtsRootDir.resolve(String.format("android-%s/results", xtsType));
-  }
-
-  private Path getXtsSubPlansDir(Path xtsRootDir, String xtsType) {
-    return xtsRootDir.resolve(String.format("android-%s/subplans", xtsType));
-  }
-
   @VisibleForTesting
   TestSuiteHelper getTestSuiteHelper(
       String xtsRootDir, String xtsType, SessionRequestInfo sessionRequestInfo) {
@@ -1041,7 +1029,7 @@ public class SessionRequestHandlerUtil {
     Path xtsRootDirPath = Path.of(xtsRootDir);
     RetryArgs.Builder retryArgs =
         RetryArgs.builder()
-            .setResultsDir(getXtsResultsDir(xtsRootDirPath, xtsType))
+            .setResultsDir(XtsDirUtil.getXtsResultsDir(xtsRootDirPath, xtsType))
             .setPreviousSessionIndex(previousSessionIndex);
     if (retryType != null) {
       retryArgs.setRetryType(retryType);
@@ -1205,7 +1193,7 @@ public class SessionRequestHandlerUtil {
                           "Missing session index for retry"));
       Result finalReport =
           retryReportMerger.mergeReports(
-              getXtsResultsDir(
+              XtsDirUtil.getXtsResultsDir(
                   Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
               previousSessionIndex,
               sessionRequestInfo.retryType().orElse(null),
@@ -1664,7 +1652,7 @@ public class SessionRequestHandlerUtil {
     for (JobInfo jobInfo : jobInfos) {
       // Tradefed Jobs.
       if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_TF_JOB_PROP)) {
-        for (TestInfo testInfo : jobInfo.getAllTests().values()) {
+        for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
           if (!testInfo.properties().has(XtsTradefedTest.TRADEFED_JOBS_PASSED)) {
             return false;
           }
@@ -1672,7 +1660,7 @@ public class SessionRequestHandlerUtil {
       }
       // Non Tradefed Jobs.
       if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_NON_TF_JOB_PROP)) {
-        for (TestInfo testInfo : jobInfo.getAllTests().values()) {
+        for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
           if (!testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_JOBS_PASSED)) {
             return false;
           }

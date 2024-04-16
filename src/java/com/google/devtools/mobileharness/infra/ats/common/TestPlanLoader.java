@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -46,6 +47,8 @@ public class TestPlanLoader {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final String TEST_PLAN_DIR_IN_JAR = "config";
+
   private static final String CONFIGURATION_NODE_NAME = "configuration";
   private static final String OPTION_NODE_NAME = "option";
   private static final String INCLUDE_NODE_NAME = "include";
@@ -63,15 +66,21 @@ public class TestPlanLoader {
       return TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
     }
 
-    JarFile xtsTradefedJarFile = createXtsTradefedJarFile(xtsRootPath, type);
-    return parseFilters(xtsTradefedJarFile, rootTestPlan);
+    try (JarFile xtsTradefedJarFile = createXtsTradefedJarFile(xtsRootPath, type)) {
+      return parseFilters(xtsTradefedJarFile, rootTestPlan);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_XTS_TEST_PLAN_LOADER_JARFILE_CLOSE_ERROR,
+          String.format("JarFile close failure, xts_root_path=[%s], type=[%s]", xtsRootPath, type),
+          e);
+    }
   }
 
   @VisibleForTesting
   static TestPlanFilter parseFilters(JarFile xtsTradefedJarFile, String rootTestPlan)
       throws MobileHarnessException {
     // Check existence of the root test plan.
-    String testPlanPath = String.format("config/%s.xml", rootTestPlan);
+    String testPlanPath = getTestPlanPathInJar(rootTestPlan);
     JarEntry jarEntry = xtsTradefedJarFile.getJarEntry(testPlanPath);
     if (jarEntry == null) {
       throw new MobileHarnessException(
@@ -120,13 +129,13 @@ public class TestPlanLoader {
         ImmutableSet.copyOf(includeFilters), ImmutableSet.copyOf(excludeFilters));
   }
 
-  private static JarFile createXtsTradefedJarFile(Path xtsRootPath, String type)
+  private static JarFile createXtsTradefedJarFile(Path xtsRootDir, String type)
       throws MobileHarnessException {
     Path xtsTradefedPath =
-        xtsRootPath.resolve(String.format("android-%s/tools/%s-tradefed.jar", type, type));
+        XtsDirUtil.getXtsToolsDir(xtsRootDir, type).resolve(String.format("%s-tradefed.jar", type));
 
     try {
-      return new JarFile(xtsRootPath.resolve(xtsTradefedPath).toString());
+      return new JarFile(xtsRootDir.resolve(xtsTradefedPath).toString());
     } catch (IOException e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_XTS_TEST_PLAN_LOADER_JARFILE_CREATION_ERROR,
@@ -212,7 +221,7 @@ public class TestPlanLoader {
       throws MobileHarnessException {
     logger.atInfo().log("Start to parse the test plan: %s", testPlan);
 
-    String testPlanPath = String.format("config/%s.xml", testPlan);
+    String testPlanPath = getTestPlanPathInJar(testPlan);
     JarEntry jarEntry = xtsTradefedJarFile.getJarEntry(testPlanPath);
     if (jarEntry == null) {
       logger.atWarning().log(
@@ -232,6 +241,10 @@ public class TestPlanLoader {
           String.format("Failed to read test plan, test_plan=%s, path=%s", testPlan, testPlanPath),
           e);
     }
+  }
+
+  private static String getTestPlanPathInJar(String testPlan) {
+    return String.format("%s/%s.xml", TEST_PLAN_DIR_IN_JAR, testPlan);
   }
 
   private TestPlanLoader() {}

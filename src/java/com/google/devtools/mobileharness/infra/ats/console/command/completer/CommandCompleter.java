@@ -25,8 +25,11 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.Callables
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanConfigUtil.PlanConfigInfo;
+import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanLister;
 import java.util.List;
 import java.util.logging.Level;
 import javax.inject.Inject;
@@ -40,22 +43,24 @@ import org.jline.reader.ParsedLine;
 public class CommandCompleter {
 
   private final ListeningExecutorService threadPool;
+  private final PlanLister planLister;
 
-  private final SettableFuture<ImmutableList<Candidate>> getTestPlansFuture =
+  private final SettableFuture<ImmutableList<Candidate>> listTestPlansFuture =
       SettableFuture.create();
 
   @Inject
-  CommandCompleter(ListeningExecutorService threadPool) {
+  CommandCompleter(ListeningExecutorService threadPool, PlanLister planLister) {
     this.threadPool = threadPool;
+    this.planLister = planLister;
   }
 
-  public void startGettingTestPlans() {
-    getTestPlansFuture.setFuture(
+  public void startListingTestPlans() {
+    listTestPlansFuture.setFuture(
         catching(
             logFailure(
-                threadPool.submit(threadRenaming(this::getTestPlans, () -> "test-plans-fetcher")),
+                threadPool.submit(threadRenaming(this::listTestPlans, () -> "test-plans-lister")),
                 Level.WARNING,
-                "Fatal error when getting test plans"),
+                "Fatal error when listing test plans"),
             Throwable.class,
             error -> ImmutableList.of(),
             directExecutor()));
@@ -69,17 +74,15 @@ public class CommandCompleter {
       return ImmutableList.of(new Candidate("run"));
     } else if (words.size() > 1
         && equalsIgnoreCase(words.get(0), "run")
-        && getTestPlansFuture.isDone()) {
+        && listTestPlansFuture.isDone()) {
       // Inputting the following words of "run":
-      return getUnchecked(getTestPlansFuture);
+      return getUnchecked(listTestPlansFuture);
     }
     return ImmutableList.of();
   }
 
-  private ImmutableList<Candidate> getTestPlans() {
-    // TODO: Loads full test plan list.
-    return ImmutableList.of("cts", "cts-camera", "empty").stream()
-        .map(Candidate::new)
-        .collect(toImmutableList());
+  private ImmutableList<Candidate> listTestPlans() {
+    ImmutableMap<String, PlanConfigInfo> testPlans = planLister.listPlans();
+    return testPlans.keySet().stream().map(Candidate::new).collect(toImmutableList());
   }
 }

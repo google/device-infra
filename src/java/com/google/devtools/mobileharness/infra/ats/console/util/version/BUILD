@@ -23,7 +23,6 @@ java_library(
     ],
     deps = [
         ":version_parser",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_info",

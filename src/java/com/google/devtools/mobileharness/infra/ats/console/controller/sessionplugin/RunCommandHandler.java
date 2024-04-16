@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -130,8 +131,8 @@ class RunCommandHandler {
       Path xtsRootDir = Path.of(command.getXtsRootDir());
       String xtsType = command.getXtsType();
       String timestampDirName = getTimestampDirName();
-      Path resultDir = getResultDir(xtsRootDir, xtsType, timestampDirName);
-      Path logDir = getLogDir(xtsRootDir, xtsType, timestampDirName);
+      Path resultDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve(timestampDirName);
+      Path logDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve(timestampDirName);
 
       sessionRequestHandlerUtil.processResult(
           resultDir, logDir, sessionInfo.getAllJobs(), generateSessionRequestInfo(command));
@@ -199,25 +200,9 @@ class RunCommandHandler {
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(builder.build());
   }
 
-  private Path getResultDir(Path xtsRootDir, String xtsType, String timestampDirName) {
-    return getXtsResultsDir(xtsRootDir, xtsType).resolve(timestampDirName);
-  }
-
-  private Path getLogDir(Path xtsRootDir, String xtsType, String timestampDirName) {
-    return getXtsLogsDir(xtsRootDir, xtsType).resolve(timestampDirName);
-  }
-
   @VisibleForTesting
   String getTimestampDirName() {
     return new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss", Locale.getDefault())
         .format(new Timestamp(Clock.systemUTC().millis()));
-  }
-
-  private Path getXtsResultsDir(Path xtsRootDir, String xtsType) {
-    return xtsRootDir.resolve(String.format("android-%s/results", xtsType));
-  }
-
-  private Path getXtsLogsDir(Path xtsRootDir, String xtsType) {
-    return xtsRootDir.resolve(String.format("android-%s/logs", xtsType));
   }
 }

@@ -16,10 +16,11 @@
 
 package com.google.devtools.mobileharness.infra.ats.common;
 
-import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import javax.inject.Inject;
 
 /** Helper class for commands. */
@@ -28,33 +29,42 @@ public class CommandHelper {
 
   private final LocalFileUtil localFileUtil;
 
+  private final Map<String, String> xtsTypesByRootDir = new ConcurrentHashMap<>();
+
   @Inject
   CommandHelper(LocalFileUtil localFileUtil) {
     this.localFileUtil = localFileUtil;
   }
 
   /** Gets the xts type. */
-  public String getXtsType(String xtsRootDir) throws MobileHarnessException {
+  public String getXtsType(String xtsRootDir) {
+    return xtsTypesByRootDir.computeIfAbsent(xtsRootDir, this::calculateXtsType);
+  }
+
+  private String calculateXtsType(String xtsRootDir) {
     if (xtsRootDir.isEmpty()) {
-      throw new MobileHarnessException(
-          ExtErrorId.COMMAND_HELPER_XTS_ROOT_DIR_NOT_EXIST, "XTS root directory is empty.");
+      throw new IllegalStateException("XTS root directory is empty.");
     }
     if (!localFileUtil.isDirExist(xtsRootDir)) {
-      throw new MobileHarnessException(
-          ExtErrorId.COMMAND_HELPER_XTS_ROOT_DIR_NOT_EXIST, "XTS root directory doesn't exist.");
+      throw new IllegalStateException(
+          String.format("XTS root directory [%s] doesn't exist.", xtsRootDir));
     }
-    Path androidXtsDir =
-        localFileUtil.listDirs(Path.of(xtsRootDir)).stream()
-            .filter(p -> p.getFileName().toString().startsWith(ANDROID_XTS_DIR_NAME_PREFIX))
-            .findFirst()
-            .orElseThrow(
-                () ->
-                    new MobileHarnessException(
-                        ExtErrorId.COMMAND_HELPER_ANDROID_XTS_DIR_NOT_EXIST,
-                        String.format(
-                            "Android XTS directory whose name in format [android-<xts>] doesn't"
-                                + " exist under directory %s.",
-                            xtsRootDir)));
+    Path androidXtsDir;
+    try {
+      androidXtsDir =
+          localFileUtil.listDirs(Path.of(xtsRootDir)).stream()
+              .filter(p -> p.getFileName().toString().startsWith(ANDROID_XTS_DIR_NAME_PREFIX))
+              .findFirst()
+              .orElseThrow(
+                  () ->
+                      new IllegalStateException(
+                          String.format(
+                              "Android XTS directory whose name in format [android-<xts>] doesn't"
+                                  + " exist under directory %s.",
+                              xtsRootDir)));
+    } catch (MobileHarnessException e) {
+      throw new IllegalStateException(e);
+    }
 
     return androidXtsDir.getFileName().toString().substring(ANDROID_XTS_DIR_NAME_PREFIX.length());
   }

@@ -19,19 +19,13 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
     ],
 )
 
 java_library(
     name = "session_request_handler_util",
     srcs = ["SessionRequestHandlerUtil.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
-    ],
     deps = [
         ":session_request_info",
         ":test_plan_loader",
@@ -99,15 +93,6 @@ java_library(
 java_library(
     name = "session_request_info",
     srcs = ["SessionRequestInfo.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
-    ],
     deps = [
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
@@ -119,11 +104,9 @@ java_library(
 java_library(
     name = "test_plan_loader",
     srcs = ["TestPlanLoader.java"],
-    visibility = [
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
-    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
