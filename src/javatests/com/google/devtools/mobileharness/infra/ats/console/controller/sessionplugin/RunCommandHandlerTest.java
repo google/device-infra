@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -166,8 +167,9 @@ public final class RunCommandHandlerTest {
 
     when(sessionInfo.getAllJobs())
         .thenReturn(ImmutableList.of(tradefedJobInfo, nonTradefedJobInfo));
+    when(sessionRequestHandlerUtil.isSessionPassed(anyList())).thenReturn(true);
 
-    runCommandHandler.handleResultProcessing(command, sessionInfo, "summary", true);
+    runCommandHandler.handleResultProcessing(command, sessionInfo);
 
     assertThat(
             xtsRootDir

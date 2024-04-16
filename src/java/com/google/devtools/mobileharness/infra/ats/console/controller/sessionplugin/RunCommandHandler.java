@@ -16,10 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
+import static com.google.common.base.Ascii.toUpperCase;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -32,13 +32,17 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
+import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
+import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.nio.file.Path;
 import java.sql.Timestamp;
 import java.text.SimpleDateFormat;
 import java.time.Clock;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -119,9 +123,10 @@ class RunCommandHandler {
    * Copies xTS tradefed and non-tradefed generated logs/results into proper locations within the
    * given xts root dir.
    */
-  void handleResultProcessing(
-      RunCommand command, SessionInfo sessionInfo, String summaryReport, boolean isSessionPassed)
+  void handleResultProcessing(RunCommand command, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
+    List<JobInfo> allJobs = sessionInfo.getAllJobs();
+
     try {
       if (!localFileUtil.isDirExist(command.getXtsRootDir())) {
         logger.atInfo().log(
@@ -135,9 +140,12 @@ class RunCommandHandler {
       Path logDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve(timestampDirName);
 
       sessionRequestHandlerUtil.processResult(
-          resultDir, logDir, sessionInfo.getAllJobs(), generateSessionRequestInfo(command));
+          resultDir, logDir, allJobs, generateSessionRequestInfo(command));
     } finally {
-      sessionRequestHandlerUtil.cleanUpJobGenDirs(sessionInfo.getAllJobs());
+      sessionRequestHandlerUtil.cleanUpJobGenDirs(allJobs);
+
+      String xtsTestResultSummary = createXtsTestResultSummary(allJobs, command);
+      boolean isSessionPassed = sessionRequestHandlerUtil.isSessionPassed(allJobs);
       String sessionSummary =
           String.format(
               "run_command session_id: [%s], command_id: [%s], result: %s.\n"
@@ -146,7 +154,8 @@ class RunCommandHandler {
               command.getInitialState().getCommandId(),
               isSessionPassed ? "SUCCESS" : "FAILURE",
               command.getInitialState().getCommandLineArgs(),
-              summaryReport);
+              xtsTestResultSummary);
+
       sessionInfo.setSessionPluginOutput(
           oldOutput -> {
             AtsSessionPluginOutput.Builder builder =
@@ -192,7 +201,7 @@ class RunCommandHandler {
       builder.setRetrySessionIndex(runCommand.getRetrySessionIndex());
     }
     if (runCommand.hasRetryType()) {
-      builder.setRetryType(RetryType.valueOf(Ascii.toUpperCase(runCommand.getRetryType())));
+      builder.setRetryType(RetryType.valueOf(toUpperCase(runCommand.getRetryType())));
     }
     if (runCommand.hasSubPlanName()) {
       builder.setSubPlanName(runCommand.getSubPlanName());
@@ -204,5 +213,100 @@ class RunCommandHandler {
   String getTimestampDirName() {
     return new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss", Locale.getDefault())
         .format(new Timestamp(Clock.systemUTC().millis()));
+  }
+
+  private static String createXtsTestResultSummary(List<JobInfo> jobInfos, RunCommand runCommand) {
+    // Print the time from xts run start to end
+    int tradefedDoneModuleNumber = 0;
+    int tradefedTotalModuleNumber = 0;
+    int tradefedPassedTestNumber = 0;
+    int tradefedFailedTestNumber = 0;
+    int nonTradefedTotalModuleNumber = 0;
+    int nonTradefedDoneModuleNumber = 0;
+    int nonTradefedPassedTestNumber = 0;
+    int nonTradefedFailedTestNumber = 0;
+    int nonTradefedSkippedTestNumber = 0;
+    @SuppressWarnings("unused")
+    int nonTradefedTotalTestCaseNumber = 0;
+    @SuppressWarnings("unused")
+    int nonTradefedDoneTestCaseNumber = 0;
+
+    for (JobInfo jobInfo : jobInfos) {
+      TestInfo testInfo = jobInfo.tests().getOnly();
+
+      // Collect Tradefed Jobs test summary.
+      if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_TF_JOB_PROP)) {
+        tradefedDoneModuleNumber +=
+            Integer.parseInt(
+                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_DONE)
+                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_DONE)
+                    : "0");
+        tradefedTotalModuleNumber +=
+            Integer.parseInt(
+                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_TOTAL)
+                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_TOTAL)
+                    : "0");
+        tradefedPassedTestNumber +=
+            Integer.parseInt(
+                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_PASSED)
+                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_PASSED)
+                    : "0");
+        tradefedFailedTestNumber +=
+            Integer.parseInt(
+                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_FAILED)
+                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_FAILED)
+                    : "0");
+      }
+      // Collect Non Tradefed Jobs test summary.
+      if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_NON_TF_JOB_PROP)) {
+        nonTradefedTotalModuleNumber++;
+        if (testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_DONE)) {
+          nonTradefedDoneModuleNumber++;
+        }
+        nonTradefedPassedTestNumber +=
+            Integer.parseInt(
+                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_PASSED)
+                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_PASSED)
+                    : "0");
+        nonTradefedFailedTestNumber +=
+            Integer.parseInt(
+                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_FAILED_AND_ERROR)
+                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_FAILED_AND_ERROR)
+                    : "0");
+        nonTradefedSkippedTestNumber +=
+            Integer.parseInt(
+                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_SKIPPED)
+                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_SKIPPED)
+                    : "0");
+        nonTradefedTotalTestCaseNumber +=
+            Integer.parseInt(
+                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_TOTAL)
+                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_TOTAL)
+                    : "0");
+        nonTradefedDoneTestCaseNumber +=
+            Integer.parseInt(
+                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_DONE)
+                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_DONE)
+                    : "0");
+      }
+    }
+
+    // Print out the xts test result summary.
+    return String.format(
+            "\n================= %s test result summary ================\n",
+            toUpperCase(runCommand.getXtsType()))
+        + String.format(
+            "%s/%s modules completed\n",
+            tradefedDoneModuleNumber + nonTradefedDoneModuleNumber,
+            tradefedTotalModuleNumber + nonTradefedTotalModuleNumber)
+        + String.format(
+            "PASSED TESTCASES           : %s\n",
+            tradefedPassedTestNumber + nonTradefedPassedTestNumber)
+        + String.format(
+            "FAILED TESTCASES           : %s\n",
+            tradefedFailedTestNumber + nonTradefedFailedTestNumber)
+        + String.format("SKIPPED TESTCASES          : %s\n", nonTradefedSkippedTestNumber)
+        + "=================== End of Results =============================\n"
+        + "================================================================\n";
   }
 }

@@ -30,7 +30,6 @@ import com.google.devtools.mobileharness.api.model.proto.Device;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent;
 import com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig.CommandCase;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
@@ -44,16 +43,11 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
-import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
-import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.UnaryOperator;
 import javax.annotation.concurrent.GuardedBy;
@@ -76,7 +70,6 @@ public class AtsSessionPlugin {
   private final ListDevicesCommandHandler listDevicesCommandHandler;
   private final ListModulesCommandHandler listModulesCommandHandler;
   private final RunCommandHandler runCommandHandler;
-  private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
@@ -89,8 +82,7 @@ public class AtsSessionPlugin {
       DumpUptimeCommandHandler dumpUptimeCommandHandler,
       ListDevicesCommandHandler listDevicesCommandHandler,
       ListModulesCommandHandler listModulesCommandHandler,
-      RunCommandHandler runCommandHandler,
-      SessionRequestHandlerUtil sessionRequestHandlerUtil) {
+      RunCommandHandler runCommandHandler) {
     this.sessionInfo = sessionInfo;
     this.dumpEnvVarCommandHandler = dumpEnvVarCommandHandler;
     this.dumpStackCommandHandler = dumpStackCommandHandler;
@@ -98,7 +90,6 @@ public class AtsSessionPlugin {
     this.listDevicesCommandHandler = listDevicesCommandHandler;
     this.listModulesCommandHandler = listModulesCommandHandler;
     this.runCommandHandler = runCommandHandler;
-    this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
   }
 
   @Subscribe
@@ -179,104 +170,9 @@ public class AtsSessionPlugin {
             .build());
   }
 
-  private String collectXtsTestResultSummary(List<JobInfo> jobInfos) {
-    // Print the time from xts run start to end
-    int tradefedDoneModuleNumber = 0;
-    int tradefedTotalModuleNumber = 0;
-    int tradefedPassedTestNumber = 0;
-    int tradefedFailedTestNumber = 0;
-    int nonTradefedTotalModuleNumber = 0;
-    int nonTradefedDoneModuleNumber = 0;
-    int nonTradefedPassedTestNumber = 0;
-    int nonTradefedFailedTestNumber = 0;
-    int nonTradefedSkippedTestNumber = 0;
-    int nonTradefedTotalTestCaseNumber = 0;
-    int nonTradefedDoneTestCaseNumber = 0;
-
-    for (JobInfo jobInfo : jobInfos) {
-      TestInfo testInfo = jobInfo.tests().getOnly();
-
-      // Collect Tradefed Jobs test summary.
-      if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_TF_JOB_PROP)) {
-        tradefedDoneModuleNumber +=
-            Integer.parseInt(
-                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_DONE)
-                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_DONE)
-                    : "0");
-        tradefedTotalModuleNumber +=
-            Integer.parseInt(
-                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_TOTAL)
-                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_TOTAL)
-                    : "0");
-        tradefedPassedTestNumber +=
-            Integer.parseInt(
-                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_PASSED)
-                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_PASSED)
-                    : "0");
-        tradefedFailedTestNumber +=
-            Integer.parseInt(
-                testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_FAILED)
-                    ? testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_FAILED)
-                    : "0");
-      }
-      // Collect Non Tradefed Jobs test summary.
-      if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_NON_TF_JOB_PROP)) {
-        nonTradefedTotalModuleNumber++;
-        if (testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_DONE)) {
-          nonTradefedDoneModuleNumber++;
-        }
-        nonTradefedPassedTestNumber +=
-            Integer.parseInt(
-                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_PASSED)
-                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_PASSED)
-                    : "0");
-        nonTradefedFailedTestNumber +=
-            Integer.parseInt(
-                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_FAILED_AND_ERROR)
-                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_FAILED_AND_ERROR)
-                    : "0");
-        nonTradefedSkippedTestNumber +=
-            Integer.parseInt(
-                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_SKIPPED)
-                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_SKIPPED)
-                    : "0");
-        nonTradefedTotalTestCaseNumber +=
-            Integer.parseInt(
-                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_TOTAL)
-                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_TOTAL)
-                    : "0");
-        nonTradefedDoneTestCaseNumber +=
-            Integer.parseInt(
-                testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_TESTS_DONE)
-                    ? testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_DONE)
-                    : "0");
-      }
-    }
-
-    // Print out the xts test result summary.
-    return "\n================= xTS total test result summary ================\n"
-        + "=============== xTS Tradefed test result summary ===============\n"
-        + String.format(
-            "%s/%s modules completed\n", tradefedDoneModuleNumber, tradefedTotalModuleNumber)
-        + String.format("PASSED TESTCASES           : %s\n", tradefedPassedTestNumber)
-        + String.format("FAILED TESTCASES           : %s\n", tradefedFailedTestNumber)
-        + "=============== xTS Non Tradefed test result summary ===========\n"
-        + String.format(
-            "%s/%s modules completed\n", nonTradefedDoneModuleNumber, nonTradefedTotalModuleNumber)
-        + String.format(
-            "%s/%s testcases completed\n",
-            nonTradefedDoneTestCaseNumber, nonTradefedTotalTestCaseNumber)
-        + String.format("PASSED TESTCASES           : %s\n", nonTradefedPassedTestNumber)
-        + String.format("FAILED TESTCASES           : %s\n", nonTradefedFailedTestNumber)
-        + String.format("SKIPPED TESTCASES          : %s\n", nonTradefedSkippedTestNumber)
-        + "=================== End of Results =============================\n"
-        + "================================================================\n";
-  }
-
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event)
       throws MobileHarnessException, InterruptedException {
-    String summaryReport = collectXtsTestResultSummary(sessionInfo.getAllJobs());
     // If the result has been set, returns immediately.
     if (sessionInfo
         .getSessionPluginOutput(AtsSessionPluginOutput.class)
@@ -286,12 +182,7 @@ public class AtsSessionPlugin {
     }
 
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
-      RunCommand runCommand = config.getRunCommand();
-      runCommandHandler.handleResultProcessing(
-          runCommand,
-          sessionInfo,
-          summaryReport,
-          sessionRequestHandlerUtil.isSessionPassed(sessionInfo.getAllJobs()));
+      runCommandHandler.handleResultProcessing(config.getRunCommand(), sessionInfo);
     }
   }
 
