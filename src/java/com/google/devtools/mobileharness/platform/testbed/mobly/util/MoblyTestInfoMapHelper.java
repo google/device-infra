@@ -251,7 +251,7 @@ public class MoblyTestInfoMapHelper {
         moblyTestSummary.put(MOBLY_TESTS_DONE, String.valueOf(summaryEntry.executed()));
         moblyTestSummary.put(MOBLY_TESTS_SKIPPED, String.valueOf(summaryEntry.skipped()));
         moblyTestSummary.put(MOBLY_TESTS_TOTAL, String.valueOf(summaryEntry.requested()));
-        testInfo.jobInfo().properties().addAll(moblyTestSummary);
+        testInfo.properties().addAll(moblyTestSummary);
         // Only if failed number is 0 and number of passed + skipped = requested, then we treat the
         // mobly job as PASS.
         if ((summaryEntry.failed() == 0)
