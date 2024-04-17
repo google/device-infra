@@ -26,14 +26,10 @@ import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleU
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
-import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.HelpCommand;
-import picocli.CommandLine.Option;
 
 /** Command to set console configurations. */
 @Command(
@@ -45,18 +41,9 @@ import picocli.CommandLine.Option;
     subcommands = {
       HelpCommand.class,
     })
-class SetCommand implements Callable<Integer> {
-
-  @Option(
-      names = "--mobly_testcases_dir",
-      description = "Directory contains all being run Mobly testcases in zip file format.")
-  private String moblyTestCasesDir;
-
-  @Option(names = "--results_dir", description = "Directory in which the test results are saved.")
-  private String resultsDir;
+class SetCommand {
 
   private final ConsoleInfo consoleInfo;
-  private final LocalFileUtil localFileUtil;
   private final ConsoleUtil consoleUtil;
   private final ServerPreparer serverPreparer;
   private final ControlStub controlStub;
@@ -64,22 +51,13 @@ class SetCommand implements Callable<Integer> {
   @Inject
   SetCommand(
       ConsoleInfo consoleInfo,
-      LocalFileUtil localFileUtil,
       ConsoleUtil consoleUtil,
       ServerPreparer serverPreparer,
       @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlStub controlStub) {
     this.consoleInfo = consoleInfo;
-    this.localFileUtil = localFileUtil;
     this.consoleUtil = consoleUtil;
     this.serverPreparer = serverPreparer;
     this.controlStub = controlStub;
-  }
-
-  @Override
-  public Integer call() {
-    @SuppressWarnings("ShortCircuitBoolean")
-    boolean allSuccess = setMoblyTestCasesDir() & setResultsDir();
-    return allSuccess ? ExitCode.OK : ExitCode.SOFTWARE;
   }
 
   @Command(name = "log-level-display", description = "Sets the global display log level to <level>")
@@ -95,8 +73,7 @@ class SetCommand implements Callable<Integer> {
       name = "python-package-index-url",
       description =
           "Sets the global base URL of python package index to <python-package-index-url>")
-  public int setPythonPackageIndexUrl(String pythonPackageIndexUrl)
-      throws MobileHarnessException, InterruptedException {
+  public int setPythonPackageIndexUrl(String pythonPackageIndexUrl) {
     if (!StrUtil.isEmptyOrWhitespace(pythonPackageIndexUrl)) {
       consoleInfo.setPythonPackageIndexUrl(pythonPackageIndexUrl.trim());
       consoleUtil.printlnStdout(
@@ -104,33 +81,5 @@ class SetCommand implements Callable<Integer> {
     }
 
     return ExitCode.OK;
-  }
-
-  private boolean setMoblyTestCasesDir() {
-    if (moblyTestCasesDir != null) {
-      moblyTestCasesDir = PathUtil.completeHomeDirectory(moblyTestCasesDir);
-      if (!moblyTestCasesDir.isEmpty() && localFileUtil.isDirExist(moblyTestCasesDir)) {
-        consoleInfo.setMoblyTestCasesDir(moblyTestCasesDir);
-      } else {
-        consoleUtil.printlnStderr(
-            "Directory '%s' doesn't exist, please confirm and retry.", moblyTestCasesDir);
-        return false;
-      }
-    }
-    return true;
-  }
-
-  private boolean setResultsDir() {
-    if (resultsDir != null) {
-      resultsDir = PathUtil.completeHomeDirectory(resultsDir);
-      if (!resultsDir.isEmpty() && localFileUtil.isDirExist(resultsDir)) {
-        consoleInfo.setResultsDirectory(resultsDir);
-      } else {
-        consoleUtil.printlnStderr(
-            "Directory '%s' doesn't exist, please confirm and retry.", resultsDir);
-        return false;
-      }
-    }
-    return true;
   }
 }
