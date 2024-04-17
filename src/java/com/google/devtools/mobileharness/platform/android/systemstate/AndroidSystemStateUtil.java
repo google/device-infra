@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
 import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.io.File;
 import java.time.Clock;
@@ -434,6 +435,13 @@ public class AndroidSystemStateUtil {
    */
   private boolean isOnline(String serial, boolean silent, boolean rateLimitLog)
       throws MobileHarnessException, InterruptedException {
+    if (!Flags.instance().enableAndroidDeviceReadyCheck.get()) {
+      logger.atInfo().log(
+          "Ignore ready check for device %s when enable_android_device_ready_check is false.",
+          serial);
+
+      return true;
+    }
     String broadcastReadyOutput = null;
     String bootCompletedOutput = null;
     try {
