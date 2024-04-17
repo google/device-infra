@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
+import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
@@ -42,7 +42,7 @@ import org.mockito.junit.MockitoRule;
 public class AtsFileServerUploaderPluginTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Mock private TestEndedEvent testEndedEvent;
+  @Mock private TestEndingEvent testEndingEvent;
   @Mock private TestInfo testInfo;
   @Mock private JobSetting jobSetting;
   @Mock private JobInfo jobInfo;
@@ -61,7 +61,7 @@ public class AtsFileServerUploaderPluginTest {
             return commandExecutor;
           }
         };
-    when(testEndedEvent.getTest()).thenReturn(testInfo);
+    when(testEndingEvent.getTest()).thenReturn(testInfo);
     when(testInfo.getGenFileDir()).thenReturn("/var");
     when(testInfo.getTmpFileDir()).thenReturn("/tmp");
     when(testInfo.jobInfo()).thenReturn(jobInfo);
@@ -76,7 +76,7 @@ public class AtsFileServerUploaderPluginTest {
   public void test() throws Exception {
     when(localFileUtil.listFilePaths("/var", true))
         .thenReturn(ImmutableList.of("/var/output.txt", "/var/hello/world.txt"));
-    plugin.onTestEnded(testEndedEvent);
+    plugin.onTestEnding(testEndingEvent);
 
     verify(commandExecutor)
         .run(

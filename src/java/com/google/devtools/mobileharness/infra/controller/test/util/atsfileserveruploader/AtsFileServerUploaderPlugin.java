@@ -31,7 +31,7 @@ import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
-import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
+import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.net.URI;
@@ -57,7 +57,7 @@ public class AtsFileServerUploaderPlugin {
   }
 
   @Subscribe
-  public void onTestEnded(TestEndedEvent event)
+  public void onTestEnding(TestEndingEvent event)
       throws MobileHarnessException, SkipTestException, InterruptedException {
     try {
       String genFileDir = event.getTest().getGenFileDir();
