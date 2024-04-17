@@ -207,6 +207,56 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void createXtsTradefedTestJobConfig_multiDevice_pick2Devices() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
+
+    Optional<JobConfig> jobConfigOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts-multidevice")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .build(),
+            ImmutableList.of());
+
+    assertThat(jobConfigOpt).isPresent();
+    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+        .containsExactly(
+            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build(),
+            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+  }
+
+  @Test
+  public void createXtsTradefedTestJobConfig_multiDevice_noEnoughDevices() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .build());
+
+    Optional<JobConfig> jobConfigOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts-multi-device")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .build(),
+            ImmutableList.of());
+
+    assertThat(jobConfigOpt).isEmpty();
+  }
+
+  @Test
   public void createXtsTradefedTestJobConfig_verifyUseParallelSetup() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(

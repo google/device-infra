@@ -24,6 +24,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.primitives.Ints.saturatedCast;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static com.google.wireless.qa.mobileharness.shared.api.driver.MoblyGenericTest.TEST_SELECTOR_KEY;
+import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
@@ -380,10 +381,12 @@ public class SessionRequestHandlerUtil {
     int shardCount = sessionRequestInfo.shardCount().orElse(0);
     ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
 
+    // TODO: migrate multi-device tests to non-TF
+    int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
-        getSubDeviceSpecListForTradefed(deviceSerials, shardCount);
-    if (subDeviceSpecList.isEmpty()) {
-      logger.atInfo().log("Found no devices to create the job config.");
+        getSubDeviceSpecListForTradefed(deviceSerials, max(shardCount, minDeviceCount));
+    if (subDeviceSpecList.size() < minDeviceCount) {
+      logger.atInfo().log("Found no enough devices to create the job config.");
       return Optional.empty();
     }
 
