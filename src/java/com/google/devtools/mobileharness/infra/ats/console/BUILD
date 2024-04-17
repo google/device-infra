@@ -32,6 +32,9 @@ java_library(
 java_binary(
     name = "ats_console",
     main_class = "com.google.devtools.mobileharness.infra.ats.console.AtsConsole",
+    visibility = DEFAULT_VISIBILITY + [
+        "//src/javatests/com/google/devtools/mobileharness/shared/size:__subpackages__",
+    ],
     runtime_deps = [
         ":ats_console_lib",
     ],
@@ -80,7 +83,6 @@ java_library(
     srcs = ["AtsConsoleModule.java"],
     visibility = DEFAULT_VISIBILITY + [
         "//src/java/com/google/devtools/mobileharness/infra/ats/server:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__subpackages__",
     ],
     deps = [
         ":annotations",
@@ -114,7 +116,6 @@ java_library(
     srcs = ["GuiceFactory.java"],
     visibility = DEFAULT_VISIBILITY + [
         "//src/java/com/google/devtools/mobileharness/infra/ats/server:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__subpackages__",
     ],
     deps = [
         "@maven//:com_google_inject_guice",

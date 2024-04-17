@@ -30,7 +30,6 @@ java_library(
         ],
     ),
     data = [
-        ":base_olc_server_deploy.jar",
         ":olc_server_for_testing_deploy.jar",
         ":olc_server_for_testing_local_mode_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
@@ -61,7 +60,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/devtools/mobileharness/shared/version",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/file/local:binary_size_checker",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@com_google_protobuf_protobuf_java",
         "@io_grpc_grpc_java//core",
@@ -91,13 +89,6 @@ olc_server_binary(
         ":session_plugin_for_testing",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:no_op_test",
-    ],
-)
-
-olc_server_binary(
-    name = "base_olc_server",
-    extra_runtime_deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
     ],
 )
 
@@ -136,7 +127,6 @@ java_proto_library(
 junit_test_suites(
     name = "gen_tests",
     sizes = [
-        "small",
         "medium",
     ],
     deps = [":longrunningservice"],

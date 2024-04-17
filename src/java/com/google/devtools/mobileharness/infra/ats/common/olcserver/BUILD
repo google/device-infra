@@ -21,6 +21,7 @@ package(
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/size:__subpackages__",
     ],
 )
 
@@ -87,7 +88,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
-        "//src/java/com/google/devtools/mobileharness/shared/version",
         "@com_google_protobuf//:protobuf_java",
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_code_findbugs_jsr305",
