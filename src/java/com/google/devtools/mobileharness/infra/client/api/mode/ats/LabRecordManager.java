@@ -194,6 +194,7 @@ class LabRecordManager {
         if (now.isAfter(lastUpdateTime.plus(MISSING_DELAY)) && !lastRecord.isMissing()) {
           RecordDataT newRecord = lastRecord.copyToMissingRecord(now);
           internalAddRecord(newRecord);
+          lastRecord = newRecord;
         }
       }
     }

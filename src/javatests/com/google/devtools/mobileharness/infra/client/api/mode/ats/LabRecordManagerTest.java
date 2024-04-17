@@ -345,5 +345,18 @@ public final class LabRecordManagerTest {
                 .setDeviceInfo(deviceInfo2)
                 .setTimestamp(TimeUtils.toProtoTimestamp(Instant.ofEpochSecond(660L)))
                 .build());
+
+    when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000 * 60 * 22)); // 22 mins
+    labRecordManager.addDeviceRecordWhenBecomeMissing();
+    assertThat(labRecordManager.getDeviceRecords("device_uuid"))
+        .containsExactly(
+            DeviceRecord.newBuilder()
+                .setDeviceInfo(deviceInfo1)
+                .setTimestamp(Timestamp.newBuilder().setNanos(1000000).build())
+                .build(),
+            DeviceRecord.newBuilder()
+                .setDeviceInfo(deviceInfo2)
+                .setTimestamp(TimeUtils.toProtoTimestamp(Instant.ofEpochSecond(660L)))
+                .build());
   }
 }
