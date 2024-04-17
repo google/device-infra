@@ -2166,7 +2166,7 @@ public class LocalFileUtil {
       String filePermissionString = getFilePermissionString(path);
       if (!filePermissionString.equals("rwxrwxrwx")) {
         logger.atInfo().log(
-            "File %s is not fully accessible. Permissions: %s", path, filePermissionString);
+            "Checked fully accessibility of file %s. Permissions: %s", path, filePermissionString);
         return false;
       }
       return true;
