@@ -389,7 +389,7 @@ public class SessionRequestHandlerUtil {
 
     Duration jobTimeout =
         sessionRequestInfo.jobTimeout().isZero()
-            ? Duration.ofDays(3L)
+            ? Duration.ofDays(15L)
             : sessionRequestInfo.jobTimeout();
     // Temporarily reuse job timeout to be test timeout.
     @SuppressWarnings("UnnecessaryLocalVariable")
