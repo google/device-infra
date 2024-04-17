@@ -126,7 +126,8 @@ class RunCommandHandler {
   void handleResultProcessing(RunCommand command, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
     List<JobInfo> allJobs = sessionInfo.getAllJobs();
-
+    Path resultDir = null;
+    Path logDir = null;
     try {
       if (!localFileUtil.isDirExist(command.getXtsRootDir())) {
         logger.atInfo().log(
@@ -136,15 +137,19 @@ class RunCommandHandler {
       Path xtsRootDir = Path.of(command.getXtsRootDir());
       String xtsType = command.getXtsType();
       String timestampDirName = getTimestampDirName();
-      Path resultDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve(timestampDirName);
-      Path logDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve(timestampDirName);
-
+      resultDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve(timestampDirName);
+      logDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve(timestampDirName);
       sessionRequestHandlerUtil.processResult(
           resultDir, logDir, allJobs, generateSessionRequestInfo(command));
     } finally {
       sessionRequestHandlerUtil.cleanUpJobGenDirs(allJobs);
 
-      String xtsTestResultSummary = createXtsTestResultSummary(allJobs, command);
+      String xtsTestResultSummary =
+          createXtsTestResultSummary(
+              allJobs,
+              command,
+              resultDir != null ? resultDir.toString() : "N/A",
+              logDir != null ? logDir.toString() : "N/A");
       boolean isSessionPassed = sessionRequestHandlerUtil.isSessionPassed(allJobs);
       String sessionSummary =
           String.format(
@@ -215,7 +220,8 @@ class RunCommandHandler {
         .format(new Timestamp(Clock.systemUTC().millis()));
   }
 
-  private static String createXtsTestResultSummary(List<JobInfo> jobInfos, RunCommand runCommand) {
+  private static String createXtsTestResultSummary(
+      List<JobInfo> jobInfos, RunCommand runCommand, String resultDir, String logDir) {
     // Print the time from xts run start to end
     int tradefedDoneModuleNumber = 0;
     int tradefedTotalModuleNumber = 0;
@@ -306,6 +312,8 @@ class RunCommandHandler {
             "FAILED TESTCASES           : %s\n",
             tradefedFailedTestNumber + nonTradefedFailedTestNumber)
         + String.format("SKIPPED TESTCASES          : %s\n", nonTradefedSkippedTestNumber)
+        + String.format("RESULT DIRECTORY           : %s\n", resultDir)
+        + String.format("LOG DIRECTORY              : %s\n", logDir)
         + "=================== End of Results =============================\n"
         + "================================================================\n";
   }
