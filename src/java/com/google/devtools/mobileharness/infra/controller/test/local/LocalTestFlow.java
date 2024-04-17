@@ -139,28 +139,25 @@ public class LocalTestFlow {
    */
   ImmutableList<PluginItem<?>> loadBuiltInPlugin(TestInfo testInfo, DirectTestRunner testRunner) {
     // Loads built-in plugins.
-    ImmutableList.Builder<Object> builtinPluginsBuilder = ImmutableList.builder();
+    ImmutableList.Builder<PluginItem<?>> builtinPluginsBuilder = ImmutableList.builder();
     if (isXtsDynamicDownloaderEnabled()) {
-      builtinPluginsBuilder.add(new MctsDynamicDownloadPlugin());
+      builtinPluginsBuilder.add(
+          PluginItem.create(new MctsDynamicDownloadPlugin(), EventScope.INTERNAL_PLUGIN));
     }
     if (isAtsFileServerUploaderEnabled()) {
-      builtinPluginsBuilder.add(new AtsFileServerUploaderPlugin());
+      builtinPluginsBuilder.add(
+          PluginItem.create(new AtsFileServerUploaderPlugin(), EventScope.CLASS_INTERNAL));
     }
-    builtinPluginsBuilder.add(new TestCommandHistorySaver());
-    builtinPluginsBuilder.add(new NonTradefedReportGenerator());
+    builtinPluginsBuilder.add(
+        PluginItem.create(new TestCommandHistorySaver(), EventScope.CLASS_INTERNAL),
+        PluginItem.create(new NonTradefedReportGenerator(), EventScope.CLASS_INTERNAL));
 
-    ImmutableList<Object> builtinPlugins = builtinPluginsBuilder.build();
-    for (Object plugin : builtinPlugins) {
-      testRunner.registerTestEventSubscriber(
-          plugin,
-          plugin instanceof MctsDynamicDownloadPlugin
-              ? EventScope.INTERNAL_PLUGIN
-              : EventScope.CLASS_INTERNAL);
-      testRunner.registerTestEventSubscriber(plugin, EventScope.TEST_MESSAGE);
+    ImmutableList<PluginItem<?>> builtinPlugins = builtinPluginsBuilder.build();
+    for (PluginItem<?> pluginItem : builtinPlugins) {
+      testRunner.registerTestEventSubscriber(pluginItem.plugin(), pluginItem.scope());
+      testRunner.registerTestEventSubscriber(pluginItem.plugin(), EventScope.TEST_MESSAGE);
     }
-    return builtinPlugins.stream()
-        .map(plugin -> PluginItem.create(plugin, EventScope.CLASS_INTERNAL))
-        .collect(toImmutableList());
+    return builtinPlugins;
   }
 
   /** Loads plugins. Should be invoked when test is initializing. */
