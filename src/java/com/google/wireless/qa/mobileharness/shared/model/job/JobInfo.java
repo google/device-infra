@@ -434,7 +434,8 @@ public class JobInfo extends JobScheduleUnit {
    *     {@link #protoSpec}
    */
   public <T extends Message> T combinedSpec(SpecConfigable<T> configable)
-      throws InterruptedException, MobileHarnessException {
+      throws InterruptedException,
+          com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
     @SuppressWarnings("unchecked")
     Class<T> specClass = (Class<T>) JobSpecHelper.getSpecClass(configable.getClass());
     return combinedSpecOfClass(specClass, null);
