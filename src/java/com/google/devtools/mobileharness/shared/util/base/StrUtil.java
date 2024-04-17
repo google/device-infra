@@ -484,6 +484,84 @@ public final class StrUtil {
     return str.startsWith(prefix) ? str.substring(prefix.length()) : null;
   }
 
+  /**
+   * If this given string is of length {@code maxLength} or less, it will be returned as-is.
+   * Otherwise it will be trucated to {@code maxLength}, regardless of whether there are any space
+   * characters in the String. If an ellipsis is requested to be appended to the truncated String,
+   * the String will be truncated so that the ellipsis will also fit within maxLength. If no
+   * truncation was necessary, no ellipsis will be added.
+   *
+   * @param source the String to truncate if necessary
+   * @param maxLength the maximum number of characters to keep
+   * @param addEllipsis if true, and if the String had to be truncated, add "..." to the end of the
+   *     String before returning. Additionally, the ellipsis will only be added if maxLength is
+   *     greater than 3.
+   * @return the original string if its length is less than or equal to maxLength, otherwise a
+   *     truncated string as mentioned above
+   */
+  public static String truncateAtMaxLength(String source, int maxLength, boolean addEllipsis) {
+
+    if (source.length() <= maxLength) {
+      return source;
+    }
+    if (addEllipsis && maxLength > 3) {
+      return unicodePreservingSubstring(source, 0, maxLength - 3) + "...";
+    }
+    return unicodePreservingSubstring(source, 0, maxLength);
+  }
+
+  /**
+   * Returns a substring of {@code str} that respects Unicode character boundaries.
+   *
+   * <p>The string will never be split between a [high, low] surrogate pair, as defined by {@link
+   * Character#isHighSurrogate} and {@link Character#isLowSurrogate}.
+   *
+   * <p>If {@code begin} or {@code end} are the low surrogate of a unicode character, it will be
+   * offset by -1.
+   *
+   * <p>This behavior guarantees that {@code str.equals(StringUtil.unicodePreservingSubstring(str,
+   * 0, n) + StringUtil.unicodePreservingSubstring(str, n, str.length())) } is true for all {@code
+   * n}.
+   *
+   * <p>This means that unlike {@link String#substring(int, int)}, the length of the returned
+   * substring may not necessarily be equivalent to {@code end - begin}.
+   *
+   * @param str the original String
+   * @param begin the beginning index, inclusive
+   * @param end the ending index, exclusive
+   * @return the specified substring, possibly adjusted in order to not split unicode surrogate
+   *     pairs
+   * @throws IndexOutOfBoundsException if the {@code begin} is negative, or {@code end} is larger
+   *     than the length of {@code str}, or {@code begin} is larger than {@code end}
+   */
+  public static String unicodePreservingSubstring(String str, int begin, int end) {
+    return str.substring(unicodePreservingIndex(str, begin), unicodePreservingIndex(str, end));
+  }
+
+  /**
+   * Normalizes {@code index} such that it respects Unicode character boundaries in {@code str}.
+   *
+   * <p>If {@code index} is the low surrogate of a unicode character, the method returns {@code
+   * index - 1}. Otherwise, {@code index} is returned.
+   *
+   * <p>In the case in which {@code index} falls in an invalid surrogate pair (e.g. consecutive low
+   * surrogates, consecutive high surrogates), or if it is not a valid index into {@code str}, the
+   * original value of {@code index} is returned.
+   *
+   * @param str the String
+   * @param index the index to be normalized
+   * @return a normalized index that does not split a Unicode character
+   */
+  static int unicodePreservingIndex(String str, int index) {
+    if (index > 0 && index < str.length()) {
+      if (Character.isHighSurrogate(str.charAt(index - 1))
+          && Character.isLowSurrogate(str.charAt(index))) {
+        return index - 1;
+      }
+    }
+    return index;
+  }
+
   private static final Splitter TO_WORDS =
       Splitter.on(CharMatcher.breakingWhitespace()).omitEmptyStrings();
 

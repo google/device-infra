@@ -24,8 +24,12 @@ java_library(
     name = "channel_factory",
     srcs = ["ChannelFactory.java"],
     deps = [
+        "@io_grpc_grpc_java//auth",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//netty",
+        "@maven//:com_google_auth_google_auth_library_credentials",
+        "@maven//:com_google_auth_google_auth_library_oauth2_http",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

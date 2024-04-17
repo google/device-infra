@@ -28,6 +28,7 @@ java_library(
     name = "formatter",
     srcs = ["MobileHarnessLogFormatter.java"],
     visibility = [
+        "//src/java/com/google/devtools/deviceinfra/shared/logging:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared:__pkg__",
     ],
     deps = [
