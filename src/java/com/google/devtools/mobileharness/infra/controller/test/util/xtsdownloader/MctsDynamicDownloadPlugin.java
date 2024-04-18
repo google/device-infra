@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.protobuf.TextFormat;
+import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.BufferedInputStream;
@@ -264,8 +265,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   String downloadPublicUrlFiles(String downloadUrl, String subDirName)
       throws MobileHarnessException {
     synchronized (lock) {
-      // mh_res_files/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
-      String filePath = PathUtil.join(ResUtil.getResDir(), subDirName);
+      // tmp/dynamic_download/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
+      String dynamicDownloadDir = DirCommon.getTempDirRoot() + "/mcts_dynamic_download";
+      String filePath = PathUtil.join(dynamicDownloadDir, subDirName);
       try {
         // TODO: Add a file checker.
         fileUtil.checkFile(filePath);
@@ -298,7 +300,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
               "Can not find resource " + downloadUrl);
         }
         ByteStreams.copy(inputStream, outputStream);
-        fileUtil.grantFileOrDirFullAccess(ResUtil.getResDir());
+        fileUtil.grantFileOrDirFullAccess(dynamicDownloadDir);
         fileUtil.grantFileOrDirFullAccess(filePath);
         logger.atInfo().log("Downloaded resource %s to %s", downloadUrl, filePath);
         return filePath;
