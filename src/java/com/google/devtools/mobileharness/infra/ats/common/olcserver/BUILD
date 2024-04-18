@@ -43,6 +43,7 @@ olc_server_binary(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:ats_session_plugin",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:ats_test",
+        "@io_grpc_grpc_java//alts",  # FIXME to test the checker
     ],
 )
 
