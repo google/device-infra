@@ -101,6 +101,26 @@ public final class RetryReportMergerTest {
   }
 
   @Test
+  public void mergeReports_prevReportAllPassedTestsForAtsServer() throws Exception {
+    Result prevReport =
+        TextFormat.parse(localFileUtil.readFile(PREV_REPORT_ALL_PASSED_TEXTPROTO), Result.class);
+
+    Result expectedMergedReport =
+        TextFormat.parse(
+            localFileUtil.readFile(MERGED_REPORT_FOR_ALL_PASSED_TEXTPROTO), Result.class);
+    when(previousResultLoader.loadPreviousResult(RESULTS_DIR_PATH, "session_id"))
+        .thenReturn(prevReport);
+    SubPlan subPlan = new SubPlan();
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+
+    Result mergedReport =
+        retryReportMerger.mergeReports(
+            RESULTS_DIR_PATH, "session_id", /* retryType= */ null, /* retryResult= */ null);
+
+    assertThat(mergedReport).isEqualTo(expectedMergedReport);
+  }
+
+  @Test
   public void mergeReports_prevReportHasSomeFailedTests() throws Exception {
     Result prevReport =
         TextFormat.parse(localFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);

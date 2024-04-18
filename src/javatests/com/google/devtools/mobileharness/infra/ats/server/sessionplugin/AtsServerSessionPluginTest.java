@@ -49,7 +49,11 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
@@ -112,6 +116,7 @@ public final class AtsServerSessionPluginTest {
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
   @Bind @Mock private CommandHelper commandHelper;
+  @Bind @Mock private LocalSessionStub localSessionStub;
   @Mock private JobInfo jobInfo;
   @Mock private JobInfo jobInfo2;
   @Mock private JobInfo moblyJobInfo;
@@ -457,6 +462,89 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
+  public void onSessionEnded_retryNeeded_createRetrySession() throws Exception {
+    request = request.toBuilder().setMaxRetryOnTestFailures(1).build();
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+
+    when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
+    when(testInfo.result()).thenReturn(result);
+
+    when(jobInfo.result()).thenReturn(result);
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    CreateSessionResponse response =
+        CreateSessionResponse.newBuilder()
+            .setSessionId(SessionId.newBuilder().setId("retry_session_id"))
+            .build();
+    when(localSessionStub.createSession(any())).thenReturn(response);
+    when(sessionRequestHandlerUtil.isSessionPassed(any())).thenReturn(false);
+    plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+    ArgumentCaptor<CreateSessionRequest> requestCaptor =
+        ArgumentCaptor.forClass(CreateSessionRequest.class);
+    verify(localSessionStub).createSession(requestCaptor.capture());
+    SessionRequest sessionRequest =
+        requestCaptor
+            .getValue()
+            .getSessionConfig()
+            .getSessionPluginConfigs()
+            .getSessionPluginConfig(0)
+            .getExecutionConfig()
+            .getConfig()
+            .unpack(SessionRequest.class);
+    NewMultiCommandRequest newMultiCommandRequest = sessionRequest.getNewMultiCommandRequest();
+    assertThat(newMultiCommandRequest.getMaxRetryOnTestFailures()).isEqualTo(0);
+    assertThat(newMultiCommandRequest.getRetryPreviousSessionId()).isEqualTo("session_id");
+    assertThat(newMultiCommandRequest.getCommandsList()).containsExactly(commandInfo);
+  }
+
+  @Test
+  public void onSessionEnded_sessionSucceeded_noRetry() throws Exception {
+    request = request.toBuilder().setMaxRetryOnTestFailures(1).build();
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+
+    when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
+    when(testInfo.result()).thenReturn(result);
+
+    when(jobInfo.result()).thenReturn(result);
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+
+    when(sessionRequestHandlerUtil.isSessionPassed(any())).thenReturn(true);
+    plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+    verify(localSessionStub, never()).createSession(any());
+  }
+
+  @Test
   public void onSessionEnded_jobCompleted_updateSessionOutput() throws Exception {
     verifyState(TestStatus.DONE, TestResult.PASS, CommandState.COMPLETED);
   }
@@ -494,7 +582,7 @@ public final class AtsServerSessionPluginTest {
 
     plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
 
-    // sessionInfo.setSessionPluginOutput() is called 3 times. First time in
+    // sessionInfo.setSessionPluginOutput() is called 4 times. First time in
     // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
     // after job ended signal trigger session output update. Fourth time in OnSessionEnded().
     verify(sessionInfo, times(4))

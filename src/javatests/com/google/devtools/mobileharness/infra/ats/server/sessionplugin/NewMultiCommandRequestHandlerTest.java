@@ -243,12 +243,12 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(requestDetail.getUpdateTime()).isEqualTo(Timestamps.fromMillis(3000L));
 
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    String jobId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
-    assertThat(jobId)
+    String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
+    assertThat(commandId)
         .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
-    assertThat(commandDetail.getId()).isEqualTo(jobId);
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
 
     verify(sessionInfo).addJob(jobInfo);
     verify(properties).add("xts-tradefed-job", "true");
@@ -271,6 +271,68 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.testPlanFile()).hasValue("ats-file-server::" + testPlanFile);
+
+    // Verify that handler has mounted the zip file.
+    Command mountCommand =
+        Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(mountCommand);
+    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
+    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
+  }
+
+  @Test
+  public void addTradefedJobs_fromRetrySession_success() throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    request =
+        request.toBuilder()
+            .setRetryPreviousSessionId("retry_previous_session_id")
+            .setRetryType("FAILED")
+            .build();
+
+    // Trigger the handler.
+    RequestDetail requestDetail =
+        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.RUNNING);
+    assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
+    assertThat(requestDetail.getCreateTime()).isEqualTo(Timestamps.fromMillis(1000L));
+    assertThat(requestDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(2000L));
+    assertThat(requestDetail.getUpdateTime()).isEqualTo(Timestamps.fromMillis(3000L));
+
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
+    assertThat(commandId)
+        .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+
+    verify(sessionInfo).addJob(jobInfo);
+    verify(properties).add("xts-tradefed-job", "true");
+    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify sessionRequestInfo has been correctly generated.
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("retry");
+    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
+    assertThat(sessionRequestInfo.testName()).hasValue("test1");
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    String zipFile = "/path/to/xts/zip/file.zip";
+    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
+    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
+    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
+    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
+    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
+    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
+    assertThat(sessionRequestInfo.retrySessionId()).hasValue("retry_previous_session_id");
+    String retryResultDir = "/path/to/output/retry_previous_session_id/" + commandId;
+    assertThat(sessionRequestInfo.retryResultDir()).hasValue(retryResultDir);
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =

@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -54,9 +55,21 @@ public abstract class SessionRequestInfo {
 
   public abstract ImmutableList<String> excludeFilters();
 
+  /**
+   * When testPlan is "retry", at least one of retrySessionId or retrySessionIndex should be set
+   * before calling build().
+   */
   public abstract OptionalInt retrySessionIndex();
 
+  /**
+   * When testPlan is "retry", at least one of retrySessionId or retrySessionIndex should be set
+   * before calling build().
+   */
+  public abstract Optional<String> retrySessionId();
+
   public abstract Optional<RetryType> retryType();
+
+  public abstract Optional<String> retryResultDir();
 
   public abstract ImmutableList<String> extraArgs();
 
@@ -128,9 +141,22 @@ public abstract class SessionRequestInfo {
 
     public abstract Builder setExcludeFilters(List<String> excludeFilters);
 
+    /**
+     * When testPlan is "retry", at least one of retrySessionId or retrySessionIndex should be set
+     * before calling build().
+     */
     public abstract Builder setRetrySessionIndex(int retrySessionIndex);
 
+    /**
+     * When testPlan is "retry", at least one of retrySessionId or retrySessionIndex should be set
+     * before calling build().
+     */
+    public abstract Builder setRetrySessionId(String retrySessionId);
+
     public abstract Builder setRetryType(RetryType retryType);
+
+    /** Must be set if retrySessionId is set. This is for ATS Server retry. */
+    public abstract Builder setRetryResultDir(String retryResultDir);
 
     public abstract Builder setExtraArgs(List<String> extraArgs);
 
@@ -141,8 +167,6 @@ public abstract class SessionRequestInfo {
     public abstract Builder setAndroidXtsZip(String androidXtsZip);
 
     public abstract Builder setEnvVars(ImmutableMap<String, String> envVars);
-
-    public abstract SessionRequestInfo build();
 
     public abstract Builder setGivenMatchedNonTfModules(
         ImmutableSet<String> givenMatchedNonTfModules);
@@ -164,5 +188,20 @@ public abstract class SessionRequestInfo {
     public abstract Builder setHtmlInZip(boolean htmlInZip);
 
     public abstract Builder setTestPlanFile(String testPlanFile);
+
+    protected abstract SessionRequestInfo autoBuild();
+
+    public SessionRequestInfo build() {
+      SessionRequestInfo sessionRequestInfo = autoBuild();
+      if (sessionRequestInfo.testPlan().equals("retry")) {
+        Preconditions.checkState(
+            sessionRequestInfo.retrySessionIndex().isPresent()
+                || sessionRequestInfo.retrySessionId().isPresent());
+        if (sessionRequestInfo.retrySessionId().isPresent()) {
+          Preconditions.checkState(sessionRequestInfo.retryResultDir().isPresent());
+        }
+      }
+      return sessionRequestInfo;
+    }
   }
 }

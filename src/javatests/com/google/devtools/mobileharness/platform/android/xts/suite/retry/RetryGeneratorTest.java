@@ -153,6 +153,36 @@ public final class RetryGeneratorTest {
   }
 
   @org.junit.Test
+  public void generateRetrySubPlan_defaultRetryTypeForAtsServer() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    String previousSessionId = "session_id";
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionId))
+        .thenReturn(REPORT_1);
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setPreviousSessionId(previousSessionId)
+                .build());
+
+    SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"));
+
+    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
+        subPlan.getNonTfIncludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+  }
+
+  @org.junit.Test
   public void generateRetrySubPlan_retryTypeIsNotExecuted() throws Exception {
     Path resultsDir = Path.of("/path/to/results_dir");
     int previousSessionIndex = 0;

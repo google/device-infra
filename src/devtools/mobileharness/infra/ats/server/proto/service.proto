@@ -40,6 +40,10 @@ message NewMultiCommandRequest {
 
   optional TestEnvironment test_environment = 6;
   repeated TestResource test_resources = 7;
+
+  // Retry Info.
+  optional string retry_previous_session_id = 8;
+  optional string retry_type = 9;
 }
 
 // Command information of a test request.
@@ -217,4 +221,5 @@ message RequestDetail {
 
   optional CancelReason cancel_reason = 20;
   optional NewMultiCommandRequest original_request = 21;
+  optional string next_attempt_session_id = 22;
 }

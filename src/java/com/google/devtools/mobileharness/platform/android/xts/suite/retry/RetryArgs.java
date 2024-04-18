@@ -17,20 +17,33 @@
 package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import java.nio.file.Path;
 import java.util.Optional;
+import java.util.OptionalInt;
 
 /** Args for the retry. */
 @AutoValue
 public abstract class RetryArgs {
 
-  /** The path to the "results" directory. */
+  /**
+   * For ATS Console, this is the path to the "results" directory for ATS. For ATS server, this is
+   * the directory of previous session's result file.
+   */
   public abstract Path resultsDir();
 
-  /** Index to the previous session. */
-  public abstract int previousSessionIndex();
+  /**
+   * Index to the previous session. One of previousSessionIndex or previousSessionId should be
+   * present.
+   */
+  public abstract OptionalInt previousSessionIndex();
+
+  /**
+   * ID to the previous session. One of previousSessionIndex or previousSessionId should be present.
+   */
+  public abstract Optional<String> previousSessionId();
 
   /**
    * Used to retry tests of a certain status. Possible values include {@link RetryType#FAILED},
@@ -55,7 +68,11 @@ public abstract class RetryArgs {
   public abstract static class Builder {
     public abstract Builder setResultsDir(Path resultsDir);
 
+    /** One of previousSessionIndex or previousSessionId must be set. */
     public abstract Builder setPreviousSessionIndex(int previousSessionIndex);
+
+    /** One of previousSessionIndex or previousSessionId must be set. */
+    public abstract Builder setPreviousSessionId(String previousSessionId);
 
     public abstract Builder setRetryType(RetryType retryType);
 
@@ -65,6 +82,15 @@ public abstract class RetryArgs {
     public abstract Builder setPassedInExcludeFilters(
         ImmutableSet<SuiteTestFilter> passedInExcludeFilters);
 
-    public abstract RetryArgs build();
+    protected abstract RetryArgs autoBuild();
+
+    public RetryArgs build() {
+      RetryArgs retryArgs = autoBuild();
+      Preconditions.checkState(
+          retryArgs.previousSessionIndex().isPresent()
+              || retryArgs.previousSessionId().isPresent());
+
+      return retryArgs;
+    }
   }
 }

@@ -426,26 +426,43 @@ public class SessionRequestHandlerUtil {
     }
     driverParams.put("xts_test_plan", testPlan);
     if (isRunRetry(testPlan)) {
-      Optional<SubPlan> runRetryTfSubPlan =
-          prepareRunRetrySubPlan(
-              xtsRootDir,
-              sessionRequestInfo.xtsType(),
-              sessionRequestInfo.retrySessionIndex().orElseThrow(),
-              sessionRequestInfo.retryType().orElse(null),
-              /* forTf= */ true);
+      Optional<SubPlan> runRetryTfSubPlan;
+      if (sessionRequestInfo.retrySessionIndex().isPresent()) {
+        runRetryTfSubPlan =
+            prepareRunRetrySubPlan(
+                xtsRootDir,
+                sessionRequestInfo.xtsType(),
+                sessionRequestInfo.retrySessionIndex().orElseThrow(),
+                sessionRequestInfo.retryType().orElse(null),
+                /* forTf= */ true);
+      } else {
+        runRetryTfSubPlan =
+            prepareRunRetrySubPlan(
+                sessionRequestInfo.retryResultDir().orElseThrow(),
+                sessionRequestInfo.retrySessionId().orElseThrow(),
+                sessionRequestInfo.retryType().orElse(null),
+                /* forTf= */ true);
+      }
       if (runRetryTfSubPlan.isEmpty()) {
         return Optional.empty();
       }
       driverParams.put(
           "prev_session_xts_test_plan", runRetryTfSubPlan.get().getPreviousSessionXtsTestPlan());
-
-      Path runRetryTfSubPlanXmlFile =
-          prepareRunRetryTfSubPlanXmlFile(
-              xtsRootDir,
-              sessionRequestInfo.xtsType(),
-              sessionRequestInfo.retrySessionIndex().orElseThrow(),
-              runRetryTfSubPlan.get());
-
+      Path runRetryTfSubPlanXmlFile;
+      if (sessionRequestInfo.retrySessionIndex().isPresent()) {
+        runRetryTfSubPlanXmlFile =
+            prepareRunRetryTfSubPlanXmlFile(
+                xtsRootDir,
+                sessionRequestInfo.xtsType(),
+                sessionRequestInfo.retrySessionIndex().orElseThrow(),
+                runRetryTfSubPlan.get());
+      } else {
+        runRetryTfSubPlanXmlFile =
+            prepareRunRetryTfSubPlanXmlFile(
+                xtsRootDir,
+                sessionRequestInfo.retrySessionId().orElseThrow(),
+                runRetryTfSubPlan.get());
+      }
       driverParams.put("subplan_xml", runRetryTfSubPlanXmlFile.toAbsolutePath().toString());
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
       Optional<Path> tfSubPlan =
@@ -559,15 +576,32 @@ public class SessionRequestHandlerUtil {
     return Optional.of(tfOnlySubPlanPath);
   }
 
+  // For ATS Console
   private Path prepareRunRetryTfSubPlanXmlFile(
       String xtsRootDir, String xtsType, int previousSessionIndex, SubPlan subPlan)
       throws MobileHarnessException {
     Path xtsSubPlansDir = XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), xtsType);
+
+    return serializeRetrySubPlan(
+        xtsSubPlansDir, subPlan, String.format("#%s", previousSessionIndex));
+  }
+
+  // For ATS Server
+  private Path prepareRunRetryTfSubPlanXmlFile(
+      String xtsRootDir, String previousSessionId, SubPlan subPlan) throws MobileHarnessException {
+    Path xtsSubPlansDir = Path.of(xtsRootDir).getParent();
+    return serializeRetrySubPlan(xtsSubPlansDir, subPlan, previousSessionId);
+  }
+
+  private Path serializeRetrySubPlan(
+      Path xtsSubPlansDir, SubPlan subPlan, String formattedPreviousSessionIdentifier)
+      throws MobileHarnessException {
     localFileUtil.prepareDir(xtsSubPlansDir);
     Path subPlanPath =
         xtsSubPlansDir.resolve(
             String.format(
-                "tf_retry_session_%d_%d.xml", previousSessionIndex, Clock.systemUTC().millis()));
+                "tf_retry_session_%s_%d.xml",
+                formattedPreviousSessionIdentifier, Clock.systemUTC().millis()));
     try (OutputStream outputStream = new FileOutputStream(subPlanPath.toFile())) {
       subPlan.serialize(outputStream, /* tfFiltersOnly= */ true);
     } catch (IOException e) {
@@ -575,7 +609,7 @@ public class SessionRequestHandlerUtil {
           InfraErrorId.ATSC_RUN_RETRY_COMMAND_PREPARE_SUBPLAN_ERROR,
           String.format(
               "Failed to write the subplan xml file when retrying session %s",
-              previousSessionIndex),
+              formattedPreviousSessionIdentifier),
           e);
     }
     return subPlanPath;
@@ -668,13 +702,22 @@ public class SessionRequestHandlerUtil {
     String xtsType = sessionRequestInfo.xtsType();
     Optional<SubPlan> subPlanOpt = Optional.empty();
     if (isRunRetry(testPlan)) {
-      subPlanOpt =
-          prepareRunRetrySubPlan(
-              xtsRootDir,
-              sessionRequestInfo.xtsType(),
-              sessionRequestInfo.retrySessionIndex().orElseThrow(),
-              sessionRequestInfo.retryType().orElse(null),
-              /* forTf= */ false);
+      if (sessionRequestInfo.retrySessionIndex().isPresent()) {
+        subPlanOpt =
+            prepareRunRetrySubPlan(
+                xtsRootDir,
+                sessionRequestInfo.xtsType(),
+                sessionRequestInfo.retrySessionIndex().orElseThrow(),
+                sessionRequestInfo.retryType().orElse(null),
+                /* forTf= */ false);
+      } else {
+        subPlanOpt =
+            prepareRunRetrySubPlan(
+                sessionRequestInfo.retryResultDir().orElseThrow(),
+                sessionRequestInfo.retrySessionId().orElseThrow(),
+                sessionRequestInfo.retryType().orElse(null),
+                /* forTf= */ false);
+      }
       if (subPlanOpt.isEmpty()) {
         return ImmutableList.of();
       }
@@ -1023,6 +1066,7 @@ public class SessionRequestHandlerUtil {
     }
   }
 
+  // For ATS Console
   private Optional<SubPlan> prepareRunRetrySubPlan(
       String xtsRootDir,
       String xtsType,
@@ -1038,7 +1082,27 @@ public class SessionRequestHandlerUtil {
     if (retryType != null) {
       retryArgs.setRetryType(retryType);
     }
-    SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
+    return generateRetrySubPlan(retryArgs.build(), forTf, String.valueOf(previousSessionIndex));
+  }
+
+  // For ATS Server
+  private Optional<SubPlan> prepareRunRetrySubPlan(
+      String retryResultDir, String previousSessionId, @Nullable RetryType retryType, boolean forTf)
+      throws MobileHarnessException {
+    RetryArgs.Builder retryArgs =
+        RetryArgs.builder()
+            .setResultsDir(Path.of(retryResultDir))
+            .setPreviousSessionId(previousSessionId);
+    if (retryType != null) {
+      retryArgs.setRetryType(retryType);
+    }
+    return generateRetrySubPlan(retryArgs.build(), forTf, previousSessionId);
+  }
+
+  private Optional<SubPlan> generateRetrySubPlan(
+      RetryArgs retryArgs, boolean forTf, String previousSessionIdOrIndex)
+      throws MobileHarnessException {
+    SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs);
     if ((forTf
             && subPlan.getIncludeFiltersMultimap().isEmpty()
             && subPlan.getExcludeFiltersMultimap().isEmpty())
@@ -1047,7 +1111,9 @@ public class SessionRequestHandlerUtil {
             && subPlan.getNonTfExcludeFiltersMultimap().isEmpty())) {
       logger.atInfo().log(
           "No include or exclude filters found for %s retry session %s with retry type %s",
-          forTf ? "TF" : "Non-TF", previousSessionIndex, retryType);
+          forTf ? "TF" : "Non-TF",
+          previousSessionIdOrIndex,
+          retryArgs.retryType().isPresent() ? retryArgs.retryType().get() : "UNKNOWN");
       return Optional.empty();
     }
     return Optional.of(subPlan);
@@ -1188,21 +1254,31 @@ public class SessionRequestHandlerUtil {
       reportCreator.createReport(
           finalReportBuilder.build(), resultDir, null, sessionRequestInfo.htmlInZip());
     } else if (isRunRetry) {
-      int previousSessionIndex =
-          sessionRequestInfo
-              .retrySessionIndex()
-              .orElseThrow(
-                  () ->
-                      new MobileHarnessException(
-                          InfraErrorId.ATSC_RUN_RETRY_COMMAND_MISSING_SESSION_INDEX_ERROR,
-                          "Missing session index for retry"));
-      Result finalReport =
-          retryReportMerger.mergeReports(
-              XtsDirUtil.getXtsResultsDir(
-                  Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
-              previousSessionIndex,
-              sessionRequestInfo.retryType().orElse(null),
-              mergedReport.orElse(null));
+      Result finalReport;
+      if (sessionRequestInfo.retrySessionId().isPresent()) {
+        finalReport =
+            retryReportMerger.mergeReports(
+                Path.of(sessionRequestInfo.retryResultDir().get()),
+                sessionRequestInfo.retrySessionId().get(),
+                sessionRequestInfo.retryType().orElse(null),
+                mergedReport.orElse(null));
+      } else {
+        int previousSessionIndex =
+            sessionRequestInfo
+                .retrySessionIndex()
+                .orElseThrow(
+                    () ->
+                        new MobileHarnessException(
+                            InfraErrorId.ATSC_RUN_RETRY_COMMAND_MISSING_SESSION_INDEX_ERROR,
+                            "Missing session index for retry"));
+        finalReport =
+            retryReportMerger.mergeReports(
+                XtsDirUtil.getXtsResultsDir(
+                    Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
+                previousSessionIndex,
+                sessionRequestInfo.retryType().orElse(null),
+                mergedReport.orElse(null));
+      }
       reportCreator.createReport(finalReport, resultDir, null, sessionRequestInfo.htmlInZip());
     } else {
       logger.atWarning().log("Failed to merge reports.");

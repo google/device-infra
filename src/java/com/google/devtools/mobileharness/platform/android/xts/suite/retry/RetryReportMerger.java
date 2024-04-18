@@ -86,7 +86,38 @@ public class RetryReportMerger {
       retryArgs.setRetryType(retryType);
     }
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
+    return mergeReports(previousResult, subPlan, retryResult);
+  }
 
+  /**
+   * Merges result from the previous session and the result from the retry. This is for ATS Server's
+   * sessions.
+   *
+   * @param resultsDir the path to the "results" directory which stores the results for the previous
+   *     sessions
+   * @param previousSessionId id of the previous session being retried
+   * @param retryType test statuses for retry
+   * @param retryResult the result report for the "retry" run
+   */
+  public Result mergeReports(
+      Path resultsDir,
+      String previousSessionId,
+      @Nullable RetryType retryType,
+      @Nullable Result retryResult)
+      throws MobileHarnessException {
+    // Loads the previous session result and its subplan used for the retry
+    Result previousResult = previousResultLoader.loadPreviousResult(resultsDir, previousSessionId);
+    RetryArgs.Builder retryArgs =
+        RetryArgs.builder().setResultsDir(resultsDir).setPreviousSessionId(previousSessionId);
+    if (retryType != null) {
+      retryArgs.setRetryType(retryType);
+    }
+    SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
+    return mergeReports(previousResult, subPlan, retryResult);
+  }
+
+  private Result mergeReports(
+      Result previousResult, SubPlan retrySubPlan, @Nullable Result retryResult) {
     Result.Builder mergedResult = Result.newBuilder();
     // If the previous result was ran with some filters given by the user command, reflect them in
     // the merged report too.
@@ -103,8 +134,8 @@ public class RetryReportMerger {
 
     // If no tests were retried, mark tests as cached, and inherit some info from previous result
     if (retryResult == null
-        || (subPlan.getIncludeFiltersMultimap().isEmpty()
-            && subPlan.getNonTfIncludeFiltersMultimap().isEmpty())) {
+        || (retrySubPlan.getIncludeFiltersMultimap().isEmpty()
+            && retrySubPlan.getNonTfIncludeFiltersMultimap().isEmpty())) {
       List<Module.Builder> moduleBuildersFromPrevSession =
           previousResult.toBuilder().getModuleInfoBuilderList();
       mergedResult =
@@ -157,8 +188,8 @@ public class RetryReportMerger {
               moduleFromPrevSession,
               modulesFromRetry,
               moduleFromPrevSession.getIsNonTfModule()
-                  ? subPlan.getNonTfIncludeFiltersMultimap()
-                  : subPlan.getIncludeFiltersMultimap()));
+                  ? retrySubPlan.getNonTfIncludeFiltersMultimap()
+                  : retrySubPlan.getIncludeFiltersMultimap()));
     }
 
     // Prepare the Summary

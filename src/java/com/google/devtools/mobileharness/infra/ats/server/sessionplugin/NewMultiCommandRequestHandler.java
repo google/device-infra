@@ -134,6 +134,7 @@ final class NewMultiCommandRequestHandler {
             .setId(sessionInfo.getSessionId())
             .setState(RequestState.RUNNING)
             .setOriginalRequest(request)
+            .setMaxRetryOnTestFailures(request.getMaxRetryOnTestFailures())
             .addAllCommandInfos(request.getCommandsList());
     if (request.getCommandsList().isEmpty()) {
       return requestDetailBuilder
@@ -176,6 +177,7 @@ final class NewMultiCommandRequestHandler {
         sessionRequestInfo = sessionRequestInfoCache.get(commandInfo);
       } else {
         sessionRequestInfo = generateSessionRequestInfo(request, commandInfo, sessionInfo);
+        sessionRequestInfoCache.put(commandInfo, sessionRequestInfo);
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
@@ -343,7 +345,6 @@ final class NewMultiCommandRequestHandler {
   private SessionRequestInfo generateSessionRequestInfo(
       NewMultiCommandRequest request, CommandInfo commandInfo, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
-    // TODO: need to handle sharding.
     List<String> deviceSerials = new ArrayList<>();
     for (DeviceDimension entry : commandInfo.getDeviceDimensionsList()) {
       if (entry.getName().equals("device_serial")) {
@@ -416,6 +417,32 @@ final class NewMultiCommandRequestHandler {
         ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
     sessionRequestInfoBuilder.setTestPlanFile(
         replacePathForRemoteRunner(commandPath.toAbsolutePath().toString()));
+
+    if (!request.getRetryPreviousSessionId().isEmpty()) {
+      sessionRequestInfoBuilder.setTestPlan("retry");
+      // TODO: customize retry type based on UI input.
+      sessionRequestInfoBuilder.setRetrySessionId(request.getRetryPreviousSessionId());
+      try {
+        URL outputUrl = URI.create(request.getTestEnvironment().getOutputFileUploadUrl()).toURL();
+        if (outputUrl.getProtocol().equals("file")) {
+          String previousCommandId =
+              UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+          Path outputDirPath =
+              Path.of(outputUrl.getPath())
+                  .resolve(request.getRetryPreviousSessionId())
+                  .resolve(previousCommandId);
+          sessionRequestInfoBuilder.setRetryResultDir(outputDirPath.toString());
+        }
+      } catch (MalformedURLException e) {
+        throw new MobileHarnessException(
+            InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
+            String.format(
+                "Failed to parse output file upload url: %s, skip processing result for session:"
+                    + " %s.",
+                request.getTestEnvironment().getOutputFileUploadUrl(), sessionInfo.getSessionId()),
+            e);
+      }
+    }
 
     // TODO: add extra args
     sessionRequestInfoBuilder.setExtraArgs(ImmutableList.of());

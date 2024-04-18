@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Com
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandState;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest;
@@ -35,9 +36,17 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Ses
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfigs;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
@@ -57,6 +66,11 @@ final class AtsServerSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final String TRADEFED_DRIVER_NAME = "XtsTradefedTest";
+  private static final String SESSION_PLUGIN_CLASS_NAME =
+      "com.google.devtools.mobileharness.infra.ats.server.sessionplugin.AtsServerSessionPlugin";
+  private static final String SESSION_MODULE_CLASS_NAME =
+      "com.google.devtools.mobileharness.infra.ats.server.sessionplugin.AtsServerSessionPluginModule";
+  private static final String SESSION_PLUGIN_LABEL = "AtsServerSessionPlugin";
 
   /** Set in {@link #onSessionStarting}. */
   private volatile SessionRequest request;
@@ -73,15 +87,18 @@ final class AtsServerSessionPlugin {
   private final SessionInfo sessionInfo;
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final NewMultiCommandRequestHandler newMultiCommandRequestHandler;
+  private final LocalSessionStub localSessionStub;
 
   @Inject
   AtsServerSessionPlugin(
       SessionInfo sessionInfo,
       NewMultiCommandRequestHandler newMultiCommandRequestHandler,
-      SessionRequestHandlerUtil sessionRequestHandlerUtil) {
+      SessionRequestHandlerUtil sessionRequestHandlerUtil,
+      LocalSessionStub localSessionStub) {
     this.sessionInfo = sessionInfo;
     this.newMultiCommandRequestHandler = newMultiCommandRequestHandler;
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
+    this.localSessionStub = localSessionStub;
   }
 
   @Subscribe
@@ -153,9 +170,49 @@ final class AtsServerSessionPlugin {
               ? RequestState.COMPLETED
               : RequestState.ERROR);
       logger.atInfo().log("RequestDetail: %s", shortDebugString(requestDetail.build()));
+
+      if (requestDetail.getState().equals(RequestState.ERROR)
+          && requestDetail.getMaxRetryOnTestFailures() > 0) {
+        retrySession();
+      }
+
       RequestDetail latestRequestDetail = requestDetail.build();
       sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
     }
+  }
+
+  @GuardedBy("requestDetailLock")
+  private void retrySession() throws MobileHarnessException {
+    NewMultiCommandRequest.Builder retryRequestBuilder =
+        requestDetail.getOriginalRequest().toBuilder();
+    retryRequestBuilder.setRetryPreviousSessionId(sessionInfo.getSessionId());
+    // TODO: customize retry type
+    retryRequestBuilder.setMaxRetryOnTestFailures(requestDetail.getMaxRetryOnTestFailures() - 1);
+    SessionPluginConfig retryConfig =
+        SessionPluginConfig.newBuilder()
+            .setExecutionConfig(
+                sessionInfo.getSessionPluginExecutionConfig().toBuilder()
+                    .setConfig(
+                        Any.pack(
+                            SessionRequest.newBuilder()
+                                .setNewMultiCommandRequest(retryRequestBuilder.build())
+                                .build())))
+            .setLoadingConfig(
+                SessionPluginLoadingConfig.newBuilder()
+                    .setPluginClassName(SESSION_PLUGIN_CLASS_NAME)
+                    .setPluginModuleClassName(SESSION_MODULE_CLASS_NAME))
+            .setExplicitLabel(SessionPluginLabel.newBuilder().setLabel(SESSION_PLUGIN_LABEL))
+            .build();
+    CreateSessionRequest createSessionRequest =
+        CreateSessionRequest.newBuilder()
+            .setSessionConfig(
+                SessionConfig.newBuilder()
+                    .setSessionPluginConfigs(
+                        SessionPluginConfigs.newBuilder().addSessionPluginConfig(retryConfig)))
+            .build();
+    String nextAttemptSessionId =
+        localSessionStub.createSession(createSessionRequest).getSessionId().getId();
+    requestDetail.setNextAttemptSessionId(nextAttemptSessionId);
   }
 
   private void createNonTradefedJobs() throws MobileHarnessException, InterruptedException {

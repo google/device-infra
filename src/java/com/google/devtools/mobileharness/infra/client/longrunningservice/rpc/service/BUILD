@@ -13,12 +13,14 @@
 # limitations under the License.
 #
 
+DEFAULT_VISIBILITY = [
+    "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+    "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+]
+
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-    ],
+    default_visibility = DEFAULT_VISIBILITY,
 )
 
 java_library(
@@ -49,6 +51,10 @@ java_library(
 java_library(
     name = "local_session_stub",
     srcs = ["LocalSessionStub.java"],
+    visibility = DEFAULT_VISIBILITY + [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+    ],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

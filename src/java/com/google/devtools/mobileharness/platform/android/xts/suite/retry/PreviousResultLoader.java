@@ -42,7 +42,7 @@ public class PreviousResultLoader {
   }
 
   /**
-   * Loads the result for the given session.
+   * Loads the result for the given session from ATS Console.
    *
    * @param resultsDir path to the "results" directory
    * @param previousSessionIndex index of the previous session being loaded
@@ -50,7 +50,23 @@ public class PreviousResultLoader {
   public Result loadPreviousResult(Path resultsDir, int previousSessionIndex)
       throws MobileHarnessException {
     Path testResultProtoFile = getPrevSessionTestResultProtoFile(resultsDir, previousSessionIndex);
+    return loadResult(testResultProtoFile, String.valueOf(previousSessionIndex));
+  }
 
+  /**
+   * Loads the result for the given session from ATS Server.
+   *
+   * @param resultDir path to the session's result PB file.
+   * @param previousSessionId ID of the previous session being loaded
+   */
+  public Result loadPreviousResult(Path resultDir, String previousSessionId)
+      throws MobileHarnessException {
+    Path testResultProtoFile = resultDir.resolve(SuiteCommon.TEST_RESULT_PB_FILE_NAME);
+    return loadResult(testResultProtoFile, previousSessionId);
+  }
+
+  private Result loadResult(Path testResultProtoFile, String previousSessionIdOrIndex)
+      throws MobileHarnessException {
     try {
       return TestResultProtoUtil.readFromFile(testResultProtoFile.toFile());
     } catch (IOException e) {
@@ -58,7 +74,7 @@ public class PreviousResultLoader {
           ExtErrorId.PREV_RESULT_LOADER_LOAD_TEST_RESULT_PROTO_FILE_ERROR,
           String.format(
               "Failed to load test result proto file %s for session %s.",
-              testResultProtoFile.toAbsolutePath(), previousSessionIndex),
+              testResultProtoFile.toAbsolutePath(), previousSessionIdOrIndex),
           e);
     }
   }
