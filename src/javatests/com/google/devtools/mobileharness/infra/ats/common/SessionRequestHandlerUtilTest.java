@@ -196,7 +196,7 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
     assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
@@ -232,8 +232,8 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
-            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build(),
-            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+            SubDeviceSpec.newBuilder().setType("AndroidDevice").build(),
+            SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
   }
 
   @Test
@@ -280,7 +280,7 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
     assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
@@ -321,7 +321,7 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
     assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
@@ -373,7 +373,7 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
     assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
@@ -429,7 +429,7 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
     assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
@@ -480,7 +480,7 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
     assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
@@ -525,8 +525,8 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
-            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build(),
-            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+            SubDeviceSpec.newBuilder().setType("AndroidDevice").build(),
+            SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
   }
 
   @Test
@@ -555,8 +555,8 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
-            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build(),
-            SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+            SubDeviceSpec.newBuilder().setType("AndroidDevice").build(),
+            SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
   }
 
   @Test
@@ -606,7 +606,7 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder()
-                .setType("AndroidRealDevice")
+                .setType("AndroidDevice")
                 .setDimensions(StringMap.newBuilder().putContent("serial", "device_id_1"))
                 .build());
 
@@ -659,11 +659,11 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder()
-                .setType("AndroidRealDevice")
+                .setType("AndroidDevice")
                 .setDimensions(StringMap.newBuilder().putContent("serial", "device_id_1"))
                 .build(),
             SubDeviceSpec.newBuilder()
-                .setType("AndroidRealDevice")
+                .setType("AndroidDevice")
                 .setDimensions(StringMap.newBuilder().putContent("serial", "device_id_3"))
                 .build());
   }
@@ -749,7 +749,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(false))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -759,7 +759,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(false))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -849,7 +849,7 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(jobConfigOpt).isPresent();
     assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
     assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
@@ -874,7 +874,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -884,7 +884,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -921,7 +921,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -931,7 +931,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -968,7 +968,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -978,7 +978,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1015,7 +1015,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1025,7 +1025,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1035,7 +1035,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module3").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1088,7 +1088,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1141,7 +1141,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1151,7 +1151,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1189,7 +1189,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1199,7 +1199,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1209,7 +1209,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module3").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1281,7 +1281,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module1").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1291,7 +1291,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module2").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1301,7 +1301,7 @@ public final class SessionRequestHandlerUtilTest {
         Configuration.newBuilder()
             .setMetadata(
                 ConfigurationMetadata.newBuilder().setXtsModule("module3").setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1372,7 +1372,7 @@ public final class SessionRequestHandlerUtilTest {
                 ConfigurationMetadata.newBuilder()
                     .setXtsModule("HelloWorldTest")
                     .setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
@@ -1421,7 +1421,7 @@ public final class SessionRequestHandlerUtilTest {
                 ConfigurationMetadata.newBuilder()
                     .setXtsModule("HelloWorldTest")
                     .setIsConfigV2(true))
-            .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
             .setTest(
                 com.google.devtools.mobileharness.platform.android.xts.config.proto
                     .ConfigurationProto.Test.newBuilder()
