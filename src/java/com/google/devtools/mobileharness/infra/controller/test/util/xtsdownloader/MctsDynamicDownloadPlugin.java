@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy.exponentialBackoff;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
@@ -34,6 +35,9 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryException;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryStrategy;
+import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCallable;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -48,6 +52,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -83,6 +88,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "armeabi-v7a-hard", "arm",
           "arm64-v8a", "arm64",
           "x86_64", "x86_64");
+  private static final RetryStrategy RETRY_STRATEGY =
+      exponentialBackoff(Duration.ofMinutes(1), /* multiplier= */ 5, /* numAttempts= */ 3);
+
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
   private final AndroidAdbUtil adbUtil;
   private final LocalFileUtil fileUtil;
@@ -292,7 +300,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       // Preparer the target directory:
       fileUtil.prepareDir(fileUtil.getParentDirPath(filePath), LocalFileUtil.FULL_ACCESS);
       // Download the resource.
-      try (InputStream inputStream = new BufferedInputStream(connection.getInputStream());
+      try (InputStream inputStream = new BufferedInputStream(downloadWithRetry(connection));
           FileOutputStream outputStream = new FileOutputStream(filePath); ) {
         if (inputStream == null) {
           throw new MobileHarnessException(
@@ -304,24 +312,41 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         fileUtil.grantFileOrDirFullAccess(filePath);
         logger.atInfo().log("Downloaded resource %s to %s", downloadUrl, filePath);
         return filePath;
-      } catch (IOException e) {
-        if (e instanceof FileNotFoundException) {
-          // Handle FileNotFoundException specifically since there might not exist MCTS files for
-          // some of the modules.
-          logger.atWarning().log(
-              "%s not exist, since there might not exist MCTS files for some of the modules.",
-              downloadUrl);
-          return null;
-        } else {
-          throw new MobileHarnessException(
-              AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_FILE_DOWNLOAD_ERROR,
-              String.format(
-                  "An I/O error occurred when downloading and unzipping resource from %s to %s",
-                  downloadUrl, filePath),
-              e);
-        }
+      } catch (RetryException | IOException e) {
+        throw new MobileHarnessException(
+            AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_FILE_DOWNLOAD_ERROR,
+            String.format(
+                "An I/O error occurred when downloading and unzipping resource from %s to %s",
+                downloadUrl, filePath),
+            e);
       }
     }
+  }
+
+  @Nullable
+  private InputStream downloadWithRetry(URLConnection connection) throws RetryException {
+    RetryingCallable<InputStream> getInputStream =
+        RetryingCallable.newBuilder(
+                () -> {
+                  try {
+                    InputStream inputStream = connection.getInputStream();
+                    return inputStream;
+                  } catch (IOException e) {
+                    if (e instanceof FileNotFoundException) {
+                      // Handle FileNotFoundException specifically since there might not exist MCTS
+                      // files for some of the modules.
+                      logger.atWarning().log(
+                          "%s not exist, since there might not exist MCTS files for some of the"
+                              + " modules.",
+                          connection.getURL().getPath());
+                      return null;
+                    }
+                    throw e;
+                  }
+                },
+                RETRY_STRATEGY)
+            .build();
+    return getInputStream.call();
   }
 
   private Set<String> unzipDownloadedTestCases(
