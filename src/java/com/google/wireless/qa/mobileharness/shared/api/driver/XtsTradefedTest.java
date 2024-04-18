@@ -19,6 +19,7 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.lang.Math.min;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -51,6 +52,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandStartExcepti
 import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.LineCallbackException;
+import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -82,6 +84,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -180,9 +183,7 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   @Override
-  public void run(TestInfo testInfo)
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+  public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     XtsTradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
     String xtsType = spec.getXtsType();
     boolean isRunRetry = Ascii.equalsIgnoreCase("retry", getXtsTestPlan(spec));
@@ -385,6 +386,11 @@ public class XtsTradefedTest extends BaseDriver
       BufferedWriter writer =
           Files.newBufferedWriter(Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG));
 
+      String testId = testInfo.locator().getId();
+      String outputLoggerPrefix =
+          String.format("TF-%s ", testId.substring(0, min(4, testId.length())));
+      CommandOutputLogger commandOutputLogger =
+          new CommandOutputLogger(outputLoggerPrefix, outputLoggerPrefix);
       return cmdExecutor.start(
           Command.of(cmd)
               .extraEnv(env)
@@ -396,6 +402,7 @@ public class XtsTradefedTest extends BaseDriver
                                 .setFormattedLogRecord(line + "\n")
                                 .setSourceType(SourceType.TF)
                                 .build());
+                        commandOutputLogger.logStdoutLine(line);
                         try {
                           writer.write(line + "\n");
                         } catch (IOException e) {
@@ -469,7 +476,7 @@ public class XtsTradefedTest extends BaseDriver
       throws MobileHarnessException {
     ImmutableList<Pattern> excludedJarFilePatterns =
         EXCLUDED_JAR_FILE_PATTERNS.stream().map(Pattern::compile).collect(toImmutableList());
-    LinkedHashSet<String> leadingJarsSet = getLeadingJarsInClasspath(spec);
+    Set<String> leadingJarsSet = getLeadingJarsInClasspath(spec);
 
     ListMultimap<String, Path> foundLeadingJars = ArrayListMultimap.create();
     ImmutableList.Builder<Path> restOfJars = ImmutableList.builder();
@@ -555,7 +562,7 @@ public class XtsTradefedTest extends BaseDriver
     }
   }
 
-  private LinkedHashSet<String> getLeadingJarsInClasspath(XtsTradefedTestDriverSpec spec) {
+  private Set<String> getLeadingJarsInClasspath(XtsTradefedTestDriverSpec spec) {
     LinkedHashSet<String> leadingJarsSet = new LinkedHashSet<>();
     // Always put tradefed.jar at the beginning
     leadingJarsSet.add("tradefed.jar");

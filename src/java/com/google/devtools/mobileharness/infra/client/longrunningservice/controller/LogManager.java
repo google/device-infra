@@ -23,7 +23,9 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
+import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Handler;
 import java.util.logging.Level;
@@ -63,7 +65,7 @@ public class LogManager<D> {
 
   private static final int CAPACITY = 10;
 
-  private final Handler logHandler = new LogHandler();
+  private final Handler logHandler;
 
   private final ListeningExecutorService threadPool;
 
@@ -93,8 +95,10 @@ public class LogManager<D> {
   LogManager(ListeningExecutorService threadPool, LogRecordsCollector<D> downstreamCollector) {
     this.threadPool = threadPool;
     this.downstreamCollector = downstreamCollector;
+    this.logHandler = new LogHandler();
   }
 
+  /** The handler will not handle logs from {@link CommandOutputLogger}. */
   public Handler getLogHandler() {
     return logHandler;
   }
@@ -191,6 +195,12 @@ public class LogManager<D> {
   }
 
   private class LogHandler extends Handler {
+
+    private LogHandler() {
+      setFilter(
+          logRecord ->
+              !Objects.equals(logRecord.getSourceClassName(), CommandOutputLogger.class.getName()));
+    }
 
     @Override
     public void publish(LogRecord logRecord) {

@@ -148,7 +148,7 @@ public class SessionRunner implements Callable<Void> {
     return null;
   }
 
-  public Optional<SessionEnvironment> getSessionEnvironment() {
+  Optional<SessionEnvironment> getSessionEnvironment() {
     return Optional.ofNullable(sessionEnvironment);
   }
 
@@ -159,15 +159,15 @@ public class SessionRunner implements Callable<Void> {
    *     required. It is acceptable that the implementation outputs more fields than the field mask
    *     requires.
    */
-  public SessionDetail getSession(@Nullable FieldMask fieldMask) {
+  SessionDetail getSession(@Nullable FieldMask fieldMask) {
     return sessionDetailHolder.buildSessionDetail(fieldMask);
   }
 
-  public SessionConfig getSessionConfig() {
+  SessionConfig getSessionConfig() {
     return sessionDetailHolder.getSessionConfig();
   }
 
-  public boolean notifySession(SessionNotification sessionNotification) {
+  boolean notifySession(SessionNotification sessionNotification) {
     synchronized (sessionNotifyingFutures) {
       if (!receiveSessionNotification) {
         return false;
@@ -182,7 +182,7 @@ public class SessionRunner implements Callable<Void> {
     }
   }
 
-  public void abortSession() {
+  void abortSession() {
     sessionDetailHolder.putSessionProperty(
         SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING, "true");
 

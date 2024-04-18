@@ -20,10 +20,12 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import java.nio.file.Path;
+import java.util.Objects;
 import javax.inject.Inject;
 
 /** Preparer for preparing environment for a session. */
@@ -130,7 +132,11 @@ class SessionEnvironmentPreparer {
       Path sessionLogFile = sessionLogDir.resolve("olc_server_session_log_0.txt");
       NonThrowingAutoCloseable sessionLogHandlerRemover =
           MobileHarnessLogger.addSingleFileHandler(
-              sessionLogDir.toString(), "olc_server_session_log_%g.txt");
+              sessionLogDir.toString(),
+              "olc_server_session_log_%g.txt",
+              logRecord ->
+                  !Objects.equals(
+                      logRecord.getSourceClassName(), CommandOutputLogger.class.getName()));
       sessionEnvironment.setSessionLog(sessionLogHandlerRemover, sessionLogFile);
     } catch (MobileHarnessException | RuntimeException | Error e) {
       sessionEnvironment.close();

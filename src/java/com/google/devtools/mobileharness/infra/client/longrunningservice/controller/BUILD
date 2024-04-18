@@ -37,6 +37,7 @@ java_library(
     srcs = ["LogManager.java"],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command/linecallback:command_output_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -84,6 +85,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command/linecallback:command_output_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:log",

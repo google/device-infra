@@ -68,14 +68,13 @@ public class MobileHarnessLogger {
   private static final Filter COMMON_FILTER =
       logRecord -> !logRecord.getLoggerName().equals("io.grpc.netty.NettyServerHandler");
 
-  private static final Filter LAB_FILTER =
-      logRecord -> COMMON_FILTER.isLoggable(logRecord) && !(false);
-
-  private static final Filter FILTER = LAB_FILTER;
+  private static final Filter FILTER = combineFilter(COMMON_FILTER, logRecord -> true);
 
   private static final AtomicBoolean isInitialized = new AtomicBoolean();
 
-  @Nullable private static volatile String logFileDirName;
+  @SuppressWarnings("NonFinalStaticField")
+  @Nullable
+  private static volatile String logFileDirName;
 
   /** For saving strong references of configured loggers. */
   @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
@@ -177,7 +176,8 @@ public class MobileHarnessLogger {
    * <logFileDir>/log_0.txt}".
    */
   public static NonThrowingAutoCloseable addSingleFileHandler(
-      String logFileDir, String logFileNamePattern) throws MobileHarnessException {
+      String logFileDir, String logFileNamePattern, @Nullable Filter extraFilter)
+      throws MobileHarnessException {
     prepareDir(logFileDir);
     String logFilePattern = PathUtil.join(logFileDir, logFileNamePattern);
     Handler logFileHandler;
@@ -189,6 +189,7 @@ public class MobileHarnessLogger {
           "Failed to create file handler",
           e);
     }
+    logFileHandler.setFilter(extraFilter);
     configureHandler(logFileHandler);
     Logger rootLogger = getLoggerByName(/* loggerName= */ "");
     rootLogger.addHandler(logFileHandler);
@@ -221,7 +222,7 @@ public class MobileHarnessLogger {
   /** Sets formatter/filter/level of a {@link Handler}. */
   private static void configureHandler(Handler handler) {
     handler.setFormatter(MobileHarnessLogFormatter.getDefaultFormatter());
-    handler.setFilter(FILTER);
+    addFilter(handler, FILTER);
     handler.setLevel(Level.INFO);
   }
 
@@ -256,5 +257,22 @@ public class MobileHarnessLogger {
       logger.removeHandler(handler);
       handler.close();
     }
+  }
+
+  private static void addFilter(Handler handler, Filter extraFilter) {
+    handler.setFilter(combineFilter(handler.getFilter(), extraFilter));
+  }
+
+  @SuppressWarnings("RedundantIfStatement")
+  private static Filter combineFilter(@Nullable Filter filter1, @Nullable Filter filter2) {
+    return logRecord -> {
+      if (filter1 != null && !filter1.isLoggable(logRecord)) {
+        return false;
+      }
+      if (filter2 != null && !filter2.isLoggable(logRecord)) {
+        return false;
+      }
+      return true;
+    };
   }
 }

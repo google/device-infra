@@ -20,6 +20,7 @@ import static com.google.common.base.Strings.nullToEmpty;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -35,7 +36,8 @@ public final class MobileHarnessLogFormatter {
    *
    * <p>Usually for printing logs from a sub process.
    */
-  private static final ImmutableSet<String> DIRECT_MODE_SOURCE_CLASS_NAMES = ImmutableSet.of();
+  private static final ImmutableSet<String> DIRECT_MODE_SOURCE_CLASS_NAMES =
+      ImmutableSet.of(CommandOutputLogger.class.getName());
 
   private static final ZoneId ZONE_ID = ZoneId.of("America/Los_Angeles");
   private static final DateTimeFormatter DATE_TIME_FORMATTER =

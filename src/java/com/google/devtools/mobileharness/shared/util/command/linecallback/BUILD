@@ -13,14 +13,24 @@
 # limitations under the License.
 #
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
+
+java_library(
+    name = "command_output_logger",
+    srcs = ["CommandOutputLogger.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+    ],
+)
 
 java_library(
     name = "linecallback",
-    srcs = glob(["*.java"]),
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    srcs = ["ScanSignalOutputCallback.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

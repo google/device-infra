@@ -436,6 +436,20 @@ public class SessionManager {
       SessionDetail finalSessionDetail =
           createFinalSessionDetail(sessionDetail, sessionRunnerError);
 
+      Optional<SessionEnvironment> sessionEnvironment =
+          runningSession.sessionRunner().getSessionEnvironment();
+      if (sessionEnvironment.isPresent()) {
+        // Copies session logs.
+        try {
+          copySessionLog(sessionEnvironment.get(), finalSessionDetail);
+        } catch (RuntimeException | Error e) {
+          logger.atWarning().withCause(e).log("Failed to copy session logs");
+        }
+
+        // Cleans up session environment.
+        sessionEnvironment.get().close();
+      }
+
       // Archives the session.
       synchronized (sessionsLock) {
         runningSessions.remove(finalSessionDetail.getSessionId().getId());
@@ -450,18 +464,6 @@ public class SessionManager {
 
       // Completes the final result future.
       runningSession.finalResultFuture().set(finalSessionDetail);
-
-      Optional<SessionEnvironment> sessionEnvironment =
-          runningSession.sessionRunner().getSessionEnvironment();
-      if (sessionEnvironment.isPresent()) {
-        try {
-          // Copies session logs.
-          copySessionLog(sessionEnvironment.get(), finalSessionDetail);
-        } finally {
-          // Cleans up session environment.
-          sessionEnvironment.get().close();
-        }
-      }
     }
   }
 

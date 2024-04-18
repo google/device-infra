@@ -22,8 +22,14 @@ import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 /** Dir constants for OLC server. */
 public class OlcServerDirs {
 
+  private static final String LOG_DIR_NAME = "olc_server_log";
+
   public static String getLogDir() {
-    return PathUtil.join(DirCommon.getPublicDirRoot(), "olc_server_log");
+    return PathUtil.join(DirCommon.getPublicDirRoot(), getLogDirName());
+  }
+
+  public static String getLogDirName() {
+    return LOG_DIR_NAME;
   }
 
   public static String getLatestLogFile() {
