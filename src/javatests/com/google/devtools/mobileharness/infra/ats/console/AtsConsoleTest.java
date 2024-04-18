@@ -77,6 +77,7 @@ public final class AtsConsoleTest {
   public void setUp() throws Exception {
     int olcServerPort = PortProber.pickUnusedPort();
     String publicDirPath = tmpFolder.newFolder("public_dir").toString();
+    String tmpDirPath = tmpFolder.newFolder("tmp_dir").toString();
     String xtsRootDirPath = tmpFolder.newFolder("xts_root_dir").toString();
     String versionFilePath = PathUtil.join(xtsRootDirPath, "android-cts/tools/version.txt");
     localFileUtil.writeToFile(versionFilePath, "fake_version");
@@ -96,7 +97,9 @@ public final class AtsConsoleTest {
             "external_adb_initializer_template",
             "true",
             "simplified_log_format",
-            "true");
+            "true",
+            "tmp_dir_root",
+            tmpDirPath);
     deviceInfraServiceFlags =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))

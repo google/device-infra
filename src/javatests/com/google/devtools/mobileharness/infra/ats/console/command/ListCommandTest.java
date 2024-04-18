@@ -85,6 +85,7 @@ public class ListCommandTest {
   @Captor private ArgumentCaptor<String> consoleStdoutCaptor;
 
   private String publicDirPath;
+  private String tmpDirPath;
   private String xtsRootDirPath;
 
   @Inject private AtsConsole atsConsole;
@@ -94,6 +95,7 @@ public class ListCommandTest {
     // Prepares environment.
     int olcServerPort = PortProber.pickUnusedPort();
     publicDirPath = tmpFolder.newFolder("public_dir").toString();
+    tmpDirPath = tmpFolder.newFolder("tmp_dir").toString();
     xtsRootDirPath = tmpFolder.newFolder("xts_root_dir").toString();
     Path olcServerBinary =
         Path.of(
@@ -115,7 +117,9 @@ public class ListCommandTest {
             "no_op_device_num",
             "1",
             "simplified_log_format",
-            "true");
+            "true",
+            "tmp_dir_root",
+            tmpDirPath);
     ImmutableList<String> deviceInfraServiceFlags =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))

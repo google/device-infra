@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
@@ -36,10 +37,12 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
 import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressServerInterceptor;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
+import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
@@ -56,7 +59,8 @@ public class OlcServer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  public static void main(String[] args) throws IOException, InterruptedException {
+  public static void main(String[] args)
+      throws MobileHarnessException, IOException, InterruptedException {
     // Parses flags.
     Flags.parse(args);
 
@@ -83,6 +87,7 @@ public class OlcServer {
   private final LogManager<GetLogResponse> logManager;
   private final ClientApi clientApi;
   private final ServerBuilder<?> serverBuilder;
+  private final LocalFileUtil localFileUtil;
 
   @Inject
   OlcServer(
@@ -94,7 +99,8 @@ public class OlcServer {
       @GlobalInternalEventBus EventBus globalInternalEventBus,
       LogManager<GetLogResponse> logManager,
       ClientApi clientApi,
-      @GrpcServer ServerBuilder<?> serverBuilder) {
+      @GrpcServer ServerBuilder<?> serverBuilder,
+      LocalFileUtil localFileUtil) {
     this.sessionService = sessionService;
     this.versionService = versionService;
     this.controlService = controlService;
@@ -104,9 +110,17 @@ public class OlcServer {
     this.logManager = logManager;
     this.clientApi = clientApi;
     this.serverBuilder = serverBuilder;
+    this.localFileUtil = localFileUtil;
   }
 
-  private void run(List<String> args) throws IOException, InterruptedException {
+  private void run(List<String> args)
+      throws MobileHarnessException, IOException, InterruptedException {
+    // Prepares dirs.
+    localFileUtil.prepareDir(DirCommon.getPublicDirRoot());
+    localFileUtil.prepareDir(DirCommon.getTempDirRoot());
+    localFileUtil.grantFileOrDirFullAccess(DirCommon.getPublicDirRoot());
+    localFileUtil.grantFileOrDirFullAccess(DirCommon.getTempDirRoot());
+
     // Initializes logger.
     MobileHarnessLogger.init(
         OlcServerDirs.getLogDir(),

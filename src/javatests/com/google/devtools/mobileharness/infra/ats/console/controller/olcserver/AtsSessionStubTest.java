@@ -91,6 +91,7 @@ public class AtsSessionStubTest {
   public void setUp() throws Exception {
     int serverPort = PortProber.pickUnusedPort();
     String publicDirPath = tmpFolder.newFolder("public_dir").toString();
+    String tmpDirPath = tmpFolder.newFolder("tmp_dir").toString();
 
     ImmutableMap<String, String> flagMap =
         ImmutableMap.of(
@@ -99,7 +100,9 @@ public class AtsSessionStubTest {
             "public_dir",
             publicDirPath,
             "detect_adb_device",
-            "false");
+            "false",
+            "tmp_dir_root",
+            tmpDirPath);
     deviceInfraServiceFlags =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
