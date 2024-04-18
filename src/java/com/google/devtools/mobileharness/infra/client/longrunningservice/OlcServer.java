@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.GrpcServer;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
@@ -41,7 +42,7 @@ import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import io.grpc.BindableService;
 import io.grpc.Server;
-import io.grpc.netty.NettyServerBuilder;
+import io.grpc.ServerBuilder;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.Arrays;
@@ -63,7 +64,12 @@ public class OlcServer {
     Instant serverStartTime = Instant.now();
     OlcServer server =
         Guice.createInjector(
-                new ServerModule(Flags.instance().enableAtsMode.getNonNull(), serverStartTime))
+                new ServerModule(
+                    Flags.instance().enableAtsMode.getNonNull(),
+                    serverStartTime,
+                    Flags.instance().olcServerPort.getNonNull(),
+                    Flags.instance().useAlts.getNonNull(),
+                    Flags.instance().restrictOlcServiceToUsers.getNonNull()))
             .getInstance(OlcServer.class);
     server.run(Arrays.asList(args));
   }
@@ -76,6 +82,7 @@ public class OlcServer {
   private final EventBus globalInternalEventBus;
   private final LogManager<GetLogResponse> logManager;
   private final ClientApi clientApi;
+  private final ServerBuilder<?> serverBuilder;
 
   @Inject
   OlcServer(
@@ -86,7 +93,8 @@ public class OlcServer {
       ExecMode execMode,
       @GlobalInternalEventBus EventBus globalInternalEventBus,
       LogManager<GetLogResponse> logManager,
-      ClientApi clientApi) {
+      ClientApi clientApi,
+      @GrpcServer ServerBuilder<?> serverBuilder) {
     this.sessionService = sessionService;
     this.versionService = versionService;
     this.controlService = controlService;
@@ -95,6 +103,7 @@ public class OlcServer {
     this.globalInternalEventBus = globalInternalEventBus;
     this.logManager = logManager;
     this.clientApi = clientApi;
+    this.serverBuilder = serverBuilder;
   }
 
   private void run(List<String> args) throws IOException, InterruptedException {
@@ -117,18 +126,16 @@ public class OlcServer {
     LogRecorder.getInstance().initialize(logManager);
 
     // Starts RPC server.
-    int port = Flags.instance().olcServerPort.getNonNull();
     ImmutableList<BindableService> extraServices =
         execMode instanceof ServiceProvider
             ? ((ServiceProvider) execMode).provideServices()
             : ImmutableList.of();
-    NettyServerBuilder serverBuilder =
-        NettyServerBuilder.forPort(port)
-            .executor(threadPool)
-            .intercept(new ClientAddressServerInterceptor())
-            .addService(controlService)
-            .addService(sessionService)
-            .addService(versionService);
+    serverBuilder
+        .executor(threadPool)
+        .intercept(new ClientAddressServerInterceptor())
+        .addService(controlService)
+        .addService(sessionService)
+        .addService(versionService);
     extraServices.forEach(serverBuilder::addService);
     Server server = serverBuilder.build();
     controlService.setServer(server);
@@ -141,7 +148,7 @@ public class OlcServer {
         "Fatal error while initializing %s exec mode",
         execMode.getClass().getSimpleName());
 
-    logger.atInfo().log("OLC server started, port=%s", port);
+    logger.atInfo().log("OLC server started, port=%s", server.getPort());
 
     server.awaitTermination();
     logger.atInfo().log("Exiting...");

@@ -891,6 +891,16 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> resDirName = resDirNameDefault;
 
+  private static final Flag<List<String>> restrictOlcServiceToUsersDefault = Flag.stringList();
+
+  @com.beust.jcommander.Parameter(
+      names = "--restrict_olc_service_to_users",
+      description =
+          "A list of authorized users. If the list is nonempty, "
+              + "restrict the OLC service to users on the list.",
+      converter = Flag.StringListConverter.class)
+  public Flag<List<String>> restrictOlcServiceToUsers = restrictOlcServiceToUsersDefault;
+
   private static final Flag<Boolean> reverseTunnelingLabServerDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -1059,6 +1069,15 @@ public class Flags {
   private static String getTmpDirRootDefaultOss() {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/mobileharness";
   }
+
+  private static final Flag<Boolean> useAltsDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--use_alts",
+      description =
+          "Use ALTS for OLC server auth.This is supported by GCP vm. " + "The default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> useAlts = useAltsDefault;
 
   private static final Flags INSTANCE = new Flags();
 

@@ -21,6 +21,41 @@ package(
 )
 
 java_library(
+    name = "reflection_operation_exception_wrapper",
+    srcs = [
+        "ReflectionOperationExceptionWrapper.java",
+    ],
+    deps = [],
+)
+
+java_library(
+    name = "alts_auth_interceptor",
+    srcs = [
+        "AltsAuthInterceptor.java",
+    ],
+    deps = [
+        ":reflection_operation_exception_wrapper",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "sever_builder_factory",
+    srcs = [
+        "ServerBuilderFactory.java",
+    ],
+    deps = [
+        ":alts_auth_interceptor",
+        ":reflection_operation_exception_wrapper",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@io_grpc_grpc_java//core",
+        "@io_grpc_grpc_java//netty",
+    ],
+)
+
+java_library(
     name = "client_address_server_interceptor",
     srcs = ["ClientAddressServerInterceptor.java"],
     deps = [

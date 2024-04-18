@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.eventbus.EventBus;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
@@ -25,6 +26,7 @@ import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.GrpcServer;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
@@ -33,6 +35,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStubImpl;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
+import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -40,8 +43,11 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import io.grpc.ServerBuilder;
+import java.lang.reflect.InvocationTargetException;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import javax.inject.Singleton;
 
@@ -59,10 +65,21 @@ class ServerModule extends AbstractModule {
 
   private final Instant serverStartTime;
   private final boolean isAtsMode;
+  private final int grpcPort;
+  private final boolean useAlts;
+  private final ImmutableSet<String> restrictToAuthUsers;
 
-  ServerModule(boolean isAtsMode, Instant serverStartTime) {
+  ServerModule(
+      boolean isAtsMode,
+      Instant serverStartTime,
+      int grpcPort,
+      boolean useAlts,
+      List<String> restrictToAuthUsers) {
     this.serverStartTime = serverStartTime;
     this.isAtsMode = isAtsMode;
+    this.grpcPort = grpcPort;
+    this.useAlts = useAlts;
+    this.restrictToAuthUsers = ImmutableSet.copyOf(restrictToAuthUsers);
   }
 
   @Override
@@ -126,6 +143,19 @@ class ServerModule extends AbstractModule {
   @Provides
   LogRecordsCollector<GetLogResponse> provideLogRecordsCollector() {
     return new GetLogResponseLogRecordsCollector();
+  }
+
+  @Provides
+  @Singleton
+  @GrpcServer
+  ServerBuilder<?> provideServerBuilder()
+      throws ClassNotFoundException,
+          InvocationTargetException,
+          NoSuchMethodException,
+          IllegalAccessException {
+    return useAlts
+        ? ServerBuilderFactory.createAltsServerBuilder(grpcPort, restrictToAuthUsers)
+        : ServerBuilderFactory.createNettyServerBuilder(grpcPort, /* localhost= */ false);
   }
 
   private static class GetLogResponseLogRecordsCollector
