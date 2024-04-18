@@ -140,7 +140,12 @@ class RunCommandHandler {
       resultDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve(timestampDirName);
       logDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve(timestampDirName);
       sessionRequestHandlerUtil.processResult(
-          resultDir, logDir, allJobs, generateSessionRequestInfo(command));
+          resultDir,
+          logDir,
+          Optional.of(XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve("latest")),
+          Optional.of(XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve("latest")),
+          allJobs,
+          generateSessionRequestInfo(command));
     } finally {
       sessionRequestHandlerUtil.cleanUpJobGenDirs(allJobs);
 

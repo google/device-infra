@@ -1128,11 +1128,18 @@ public class SessionRequestHandlerUtil {
    *
    * @param resultDir the directory to save the merged result
    * @param logDir the directory to save the logs
+   * @param latestResultLink the symbolic link path to the latest result directory.
+   * @param latestLogLink the symbolic link path to the latest log directory.
    * @param jobs the jobs to process
    * @param sessionRequestInfo session request info stores info about the command
    */
   public void processResult(
-      Path resultDir, Path logDir, List<JobInfo> jobs, SessionRequestInfo sessionRequestInfo)
+      Path resultDir,
+      Path logDir,
+      Optional<Path> latestResultLink,
+      Optional<Path> latestLogLink,
+      List<JobInfo> jobs,
+      SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<JobInfo, Optional<TestInfo>> tradefedTests =
         jobs.stream()
@@ -1299,6 +1306,25 @@ public class SessionRequestHandlerUtil {
     } finally {
       if (localFileUtil.isDirExist(tmpTradefedTestResultsDir)) {
         localFileUtil.removeFileOrDir(tmpTradefedTestResultsDir);
+      }
+    }
+    // Create the latest result link and the latest log link. Catch the exception to avoid breaking
+    // the session.
+    if (latestResultLink.isPresent()) {
+      try {
+        localFileUtil.removeFileOrDir(latestResultLink.get());
+        localFileUtil.linkFileOrDir(resultDir.toString(), latestResultLink.get().toString());
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log("Failed to create the latest result link.");
+      }
+    }
+    if (latestLogLink.isPresent()) {
+      try {
+        localFileUtil.removeFileOrDir(latestLogLink.get());
+        localFileUtil.linkFileOrDir(logDir.toString(), latestLogLink.get().toString());
+      } catch (MobileHarnessException e) {
+        // Ignore the error here as it is possible that the latest link wasn't created.
+        logger.atWarning().withCause(e).log("Failed to create the latest log link.");
       }
     }
   }

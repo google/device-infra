@@ -393,7 +393,12 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
     verify(sessionRequestHandlerUtil)
         .processResult(
-            outputPath, outputPath, ImmutableList.of(jobInfo), sessionRequestInfoCaptor.getValue());
+            outputPath,
+            outputPath,
+            Optional.empty(),
+            Optional.empty(),
+            ImmutableList.of(jobInfo),
+            sessionRequestInfoCaptor.getValue());
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
   }
@@ -421,7 +426,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(files.getAll()).thenReturn(ImmutableMultimap.of());
     newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
-    verify(sessionRequestHandlerUtil, never()).processResult(any(), any(), any(), any());
+    verify(sessionRequestHandlerUtil, never())
+        .processResult(any(), any(), any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
   }
@@ -440,7 +446,9 @@ public final class NewMultiCommandRequestHandlerTest {
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     MobileHarnessException mhException = Mockito.mock(MobileHarnessException.class);
-    doThrow(mhException).when(sessionRequestHandlerUtil).processResult(any(), any(), any(), any());
+    doThrow(mhException)
+        .when(sessionRequestHandlerUtil)
+        .processResult(any(), any(), any(), any(), any(), any());
     newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
@@ -468,7 +476,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
-    verify(sessionRequestHandlerUtil, never()).processResult(any(), any(), any(), any());
+    verify(sessionRequestHandlerUtil, never())
+        .processResult(any(), any(), any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
   }
