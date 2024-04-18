@@ -24,6 +24,7 @@ import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
 import static java.util.stream.Collectors.joining;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
@@ -278,7 +279,8 @@ public final class RunCommand implements Callable<Integer> {
     return sessionRequestBuilder.setExtraArgs(extraArgs);
   }
 
-  private void validateCommandParameters() throws MobileHarnessException {
+  @VisibleForTesting
+  void validateCommandParameters() throws MobileHarnessException {
     if (isNullOrEmpty(config)) {
       throw new ParameterException(
           spec.commandLine(),
@@ -302,16 +304,27 @@ public final class RunCommand implements Callable<Integer> {
             Ansi.AUTO.string("Multiple modules are unsupported if a test case is specified.\n"));
       }
     }
-    if (config.equals("retry") && retrySessionIndex == null) {
-      throw new ParameterException(
-          spec.commandLine(),
-          Ansi.AUTO.string(
-              "Option @|fg(red) --retry <retry_session_id>|@ is required for retry command.\n"));
+    if (config.equals("retry")) {
+      validateRunRetryCommandParameters();
     }
     if (!isNullOrEmpty(subPlanName) && !isSubPlanExist(subPlanName)) {
       throw new ParameterException(
           spec.commandLine(),
           Ansi.AUTO.string(String.format("Subplan [%s] doesn't exist.\n", subPlanName)));
+    }
+  }
+
+  private void validateRunRetryCommandParameters() {
+    if (retrySessionIndex == null) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string("Option '--retry <retry_session_id>' is required for retry command.\n"));
+    }
+    if (!isNullOrEmpty(subPlanName)) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Option '--subplan <subplan_name>' is not supported in retry command.\n"));
     }
   }
 

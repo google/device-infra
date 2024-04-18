@@ -79,7 +79,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command/run:__pkg__",
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",

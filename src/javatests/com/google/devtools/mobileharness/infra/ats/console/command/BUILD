@@ -37,6 +37,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:guice_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:run_command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
