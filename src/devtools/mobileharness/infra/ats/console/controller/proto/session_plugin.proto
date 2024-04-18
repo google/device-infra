@@ -97,6 +97,9 @@ message RunCommand {
 
   // Optional.
   optional string sub_plan_name = 15;
+
+  // Optional. Whether to include html reports in the result zip file.
+  optional bool html_in_zip = 16;
 }
 
 message RunCommandState {

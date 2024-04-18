@@ -92,7 +92,8 @@ public final class CompatibilityReportCreatorTest {
 
     File xmlResultDir = temporaryFolder.newFolder("xml_result");
 
-    reportCreator.createReport(report, xmlResultDir.toPath(), /* testRecord= */ null);
+    reportCreator.createReport(
+        report, xmlResultDir.toPath(), /* testRecord= */ null, /* includeHtmlInZip= */ false);
 
     assertThat(
             realLocalFileUtil.listFilePaths(xmlResultDir.toPath(), false).stream()
@@ -104,6 +105,7 @@ public final class CompatibilityReportCreatorTest {
                 .add(CompatibilityReportCreator.HTML_REPORT_NAME)
                 .add("checksum-suite.data")
                 .add(CompatibilityReportCreator.TEST_RESULT_PB_FILE_NAME)
+                .add(CompatibilityReportCreator.FAILURE_REPORT_NAME)
                 .build());
 
     assertThat(

@@ -18,6 +18,7 @@ package(default_applicable_licenses = ["//:license"])
 filegroup(
     name = "compatibility_res",
     srcs = [
+        "compatibility_failures.xsl",
         "compatibility_result.css",
         "compatibility_result.xsl",
         "logo.png",

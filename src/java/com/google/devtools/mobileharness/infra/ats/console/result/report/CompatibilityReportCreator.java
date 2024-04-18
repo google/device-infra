@@ -69,6 +69,8 @@ public class CompatibilityReportCreator {
   @VisibleForTesting static final String TEST_RESULT_FILE_NAME = "test_result.xml";
   @VisibleForTesting static final String HTML_REPORT_NAME = "test_result.html";
   @VisibleForTesting static final String REPORT_XSL_FILE_NAME = "compatibility_result.xsl";
+  @VisibleForTesting static final String FAILURE_REPORT_NAME = "test_result_failures_suite.html";
+  @VisibleForTesting static final String FAILURE_XSL_FILE_NAME = "compatibility_failures.xsl";
   @VisibleForTesting static final String TEST_RECORD_PROTO_FILE_NAME = "test-record.pb";
 
   @VisibleForTesting static final String TEST_RESULT_PB_FILE_NAME = "test_result.pb";
@@ -104,9 +106,11 @@ public class CompatibilityReportCreator {
    * @param report the result report
    * @param resultDir the directory where to store the generated report files
    * @param testRecord test record proto packed into the report if specified
+   * @param includeHtmlInZip whether to include html reports in the zip file
    * @throws MobileHarnessException if failed to write the report to a XML file
    */
-  public void createReport(Result report, Path resultDir, @Nullable TestRecord testRecord)
+  public void createReport(
+      Result report, Path resultDir, @Nullable TestRecord testRecord, boolean includeHtmlInZip)
       throws MobileHarnessException, InterruptedException {
     localFileUtil.prepareDir(resultDir);
     try {
@@ -137,6 +141,15 @@ public class CompatibilityReportCreator {
       logger.atInfo().log("No test record specified.");
     }
 
+    Optional<File> htmlReport = Optional.empty();
+    Optional<File> htmlFailureReport = Optional.empty();
+    File testResultXmlFile = resultDir.resolve(TEST_RESULT_FILE_NAME).toFile();
+    if (includeHtmlInZip) {
+      // Create the html reports before the zip file.
+      htmlReport = createHtmlReport(testResultXmlFile);
+      htmlFailureReport = createFailureHtmlReport(testResultXmlFile);
+    }
+
     try {
       File zipResultFile =
           resultDir.resolveSibling(String.format("%s.zip", resultDir.getFileName())).toFile();
@@ -147,9 +160,19 @@ public class CompatibilityReportCreator {
           resultDir.getFileName(), MoreThrowables.shortDebugString(e));
     }
 
-    Optional<File> htmlReport = createHtmlReport(resultDir.resolve(TEST_RESULT_FILE_NAME).toFile());
+    if (!includeHtmlInZip) {
+      htmlReport = createHtmlReport(testResultXmlFile);
+      htmlFailureReport = createFailureHtmlReport(testResultXmlFile);
+    }
     if (htmlReport.isPresent()) {
-      logger.atInfo().log("HTML report: %s", htmlReport.get().getAbsolutePath());
+      logger.atInfo().log("Viewable report: %s", htmlReport.get().getAbsolutePath());
+    }
+
+    if (htmlFailureReport.isPresent()
+        && localFileUtil.isFileExist(htmlFailureReport.get().getAbsolutePath())) {
+      logger.atInfo().log("Failure HTML report: %s", htmlFailureReport.get().getAbsolutePath());
+    } else {
+      logger.atInfo().log("Test result: %s", testResultXmlFile.getAbsolutePath());
     }
   }
 
@@ -414,11 +437,35 @@ public class CompatibilityReportCreator {
     } catch (IOException | TransformerException ignored) {
       logger.atSevere().log(
           "Failed to create %s: %s", HTML_REPORT_NAME, MoreThrowables.shortDebugString(ignored));
-      if (report != null) {
+      if (report.exists()) {
         report.delete();
       }
       return Optional.empty();
     }
     return Optional.of(report);
+  }
+
+  /** Generates html report listing failed tests. CTS specific. */
+  private Optional<File> createFailureHtmlReport(File inputXml) {
+    File failureReport = new File(inputXml.getParentFile(), FAILURE_REPORT_NAME);
+    try (InputStream xslStream =
+            CompatibilityReportCreator.class.getResourceAsStream(
+                String.format(
+                    "/com/google/devtools/mobileharness/infra/ats/console/result/report/res/%s",
+                    FAILURE_XSL_FILE_NAME));
+        OutputStream outputStream = new FileOutputStream(failureReport)) {
+
+      Transformer transformer =
+          TransformerFactory.newInstance().newTransformer(new StreamSource(xslStream));
+      transformer.transform(new StreamSource(inputXml), new StreamResult(outputStream));
+    } catch (IOException | TransformerException ignored) {
+      logger.atSevere().log(
+          "Failed to create %s: %s", FAILURE_REPORT_NAME, MoreThrowables.shortDebugString(ignored));
+      if (failureReport.exists()) {
+        failureReport.delete();
+      }
+      return Optional.empty();
+    }
+    return Optional.of(failureReport);
   }
 }

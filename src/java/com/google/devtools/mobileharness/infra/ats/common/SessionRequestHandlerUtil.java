@@ -479,7 +479,14 @@ public class SessionRequestHandlerUtil {
         Joiner.on(' ')
             .join(
                 Streams.concat(
-                        tfModules.stream().map(module -> String.format("-m %s", module)),
+                        // For "run retry" command, the given module won't make difference to the
+                        // result no matter whether the given module was ran in the previous result.
+                        // If the given module was not ran in the previous result, it won't run the
+                        // given module based on TF current behavior. If the given module was ran in
+                        // the previous result, it won't forcely rerun the module either.
+                        (isRunRetry(testPlan)
+                            ? Stream.empty()
+                            : tfModules.stream().map(module -> String.format("-m %s", module))),
                         testNameArg.stream(),
                         shardCountArg.stream(),
                         sessionRequestInfo.includeFilters().stream()
@@ -625,6 +632,9 @@ public class SessionRequestHandlerUtil {
    * @return true if non-tradefed jobs can be created.
    */
   public boolean canCreateNonTradefedJobs(SessionRequestInfo sessionRequestInfo) {
+    if (isRunRetry(sessionRequestInfo.testPlan())) {
+      return true;
+    }
     boolean noGivenModuleForNonTf =
         !sessionRequestInfo.moduleNames().isEmpty()
             && sessionRequestInfo.givenMatchedNonTfModules().isEmpty();
@@ -1184,7 +1194,8 @@ public class SessionRequestHandlerUtil {
       if (!sessionRequestInfo.excludeFilters().isEmpty()) {
         finalReportBuilder.addAllExcludeFilter(sessionRequestInfo.excludeFilters());
       }
-      reportCreator.createReport(finalReportBuilder.build(), resultDir, null);
+      reportCreator.createReport(
+          finalReportBuilder.build(), resultDir, null, sessionRequestInfo.htmlInZip());
     } else if (isRunRetry) {
       int previousSessionIndex =
           sessionRequestInfo
@@ -1201,7 +1212,7 @@ public class SessionRequestHandlerUtil {
               previousSessionIndex,
               sessionRequestInfo.retryType().orElse(null),
               mergedReport.orElse(null));
-      reportCreator.createReport(finalReport, resultDir, null);
+      reportCreator.createReport(finalReport, resultDir, null, sessionRequestInfo.htmlInZip());
     } else {
       logger.atWarning().log("Failed to merge reports.");
     }

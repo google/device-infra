@@ -156,6 +156,12 @@ public final class RunCommand implements Callable<Integer> {
   private boolean exitAfterRun;
 
   @Option(
+      names = {"--html-in-zip"},
+      paramLabel = "<html_in_zip>",
+      description = "Whether to include html reports in the result zip file. Default is false.")
+  private boolean htmlInZip;
+
+  @Option(
       names = {"--subplan"},
       paramLabel = "<subplan_name>",
       description = "Run the specified subplan.")
@@ -359,7 +365,8 @@ public final class RunCommand implements Callable<Integer> {
             .setXtsType(xtsType)
             .addAllDeviceSerial(deviceSerials)
             .addAllIncludeFilter(includeFilters)
-            .addAllExcludeFilter(excludeFilters);
+            .addAllExcludeFilter(excludeFilters)
+            .setHtmlInZip(htmlInZip);
     if (shardCount > 0) {
       runCommand.setShardCount(shardCount);
     }

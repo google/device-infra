@@ -801,6 +801,8 @@ public class XtsTradefedTest extends BaseDriver
       localFileUtil.grantFileOrDirFullAccess(subplansDirInTmpXtsWorkDir);
       localFileUtil.copyFileOrDir(
           spec.getSubplanXml(), subplansDirInTmpXtsWorkDir.toAbsolutePath().toString());
+      // Also copy the subplan xml file the test GenFileDir for debugging if needed
+      localFileUtil.copyFileOrDir(spec.getSubplanXml(), testInfo.getGenFileDir());
     }
   }
 

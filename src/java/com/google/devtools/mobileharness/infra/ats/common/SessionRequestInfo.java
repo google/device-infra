@@ -84,6 +84,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<String> subPlanName();
 
+  public abstract boolean htmlInZip();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -99,7 +101,8 @@ public abstract class SessionRequestInfo {
         .setEnableModuleOptionalParameter(false)
         .setJobTimeout(Duration.ZERO)
         .setStartTimeout(Duration.ZERO)
-        .setUseParallelSetup(false);
+        .setUseParallelSetup(false)
+        .setHtmlInZip(false);
   }
 
   public abstract Builder toBuilder();
@@ -160,5 +163,7 @@ public abstract class SessionRequestInfo {
     public abstract Builder setUseParallelSetup(boolean useParallelSetup);
 
     public abstract Builder setSubPlanName(String subPlanName);
+
+    public abstract Builder setHtmlInZip(boolean htmlInZip);
   }
 }

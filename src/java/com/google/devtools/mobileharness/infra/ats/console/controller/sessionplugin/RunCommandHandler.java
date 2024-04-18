@@ -187,7 +187,8 @@ class RunCommandHandler {
             .setEnableModuleOptionalParameter(false)
             .setCommandLineArgs(runCommand.getInitialState().getCommandLineArgs())
             .setDeviceSerials(runCommand.getDeviceSerialList())
-            .setModuleNames(runCommand.getModuleNameList());
+            .setModuleNames(runCommand.getModuleNameList())
+            .setHtmlInZip(runCommand.getHtmlInZip());
     if (runCommand.hasTestName()) {
       builder.setTestName(runCommand.getTestName());
     }
