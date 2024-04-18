@@ -267,6 +267,7 @@ maven_install(
         "net.bytebuddy:byte-buddy:1.14.11",
         "net.sf.kxml:kxml2:2.3.0",
         "org.apache.commons:commons-lang3:3.14.0",
+        "org.apache.commons:commons-text:1.10.0",
         "org.jline:jline:3.25.1",
         "org.json:json:20231013",
         "org.mockito:mockito-core:4.11.0",

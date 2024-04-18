@@ -80,11 +80,11 @@ public abstract class SessionRequestInfo {
 
   public abstract ImmutableMap<String, String> envVars();
 
-  public abstract boolean useParallelSetup();
-
   public abstract Optional<String> subPlanName();
 
   public abstract boolean htmlInZip();
+
+  public abstract Optional<String> testPlanFile();
 
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
@@ -101,7 +101,6 @@ public abstract class SessionRequestInfo {
         .setEnableModuleOptionalParameter(false)
         .setJobTimeout(Duration.ZERO)
         .setStartTimeout(Duration.ZERO)
-        .setUseParallelSetup(false)
         .setHtmlInZip(false);
   }
 
@@ -160,10 +159,10 @@ public abstract class SessionRequestInfo {
 
     public abstract Builder setStartTimeout(Duration startTimeout);
 
-    public abstract Builder setUseParallelSetup(boolean useParallelSetup);
-
     public abstract Builder setSubPlanName(String subPlanName);
 
     public abstract Builder setHtmlInZip(boolean htmlInZip);
+
+    public abstract Builder setTestPlanFile(String testPlanFile);
   }
 }

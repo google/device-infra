@@ -40,7 +40,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFileType;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
@@ -421,13 +420,7 @@ public class SessionRequestHandlerUtil {
 
     // Use android xts zip file path if specified in request. Otherwise use root directory path.
     if (sessionRequestInfo.androidXtsZip().isPresent()) {
-      driverParams.put(
-          "android_xts_zip",
-          PathUtil.join(
-              RemoteFileType.ATS_FILE_SERVER.prefix(),
-              PathUtil.makeRelative(
-                  Flags.instance().atsStoragePath.getNonNull(),
-                  sessionRequestInfo.androidXtsZip().get())));
+      driverParams.put("android_xts_zip", sessionRequestInfo.androidXtsZip().get());
     } else {
       driverParams.put("xts_root_dir", xtsRootDir);
     }
@@ -467,6 +460,9 @@ public class SessionRequestHandlerUtil {
     if (!sessionRequestInfo.envVars().isEmpty()) {
       driverParams.put("env_vars", new Gson().toJson(sessionRequestInfo.envVars()));
     }
+    if (sessionRequestInfo.testPlanFile().isPresent()) {
+      driverParams.put("xts_test_plan_file", sessionRequestInfo.testPlanFile().get());
+    }
     ImmutableList<String> shardCountArg =
         shardCount > 0
             ? ImmutableList.of(String.format("--shard-count %s", shardCount))
@@ -497,11 +493,6 @@ public class SessionRequestHandlerUtil {
                             .map(
                                 excludeFilter ->
                                     String.format("--exclude-filter \"%s\"", excludeFilter)),
-                        sessionRequestInfo.useParallelSetup()
-                            ? ImmutableList.of(
-                                "--parallel-setup", "true", "--parallel-setup-timeout", "0")
-                                .stream()
-                            : Stream.empty(),
                         extraArgs.stream())
                     .collect(toImmutableList()));
     if (!sessionRequestInfoArgs.isEmpty()) {

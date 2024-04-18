@@ -63,6 +63,7 @@ java_library(
     visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__"],
     deps = [
         ":command_line_parser",
+        ":tradefed_config_generator",
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -84,6 +85,7 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+        "@maven//:xmlpull_xmlpull",
     ],
 )
 
@@ -111,5 +113,17 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:info_picocli_picocli",
+    ],
+)
+
+java_library(
+    name = "tradefed_config_generator",
+    srcs = ["TradefedConfigGenerator.java"],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__"],
+    deps = [
+        "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
+        "@maven//:com_google_guava_guava",
+        "@maven//:xmlpull_xmlpull",
     ],
 )

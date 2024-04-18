@@ -20,9 +20,18 @@ package(
     default_testonly = 1,
 )
 
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/*"]),
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__subpackages__"],
+)
+
 java_library(
     name = "sessionplugin",
     srcs = glob(["*.java"]),
+    data = [
+        ":testdata",
+    ],
     runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
     ],
@@ -38,12 +47,14 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:ats_server_session_plugin_lib",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:command_line_parser",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:new_multi_command_request_handler",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:tradefed_config_generator",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_event",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/infra/lab/common/dir",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:xts_tradefed_test",
@@ -51,6 +62,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf//:protobuf_java_util",
         "@com_google_protobuf_protobuf_java",

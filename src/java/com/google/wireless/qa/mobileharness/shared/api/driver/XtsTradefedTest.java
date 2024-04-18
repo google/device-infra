@@ -86,6 +86,7 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
+import org.apache.commons.text.StringSubstitutor;
 
 /** Driver for running Tradefed based xTS test suites. */
 @DriverAnnotation(help = "Running Tradefed based xTS test suites.")
@@ -117,6 +118,8 @@ public class XtsTradefedTest extends BaseDriver
 
   private static final ImmutableList<String> EXCLUDED_JAR_FILE_PATTERNS =
       ImmutableList.of("art-run-test.*", "art-gtest-jars.*");
+
+  private static final String TF_PATH_KEY = "TF_PATH";
 
   private volatile ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
 
@@ -437,10 +440,12 @@ public class XtsTradefedTest extends BaseDriver
         ImmutableList.<String>builder()
             .add(getJavaBinary(envVars), "-Xmx16g", "-XX:+HeapDumpOnOutOfMemoryError");
     xtsCommand
-        .add("-cp", getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType))
+        .add(
+            "-cp",
+            envVars.getOrDefault(TF_PATH_KEY, getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType)))
         .add(String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType), tmpXtsRootDir))
         .add(COMPATIBILITY_CONSOLE_CLASS)
-        .addAll(getXtsRunCommandArgs(spec));
+        .addAll(getXtsRunCommandArgs(spec, envVars));
 
     return xtsCommand.build().toArray(new String[0]);
   }
@@ -597,6 +602,7 @@ public class XtsTradefedTest extends BaseDriver
     environmentToTradefedConsole.put(
         "LD_LIBRARY_PATH", getConcatenatedLdLibraryPath(tmpXtsRootDir, xtsType));
     environmentToTradefedConsole.put("PATH", getEnvPath());
+    environmentToTradefedConsole.put("TF_WORK_DIR", tmpXtsRootDir.toString());
     if (!spec.getEnvVars().isEmpty()) {
       String envVarJson = spec.getEnvVars();
       Map<String, String> envVar =
@@ -605,11 +611,18 @@ public class XtsTradefedTest extends BaseDriver
         if (entry.getKey().isEmpty() || entry.getValue().isEmpty()) {
           continue;
         }
-        String value = entry.getValue().replace("${TF_WORK_DIR}", tmpXtsRootDir.toString());
-        // This will override the existing entry if it exists.
-        environmentToTradefedConsole.put(entry.getKey(), value);
+        if (entry.getKey().equals(TF_PATH_KEY)) {
+          // Override TF_PATH since the original TF_PATH may be unavailable due to symlink
+          environmentToTradefedConsole.put(
+              TF_PATH_KEY, getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType));
+        } else {
+          String value = entry.getValue().replace("${TF_WORK_DIR}", tmpXtsRootDir.toString());
+          // This will override the existing entry if it exists.
+          environmentToTradefedConsole.put(entry.getKey(), value);
+        }
       }
     }
+
     return ImmutableMap.copyOf(environmentToTradefedConsole);
   }
 
@@ -662,19 +675,34 @@ public class XtsTradefedTest extends BaseDriver
     return Path.of(result.stdout().trim());
   }
 
-  private ImmutableList<String> getXtsRunCommandArgs(XtsTradefedTestDriverSpec spec) {
+  private ImmutableList<String> getXtsRunCommandArgs(
+      XtsTradefedTestDriverSpec spec, Map<String, String> envVars) throws MobileHarnessException {
+    ImmutableList.Builder<String> xtsRunCommand =
+        ImmutableList.<String>builder().add("run", "commandAndExit");
+
     String testPlan =
         isRunRetryWithSubPlan(spec) ? spec.getPrevSessionXtsTestPlan() : getXtsTestPlan(spec);
-
-    ImmutableList.Builder<String> xtsRunCommand =
-        ImmutableList.<String>builder().add("run", "commandAndExit", testPlan);
-
+    ImmutableList.Builder<String> xtsCommandBuilder = ImmutableList.<String>builder().add(testPlan);
     if (isRunWithSubPlan(spec)) {
-      xtsRunCommand.add(
+      xtsCommandBuilder.add(
           "--subplan", com.google.common.io.Files.getNameWithoutExtension(spec.getSubplanXml()));
     }
+    ImmutableList<String> xtsCommand =
+        xtsCommandBuilder.addAll(getExtraRunCommandArgs(spec)).build();
 
-    xtsRunCommand.addAll(getExtraRunCommandArgs(spec));
+    if (spec.getXtsTestPlanFile().isEmpty()) {
+      xtsRunCommand.addAll(xtsCommand);
+    } else {
+      // Build final config based with local env vars
+      String configTemplate = localFileUtil.readFile(spec.getXtsTestPlanFile());
+      StringSubstitutor sub = new StringSubstitutor(envVars);
+      // Replace ${COMMAND} with the xTS command
+      String config =
+          sub.replace(configTemplate).replace("${COMMAND}", String.join(" ", xtsCommand));
+      logger.atInfo().log("Run xTS cluster command with config:\n%s", config);
+      localFileUtil.writeToFile(spec.getXtsTestPlanFile(), config);
+      xtsRunCommand.add(spec.getXtsTestPlanFile());
+    }
 
     // Appends allocated device(s) serial
     getDeviceIds().forEach(serial -> xtsRunCommand.add("-s", serial));

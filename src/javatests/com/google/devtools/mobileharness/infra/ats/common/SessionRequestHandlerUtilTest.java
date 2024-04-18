@@ -95,7 +95,7 @@ public final class SessionRequestHandlerUtilTest {
       RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "subplan2.xml");
 
   private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
-  private static final String ANDROID_XTS_ZIP_PATH = "/path/to/android_xts.zip";
+  private static final String ANDROID_XTS_ZIP_PATH = "ats-file-server::/path/to/android_xts.zip";
 
   @Rule public MockitoRule mockito = MockitoJUnit.rule();
   @Rule public TemporaryFolder folder = new TemporaryFolder();
@@ -257,49 +257,6 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_verifyUseParallelSetup() throws Exception {
-    when(deviceQuerier.queryDevice(any()))
-        .thenReturn(
-            DeviceQueryResult.newBuilder()
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
-                .addDeviceInfo(
-                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
-                .build());
-
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
-            SessionRequestInfo.builder()
-                .setTestPlan("cts")
-                .setCommandLineArgs("cts")
-                .setXtsType("cts")
-                .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setUseParallelSetup(true)
-                .build(),
-            ImmutableList.of());
-
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
-
-    // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
-    Map<String, String> driverParamsMap =
-        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
-    assertThat(driverParamsMap)
-        .containsExactly(
-            "xts_type",
-            "cts",
-            "xts_root_dir",
-            XTS_ROOT_DIR_PATH,
-            "xts_test_plan",
-            "cts",
-            "run_command_args",
-            "--parallel-setup true --parallel-setup-timeout 0");
-  }
-
-  @Test
   public void createXtsTradefedTestJobConfig_addAndroidXtsZipPathIfAvailable() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
@@ -330,12 +287,7 @@ public final class SessionRequestHandlerUtilTest {
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap)
         .containsExactly(
-            "xts_type",
-            "cts",
-            "android_xts_zip",
-            "ats-file-server::" + ANDROID_XTS_ZIP_PATH,
-            "xts_test_plan",
-            "cts");
+            "xts_type", "cts", "android_xts_zip", ANDROID_XTS_ZIP_PATH, "xts_test_plan", "cts");
   }
 
   @Test
@@ -811,6 +763,49 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobInfoOptWithIncludeFilters).isEmpty();
     assertThat(jobInfoOptWithExcludeFilters).isEmpty();
     assertThat(jobInfoOptWithMixedFilters).isPresent();
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_hasTestPlanFile() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
+
+    Optional<JobConfig> jobConfigOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setTestPlanFile("ats-file-server::/path/to/test_plan")
+                .build(),
+            ImmutableList.of());
+
+    assertThat(jobConfigOpt).isPresent();
+    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidRealDevice").build());
+
+    // Asserts the driver
+    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
+    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    Map<String, String> driverParamsMap =
+        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
+    assertThat(driverParamsMap)
+        .containsExactly(
+            "xts_type",
+            "cts",
+            "xts_root_dir",
+            XTS_ROOT_DIR_PATH,
+            "xts_test_plan",
+            "cts",
+            "xts_test_plan_file",
+            "ats-file-server::/path/to/test_plan");
   }
 
   @Test

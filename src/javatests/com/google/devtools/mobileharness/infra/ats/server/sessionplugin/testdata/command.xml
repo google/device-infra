@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no' ?>
+<configuration>
+  <target_preparer class="class1">
+    <option name="option1" value="value" />
+    <option name="option2" value="value1" />
+    <option name="option2" value="value2" />
+  </target_preparer>
+  <result_reporter class="class2" />
+  <test class="com.android.tradefed.cluster.ClusterCommandLauncher">
+    <option name="root-dir" value="${TF_WORK_DIR}" />
+    <option name="command-line" value="${COMMAND}" />
+    <option name="env-var" key="env1" value="${env1}" />
+    <option name="env-var" key="env2" value="${env2}" />
+    <option name="setup-script" value="setup.sh" />
+    <option name="use-subprocess-reporting" value="true" />
+    <option name="output-idle-timeout" value="3600000" />
+    <option name="jvm-option" value="-Xmx16g" />
+    <option name="java-property" key="CTS_ROOT" value="${TF_WORK_DIR}" />
+  </test>
+  <cmd_options class="com.android.tradefed.command.CommandOptions">
+    <option name="test-tag" value="cluster_command_launcher" />
+    <option name="parallel-setup" value="true" />
+    <option name="parallel-setup-timeout" value="PT0S" />
+  </cmd_options>
+</configuration>

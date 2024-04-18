@@ -50,7 +50,7 @@ import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -67,9 +67,11 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
@@ -92,10 +94,10 @@ public final class NewMultiCommandRequestHandlerTest {
   private NewMultiCommandRequest request = NewMultiCommandRequest.getDefaultInstance();
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
-  @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
   @Bind @Mock private CommandHelper commandHelper;
@@ -111,6 +113,8 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Before
   public void setup() throws Exception {
+    String publicDir = tmpFolder.newFolder("public_dir").getAbsolutePath();
+    Flags.parse(new String[] {String.format("--public_dir=%s", publicDir)});
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     when(sessionInfo.getSessionId()).thenReturn("session_id");
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
@@ -172,6 +176,11 @@ public final class NewMultiCommandRequestHandlerTest {
                     .build())
             .build();
     when(clock.millis()).thenReturn(1000L);
+  }
+
+  @After
+  public void tearDown() {
+    Flags.resetToDefault();
   }
 
   @Test
@@ -252,15 +261,16 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.testName()).hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
+    String testPlanFile = DirUtil.getPublicGenDir() + "/session_session_id/command.xml";
     assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
     assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
-    assertThat(sessionRequestInfo.androidXtsZip()).hasValue(zipFile);
+    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
     assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
     assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
-    assertThat(sessionRequestInfo.useParallelSetup()).isTrue();
+    assertThat(sessionRequestInfo.testPlanFile()).hasValue("ats-file-server::" + testPlanFile);
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =

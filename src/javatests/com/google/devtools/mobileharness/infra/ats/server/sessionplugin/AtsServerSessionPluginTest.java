@@ -51,7 +51,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -85,6 +85,7 @@ import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
@@ -103,10 +104,11 @@ public final class AtsServerSessionPluginTest {
   private Timing timing;
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
+  @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
+
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private SessionInfo sessionInfo;
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
-  @Bind @Mock private LocalFileUtil localFileUtil;
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
   @Bind @Mock private CommandHelper commandHelper;
@@ -126,6 +128,8 @@ public final class AtsServerSessionPluginTest {
 
   @Before
   public void setup() throws Exception {
+    String publicDir = tmpFolder.newFolder("public_dir").getAbsolutePath();
+    Flags.parse(new String[] {String.format("--public_dir=%s", publicDir)});
     Instant baseTime = Instant.ofEpochMilli(1000);
     timing = new Timing(baseTime);
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);

@@ -57,6 +57,9 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
@@ -73,13 +76,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.inject.Inject;
+import org.xmlpull.v1.XmlPullParserException;
 
 /** Handler for ATS server's create test jobs request. */
 @NotThreadSafe
 final class NewMultiCommandRequestHandler {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-  private static final String GEN_FILE_DIR = DirUtil.getPublicGenDir();
 
   /** Timeout setting for slow commands. */
   private static final Duration SLOW_CMD_TIMEOUT = Duration.ofMinutes(10);
@@ -377,7 +380,7 @@ final class NewMultiCommandRequestHandler {
     }
     String xtsRootDir =
         PathUtil.join(
-            GEN_FILE_DIR,
+            DirUtil.getPublicGenDir(),
             "session_" + sessionInfo.getSessionId(),
             Files.getNameWithoutExtension(androidXtsZipPath));
     if (!hasMountedAndroidXtsZip) {
@@ -387,17 +390,32 @@ final class NewMultiCommandRequestHandler {
     }
     String xtsType = commandHelper.getXtsType(xtsRootDir);
 
+    // Generate XML test config template for ClusterCommandLauncher.
+    Path commandPath = Path.of(xtsRootDir).resolveSibling("command.xml");
+    try (OutputStream outputStream = new FileOutputStream(commandPath.toFile())) {
+      TradefedConfigGenerator.generateXml(outputStream, request.getTestEnvironment());
+    } catch (IOException | XmlPullParserException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATS_SERVER_FAILED_TO_GENERATE_XML_TEST_CONFIG,
+          String.format(
+              "Failed to create XML test config for session %s ", sessionInfo.getSessionId()),
+          e);
+    }
+    logger.atInfo().log(
+        "Generate TF config for session %s:\n%s",
+        sessionInfo.getSessionId(), localFileUtil.readFile(commandPath));
+
     SessionRequestInfo.Builder sessionRequestInfoBuilder =
         CommandLineParser.getInstance().parseCommandLine(commandInfo.getCommandLine());
     sessionRequestInfoBuilder.setCommandLineArgs(commandInfo.getCommandLine());
     sessionRequestInfoBuilder.setXtsType(xtsType);
     sessionRequestInfoBuilder.setXtsRootDir(xtsRootDir);
-    sessionRequestInfoBuilder.setAndroidXtsZip(androidXtsZipPath);
+    sessionRequestInfoBuilder.setAndroidXtsZip(replacePathForRemoteRunner(androidXtsZipPath));
     sessionRequestInfoBuilder.setDeviceSerials(deviceSerials);
     sessionRequestInfoBuilder.setEnvVars(
         ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
-    sessionRequestInfoBuilder.setUseParallelSetup(
-        request.getTestEnvironment().getUseParallelSetup());
+    sessionRequestInfoBuilder.setTestPlanFile(
+        replacePathForRemoteRunner(commandPath.toAbsolutePath().toString()));
 
     // TODO: add extra args
     sessionRequestInfoBuilder.setExtraArgs(ImmutableList.of());

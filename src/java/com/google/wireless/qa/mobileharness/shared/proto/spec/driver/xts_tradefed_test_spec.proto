@@ -71,4 +71,7 @@ message XtsTradefedTestDriverSpec {
     help: "The test plan for xTS previous session. It must be set when the "
           "'xts_test_plan' is 'retry'."
   }];
+
+  optional string xts_test_plan_file = 10
+      [(file_detail) = { help: "The test plan XML file for xTS to run." }];
 }
