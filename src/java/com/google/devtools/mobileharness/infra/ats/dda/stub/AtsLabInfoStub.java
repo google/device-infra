@@ -73,7 +73,6 @@ public class AtsLabInfoStub {
     }
 
     return DeviceGroupMetadata.builder()
-        .setId(findDimensionValue(supportedDimensions, "id"))
         .setBrand(findDimensionValue(supportedDimensions, "brand"))
         .setModel(findDimensionValue(supportedDimensions, "model"))
         .setHardware(findDimensionValue(supportedDimensions, "hardware"))
@@ -96,8 +95,6 @@ public class AtsLabInfoStub {
   /** Metadata of a device to used for grouping devices. */
   @AutoValue
   public abstract static class DeviceGroupMetadata {
-    public abstract String id();
-
     public abstract String brand();
 
     public abstract String model();
@@ -118,8 +115,6 @@ public class AtsLabInfoStub {
 
     @AutoValue.Builder
     abstract static class Builder {
-      abstract Builder setId(String id);
-
       abstract Builder setBrand(String brand);
 
       abstract Builder setModel(String model);
