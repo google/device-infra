@@ -184,7 +184,6 @@ public class LabServerIntegrationTest {
                             "--enable_stubby_rpc_server=false",
                             "--external_adb_initializer_template=true",
                             "--grpc_port=" + labServerGrpcPort,
-                            "--log_file_size_no_limit=true",
                             "--master_grpc_target=localhost:" + masterPort,
                             "--no_op_device_num=1",
                             "--public_dir=" + labServerPublicDirPath,

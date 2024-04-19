@@ -70,7 +70,6 @@ public class AtsLocalRunnerIntegrationTest {
             "--detect_adb_device=false",
             "--enable_android_device_ready_check=false",
             "--enable_api_config=false",
-            "--log_file_size_no_limit=true",
             "--no_op_device_num=2",
             "--olc_server_port=" + serverPort,
             "--public_dir=" + olcServerPublicDir,

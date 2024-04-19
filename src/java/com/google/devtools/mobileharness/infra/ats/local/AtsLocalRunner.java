@@ -180,8 +180,8 @@ public class AtsLocalRunner {
       System.out.printf("\nATS logs have been saved to %s\n", OlcServerDirs.getLogDir());
       System.out.printf(
           "\nTo access logs, press \"ctrl\" and click on:\n"
-              + "\033[1;35mfile://%s\033[0m\n\n", // Magenta
-          OlcServerDirs.getLatestLogFile());
+              + "\033[1;35mfile://%s/\033[0m\n\n", // Magenta
+          OlcServerDirs.getLogDir());
     }
   }
 

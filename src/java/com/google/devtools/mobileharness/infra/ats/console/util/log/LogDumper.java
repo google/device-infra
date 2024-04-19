@@ -25,8 +25,8 @@ public class LogDumper {
   /** Prints information about log dirs of ATS console and OLC server. */
   public static String dumpLog() {
     return String.format(
-        "Saved log to %s\nSaved log to %s",
-        OlcServerDirs.getLatestLogFile(), AtsConsoleDirs.getLatestLogFile());
+        "Saved log to %s/\nSaved log to %s/",
+        OlcServerDirs.getLogDir(), AtsConsoleDirs.getLogDir());
   }
 
   private LogDumper() {}

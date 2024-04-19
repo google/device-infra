@@ -26,9 +26,5 @@ public class AtsConsoleDirs {
     return PathUtil.join(DirCommon.getPublicDirRoot(), "ats_console_log");
   }
 
-  public static String getLatestLogFile() {
-    return PathUtil.join(getLogDir(), "log0.txt");
-  }
-
   private AtsConsoleDirs() {}
 }

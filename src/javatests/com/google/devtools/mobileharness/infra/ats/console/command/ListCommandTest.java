@@ -112,8 +112,6 @@ public class ListCommandTest {
             publicDirPath,
             "detect_adb_device",
             "false",
-            "enable_ats_console_olc_server",
-            "true",
             "no_op_device_num",
             "1",
             "simplified_log_format",

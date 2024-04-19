@@ -389,12 +389,12 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAteDualStack = enableAteDualStackDefault;
 
-  private static final Flag<Boolean> enableAtsConsoleOlcServerDefault = Flag.value(false);
+  private static final Flag<Boolean> enableAtsConsoleOlcServerDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
       names = "--enable_ats_console_olc_server",
       description =
-          "Whether to enable OmniLab long-running client in ATS console. Default is false.",
+          "Whether to enable OmniLab long-running client in ATS console. Default is true.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAtsConsoleOlcServer = enableAtsConsoleOlcServerDefault;
 

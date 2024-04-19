@@ -92,8 +92,6 @@ public final class AtsConsoleTest {
             publicDirPath,
             "detect_adb_device",
             "false",
-            "enable_ats_console_olc_server",
-            "true",
             "external_adb_initializer_template",
             "true",
             "simplified_log_format",

@@ -32,9 +32,5 @@ public class OlcServerDirs {
     return LOG_DIR_NAME;
   }
 
-  public static String getLatestLogFile() {
-    return PathUtil.join(getLogDir(), "log0.txt");
-  }
-
   private OlcServerDirs() {}
 }

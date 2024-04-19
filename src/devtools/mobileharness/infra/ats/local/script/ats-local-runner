@@ -73,7 +73,6 @@ main() {
     --enable_android_device_ready_check=false \
     --enable_api_config=false \
     --fastboot=$(type -P fastboot 2>/dev/null) \
-    --log_file_size_no_limit=true \
     --public_dir=${DEFAULT_TMP_DIR} \
     --simplified_log_format=true \
     --tmp_dir_root=${DEFAULT_TMP_DIR} \

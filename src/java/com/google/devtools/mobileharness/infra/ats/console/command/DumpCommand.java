@@ -105,12 +105,13 @@ class DumpCommand implements Callable<Integer> {
     String bugreportDirPath = PathUtil.join(baseDirPath, bugreportName);
     consoleUtil.printlnStdout("Bugreport dir: %s", bugreportDirPath);
     localFileUtil.prepareDir(bugreportDirPath);
+
     localFileUtil.copyFileOrDir(
-        AtsConsoleDirs.getLatestLogFile(),
-        PathUtil.join(bugreportDirPath, String.format("ats_console_log_%s.txt", fileSuffix)));
+        AtsConsoleDirs.getLogDir(),
+        PathUtil.join(bugreportDirPath, String.format("ats_console_logs_%s", fileSuffix)));
     localFileUtil.copyFileOrDir(
-        OlcServerDirs.getLatestLogFile(),
-        PathUtil.join(bugreportDirPath, String.format("olc_server_log_%s.txt", fileSuffix)));
+        OlcServerDirs.getLogDir(),
+        PathUtil.join(bugreportDirPath, String.format("olc_server_logs_%s", fileSuffix)));
     localFileUtil.writeToFile(
         PathUtil.join(
             bugreportDirPath, String.format("ats_console_stack_trace_%s.txt", fileSuffix)),
