@@ -32,7 +32,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.constan
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ServiceProvider;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
@@ -84,7 +84,7 @@ public class OlcServer {
   private final ListeningExecutorService threadPool;
   private final ExecMode execMode;
   private final EventBus globalInternalEventBus;
-  private final LogManager<GetLogResponse> logManager;
+  private final LogManager<LogRecords> logManager;
   private final ClientApi clientApi;
   private final ServerBuilder<?> serverBuilder;
   private final LocalFileUtil localFileUtil;
@@ -97,7 +97,7 @@ public class OlcServer {
       ListeningExecutorService threadPool,
       ExecMode execMode,
       @GlobalInternalEventBus EventBus globalInternalEventBus,
-      LogManager<GetLogResponse> logManager,
+      LogManager<LogRecords> logManager,
       ClientApi clientApi,
       @GrpcServer ServerBuilder<?> serverBuilder,
       LocalFileUtil localFileUtil) {

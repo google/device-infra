@@ -41,6 +41,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.Success;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
@@ -53,7 +55,10 @@ import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Level;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** Implementation of {@link ControlServiceGrpc}. */
@@ -108,7 +113,7 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
               SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING)
           .build();
 
-  private final LogManager<GetLogResponse> logManager;
+  private final LogManager<LogRecords> logManager;
   private final SessionManager sessionManager;
   private final ListeningScheduledExecutorService threadPool;
 
@@ -117,7 +122,7 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
 
   @Inject
   ControlService(
-      LogManager<GetLogResponse> logManager,
+      LogManager<LogRecords> logManager,
       SessionManager sessionManager,
       ListeningScheduledExecutorService threadPool) {
     this.logManager = logManager;
@@ -218,6 +223,8 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
 
     private final ForwardingLogRecordHandler forwardingLogRecordHandler;
 
+    @Nullable private volatile String clientId;
+
     private GetLogRequestStreamObserver(StreamObserver<GetLogResponse> responseObserver) {
       this.forwardingLogRecordHandler = new ForwardingLogRecordHandler(responseObserver);
     }
@@ -225,6 +232,7 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
     @Override
     public void onNext(GetLogRequest value) {
       if (value.getEnable()) {
+        clientId = value.hasClientId() ? value.getClientId() : null;
         logManager.addConsumer(forwardingLogRecordHandler);
       } else {
         logManager.removeConsumer(forwardingLogRecordHandler);
@@ -251,23 +259,69 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
       logManager.removeConsumer(forwardingLogRecordHandler);
       forwardingLogRecordHandler.onCompleted();
     }
+
+    private class ForwardingLogRecordHandler implements LogRecordsConsumer<LogRecords> {
+
+      private final StreamObserver<GetLogResponse> responseObserver;
+
+      private ForwardingLogRecordHandler(StreamObserver<GetLogResponse> responseObserver) {
+        this.responseObserver = responseObserver;
+      }
+
+      @Override
+      public void consumeLogRecords(LogRecords logRecords) {
+        // Filters log records.
+        List<LogRecord> records = logRecords.getLogRecordList();
+        List<LogRecord> filteredRecords = filterLogRecords(records);
+
+        // Creates result proto.
+        LogRecords filteredResult;
+        if (records.size() == filteredRecords.size()) {
+          filteredResult = logRecords;
+        } else {
+          filteredResult =
+              logRecords.toBuilder().clearLogRecord().addAllLogRecord(filteredRecords).build();
+        }
+
+        responseObserver.onNext(GetLogResponse.newBuilder().setLogRecords(filteredResult).build());
+      }
+
+      private void onCompleted() {
+        responseObserver.onCompleted();
+      }
+
+      @SuppressWarnings("MixedMutabilityReturnType")
+      private List<LogRecord> filterLogRecords(List<LogRecord> logRecords) {
+        String clientId = GetLogRequestStreamObserver.this.clientId;
+        if (clientId == null) {
+          return logRecords;
+        }
+
+        // Traverses twice to avoid new list construction.
+        int numAccepted = 0;
+        for (LogRecord logRecord : logRecords) {
+          if (acceptLogRecord(clientId, logRecord)) {
+            numAccepted++;
+          }
+        }
+        if (numAccepted == logRecords.size()) {
+          return logRecords;
+        }
+        if (numAccepted == 0) {
+          return ImmutableList.of();
+        }
+        List<LogRecord> result = new ArrayList<>(numAccepted);
+        for (LogRecord logRecord : logRecords) {
+          if (acceptLogRecord(clientId, logRecord)) {
+            result.add(logRecord);
+          }
+        }
+        return result;
+      }
+    }
   }
 
-  private static class ForwardingLogRecordHandler implements LogRecordsConsumer<GetLogResponse> {
-
-    private final StreamObserver<GetLogResponse> responseObserver;
-
-    private ForwardingLogRecordHandler(StreamObserver<GetLogResponse> responseObserver) {
-      this.responseObserver = responseObserver;
-    }
-
-    @Override
-    public void consumeLogRecords(GetLogResponse getLogResponse) {
-      responseObserver.onNext(getLogResponse);
-    }
-
-    private void onCompleted() {
-      responseObserver.onCompleted();
-    }
+  private static boolean acceptLogRecord(String clientId, LogRecord logRecord) {
+    return !logRecord.hasClientId() || logRecord.getClientId().equals(clientId);
   }
 }

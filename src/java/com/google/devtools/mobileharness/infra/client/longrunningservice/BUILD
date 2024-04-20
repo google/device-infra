@@ -41,7 +41,7 @@ java_library(
     deps = [
         ":annotations",
         ":server_module",
-        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api",
         "//src/java/com/google/devtools/mobileharness/infra/client/api:annotations",
@@ -74,7 +74,6 @@ java_library(
     srcs = ["ServerModule.java"],
     deps = [
         ":annotations",
-        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/api",

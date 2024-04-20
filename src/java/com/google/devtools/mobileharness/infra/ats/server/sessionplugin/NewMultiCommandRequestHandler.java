@@ -490,8 +490,8 @@ final class NewMultiCommandRequestHandler {
           sessionRequestHandlerUtil.processResult(
               resultDir,
               logDir,
-              /* latestResultLink= */ Optional.empty(),
-              /* latestLogLink= */ Optional.empty(),
+              /* latestResultLink= */ null,
+              /* latestLogLink= */ null,
               commandToJobsMap.get(commandId).stream()
                   .map(jobIdToJobMap::get)
                   .collect(toImmutableList()),

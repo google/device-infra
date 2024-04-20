@@ -16,10 +16,13 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.olcserver;
 
+import static java.util.Objects.requireNonNull;
+
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
+import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
@@ -45,6 +48,7 @@ public class ServerLogPrinter {
   private final ConsoleUtil consoleUtil;
   private final Provider<ControlStub> controlStubProvider;
   private final ServerPreparer serverPreparer;
+  private final String consoleId;
 
   private final GetLogResponseObserver responseObserver = new GetLogResponseObserver();
 
@@ -60,10 +64,12 @@ public class ServerLogPrinter {
   ServerLogPrinter(
       ConsoleUtil consoleUtil,
       @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlStub> controlStubProvider,
-      ServerPreparer serverPreparer) {
+      ServerPreparer serverPreparer,
+      @ConsoleId String consoleId) {
     this.consoleUtil = consoleUtil;
     this.controlStubProvider = controlStubProvider;
     this.serverPreparer = serverPreparer;
+    this.consoleId = consoleId;
   }
 
   /** Enables/disables the printer. */
@@ -82,9 +88,10 @@ public class ServerLogPrinter {
       if (enable) {
         serverPreparer.prepareOlcServer();
         if (requestObserver == null) {
-          requestObserver = controlStubProvider.get().getLog(responseObserver);
+          requestObserver = requireNonNull(controlStubProvider.get()).getLog(responseObserver);
         }
-        requestObserver.onNext(GetLogRequest.newBuilder().setEnable(true).build());
+        requestObserver.onNext(
+            GetLogRequest.newBuilder().setEnable(true).setClientId(consoleId).build());
       } else {
         if (requestObserver != null) {
           requestObserver.onCompleted();

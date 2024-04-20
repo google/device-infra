@@ -386,23 +386,35 @@ public class XtsTradefedTest extends BaseDriver
       BufferedWriter writer =
           Files.newBufferedWriter(Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG));
 
+      // Creates CommandOutputLogger.
       String testId = testInfo.locator().getId();
       String outputLoggerPrefix =
           String.format("TF-%s ", testId.substring(0, min(4, testId.length())));
       CommandOutputLogger commandOutputLogger =
           new CommandOutputLogger(outputLoggerPrefix, outputLoggerPrefix);
+
+      // Gets session client ID if any.
+      Optional<String> olcSessionClientId =
+          testInfo.jobInfo().params().getOptional("olc_session_client_id");
+
       return cmdExecutor.start(
           Command.of(cmd)
               .extraEnv(env)
               .onStdout(
                   LineCallback.does(
                       line -> {
-                        logRecorder.addLogRecord(
+                        // Writes to LogManager.
+                        LogRecord.Builder logRecord =
                             LogRecord.newBuilder()
                                 .setFormattedLogRecord(line + "\n")
-                                .setSourceType(SourceType.TF)
-                                .build());
+                                .setSourceType(SourceType.TF);
+                        olcSessionClientId.ifPresent(logRecord::setClientId);
+                        logRecorder.addLogRecord(logRecord.build());
+
+                        // Writes to CommandOutputLogger.
                         commandOutputLogger.logStdoutLine(line);
+
+                        // Writes to file.
                         try {
                           writer.write(line + "\n");
                         } catch (IOException e) {

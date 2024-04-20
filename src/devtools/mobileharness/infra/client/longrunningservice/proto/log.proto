@@ -41,4 +41,7 @@ message LogRecord {
     // The log record is from TF process.
     TF = 2;
   }
+
+  // ID of the client to which the log record is associated.
+  optional string client_id = 3;
 }

@@ -99,6 +99,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<String> testPlanFile();
 
+  public abstract Optional<String> sessionClientId();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -120,9 +122,9 @@ public abstract class SessionRequestInfo {
   public abstract Builder toBuilder();
 
   /** Builder to create SessionRequestInfo. */
-  @SuppressWarnings("UnusedReturnValue")
   @AutoValue.Builder
   public abstract static class Builder {
+
     public abstract Builder setTestPlan(String testPlan);
 
     public abstract Builder setCommandLineArgs(String commandLineArgs);
@@ -188,6 +190,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setHtmlInZip(boolean htmlInZip);
 
     public abstract Builder setTestPlanFile(String testPlanFile);
+
+    public abstract Builder setSessionClientId(String sessionClientId);
 
     protected abstract SessionRequestInfo autoBuild();
 

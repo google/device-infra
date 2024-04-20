@@ -30,7 +30,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotat
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStubImpl;
@@ -44,7 +43,6 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
 import io.grpc.ServerBuilder;
-import java.lang.reflect.InvocationTargetException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -141,29 +139,24 @@ class ServerModule extends AbstractModule {
   }
 
   @Provides
-  LogRecordsCollector<GetLogResponse> provideLogRecordsCollector() {
-    return new GetLogResponseLogRecordsCollector();
+  LogRecordsCollector<LogRecords> provideLogRecordsCollector() {
+    return new DirectlyBuildLogRecordsCollector();
   }
 
   @Provides
   @Singleton
   @GrpcServer
-  ServerBuilder<?> provideServerBuilder()
-      throws ClassNotFoundException,
-          InvocationTargetException,
-          NoSuchMethodException,
-          IllegalAccessException {
+  ServerBuilder<?> provideServerBuilder() {
     return useAlts
         ? ServerBuilderFactory.createAltsServerBuilder(grpcPort, restrictToAuthUsers)
         : ServerBuilderFactory.createNettyServerBuilder(grpcPort, /* localhost= */ false);
   }
 
-  private static class GetLogResponseLogRecordsCollector
-      implements LogRecordsCollector<GetLogResponse> {
+  private static class DirectlyBuildLogRecordsCollector implements LogRecordsCollector<LogRecords> {
 
     @Override
-    public GetLogResponse collectLogRecords(LogRecords.Builder logRecords) {
-      return GetLogResponse.newBuilder().setLogRecords(logRecords).build();
+    public LogRecords collectLogRecords(LogRecords.Builder logRecords) {
+      return logRecords.build();
     }
   }
 

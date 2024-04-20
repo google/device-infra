@@ -29,6 +29,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_grpc",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:log_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
@@ -43,6 +44,7 @@ java_library(
         "@com_google_protobuf_protobuf_java",
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

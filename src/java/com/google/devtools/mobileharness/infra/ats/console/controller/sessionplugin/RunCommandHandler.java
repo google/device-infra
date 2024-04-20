@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
@@ -74,7 +75,8 @@ class RunCommandHandler {
   ImmutableList<String> addTradefedJobs(RunCommand command, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
     Optional<JobInfo> jobInfo =
-        sessionRequestHandlerUtil.createXtsTradefedTestJob(generateSessionRequestInfo(command));
+        sessionRequestHandlerUtil.createXtsTradefedTestJob(
+            generateSessionRequestInfo(command, sessionInfo));
     if (jobInfo.isEmpty()) {
       logger.atInfo().log(
           "No tradefed jobs created, double check device availability. The run command -> %s",
@@ -99,7 +101,8 @@ class RunCommandHandler {
   ImmutableList<String> addNonTradefedJobs(RunCommand runCommand, SessionInfo sessionInfo)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(generateSessionRequestInfo(runCommand));
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
+            generateSessionRequestInfo(runCommand, sessionInfo));
     if (jobInfos.isEmpty()) {
       logger.atInfo().log(
           "No valid module(s) matched, no non-tradefed jobs will run. The run command -> %s",
@@ -142,10 +145,10 @@ class RunCommandHandler {
       sessionRequestHandlerUtil.processResult(
           resultDir,
           logDir,
-          Optional.of(XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve("latest")),
-          Optional.of(XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve("latest")),
+          XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve("latest"),
+          XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve("latest"),
           allJobs,
-          generateSessionRequestInfo(command));
+          generateSessionRequestInfo(command, sessionInfo));
     } finally {
       sessionRequestHandlerUtil.cleanUpJobGenDirs(allJobs);
 
@@ -181,8 +184,8 @@ class RunCommandHandler {
     }
   }
 
-  private SessionRequestInfo generateSessionRequestInfo(RunCommand runCommand)
-      throws MobileHarnessException {
+  private SessionRequestInfo generateSessionRequestInfo(
+      RunCommand runCommand, SessionInfo sessionInfo) throws MobileHarnessException {
     SessionRequestInfo.Builder builder =
         SessionRequestInfo.builder()
             .setTestPlan(runCommand.getTestPlan())
@@ -193,15 +196,12 @@ class RunCommandHandler {
             .setCommandLineArgs(runCommand.getInitialState().getCommandLineArgs())
             .setDeviceSerials(runCommand.getDeviceSerialList())
             .setModuleNames(runCommand.getModuleNameList())
-            .setHtmlInZip(runCommand.getHtmlInZip());
+            .setHtmlInZip(runCommand.getHtmlInZip())
+            .setIncludeFilters(runCommand.getIncludeFilterList())
+            .setExcludeFilters(runCommand.getExcludeFilterList());
     if (runCommand.hasTestName()) {
       builder.setTestName(runCommand.getTestName());
     }
-    builder
-        .setIncludeFilters(runCommand.getIncludeFilterList())
-        .setExcludeFilters(runCommand.getExcludeFilterList())
-        .setExtraArgs(runCommand.getExtraArgList());
-
     if (runCommand.hasShardCount()) {
       builder.setShardCount(runCommand.getShardCount());
     }
@@ -217,6 +217,9 @@ class RunCommandHandler {
     if (runCommand.hasSubPlanName()) {
       builder.setSubPlanName(runCommand.getSubPlanName());
     }
+    sessionInfo
+        .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)
+        .ifPresent(builder::setSessionClientId);
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(builder.build());
   }
 

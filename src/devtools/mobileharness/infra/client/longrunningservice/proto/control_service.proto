@@ -75,6 +75,11 @@ message KillServerResponse {
 message GetLogRequest {
   // Required.
   bool enable = 1;
+
+  // If present, only logs associated to the client will be returned.
+  //
+  // Ignored if enable is false.
+  optional string client_id = 2;
 }
 
 message GetLogResponse {

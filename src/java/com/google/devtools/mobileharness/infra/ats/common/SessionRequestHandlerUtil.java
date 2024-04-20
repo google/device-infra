@@ -361,12 +361,14 @@ public class SessionRequestHandlerUtil {
     if (jobConfig.isEmpty()) {
       return Optional.empty();
     }
-    return Optional.of(
+    JobInfo jobInfo =
         JobInfoCreator.createJobInfo(
             jobConfig.get(),
             ImmutableList.of(),
             jobConfig.get().getGenFileDir(),
-            createJobTmpDir(jobConfig.get().getName()).toString()));
+            createJobTmpDir(jobConfig.get().getName()).toString());
+    addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
+    return Optional.of(jobInfo);
   }
 
   @VisibleForTesting
@@ -496,7 +498,7 @@ public class SessionRequestHandlerUtil {
                         // result no matter whether the given module was ran in the previous result.
                         // If the given module was not ran in the previous result, it won't run the
                         // given module based on TF current behavior. If the given module was ran in
-                        // the previous result, it won't forcely rerun the module either.
+                        // the previous result, it won't forcibly rerun the module either.
                         (isRunRetry(testPlan)
                             ? Stream.empty()
                             : tfModules.stream().map(module -> String.format("-m %s", module))),
@@ -859,6 +861,7 @@ public class SessionRequestHandlerUtil {
                             .dimensions()
                             .add("serial", serialDimensionValue));
           }
+          addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
           jobInfos.add(jobInfo);
         }
       }
@@ -1136,8 +1139,8 @@ public class SessionRequestHandlerUtil {
   public void processResult(
       Path resultDir,
       Path logDir,
-      Optional<Path> latestResultLink,
-      Optional<Path> latestLogLink,
+      @Nullable Path latestResultLink,
+      @Nullable Path latestLogLink,
       List<JobInfo> jobs,
       SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
@@ -1265,7 +1268,7 @@ public class SessionRequestHandlerUtil {
       if (sessionRequestInfo.retrySessionId().isPresent()) {
         finalReport =
             retryReportMerger.mergeReports(
-                Path.of(sessionRequestInfo.retryResultDir().get()),
+                Path.of(sessionRequestInfo.retryResultDir().orElseThrow()),
                 sessionRequestInfo.retrySessionId().get(),
                 sessionRequestInfo.retryType().orElse(null),
                 mergedReport.orElse(null));
@@ -1310,18 +1313,18 @@ public class SessionRequestHandlerUtil {
     }
     // Create the latest result link and the latest log link. Catch the exception to avoid breaking
     // the session.
-    if (latestResultLink.isPresent()) {
+    if (latestResultLink != null) {
       try {
-        localFileUtil.removeFileOrDir(latestResultLink.get());
-        localFileUtil.linkFileOrDir(resultDir.toString(), latestResultLink.get().toString());
+        localFileUtil.removeFileOrDir(latestResultLink);
+        localFileUtil.linkFileOrDir(resultDir.toString(), latestResultLink.toString());
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log("Failed to create the latest result link.");
       }
     }
-    if (latestLogLink.isPresent()) {
+    if (latestLogLink != null) {
       try {
-        localFileUtil.removeFileOrDir(latestLogLink.get());
-        localFileUtil.linkFileOrDir(logDir.toString(), latestLogLink.get().toString());
+        localFileUtil.removeFileOrDir(latestLogLink);
+        localFileUtil.linkFileOrDir(logDir.toString(), latestLogLink.toString());
       } catch (MobileHarnessException e) {
         // Ignore the error here as it is possible that the latest link wasn't created.
         logger.atWarning().withCause(e).log("Failed to create the latest log link.");
@@ -1664,6 +1667,14 @@ public class SessionRequestHandlerUtil {
               "Multiple modules found matching %s:\n%s\nWhich one did you mean?\n",
               filter, String.join("\n", modules)));
     }
+  }
+
+  private static void addSessionClientIdToJobInfo(
+      JobInfo jobInfo, SessionRequestInfo sessionRequestInfo) {
+    sessionRequestInfo
+        .sessionClientId()
+        .ifPresent(
+            sessionClientId -> jobInfo.params().add("olc_session_client_id", sessionClientId));
   }
 
   /** Data class for the non-tradefed test result. */

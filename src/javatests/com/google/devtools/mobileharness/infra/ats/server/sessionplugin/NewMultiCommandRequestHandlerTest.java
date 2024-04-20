@@ -395,8 +395,8 @@ public final class NewMultiCommandRequestHandlerTest {
         .processResult(
             outputPath,
             outputPath,
-            Optional.empty(),
-            Optional.empty(),
+            null,
+            null,
             ImmutableList.of(jobInfo),
             sessionRequestInfoCaptor.getValue());
     verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
