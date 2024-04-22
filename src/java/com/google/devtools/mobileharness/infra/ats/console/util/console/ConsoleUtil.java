@@ -20,6 +20,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.FormatMethod;
+import java.io.PrintStream;
 import java.util.Objects;
 import java.util.logging.ErrorManager;
 import java.util.logging.Handler;
@@ -28,8 +29,6 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.jline.reader.LineReader;
-import org.jline.utils.AttributedString;
-import org.jline.utils.AttributedStyle;
 
 /** Utility for printing information to ATS console. */
 @Singleton
@@ -38,9 +37,6 @@ public class ConsoleUtil {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String LOGGER_NAME = ConsoleUtil.class.getName();
-
-  private static final AttributedStyle STDERR_STYLE =
-      AttributedStyle.DEFAULT.italic().foreground(AttributedStyle.MAGENTA);
 
   private final LogHandler logHandler = new LogHandler();
   @Nullable private final LineReader lineReader;
@@ -66,13 +62,7 @@ public class ConsoleUtil {
   @FormatMethod
   public void printlnStdout(String format, Object... args) {
     String line = String.format(format, args);
-    if (printAbove) {
-      if (!line.isEmpty() && lineReader != null) {
-        lineReader.printAbove(line);
-      }
-    } else {
-      System.out.print(addLineTerminatorIfNecessary(line));
-    }
+    doPrintlnStdout(line);
     logger.atInfo().logVarargs(format, args);
   }
 
@@ -88,13 +78,7 @@ public class ConsoleUtil {
    * <p>The method is thread safe.
    */
   public void printlnStdout(String text) {
-    if (printAbove) {
-      if (!text.isEmpty() && lineReader != null) {
-        lineReader.printAbove(text);
-      }
-    } else {
-      System.out.print(addLineTerminatorIfNecessary(text));
-    }
+    doPrintlnStdout(text);
     logger.atInfo().log("%s", text);
   }
 
@@ -142,18 +126,22 @@ public class ConsoleUtil {
    *
    * <p>The method is thread safe.
    */
-  public void printlnDirect(AttributedString attributedString) {
+  public void printlnDirect(String text, ConsoleTextStyle style, PrintStream secondaryStream) {
     if (printAbove) {
-      if (attributedString.length() > 0 && lineReader != null) {
-        lineReader.printAbove(attributedString);
+      if (!text.isEmpty() && lineReader != null) {
+        style.printAbove(lineReader, text);
       }
     } else {
-      System.err.print(addLineTerminatorIfNecessary(attributedString.toString()));
+      secondaryStream.print(addLineTerminatorIfNecessary(text));
     }
   }
 
+  private void doPrintlnStdout(String text) {
+    printlnDirect(text, ConsoleTextStyle.CONSOLE_STDOUT, System.out);
+  }
+
   private void doPrintlnStderr(String text) {
-    printlnDirect(createStderr(text));
+    printlnDirect(text, ConsoleTextStyle.CONSOLE_STDERR, System.err);
   }
 
   public Handler getLogHandler() {
@@ -183,10 +171,6 @@ public class ConsoleUtil {
     public void close() {
       // Does nothing.
     }
-  }
-
-  private static AttributedString createStderr(String text) {
-    return new AttributedString(text, STDERR_STYLE);
   }
 
   private static String addLineTerminatorIfNecessary(String line) {

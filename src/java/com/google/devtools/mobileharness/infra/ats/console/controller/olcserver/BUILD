@@ -57,12 +57,12 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_text_style",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@io_grpc_grpc_java//stub",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:javax_inject_jsr330_api",
-        "@maven//:org_jline_jline",
     ],
 )

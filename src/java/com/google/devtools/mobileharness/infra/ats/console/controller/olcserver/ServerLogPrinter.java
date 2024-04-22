@@ -23,27 +23,24 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleTextStyle;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import io.grpc.stub.StreamObserver;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import javax.inject.Provider;
 import javax.inject.Singleton;
-import org.jline.utils.AttributedString;
-import org.jline.utils.AttributedStyle;
 
 /** Printer for printing OLC server streaming logs. */
 @Singleton
 public class ServerLogPrinter {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static final AttributedStyle SERVER_LOG_STYLE =
-      AttributedStyle.DEFAULT.italic().foreground(AttributedStyle.GREEN);
 
   private final ConsoleUtil consoleUtil;
   private final Provider<ControlStub> controlStubProvider;
@@ -107,7 +104,7 @@ public class ServerLogPrinter {
     public void onNext(GetLogResponse response) {
       for (LogRecord logRecord : response.getLogRecords().getLogRecordList()) {
         consoleUtil.printlnDirect(
-            new AttributedString(logRecord.getFormattedLogRecord(), SERVER_LOG_STYLE));
+            logRecord.getFormattedLogRecord(), getLogRecordStyle(logRecord), System.err);
       }
     }
 
@@ -126,6 +123,14 @@ public class ServerLogPrinter {
       synchronized (lock) {
         requestObserver = null;
       }
+    }
+  }
+
+  private static ConsoleTextStyle getLogRecordStyle(LogRecord logRecord) {
+    if (logRecord.getSourceType() == SourceType.TF) {
+      return ConsoleTextStyle.TF_STDOUT;
+    } else {
+      return ConsoleTextStyle.OLC_SERVER_LOG;
     }
   }
 }

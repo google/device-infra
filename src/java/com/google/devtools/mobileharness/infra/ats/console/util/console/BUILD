@@ -23,9 +23,16 @@ package(
 )
 
 java_library(
+    name = "console_text_style",
+    srcs = ["ConsoleTextStyle.java"],
+    deps = ["@maven//:org_jline_jline"],
+)
+
+java_library(
     name = "console_util",
     srcs = ["ConsoleUtil.java"],
     deps = [
+        ":console_text_style",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
