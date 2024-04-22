@@ -790,6 +790,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> monitorCloudRpc = monitorCloudRpcDefault;
 
+  private static final Flag<Boolean> monitorGcsDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--monitor_gcs",
+      description = "Whether enable the gcs monitor. default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> monitorGcs = monitorGcsDefault;
+
   private static final Flag<Boolean> muteAndroidDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
