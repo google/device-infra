@@ -26,6 +26,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
@@ -39,6 +40,8 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
 import com.google.devtools.mobileharness.infra.ats.console.command.RootCommand;
 import com.google.devtools.mobileharness.infra.ats.console.command.completer.CommandCompleter;
 import com.google.devtools.mobileharness.infra.ats.console.command.completer.CommandCompleterHolder;
+import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandPreprocessor;
+import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandPreprocessor.PreprocessingResult;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
@@ -72,6 +75,8 @@ import picocli.CommandLine;
 
 /** ATS Console. */
 public class AtsConsole {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final String HELP_PATTERN = "h|help";
 
@@ -143,6 +148,7 @@ public class AtsConsole {
   private final ServerLogPrinter serverLogPrinter;
   private final VersionMessageUtil versionMessageUtil;
   private final CommandCompleter commandCompleter;
+  private final CommandPreprocessor commandPreprocessor;
 
   /** Set before {@link #run}; */
   @VisibleForTesting public volatile Injector injector;
@@ -162,7 +168,8 @@ public class AtsConsole {
       ServerPreparer serverPreparer,
       ServerLogPrinter serverLogPrinter,
       VersionMessageUtil versionMessageUtil,
-      CommandCompleter commandCompleter) {
+      CommandCompleter commandCompleter,
+      CommandPreprocessor commandPreprocessor) {
     this.mainArgs = mainArgs;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.lineReader = lineReader;
@@ -177,6 +184,7 @@ public class AtsConsole {
     this.serverLogPrinter = serverLogPrinter;
     this.versionMessageUtil = versionMessageUtil;
     this.commandCompleter = commandCompleter;
+    this.commandPreprocessor = commandPreprocessor;
   }
 
   public void run() throws MobileHarnessException, InterruptedException {
@@ -247,6 +255,19 @@ public class AtsConsole {
         args = ImmutableList.of();
       }
 
+      // Preprocesses the command.
+      PreprocessingResult preprocessingResult = commandPreprocessor.preprocess(tokens);
+      if (preprocessingResult.errorMessage().isPresent()) {
+        consoleUtil.printlnStderr(preprocessingResult.errorMessage().get());
+        continue;
+      }
+      if (preprocessingResult.modifiedTokens().isPresent()) {
+        logger.atInfo().log(
+            "Replace command %s by %s", tokens, preprocessingResult.modifiedTokens().get());
+        tokens = preprocessingResult.modifiedTokens().get();
+      }
+
+      // Executes the command.
       consoleInfo.setLastCommand(tokens);
       commandLine.execute(tokens.toArray(new String[0]));
 
