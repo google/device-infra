@@ -14,71 +14,25 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.shared.api.validator;
+package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
-import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVersion;
-import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
-import com.google.errorprone.annotations.Keep;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
-import com.google.wireless.qa.mobileharness.shared.api.device.Device;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidDeviceSettingsDecoratorSpec;
 import java.util.List;
-import java.util.function.Supplier;
 
-/** Validator for {@code AndroidDeviceSettingsDecorator}. */
-public class AndroidDeviceSettingsDecoratorValidator extends BaseValidator
-    implements SpecConfigable<AndroidDeviceSettingsDecoratorSpec> {
+/** Job validator for {@code AndroidDeviceSettingsDecorator}. */
+public class AndroidDeviceSettingsDecoratorJobValidator
+    implements JobValidator, SpecConfigable<AndroidDeviceSettingsDecoratorSpec> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private final Supplier<AndroidSystemSettingUtil> androidSystemSettingUtilSupplier;
-
-  @Keep
-  public AndroidDeviceSettingsDecoratorValidator() {
-    this(Suppliers.memoize(AndroidSystemSettingUtil::new));
-  }
-
-  @VisibleForTesting
-  AndroidDeviceSettingsDecoratorValidator(
-      Supplier<AndroidSystemSettingUtil> androidSystemSettingUtilSupplier) {
-    this.androidSystemSettingUtilSupplier = androidSystemSettingUtilSupplier;
-  }
-
   @Override
-  public void validateEnv(Device device) throws MobileHarnessException, InterruptedException {
-    if (!(device instanceof AndroidDevice)) {
-      throw new MobileHarnessException(
-          ErrorCode.DEVICE_NOT_SUPPORTED, "Only support android devices.");
-    }
-
-    if (device.getClass().getSimpleName().equals("AndroidVirtualDevice")
-        || device.getClass().getSimpleName().equals("OxygenDevice")) {
-      return;
-    }
-    int sdkVersion =
-        androidSystemSettingUtilSupplier.get().getDeviceSdkVersion(device.getDeviceId());
-    if (sdkVersion < AndroidVersion.LOLLIPOP.getEndSdkVersion()) {
-      throw new MobileHarnessException(
-          ErrorCode.ANDROID_DEVICE_TOO_OLD, "Only support device with API 22+.");
-    }
-
-    if (!((AndroidDevice) device).isRooted()) {
-      throw new MobileHarnessException(
-          ErrorCode.DEVICE_NOT_SUPPORTED, "Only support rooted device.");
-    }
-  }
-
-  @Override
-  public List<String> validateJob(JobInfo job) throws InterruptedException {
+  public List<String> validate(JobInfo job) throws InterruptedException {
     ImmutableList.Builder<String> errors = ImmutableList.builder();
 
     List<AndroidDeviceSettingsDecoratorSpec> specs;

@@ -32,3 +32,24 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
     ],
 )
+
+################################################################################
+# Validator libraries in alphabetical order
+################################################################################
+
+java_library(
+    name = "android_device_settings_decorator_env_validator",
+    srcs = ["AndroidDeviceSettingsDecoratorEnvValidator.java"],
+    deps = [
+        ":env_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)

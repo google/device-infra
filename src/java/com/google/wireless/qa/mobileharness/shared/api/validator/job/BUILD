@@ -32,3 +32,22 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+################################################################################
+# Validator libraries in alphabetical order
+################################################################################
+
+java_library(
+    name = "android_device_settings_decorator_job_validator",
+    srcs = ["AndroidDeviceSettingsDecoratorJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_device_setting_decorator_spec_java_proto",
+        "@maven//:com_google_guava_guava",
+    ],
+)

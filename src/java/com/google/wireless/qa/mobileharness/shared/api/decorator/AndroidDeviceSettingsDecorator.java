@@ -49,7 +49,6 @@ import com.google.devtools.mobileharness.shared.util.concurrent.retry.RetryingCa
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
-import com.google.wireless.qa.mobileharness.shared.api.validator.AndroidDeviceSettingsDecoratorValidator;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -442,7 +441,6 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
   @VisibleForTesting
   protected void parseSpec(AndroidDeviceSettingsDecoratorSpec spec, TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
-    AndroidDeviceSettingsDecoratorValidator.validateSpec(spec);
     // screen_brightness
     if (spec.hasScreenBrightness()) {
       settings.system.add("screen_brightness", spec.getScreenBrightness());
