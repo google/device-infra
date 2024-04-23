@@ -141,19 +141,23 @@
                         <xsl:for-each select="Result/Module">
                             <tr>
                                 <td>
-                                    <xsl:variable name="href">
+                                    <xsl:variable name="moduleName">
                                         <xsl:value-of select="@abi"/>&#xA0;<xsl:value-of
                                         select="@name"/>
                                     </xsl:variable>
                                     <xsl:choose>
                                         <xsl:when test="count(TestCase/Test) &gt; 0">
+                                            <xsl:variable name="href">
+                                                <xsl:value-of select="@abi"/>_<xsl:value-of
+                                                select="@name"/>
+                                            </xsl:variable>
                                             <a href="module_reports/{$href}.html">
-                                                <xsl:value-of select="$href"/>
+                                                <xsl:value-of select="$moduleName"/>
                                             </a>
                                         </xsl:when>
                                         <xsl:otherwise>
                                             <a>
-                                                <xsl:value-of select="$href"/>
+                                                <xsl:value-of select="$moduleName"/>
                                             </a>
                                         </xsl:otherwise>
                                     </xsl:choose>
@@ -236,7 +240,7 @@
 
     <xsl:template name="detailedTestReportPage">
         <xsl:variable name="href">
-            <xsl:value-of select="@abi"/>&#xA0;<xsl:value-of select="@name"/>
+            <xsl:value-of select="@abi"/>_<xsl:value-of select="@name"/>
         </xsl:variable>
         <redirect:write file="{$reportDir}/module_reports/{$href}.html">
             <html>
@@ -276,11 +280,11 @@
     <xsl:template name="moduleTableHeader">
         <tr>
             <td class="module" colspan="3">
-                <xsl:variable name="href">
+                <xsl:variable name="moduleName">
                     <xsl:value-of select="@abi"/>&#xA0;<xsl:value-of select="@name"/>
                 </xsl:variable>
-                <a name="{$href}">
-                    <xsl:value-of select="$href"/>
+                <a name="{$moduleName}">
+                    <xsl:value-of select="$moduleName"/>
                 </a>
             </td>
         </tr>
