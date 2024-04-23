@@ -44,33 +44,32 @@ public abstract class SuiteTestFilter {
 
   public static SuiteTestFilter create(String filterString) {
     List<String> tokens = FILTER_STRING_SPLITTER.splitToList(filterString);
-    switch (tokens.size()) {
-      case 1:
-        return create(
-            filterString, /* abi= */ null, /* moduleName= */ tokens.get(0), /* testName= */ null);
-      case 2:
-        if (AbiUtil.isAbiSupportedByCompatibility(tokens.get(0))) {
-          return create(
-              filterString,
-              /* abi= */ tokens.get(0),
-              /* moduleName= */ tokens.get(1),
-              /* testName= */ null);
-        } else {
-          return create(
-              filterString,
-              /* abi= */ null,
-              /* moduleName= */ tokens.get(0),
-              /* testName= */ tokens.get(1));
+    if (tokens.size() == 1) {
+      return create(
+          filterString, /* abi= */ null, /* moduleName= */ tokens.get(0), /* testName= */ null);
+    } else {
+      // Collect test name by removing abi and module name from the filter string as test names
+      // may contain parameters with spaces.
+      if (AbiUtil.isAbiSupportedByCompatibility(tokens.get(0))) {
+        // Create a filter with abi.
+        String abi = tokens.get(0);
+        String moduleName = tokens.get(1);
+        String testName = "";
+        if (tokens.size() > 2) {
+          testName = String.join(" ", tokens.subList(2, tokens.size()));
+          ;
         }
-      case 3:
+        return create(filterString, abi, moduleName, testName.isEmpty() ? null : testName);
+      } else {
+        // Create a filter without abi.
+        String moduleName = tokens.get(0);
+        String testName = "";
+        if (tokens.size() > 1) {
+          testName = String.join(" ", tokens.subList(1, tokens.size()));
+        }
         return create(
-            filterString,
-            /* abi= */ tokens.get(0),
-            /* moduleName= */ tokens.get(1),
-            /* testName= */ tokens.get(2));
-      default:
-        throw new IllegalArgumentException(
-            String.format("Invalid filter string: [%s]", filterString));
+            filterString, /* abi= */ null, moduleName, testName.isEmpty() ? null : testName);
+      }
     }
   }
 
