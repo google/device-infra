@@ -84,6 +84,7 @@ filegroup(
 junit_test_suites(
     name = "tests",
     sizes = [
+        "medium",
         "small",
     ],
     deps = [":command"],

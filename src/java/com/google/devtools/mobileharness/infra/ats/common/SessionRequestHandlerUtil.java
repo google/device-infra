@@ -1127,7 +1127,8 @@ public class SessionRequestHandlerUtil {
    *
    * <p>The results are merged and saved to the given result directory. The logs are saved to the
    * given log directory. Also the content of {@code resultDir} will be zipped so ensure only needed
-   * files are put under {@code resultDir} before the zipping.
+   * files are put under {@code resultDir} before the zipping. This method returns optional final
+   * result in case the caller want to check it.
    *
    * @param resultDir the directory to save the merged result
    * @param logDir the directory to save the logs
@@ -1135,8 +1136,10 @@ public class SessionRequestHandlerUtil {
    * @param latestLogLink the symbolic link path to the latest log directory.
    * @param jobs the jobs to process
    * @param sessionRequestInfo session request info stores info about the command
+   * @return the final result generated from the jobs' results.
    */
-  public void processResult(
+  @CanIgnoreReturnValue
+  public Optional<Result> processResult(
       Path resultDir,
       Path logDir,
       @Nullable Path latestResultLink,
@@ -1144,6 +1147,7 @@ public class SessionRequestHandlerUtil {
       List<JobInfo> jobs,
       SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
+    Result finalReport = null;
     ImmutableMap<JobInfo, Optional<TestInfo>> tradefedTests =
         jobs.stream()
             .filter(jobInfo -> jobInfo.properties().has(XTS_TF_JOB_PROP))
@@ -1261,10 +1265,10 @@ public class SessionRequestHandlerUtil {
       if (!sessionRequestInfo.excludeFilters().isEmpty()) {
         finalReportBuilder.addAllExcludeFilter(sessionRequestInfo.excludeFilters());
       }
-      reportCreator.createReport(
-          finalReportBuilder.build(), resultDir, null, sessionRequestInfo.htmlInZip());
+      finalReport = finalReportBuilder.build();
+      reportCreator.createReport(finalReport, resultDir, null, sessionRequestInfo.htmlInZip());
+
     } else if (isRunRetry) {
-      Result finalReport;
       if (sessionRequestInfo.retrySessionId().isPresent()) {
         finalReport =
             retryReportMerger.mergeReports(
@@ -1330,6 +1334,7 @@ public class SessionRequestHandlerUtil {
         logger.atWarning().withCause(e).log("Failed to create the latest log link.");
       }
     }
+    return Optional.ofNullable(finalReport);
   }
 
   /**

@@ -23,7 +23,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandAttemptDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -56,8 +55,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -85,7 +82,6 @@ final class AtsServerSessionPlugin {
   private int runningTradefedJobCount = 0;
 
   private final SessionInfo sessionInfo;
-  private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final NewMultiCommandRequestHandler newMultiCommandRequestHandler;
   private final LocalSessionStub localSessionStub;
 
@@ -93,11 +89,9 @@ final class AtsServerSessionPlugin {
   AtsServerSessionPlugin(
       SessionInfo sessionInfo,
       NewMultiCommandRequestHandler newMultiCommandRequestHandler,
-      SessionRequestHandlerUtil sessionRequestHandlerUtil,
       LocalSessionStub localSessionStub) {
     this.sessionInfo = sessionInfo;
     this.newMultiCommandRequestHandler = newMultiCommandRequestHandler;
-    this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.localSessionStub = localSessionStub;
   }
 
@@ -152,23 +146,9 @@ final class AtsServerSessionPlugin {
   public void onSessionEnded(SessionEndedEvent event)
       throws InterruptedException, MobileHarnessException {
     synchronized (requestDetailLock) {
-      newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail.build());
-      Map<String, CommandDetail> newCommandDetails = new HashMap<>();
-      for (CommandDetail commandDetail : requestDetail.getCommandDetailsMap().values()) {
-        CommandDetail.Builder updatedCommandDetail =
-            commandDetail.toBuilder()
-                .setState(
-                    hasCommandPassed(commandDetail.getId(), requestDetail.build())
-                        ? CommandState.COMPLETED
-                        : CommandState.ERROR);
-        updatedCommandDetail.setEndTime(updatedCommandDetail.getUpdateTime());
-        newCommandDetails.put(commandDetail.getId(), updatedCommandDetail.build());
-      }
-      requestDetail.putAllCommandDetails(newCommandDetails);
+      newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
       requestDetail.setState(
-          sessionRequestHandlerUtil.isSessionPassed(sessionInfo.getAllJobs())
-              ? RequestState.COMPLETED
-              : RequestState.ERROR);
+          hasSessionPassed(requestDetail.build()) ? RequestState.COMPLETED : RequestState.ERROR);
       logger.atInfo().log("RequestDetail: %s", shortDebugString(requestDetail.build()));
 
       if (requestDetail.getState().equals(RequestState.ERROR)
@@ -279,36 +259,20 @@ final class AtsServerSessionPlugin {
             "Tradefed job %s not found in requestDetail", jobInfo.locator().getId());
         return;
       }
-      String commandId = newMultiCommandRequestHandler.getCommandIdOfJob(jobInfo);
       // Add a command attempt
       CommandAttemptDetail commandAttemptDetail =
           generateCommandAttemptDetail(
               jobInfo, jobInfo.tests().getAll().values().iterator().next());
       requestDetail.addCommandAttemptDetails(commandAttemptDetail);
-      CommandDetail oldCommandDetail = requestDetail.getCommandDetailsOrThrow(commandId);
-      CommandDetail newCommandDetail =
-          oldCommandDetail.toBuilder()
-              .setPassedTestCount(
-                  oldCommandDetail.getPassedTestCount() + commandAttemptDetail.getPassedTestCount())
-              .setFailedTestCount(
-                  oldCommandDetail.getFailedTestCount() + commandAttemptDetail.getFailedTestCount())
-              .setTotalTestCount(
-                  oldCommandDetail.getTotalTestCount() + commandAttemptDetail.getTotalTestCount())
-              .setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()))
-              .build();
-
-      requestDetail.putCommandDetails(commandId, newCommandDetail);
       requestDetail.setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
       RequestDetail latestRequestDetail = requestDetail.build();
       sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
     }
   }
 
-  private boolean hasCommandPassed(String commandId, RequestDetail requestDetail) {
-    return requestDetail.getCommandAttemptDetailsList().stream()
-        .filter(commandAttemptDetail -> commandAttemptDetail.getCommandId().equals(commandId))
-        .allMatch(
-            commandAttemptDetail -> commandAttemptDetail.getState() == CommandState.COMPLETED);
+  private boolean hasSessionPassed(RequestDetail requestDetail) {
+    return requestDetail.getCommandDetailsMap().values().stream()
+        .allMatch(commandDetail -> commandDetail.getState() == CommandState.COMPLETED);
   }
 
   private CommandState convertStatusAndResultToCommandState(Status status, Result result) {

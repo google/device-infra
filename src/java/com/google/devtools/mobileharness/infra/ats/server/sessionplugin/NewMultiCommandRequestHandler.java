@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -268,6 +269,7 @@ final class NewMultiCommandRequestHandler {
     commandDetailBuilder.setCreateTime(Timestamps.fromMillis(clock.millis()));
     commandDetailBuilder.setStartTime(Timestamps.fromMillis(clock.millis()));
     commandDetailBuilder.setUpdateTime(Timestamps.fromMillis(clock.millis()));
+    commandDetailBuilder.setRequestId(sessionInfo.getSessionId());
 
     // Validates request and generate a sessionRequestInfo that is needed to create a jobInfo.
     try {
@@ -457,9 +459,9 @@ final class NewMultiCommandRequestHandler {
 
   /**
    * Copies xTS tradefed and non-tradefed generated logs/results into proper locations within the
-   * given xts root dir.
+   * given xts root dir. Also update the request's command states based on the results.
    */
-  void handleResultProcessing(SessionInfo sessionInfo, RequestDetail requestDetail)
+  void handleResultProcessing(SessionInfo sessionInfo, RequestDetail.Builder requestDetail)
       throws MobileHarnessException, InterruptedException {
     URL outputUrl;
     String outputFileUploadUrl =
@@ -486,16 +488,33 @@ final class NewMultiCommandRequestHandler {
               Path.of(outputUrl.getPath()).resolve(sessionInfo.getSessionId()).resolve(commandId);
           Path resultDir = outputDirPath;
           Path logDir = outputDirPath;
-
-          sessionRequestHandlerUtil.processResult(
-              resultDir,
-              logDir,
-              /* latestResultLink= */ null,
-              /* latestLogLink= */ null,
-              commandToJobsMap.get(commandId).stream()
-                  .map(jobIdToJobMap::get)
-                  .collect(toImmutableList()),
-              sessionRequestInfo);
+          Optional<Result> result =
+              sessionRequestHandlerUtil.processResult(
+                  resultDir,
+                  logDir,
+                  /* latestResultLink= */ null,
+                  /* latestLogLink= */ null,
+                  commandToJobsMap.get(commandId).stream()
+                      .map(jobIdToJobMap::get)
+                      .collect(toImmutableList()),
+                  sessionRequestInfo);
+          CommandDetail.Builder commandDetailBuilder = commandDetail.toBuilder();
+          if (result.isPresent() && result.get().hasSummary()) {
+            commandDetailBuilder
+                .setPassedTestCount(result.get().getSummary().getPassed())
+                .setFailedTestCount(result.get().getSummary().getFailed());
+            commandDetailBuilder.setTotalTestCount(
+                commandDetailBuilder.getPassedTestCount()
+                    + commandDetailBuilder.getFailedTestCount());
+          }
+          commandDetailBuilder
+              .setState(
+                  hasCommandPassed(commandDetailBuilder.build())
+                      ? CommandState.COMPLETED
+                      : CommandState.ERROR)
+              .setEndTime(Timestamps.fromMillis(clock.millis()))
+              .setUpdateTime(Timestamps.fromMillis(clock.millis()));
+          requestDetail.putCommandDetails(commandId, commandDetailBuilder.build());
         }
       } else {
         logger.atWarning().log(
@@ -527,6 +546,10 @@ final class NewMultiCommandRequestHandler {
         logger.atWarning().withCause(e).log("Failed to unmount xts root directory: %s", xtsRootDir);
       }
     }
+  }
+
+  private boolean hasCommandPassed(CommandDetail commandDetail) {
+    return commandDetail.getTotalTestCount() > 0 && commandDetail.getFailedTestCount() == 0;
   }
 
   @CanIgnoreReturnValue
