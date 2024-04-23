@@ -72,6 +72,7 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryT
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -157,6 +158,7 @@ public class SessionRequestHandlerUtil {
   private final Path sessionGenDir;
   private final Path sessionTempDir;
   private final SessionInfo sessionInfo;
+  private final Provider<ResUtil> resUtil;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -173,7 +175,8 @@ public class SessionRequestHandlerUtil {
       Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider,
       @SessionGenDir Path sessionGenDir,
       @SessionTempDir Path sessionTempDir,
-      SessionInfo sessionInfo) {
+      SessionInfo sessionInfo,
+      Provider<ResUtil> resUtil) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
@@ -188,6 +191,7 @@ public class SessionRequestHandlerUtil {
     this.sessionGenDir = sessionGenDir;
     this.sessionTempDir = sessionTempDir;
     this.sessionInfo = sessionInfo;
+    this.resUtil = resUtil;
   }
 
   /**
@@ -317,9 +321,21 @@ public class SessionRequestHandlerUtil {
             ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
 
     ImmutableList<String> modules = sessionRequestInfo.moduleNames();
+    String ctsListPath =
+        resUtil
+            .get()
+            .getResourceFile(
+                getClass(),
+                "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/cts_list.txt");
+    ImmutableList<String> ctsLists =
+        localFileUtil.readLineListFromFile(ctsListPath).stream()
+            .map(String::trim)
+            .filter(line -> !line.isEmpty())
+            .collect(toImmutableList());
     ImmutableSet<String> allTfModules =
-        configsMap.values().stream()
-            .map(config -> config.getMetadata().getXtsModule())
+        Stream.concat(
+                configsMap.values().stream().map(config -> config.getMetadata().getXtsModule()),
+                ctsLists.stream())
             .collect(toImmutableSet());
     ImmutableSet<String> givenMatchedTfModules =
         modules.isEmpty() ? allTfModules : matchModules(modules, allTfModules);

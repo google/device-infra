@@ -26,6 +26,9 @@ package(
 java_library(
     name = "session_request_handler_util",
     srcs = ["SessionRequestHandlerUtil.java"],
+    resources = [
+        "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:cts_list",
+    ],
     deps = [
         ":session_request_info",
         ":test_plan_loader",
@@ -59,6 +62,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_test_info_map_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/jobconfig:job_info_creator",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

@@ -16,6 +16,7 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
     ],
 )
@@ -23,4 +24,10 @@ package(
 filegroup(
     name = "config_proto_files",
     srcs = ["module_info_map.textpb"],
+)
+
+# This is for Tradefed CTS modules only.
+filegroup(
+    name = "cts_list",
+    srcs = ["cts_list.txt"],
 )
