@@ -26,5 +26,8 @@ go_library(
         "chunkerutil.go",
     ],
     importpath = "github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil",
-    deps = ["//src/devtools/rbe/casuploader/chunker"],
+    deps = [
+        "//src/devtools/rbe/casuploader/chunker",
+        "@com_github_golang_glog//:glog",
+    ],
 )

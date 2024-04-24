@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"time"
 
+	log "github.com/golang/glog"
 	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunker"
 )
 
@@ -58,8 +59,10 @@ func CreateIndexFile(inDir string, chunksIndex []ChunksIndex) error {
 
 // RestoreFiles restores files to dstDir with chunks index file and chunks file in srcDir.
 func RestoreFiles(srcDir string, dstDir string) error {
+	start := time.Now()
 	indexPath := filepath.Join(srcDir, ChunksIndexFileName)
 	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		log.Infof("skipped restoring chunked files, chunk index file not found")
 		return nil // Skip restoring chunked files - not found
 	}
 
@@ -93,5 +96,6 @@ func RestoreFiles(srcDir string, dstDir string) error {
 		return fmt.Errorf("error deleting chunks dir: %v", err)
 	}
 
+	log.Infof("restored chunked files, took %s", time.Since(start))
 	return nil
 }
