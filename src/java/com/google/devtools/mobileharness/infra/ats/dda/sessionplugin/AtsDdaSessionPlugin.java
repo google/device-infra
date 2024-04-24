@@ -161,6 +161,7 @@ public class AtsDdaSessionPlugin {
         .add(
             "lease_expiration_time_sec",
             Long.toString(Flags.instance().atsDdaLeaseExpirationTime.getNonNull().toSeconds()));
+    jobInfo.params().add("cache_device_in_driver", Boolean.TRUE.toString());
     jobInfo.tests().add(TEST_NAME);
     return jobInfo;
   }

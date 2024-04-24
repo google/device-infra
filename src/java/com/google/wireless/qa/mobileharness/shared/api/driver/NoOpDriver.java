@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Test;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.TestAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -95,75 +96,97 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
   @Override
   public void run(TestInfo testInfo) throws InterruptedException, MobileHarnessException {
     NoOpDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
+    logger.atInfo().log("Config: %s", spec);
 
-    if (spec.hasLeaseExpirationTimeSec()) {
-      Duration leaseExpirationTime = Duration.ofSeconds(spec.getLeaseExpirationTimeSec());
-      testInfo.log().atInfo().alsoTo(logger).log("Lease expiration time: %s", leaseExpirationTime);
-      synchronized (leaseLock) {
-        this.leaseExpirationTime = leaseExpirationTime;
-        scheduledThreadPool =
-            ThreadPools.createStandardScheduledThreadPool(
-                /* threadNamePrefix= */ "no-op-driver-lease-monitor-" + testInfo.locator().getId(),
-                /* corePoolSize= */ 1);
-        extendLease();
-      }
+    // Caches device.
+    boolean cacheDevice = spec.hasCacheDeviceInDriver() && spec.getCacheDeviceInDriver();
+    if (cacheDevice) {
+      CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     }
-
     try {
-      int sleepTimeSec = spec.getSleepTimeSec();
-      testInfo.log().atInfo().alsoTo(logger).log("Sleep for %d seconds", sleepTimeSec);
-      WakeupReason wakeupReason = wakeupFuture.get(sleepTimeSec, SECONDS);
-      testInfo.log().atInfo().alsoTo(logger).log("Wake up from sleep, reason=%s", wakeupReason);
-    } catch (ExecutionException e) {
-      throw new AssertionError(e); // The future will never be set with an exception.
-    } catch (TimeoutException e) {
-      // Does nothing. No wake_up message received and the lease is not expired.
-    } finally {
-      synchronized (leaseLock) {
-        if (leaseExpirationFuture != null) {
-          leaseExpirationFuture.cancel(/* mayInterruptIfRunning= */ false);
-          leaseExpirationFuture = null;
-        }
-        if (scheduledThreadPool != null) {
-          scheduledThreadPool.shutdown();
-          scheduledThreadPool = null;
+
+      // Monitors lease.
+      if (spec.hasLeaseExpirationTimeSec()) {
+        Duration leaseExpirationTime = Duration.ofSeconds(spec.getLeaseExpirationTimeSec());
+        testInfo
+            .log()
+            .atInfo()
+            .alsoTo(logger)
+            .log("Lease expiration time: %s", leaseExpirationTime);
+        synchronized (leaseLock) {
+          this.leaseExpirationTime = leaseExpirationTime;
+          scheduledThreadPool =
+              ThreadPools.createStandardScheduledThreadPool(
+                  /* threadNamePrefix= */ "no-op-driver-lease-monitor-"
+                      + testInfo.locator().getId(),
+                  /* corePoolSize= */ 1);
+          extendLease();
         }
       }
 
-      // Sets the test result to:
-      // 1. The result from the last test message.
-      // 2. The result from job params.
-      // 3. PASS.
-      Test.TestResult testResultFromMessage = this.testResultFromMessage;
-      com.google.devtools.mobileharness.api.model.error.MobileHarnessException
-          testResultCauseFromMessage = this.testResultCauseFromMessage;
-      if (testResultFromMessage == null) {
-        if (spec.hasTestResult()) {
-          if (spec.getTestResult() == TestResult.PASS) {
+      // Sleeps.
+      try {
+        int sleepTimeSec = spec.getSleepTimeSec();
+        testInfo.log().atInfo().alsoTo(logger).log("Sleep for %d seconds", sleepTimeSec);
+        WakeupReason wakeupReason = wakeupFuture.get(sleepTimeSec, SECONDS);
+        testInfo.log().atInfo().alsoTo(logger).log("Wake up from sleep, reason=%s", wakeupReason);
+      } catch (ExecutionException e) {
+        throw new AssertionError(e); // The future will never be set with an exception.
+      } catch (TimeoutException e) {
+        // Does nothing. No wake_up message received and the lease is not expired.
+      } finally {
+        synchronized (leaseLock) {
+          if (leaseExpirationFuture != null) {
+            leaseExpirationFuture.cancel(/* mayInterruptIfRunning= */ false);
+            leaseExpirationFuture = null;
+          }
+          if (scheduledThreadPool != null) {
+            scheduledThreadPool.shutdown();
+            scheduledThreadPool = null;
+          }
+        }
+
+        // Sets the test result to:
+        // 1. The result from the last test message.
+        // 2. The result from job params.
+        // 3. PASS.
+        Test.TestResult testResultFromMessage = this.testResultFromMessage;
+        com.google.devtools.mobileharness.api.model.error.MobileHarnessException
+            testResultCauseFromMessage = this.testResultCauseFromMessage;
+        if (testResultFromMessage == null) {
+          if (spec.hasTestResult()) {
+            if (spec.getTestResult() == TestResult.PASS) {
+              testInfo.resultWithCause().setPass();
+            } else {
+              testInfo
+                  .resultWithCause()
+                  .setNonPassing(
+                      Test.TestResult.valueOf(spec.getTestResult().name()),
+                      new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                          ExtErrorId.NO_OP_DRIVER_NON_PASSING_RESULT_SET_BY_PARAM,
+                          String.format(
+                              "NoOpDriver non-passing result set by param \"test_result\""
+                                  + ", reason=[%s]",
+                              spec.getTestResultReason())));
+            }
+          } else {
+            testInfo.resultWithCause().setPass();
+          }
+        } else {
+          if (testResultFromMessage == Test.TestResult.PASS) {
             testInfo.resultWithCause().setPass();
           } else {
             testInfo
                 .resultWithCause()
-                .setNonPassing(
-                    Test.TestResult.valueOf(spec.getTestResult().name()),
-                    new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
-                        ExtErrorId.NO_OP_DRIVER_NON_PASSING_RESULT_SET_BY_PARAM,
-                        String.format(
-                            "NoOpDriver non-passing result set by param \"test_result\""
-                                + ", reason=[%s]",
-                            spec.getTestResultReason())));
+                .setNonPassing(testResultFromMessage, testResultCauseFromMessage);
           }
-        } else {
-          testInfo.resultWithCause().setPass();
         }
-      } else {
-        if (testResultFromMessage == Test.TestResult.PASS) {
-          testInfo.resultWithCause().setPass();
-        } else {
-          testInfo
-              .resultWithCause()
-              .setNonPassing(testResultFromMessage, testResultCauseFromMessage);
-        }
+      }
+
+    } finally {
+      // Uncaches device.
+      if (cacheDevice) {
+        CompositeDeviceUtil.uncacheTestbed(getDevice());
       }
     }
   }

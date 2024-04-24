@@ -136,6 +136,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:composite_device_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event",

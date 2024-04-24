@@ -54,4 +54,9 @@ message NoOpDriverSpec {
           " 'mobileharness:driver:NoOpDriver' and whose 'type' is "
           "'extend_lease') for the given time."
   }];
+
+  optional bool cache_device_in_driver = 8 [(field_detail) = {
+    help: "Whether to cache device during the driver execution. "
+          "The default value is false."
+  }];
 }
