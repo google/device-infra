@@ -1624,6 +1624,8 @@ LocationAccessingApp
 LocationAccessingAppSdk28
 MainlineModuleDetector
 MctsAppSecurityHostTestCases
+MctsMediaDecoderTestCases
+MctsTextClassifierTestCases
 MicrodroidHostTestCases
 MicrodroidTestApp
 MicrodroidTestAppNoPerm
