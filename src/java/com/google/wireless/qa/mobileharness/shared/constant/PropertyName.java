@@ -16,8 +16,14 @@
 
 package com.google.wireless.qa.mobileharness.shared.constant;
 
+import com.google.common.base.Ascii;
+
 /** Mobile Harness property name constants. */
 public interface PropertyName {
+
+  default String lowerCaseName() {
+    return Ascii.toLowerCase(toString());
+  }
 
   /** Mobile Harness job property name constants. */
   enum Job implements PropertyName {
