@@ -91,8 +91,15 @@ message DeallocationRequest {
 // some sort of RPC error (e.g. in the case that the allocation was not found).
 message DeallocationResponse {}
 
+message Condition {
+  repeated string contains_all = 1;
+  repeated string not_contains_any = 2;
+}
+
 // An empty request message.
-message GetAvailableDevicesRequest {}
+message GetAvailableDevicesRequest {
+  Condition device_type_condition = 1;
+}
 
 // The information of available satellite devices.
 message GetAvailableDevicesResponse {
