@@ -1893,6 +1893,9 @@ public class SessionRequestHandlerUtil {
   }
 
   public boolean isSessionPassed(List<JobInfo> jobInfos) {
+    if (jobInfos.isEmpty()) {
+      return false;
+    }
     for (JobInfo jobInfo : jobInfos) {
       // Tradefed Jobs.
       if (jobInfo.properties().has(SessionRequestHandlerUtil.XTS_TF_JOB_PROP)) {
