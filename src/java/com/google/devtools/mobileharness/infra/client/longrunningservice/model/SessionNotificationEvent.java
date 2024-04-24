@@ -16,19 +16,20 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.model;
 
-import static com.google.protobuf.TextFormat.shortDebugString;
-
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
+import com.google.protobuf.TextFormat.Printer;
 
 /** An event that indicates the session has received a notification from client. */
 public class SessionNotificationEvent extends SessionEvent {
 
   private final SessionNotification sessionNotification;
+  private final Printer protoPrinter;
 
   public SessionNotificationEvent(
-      SessionInfo sessionInfo, SessionNotification sessionNotification) {
+      SessionInfo sessionInfo, SessionNotification sessionNotification, Printer protoPrinter) {
     super(sessionInfo);
     this.sessionNotification = sessionNotification;
+    this.protoPrinter = protoPrinter;
   }
 
   /** A notification from client. */
@@ -41,6 +42,7 @@ public class SessionNotificationEvent extends SessionEvent {
     return String.format(
         "%s%s",
         super.toString(),
-        String.format(" with notification [%s]", shortDebugString(sessionNotification)));
+        String.format(
+            " with notification [%s]", protoPrinter.shortDebugString(sessionNotification)));
   }
 }

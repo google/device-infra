@@ -67,7 +67,9 @@ public class SessionPluginRunner {
   /** Posts {@link SessionNotificationEvent} to session plugins with the given label. */
   public void onSessionNotification(SessionNotification sessionNotification) {
     postEvent(
-        sessionInfo -> new SessionNotificationEvent(sessionInfo, sessionNotification),
+        sessionInfo ->
+            new SessionNotificationEvent(
+                sessionInfo, sessionNotification, sessionDetailHolder.getProtoPrinter()),
         SessionNotificationEvent.class,
         sessionNotification.hasPluginLabel()
             ? sessionPlugin ->

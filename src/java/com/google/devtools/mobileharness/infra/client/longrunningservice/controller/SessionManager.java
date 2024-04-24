@@ -53,6 +53,8 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.FieldMask;
+import com.google.protobuf.TextFormat;
+import com.google.protobuf.TextFormat.Printer;
 import com.google.protobuf.util.FieldMaskUtil;
 import io.grpc.stub.StreamObserver;
 import java.util.ArrayList;
@@ -176,13 +178,16 @@ public class SessionManager {
   public SessionDetail getSession(String sessionId, @Nullable FieldMask fieldMask)
       throws MobileHarnessException {
     SessionDetail sessionDetail;
+    Printer protoPrinter = TextFormat.printer();
     // Checks the session from 3 places.
     synchronized (sessionsLock) {
       sessionDetail = archivedSessions.get(sessionId);
       if (sessionDetail == null) {
         RunningSession runningSession = runningSessions.get(sessionId);
         if (runningSession != null) {
-          sessionDetail = runningSession.sessionRunner().getSession(fieldMask);
+          SessionRunner sessionRunner = runningSession.sessionRunner();
+          sessionDetail = sessionRunner.getSession(fieldMask);
+          protoPrinter = sessionRunner.getProtoPrinter();
         }
       }
       if (sessionDetail == null) {
@@ -196,7 +201,7 @@ public class SessionManager {
         sessionDetail != null,
         InfraErrorId.OLCS_GET_SESSION_SESSION_NOT_FOUND,
         () -> String.format("Session not found, id=[%s]", sessionId));
-    logger.atFine().log("Get session: %s", shortDebugString(sessionDetail));
+    logger.atFine().log("Get session: %s", protoPrinter.shortDebugString(sessionDetail));
     return sessionDetail;
   }
 
@@ -283,9 +288,11 @@ public class SessionManager {
     synchronized (sessionsLock) {
       RunningSession runningSession = runningSessions.get(sessionId);
       if (runningSession != null) {
+        SessionRunner sessionRunner = runningSession.sessionRunner();
         logger.atInfo().log(
-            "Notify running session [%s]: [%s]", sessionId, shortDebugString(sessionNotification));
-        return runningSession.sessionRunner().notifySession(sessionNotification);
+            "Notify running session [%s]: [%s]",
+            sessionId, sessionRunner.getProtoPrinter().shortDebugString(sessionNotification));
+        return sessionRunner.notifySession(sessionNotification);
       }
       PendingSession pendingSession = pendingSessions.get(sessionId);
       if (pendingSession != null) {
@@ -316,7 +323,9 @@ public class SessionManager {
           // Marks the session as FINISHED.
           SessionDetail finalSessionDetail =
               createFinalSessionDetail(
-                  pendingSession.sessionDetail(), /* sessionRunnerError= */ null);
+                  pendingSession.sessionDetail(),
+                  /* sessionRunnerError= */ null,
+                  TextFormat.printer());
 
           // Archives the session.
           archiveSession(finalSessionDetail);
@@ -378,10 +387,9 @@ public class SessionManager {
       subscribers.receiveSessionDetail(/* finalSessionDetail= */ false);
       subscribers.setSessionDetailSupplier(sessionRunner::getSession);
 
-      SessionDetail sessionDetail = sessionRunner.getSession(/* fieldMask= */ null);
-      logger.atInfo().log("Starting session: %s", shortDebugString(sessionDetail));
+      String sessionId = sessionRunner.getSessionId();
+      logger.atInfo().log("Starting session [%s]", sessionId);
 
-      String sessionId = sessionDetail.getSessionId().getId();
       runningSessions.put(sessionId, runningSession);
       addCallback(
           threadPool.submit(threadRenaming(sessionRunner, () -> "session-runner-" + sessionId)),
@@ -431,13 +439,13 @@ public class SessionManager {
     }
 
     private void afterSession(@Nullable Throwable sessionRunnerError) {
-      SessionDetail sessionDetail =
-          runningSession.sessionRunner().getSession(/* fieldMask= */ null);
+      SessionRunner sessionRunner = runningSession.sessionRunner();
+      SessionDetail sessionDetail = sessionRunner.getSession(/* fieldMask= */ null);
       SessionDetail finalSessionDetail =
-          createFinalSessionDetail(sessionDetail, sessionRunnerError);
+          createFinalSessionDetail(
+              sessionDetail, sessionRunnerError, sessionRunner.getProtoPrinter());
 
-      Optional<SessionEnvironment> sessionEnvironment =
-          runningSession.sessionRunner().getSessionEnvironment();
+      Optional<SessionEnvironment> sessionEnvironment = sessionRunner.getSessionEnvironment();
       if (sessionEnvironment.isPresent()) {
         // Copies session logs.
         try {
@@ -468,13 +476,14 @@ public class SessionManager {
   }
 
   private static SessionDetail createFinalSessionDetail(
-      SessionDetail sessionDetail, @Nullable Throwable sessionRunnerError) {
+      SessionDetail sessionDetail, @Nullable Throwable sessionRunnerError, Printer protoPrinter) {
     SessionDetail.Builder sessionDetailBuilder =
         sessionDetail.toBuilder().setSessionStatus(SessionStatus.SESSION_FINISHED);
 
     logger.atInfo().withCause(sessionRunnerError).log(
         "Session finished, session_id=%s, final_session_detail=[%s]",
-        sessionDetailBuilder.getSessionId().getId(), shortDebugString(sessionDetailBuilder));
+        sessionDetailBuilder.getSessionId().getId(),
+        protoPrinter.shortDebugString(sessionDetailBuilder));
 
     // Adds the error thrown from the session runner to SessionDetail, if any.
     if (sessionRunnerError != null) {

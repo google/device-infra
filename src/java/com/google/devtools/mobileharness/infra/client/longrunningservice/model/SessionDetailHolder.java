@@ -30,6 +30,9 @@ import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.FieldMask;
+import com.google.protobuf.TextFormat;
+import com.google.protobuf.TextFormat.Printer;
+import com.google.protobuf.TypeRegistry;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -75,6 +78,8 @@ public class SessionDetailHolder {
   private final Map<String, SessionPluginOutput> sessionPluginOutputs = new HashMap<>();
 
   private final Runnable sessionDetailListener;
+
+  private volatile Printer protoPrinter = TextFormat.printer();
 
   /**
    * Constructor with an initial {@link SessionDetail}. {@link
@@ -215,6 +220,14 @@ public class SessionDetailHolder {
     synchronized (sessionDetailLock) {
       return Optional.ofNullable(sessionPluginOutputs.get(sessionPluginLabel.getLabel()));
     }
+  }
+
+  public void setTypeRegistry(TypeRegistry typeRegistry) {
+    protoPrinter = protoPrinter.usingTypeRegistry(typeRegistry);
+  }
+
+  public Printer getProtoPrinter() {
+    return protoPrinter;
   }
 
   /**

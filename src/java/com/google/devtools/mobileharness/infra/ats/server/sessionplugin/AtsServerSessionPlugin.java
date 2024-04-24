@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Ses
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfigs;
@@ -59,6 +60,7 @@ import java.util.Optional;
 import javax.inject.Inject;
 
 /** Session Plugin to serve test requests coming from ATS server. */
+@WithProto({SessionRequest.class, RequestDetail.class})
 final class AtsServerSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -211,10 +213,11 @@ final class AtsServerSessionPlugin {
   }
 
   private CommandAttemptDetail generateCommandAttemptDetail(JobInfo jobInfo, TestInfo testInfo) {
-    CommandAttemptDetail.Builder builder = CommandAttemptDetail.newBuilder();
-    builder.setId(testInfo.locator().getId());
-    builder.setRequestId(sessionInfo.getSessionId());
-    builder.setCommandId(newMultiCommandRequestHandler.getCommandIdOfJob(jobInfo));
+    CommandAttemptDetail.Builder builder =
+        CommandAttemptDetail.newBuilder()
+            .setId(testInfo.locator().getId())
+            .setRequestId(sessionInfo.getSessionId())
+            .setCommandId(newMultiCommandRequestHandler.getCommandIdOfJob(jobInfo));
     if (testInfo.properties().has(DEVICE_ID_LIST)) {
       ImmutableList<String> deviceSerials =
           ImmutableList.copyOf(testInfo.properties().get(DEVICE_ID_LIST).split(","));

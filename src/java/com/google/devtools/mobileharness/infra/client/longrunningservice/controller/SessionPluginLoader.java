@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.protobuf.TextFormat.shortDebugString;
+import static java.util.Arrays.stream;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
@@ -33,6 +34,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLabel;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
@@ -46,6 +48,8 @@ import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.protobuf.Descriptors.Descriptor;
+import com.google.protobuf.Message;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
@@ -84,7 +88,7 @@ public class SessionPluginLoader {
     this.localSessionStub = localSessionStub;
   }
 
-  public ImmutableList<SessionPlugin> loadSessionPlugins(
+  ImmutableList<SessionPlugin> loadSessionPlugins(
       SessionDetailHolder sessionDetailHolder, SessionEnvironment sessionEnvironment)
       throws MobileHarnessException {
     ImmutableList.Builder<SessionPlugin> sessionPlugins = ImmutableList.builder();
@@ -144,7 +148,12 @@ public class SessionPluginLoader {
       // Searches subscriber methods.
       Subscriber subscriber = eventBusBackend.searchSubscriberMethods(sessionPlugin);
 
-      sessionPlugins.add(SessionPlugin.of(sessionInfo, subscriber, closeableResources));
+      // Gets descriptors.
+      ImmutableList<Descriptor> descriptors =
+          getDescriptors(sessionPluginClasses.sessionPluginClass());
+
+      sessionPlugins.add(
+          SessionPlugin.of(sessionInfo, subscriber, closeableResources, descriptors));
     }
     return sessionPlugins.build();
   }
@@ -187,6 +196,24 @@ public class SessionPluginLoader {
               "Builtin session plugin or module class not found, loading_config=[%s]",
               shortDebugString(loadingConfig)),
           e);
+    }
+  }
+
+  private static ImmutableList<Descriptor> getDescriptors(Class<?> sessionPluginClass) {
+    WithProto withProto = sessionPluginClass.getAnnotation(WithProto.class);
+    if (withProto == null) {
+      return ImmutableList.of();
+    }
+    return stream(withProto.value())
+        .map(SessionPluginLoader::getDescriptor)
+        .collect(toImmutableList());
+  }
+
+  private static Descriptor getDescriptor(Class<? extends Message> protoClass) {
+    try {
+      return (Descriptor) protoClass.getMethod("getDescriptor").invoke(/* obj= */ null);
+    } catch (ReflectiveOperationException e) {
+      throw new LinkageError("Failed to get Descriptor of " + protoClass, e);
     }
   }
 

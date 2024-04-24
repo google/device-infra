@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
@@ -54,6 +55,11 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
 /** Session plugin for ATS DDA. */
+@WithProto({
+  AtsDdaSessionPluginConfig.class,
+  AtsDdaSessionPluginOutput.class,
+  AtsDdaSessionNotification.class
+})
 public class AtsDdaSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();

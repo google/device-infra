@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import java.time.Duration;
@@ -53,7 +54,8 @@ import java.util.function.UnaryOperator;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
-/** OmniLab long-running client session plugin for ATS 2.0. */
+/** OmniLab long-running client session plugin for ATS console. */
+@WithProto({AtsSessionPluginConfig.class, AtsSessionPluginOutput.class})
 public class AtsSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();

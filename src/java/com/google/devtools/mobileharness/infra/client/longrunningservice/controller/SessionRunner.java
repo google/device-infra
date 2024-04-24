@@ -37,7 +37,10 @@ import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAu
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
 import com.google.inject.assistedinject.Assisted;
 import com.google.protobuf.FieldMask;
+import com.google.protobuf.TextFormat.Printer;
+import com.google.protobuf.TypeRegistry;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Callable;
@@ -102,18 +105,31 @@ public class SessionRunner implements Callable<Void> {
     // Prepares environment.
     sessionEnvironment = sessionEnvironmentPreparer.prepareEnvironment(sessionDetailHolder);
 
-    logger.atInfo().log(
-        "Starting session runner %s, session_detail:\n%s",
-        sessionDetailHolder.getSessionId(),
-        sessionDetailHolder.buildSessionDetail(/* fieldMask= */ null));
-
-    // Creates OmniLab jobs.
-    sessionJobCreator.createAndAddJobs(sessionDetailHolder);
+    logger.atInfo().log("Starting session runner %s", sessionDetailHolder.getSessionId());
 
     // Loads session plugins.
     ImmutableList<SessionPlugin> sessionPlugins =
         sessionPluginLoader.loadSessionPlugins(sessionDetailHolder, sessionEnvironment);
     sessionPluginRunner.initialize(sessionDetailHolder, sessionPlugins);
+
+    // Creates type registry.
+    sessionDetailHolder.setTypeRegistry(
+        TypeRegistry.newBuilder()
+            .add(
+                sessionPlugins.stream()
+                    .map(SessionPlugin::descriptors)
+                    .flatMap(Collection::stream)
+                    .collect(toImmutableList()))
+            .build());
+
+    logger.atInfo().log(
+        "Session_detail:\n%s",
+        sessionDetailHolder
+            .getProtoPrinter()
+            .printToString(sessionDetailHolder.buildSessionDetail(/* fieldMask= */ null)));
+
+    // Creates OmniLab jobs.
+    sessionJobCreator.createAndAddJobs(sessionDetailHolder);
 
     // Sends cached session notifications synchronously.
     cachedSessionNotifications.forEach(sessionPluginRunner::onSessionNotification);
@@ -167,6 +183,10 @@ public class SessionRunner implements Callable<Void> {
     return sessionDetailHolder.getSessionConfig();
   }
 
+  String getSessionId() {
+    return sessionDetailHolder.getSessionId();
+  }
+
   boolean notifySession(SessionNotification sessionNotification) {
     synchronized (sessionNotifyingFutures) {
       if (!receiveSessionNotification) {
@@ -187,6 +207,10 @@ public class SessionRunner implements Callable<Void> {
         SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING, "true");
 
     sessionJobRunner.abort();
+  }
+
+  Printer getProtoPrinter() {
+    return sessionDetailHolder.getProtoPrinter();
   }
 
   private void waitSessionNotifying() {

@@ -16,14 +16,17 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//:deviceinfra_all_pkg",
     ],
 )
 
 java_library(
     name = "session_detail_holder",
     srcs = ["SessionDetailHolder.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+    ],
     deps = [
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:field_mask_utils",
@@ -44,12 +47,6 @@ java_library(
         "SessionNotificationEvent.java",
         "SessionStartingEvent.java",
     ],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-    ],
     deps = [
         ":session_info",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
@@ -61,12 +58,6 @@ java_library(
 java_library(
     name = "session_info",
     srcs = ["SessionInfo.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
-    ],
     deps = [
         ":session_detail_holder",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
@@ -81,10 +72,22 @@ java_library(
 java_library(
     name = "session_plugin",
     srcs = ["SessionPlugin.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+    ],
     deps = [
         ":session_info",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus_backend",
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_guava_guava",
     ],
+)
+
+java_library(
+    name = "with_proto",
+    srcs = ["WithProto.java"],
+    deps = ["@com_google_protobuf//:protobuf_java"],
 )
