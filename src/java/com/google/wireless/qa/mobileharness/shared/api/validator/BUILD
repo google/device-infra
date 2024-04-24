@@ -96,22 +96,6 @@ java_library(
 ################################################################################
 
 java_library(
-    name = "android_adb_shell_decorator_validator",
-    srcs = ["AndroidAdbShellDecoratorValidator.java"],
-    deps = [
-        ":base_validator",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:android_adb_shell_decorator_spec_java_proto",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "android_clean_apps_decorator_validator",
     srcs = ["AndroidCleanAppsDecoratorValidator.java"],
     deps = [

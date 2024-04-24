@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.shared.api.validator;
+package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -29,9 +28,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-/** Validator for the {@code AndroidAdbShellDecorator} driver decorator. */
-public class AndroidAdbShellDecoratorValidator extends BaseValidator
-    implements SpecConfigable<AndroidAdbShellDecoratorSpec> {
+/** Job validator for the {@code AndroidAdbShellDecorator} driver decorator. */
+public class AndroidAdbShellDecoratorJobValidator
+    implements JobValidator, SpecConfigable<AndroidAdbShellDecoratorSpec> {
   private static final ImmutableSet<String> ASYNC_DECORATORS =
       ImmutableSet.of("AndroidHdVideoDecorator", "AndroidSystemHealthMemoryDecorator");
   private static final ImmutableList<String> ILLEGAL_KEYWORDS =
@@ -46,12 +45,7 @@ public class AndroidAdbShellDecoratorValidator extends BaseValidator
           "(^|\\s)(" + Joiner.on('|').join(ILLEGAL_MNM_ADDITIONAL_KEYWORDS) + ")($|\\s)");
 
   @Override
-  public void validateEnv(Device device) throws MobileHarnessException, InterruptedException {
-    super.validateEnv(device);
-  }
-
-  @Override
-  public List<String> validateJob(JobInfo job) throws InterruptedException {
+  public List<String> validate(JobInfo job) throws InterruptedException {
     ImmutableList.Builder<String> errors = ImmutableList.builder();
 
     List<AndroidAdbShellDecoratorSpec> specs;
@@ -61,7 +55,7 @@ public class AndroidAdbShellDecoratorValidator extends BaseValidator
               this,
               subDeviceSpec ->
                   subDeviceSpec.decorators().getAll().contains("AndroidAdbShellDecorator"));
-    } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       errors.add(e.getMessage());
       return errors.build();
     }
