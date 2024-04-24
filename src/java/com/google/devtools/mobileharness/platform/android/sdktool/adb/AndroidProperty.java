@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 /** Android device properties. */
 public enum AndroidProperty {
   ABI("ro.product.cpu.abi", "ro.product.cpu.abi2"),
+  ABILIST("ro.product.cpu.abilist"),
   BOOT_TO_VR("ro.boot.vr"),
   BRAND("ro.product.brand"),
   BUILD("ro.build.display.id"),

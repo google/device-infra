@@ -185,7 +185,8 @@ class RunCommandHandler {
   }
 
   private SessionRequestInfo generateSessionRequestInfo(
-      RunCommand runCommand, SessionInfo sessionInfo) throws MobileHarnessException {
+      RunCommand runCommand, SessionInfo sessionInfo)
+      throws MobileHarnessException, InterruptedException {
     SessionRequestInfo.Builder builder =
         SessionRequestInfo.builder()
             .setTestPlan(runCommand.getTestPlan())

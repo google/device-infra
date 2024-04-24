@@ -20,6 +20,7 @@ java_library(
     srcs = ["AbiUtil.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
     deps = [
@@ -39,6 +40,18 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
     deps = [
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "abi_formatter",
+    srcs = ["AbiFormatter.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+    ],
+    deps = [
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )

@@ -187,7 +187,8 @@ public class MoblyReportParser {
                   .setModulesTotal(1))
           .addModuleInfo(module);
     } else if (moduleRunResult != null) {
-      if (moduleRunResult.getResult().equals(TestResult.ERROR)) {
+      if (moduleRunResult.getResult().equals(TestResult.ERROR)
+          || moduleRunResult.getResult().equals(TestResult.FAIL)) {
         Module module =
             moduleBuilder.setReason(Reason.newBuilder().setMsg(moduleRunResult.getCause())).build();
         resultBuilder

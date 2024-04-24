@@ -20,9 +20,15 @@ java_library(
     testonly = 1,
     srcs = glob(["*.java"]),
     deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:abi",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 

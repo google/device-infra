@@ -23,15 +23,20 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListModulesCommand;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
+import com.google.devtools.mobileharness.platform.android.xts.suite.Abi;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters;
+import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Set;
 
 /** Handler for "list modules" commands. */
 class ListModulesCommandHandler {
 
-  AtsSessionPluginOutput handle(ListModulesCommand command) throws MobileHarnessException {
+  AtsSessionPluginOutput handle(ListModulesCommand command)
+      throws MobileHarnessException, InterruptedException {
     TestSuiteHelper testSuiteHelper =
         getTestSuiteHelper(command.getXtsRootDir(), command.getXtsType());
     testSuiteHelper.setParameterizedModules(true);
@@ -40,7 +45,17 @@ class ListModulesCommandHandler {
       testSuiteHelper.setModuleParameter(
           ModuleParameters.valueOf(Ascii.toUpperCase(command.getModuleParameter())));
     }
-    Map<String, Configuration> configs = testSuiteHelper.loadTests();
+
+    Set<String> abiStrings = testSuiteHelper.getAbisForBuildTargetArchFromSuite();
+    Set<Abi> abis = new LinkedHashSet<>();
+    for (String abi : abiStrings) {
+      if (AbiUtil.isAbiSupportedByCompatibility(abi)) {
+        abis.add(Abi.of(abi, AbiUtil.getBitness(abi)));
+      }
+    }
+    testSuiteHelper.setAbis(abis);
+
+    Map<String, Configuration> configs = testSuiteHelper.loadTests(/* deviceInfo= */ null);
 
     return getListModuleOutput(configs, command.getXtsRootDir());
   }

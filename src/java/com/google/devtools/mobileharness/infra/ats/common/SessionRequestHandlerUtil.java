@@ -56,6 +56,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotat
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
@@ -65,6 +67,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
+import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
@@ -89,7 +92,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.Driver;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringList;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
-import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
@@ -155,6 +158,7 @@ public class SessionRequestHandlerUtil {
   private final RetryGenerator retryGenerator;
   private final RetryReportMerger retryReportMerger;
   private final Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider;
+  private final Provider<AndroidAdbUtil> androidAdbUtilProvider;
   private final Path sessionGenDir;
   private final Path sessionTempDir;
   private final SessionInfo sessionInfo;
@@ -173,6 +177,7 @@ public class SessionRequestHandlerUtil {
       RetryGenerator retryGenerator,
       RetryReportMerger retryReportMerger,
       Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider,
+      Provider<AndroidAdbUtil> androidAdbUtilProvider,
       @SessionGenDir Path sessionGenDir,
       @SessionTempDir Path sessionTempDir,
       SessionInfo sessionInfo,
@@ -188,6 +193,7 @@ public class SessionRequestHandlerUtil {
     this.retryGenerator = retryGenerator;
     this.retryReportMerger = retryReportMerger;
     this.androidAdbInternalUtilProvider = androidAdbInternalUtilProvider;
+    this.androidAdbUtilProvider = androidAdbUtilProvider;
     this.sessionGenDir = sessionGenDir;
     this.sessionTempDir = sessionTempDir;
     this.sessionInfo = sessionInfo;
@@ -302,7 +308,7 @@ public class SessionRequestHandlerUtil {
             deviceInfo ->
                 deviceInfo.getTypeList().stream()
                     .anyMatch(deviceType -> deviceType.startsWith("Android")))
-        .map(DeviceInfo::getId)
+        .map(com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo::getId)
         .collect(toImmutableSet());
   }
 
@@ -640,7 +646,7 @@ public class SessionRequestHandlerUtil {
    * @return an updated {@code SessionRequestInfo}
    */
   public SessionRequestInfo addNonTradefedModuleInfo(SessionRequestInfo sessionRequestInfo)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     SessionRequestInfo.Builder updatedSessionRequestInfo = sessionRequestInfo.toBuilder();
 
     String xtsRootDir = sessionRequestInfo.xtsRootDir();
@@ -658,7 +664,9 @@ public class SessionRequestHandlerUtil {
 
     // Gets expanded modules with abi and module parameters (if any).
     TestSuiteHelper testSuiteHelper = getTestSuiteHelper(xtsRootDir, xtsType, sessionRequestInfo);
-    updatedSessionRequestInfo.setExpandedModules(ImmutableMap.copyOf(testSuiteHelper.loadTests()));
+    updatedSessionRequestInfo.setExpandedModules(
+        ImmutableMap.copyOf(
+            testSuiteHelper.loadTests(getDeviceInfo(sessionRequestInfo).orElse(null))));
 
     ImmutableList<String> modules = sessionRequestInfo.moduleNames();
     ImmutableSet<String> allNonTfModules =
@@ -667,6 +675,100 @@ public class SessionRequestHandlerUtil {
             .collect(toImmutableSet());
     updatedSessionRequestInfo.setGivenMatchedNonTfModules(matchModules(modules, allNonTfModules));
     return updatedSessionRequestInfo.build();
+  }
+
+  private Optional<DeviceInfo> getDeviceInfo(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    if (Flags.instance().enableAtsMode.getNonNull()) {
+      return getDeviceInfoFromMaster(sessionRequestInfo);
+    } else {
+      return getDeviceInfoFromLocal(sessionRequestInfo);
+    }
+  }
+
+  private Optional<DeviceInfo> getDeviceInfoFromMaster(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    DeviceQueryResult queryResult;
+    try {
+      queryResult = deviceQuerier.queryDevice(DeviceQueryFilter.getDefaultInstance());
+    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_COMMAND_QUERY_DEVICE_ERROR, "Failed to query device", e);
+    }
+
+    Optional<com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo>
+        queryDeviceInfo =
+            queryResult.getDeviceInfoList().stream()
+                .filter(
+                    deviceInfo -> {
+                      if (sessionRequestInfo.deviceSerials().isEmpty()) {
+                        return true;
+                      } else {
+                        return sessionRequestInfo.deviceSerials().contains(deviceInfo.getId())
+                            && deviceInfo.getTypeList().stream()
+                                .anyMatch(deviceType -> deviceType.startsWith("Android"));
+                      }
+                    })
+                .findFirst();
+    if (queryDeviceInfo.isEmpty()) {
+      return Optional.empty();
+    }
+
+    return Optional.of(
+        DeviceInfo.builder()
+            .setDeviceId(queryDeviceInfo.get().getId())
+            .setSupportedAbiList(
+                queryDeviceInfo.get().getDimensionList().stream()
+                    .filter(
+                        dimension ->
+                            dimension
+                                .getName()
+                                .equals(Ascii.toLowerCase(AndroidProperty.ABILIST.name())))
+                    .map(DeviceQuery.Dimension::getValue)
+                    .findFirst()
+                    .orElse(""))
+            .setSupportedAbi(
+                queryDeviceInfo.get().getDimensionList().stream()
+                    .filter(
+                        dimension ->
+                            dimension
+                                .getName()
+                                .equals(Ascii.toLowerCase(AndroidProperty.ABI.name())))
+                    .map(DeviceQuery.Dimension::getValue)
+                    .findFirst()
+                    .orElse(""))
+            .build());
+  }
+
+  private Optional<DeviceInfo> getDeviceInfoFromLocal(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException, InterruptedException {
+    ImmutableSet<String> allLocalAndroidDevices = getAllLocalAndroidDevices();
+    if (!allLocalAndroidDevices.isEmpty()) {
+      Optional<String> deviceSerial = Optional.empty();
+      if (sessionRequestInfo.deviceSerials().isEmpty()) {
+        deviceSerial = allLocalAndroidDevices.stream().findFirst();
+      } else {
+        deviceSerial =
+            sessionRequestInfo.deviceSerials().stream()
+                .filter(allLocalAndroidDevices::contains)
+                .findFirst();
+      }
+      if (deviceSerial.isEmpty()) {
+        return Optional.empty();
+      }
+
+      String abiList =
+          androidAdbUtilProvider.get().getProperty(deviceSerial.get(), AndroidProperty.ABILIST);
+      String abi =
+          androidAdbUtilProvider.get().getProperty(deviceSerial.get(), AndroidProperty.ABI);
+      return Optional.of(
+          DeviceInfo.builder()
+              .setDeviceId(deviceSerial.get())
+              .setSupportedAbiList(abiList)
+              .setSupportedAbi(abi)
+              .build());
+    }
+    return Optional.empty();
   }
 
   /**
@@ -1194,6 +1296,7 @@ public class SessionRequestHandlerUtil {
         serverSessionLogsDir.resolve("olc_server_session_log.txt").toString());
 
     List<Path> tradefedTestResultXmlFiles = new ArrayList<>();
+    boolean hasTradefedTests = false;
     // Copies tradefed test relevant log and result files to dedicated locations
     for (Entry<JobInfo, Optional<TestInfo>> testEntry : tradefedTests.entrySet()) {
       if (testEntry.getValue().isEmpty()) {
@@ -1201,7 +1304,7 @@ public class SessionRequestHandlerUtil {
             "Found no test in tradefed job [%s], skip it.", testEntry.getKey().locator().getId());
         continue;
       }
-
+      hasTradefedTests = true;
       TestInfo test = testEntry.getValue().get();
 
       copyTradefedTestLogFiles(test, tradefedTestLogsDir);
@@ -1318,13 +1421,15 @@ public class SessionRequestHandlerUtil {
     // result zip file smaller. It copies those TF raw result files to result directory after
     // the zipping.
     try {
-      localFileUtil.removeFileOrDir(tradefedTestResultsDir);
-      localFileUtil.prepareDir(tradefedTestResultsDir);
-      List<Path> resultFilesOrDirs =
-          localFileUtil.listFilesOrDirs(tmpTradefedTestResultsDir, path -> true);
-      for (Path resultFileOrDir : resultFilesOrDirs) {
-        localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-            resultFileOrDir, tradefedTestResultsDir, ImmutableList.of("-rf"));
+      if (hasTradefedTests) {
+        localFileUtil.removeFileOrDir(tradefedTestResultsDir);
+        localFileUtil.prepareDir(tradefedTestResultsDir);
+        List<Path> resultFilesOrDirs =
+            localFileUtil.listFilesOrDirs(tmpTradefedTestResultsDir, path -> true);
+        for (Path resultFileOrDir : resultFilesOrDirs) {
+          localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+              resultFileOrDir, tradefedTestResultsDir, ImmutableList.of("-rf"));
+        }
       }
     } finally {
       if (localFileUtil.isDirExist(tmpTradefedTestResultsDir)) {

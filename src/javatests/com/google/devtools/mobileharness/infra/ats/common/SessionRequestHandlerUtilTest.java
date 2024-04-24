@@ -65,6 +65,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
 import java.io.File;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -783,7 +784,7 @@ public final class SessionRequestHandlerUtilTest {
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
-    when(testSuiteHelper.loadTests())
+    when(testSuiteHelper.loadTests(any()))
         .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
 
     SessionRequestInfo sessionRequestInfoWithIncludeFilters =
@@ -893,11 +894,21 @@ public final class SessionRequestHandlerUtilTest {
     when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
-    when(testSuiteHelper.loadTests())
+    when(testSuiteHelper.loadTests(any()))
         .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
 
     SessionRequestInfo sessionRequestInfo =
@@ -940,11 +951,21 @@ public final class SessionRequestHandlerUtilTest {
     when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
-    when(testSuiteHelper.loadTests())
+    when(testSuiteHelper.loadTests(any()))
         .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
 
     ImmutableList<JobInfo> jobInfos =
@@ -987,11 +1008,21 @@ public final class SessionRequestHandlerUtilTest {
     when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
-    when(testSuiteHelper.loadTests())
+    when(testSuiteHelper.loadTests(any()))
         .thenReturn(ImmutableMap.of("module1", config1, "module2", config2));
 
     SessionRequestInfo sessionRequestInfo =
@@ -1051,11 +1082,21 @@ public final class SessionRequestHandlerUtilTest {
                 config2,
                 "/path/to/config3",
                 config3));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
-    when(testSuiteHelper.loadTests())
+    when(testSuiteHelper.loadTests(any()))
         .thenReturn(ImmutableMap.of("module1", config1, "module2", config2, "module3", config3));
 
     SessionRequestInfo sessionRequestInfo =
@@ -1097,11 +1138,21 @@ public final class SessionRequestHandlerUtilTest {
     when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
-    when(testSuiteHelper.loadTests()).thenReturn(ImmutableMap.of("module1", config1));
+    when(testSuiteHelper.loadTests(any())).thenReturn(ImmutableMap.of("module1", config1));
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
@@ -1160,11 +1211,21 @@ public final class SessionRequestHandlerUtilTest {
     when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
-    when(testSuiteHelper.loadTests())
+    when(testSuiteHelper.loadTests(any()))
         .thenReturn(ImmutableMap.of("arm64-v8a module1", config1, "arm64-v8a module2", config2));
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(new SubPlan());
 
@@ -1225,11 +1286,21 @@ public final class SessionRequestHandlerUtilTest {
                 config2,
                 "/path/to/config3",
                 config3));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
-    when(testSuiteHelper.loadTests())
+    when(testSuiteHelper.loadTests(any()))
         .thenReturn(
             ImmutableMap.of(
                 "arm64-v8a module1",
@@ -1317,11 +1388,21 @@ public final class SessionRequestHandlerUtilTest {
                 config2,
                 "/path/to/config3",
                 config3));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
-    when(testSuiteHelper.loadTests())
+    when(testSuiteHelper.loadTests(any()))
         .thenReturn(
             ImmutableMap.of(
                 "arm64-v8a module1",
@@ -1380,11 +1461,21 @@ public final class SessionRequestHandlerUtilTest {
             .build();
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
-    when(testSuiteHelper.loadTests())
+    when(testSuiteHelper.loadTests(any()))
         .thenReturn(
             ImmutableMap.of(
                 "arm64-v8a HelloWorldTest", config1, "arm64-v8a HelloWorldTest[instant]", config1));
@@ -1429,11 +1520,21 @@ public final class SessionRequestHandlerUtilTest {
             .build();
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     doReturn(testSuiteHelper)
         .when(sessionRequestHandlerUtil)
         .getTestSuiteHelper(any(), any(), any());
-    when(testSuiteHelper.loadTests())
+    when(testSuiteHelper.loadTests(any()))
         .thenReturn(
             ImmutableMap.of(
                 "arm64-v8a HelloWorldTest", config1, "arm64-v8a HelloWorldTest[instant]", config1));

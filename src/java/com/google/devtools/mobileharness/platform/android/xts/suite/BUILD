@@ -22,6 +22,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
     ],
     deps = [
         ":abi",
@@ -29,10 +30,14 @@ java_library(
         ":test_suite_info",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_formatter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/params:module_parameters",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -62,6 +67,10 @@ java_library(
 java_library(
     name = "abi",
     srcs = ["Abi.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
+    ],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
 )
 
