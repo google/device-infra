@@ -21,7 +21,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -50,6 +49,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -117,9 +117,11 @@ public final class RunCommandHandlerTest {
 
   @Test
   public void handleResultProcessing_copyResultsAndLogsIntoXtsRootDir() throws Exception {
-    runCommandHandler = spy(new RunCommandHandler(new LocalFileUtil(), sessionRequestHandlerUtil));
+    runCommandHandler =
+        spy(new RunCommandHandler(new LocalFileUtil(), sessionRequestHandlerUtil, sessionInfo));
     doNothing().when(sessionRequestHandlerUtil).cleanUpJobGenDirs(any());
-    doReturn(TIMESTAMP_DIR_NAME).when(runCommandHandler).getTimestampDirName();
+    when(sessionInfo.getSessionProperty("timestamp_dir_name"))
+        .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));
 
     File xtsRootDir = folder.newFolder(XTS_ROOT_DIR_NAME);
     RunCommand command =
@@ -169,7 +171,7 @@ public final class RunCommandHandlerTest {
         .thenReturn(ImmutableList.of(tradefedJobInfo, nonTradefedJobInfo));
     when(sessionRequestHandlerUtil.isSessionPassed(anyList())).thenReturn(true);
 
-    runCommandHandler.handleResultProcessing(command, sessionInfo);
+    runCommandHandler.handleResultProcessing(command);
 
     assertThat(
             xtsRootDir

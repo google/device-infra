@@ -113,8 +113,8 @@ public class AtsSessionPlugin {
 
       setRunCommandState(oldState -> runCommand.getInitialState());
 
-      ImmutableList<String> tradefedJobIds =
-          runCommandHandler.addTradefedJobs(runCommand, sessionInfo);
+      runCommandHandler.initialize();
+      ImmutableList<String> tradefedJobIds = runCommandHandler.addTradefedJobs(runCommand);
       synchronized (tradefedJobsLock) {
         for (String tradefedJobId : tradefedJobIds) {
           runningTradefedJobs.putIfAbsent(tradefedJobId, true);
@@ -125,7 +125,7 @@ public class AtsSessionPlugin {
             "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
                 + " needed.",
             sessionInfo.getSessionId());
-        runCommandHandler.addNonTradefedJobs(runCommand, sessionInfo);
+        runCommandHandler.addNonTradefedJobs(runCommand);
       }
       return;
     } else if (config.getCommandCase().equals(CommandCase.LIST_COMMAND)) {
@@ -184,7 +184,7 @@ public class AtsSessionPlugin {
     }
 
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
-      runCommandHandler.handleResultProcessing(config.getRunCommand(), sessionInfo);
+      runCommandHandler.handleResultProcessing(config.getRunCommand());
     }
   }
 
@@ -200,7 +200,7 @@ public class AtsSessionPlugin {
       if (runningTradefedJobs.values().stream().noneMatch(running -> running)) {
         logger.atInfo().log(
             "All added tradefed jobs have been done, try add non-tradefed jobs if needed.");
-        runCommandHandler.addNonTradefedJobs(config.getRunCommand(), sessionInfo);
+        runCommandHandler.addNonTradefedJobs(config.getRunCommand());
       }
     }
   }

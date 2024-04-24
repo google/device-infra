@@ -88,6 +88,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.apache.commons.text.StringSubstitutor;
 
@@ -381,10 +382,17 @@ public class XtsTradefedTest extends BaseDriver
     Joiner.on(' ').appendTo(cmdString, cmd);
     logger.atInfo().log("Running %s command:%n%s", xtsType, cmdString);
     try {
+      // Prepares TF output file.
+      Path tfOutputPath;
+      if (spec.hasXtsTfOutputPath()) {
+        localFileUtil.prepareParentDir(spec.getXtsTfOutputPath());
+        tfOutputPath = Path.of(spec.getXtsTfOutputPath());
+      } else {
+        tfOutputPath = Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG);
+      }
       // The writer will be closed after the command exits.
       @SuppressWarnings("resource")
-      BufferedWriter writer =
-          Files.newBufferedWriter(Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG));
+      BufferedWriter writer = Files.newBufferedWriter(tfOutputPath);
 
       // Creates CommandOutputLogger.
       String testId = testInfo.locator().getId();
@@ -394,8 +402,9 @@ public class XtsTradefedTest extends BaseDriver
           new CommandOutputLogger(outputLoggerPrefix, outputLoggerPrefix);
 
       // Gets session client ID if any.
-      Optional<String> olcSessionClientId =
-          testInfo.jobInfo().params().getOptional("olc_session_client_id");
+      @Nullable
+      String olcSessionClientId =
+          spec.hasOlcSessionClientId() ? spec.getOlcSessionClientId() : null;
 
       return cmdExecutor.start(
           Command.of(cmd)
@@ -408,7 +417,9 @@ public class XtsTradefedTest extends BaseDriver
                             LogRecord.newBuilder()
                                 .setFormattedLogRecord(line + "\n")
                                 .setSourceType(SourceType.TF);
-                        olcSessionClientId.ifPresent(logRecord::setClientId);
+                        if (olcSessionClientId != null) {
+                          logRecord.setClientId(olcSessionClientId);
+                        }
                         logRecorder.addLogRecord(logRecord.build());
 
                         // Writes to CommandOutputLogger.

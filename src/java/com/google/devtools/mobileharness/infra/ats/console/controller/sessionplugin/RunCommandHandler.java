@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import static com.google.common.base.Ascii.toUpperCase;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -40,11 +39,10 @@ import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.nio.file.Path;
-import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
-import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -53,14 +51,28 @@ class RunCommandHandler {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final String SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME = "timestamp_dir_name";
+  private static final DateTimeFormatter TIMESTAMP_DIR_NAME_FORMATTER =
+      DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss").withZone(ZoneId.systemDefault());
+
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final LocalFileUtil localFileUtil;
+  private final SessionInfo sessionInfo;
 
   @Inject
   RunCommandHandler(
-      LocalFileUtil localFileUtil, SessionRequestHandlerUtil sessionRequestHandlerUtil) {
+      LocalFileUtil localFileUtil,
+      SessionRequestHandlerUtil sessionRequestHandlerUtil,
+      SessionInfo sessionInfo) {
     this.localFileUtil = localFileUtil;
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
+    this.sessionInfo = sessionInfo;
+  }
+
+  void initialize() {
+    sessionInfo.putSessionProperty(
+        SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME,
+        TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()));
   }
 
   /**
@@ -72,11 +84,10 @@ class RunCommandHandler {
    * @return a list of added tradefed job IDs
    */
   @CanIgnoreReturnValue
-  ImmutableList<String> addTradefedJobs(RunCommand command, SessionInfo sessionInfo)
+  ImmutableList<String> addTradefedJobs(RunCommand command)
       throws MobileHarnessException, InterruptedException {
     Optional<JobInfo> jobInfo =
-        sessionRequestHandlerUtil.createXtsTradefedTestJob(
-            generateSessionRequestInfo(command, sessionInfo));
+        sessionRequestHandlerUtil.createXtsTradefedTestJob(generateSessionRequestInfo(command));
     if (jobInfo.isEmpty()) {
       logger.atInfo().log(
           "No tradefed jobs created, double check device availability. The run command -> %s",
@@ -84,6 +95,22 @@ class RunCommandHandler {
       return ImmutableList.of();
     }
     jobInfo.get().properties().add(SessionRequestHandlerUtil.XTS_TF_JOB_PROP, "true");
+
+    // Lets the driver write TF output to XTS log dir directly.
+    jobInfo
+        .get()
+        .params()
+        .add(
+            "xts_tf_output_path",
+            XtsDirUtil.getXtsLogsDir(Path.of(command.getXtsRootDir()), command.getXtsType())
+                .resolve(
+                    sessionInfo
+                        .getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME)
+                        .orElseThrow())
+                .resolve("tradefed_logs")
+                .resolve("xts_tf_output.log")
+                .toString());
+
     sessionInfo.addJob(jobInfo.get());
     String jobId = jobInfo.get().locator().getId();
     logger.atInfo().log(
@@ -98,11 +125,10 @@ class RunCommandHandler {
    * @return a list of added non-tradefed job IDs
    */
   @CanIgnoreReturnValue
-  ImmutableList<String> addNonTradefedJobs(RunCommand runCommand, SessionInfo sessionInfo)
+  ImmutableList<String> addNonTradefedJobs(RunCommand runCommand)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(
-            generateSessionRequestInfo(runCommand, sessionInfo));
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(generateSessionRequestInfo(runCommand));
     if (jobInfos.isEmpty()) {
       logger.atInfo().log(
           "No valid module(s) matched, no non-tradefed jobs will run. The run command -> %s",
@@ -126,7 +152,7 @@ class RunCommandHandler {
    * Copies xTS tradefed and non-tradefed generated logs/results into proper locations within the
    * given xts root dir.
    */
-  void handleResultProcessing(RunCommand command, SessionInfo sessionInfo)
+  void handleResultProcessing(RunCommand command)
       throws MobileHarnessException, InterruptedException {
     List<JobInfo> allJobs = sessionInfo.getAllJobs();
     Path resultDir = null;
@@ -139,7 +165,8 @@ class RunCommandHandler {
       }
       Path xtsRootDir = Path.of(command.getXtsRootDir());
       String xtsType = command.getXtsType();
-      String timestampDirName = getTimestampDirName();
+      String timestampDirName =
+          sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME).orElseThrow();
       resultDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve(timestampDirName);
       logDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve(timestampDirName);
       sessionRequestHandlerUtil.processResult(
@@ -148,7 +175,7 @@ class RunCommandHandler {
           XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve("latest"),
           XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve("latest"),
           allJobs,
-          generateSessionRequestInfo(command, sessionInfo));
+          generateSessionRequestInfo(command));
     } finally {
       sessionRequestHandlerUtil.cleanUpJobGenDirs(allJobs);
 
@@ -184,8 +211,7 @@ class RunCommandHandler {
     }
   }
 
-  private SessionRequestInfo generateSessionRequestInfo(
-      RunCommand runCommand, SessionInfo sessionInfo)
+  private SessionRequestInfo generateSessionRequestInfo(RunCommand runCommand)
       throws MobileHarnessException, InterruptedException {
     SessionRequestInfo.Builder builder =
         SessionRequestInfo.builder()
@@ -222,12 +248,6 @@ class RunCommandHandler {
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)
         .ifPresent(builder::setSessionClientId);
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(builder.build());
-  }
-
-  @VisibleForTesting
-  String getTimestampDirName() {
-    return new SimpleDateFormat("yyyy.MM.dd_HH.mm.ss", Locale.getDefault())
-        .format(new Timestamp(Clock.systemUTC().millis()));
   }
 
   private static String createXtsTestResultSummary(
