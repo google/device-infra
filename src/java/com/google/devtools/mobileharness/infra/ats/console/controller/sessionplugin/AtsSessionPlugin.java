@@ -113,7 +113,7 @@ public class AtsSessionPlugin {
 
       setRunCommandState(oldState -> runCommand.getInitialState());
 
-      runCommandHandler.initialize();
+      runCommandHandler.initialize(runCommand);
       ImmutableList<String> tradefedJobIds = runCommandHandler.addTradefedJobs(runCommand);
       synchronized (tradefedJobsLock) {
         for (String tradefedJobId : tradefedJobIds) {

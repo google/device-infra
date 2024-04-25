@@ -61,6 +61,8 @@ class RunCommandHandler {
   private final LocalFileUtil localFileUtil;
   private final SessionInfo sessionInfo;
 
+  private volatile SessionRequestInfo sessionRequestInfo;
+
   @Inject
   RunCommandHandler(
       LocalFileUtil localFileUtil,
@@ -71,10 +73,11 @@ class RunCommandHandler {
     this.sessionInfo = sessionInfo;
   }
 
-  void initialize() {
+  void initialize(RunCommand command) throws MobileHarnessException, InterruptedException {
     sessionInfo.putSessionProperty(
         SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME,
         TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()));
+    sessionRequestInfo = generateSessionRequestInfo(command);
   }
 
   /**
@@ -89,7 +92,7 @@ class RunCommandHandler {
   ImmutableList<String> addTradefedJobs(RunCommand command)
       throws MobileHarnessException, InterruptedException {
     Optional<JobInfo> jobInfo =
-        sessionRequestHandlerUtil.createXtsTradefedTestJob(generateSessionRequestInfo(command));
+        sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfo);
     if (jobInfo.isEmpty()) {
       logger.atInfo().log(
           "No tradefed jobs created, double check device availability. The run command -> %s",
@@ -130,7 +133,7 @@ class RunCommandHandler {
   ImmutableList<String> addNonTradefedJobs(RunCommand runCommand)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(generateSessionRequestInfo(runCommand));
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
     if (jobInfos.isEmpty()) {
       logger.atInfo().log(
           "No valid module(s) matched, no non-tradefed jobs will run. The run command -> %s",
@@ -172,16 +175,21 @@ class RunCommandHandler {
           sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME).orElseThrow();
       resultDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve(timestampDirName);
       logDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve(timestampDirName);
-      result =
-          sessionRequestHandlerUtil
-              .processResult(
-                  resultDir,
-                  logDir,
-                  XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve("latest"),
-                  XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve("latest"),
-                  allJobs,
-                  generateSessionRequestInfo(command))
-              .orElse(null);
+      SessionRequestInfo sessionRequestInfo = this.sessionRequestInfo;
+      if (sessionRequestInfo != null) {
+        result =
+            sessionRequestHandlerUtil
+                .processResult(
+                    resultDir,
+                    logDir,
+                    XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve("latest"),
+                    XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve("latest"),
+                    allJobs,
+                    sessionRequestInfo)
+                .orElse(null);
+      } else {
+        logger.atInfo().log("Skip result processing due to initialization failure");
+      }
     } finally {
       sessionRequestHandlerUtil.cleanUpJobGenDirs(allJobs);
 

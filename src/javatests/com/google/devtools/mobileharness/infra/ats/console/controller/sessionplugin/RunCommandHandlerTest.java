@@ -171,6 +171,7 @@ public final class RunCommandHandlerTest {
         .thenReturn(ImmutableList.of(tradefedJobInfo, nonTradefedJobInfo));
     when(sessionRequestHandlerUtil.isSessionPassed(anyList())).thenReturn(true);
 
+    runCommandHandler.initialize(command);
     runCommandHandler.handleResultProcessing(command);
 
     assertThat(
