@@ -74,6 +74,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefed
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -381,31 +382,38 @@ public class XtsTradefedTest extends BaseDriver
     }
     Joiner.on(' ').appendTo(cmdString, cmd);
     logger.atInfo().log("Running %s command:%n%s", xtsType, cmdString);
+
+    // Creates CommandOutputLogger.
+    String testId = testInfo.locator().getId();
+    String outputLoggerPrefix =
+        String.format("TF-%s ", testId.substring(0, min(4, testId.length())));
+    CommandOutputLogger commandOutputLogger =
+        new CommandOutputLogger(outputLoggerPrefix, outputLoggerPrefix);
+
+    // Gets session client ID if any.
+    @Nullable
+    String olcSessionClientId = spec.hasOlcSessionClientId() ? spec.getOlcSessionClientId() : null;
+
+    // Prepares TF output file.
+    Path tfOutputPath;
+    if (spec.hasXtsTfOutputPath()) {
+      localFileUtil.prepareParentDir(spec.getXtsTfOutputPath());
+      tfOutputPath = Path.of(spec.getXtsTfOutputPath());
+    } else {
+      tfOutputPath = Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG);
+    }
+    // The writer will be closed after the command exits.
+    BufferedWriter writer;
     try {
-      // Prepares TF output file.
-      Path tfOutputPath;
-      if (spec.hasXtsTfOutputPath()) {
-        localFileUtil.prepareParentDir(spec.getXtsTfOutputPath());
-        tfOutputPath = Path.of(spec.getXtsTfOutputPath());
-      } else {
-        tfOutputPath = Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG);
-      }
-      // The writer will be closed after the command exits.
-      @SuppressWarnings("resource")
-      BufferedWriter writer = Files.newBufferedWriter(tfOutputPath);
+      writer = Files.newBufferedWriter(tfOutputPath);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.XTS_TRADEFED_CREATE_COMMAND_OUTPUT_FILE_ERROR,
+          "Failed to create TF output file " + tfOutputPath,
+          e);
+    }
 
-      // Creates CommandOutputLogger.
-      String testId = testInfo.locator().getId();
-      String outputLoggerPrefix =
-          String.format("TF-%s ", testId.substring(0, min(4, testId.length())));
-      CommandOutputLogger commandOutputLogger =
-          new CommandOutputLogger(outputLoggerPrefix, outputLoggerPrefix);
-
-      // Gets session client ID if any.
-      @Nullable
-      String olcSessionClientId =
-          spec.hasOlcSessionClientId() ? spec.getOlcSessionClientId() : null;
-
+    try {
       return cmdExecutor.start(
           Command.of(cmd)
               .extraEnv(env)
@@ -441,18 +449,19 @@ public class XtsTradefedTest extends BaseDriver
                     try {
                       writer.close();
                     } catch (IOException e) {
-                      testInfo
-                          .log()
-                          .atWarning()
-                          .alsoTo(logger)
-                          .log("Unable to close writer for %s", XTS_TF_LOG);
+                      throw new UncheckedIOException(e);
                     }
                   })
               .redirectStderr(true)
               .needStdoutInResult(false)
               .needStderrInResult(false)
               .timeout(getXtsTimeout(testInfo)));
-    } catch (IOException | CommandStartException e) {
+    } catch (CommandStartException e) {
+      try {
+        writer.close();
+      } catch (IOException e1) {
+        throw new UncheckedIOException(e1);
+      }
       throw new MobileHarnessException(
           AndroidErrorId.XTS_TRADEFED_START_COMMAND_ERROR,
           "Failed to start the xTS command: " + cmdString,
