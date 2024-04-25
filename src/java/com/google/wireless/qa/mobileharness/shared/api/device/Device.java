@@ -432,11 +432,14 @@ public interface Device {
    *
    * @return device screenshot full path on host machine, which looks like:
    *     <PublicGenDir>/screen_shot_files/<DeviceID>/<Timestamp>.png
-   * @throws MobileHarnessException if fails to get screen shot
+   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
+   *     get screen shot
    * @throws InterruptedException if the current thread or its sub-thread is {@linkplain
    *     Thread#interrupt() interrupted} by another thread
    */
-  String takeScreenshot() throws MobileHarnessException, InterruptedException;
+  String takeScreenshot()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException;
 
   /**
    * Gets the device log based on the log type.
@@ -451,7 +454,8 @@ public interface Device {
       throws MobileHarnessException, InterruptedException;
 
   /** Gets general file directory. */
-  String getGenFileDir() throws MobileHarnessException;
+  String getGenFileDir()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 
   default DeviceFeature toFeature() {
     return DeviceFeature.newBuilder()

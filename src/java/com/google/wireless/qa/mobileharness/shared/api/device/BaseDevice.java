@@ -363,8 +363,11 @@ public abstract class BaseDevice implements Device {
   }
 
   @Override
-  public String takeScreenshot() throws MobileHarnessException, InterruptedException {
-    throw new MobileHarnessException(ErrorCode.NOT_IMPLEMENTED, "Unsupported screenshot");
+  public String takeScreenshot()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
+    throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+        InfraErrorId.LAB_TAKE_SCREENSHOT_METHOD_UNSUPPORTED, "Unsupported screenshot");
   }
 
   @Override
@@ -443,7 +446,8 @@ public abstract class BaseDevice implements Device {
   }
 
   @Override
-  public String getGenFileDir() throws MobileHarnessException {
+  public String getGenFileDir()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
     checkNotNull(genFileDirRoot, "genFileDirRoot isn't set.");
     String genFileDir = PathUtil.join(genFileDirRoot, info().deviceId().controlId());
     fileUtil.prepareDir(genFileDir);

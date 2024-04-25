@@ -113,7 +113,9 @@ public class AndroidRealDevice extends AndroidDevice {
   }
 
   @Override
-  public String takeScreenshot() throws MobileHarnessException, InterruptedException {
+  public String takeScreenshot()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     return delegate.takeScreenshot();
   }
 

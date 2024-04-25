@@ -1235,7 +1235,9 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   /** Takes device screenshot and returns the screenshot local path in the host machine. */
-  public String takeScreenshot() throws MobileHarnessException, InterruptedException {
+  public String takeScreenshot()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     String screensShotFilePathOnDevice =
         PathUtil.join(AndroidRealDeviceConstants.TEMP_SCREEN_SHOT_PATH, UUID.randomUUID() + ".png");
     String desFilePathOnHost = BaseDeviceHelper.getGenScreenshotPathWithDate(device);

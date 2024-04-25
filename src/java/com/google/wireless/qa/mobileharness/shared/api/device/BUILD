@@ -74,6 +74,7 @@ java_library(
     srcs = ["Device.java"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
         "//src/java/com/google/devtools/mobileharness/infra/container/sandbox/device:device_sandbox_controller",
         "//src/java/com/google/devtools/mobileharness/infra/container/sandbox/device:unsupported_device",
