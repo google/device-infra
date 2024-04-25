@@ -53,3 +53,15 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "android_switch_user_decorator_env_validator",
+    srcs = ["AndroidSwitchUserDecoratorEnvValidator.java"],
+    deps = [
+        ":env_validator",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
+)
