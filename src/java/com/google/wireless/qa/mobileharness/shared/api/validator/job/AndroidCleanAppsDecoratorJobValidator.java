@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.shared.api.validator;
+package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidCleanAppsSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
@@ -23,11 +23,11 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-/** Validator for the {@code AndroidCleanAppsDecorator}. */
-public class AndroidCleanAppsDecoratorValidator extends BaseValidator {
+/** Job validator for the {@code AndroidCleanAppsDecorator}. */
+public class AndroidCleanAppsDecoratorJobValidator implements JobValidator {
 
   @Override
-  public List<String> validateJob(JobInfo job) {
+  public List<String> validate(JobInfo job) {
     List<String> errors = new ArrayList<>();
     String regexValue;
     if ((regexValue = job.params().get(AndroidCleanAppsSpec.PARAM_PKGS_TO_KEEP_REGEX, null))

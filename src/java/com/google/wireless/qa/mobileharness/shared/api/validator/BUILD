@@ -96,16 +96,6 @@ java_library(
 ################################################################################
 
 java_library(
-    name = "android_clean_apps_decorator_validator",
-    srcs = ["AndroidCleanAppsDecoratorValidator.java"],
-    deps = [
-        ":base_validator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_clean_apps_spec",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-    ],
-)
-
-java_library(
     name = "mobly_aosp_package_test_validator",
     srcs = ["MoblyAospPackageTestValidator.java"],
     deps = [

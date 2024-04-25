@@ -52,6 +52,16 @@ java_library(
 )
 
 java_library(
+    name = "android_clean_apps_decorator_job_validator",
+    srcs = ["AndroidCleanAppsDecoratorJobValidator.java"],
+    deps = [
+        ":job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_clean_apps_spec",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+    ],
+)
+
+java_library(
     name = "android_device_settings_decorator_job_validator",
     srcs = ["AndroidDeviceSettingsDecoratorJobValidator.java"],
     deps = [
