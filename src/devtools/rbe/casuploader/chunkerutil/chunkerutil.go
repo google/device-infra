@@ -60,10 +60,10 @@ func CreateIndexFile(inDir string, chunksIndex []ChunksIndex) error {
 // RestoreFiles restores files to dstDir with chunks index file and chunks file in srcDir.
 func RestoreFiles(srcDir string, dstDir string) error {
 	start := time.Now()
-	indexPath := filepath.Join(srcDir, ChunksIndexFileName)
-	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
-		log.Infof("skipped restoring chunked files, chunk index file not found")
-		return nil // Skip restoring chunked files - not found
+	indexPath, err := FindChunksIndex(srcDir)
+	if err != nil {
+		log.Infof("no chunk index file found, skip restoring chunked files")
+		return nil
 	}
 
 	index, err := os.ReadFile(indexPath)
@@ -88,14 +88,29 @@ func RestoreFiles(srcDir string, dstDir string) error {
 		}
 	}
 
+	err = DeleteChunkFilesAndIndex(srcDir)
+	log.Infof("restored %d chunked files, took %s", len(chunksIndexEntries), time.Since(start))
+	return err
+}
+
+// FindChunksIndex returns the path of ChunksIndex file in the dir.
+func FindChunksIndex(dir string) (string, error) {
+	indexPath := filepath.Join(dir, ChunksIndexFileName)
+	if _, err := os.Stat(indexPath); os.IsNotExist(err) {
+		return "", fmt.Errorf("chunk index file not found in %s", dir)
+	}
+	return indexPath, nil
+}
+
+// DeleteChunkFilesAndIndex deletes chunk files dir and the chunk index file in the dir.
+func DeleteChunkFilesAndIndex(dir string) error {
 	// Delete chunk index file and chunks dir
-	if err := os.Remove(indexPath); err != nil {
+	if err := os.Remove(filepath.Join(dir, ChunksIndexFileName)); err != nil {
 		return fmt.Errorf("error deleting chunk index file: %v", err)
 	}
-	if err := os.RemoveAll(chunksDir); err != nil {
+	if err := os.RemoveAll(filepath.Join(dir, ChunksDirName)); err != nil {
 		return fmt.Errorf("error deleting chunks dir: %v", err)
 	}
 
-	log.Infof("restored chunked files, took %s", time.Since(start))
 	return nil
 }

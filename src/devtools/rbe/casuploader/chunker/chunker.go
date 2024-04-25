@@ -78,10 +78,14 @@ func writeChunkToFile(dir string, sha256 string, chunk fastcdc.Chunk) error {
 
 // RestoreFile restores a file from its chunks file in chunksDir using.
 func RestoreFile(path string, chunksDir string, chunks []ChunkInfo) error {
-	// Create an empty file to start with.
+	err := os.MkdirAll(filepath.Dir(path), 0755) // Standard permissions
+	if err != nil {
+		return fmt.Errorf("error creating directories: %w", err)
+	}
+
 	file, err := os.Create(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating file: %w", err)
 	}
 	defer file.Close()
 

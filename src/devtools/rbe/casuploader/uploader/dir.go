@@ -3,7 +3,9 @@ package uploader
 import (
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"io/ioutil"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/filemetadata"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	repb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
+	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -52,6 +55,12 @@ func (du *DirUploader) inputSpec() command.InputSpec {
 
 // DoUpload uploads the given directories to CAS, and returns the digest of the root directory.
 func (du *DirUploader) DoUpload() (digest.Digest, error) {
+	if du.CommonConfig.chunk {
+		if _, err := chunkerutil.FindChunksIndex(du.dirPath); err != nil {
+			return du.chunkAndUpload()
+		}
+	}
+
 	inputSpec := du.inputSpec()
 	rootDigest, uploadEntries, _, err := du.client.ComputeMerkleTree(
 		du.ctx, du.dirPath, "", "", &inputSpec, filemetadata.NewNoopCache())
@@ -88,6 +97,68 @@ func (du *DirUploader) DoUpload() (digest.Digest, error) {
 	}
 
 	return rootDigest, nil
+}
+
+func (du *DirUploader) chunkAndUpload() (digest.Digest, error) {
+	targetDir := createTmpDir()
+	defer func() {
+		if err := os.RemoveAll(targetDir); err != nil {
+			log.Errorf("Failed to remove tmp dir: %v\n", err)
+		}
+	}()
+
+	chunksDir := filepath.Join(targetDir, chunkerutil.ChunksDirName)
+	os.MkdirAll(chunksDir, 0755)
+
+	// Compile the list of files to chunk and upload
+	paths := []string{}
+	err := fs.WalkDir(os.DirFS(du.dirPath), ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		// TODO: apply excludeFilter
+		if !d.IsDir() {
+			filePath := filepath.Join(du.dirPath, path)
+			paths = append(paths, filePath)
+		}
+		return nil
+	})
+	if err != nil {
+		return digest.Digest{}, fmt.Errorf("error walking the directory: %v", err)
+	}
+
+	chunksIndexEntries, err := du.chunkFiles(chunksDir, paths)
+	if err != nil {
+		return digest.Digest{}, err
+	}
+
+	if err := chunkerutil.CreateIndexFile(targetDir, chunksIndexEntries); err != nil {
+		return digest.Digest{}, err
+	}
+
+	newDu := NewDirUploader(&du.CommonConfig, targetDir, nil)
+	rootDigest, err := newDu.DoUpload()
+	if err != nil {
+		return rootDigest, fmt.Errorf("failed to upload the directory %s for file %s: %v", targetDir, du.dirPath, err)
+	}
+	return rootDigest, nil
+}
+
+func (du *DirUploader) chunkFiles(chunksDir string, paths []string) ([]chunkerutil.ChunksIndex, error) {
+	chunksIndexEntries := []chunkerutil.ChunksIndex{}
+	for _, path := range paths {
+		relPath, err := filepath.Rel(du.dirPath, path)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get relative path of file %s: %v", path, err)
+		}
+		chunksIndex, err := chunkerutil.ChunkFile(path, relPath, chunksDir, du.CommonConfig.avgChunkSize)
+		if err != nil {
+			return nil, err
+		}
+		chunksIndexEntries = append(chunksIndexEntries, chunksIndex)
+	}
+
+	return chunksIndexEntries, nil
 }
 
 func (du *DirUploader) findMissing(uploadInfos []*uploadinfo.Entry) ([]*uploadinfo.Entry, error) {

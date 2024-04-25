@@ -68,7 +68,8 @@ func (zu *ZipUploader) DoUpload() (digest.Digest, error) {
 	}
 	defer unarchiver.Close()
 
-	err = unarchiver.extractAll(true)
+	// For in-zip chunking, the entire zip file needs to be decompressed.
+	err = unarchiver.extractAll(zu.CommonConfig.chunk == false)
 	if err != nil {
 		return digest.Digest{}, fmt.Errorf("failed to extract %s to %s: %v", zu.zipPath, targetDir, err)
 	}
@@ -178,6 +179,12 @@ func (zu *zipUnarchiver) extractFile(zf *zip.File, skipIfDigestExists bool) erro
 
 	if _, err = io.Copy(dst, src); err != nil {
 		return fmt.Errorf("failed to extract file %s in archive: %v", zf.Name, err)
+	}
+	if err := os.Chmod(filePath, zf.Mode()); err != nil {
+		return fmt.Errorf("failed to set mode %s to file %s: %v", zf.Mode(), filePath, err)
+	}
+	if err := os.Chtimes(filePath, time.Time{}, zf.Modified); err != nil {
+		return fmt.Errorf("failed to set modified time %s to file %s: %v", zf.Modified, filePath, err)
 	}
 	return nil
 }
