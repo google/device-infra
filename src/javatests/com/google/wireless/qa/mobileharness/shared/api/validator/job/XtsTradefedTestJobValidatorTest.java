@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.shared.api.validator;
+package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,18 +32,18 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-/** Unit tests for {@link XtsTradefedTestValidator}. */
+/** Unit tests for {@link XtsTradefedTestJobValidator}. */
 @RunWith(JUnit4.class)
-public final class XtsTradefedTestValidatorTest {
+public final class XtsTradefedTestJobValidatorTest {
 
-  private XtsTradefedTestValidator validator;
+  private XtsTradefedTestJobValidator validator;
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
   @Mock private JobInfo mockJobInfo;
 
   @Before
   public void setUp() {
-    validator = new XtsTradefedTestValidator();
+    validator = new XtsTradefedTestJobValidator();
   }
 
   @Test
@@ -56,7 +56,7 @@ public final class XtsTradefedTestValidatorTest {
                 .setXtsRootDir("/path/to/cts_root")
                 .build());
 
-    assertThat(validator.validateJob(mockJobInfo)).isEmpty();
+    assertThat(validator.validate(mockJobInfo)).isEmpty();
 
     when(mockJobInfo.combinedSpec(any()))
         .thenReturn(
@@ -66,7 +66,7 @@ public final class XtsTradefedTestValidatorTest {
                 .setAndroidXtsZip("/path/to/android_xts_zip")
                 .build());
 
-    assertThat(validator.validateJob(mockJobInfo)).isEmpty();
+    assertThat(validator.validate(mockJobInfo)).isEmpty();
   }
 
   @Test
@@ -78,7 +78,7 @@ public final class XtsTradefedTestValidatorTest {
                 .setXtsRootDir("/path/to/cts_root")
                 .build());
 
-    List<String> errors = validator.validateJob(mockJobInfo);
+    List<String> errors = validator.validate(mockJobInfo);
     assertThat(errors).hasSize(1);
     assertThat(errors)
         .contains("An xTS type must be specified, check xts_tradefed_test_spec.proto.");
@@ -93,7 +93,7 @@ public final class XtsTradefedTestValidatorTest {
                 .setXtsRootDir("/path/to/cts_root")
                 .build());
 
-    List<String> errors = validator.validateJob(mockJobInfo);
+    List<String> errors = validator.validate(mockJobInfo);
     assertThat(errors).hasSize(1);
     assertThat(errors).contains("An xTS test plan must be specified.");
   }
@@ -108,7 +108,7 @@ public final class XtsTradefedTestValidatorTest {
                 .setXtsRootDir("/path/to/cts_root")
                 .build());
 
-    List<String> errors = validator.validateJob(mockJobInfo);
+    List<String> errors = validator.validate(mockJobInfo);
     assertThat(errors).hasSize(1);
     assertThat(errors.get(0)).contains("The 'prev_session_xts_test_plan' must be specified");
   }
@@ -119,7 +119,7 @@ public final class XtsTradefedTestValidatorTest {
         .thenReturn(
             XtsTradefedTestDriverSpec.newBuilder().setXtsType("cts").setXtsTestPlan("cts").build());
 
-    List<String> errors = validator.validateJob(mockJobInfo);
+    List<String> errors = validator.validate(mockJobInfo);
     assertThat(errors).hasSize(1);
     assertThat(errors)
         .contains("At least one of the xts_root_dir, android_xts_zip must be specified.");

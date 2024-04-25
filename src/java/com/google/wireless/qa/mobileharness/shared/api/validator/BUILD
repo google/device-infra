@@ -105,16 +105,3 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
 )
-
-java_library(
-    name = "xts_tradefed_test_validator",
-    srcs = ["XtsTradefedTestValidator.java"],
-    deps = [
-        ":base_validator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:xts_tradefed_test_spec_java_proto",
-        "@maven//:com_google_guava_guava",
-    ],
-)

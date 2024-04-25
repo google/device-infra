@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.shared.api.validator;
+package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import com.google.common.collect.ImmutableList;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
 import java.util.List;
 
-/** Validator for the {@code XtsTradefedTest} driver. */
-public class XtsTradefedTestValidator extends BaseValidator
-    implements SpecConfigable<XtsTradefedTestDriverSpec> {
+/** Job validator for the {@code XtsTradefedTest} driver. */
+public class XtsTradefedTestJobValidator
+    implements JobValidator, SpecConfigable<XtsTradefedTestDriverSpec> {
 
   @Override
-  public List<String> validateJob(JobInfo jobInfo) throws InterruptedException {
+  public List<String> validate(JobInfo jobInfo) throws InterruptedException {
     ImmutableList.Builder<String> errors = ImmutableList.builder();
     XtsTradefedTestDriverSpec spec;
     try {

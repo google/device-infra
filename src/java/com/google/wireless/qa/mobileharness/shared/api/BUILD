@@ -60,11 +60,11 @@ java_library(
     name = "ats_test_client",
     runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:mobly_aosp_package_test_validator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:xts_tradefed_test_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_adb_shell_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_clean_apps_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_device_settings_decorator_job_validator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:android_switch_user_decorator_job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:xts_tradefed_test_job_validator",
     ],
 )
 
