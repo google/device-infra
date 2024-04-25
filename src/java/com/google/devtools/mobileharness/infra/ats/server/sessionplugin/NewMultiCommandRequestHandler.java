@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
@@ -93,6 +94,7 @@ final class NewMultiCommandRequestHandler {
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
+  private final SessionResultHandlerUtil sessionResultHandlerUtil;
   private final LocalFileUtil localFileUtil;
   private final CommandExecutor commandExecutor;
   private final Clock clock;
@@ -115,11 +117,13 @@ final class NewMultiCommandRequestHandler {
   @Inject
   NewMultiCommandRequestHandler(
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
+      SessionResultHandlerUtil sessionResultHandlerUtil,
       LocalFileUtil localFileUtil,
       CommandExecutor commandExecutor,
       Clock clock,
       CommandHelper commandHelper) {
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
+    this.sessionResultHandlerUtil = sessionResultHandlerUtil;
     this.localFileUtil = localFileUtil;
     this.commandExecutor = commandExecutor;
     this.clock = clock;
@@ -489,7 +493,7 @@ final class NewMultiCommandRequestHandler {
           Path resultDir = outputDirPath;
           Path logDir = outputDirPath;
           Optional<Result> result =
-              sessionRequestHandlerUtil.processResult(
+              sessionResultHandlerUtil.processResult(
                   resultDir,
                   logDir,
                   /* latestResultLink= */ null,
@@ -536,7 +540,7 @@ final class NewMultiCommandRequestHandler {
   // Clean up temporary files and directories in session and jobs.
   void cleanup(NewMultiCommandRequest newMultiCommandRequest, SessionInfo sessionInfo)
       throws InterruptedException, MobileHarnessException {
-    sessionRequestHandlerUtil.cleanUpJobGenDirs(sessionInfo.getAllJobs());
+    sessionResultHandlerUtil.cleanUpJobGenDirs(sessionInfo.getAllJobs());
     if (hasMountedAndroidXtsZip) {
       String xtsRootDir =
           sessionRequestInfoCache.get(newMultiCommandRequest.getCommandsList().get(0)).xtsRootDir();

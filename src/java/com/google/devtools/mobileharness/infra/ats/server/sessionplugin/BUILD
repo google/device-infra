@@ -75,6 +75,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_result_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/infra/lab/common/dir",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",

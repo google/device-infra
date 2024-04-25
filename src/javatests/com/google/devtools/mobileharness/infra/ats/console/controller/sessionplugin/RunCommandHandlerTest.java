@@ -26,7 +26,9 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
@@ -93,6 +95,7 @@ public final class RunCommandHandlerTest {
 
   @Inject private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
+  @Inject private SessionResultHandlerUtil sessionResultHandlerUtil;
 
   @Before
   public void setUp() throws Exception {
@@ -112,14 +115,20 @@ public final class RunCommandHandlerTest {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
 
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    sessionResultHandlerUtil = spy(sessionResultHandlerUtil);
     runCommandHandler = spy(runCommandHandler);
   }
 
   @Test
   public void handleResultProcessing_copyResultsAndLogsIntoXtsRootDir() throws Exception {
     runCommandHandler =
-        spy(new RunCommandHandler(new LocalFileUtil(), sessionRequestHandlerUtil, sessionInfo));
-    doNothing().when(sessionRequestHandlerUtil).cleanUpJobGenDirs(any());
+        spy(
+            new RunCommandHandler(
+                new LocalFileUtil(),
+                sessionRequestHandlerUtil,
+                sessionResultHandlerUtil,
+                sessionInfo));
+    doNothing().when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
     when(sessionInfo.getSessionProperty("timestamp_dir_name"))
         .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));
 
@@ -144,7 +153,7 @@ public final class RunCommandHandlerTest {
                     .build())
             .setTiming(new Timing())
             .build();
-    tradefedJobInfo.properties().add(SessionRequestHandlerUtil.XTS_TF_JOB_PROP, "true");
+    tradefedJobInfo.properties().add(SessionHandlerHelper.XTS_TF_JOB_PROP, "true");
     tradefedJobInfo.tests().add("1", "test_name");
 
     JobInfo nonTradefedJobInfo =
@@ -161,15 +170,15 @@ public final class RunCommandHandlerTest {
                     .build())
             .setTiming(new Timing())
             .build();
-    nonTradefedJobInfo.properties().add(SessionRequestHandlerUtil.XTS_NON_TF_JOB_PROP, "true");
+    nonTradefedJobInfo.properties().add(SessionHandlerHelper.XTS_NON_TF_JOB_PROP, "true");
     nonTradefedJobInfo
         .properties()
-        .add(SessionRequestHandlerUtil.XTS_MODULE_NAME_PROP, "mobly_test_module_name");
+        .add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, "mobly_test_module_name");
     nonTradefedJobInfo.tests().add("2", "test_name");
 
     when(sessionInfo.getAllJobs())
         .thenReturn(ImmutableList.of(tradefedJobInfo, nonTradefedJobInfo));
-    when(sessionRequestHandlerUtil.isSessionPassed(anyList())).thenReturn(true);
+    when(sessionResultHandlerUtil.isSessionPassed(anyList())).thenReturn(true);
 
     runCommandHandler.initialize(command);
     runCommandHandler.handleResultProcessing(command);

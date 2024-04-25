@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.ats.common;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -30,7 +29,6 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
@@ -57,9 +55,6 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
-import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
@@ -81,7 +76,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -1554,34 +1548,5 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
 
     assertThat(jobInfos).isEmpty();
-  }
-
-  @Test
-  public void getTestResultFromTest_success() throws Exception {
-    TestInfo testInfo = Mockito.mock(TestInfo.class);
-    Path resultFilePath = Path.of("/data/genfiles/test_id/test_result.xml");
-    when(testInfo.locator())
-        .thenReturn(new TestLocator("test_id", "test_name", new JobLocator("job_id", "job_name")));
-    when(localFileUtil.isDirExist("/data/genfiles/test_id")).thenReturn(true);
-    when(localFileUtil.listFilePaths(eq(Path.of("/data/genfiles/test_id")), eq(true), any()))
-        .thenReturn(ImmutableList.of(resultFilePath));
-    Optional<Result> result = Optional.of(Result.getDefaultInstance());
-    when(compatibilityReportParser.parse(resultFilePath)).thenReturn(result);
-
-    assertThat(sessionRequestHandlerUtil.getTestResultFromTest(testInfo)).isEqualTo(result);
-  }
-
-  @Test
-  public void getTestResultFromTest_parserFailed() throws Exception {
-    TestInfo testInfo = Mockito.mock(TestInfo.class);
-    Path resultFilePath = Path.of("/data/genfiles/test_id/test_result.xml");
-    when(testInfo.locator())
-        .thenReturn(new TestLocator("test_id", "test_name", new JobLocator("job_id", "job_name")));
-    when(localFileUtil.listFilePaths(eq(Path.of("/data/genfiles/test_id")), eq(true), any()))
-        .thenReturn(ImmutableList.of(resultFilePath));
-    when(localFileUtil.isDirExist("/data/genfiles/test_id")).thenReturn(true);
-    when(compatibilityReportParser.parse(resultFilePath)).thenReturn(Optional.empty());
-
-    assertThat(sessionRequestHandlerUtil.getTestResultFromTest(testInfo)).isEmpty();
   }
 }

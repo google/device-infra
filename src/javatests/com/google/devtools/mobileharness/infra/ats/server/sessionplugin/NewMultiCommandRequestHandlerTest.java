@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -100,6 +101,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
+  @Bind @Mock private SessionResultHandlerUtil sessionResultHandlerUtil;
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
   @Bind @Mock private CommandHelper commandHelper;
@@ -381,7 +383,7 @@ public final class NewMultiCommandRequestHandlerTest {
         .thenReturn(Optional.of(jobInfo));
     Result.Builder resultBuilder =
         Result.newBuilder().setSummary(Summary.newBuilder().setPassed(10).setFailed(0).build());
-    when(sessionRequestHandlerUtil.processResult(
+    when(sessionResultHandlerUtil.processResult(
             any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
         .thenReturn(Optional.of(resultBuilder.build()));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
@@ -399,7 +401,7 @@ public final class NewMultiCommandRequestHandlerTest {
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
     verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
-    verify(sessionRequestHandlerUtil)
+    verify(sessionResultHandlerUtil)
         .processResult(
             outputPath,
             outputPath,
@@ -407,7 +409,7 @@ public final class NewMultiCommandRequestHandlerTest {
             null,
             ImmutableList.of(jobInfo),
             sessionRequestInfoCaptor.getValue());
-    verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     assertThat(requestDetailBuilder.getCommandDetailsCount()).isEqualTo(1);
     CommandDetail commandDetail =
@@ -425,7 +427,7 @@ public final class NewMultiCommandRequestHandlerTest {
         .thenReturn(Optional.of(jobInfo));
     Result.Builder resultBuilder =
         Result.newBuilder().setSummary(Summary.newBuilder().setPassed(5).setFailed(5).build());
-    when(sessionRequestHandlerUtil.processResult(
+    when(sessionResultHandlerUtil.processResult(
             any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
         .thenReturn(Optional.of(resultBuilder.build()));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
@@ -443,7 +445,7 @@ public final class NewMultiCommandRequestHandlerTest {
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
     verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
-    verify(sessionRequestHandlerUtil)
+    verify(sessionResultHandlerUtil)
         .processResult(
             outputPath,
             outputPath,
@@ -451,7 +453,7 @@ public final class NewMultiCommandRequestHandlerTest {
             null,
             ImmutableList.of(jobInfo),
             sessionRequestInfoCaptor.getValue());
-    verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     assertThat(requestDetailBuilder.getCommandDetailsCount()).isEqualTo(1);
     CommandDetail commandDetail =
@@ -469,7 +471,7 @@ public final class NewMultiCommandRequestHandlerTest {
         .thenReturn(Optional.of(jobInfo));
     Result.Builder resultBuilder =
         Result.newBuilder().setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build());
-    when(sessionRequestHandlerUtil.processResult(
+    when(sessionResultHandlerUtil.processResult(
             any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
         .thenReturn(Optional.of(resultBuilder.build()));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
@@ -487,7 +489,7 @@ public final class NewMultiCommandRequestHandlerTest {
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
     verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
-    verify(sessionRequestHandlerUtil)
+    verify(sessionResultHandlerUtil)
         .processResult(
             outputPath,
             outputPath,
@@ -495,7 +497,7 @@ public final class NewMultiCommandRequestHandlerTest {
             null,
             ImmutableList.of(jobInfo),
             sessionRequestInfoCaptor.getValue());
-    verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     assertThat(requestDetailBuilder.getCommandDetailsCount()).isEqualTo(1);
     CommandDetail commandDetail =
@@ -530,10 +532,10 @@ public final class NewMultiCommandRequestHandlerTest {
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(files.getAll()).thenReturn(ImmutableMultimap.of());
     newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail.toBuilder());
-    verify(sessionRequestHandlerUtil, never())
+    verify(sessionResultHandlerUtil, never())
         .processResult(any(), any(), any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
   }
 
   @Test
@@ -551,11 +553,11 @@ public final class NewMultiCommandRequestHandlerTest {
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     MobileHarnessException mhException = Mockito.mock(MobileHarnessException.class);
     doThrow(mhException)
-        .when(sessionRequestHandlerUtil)
+        .when(sessionResultHandlerUtil)
         .processResult(any(), any(), any(), any(), any(), any());
     newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail.toBuilder());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
   }
 
   @Test
@@ -580,10 +582,10 @@ public final class NewMultiCommandRequestHandlerTest {
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail.toBuilder());
-    verify(sessionRequestHandlerUtil, never())
+    verify(sessionResultHandlerUtil, never())
         .processResult(any(), any(), any(), any(), any(), any());
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    verify(sessionRequestHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
   }
 
   @Test

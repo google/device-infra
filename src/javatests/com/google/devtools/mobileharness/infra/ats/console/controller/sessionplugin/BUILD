@@ -34,7 +34,9 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_handler_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_result_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:list_devices_command_handler",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:run_command_handler",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",

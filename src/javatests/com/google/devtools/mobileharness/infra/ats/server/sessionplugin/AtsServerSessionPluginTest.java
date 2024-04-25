@@ -33,6 +33,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandAttemptDetail;
@@ -113,6 +114,7 @@ public final class AtsServerSessionPluginTest {
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private SessionInfo sessionInfo;
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
+  @Bind @Mock private SessionResultHandlerUtil sessionResultHandlerUtil;
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
   @Bind @Mock private CommandHelper commandHelper;
@@ -218,14 +220,6 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
     Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
     when(testInfo.result()).thenReturn(result);
-    com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
-        resultProto =
-            com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
-                .newBuilder()
-                .setSummary(Summary.newBuilder().setPassed(10).setFailed(10).build())
-                .build();
-    when(sessionRequestHandlerUtil.getTestResultFromTest(testInfo))
-        .thenReturn(Optional.of(resultProto));
     when(clock.instant()).thenReturn(baseTime);
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
     when(commandHelper.getXtsType(any())).thenReturn("cts");
@@ -494,7 +488,7 @@ public final class AtsServerSessionPluginTest {
             com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
                 .newBuilder()
                 .setSummary(Summary.newBuilder().setPassed(5).setFailed(5).build());
-    when(sessionRequestHandlerUtil.processResult(
+    when(sessionResultHandlerUtil.processResult(
             any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
         .thenReturn(Optional.of(resultBuilder.build()));
 
@@ -569,7 +563,7 @@ public final class AtsServerSessionPluginTest {
             com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
                 .newBuilder()
                 .setSummary(Summary.newBuilder().setPassed(5).setFailed(5).build());
-    when(sessionRequestHandlerUtil.processResult(
+    when(sessionResultHandlerUtil.processResult(
             any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
         .thenReturn(Optional.of(resultBuilder.build()));
 
@@ -626,7 +620,7 @@ public final class AtsServerSessionPluginTest {
             com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
                 .newBuilder()
                 .setSummary(Summary.newBuilder().setPassed(5).setFailed(0).build());
-    when(sessionRequestHandlerUtil.processResult(
+    when(sessionResultHandlerUtil.processResult(
             any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
         .thenReturn(Optional.of(resultBuilder.build()));
     plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));

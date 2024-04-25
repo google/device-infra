@@ -22,8 +22,10 @@ import static com.google.protobuf.TextFormat.shortDebugString;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
@@ -58,6 +60,7 @@ class RunCommandHandler {
       DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss").withZone(ZoneId.systemDefault());
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
+  private final SessionResultHandlerUtil sessionResultHandlerUtil;
   private final LocalFileUtil localFileUtil;
   private final SessionInfo sessionInfo;
 
@@ -67,9 +70,11 @@ class RunCommandHandler {
   RunCommandHandler(
       LocalFileUtil localFileUtil,
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
+      SessionResultHandlerUtil sessionResultHandlerUtil,
       SessionInfo sessionInfo) {
     this.localFileUtil = localFileUtil;
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
+    this.sessionResultHandlerUtil = sessionResultHandlerUtil;
     this.sessionInfo = sessionInfo;
   }
 
@@ -99,7 +104,7 @@ class RunCommandHandler {
           shortDebugString(command));
       return ImmutableList.of();
     }
-    jobInfo.get().properties().add(SessionRequestHandlerUtil.XTS_TF_JOB_PROP, "true");
+    jobInfo.get().properties().add(SessionHandlerHelper.XTS_TF_JOB_PROP, "true");
 
     // Lets the driver write TF output to XTS log dir directly.
     jobInfo
@@ -178,7 +183,7 @@ class RunCommandHandler {
       SessionRequestInfo sessionRequestInfo = this.sessionRequestInfo;
       if (sessionRequestInfo != null) {
         result =
-            sessionRequestHandlerUtil
+            sessionResultHandlerUtil
                 .processResult(
                     resultDir,
                     logDir,
@@ -191,7 +196,7 @@ class RunCommandHandler {
         logger.atInfo().log("Skip result processing due to initialization failure");
       }
     } finally {
-      sessionRequestHandlerUtil.cleanUpJobGenDirs(allJobs);
+      sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);
 
       String xtsTestResultSummary =
           createXtsTestResultSummary(
@@ -199,7 +204,7 @@ class RunCommandHandler {
               command,
               resultDir != null ? resultDir.toString() : "N/A",
               logDir != null ? logDir.toString() : "N/A");
-      boolean isSessionPassed = sessionRequestHandlerUtil.isSessionPassed(allJobs);
+      boolean isSessionPassed = sessionResultHandlerUtil.isSessionPassed(allJobs);
       String sessionSummary =
           String.format(
               "run_command session_id: [%s], command_id: [%s], result: %s.\n"
