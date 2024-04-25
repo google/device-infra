@@ -32,19 +32,43 @@ import java.util.zip.ZipEntry;
 /** Checker for checking binary sizes. */
 public class BinarySizeChecker {
 
-  private static final double NEARLY_LARGE_FACTOR = 0.9;
+  private static final double NEARLY_MAX_SIZE_FACTOR = 0.95;
+  private static final double NEARLY_LARGE_RESOURCE_FACTOR = 0.9;
 
   public static void checkBinarySize(
       String binaryName, long maxSizeByte, String binaryFilePath, String binarySourcePath)
       throws MobileHarnessException {
+
+    long nearlyMaxSizeByte = (long) (maxSizeByte * NEARLY_MAX_SIZE_FACTOR);
+
+    long binaryFileSize = new LocalFileUtil().getFileSize(binaryFilePath);
+
     assertWithMessage(
             "The binary size of %s should be less than %s bytes. If you are sure that the new added"
                 + " deps are necessary, please update the number and explain the necessity (what"
                 + " libs are added to the binary, their sizes, why they are necessary) in the"
                 + " change description.\n\nbinary_path=%s\n\nBinary size of %s:",
             binaryName, maxSizeByte, binarySourcePath, binaryName)
-        .that(new LocalFileUtil().getFileSize(binaryFilePath))
-        .isLessThan(maxSizeByte);
+        .that(binaryFileSize)
+        .isAtMost(maxSizeByte);
+
+    assertWithMessage(
+            "The binary size of %s should be in the range [%s, 1.0] of its size limit %s bytes ([%s"
+                + " bytes, %s bytes]) but now it is less than the lower bound. Please update its"
+                + " size limit to a number in the range [%s bytes, %s bytes].\n\n"
+                + "binary_path=%s\n\n"
+                + "Binary size of %s:",
+            binaryName,
+            NEARLY_MAX_SIZE_FACTOR,
+            maxSizeByte,
+            nearlyMaxSizeByte,
+            maxSizeByte,
+            binaryFileSize,
+            (long) (binaryFileSize / NEARLY_MAX_SIZE_FACTOR),
+            binarySourcePath,
+            binaryName)
+        .that(binaryFileSize)
+        .isAtLeast(nearlyMaxSizeByte);
   }
 
   public static void checkBinaryLargeResourceFiles(
@@ -56,7 +80,8 @@ public class BinarySizeChecker {
       String allowlistSourcePath)
       throws IOException {
 
-    long nearlyMaxResourceFileSizeByte = (long) (maxResourceFileSizeByte * NEARLY_LARGE_FACTOR);
+    long nearlyMaxResourceFileSizeByte =
+        (long) (maxResourceFileSizeByte * NEARLY_LARGE_RESOURCE_FACTOR);
 
     ImmutableMap<String, Long> largeResourcesPathAndSize;
     ImmutableMap<String, Long> nearlyLargeResourcesPathAndSize;
@@ -99,7 +124,7 @@ public class BinarySizeChecker {
             binaryName,
             binaryName,
             allowlistSourcePath,
-            NEARLY_LARGE_FACTOR,
+            NEARLY_LARGE_RESOURCE_FACTOR,
             nearlyMaxResourceFileSizeByte,
             binarySourcePath,
             binaryName)
