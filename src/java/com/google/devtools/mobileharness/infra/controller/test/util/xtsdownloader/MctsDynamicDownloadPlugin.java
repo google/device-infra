@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.platform.android.packagemanager.Android
 import com.google.devtools.mobileharness.platform.android.packagemanager.ModuleInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -65,18 +66,16 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final String TMP_MCTS_TESTCASES_PATH = "/android/xts/mcts/testcases";
 
-  private static final String XTS_DYNAMIC_DOWNLOAD_PATH_KEY = "xts_dynamic_download_path";
-
   private static final String MAINLINE_TVP_PKG = "com.google.android.modulemetadata";
 
-  private static final ImmutableMap<String, Integer> SDKLEVEL_TO_YEAR =
+  private static final ImmutableMap<String, Integer> SDK_LEVEL_TO_YEAR =
       ImmutableMap.of(
           "30", 2020,
           "31", 2021,
           "32", 2022,
           "33", 2022,
           "34", 2023);
-  private static final ImmutableMap<String, String> DEVICEABI_MAP =
+  private static final ImmutableMap<String, String> DEVICE_ABI_MAP =
       ImmutableMap.of(
           "armeabi", "arm",
           "armeabi-v7a", "arm",
@@ -108,7 +107,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     ImmutableList<String> preloadedMainlineModules = getPreloadedMainlineModules(deviceId);
     ListMultimap<String, String> mctsNamesOfPreloadedMainlineModules =
         getMctsNamesOfPreloadedMainlineModules(preloadedMainlineModules);
-    String deviceAbi = DEVICEABI_MAP.get(adbUtil.getProperty(deviceId, AndroidProperty.ABI));
+    String deviceAbi = DEVICE_ABI_MAP.get(adbUtil.getProperty(deviceId, AndroidProperty.ABI));
     if (deviceAbi == null) {
       throw new MobileHarnessException(
           AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_ABI_NOT_SUPPORT,
@@ -161,7 +160,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       String filePath = downloadPublicUrlFiles(downloadUrl, subDirName);
       allTestModules.addAll(unzipDownloadedTestCases(testInfo, filePath, subDirName));
     }
-    testInfo.properties().add(XTS_DYNAMIC_DOWNLOAD_PATH_KEY, TMP_MCTS_TESTCASES_PATH);
+    testInfo
+        .properties()
+        .add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY, TMP_MCTS_TESTCASES_PATH);
     // Print out all the downloaded MCTS test modules
     logger.atInfo().log("Downloaded MCTS test modules:");
     for (String testModule : allTestModules) {
@@ -193,7 +194,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           .collect(toImmutableList());
     } catch (MobileHarnessException e) {
       logger.atInfo().log(
-          "Cannot get preloaded moduleinfo, handle this exception since this device might be built"
+          "Cannot get preloaded module info, handle this exception since this device might be built"
               + " from AOSP.");
       return ImmutableList.of();
     }
@@ -222,12 +223,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     Set<String> preloadedModules = new HashSet<>(); // Track modules added to 'preloaded'
     moduleInfoMap
         .getModulePackageToModuleInfoMap()
-        .entrySet()
         .forEach(
-            entry -> {
-              String moduleName = entry.getKey();
-              String mctsName = entry.getValue();
-
+            (moduleName, mctsName) -> {
               if (moduleList.contains(moduleName)) {
                 mctsNamesOfAllModules.put("preloaded", mctsName);
                 preloadedModules.add(mctsName);
@@ -243,19 +240,19 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     return mctsNamesOfAllModules;
   }
 
-  private String getPreloadedMainlineVersion(String versioncode)
-      throws MobileHarnessException, InterruptedException {
+  private String getPreloadedMainlineVersion(String versioncode) throws MobileHarnessException {
     // Get the release time of the preloaded mainline train, the format is YYYY-MM.
     // Note that version codes must always increase to successfully install newer builds. For this
     // reason, the version code "wraps" in January, making the month digits wrap to 13, instead of
     // 01 (for the first month of the year) and so on.
     int month = Integer.parseInt(versioncode, 2, 4, 10);
-    if (!SDKLEVEL_TO_YEAR.containsKey(versioncode.substring(0, 2))) {
+    Integer sdkLevelYear = SDK_LEVEL_TO_YEAR.get(versioncode.substring(0, 2));
+    if (sdkLevelYear == null) {
       throw new MobileHarnessException(
           AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_DEVICE_SDK_VERSION_NOT_SUPPORT,
           "Device is not compatible with the xts dynamic downloader. Required R+ build.");
     }
-    int year = SDKLEVEL_TO_YEAR.get(versioncode.substring(0, 2)) + month / 12;
+    int year = sdkLevelYear + month / 12;
     String version = String.format("%d-%02d", year, (month % 12 == 0 ? 12 : month % 12));
     logger.atInfo().log("Get mainline train version(YYYY-MM): %s", version);
     return version;
@@ -277,7 +274,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         logger.atInfo().log(
             "File %s does not exist, needs to download the file %s.", downloadUrl, filePath);
       }
-      URLConnection connection = null;
+      URLConnection connection;
       try {
         URL url = new URL(downloadUrl);
         connection = url.openConnection();
@@ -293,12 +290,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       fileUtil.prepareDir(fileUtil.getParentDirPath(filePath), LocalFileUtil.FULL_ACCESS);
       // Download the resource.
       try (InputStream inputStream = new BufferedInputStream(connection.getInputStream());
-          FileOutputStream outputStream = new FileOutputStream(filePath); ) {
-        if (inputStream == null) {
-          throw new MobileHarnessException(
-              AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_FILE_NOT_FOUND,
-              "Can not find resource " + downloadUrl);
-        }
+          FileOutputStream outputStream = new FileOutputStream(filePath)) {
         ByteStreams.copy(inputStream, outputStream);
         fileUtil.grantFileOrDirFullAccess(dynamicDownloadDir);
         fileUtil.grantFileOrDirFullAccess(filePath);

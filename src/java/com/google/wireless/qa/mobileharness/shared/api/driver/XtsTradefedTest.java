@@ -46,6 +46,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.Compati
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -107,23 +108,8 @@ public class XtsTradefedTest extends BaseDriver
     implements SpecConfigable<XtsTradefedTestDriverSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  public static final String TRADEFED_TESTS_PASSED = "tradefed_tests_passed";
-  public static final String TRADEFED_TESTS_FAILED = "tradefed_tests_failed";
-  public static final String TRADEFED_TESTS_DONE = "tradefed_tests_done";
-  public static final String TRADEFED_TESTS_TOTAL = "tradefed_tests_total";
-  public static final String TRADEFED_JOBS_PASSED = "tradefed_jobs_passed";
-
-  @VisibleForTesting
-  static final String COMPATIBILITY_CONSOLE_CLASS =
+  private static final String COMPATIBILITY_CONSOLE_CLASS =
       "com.android.compatibility.common.tradefed.command.CompatibilityConsole";
-
-  private static final String XTS_TF_LOG = "xts_tf_output.log";
-
-  /**
-   * MctsDynamicDownloadPlugin.java set the property of xts_dynamic_download_path which is a subdir
-   * under testInfo.getTmpFileDir().
-   */
-  private static final String XTS_DYNAMIC_DOWNLOAD_PATH_KEY = "xts_dynamic_download_path";
 
   private static final ImmutableSet<String> EXCLUDED_JAR_FILES =
       ImmutableSet.of(
@@ -271,13 +257,13 @@ public class XtsTradefedTest extends BaseDriver
         long failedNumber = result.get().getSummary().getFailed();
         long doneNumber = result.get().getSummary().getModulesDone();
         long totalNumber = result.get().getSummary().getModulesTotal();
-        tradefedTestSummary.put(TRADEFED_TESTS_PASSED, String.valueOf(passedNumber));
-        tradefedTestSummary.put(TRADEFED_TESTS_FAILED, String.valueOf(failedNumber));
-        tradefedTestSummary.put(TRADEFED_TESTS_DONE, String.valueOf(doneNumber));
-        tradefedTestSummary.put(TRADEFED_TESTS_TOTAL, String.valueOf(totalNumber));
+        tradefedTestSummary.put(XtsConstants.TRADEFED_TESTS_PASSED, String.valueOf(passedNumber));
+        tradefedTestSummary.put(XtsConstants.TRADEFED_TESTS_FAILED, String.valueOf(failedNumber));
+        tradefedTestSummary.put(XtsConstants.TRADEFED_TESTS_DONE, String.valueOf(doneNumber));
+        tradefedTestSummary.put(XtsConstants.TRADEFED_TESTS_TOTAL, String.valueOf(totalNumber));
         testInfo.properties().addAll(tradefedTestSummary);
         if (doneNumber == totalNumber && failedNumber == 0 && passedNumber > 0) {
-          testInfo.properties().add(TRADEFED_JOBS_PASSED, "true");
+          testInfo.properties().add(XtsConstants.TRADEFED_JOBS_PASSED, "true");
           return true;
         }
       }
@@ -380,7 +366,8 @@ public class XtsTradefedTest extends BaseDriver
       localFileUtil.prepareParentDir(spec.getXtsTfOutputPath());
       tfOutputPath = Path.of(spec.getXtsTfOutputPath());
     } else {
-      tfOutputPath = Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG);
+      tfOutputPath =
+          Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_OUTPUT_FILE_NAME);
     }
 
     AtomicReference<CommandProcess> xtsProcess = new AtomicReference<>();
@@ -859,12 +846,15 @@ public class XtsTradefedTest extends BaseDriver
     createSymlink(linkLibDir, sourceXtsBundledLibDir);
 
     if (Flags.instance().enableXtsDynamicDownloader.getNonNull()
-        && testInfo.properties().has(XTS_DYNAMIC_DOWNLOAD_PATH_KEY)) {
+        && testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)) {
       // Integrates the dynamic downloaded test cases with the temp XTS workspace.
       createSymlinksForTestCases(
           linkTestcasesDir,
           Path.of(
-              testInfo.getTmpFileDir() + testInfo.properties().get(XTS_DYNAMIC_DOWNLOAD_PATH_KEY)));
+              testInfo.getTmpFileDir()
+                  + testInfo
+                      .properties()
+                      .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)));
     }
 
     if (isRunRetry

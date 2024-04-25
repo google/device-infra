@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyRe
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
@@ -41,7 +42,6 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.nio.file.Path;
@@ -134,7 +134,7 @@ public class SessionResultHandlerUtil {
     Path tmpTradefedTestResultsDir =
         Path.of(localFileUtil.createTempDir(Flags.instance().tmpDirRoot.getNonNull()));
     Path nonTradefedTestResultsDir = resultDir.resolve("non-tradefed_results");
-    Path tradefedTestLogsDir = logDir.resolve("tradefed_logs");
+    Path tradefedTestLogsDir = logDir.resolve(XtsConstants.TRADEFED_LOGS_DIR_NAME);
     Path nonTradefedTestLogsDir = logDir.resolve("non-tradefed_logs");
     Path serverSessionLogsDir = logDir.resolve("olc_server_session_logs");
 
@@ -710,7 +710,7 @@ public class SessionResultHandlerUtil {
       // Tradefed Jobs.
       if (jobInfo.properties().has(SessionHandlerHelper.XTS_TF_JOB_PROP)) {
         for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
-          if (!testInfo.properties().has(XtsTradefedTest.TRADEFED_JOBS_PASSED)) {
+          if (!testInfo.properties().has(XtsConstants.TRADEFED_JOBS_PASSED)) {
             return false;
           }
         }

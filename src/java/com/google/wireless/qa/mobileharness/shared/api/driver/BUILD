@@ -165,6 +165,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_parser",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:log_recorder",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/linecallback:command_output_logger",

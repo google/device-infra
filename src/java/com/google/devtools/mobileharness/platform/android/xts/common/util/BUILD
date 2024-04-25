@@ -16,6 +16,18 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
+    name = "abi_formatter",
+    srcs = ["AbiFormatter.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+    ],
+    deps = [
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "abi_util",
     srcs = ["AbiUtil.java"],
     visibility = [
@@ -31,6 +43,17 @@ java_library(
 )
 
 java_library(
+    name = "xts_constants",
+    srcs = ["XtsConstants.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util/xtsdownloader:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+    ],
+)
+
+java_library(
     name = "xts_dir_util",
     srcs = ["XtsDirUtil.java"],
     visibility = [
@@ -40,18 +63,6 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
     deps = [
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "abi_formatter",
-    srcs = ["AbiFormatter.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
-    ],
-    deps = [
-        "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],
 )

@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
@@ -64,7 +65,6 @@ import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Any;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
-import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -208,8 +208,8 @@ public final class AtsServerSessionPluginTest {
     when(testLocator.getId()).thenReturn("test_id");
     testProperties = new Properties(timing);
     testProperties.add(DEVICE_ID_LIST, "device_id_1,device_id_2");
-    testProperties.add(XtsTradefedTest.TRADEFED_TESTS_PASSED, "10");
-    testProperties.add(XtsTradefedTest.TRADEFED_TESTS_FAILED, "10");
+    testProperties.add(XtsConstants.TRADEFED_TESTS_PASSED, "10");
+    testProperties.add(XtsConstants.TRADEFED_TESTS_FAILED, "10");
     when(testInfo.properties()).thenReturn(testProperties);
     when(jobInfo.tests()).thenReturn(testInfos);
     when(jobInfo2.tests()).thenReturn(testInfos);

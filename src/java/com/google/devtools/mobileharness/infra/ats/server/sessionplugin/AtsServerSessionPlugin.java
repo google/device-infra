@@ -43,13 +43,13 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
-import com.google.wireless.qa.mobileharness.shared.api.driver.XtsTradefedTest;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
@@ -225,13 +225,13 @@ final class AtsServerSessionPlugin {
     }
 
     // Tradefed test result.
-    if (testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_PASSED)) {
+    if (testInfo.properties().has(XtsConstants.TRADEFED_TESTS_PASSED)) {
       builder.setPassedTestCount(
-          Long.parseLong(testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_PASSED)));
+          Long.parseLong(testInfo.properties().get(XtsConstants.TRADEFED_TESTS_PASSED)));
     }
-    if (testInfo.properties().has(XtsTradefedTest.TRADEFED_TESTS_FAILED)) {
+    if (testInfo.properties().has(XtsConstants.TRADEFED_TESTS_FAILED)) {
       builder.setFailedTestCount(
-          Long.parseLong(testInfo.properties().get(XtsTradefedTest.TRADEFED_TESTS_FAILED)));
+          Long.parseLong(testInfo.properties().get(XtsConstants.TRADEFED_TESTS_FAILED)));
     }
 
     // Non-tradefed test result.
