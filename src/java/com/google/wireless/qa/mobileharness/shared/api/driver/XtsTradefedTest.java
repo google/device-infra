@@ -19,7 +19,10 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.lang.Math.min;
+import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -30,6 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
@@ -60,6 +64,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -86,6 +91,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
@@ -110,8 +119,10 @@ public class XtsTradefedTest extends BaseDriver
 
   private static final String XTS_TF_LOG = "xts_tf_output.log";
 
-  // MctsDynamicDownloadPlugin.java set the property of xts_dynamic_download_path which is a subdir
-  // under testInfo.getTmpFileDir().
+  /**
+   * MctsDynamicDownloadPlugin.java set the property of xts_dynamic_download_path which is a subdir
+   * under testInfo.getTmpFileDir().
+   */
   private static final String XTS_DYNAMIC_DOWNLOAD_PATH_KEY = "xts_dynamic_download_path";
 
   private static final ImmutableSet<String> EXCLUDED_JAR_FILES =
@@ -119,11 +130,12 @@ public class XtsTradefedTest extends BaseDriver
           "ats_console_deploy.jar",
           "ats_olc_server_deploy.jar",
           "ats_olc_server_local_mode_deploy.jar");
-
   private static final ImmutableList<String> EXCLUDED_JAR_FILE_PATTERNS =
       ImmutableList.of("art-run-test.*", "art-gtest-jars.*");
 
   private static final String TF_PATH_KEY = "TF_PATH";
+
+  private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(5L);
 
   private volatile ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
 
@@ -135,6 +147,8 @@ public class XtsTradefedTest extends BaseDriver
   private final Fastboot fastboot;
   private final Aapt aapt;
   private final LogRecorder logRecorder;
+  private final ListeningExecutorService threadPool;
+  private final Sleeper sleeper;
 
   @Inject
   XtsTradefedTest(
@@ -146,7 +160,9 @@ public class XtsTradefedTest extends BaseDriver
       SystemUtil systemUtil,
       Adb adb,
       Fastboot fastboot,
-      Aapt aapt) {
+      Aapt aapt,
+      ListeningExecutorService threadPool,
+      Sleeper sleeper) {
     this(
         device,
         testInfo,
@@ -157,6 +173,8 @@ public class XtsTradefedTest extends BaseDriver
         adb,
         fastboot,
         aapt,
+        threadPool,
+        sleeper,
         LogRecorder.getInstance());
   }
 
@@ -171,6 +189,8 @@ public class XtsTradefedTest extends BaseDriver
       Adb adb,
       Fastboot fastboot,
       Aapt aapt,
+      ListeningExecutorService threadPool,
+      Sleeper sleeper,
       LogRecorder logRecorder) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
@@ -180,6 +200,8 @@ public class XtsTradefedTest extends BaseDriver
     this.adb = adb;
     this.fastboot = fastboot;
     this.aapt = aapt;
+    this.threadPool = threadPool;
+    this.sleeper = sleeper;
     this.logRecorder = logRecorder;
   }
 
@@ -187,7 +209,7 @@ public class XtsTradefedTest extends BaseDriver
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     XtsTradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
     String xtsType = spec.getXtsType();
-    boolean isRunRetry = Ascii.equalsIgnoreCase("retry", getXtsTestPlan(spec));
+    boolean isRunRetry = Ascii.equalsIgnoreCase("retry", spec.getXtsTestPlan());
 
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     Path tmpXtsRootDir = null;
@@ -242,8 +264,8 @@ public class XtsTradefedTest extends BaseDriver
                       && !previousResultDirNames.contains(path.getFileName().toString())
                       && !Objects.equals(path.getFileName().toString(), "latest"));
       Path testResultXmlPath = resultDirs.get(0).resolve("test_result.xml");
-      if (localFileUtil.isFileExist(testResultXmlPath)) {
-        Optional<Result> result = compatibilityReportParser.parse(testResultXmlPath);
+      Optional<Result> result = compatibilityReportParser.parse(testResultXmlPath);
+      if (result.isPresent()) {
         Map<String, String> tradefedTestSummary = new HashMap<>();
         long passedNumber = result.get().getSummary().getPassed();
         long failedNumber = result.get().getSummary().getFailed();
@@ -361,9 +383,10 @@ public class XtsTradefedTest extends BaseDriver
       tfOutputPath = Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG);
     }
 
-    CommandProcess xtsProcess = null;
+    AtomicReference<CommandProcess> xtsProcess = new AtomicReference<>();
+    AtomicBoolean tfHasFinished = new AtomicBoolean();
     try (BufferedWriter writer = Files.newBufferedWriter(tfOutputPath)) {
-      xtsProcess =
+      xtsProcess.set(
           cmdExecutor.start(
               Command.of(cmd)
                   .extraEnv(env)
@@ -393,13 +416,45 @@ public class XtsTradefedTest extends BaseDriver
                                   /* killCommand= */ false,
                                   /* stopReadingOutput= */ true);
                             }
+
+                            // Checks if finished.
+                            if (tfFinished(line) && tfHasFinished.compareAndSet(false, true)) {
+                              testInfo.log().atInfo().alsoTo(logger).log("TF finished");
+                              logFailure(
+                                  threadPool.submit(
+                                      threadRenaming(
+                                          (Callable<Void>)
+                                              () -> {
+                                                sleeper.sleep(KILL_TF_AFTER_FINISH_TIME);
+
+                                                // Kills the TF process if it finished but the
+                                                // process is still alive.
+                                                CommandProcess process = xtsProcess.get();
+                                                if (process != null && process.isAlive()) {
+                                                  testInfo
+                                                      .log()
+                                                      .atInfo()
+                                                      .alsoTo(logger)
+                                                      .log(
+                                                          "Kill TF process since it has finished"
+                                                              + " for %s",
+                                                          KILL_TF_AFTER_FINISH_TIME);
+                                                  process.killAndThenKillForcibly(
+                                                      /* timeout= */ Duration.ofMinutes(1L));
+                                                }
+                                                return null;
+                                              },
+                                          () -> "tf-process-monitor-" + testId)),
+                                  Level.WARNING,
+                                  "Error occurred when waiting TF process exits");
+                            }
                           }))
                   .redirectStderr(true)
                   .needStdoutInResult(false)
                   .needStderrInResult(false)
-                  .timeout(getXtsTimeout(testInfo)));
+                  .timeout(getXtsTimeout(testInfo))));
 
-      return xtsProcess.await().exitCode() == 0;
+      return xtsProcess.get().await().exitCode() == 0;
     } catch (CommandStartException e) {
       throw new MobileHarnessException(
           AndroidErrorId.XTS_TRADEFED_START_COMMAND_ERROR,
@@ -438,10 +493,15 @@ public class XtsTradefedTest extends BaseDriver
       testInfo.log().atWarning().alsoTo(logger).log("xTS Tradefed was interrupted.");
       throw e;
     } finally {
-      if (xtsProcess != null && xtsProcess.isAlive()) {
-        xtsProcess.killWithSignal(/* signal= */ 2);
+      CommandProcess process = xtsProcess.get();
+      if (process != null && process.isAlive()) {
+        process.killWithSignal(/* signal= */ 2);
       }
     }
+  }
+
+  private static boolean tfFinished(String line) {
+    return line.contains("CommandScheduler: All done");
   }
 
   private String[] getXtsCommand(
@@ -456,7 +516,9 @@ public class XtsTradefedTest extends BaseDriver
     xtsCommand
         .add(
             "-cp",
-            envVars.getOrDefault(TF_PATH_KEY, getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType)))
+            requireNonNull(
+                envVars.getOrDefault(
+                    TF_PATH_KEY, getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType))))
         .add(String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType), tmpXtsRootDir))
         .add(COMPATIBILITY_CONSOLE_CLASS)
         .addAll(getXtsRunCommandArgs(spec, envVars));
@@ -471,11 +533,11 @@ public class XtsTradefedTest extends BaseDriver
     return systemUtil.getJavaBin();
   }
 
-  private boolean isJarFileExcluded(
+  private boolean isJarFileIncluded(
       String fileName, ImmutableList<Pattern> excludedJarFilePatterns) {
     return excludedJarFilePatterns.stream()
         .map(pattern -> pattern.matcher(fileName))
-        .anyMatch(Matcher::matches);
+        .noneMatch(Matcher::matches);
   }
 
   private String getConcatenatedJarPath(
@@ -519,7 +581,7 @@ public class XtsTradefedTest extends BaseDriver
               fileOrDir ->
                   Files.isRegularFile(fileOrDir)
                       && fileOrDir.getFileName().toString().endsWith(".jar")
-                      && !isJarFileExcluded(
+                      && isJarFileIncluded(
                           fileOrDir.getFileName().toString(), excludedJarFilePatterns))
           .forEach(
               jar -> {
@@ -539,7 +601,7 @@ public class XtsTradefedTest extends BaseDriver
                 /* recursively= */ true,
                 path ->
                     path.getFileName().toString().endsWith(".jar")
-                        && !isJarFileExcluded(
+                        && isJarFileIncluded(
                             path.getFileName().toString(), excludedJarFilePatterns))
             .forEach(
                 jar -> {
@@ -569,7 +631,7 @@ public class XtsTradefedTest extends BaseDriver
     }
   }
 
-  private Set<String> getLeadingJarsInClasspath(XtsTradefedTestDriverSpec spec) {
+  private static Set<String> getLeadingJarsInClasspath(XtsTradefedTestDriverSpec spec) {
     LinkedHashSet<String> leadingJarsSet = new LinkedHashSet<>();
     // Always put tradefed.jar at the beginning
     leadingJarsSet.add("tradefed.jar");
@@ -579,7 +641,7 @@ public class XtsTradefedTest extends BaseDriver
     return leadingJarsSet;
   }
 
-  private Path replacePathPrefix(Path path, Path currentPrefix, Path newPrefix) {
+  private static Path replacePathPrefix(Path path, Path currentPrefix, Path newPrefix) {
     return Path.of(path.toString().replaceFirst(currentPrefix.toString(), newPrefix.toString()));
   }
 
@@ -640,7 +702,7 @@ public class XtsTradefedTest extends BaseDriver
     return ImmutableMap.copyOf(environmentToTradefedConsole);
   }
 
-  private String getConcatenatedLdLibraryPath(Path tmpXtsRootDir, String xtsType) {
+  private static String getConcatenatedLdLibraryPath(Path tmpXtsRootDir, String xtsType) {
     Path xtsLibDir = XtsDirUtil.getXtsLibDir(tmpXtsRootDir, xtsType);
     return String.format("%s:%s64", xtsLibDir, xtsLibDir);
   }
@@ -695,7 +757,7 @@ public class XtsTradefedTest extends BaseDriver
         ImmutableList.<String>builder().add("run", "commandAndExit");
 
     String testPlan =
-        isRunRetryWithSubPlan(spec) ? spec.getPrevSessionXtsTestPlan() : getXtsTestPlan(spec);
+        isRunRetryWithSubPlan(spec) ? spec.getPrevSessionXtsTestPlan() : spec.getXtsTestPlan();
     ImmutableList.Builder<String> xtsCommandBuilder = ImmutableList.<String>builder().add(testPlan);
     if (isRunWithSubPlan(spec)) {
       xtsCommandBuilder.add(
@@ -724,11 +786,7 @@ public class XtsTradefedTest extends BaseDriver
     return xtsRunCommand.build();
   }
 
-  private String getXtsTestPlan(XtsTradefedTestDriverSpec spec) {
-    return spec.getXtsTestPlan();
-  }
-
-  private ImmutableList<String> getExtraRunCommandArgs(XtsTradefedTestDriverSpec spec) {
+  private static ImmutableList<String> getExtraRunCommandArgs(XtsTradefedTestDriverSpec spec) {
     if (spec.hasRunCommandArgs()) {
       try {
         return ShellUtils.tokenize(spec.getRunCommandArgs());
@@ -762,7 +820,7 @@ public class XtsTradefedTest extends BaseDriver
     try {
       Path dir =
           Path.of(
-              JAVA_IO_TMPDIR.value(),
+              requireNonNull(JAVA_IO_TMPDIR.value()),
               String.format("xts-root-dir-%s", UUID.randomUUID()),
               String.format("android-%s", xtsType));
       // We need to preparer /xts-root-dir/android-xts/testcases since we create symlink to all the
@@ -770,7 +828,7 @@ public class XtsTradefedTest extends BaseDriver
       localFileUtil.prepareDir(Path.of(dir.toString(), "testcases"));
       localFileUtil.grantFileOrDirFullAccess(dir.getParent());
       return dir.getParent();
-    } catch (MobileHarnessException e) {
+    } catch (MobileHarnessException | RuntimeException e) {
       throw new MobileHarnessException(
           AndroidErrorId.XTS_TRADEFED_CREATE_TEMP_DIR_ERROR, "Failed to create temp directory.", e);
     }
@@ -849,7 +907,7 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   @CanIgnoreReturnValue
-  private Path createSymlink(Path link, Path target) throws MobileHarnessException {
+  private static Path createSymlink(Path link, Path target) throws MobileHarnessException {
     try {
       // if the link already existed, we have to remove it before creating
       Files.deleteIfExists(link);
@@ -889,8 +947,8 @@ public class XtsTradefedTest extends BaseDriver
         "Finished integrating the test cases [%s] with the temp XTS workspace [%s].", target, link);
   }
 
-  private boolean isRunRetryWithSubPlan(XtsTradefedTestDriverSpec spec) {
-    return getXtsTestPlan(spec).equals("retry") && !spec.getSubplanXml().isEmpty();
+  private static boolean isRunRetryWithSubPlan(XtsTradefedTestDriverSpec spec) {
+    return spec.getXtsTestPlan().equals("retry") && !spec.getSubplanXml().isEmpty();
   }
 
   /**
@@ -901,7 +959,7 @@ public class XtsTradefedTest extends BaseDriver
    * running with a given subplan name, which may create a modified subplan xml file and pass it to
    * the driver.
    */
-  private boolean isRunWithSubPlan(XtsTradefedTestDriverSpec spec) {
+  private static boolean isRunWithSubPlan(XtsTradefedTestDriverSpec spec) {
     return !spec.getSubplanXml().isEmpty();
   }
 }
