@@ -74,7 +74,6 @@ import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefed
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -330,10 +329,87 @@ public class XtsTradefedTest extends BaseDriver
   private boolean runXtsCommand(
       TestInfo testInfo, XtsTradefedTestDriverSpec spec, Path tmpXtsRootDir, String xtsType)
       throws MobileHarnessException, InterruptedException {
+    ImmutableMap<String, String> env =
+        getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType, spec);
+    String[] cmd = getXtsCommand(spec, tmpXtsRootDir, xtsType, env);
+    // Logs command string for debug purpose
+    StringBuilder commandString =
+        new StringBuilder(Joiner.on(' ').withKeyValueSeparator("=").join(env));
+    if (commandString.length() > 0) {
+      commandString.append(' ');
+    }
+    Joiner.on(' ').appendTo(commandString, cmd);
+    logger.atInfo().log("Running %s command:%n%s", xtsType, commandString);
+
+    // Creates CommandOutputLogger.
+    String testId = testInfo.locator().getId();
+    String outputLoggerPrefix =
+        String.format("TF-%s ", testId.substring(0, min(4, testId.length())));
+    CommandOutputLogger commandOutputLogger =
+        new CommandOutputLogger(outputLoggerPrefix, outputLoggerPrefix);
+
+    // Gets session client ID if any.
+    @Nullable
+    String olcSessionClientId = spec.hasOlcSessionClientId() ? spec.getOlcSessionClientId() : null;
+
+    // Prepares TF output file.
+    Path tfOutputPath;
+    if (spec.hasXtsTfOutputPath()) {
+      localFileUtil.prepareParentDir(spec.getXtsTfOutputPath());
+      tfOutputPath = Path.of(spec.getXtsTfOutputPath());
+    } else {
+      tfOutputPath = Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG);
+    }
+
     CommandProcess xtsProcess = null;
-    try {
-      xtsProcess = runCommand(testInfo, spec, tmpXtsRootDir, xtsType);
+    try (BufferedWriter writer = Files.newBufferedWriter(tfOutputPath)) {
+      xtsProcess =
+          cmdExecutor.start(
+              Command.of(cmd)
+                  .extraEnv(env)
+                  .onStdout(
+                      LineCallback.does(
+                          line -> {
+                            // Writes to LogManager.
+                            LogRecord.Builder logRecord =
+                                LogRecord.newBuilder()
+                                    .setFormattedLogRecord(line + "\n")
+                                    .setSourceType(SourceType.TF);
+                            if (olcSessionClientId != null) {
+                              logRecord.setClientId(olcSessionClientId);
+                            }
+                            logRecorder.addLogRecord(logRecord.build());
+
+                            // Writes to CommandOutputLogger.
+                            commandOutputLogger.logStdoutLine(line);
+
+                            // Writes to file.
+                            try {
+                              writer.write(line + "\n");
+                            } catch (IOException e) {
+                              throw new LineCallbackException(
+                                  "Failed to write",
+                                  e,
+                                  /* killCommand= */ false,
+                                  /* stopReadingOutput= */ true);
+                            }
+                          }))
+                  .redirectStderr(true)
+                  .needStdoutInResult(false)
+                  .needStderrInResult(false)
+                  .timeout(getXtsTimeout(testInfo)));
+
       return xtsProcess.await().exitCode() == 0;
+    } catch (CommandStartException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.XTS_TRADEFED_START_COMMAND_ERROR,
+          "Failed to start the xTS command: " + commandString,
+          e);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.XTS_TRADEFED_COMMAND_OUTPUT_FILE_ERROR,
+          "Failed to operate TF output file " + tfOutputPath,
+          e);
     } catch (CommandFailureException e) {
       testInfo
           .resultWithCause()
@@ -359,113 +435,12 @@ public class XtsTradefedTest extends BaseDriver
                   /* clearStackTrace= */ true));
       return false;
     } catch (InterruptedException e) {
-      testInfo.log().atWarning().alsoTo(logger).withCause(e).log("xTS Tradefed was interrupted.");
+      testInfo.log().atWarning().alsoTo(logger).log("xTS Tradefed was interrupted.");
       throw e;
     } finally {
       if (xtsProcess != null && xtsProcess.isAlive()) {
         xtsProcess.killWithSignal(/* signal= */ 2);
       }
-    }
-  }
-
-  private CommandProcess runCommand(
-      TestInfo testInfo, XtsTradefedTestDriverSpec spec, Path tmpXtsRootDir, String xtsType)
-      throws MobileHarnessException, InterruptedException {
-    ImmutableMap<String, String> env =
-        getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType, spec);
-    String[] cmd = getXtsCommand(spec, tmpXtsRootDir, xtsType, env);
-    // Logs command string for debug purpose
-    StringBuilder cmdString =
-        new StringBuilder(Joiner.on(' ').withKeyValueSeparator("=").join(env));
-    if (cmdString.length() > 0) {
-      cmdString.append(' ');
-    }
-    Joiner.on(' ').appendTo(cmdString, cmd);
-    logger.atInfo().log("Running %s command:%n%s", xtsType, cmdString);
-
-    // Creates CommandOutputLogger.
-    String testId = testInfo.locator().getId();
-    String outputLoggerPrefix =
-        String.format("TF-%s ", testId.substring(0, min(4, testId.length())));
-    CommandOutputLogger commandOutputLogger =
-        new CommandOutputLogger(outputLoggerPrefix, outputLoggerPrefix);
-
-    // Gets session client ID if any.
-    @Nullable
-    String olcSessionClientId = spec.hasOlcSessionClientId() ? spec.getOlcSessionClientId() : null;
-
-    // Prepares TF output file.
-    Path tfOutputPath;
-    if (spec.hasXtsTfOutputPath()) {
-      localFileUtil.prepareParentDir(spec.getXtsTfOutputPath());
-      tfOutputPath = Path.of(spec.getXtsTfOutputPath());
-    } else {
-      tfOutputPath = Path.of(testInfo.getGenFileDir()).resolve(XTS_TF_LOG);
-    }
-    // The writer will be closed after the command exits.
-    BufferedWriter writer;
-    try {
-      writer = Files.newBufferedWriter(tfOutputPath);
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          AndroidErrorId.XTS_TRADEFED_CREATE_COMMAND_OUTPUT_FILE_ERROR,
-          "Failed to create TF output file " + tfOutputPath,
-          e);
-    }
-
-    try {
-      return cmdExecutor.start(
-          Command.of(cmd)
-              .extraEnv(env)
-              .onStdout(
-                  LineCallback.does(
-                      line -> {
-                        // Writes to LogManager.
-                        LogRecord.Builder logRecord =
-                            LogRecord.newBuilder()
-                                .setFormattedLogRecord(line + "\n")
-                                .setSourceType(SourceType.TF);
-                        if (olcSessionClientId != null) {
-                          logRecord.setClientId(olcSessionClientId);
-                        }
-                        logRecorder.addLogRecord(logRecord.build());
-
-                        // Writes to CommandOutputLogger.
-                        commandOutputLogger.logStdoutLine(line);
-
-                        // Writes to file.
-                        try {
-                          writer.write(line + "\n");
-                        } catch (IOException e) {
-                          throw new LineCallbackException(
-                              "Failed to write",
-                              e,
-                              /* killCommand= */ false,
-                              /* stopReadingOutput= */ true);
-                        }
-                      }))
-              .onExit(
-                  unused -> {
-                    try {
-                      writer.close();
-                    } catch (IOException e) {
-                      throw new UncheckedIOException(e);
-                    }
-                  })
-              .redirectStderr(true)
-              .needStdoutInResult(false)
-              .needStderrInResult(false)
-              .timeout(getXtsTimeout(testInfo)));
-    } catch (CommandStartException e) {
-      try {
-        writer.close();
-      } catch (IOException e1) {
-        throw new UncheckedIOException(e1);
-      }
-      throw new MobileHarnessException(
-          AndroidErrorId.XTS_TRADEFED_START_COMMAND_ERROR,
-          "Failed to start the xTS command: " + cmdString,
-          e);
     }
   }
 
