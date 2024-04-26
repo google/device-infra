@@ -1,0 +1,22 @@
+TEXT:
+============================================
+================= Results ==================
+=============== Consumed Time ==============
+    armeabi-v7a CtsAbiOverrideHostTestCases: 3s
+    arm64-v8a CtsAbiOverrideHostTestCases[instant]: 2s
+    arm64-v8a CtsAbiOverrideHostTestCases: 2s
+Total aggregated tests run time: 9s
+============== Modules Preparation Times ==============
+    arm64-v8a CtsAbiOverrideHostTestCases => prep = 1425 ms || clean = 613 ms
+    armeabi-v7a CtsAbiOverrideHostTestCases => prep = 1407 ms || clean = 733 ms
+    arm64-v8a CtsAbiOverrideHostTestCases[instant] => prep = 610 ms || clean = 745 ms
+Total preparation time: 3s  ||  Total tear down time: 2s
+=======================================================
+=============== Summary ===============
+Total Run time: 1m 5s
+3/3 modules completed
+Total Tests       : 3
+PASSED            : 3
+FAILED            : 0
+============== End of Results ==============
+============================================

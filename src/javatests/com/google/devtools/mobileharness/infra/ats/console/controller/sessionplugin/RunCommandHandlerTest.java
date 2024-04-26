@@ -196,13 +196,10 @@ public final class RunCommandHandlerTest {
         realLocalFileUtil.listFilePaths(
             xtsRootDir
                 .toPath()
-                .resolve(
-                    String.format(
-                        "android-cts/results/%s/tradefed_results/XtsTradefedTest_test_1",
-                        TIMESTAMP_DIR_NAME)),
-            /* recursively= */ true);
+                .resolve(String.format("android-cts/results/%s", TIMESTAMP_DIR_NAME)),
+            /* recursively= */ false);
     assertThat(newFilesInTradefedResultsDir.stream().map(f -> f.getFileName().toString()))
-        .containsExactly("test_result.xml");
+        .contains("invocation_summary.txt");
 
     List<Path> newFilesInTradefedLogsDir =
         realLocalFileUtil.listFilePaths(
