@@ -1197,7 +1197,9 @@ public abstract class AndroidRealDeviceDelegate {
       throws MobileHarnessException, InterruptedException;
 
   /** Reboots the Android real device. */
-  public void reboot() throws MobileHarnessException, InterruptedException {
+  public void reboot()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     // Only invokes the reboot command when the device is detected, otherwise will fail.
     if (androidAdbInternalUtil.getRealDeviceSerials(/* online= */ true).contains(deviceId)
         || androidAdbInternalUtil

@@ -50,7 +50,6 @@ import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactor
 import com.google.wireless.qa.mobileharness.shared.api.validator.env.EnvValidator;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.CommunicationTypeValue;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Communication;
 import com.google.wireless.qa.mobileharness.shared.proto.CommunicationList;
@@ -351,9 +350,12 @@ public abstract class BaseDevice implements Device {
   }
 
   @Override
-  public void reboot() throws MobileHarnessException, InterruptedException {
+  public void reboot()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     if (!canReboot()) {
-      throw new MobileHarnessException(ErrorCode.DEVICE_NOT_SUPPORTED, "Can not be rebooted");
+      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+          InfraErrorId.LAB_REBOOT_METHOD_UNSUPPORTED, "Unsupported reboot");
     }
   }
 

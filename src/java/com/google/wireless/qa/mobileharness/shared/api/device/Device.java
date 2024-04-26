@@ -421,11 +421,14 @@ public interface Device {
    *       run on the device.
    * </ul>
    *
-   * @throws MobileHarnessException if fails to restart the device
+   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
+   *     restart the device
    * @throws InterruptedException if the current thread or its sub-thread is {@linkplain
    *     Thread#interrupt() interrupted} by another thread
    */
-  void reboot() throws MobileHarnessException, InterruptedException;
+  void reboot()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException;
 
   /**
    * Takes screen shot on device and uploads it to host machine.

@@ -103,7 +103,9 @@ public class AndroidRealDevice extends AndroidDevice {
   }
 
   @Override
-  public void reboot() throws MobileHarnessException, InterruptedException {
+  public void reboot()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     if (canReboot()) {
       delegate.reboot();
     } else {

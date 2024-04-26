@@ -123,7 +123,9 @@ public class AndroidLocalEmulator extends AndroidDevice {
   }
 
   @Override
-  public void reboot() throws MobileHarnessException, InterruptedException {
+  public void reboot()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     if (canReboot()) {
       String deviceId = getDeviceId();
       // Only invokes the reboot command when the device is detected, otherwise will fail.
