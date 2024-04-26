@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestIn
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.EmptyDevice;
+import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospPackageTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
@@ -86,13 +87,13 @@ public final class MoblyAospPackageTestTest {
   @Test
   public void generateTestCommand_verifySetupUtilArgs() throws Exception {
     when(testInfo.getTmpFileDir()).thenReturn("/tmp");
-    when(files.getSingle(MoblyAospPackageTest.FILE_MOBLY_PKG)).thenReturn("sample_test.zip");
+    when(files.getSingle(MoblyAospPackageTestSpec.FILE_MOBLY_PKG)).thenReturn("sample_test.zip");
     when(jobInfo.files()).thenReturn(files);
     params = new Params(null);
-    params.add(MoblyAospPackageTest.PARAM_TEST_PATH, "sample_test.py");
+    params.add(MoblyAospPackageTestSpec.PARAM_TEST_PATH, "sample_test.py");
     params.add(MoblyGenericTest.TEST_SELECTOR_KEY, "test1 test2");
-    params.add(MoblyAospPackageTest.PARAM_PYTHON_VERSION, "3.10");
-    params.add(MoblyAospPackageTest.PARAM_PY_PKG_INDEX_URL, PY_PKG_INDEX_URL);
+    params.add(MoblyAospPackageTestSpec.PARAM_PYTHON_VERSION, "3.10");
+    params.add(MoblyAospPackageTestSpec.PARAM_PY_PKG_INDEX_URL, PY_PKG_INDEX_URL);
     when(jobInfo.params()).thenReturn(params);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(configFile.getPath()).thenReturn("config.yaml");

@@ -90,18 +90,3 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
-
-################################################################################
-# Validator libraries in alphabetical order
-################################################################################
-
-java_library(
-    name = "mobly_aosp_package_test_validator",
-    srcs = ["MoblyAospPackageTestValidator.java"],
-    deps = [
-        ":base_validator",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:mobly_aosp_package_test",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-    ],
-)

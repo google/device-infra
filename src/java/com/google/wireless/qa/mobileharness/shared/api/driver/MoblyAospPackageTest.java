@@ -25,9 +25,8 @@ import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestIn
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospPackageTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.File;
 import java.nio.file.Path;
@@ -41,31 +40,6 @@ import org.json.JSONObject;
 @DriverAnnotation(
     help = "For running Mobly tests packaged in AOSP and distributed via the Android Build.")
 public class MoblyAospPackageTest extends MoblyGenericTest {
-
-  // Driver-specific files and params
-
-  @FileAnnotation(
-      required = true,
-      help =
-          "The package containing your Mobly testcases and data files. It can be generated via "
-              + "a `python_test_host` rule in your test project's `Android.bp` file.")
-  public static final String FILE_MOBLY_PKG = "mobly_pkg";
-
-  @ParamAnnotation(
-      required = false,
-      help = "Relative path of Mobly test/suite within the test package.")
-  public static final String PARAM_TEST_PATH = "test_path";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "Specifies version of python you wish to use for your test. Note that only 3.4+ is"
-              + " supported. The expected format is ^(python)?3(\\.[4-9])?$. Note that the version"
-              + " supplied here must match the executable name.")
-  public static final String PARAM_PYTHON_VERSION = "python_version";
-
-  @ParamAnnotation(required = false, help = "Base URL of Python Package Index.")
-  public static final String PARAM_PY_PKG_INDEX_URL = "python_pkg_index_url";
 
   private static final String MOBLY_CONFIG_KEY_PREFIX_MH = "mh_";
 
@@ -137,20 +111,30 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
   @VisibleForTesting
   String[] generateTestCommand(TestInfo testInfo, File configFile)
       throws MobileHarnessException, InterruptedException {
-    Path moblyPkg = Path.of(testInfo.jobInfo().files().getSingle(FILE_MOBLY_PKG));
+    Path moblyPkg =
+        Path.of(testInfo.jobInfo().files().getSingle(MoblyAospPackageTestSpec.FILE_MOBLY_PKG));
     Path moblyUnzipDir = Path.of(testInfo.getTmpFileDir(), "mobly");
     Path venvPath = Path.of(testInfo.getTmpFileDir(), "venv");
     Path configPath = Path.of(configFile.getPath());
-    String testPath = testInfo.jobInfo().params().get(PARAM_TEST_PATH);
+    String testPath = testInfo.jobInfo().params().get(MoblyAospPackageTestSpec.PARAM_TEST_PATH);
     String testCaseSelector = testInfo.jobInfo().params().get(TEST_SELECTOR_KEY);
-    String pythonVersion = testInfo.jobInfo().params().get(PARAM_PYTHON_VERSION);
+    String pythonVersion =
+        testInfo.jobInfo().params().get(MoblyAospPackageTestSpec.PARAM_PYTHON_VERSION);
 
     InstallMoblyTestDepsArgs.Builder installMoblyTestDepsArgsBuilder =
         InstallMoblyTestDepsArgs.builder().setDefaultTimeout(Duration.ofMinutes(30));
 
-    if (testInfo.jobInfo().params().getOptional(PARAM_PY_PKG_INDEX_URL).isPresent()) {
+    if (testInfo
+        .jobInfo()
+        .params()
+        .getOptional(MoblyAospPackageTestSpec.PARAM_PY_PKG_INDEX_URL)
+        .isPresent()) {
       installMoblyTestDepsArgsBuilder.setIndexUrl(
-          testInfo.jobInfo().params().getOptional(PARAM_PY_PKG_INDEX_URL).get());
+          testInfo
+              .jobInfo()
+              .params()
+              .getOptional(MoblyAospPackageTestSpec.PARAM_PY_PKG_INDEX_URL)
+              .get());
     }
 
     return setupUtil.setupEnvAndGenerateTestCommand(

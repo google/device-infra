@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-package com.google.wireless.qa.mobileharness.shared.api.validator;
+package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.driver.MoblyAospPackageTest;
+import com.google.wireless.qa.mobileharness.shared.api.spec.MoblyAospPackageTestSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Validator for the {@link MoblyAospPackageTest} driver. */
-public class MoblyAospPackageTestValidator extends BaseValidator {
+/** Job validator for the {@link MoblyAospPackageTest} driver. */
+public class MoblyAospPackageTestJobValidator implements JobValidator {
 
   @Override
-  public List<String> validateJob(JobInfo job) {
+  public List<String> validate(JobInfo job) {
     List<String> errors = new ArrayList<>();
     // Ensure that only one test package is specified in the job info.
     try {
-      job.files().checkUnique(MoblyAospPackageTest.FILE_MOBLY_PKG);
+      job.files().checkUnique(MoblyAospPackageTestSpec.FILE_MOBLY_PKG);
     } catch (MobileHarnessException e) {
       errors.add(e.getMessage());
     }
