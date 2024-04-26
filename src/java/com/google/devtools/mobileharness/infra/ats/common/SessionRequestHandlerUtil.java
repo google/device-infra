@@ -23,7 +23,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.primitives.Ints.saturatedCast;
 import static com.google.protobuf.TextFormat.shortDebugString;
-import static com.google.wireless.qa.mobileharness.shared.api.driver.MoblyGenericTest.TEST_SELECTOR_KEY;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -978,7 +977,7 @@ public class SessionRequestHandlerUtil {
       jobInfo.properties().add(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP, moduleParameter);
     }
     if (!matchedTestCases.isEmpty()) {
-      jobInfo.params().add(TEST_SELECTOR_KEY, Joiner.on(" ").join(matchedTestCases));
+      jobInfo.params().add("test_case_selector", Joiner.on(" ").join(matchedTestCases));
     }
     jobInfo.params().add("run_certification_test_suite", "true");
     jobInfo

@@ -13,22 +13,18 @@
 # limitations under the License.
 #
 
-# Description:
-#   Client-side specific events.
-
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = ["//visibility:public"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
 )
 
 java_library(
-    name = "job",
-    srcs = glob(["Job*.java"]),
+    name = "android_user_type",
+    srcs = ["AndroidUserType.java"],
     deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:base",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
     ],
 )

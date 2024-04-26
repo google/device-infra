@@ -52,6 +52,18 @@ java_library(
     visibility = [
         "//java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
+    ],
+    deps = [
+        ":manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/poster",
+    ],
+)
+
+java_library(
+    name = "lab_test_message_poster_util",
+    srcs = ["LabTestMessagePosterUtil.java"],
+    visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
     ],
     deps = [

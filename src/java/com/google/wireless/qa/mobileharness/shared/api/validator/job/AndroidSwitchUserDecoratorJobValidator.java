@@ -19,15 +19,14 @@ package com.google.wireless.qa.mobileharness.shared.api.validator.job;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserState;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidSwitchUserDecorator;
-import com.google.wireless.qa.mobileharness.shared.api.decorator.AndroidSwitchUserDecorator.UserType;
+import com.google.wireless.qa.mobileharness.shared.api.validator.job.android.AndroidUserType;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.AndroidSwitchUserDecoratorSpec;
 import java.util.List;
 import javax.annotation.Nullable;
 
-/** Job validator for {@link AndroidSwitchUserDecorator} */
+/** Job validator for {@code AndroidSwitchUserDecorator} */
 public class AndroidSwitchUserDecoratorJobValidator
     implements JobValidator, SpecConfigable<AndroidSwitchUserDecoratorSpec> {
 
@@ -53,7 +52,7 @@ public class AndroidSwitchUserDecoratorJobValidator
         errors.add(error);
       }
 
-      error = validateWaitStateparam(spec);
+      error = validateWaitStateParam(spec);
       if (error != null) {
         errors.add(error);
       }
@@ -67,7 +66,7 @@ public class AndroidSwitchUserDecoratorJobValidator
     String switchUserParam = spec.getSwitchUser();
 
     try {
-      UserType unused = UserType.fromParam(switchUserParam);
+      AndroidUserType unused = AndroidUserType.fromParam(switchUserParam);
       return null;
     } catch (IllegalArgumentException e) {
       return String.format(
@@ -80,9 +79,9 @@ public class AndroidSwitchUserDecoratorJobValidator
   }
 
   @Nullable
-  private static String validateWaitStateparam(AndroidSwitchUserDecoratorSpec spec) {
+  private static String validateWaitStateParam(AndroidSwitchUserDecoratorSpec spec) {
     String waitStateParam = spec.getSwitchUserWaitState();
-    AndroidUserState state = AndroidSwitchUserDecorator.convertWaitState(waitStateParam);
+    AndroidUserState state = AndroidUserState.convertWaitState(waitStateParam);
     if (state == AndroidUserState.STATE_UNKNOWN) {
       return String.format(
           "Unknown %s: %s",

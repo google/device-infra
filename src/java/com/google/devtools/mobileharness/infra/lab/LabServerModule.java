@@ -30,9 +30,9 @@ import com.google.devtools.mobileharness.infra.controller.device.bootstrap.Detec
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorsAndDispatchers;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
+import com.google.devtools.mobileharness.infra.controller.test.manager.LabTestMessagePosterUtil;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.TestManager;
-import com.google.devtools.mobileharness.infra.controller.test.manager.TestMessagePosterUtil;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
 import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcDnsAddress;
 import com.google.devtools.mobileharness.infra.lab.Annotations.CloudRpcShardName;
@@ -201,7 +201,7 @@ public class LabServerModule extends AbstractModule {
     // requires testManager to be injected, hence it's initialization when ExecTestServiceImpl
     // object is provided.
     TestMessageManager.createInstance(
-        testId -> TestMessagePosterUtil.getPosterFromProxyTestManager(testManager, testId));
+        testId -> LabTestMessagePosterUtil.getPosterFromProxyTestManager(testManager, testId));
     return factory.create(mainThreadPool);
   }
 }

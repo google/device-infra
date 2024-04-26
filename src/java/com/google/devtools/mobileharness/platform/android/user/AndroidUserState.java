@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.user;
 
+import com.google.common.base.Ascii;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,7 +49,7 @@ public enum AndroidUserState {
     }
   }
 
-  private AndroidUserState(String userState) {
+  AndroidUserState(String userState) {
     this.userState = userState;
   }
 
@@ -59,5 +60,10 @@ public enum AndroidUserState {
   public static AndroidUserState enumOf(String userStateStr) {
     AndroidUserState result = strToEnum.get(userStateStr);
     return result == null ? AndroidUserState.STATE_UNKNOWN : result;
+  }
+
+  /** Convert the param string to AndroidUserState. */
+  public static AndroidUserState convertWaitState(String waitStateParam) {
+    return enumOf(Ascii.toUpperCase(waitStateParam));
   }
 }

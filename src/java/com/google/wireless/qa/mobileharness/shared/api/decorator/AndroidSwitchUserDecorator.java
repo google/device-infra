@@ -32,9 +32,9 @@ import com.google.devtools.mobileharness.platform.android.user.AndroidUserInfo;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserState;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
-import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DecoratorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
+import com.google.wireless.qa.mobileharness.shared.api.validator.job.android.AndroidUserType;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
@@ -77,7 +77,7 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
   private final Sleeper sleeper;
 
   @VisibleForTesting State state = null;
-  private UserType userType = null;
+  private AndroidUserType userType = null;
   private AndroidUserState waitState = null;
 
   @Inject
@@ -126,8 +126,8 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
       throws MobileHarnessException, InterruptedException {
     Clock clock = Clock.systemUTC();
     Instant startTime = clock.instant();
-    userType = UserType.fromParam(spec.getSwitchUser());
-    waitState = convertWaitState(spec.getSwitchUserWaitState());
+    userType = AndroidUserType.fromParam(spec.getSwitchUser());
+    waitState = AndroidUserState.convertWaitState(spec.getSwitchUserWaitState());
 
     testInfo
         .log()
@@ -299,29 +299,6 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
     deviceDaemonHelper.installAndStartDaemon(getDevice(), testInfo.log());
   }
 
-  /** Parameters that specify which user to operate on. */
-  public enum UserType {
-    /** current foreground user of the device */
-    CURRENT,
-    /** user flagged as primary on the device; most often primary = system user = user 0 */
-    PRIMARY,
-    /** system user = user 0 */
-    SYSTEM,
-    /** secondary user, i.e. non-primary and non-system. */
-    SECONDARY,
-    /** guest user */
-    GUEST;
-
-    @CheckReturnValue
-    public static UserType fromParam(String value) {
-      return UserType.valueOf(Ascii.toUpperCase(value));
-    }
-
-    boolean isGuest() {
-      return this == GUEST;
-    }
-  }
-
   /**
    * Holds the current device/user state as well as the intended userType.
    *
@@ -334,7 +311,7 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
 
     private final AndroidUserUtil userUtil;
     public final String deviceId;
-    public final UserType userType;
+    public final AndroidUserType userType;
     public final int sdkVersion;
     private static final int FLAGS_NOT_SECONDARY =
         AndroidUserInfo.FLAG_PRIMARY
@@ -342,7 +319,7 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
             | AndroidUserInfo.FLAG_RESTRICTED
             | AndroidUserInfo.FLAG_MANAGED_PROFILE;
 
-    State(AndroidUserUtil userUtil, String deviceId, int sdkVersion, UserType userType)
+    State(AndroidUserUtil userUtil, String deviceId, int sdkVersion, AndroidUserType userType)
         throws MobileHarnessException, InterruptedException {
       this.userUtil = userUtil;
       this.deviceId = deviceId;
@@ -399,11 +376,6 @@ public class AndroidSwitchUserDecorator extends BaseDecorator
           AndroidErrorId.ANDROID_SWITCH_USER_DECORATOR_VARIANT_MISSING,
           "Variant not covered: " + userType);
     }
-  }
-
-  /** Convert the param string to AndroidUserState. */
-  public static AndroidUserState convertWaitState(String waitStateParam) {
-    return AndroidUserState.enumOf(Ascii.toUpperCase(waitStateParam));
   }
 
   private int createTestUser(
