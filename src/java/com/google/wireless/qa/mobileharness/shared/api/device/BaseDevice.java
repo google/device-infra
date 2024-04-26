@@ -360,7 +360,9 @@ public abstract class BaseDevice implements Device {
   }
 
   @Override
-  public void tearDown() throws MobileHarnessException, InterruptedException {
+  public void tearDown()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     // Do nothing.
   }
 

@@ -85,7 +85,9 @@ public abstract class AndroidDevice extends BaseDevice {
    * saved in device properties by drivers. Not thread safe.
    */
   @Override
-  public void tearDown() throws MobileHarnessException, InterruptedException {}
+  public void tearDown()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {}
 
   /** Returns the ABI of this device. */
   @Nullable

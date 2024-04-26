@@ -395,11 +395,14 @@ public interface Device {
    * Cleans up when the device becomes undetectable/disconnected. Should have no effect if this
    * method is invoked for the second time.
    *
-   * @throws MobileHarnessException if fails to clean up
+   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
+   *     clean up
    * @throws InterruptedException if the current thread or its sub-thread is {@linkplain
    *     Thread#interrupt() interrupted} by another thread
    */
-  void tearDown() throws MobileHarnessException, InterruptedException;
+  void tearDown()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException;
 
   /**
    * Returns whether the device can be rebooted. If false, it is useless to implement {@link
