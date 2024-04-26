@@ -44,6 +44,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",
     ],
     deps = [
+        "//java/com/google/devtools/mobileharness/shared/util/file/remote:google",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
