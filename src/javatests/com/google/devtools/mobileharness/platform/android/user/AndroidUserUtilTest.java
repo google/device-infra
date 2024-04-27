@@ -373,8 +373,8 @@ public final class AndroidUserUtilTest {
     long nowMs = 1;
     when(clock.instant())
         .thenReturn(Instant.ofEpochMilli(nowMs))
-        .thenReturn(Instant.ofEpochMilli(nowMs + Duration.ofSeconds(1).toMillis()))
-        .thenReturn(Instant.ofEpochMilli(nowMs + Duration.ofMinutes(2).toMillis()));
+        .thenReturn(Instant.ofEpochMilli(nowMs).plus(Duration.ofSeconds(1)))
+        .thenReturn(Instant.ofEpochMilli(nowMs).plus(Duration.ofMinutes(2)));
 
     assertThat(
             assertThrows(
@@ -408,8 +408,8 @@ public final class AndroidUserUtilTest {
     long nowMs = 1;
     when(clock.instant())
         .thenReturn(Instant.ofEpochMilli(nowMs))
-        .thenReturn(Instant.ofEpochMilli(nowMs + Duration.ofSeconds(1).toMillis()))
-        .thenReturn(Instant.ofEpochMilli(nowMs + Duration.ofMinutes(2).toMillis()));
+        .thenReturn(Instant.ofEpochMilli(nowMs).plus(Duration.ofSeconds(1)))
+        .thenReturn(Instant.ofEpochMilli(nowMs).plus(Duration.ofMinutes(2)));
 
     assertThat(
             assertThrows(
@@ -448,7 +448,7 @@ public final class AndroidUserUtilTest {
     when(clock.instant())
         .thenReturn(
             Instant.ofEpochMilli(nowMs),
-            Instant.ofEpochMilli(nowMs + AndroidUserUtil.CHECK_USER_READY_INTERVAL.toMillis()),
+            Instant.ofEpochMilli(nowMs).plus(AndroidUserUtil.CHECK_USER_READY_INTERVAL),
             Instant.ofEpochMilli(nowMs + 2 * AndroidUserUtil.CHECK_USER_READY_INTERVAL.toMillis()));
     when(adbUtil.dumpSys(SERIAL, DumpSysType.ACTIVITY))
         .thenReturn(dumpsysActivityOutputMultiUserBooting)
@@ -470,7 +470,7 @@ public final class AndroidUserUtilTest {
     when(clock.instant())
         .thenReturn(
             Instant.ofEpochMilli(nowMs),
-            Instant.ofEpochMilli(nowMs + AndroidUserUtil.CHECK_USER_READY_TIMEOUT.toMillis()));
+            Instant.ofEpochMilli(nowMs).plus(AndroidUserUtil.CHECK_USER_READY_TIMEOUT));
     when(adbUtil.dumpSys(SERIAL, DumpSysType.ACTIVITY))
         .thenReturn(dumpsysActivityOutputMultiUserBooting)
         .thenReturn(dumpsysActivityOutputMultiUserUnlocking);

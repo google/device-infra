@@ -204,7 +204,7 @@ public class AndroidSystemSettingUtilTest {
     when(clock.instant())
         .thenReturn(
             Instant.ofEpochMilli(nowMs),
-            Instant.ofEpochMilli(nowMs + AndroidSystemSettingUtil.CHECK_READY_TIMEOUT.toMillis()));
+            Instant.ofEpochMilli(nowMs).plus(AndroidSystemSettingUtil.CHECK_READY_TIMEOUT));
     when(adbUtil.settings(any(UtilArgs.class), any(AndroidSettings.Spec.class))).thenReturn("0");
     when(adb.runShell(DEVICE_ID, AndroidSystemSettingUtil.ADB_SHELL_DISABLE_SETUP_WIZARD))
         .thenReturn("");
@@ -218,7 +218,7 @@ public class AndroidSystemSettingUtilTest {
     when(clock.instant())
         .thenReturn(
             Instant.ofEpochMilli(nowMs),
-            Instant.ofEpochMilli(nowMs + AndroidSystemSettingUtil.CHECK_READY_TIMEOUT.toMillis()));
+            Instant.ofEpochMilli(nowMs).plus(AndroidSystemSettingUtil.CHECK_READY_TIMEOUT));
     when(adbUtil.settings(any(UtilArgs.class), any(AndroidSettings.Spec.class))).thenReturn("0");
     when(adb.runShell(DEVICE_ID, AndroidSystemSettingUtil.ADB_SHELL_DISABLE_SETUP_WIZARD))
         .thenReturn("Error");
