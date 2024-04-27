@@ -1063,8 +1063,10 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Operations after a test and before resetting/reloading the driver. */
   @CanIgnoreReturnValue
-  public PostTestDeviceOp postRunTest(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  public PostTestDeviceOp postRunTest(
+      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     // Removes the device cache after tests finish, otherwise device status may be wrong. b/32101092
     DeviceCache.getInstance().invalidateCache(device.info().deviceId().controlId());
 
@@ -1130,9 +1132,9 @@ public abstract class AndroidRealDeviceDelegate {
           return PostTestDeviceOp.REBOOT;
         }
         // Reboot the device if the test fails to assign a valid uid when installing apks.
-        if (testInfo.toNewTestInfo().resultWithCause().get().causeProto().isPresent()) {
+        if (testInfo.resultWithCause().get().causeProto().isPresent()) {
           ExceptionProto.ExceptionDetail exceptionDetail =
-              testInfo.toNewTestInfo().resultWithCause().get().causeProto().get();
+              testInfo.resultWithCause().get().causeProto().get();
           while (true) {
             if (ErrorIdComparator.equal(
                 exceptionDetail.getSummary().getErrorId(),
@@ -1150,13 +1152,12 @@ public abstract class AndroidRealDeviceDelegate {
         if (DeviceDaemonApkInfoProvider.isDeviceDaemonEnabled()) {
           deviceDaemonHelper.installAndStartDaemon(
               device,
-              testInfo.toNewTestInfo().log(),
+              testInfo.log(),
               device.getProperty(AndroidRealDeviceConstants.PROP_LABELS),
               device.getProperty(AndroidRealDeviceConstants.PROP_HOSTNAME),
               device.getProperty(AndroidRealDeviceConstants.PROP_OWNERS));
-          if (testInfo.getJobInfo().isParamTrue(AndroidRealDeviceSpec.PARAM_KILL_DAEMON_ON_TEST)) {
+          if (testInfo.jobInfo().params().isTrue(AndroidRealDeviceSpec.PARAM_KILL_DAEMON_ON_TEST)) {
             testInfo
-                .toNewTestInfo()
                 .log()
                 .atInfo()
                 .alsoTo(logger)
@@ -1177,8 +1178,7 @@ public abstract class AndroidRealDeviceDelegate {
 
     // Reboot the device if it just finished AndroidTradefedTest execution which will always flash
     // device.
-    if (Ascii.equalsIgnoreCase(
-        testInfo.getJobInfo().getType().getDriver(), "AndroidTradefedTest")) {
+    if (Ascii.equalsIgnoreCase(testInfo.jobInfo().type().getDriver(), "AndroidTradefedTest")) {
       logger.atInfo().log("Reboot device %s after AndroidTradefedTest been executed.", deviceId);
       return PostTestDeviceOp.REBOOT;
     }
@@ -1189,12 +1189,14 @@ public abstract class AndroidRealDeviceDelegate {
   /**
    * Customized operations in the device after test step which is executed before the default one.
    */
-  protected abstract void prependedRealDeviceAfterTestProcess(TestInfo testInfo)
+  protected abstract void prependedRealDeviceAfterTestProcess(
+      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
       throws InterruptedException;
 
   /** Returns {@code true} if skip the default operations after the test. */
   protected abstract boolean skipRealDeviceDefaultAfterTestProcess()
-      throws MobileHarnessException, InterruptedException;
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException;
 
   /** Reboots the Android real device. */
   public void reboot()
@@ -1302,7 +1304,9 @@ public abstract class AndroidRealDeviceDelegate {
    * are rooted. There seems no method to check root on a device with release keys which is more
    * reliable than the "adb root" command.
    */
-  private boolean isRootable(String deviceId) throws MobileHarnessException, InterruptedException {
+  private boolean isRootable(String deviceId)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     String signKeys = androidAdbUtil.getProperty(deviceId, AndroidProperty.SIGN);
     if (!Ascii.equalsIgnoreCase(signKeys, "release-keys")) {
       return true;
@@ -1327,7 +1331,9 @@ public abstract class AndroidRealDeviceDelegate {
    * device setup process, because it's likely the implementation of this method will issue some adb
    * commands to the device.
    */
-  public boolean isRooted() throws MobileHarnessException, InterruptedException {
+  public boolean isRooted()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     if (!device.hasProperty(AndroidRealDeviceConstants.PROPERTY_NAME_ROOTED)) {
       synchronized (checkRootLock) {
         if (!device.hasProperty(AndroidRealDeviceConstants.PROPERTY_NAME_ROOTED)) {
@@ -2319,7 +2325,8 @@ public abstract class AndroidRealDeviceDelegate {
   protected abstract boolean notAllowSafeDischarge();
 
   private boolean isQOrAboveBuild(String serial)
-      throws MobileHarnessException, InterruptedException {
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     return systemSettingUtil.getDeviceSdkVersion(serial) > 28
         || Ascii.equalsIgnoreCase(systemSettingUtil.getDeviceVersionCodeName(serial), "Q");
   }
@@ -2356,7 +2363,9 @@ public abstract class AndroidRealDeviceDelegate {
     }
   }
 
-  private boolean becomeRoot() throws MobileHarnessException, InterruptedException {
+  private boolean becomeRoot()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     boolean rooted = systemStateManager.becomeRoot(device);
     if (needExtraForceRootDevice()) {
       // NOT caching device intentionally as this second rooting should finish very fast when the

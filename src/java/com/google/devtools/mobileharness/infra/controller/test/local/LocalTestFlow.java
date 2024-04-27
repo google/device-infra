@@ -570,16 +570,14 @@ public class LocalTestFlow {
           .atInfo()
           .alsoTo(logger)
           .log("Post-run test of device [%s]", device.getDeviceId());
-      PostTestDeviceOp result =
-          device.postRunTest(
-              new com.google.wireless.qa.mobileharness.shared.api.job.TestInfo(testInfo));
+      PostTestDeviceOp result = device.postRunTest(testInfo);
       testInfo
           .log()
           .atInfo()
           .alsoTo(logger)
           .log("Post-run test of device [%s] finished, result=%s", device.getDeviceId(), result);
       return result;
-    } catch (MobileHarnessException e) {
+    } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
       throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
           InfraErrorId.TR_FAILED_TO_RUN_DEVICE_POST_RUN_TEST_IN_LOCAL_TEST_FLOW,
           String.format("Failed to run post-run test of device [%s]", device.getDeviceId()),

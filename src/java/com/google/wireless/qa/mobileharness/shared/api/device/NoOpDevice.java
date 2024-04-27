@@ -92,9 +92,11 @@ public class NoOpDevice extends BaseDevice {
   }
 
   @Override
-  public PostTestDeviceOp postRunTest(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
-    testInfo.setProperty(Test.NO_OP_DEVICE_POST_RUN_TEST_CALLED.name(), "true");
+  public PostTestDeviceOp postRunTest(
+      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
+    testInfo.properties().add(Test.NO_OP_DEVICE_POST_RUN_TEST_CALLED.name(), "true");
     return super.postRunTest(testInfo);
   }
 }

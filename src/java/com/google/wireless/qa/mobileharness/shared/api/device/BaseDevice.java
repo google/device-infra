@@ -337,8 +337,10 @@ public abstract class BaseDevice implements Device {
 
   @CanIgnoreReturnValue
   @Override
-  public PostTestDeviceOp postRunTest(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  public PostTestDeviceOp postRunTest(
+      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     // Removes the device cache after tests finish, otherwise device status may be wrong. b/32101092
     DeviceCache.getInstance().invalidateCache(info().deviceId().controlId());
     return PostTestDeviceOp.NONE;

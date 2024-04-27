@@ -386,10 +386,13 @@ public interface Device {
    * MobileHarnessException} is thrown out, will cause the device to reboot.
    *
    * @param testInfo the test just finished with this device
-   * @throws MobileHarnessException if fails to do the operation
+   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to do
+   *     the operation
    */
-  PostTestDeviceOp postRunTest(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException;
+  PostTestDeviceOp postRunTest(
+      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException;
 
   /**
    * Cleans up when the device becomes undetectable/disconnected. Should have no effect if this

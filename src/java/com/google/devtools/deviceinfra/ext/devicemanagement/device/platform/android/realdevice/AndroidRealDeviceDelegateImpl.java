@@ -242,14 +242,16 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
   }
 
   @Override
-  protected void prependedRealDeviceAfterTestProcess(TestInfo testInfo)
+  protected void prependedRealDeviceAfterTestProcess(
+      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
       throws InterruptedException {
     // Do nothing by default
   }
 
   @Override
   protected boolean skipRealDeviceDefaultAfterTestProcess()
-      throws MobileHarnessException, InterruptedException {
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     return !androidAdbInternalUtil.getRealDeviceSerials(/* online= */ true).contains(deviceId);
   }
 

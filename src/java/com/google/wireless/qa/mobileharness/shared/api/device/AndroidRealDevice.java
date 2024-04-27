@@ -92,8 +92,10 @@ public class AndroidRealDevice extends AndroidDevice {
 
   @CanIgnoreReturnValue
   @Override
-  public PostTestDeviceOp postRunTest(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
+  public PostTestDeviceOp postRunTest(
+      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     return delegate.postRunTest(testInfo);
   }
 
