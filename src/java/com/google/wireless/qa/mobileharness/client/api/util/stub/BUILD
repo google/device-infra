@@ -18,9 +18,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "stub",
     srcs = ["StubManager.java"],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
+    visibility = ["//:deviceinfra_all_pkg"],
     deps = [
         "//src/devtools/mobileharness/infra/container/proto:test_engine_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:lab_server_locator",
