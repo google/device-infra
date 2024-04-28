@@ -49,10 +49,23 @@ message LabConfig {
   // The UUID of testbed configs of this lab.
   repeated string testbed_uuid = 5;
 
+  reserved 8;
+
   // The host properties of this lab.
   mobileharness.api.model.HostProperties host_properties = 9;
 
-  reserved 8;
+  // The SSH groups of this lab.
+  repeated SshGroup ssh_groups = 10;
+}
+
+// The configuration of a SSH group to define users/groups that can ssh to this
+// host with a specific user. It works only when hosts have configured SSHd to
+// ask Config Server to check SSH authentication.
+message SshGroup {
+  // The login user of the group.
+  string login_user = 1;
+  // Allowed identities. Could be a user or a mdb group.
+  repeated string principals = 2;
 }
 
 // The configuration of an over SSH device.
