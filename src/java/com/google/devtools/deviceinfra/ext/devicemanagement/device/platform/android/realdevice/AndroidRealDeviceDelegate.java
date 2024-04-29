@@ -36,6 +36,7 @@ import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLogType;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.testrunner.device.cache.DeviceCache;
@@ -73,16 +74,15 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.android.RuntimeChargingUtil;
 import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
-import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidRealDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidSetWifiDecorator;
 import com.google.wireless.qa.mobileharness.shared.controller.stat.DeviceStat;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.ADB;
 import com.google.wireless.qa.mobileharness.shared.proto.ADBOverUSB;
 import com.google.wireless.qa.mobileharness.shared.proto.Communication;
@@ -202,7 +202,9 @@ public abstract class AndroidRealDeviceDelegate {
    * Initializes the Android real device. Prepares the supported device types, dimensions,
    * drivers/decorators.
    */
-  public void setUp() throws MobileHarnessException, InterruptedException {
+  public void setUp()
+      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
+          InterruptedException {
     if (shouldSetUpAsOnlineModeDevice()) {
       logger.atInfo().log(
           "Set up online mode device (%s). SetupFailureTimes=%d",
@@ -216,7 +218,7 @@ public abstract class AndroidRealDeviceDelegate {
       setUpRecoveryModeDevice();
     } else {
       // Bad connection devices could not be detected sometime.
-      throw new MobileHarnessException(
+      throw new com.google.wireless.qa.mobileharness.shared.MobileHarnessException(
           ErrorCode.ANDROID_INIT_ERROR,
           "Device is undetectable. Please replug the usb cable or reboot the device.");
     }
@@ -776,7 +778,9 @@ public abstract class AndroidRealDeviceDelegate {
     androidDeviceHelper.updateAndroidPropertyDimensions(device);
   }
 
-  public boolean checkDevice() throws MobileHarnessException, InterruptedException {
+  public boolean checkDevice()
+      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
+          InterruptedException {
     if (!ifSkipCheckAbnormalDevice()) {
       Optional<Boolean> abnormalDeviceCheckResult = checkAbnormalDevice();
       if (abnormalDeviceCheckResult.isPresent()) {
@@ -800,7 +804,8 @@ public abstract class AndroidRealDeviceDelegate {
    * device regular check.
    */
   private Optional<Boolean> checkAbnormalDevice()
-      throws MobileHarnessException, InterruptedException {
+      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
+          InterruptedException {
     /*
      Any recovery mode device should not be found when checking device. Reboot it to fastboot
      mode to notify the lab admins.
@@ -808,7 +813,7 @@ public abstract class AndroidRealDeviceDelegate {
     if (androidAdbInternalUtil.getDeviceSerialsByState(DeviceState.RECOVERY).contains(deviceId)) {
       logger.atInfo().log("Checking recovery device %s. Rebooting...", deviceId);
       AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
-      throw new MobileHarnessException(
+      throw new com.google.wireless.qa.mobileharness.shared.MobileHarnessException(
           ErrorCode.ANDROID_INIT_ERROR, "Checking recovery device. Rebooting to fastboot mode.");
     }
 
@@ -820,7 +825,7 @@ public abstract class AndroidRealDeviceDelegate {
                 .instant()
                 .isAfter(lastSetupTime.plus(AndroidRealDeviceConstants.AUTO_FASTWIPE_TIMEOUT))) {
           AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
-          throw new MobileHarnessException(
+          throw new com.google.wireless.qa.mobileharness.shared.MobileHarnessException(
               ErrorCode.ANDROID_INIT_ERROR,
               "Checking fastboot device. Rebooting to fastboot mode.");
         } else if (!isRecoveryDevice()
@@ -828,7 +833,7 @@ public abstract class AndroidRealDeviceDelegate {
                 .instant()
                 .isAfter(lastSetupTime.plus(AndroidRealDeviceConstants.AUTO_RECOVERY_TIMEOUT))) {
           AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
-          throw new MobileHarnessException(
+          throw new com.google.wireless.qa.mobileharness.shared.MobileHarnessException(
               ErrorCode.ANDROID_INIT_ERROR,
               "Checking fastboot device. Rebooting to fastboot mode.");
         }
@@ -977,7 +982,6 @@ public abstract class AndroidRealDeviceDelegate {
   public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     if (!androidAdbInternalUtil.getRealDeviceSerials(/* online= */ true).contains(deviceId)) {
       testInfo
-          .toNewTestInfo()
           .log()
           .atInfo()
           .alsoTo(logger)
@@ -986,31 +990,25 @@ public abstract class AndroidRealDeviceDelegate {
               deviceId);
       return;
     }
-    androidDeviceDelegate.preRunTest(testInfo.toNewTestInfo(), isRooted());
+    androidDeviceDelegate.preRunTest(testInfo, isRooted());
     prependedRealDevicePreparationBeforeTest(testInfo);
 
     if (!skipRealDeviceDefaultPreparationBeforeTest()) {
       if (DeviceDaemonApkInfoProvider.isDeviceDaemonEnabled()) {
         // Makes sure the device daemon is started/stopped before every test.
-        if (testInfo.getJobInfo().isParamTrue(AndroidRealDeviceSpec.PARAM_KILL_DAEMON_ON_TEST)) {
-          testInfo
-              .toNewTestInfo()
-              .log()
-              .atInfo()
-              .alsoTo(logger)
-              .log("Kill device daemon on device %s", deviceId);
-          deviceDaemonHelper.uninstallDaemonApk(device, testInfo.toNewTestInfo().log());
+        if (testInfo.jobInfo().params().isTrue(AndroidRealDeviceSpec.PARAM_KILL_DAEMON_ON_TEST)) {
+          testInfo.log().atInfo().alsoTo(logger).log("Kill device daemon on device %s", deviceId);
+          deviceDaemonHelper.uninstallDaemonApk(device, testInfo.log());
         } else {
           deviceDaemonHelper.installAndStartDaemon(
               device,
-              testInfo.toNewTestInfo().log(),
+              testInfo.log(),
               device.getProperty(AndroidRealDeviceConstants.PROP_LABELS),
               device.getProperty(AndroidRealDeviceConstants.PROP_HOSTNAME),
               device.getProperty(AndroidRealDeviceConstants.PROP_OWNERS));
         }
       } else {
         testInfo
-            .toNewTestInfo()
             .log()
             .atInfo()
             .alsoTo(logger)
@@ -1018,10 +1016,10 @@ public abstract class AndroidRealDeviceDelegate {
       }
       // Disable activity controller based on PARAM_DISABLE_ACTIVITY_CONTROLLER_ON_TEST
       if (testInfo
-          .getJobInfo()
-          .isParamTrue(AndroidRealDeviceConstants.PARAM_DISABLE_ACTIVITY_CONTROLLER_ON_TEST)) {
+          .jobInfo()
+          .params()
+          .isTrue(AndroidRealDeviceConstants.PARAM_DISABLE_ACTIVITY_CONTROLLER_ON_TEST)) {
         testInfo
-            .toNewTestInfo()
             .log()
             .atInfo()
             .alsoTo(logger)
@@ -1045,9 +1043,9 @@ public abstract class AndroidRealDeviceDelegate {
       enableDeviceChargeBeforeTest(testInfo);
     }
     if (testInfo
-        .getJobInfo()
-        .getBoolParam(
-            AndroidRealDeviceConstants.PARAM_CLEAR_GSERVICES_OVERRIDES, true /* default */)) {
+        .jobInfo()
+        .params()
+        .getBool(AndroidRealDeviceConstants.PARAM_CLEAR_GSERVICES_OVERRIDES, true /* default */)) {
       clearGServicesOverrides(testInfo);
     }
   }
@@ -1056,15 +1054,15 @@ public abstract class AndroidRealDeviceDelegate {
    * Customized device preparation before running the test which is executed before the default one.
    */
   protected abstract void prependedRealDevicePreparationBeforeTest(TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException;
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException;
 
   /** Returns {@code true} if skip default device prepration before running the test. */
   protected abstract boolean skipRealDeviceDefaultPreparationBeforeTest();
 
   /** Operations after a test and before resetting/reloading the driver. */
   @CanIgnoreReturnValue
-  public PostTestDeviceOp postRunTest(
-      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+  public PostTestDeviceOp postRunTest(TestInfo testInfo)
       throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
           InterruptedException {
     // Removes the device cache after tests finish, otherwise device status may be wrong. b/32101092
@@ -1386,7 +1384,6 @@ public abstract class AndroidRealDeviceDelegate {
   private void clearGServicesOverrides(TestInfo testInfo) throws InterruptedException {
     if (!device.getBooleanProperty(AndroidRealDeviceConstants.PROPERTY_NAME_ROOTED)) {
       testInfo
-          .toNewTestInfo()
           .log()
           .atInfo()
           .alsoTo(logger)
@@ -1396,7 +1393,6 @@ public abstract class AndroidRealDeviceDelegate {
     Integer sdkVersion = device.getSdkVersion();
     if (sdkVersion == null || sdkVersion < 18) {
       testInfo
-          .toNewTestInfo()
           .log()
           .atInfo()
           .alsoTo(logger)
@@ -1406,7 +1402,6 @@ public abstract class AndroidRealDeviceDelegate {
       return;
     }
     testInfo
-        .toNewTestInfo()
         .log()
         .atInfo()
         .alsoTo(logger)
@@ -1415,7 +1410,6 @@ public abstract class AndroidRealDeviceDelegate {
       String unused = systemSettingUtil.clearGServicesOverrides(deviceId);
     } catch (MobileHarnessException e) {
       testInfo
-          .toNewTestInfo()
           .log()
           .atInfo()
           .alsoTo(logger)
@@ -1521,14 +1515,15 @@ public abstract class AndroidRealDeviceDelegate {
   protected abstract boolean ifTrySetDevicePropertiesAndDisablePackages();
 
   /**
-   * Connect to WIFI by given SSID and password, and does't ensure it is successful to connect to
+   * Connect to WIFI by given SSID and password, and doesn't ensure it is successful to connect to
    * WIFI. The devices of non-ged, release key and version 2.2.1 are all tested.
    *
    * @param ssid SSID of WIFI to be connected
    * @param pwd password of WIFI to be connected
    */
   private void connectToWifi(String serial, int sdkVersion, String ssid, String pwd)
-      throws MobileHarnessException, InterruptedException {
+      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
+          InterruptedException {
     WifiUtil wifiUtil = new WifiUtil();
     apkInstaller.installApkIfVersionMismatched(
         device, ApkInstallArgs.builder().setApkPath(wifiUtil.getWifiUtilApkPath()).build(), null);
@@ -1571,7 +1566,7 @@ public abstract class AndroidRealDeviceDelegate {
                 // device. {@link b/197480620#comment6}.
                 .build(),
             null);
-      } catch (MobileHarnessException e) {
+      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
         logger.atWarning().log(
             "Failed to install WiFi apk: %s", MoreThrowables.shortDebugString(e));
       }
@@ -1656,7 +1651,7 @@ public abstract class AndroidRealDeviceDelegate {
     }
     try {
       connectToWifi(deviceId, sdkVersion, defaultWifi.getSsid(), defaultWifi.getPsk());
-    } catch (MobileHarnessException e) {
+    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to connect device %s to WIFI %s with psk %s: %s",
           deviceId,
@@ -2277,7 +2272,8 @@ public abstract class AndroidRealDeviceDelegate {
    * @param startChargeLevel battery level at which charging should be started
    */
   private void toggleChargingForSafeDischarge(int stopChargeLevel, int startChargeLevel)
-      throws MobileHarnessException, InterruptedException {
+      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
+          InterruptedException {
     int batteryLevel = systemSettingUtil.getBatteryLevel(deviceId);
     boolean enableCharging;
     if (batteryLevel <= startChargeLevel) {
@@ -2307,13 +2303,13 @@ public abstract class AndroidRealDeviceDelegate {
     Integer startChargeLevelInt = Flags.instance().startChargeLevel.getNonNull();
     try {
       chargingUtil.setFullChargeLevel(device, safeChargeLevelInt);
-    } catch (MobileHarnessException e) {
+    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       logger.atWarning().log(
           "Error setting full charge level for device %s: %s",
           deviceId, MoreThrowables.shortDebugString(e));
       try {
         toggleChargingForSafeDischarge(stopChargeLevelInt, startChargeLevelInt);
-      } catch (MobileHarnessException e2) {
+      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e2) {
         logger.atWarning().log(
             "Failed to enforce device %s safe discharge level: %s",
             deviceId, MoreThrowables.shortDebugString(e2));
@@ -2325,8 +2321,7 @@ public abstract class AndroidRealDeviceDelegate {
   protected abstract boolean notAllowSafeDischarge();
 
   private boolean isQOrAboveBuild(String serial)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     return systemSettingUtil.getDeviceSdkVersion(serial) > 28
         || Ascii.equalsIgnoreCase(systemSettingUtil.getDeviceVersionCodeName(serial), "Q");
   }
@@ -2339,7 +2334,7 @@ public abstract class AndroidRealDeviceDelegate {
    *
    */
   private void enableDeviceChargeBeforeTest(TestInfo testInfo) throws InterruptedException {
-    String testId = testInfo.getId();
+    String testId = testInfo.locator().getId();
     if (!Flags.instance().enforceSafeDischarge.getNonNull()) {
       logger.atInfo().log(
           "Ignoring attempt to enable device %s charging before test %s because disabled"
@@ -2351,21 +2346,18 @@ public abstract class AndroidRealDeviceDelegate {
     try {
       chargingUtil.charge(device, /* charge= */ true);
       testInfo
-          .toNewTestInfo()
           .log()
           .atInfo()
           .alsoTo(logger)
           .log("Turn on charging on device %s before test %s", deviceId, testId);
-    } catch (MobileHarnessException e) {
+    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       logger.atWarning().log(
           "Error when enabling charge for device %s before test %s: %s",
-          deviceId, testInfo.getId(), MoreThrowables.shortDebugString(e));
+          deviceId, testInfo.locator().getId(), MoreThrowables.shortDebugString(e));
     }
   }
 
-  private boolean becomeRoot()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  private boolean becomeRoot() throws MobileHarnessException, InterruptedException {
     boolean rooted = systemStateManager.becomeRoot(device);
     if (needExtraForceRootDevice()) {
       // NOT caching device intentionally as this second rooting should finish very fast when the

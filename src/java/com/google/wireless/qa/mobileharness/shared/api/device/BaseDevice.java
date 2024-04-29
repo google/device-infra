@@ -45,12 +45,12 @@ import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
-import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.api.validator.Validator;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.api.validator.env.EnvValidator;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.CommunicationTypeValue;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Communication;
 import com.google.wireless.qa.mobileharness.shared.proto.CommunicationList;
@@ -332,14 +332,15 @@ public abstract class BaseDevice implements Device {
   }
 
   @Override
-  public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  public void preRunTest(TestInfo testInfo)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     // Does nothing.
   }
 
   @CanIgnoreReturnValue
   @Override
-  public PostTestDeviceOp postRunTest(
-      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+  public PostTestDeviceOp postRunTest(TestInfo testInfo)
       throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
           InterruptedException {
     // Removes the device cache after tests finish, otherwise device status may be wrong. b/32101092

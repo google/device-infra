@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSys
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.ADB;
 import com.google.wireless.qa.mobileharness.shared.proto.Communication;
 import com.google.wireless.qa.mobileharness.shared.proto.CommunicationList;
@@ -99,11 +100,11 @@ public class AndroidLocalEmulator extends AndroidDevice {
   }
 
   @Override
-  public void preRunTest(com.google.wireless.qa.mobileharness.shared.api.job.TestInfo oldTestInfo)
-      throws MobileHarnessException, InterruptedException {
+  public void preRunTest(TestInfo testInfo)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     // Dismiss lockscreen
-    oldTestInfo
-        .toNewTestInfo()
+    testInfo
         .log()
         .atInfo()
         .alsoTo(logger)
@@ -114,7 +115,7 @@ public class AndroidLocalEmulator extends AndroidDevice {
     // Gets root permission for Ansible cloud emulator
     androidSystemStateUtil.becomeRoot(getDeviceId());
 
-    super.preRunTest(oldTestInfo);
+    super.preRunTest(testInfo);
   }
 
   @Override

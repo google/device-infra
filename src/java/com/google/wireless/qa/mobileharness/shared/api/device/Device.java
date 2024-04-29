@@ -27,8 +27,8 @@ import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp
 import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.UnsupportedDeviceSandboxController;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.CommunicationList;
 import java.time.Duration;
@@ -379,7 +379,9 @@ public interface Device {
    * @param testInfo the test going to run on this device
    * @throws MobileHarnessException if fails to do the preparation
    */
-  void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException;
+  void preRunTest(TestInfo testInfo)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException;
 
   /**
    * Operations after a test and before resetting/reloading the driver. If any {@link
@@ -389,8 +391,7 @@ public interface Device {
    * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to do
    *     the operation
    */
-  PostTestDeviceOp postRunTest(
-      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+  PostTestDeviceOp postRunTest(TestInfo testInfo)
       throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
           InterruptedException;
 

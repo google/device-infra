@@ -25,9 +25,9 @@ import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfi
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.List;
 import javax.annotation.Nullable;
 
@@ -76,8 +76,10 @@ public abstract class AndroidDevice extends BaseDevice {
   }
 
   @Override
-  public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    delegate.preRunTest(testInfo.toNewTestInfo(), isRooted());
+  public void preRunTest(TestInfo testInfo)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
+    delegate.preRunTest(testInfo, isRooted());
   }
 
   /**
@@ -129,7 +131,9 @@ public abstract class AndroidDevice extends BaseDevice {
    * device setup process, because it's likely the implementation of this method will issue some adb
    * commands to the device.
    */
-  public abstract boolean isRooted() throws MobileHarnessException, InterruptedException;
+  public abstract boolean isRooted()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException;
 
   /** Gets property value. */
   protected String getPropertyValue(String deviceId, AndroidProperty key)

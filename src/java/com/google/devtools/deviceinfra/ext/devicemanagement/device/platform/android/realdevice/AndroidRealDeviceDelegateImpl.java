@@ -22,6 +22,7 @@ import com.google.common.collect.Multimap;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegate;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegateImpl;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.NoOpDeviceSandboxController;
@@ -42,13 +43,12 @@ import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSys
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.android.RuntimeChargingUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
-import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.controller.stat.DeviceStat;
 import com.google.wireless.qa.mobileharness.shared.controller.stat.StatManager;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.time.Clock;
 import javax.annotation.Nullable;
 
@@ -242,23 +242,19 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
   }
 
   @Override
-  protected void prependedRealDeviceAfterTestProcess(
-      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+  protected void prependedRealDeviceAfterTestProcess(TestInfo testInfo)
       throws InterruptedException {
     // Do nothing by default
   }
 
   @Override
   protected boolean skipRealDeviceDefaultAfterTestProcess()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     return !androidAdbInternalUtil.getRealDeviceSerials(/* online= */ true).contains(deviceId);
   }
 
   @Override
-  protected void deviceTearDown()
-      throws InterruptedException,
-          com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  protected void deviceTearDown() throws InterruptedException, MobileHarnessException {
     // Do nothing by default
   }
 

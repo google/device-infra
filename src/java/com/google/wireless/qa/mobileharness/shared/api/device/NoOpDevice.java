@@ -25,9 +25,9 @@ import com.google.devtools.mobileharness.infra.container.sandbox.device.NoOpDevi
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import javax.annotation.Nullable;
 
 /**
@@ -86,14 +86,15 @@ public class NoOpDevice extends BaseDevice {
   }
 
   @Override
-  public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
-    testInfo.setProperty(Test.NO_OP_DEVICE_PRE_RUN_TEST_CALLED.name(), "true");
+  public void preRunTest(TestInfo testInfo)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
+    testInfo.properties().add(Test.NO_OP_DEVICE_PRE_RUN_TEST_CALLED.name(), "true");
     super.preRunTest(testInfo);
   }
 
   @Override
-  public PostTestDeviceOp postRunTest(
-      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+  public PostTestDeviceOp postRunTest(TestInfo testInfo)
       throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
           InterruptedException {
     testInfo.properties().add(Test.NO_OP_DEVICE_POST_RUN_TEST_CALLED.name(), "true");

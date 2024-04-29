@@ -24,8 +24,8 @@ import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSa
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.time.Duration;
 import javax.annotation.Nullable;
 
@@ -86,14 +86,15 @@ public class AndroidRealDevice extends AndroidDevice {
   }
 
   @Override
-  public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
+  public void preRunTest(TestInfo testInfo)
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     delegate.preRunTest(testInfo);
   }
 
   @CanIgnoreReturnValue
   @Override
-  public PostTestDeviceOp postRunTest(
-      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+  public PostTestDeviceOp postRunTest(TestInfo testInfo)
       throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
           InterruptedException {
     return delegate.postRunTest(testInfo);
@@ -131,7 +132,9 @@ public class AndroidRealDevice extends AndroidDevice {
   }
 
   @Override
-  public boolean isRooted() throws MobileHarnessException, InterruptedException {
+  public boolean isRooted()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     return delegate.isRooted();
   }
 

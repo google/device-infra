@@ -515,7 +515,7 @@ public class LocalTestFlow {
           .atInfo()
           .alsoTo(logger)
           .log("Pre-run test of device [%s]", device.getDeviceId());
-      device.preRunTest(new com.google.wireless.qa.mobileharness.shared.api.job.TestInfo(testInfo));
+      device.preRunTest(testInfo);
       testInfo
           .log()
           .atInfo()
