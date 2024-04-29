@@ -20,16 +20,15 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
-import com.google.wireless.qa.mobileharness.shared.api.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.util.Timer;
 import java.util.TimerTask;
 
 /** Decorator which runs timer task asynchronously during test running. */
-public abstract class AsyncTimerDecorator extends AdapterDecorator {
+public abstract class AsyncTimerDecorator extends BaseDecorator {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  public AsyncTimerDecorator(
-      Driver decorated, com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo) {
+  public AsyncTimerDecorator(Driver decorated, TestInfo testInfo) {
     super(decorated, testInfo);
   }
 
@@ -39,7 +38,8 @@ public abstract class AsyncTimerDecorator extends AdapterDecorator {
     logger.atInfo().log("Started");
     onStart(testInfo);
     final Timer timer =
-        new Timer(String.format("timer-%s-%s", getClass().getSimpleName(), testInfo.getId()));
+        new Timer(
+            String.format("timer-%s-%s", getClass().getSimpleName(), testInfo.locator().getId()));
     long intervalMs = getIntervalMs(testInfo);
     Boolean fixedScheduleRate = getFixedScheduleRate(testInfo);
 
@@ -50,7 +50,7 @@ public abstract class AsyncTimerDecorator extends AdapterDecorator {
             try {
               runTimerTask(testInfo);
             } catch (MobileHarnessException e) {
-              testInfo.addAndLogError(e, logger);
+              testInfo.errors().addAndLog(e, logger);
             } catch (InterruptedException e) {
               timer.cancel();
               Thread.currentThread().interrupt();
