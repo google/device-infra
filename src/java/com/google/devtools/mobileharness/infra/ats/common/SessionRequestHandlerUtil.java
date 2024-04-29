@@ -391,14 +391,16 @@ public class SessionRequestHandlerUtil {
                 sessionRequestInfo.xtsType(),
                 sessionRequestInfo.retrySessionIndex().orElseThrow(),
                 sessionRequestInfo.retryType().orElse(null),
-                /* forTf= */ true);
+                /* forTf= */ true,
+                sessionRequestInfo.moduleNames());
       } else {
         runRetryTfSubPlan =
             prepareRunRetrySubPlan(
                 sessionRequestInfo.retryResultDir().orElseThrow(),
                 sessionRequestInfo.retrySessionId().orElseThrow(),
                 sessionRequestInfo.retryType().orElse(null),
-                /* forTf= */ true);
+                /* forTf= */ true,
+                sessionRequestInfo.moduleNames());
       }
       if (runRetryTfSubPlan.isEmpty()) {
         return Optional.empty();
@@ -762,14 +764,16 @@ public class SessionRequestHandlerUtil {
                 sessionRequestInfo.xtsType(),
                 sessionRequestInfo.retrySessionIndex().orElseThrow(),
                 sessionRequestInfo.retryType().orElse(null),
-                /* forTf= */ false);
+                /* forTf= */ false,
+                sessionRequestInfo.moduleNames());
       } else {
         subPlanOpt =
             prepareRunRetrySubPlan(
                 sessionRequestInfo.retryResultDir().orElseThrow(),
                 sessionRequestInfo.retrySessionId().orElseThrow(),
                 sessionRequestInfo.retryType().orElse(null),
-                /* forTf= */ false);
+                /* forTf= */ false,
+                sessionRequestInfo.moduleNames());
       }
       if (subPlanOpt.isEmpty()) {
         return ImmutableList.of();
@@ -1128,7 +1132,8 @@ public class SessionRequestHandlerUtil {
       String xtsType,
       int previousSessionIndex,
       @Nullable RetryType retryType,
-      boolean forTf)
+      boolean forTf,
+      ImmutableList<String> passedInModules)
       throws MobileHarnessException {
     Path xtsRootDirPath = Path.of(xtsRootDir);
     RetryArgs.Builder retryArgs =
@@ -1138,12 +1143,19 @@ public class SessionRequestHandlerUtil {
     if (retryType != null) {
       retryArgs.setRetryType(retryType);
     }
+    if (!passedInModules.isEmpty()) {
+      retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
+    }
     return generateRetrySubPlan(retryArgs.build(), forTf, String.valueOf(previousSessionIndex));
   }
 
   // For ATS Server
   private Optional<SubPlan> prepareRunRetrySubPlan(
-      String retryResultDir, String previousSessionId, @Nullable RetryType retryType, boolean forTf)
+      String retryResultDir,
+      String previousSessionId,
+      @Nullable RetryType retryType,
+      boolean forTf,
+      ImmutableList<String> passedInModules)
       throws MobileHarnessException {
     RetryArgs.Builder retryArgs =
         RetryArgs.builder()
@@ -1151,6 +1163,9 @@ public class SessionRequestHandlerUtil {
             .setPreviousSessionId(previousSessionId);
     if (retryType != null) {
       retryArgs.setRetryType(retryType);
+    }
+    if (!passedInModules.isEmpty()) {
+      retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
     return generateRetrySubPlan(retryArgs.build(), forTf, previousSessionId);
   }

@@ -103,12 +103,36 @@ public final class RetryGeneratorTest {
                   .addTest(Test.newBuilder().setName("Test2").setResult("fail")))
           .build();
 
+  private static final Module MODULE_4_V8A =
+      Module.newBuilder()
+          .setAbi("arm64-v8a")
+          .setName("Module4")
+          .addTestCase(
+              TestCase.newBuilder()
+                  .setName("TestClass1")
+                  .addTest(Test.newBuilder().setName("Test1").setResult("pass"))
+                  .addTest(Test.newBuilder().setName("Test2").setResult("fail")))
+          .addTestCase(
+              TestCase.newBuilder()
+                  .setName("TestClass2")
+                  .addTest(Test.newBuilder().setName("Test1").setResult("incomplete"))
+                  .addTest(Test.newBuilder().setName("Test2").setResult("skipped")))
+          .build();
+
   private static final Result REPORT_1 =
       Result.newBuilder()
           .addModuleInfo(MODULE_1_V8A)
           .addModuleInfo(MODULE_1_V7A)
           .addModuleInfo(MODULE_2_V8A)
           .addModuleInfo(NON_TF_MODULE_3_V8A)
+          .build();
+
+  private static final Result REPORT_2 =
+      Result.newBuilder()
+          .addModuleInfo(MODULE_1_V8A)
+          .addModuleInfo(MODULE_1_V7A)
+          .addModuleInfo(MODULE_2_V8A)
+          .addModuleInfo(MODULE_4_V8A)
           .build();
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
@@ -210,5 +234,48 @@ public final class RetryGeneratorTest {
         subPlan.getNonTfIncludeFiltersMultimap();
 
     assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap)).isEmpty();
+  }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_withPassedInModules() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    int previousSessionIndex = 0;
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+        .thenReturn(REPORT_2);
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setPreviousSessionIndex(previousSessionIndex)
+                .setPassedInModules(ImmutableSet.of("Module4"))
+                .build());
+
+    SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module4",
+            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"));
+    assertThat(subPlan.getNonTfIncludeFiltersMultimap()).isEmpty();
+  }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_passedInModulesAllPassed_skip() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    int previousSessionIndex = 0;
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+        .thenReturn(REPORT_2);
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setPreviousSessionIndex(previousSessionIndex)
+                .setPassedInModules(ImmutableSet.of("Module2"))
+                .build());
+
+    assertThat(subPlan.getIncludeFiltersMultimap()).isEmpty();
+    assertThat(subPlan.getNonTfIncludeFiltersMultimap()).isEmpty();
   }
 }

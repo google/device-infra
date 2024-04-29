@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -95,7 +96,11 @@ public final class RetryReportMergerTest {
 
     Result mergedReport =
         retryReportMerger.mergeReports(
-            RESULTS_DIR_PATH, 0, /* retryType= */ null, /* retryResult= */ null);
+            RESULTS_DIR_PATH,
+            0,
+            /* retryType= */ null,
+            /* retryResult= */ null,
+            /* passedInModules= */ ImmutableList.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
@@ -115,7 +120,11 @@ public final class RetryReportMergerTest {
 
     Result mergedReport =
         retryReportMerger.mergeReports(
-            RESULTS_DIR_PATH, "session_id", /* retryType= */ null, /* retryResult= */ null);
+            RESULTS_DIR_PATH,
+            "session_id",
+            /* retryType= */ null,
+            /* retryResult= */ null,
+            /* passedInModules= */ ImmutableList.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
@@ -144,7 +153,12 @@ public final class RetryReportMergerTest {
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
 
     Result mergedReport =
-        retryReportMerger.mergeReports(RESULTS_DIR_PATH, 0, /* retryType= */ null, retryReport);
+        retryReportMerger.mergeReports(
+            RESULTS_DIR_PATH,
+            0,
+            /* retryType= */ null,
+            retryReport,
+            /* passedInModules= */ ImmutableList.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }
@@ -166,7 +180,12 @@ public final class RetryReportMergerTest {
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
 
     Result mergedReport =
-        retryReportMerger.mergeReports(RESULTS_DIR_PATH, 0, /* retryType= */ null, retryReport);
+        retryReportMerger.mergeReports(
+            RESULTS_DIR_PATH,
+            0,
+            /* retryType= */ null,
+            retryReport,
+            /* passedInModules= */ ImmutableList.of());
 
     assertThat(mergedReport).isEqualTo(expectedMergedReport);
   }

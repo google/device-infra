@@ -57,10 +57,14 @@ public abstract class RetryArgs {
   /** Exclude filters passed in by the command. */
   public abstract ImmutableSet<SuiteTestFilter> passedInExcludeFilters();
 
+  /** Modules passed in by the command. */
+  public abstract ImmutableSet<String> passedInModules();
+
   public static Builder builder() {
     return new AutoValue_RetryArgs.Builder()
         .setPassedInIncludeFilters(ImmutableSet.of())
-        .setPassedInExcludeFilters(ImmutableSet.of());
+        .setPassedInExcludeFilters(ImmutableSet.of())
+        .setPassedInModules(ImmutableSet.of());
   }
 
   /** Builder for {@link RetryArgs}. */
@@ -81,6 +85,8 @@ public abstract class RetryArgs {
 
     public abstract Builder setPassedInExcludeFilters(
         ImmutableSet<SuiteTestFilter> passedInExcludeFilters);
+
+    public abstract Builder setPassedInModules(ImmutableSet<String> passedInModules);
 
     protected abstract RetryArgs autoBuild();
 

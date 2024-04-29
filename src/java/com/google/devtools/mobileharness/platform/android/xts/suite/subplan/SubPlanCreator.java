@@ -110,7 +110,8 @@ public class SubPlanCreator {
             Stream.concat(
                     addSubPlanArgs.passedInExcludeFilters().stream(),
                     excludeFiltersFromPrevResult.stream().map(SuiteTestFilter::create))
-                .collect(toImmutableSet()));
+                .collect(toImmutableSet()),
+            /* passedInModules= */ ImmutableSet.of()); // TODO
 
     try {
       subPlan.serialize(

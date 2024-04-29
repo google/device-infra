@@ -78,6 +78,7 @@ public class RetryGenerator {
         Stream.concat(
                 retryArgs.passedInExcludeFilters().stream(),
                 excludeFiltersFromPrevResult.stream().map(SuiteTestFilter::create))
-            .collect(toImmutableSet()));
+            .collect(toImmutableSet()),
+        retryArgs.passedInModules());
   }
 }

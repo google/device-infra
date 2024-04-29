@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
@@ -35,7 +36,22 @@ public final class RetryResultHelper {
    *
    * @return true if at least one test in the module should run
    */
-  public static boolean shouldRunModule(Module module, Set<String> types, boolean addSubPlanCmd) {
+  public static boolean shouldRunModule(
+      Module module,
+      Set<String> types,
+      boolean addSubPlanCmd,
+      ImmutableSet<String> passedInModules) {
+    if (!addSubPlanCmd && !passedInModules.isEmpty()) {
+      String moduleNameWithoutParam = module.getName();
+      int moduleParamIdx = moduleNameWithoutParam.indexOf("[");
+      if (moduleParamIdx > -1) {
+        moduleNameWithoutParam = moduleNameWithoutParam.substring(0, moduleParamIdx);
+      }
+      if (!passedInModules.contains(moduleNameWithoutParam)) {
+        return false;
+      }
+    }
+
     if (types.contains("not_executed") && !module.getDone()) {
       // module has not_executed tests that should be re-run
       return true;

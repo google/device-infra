@@ -36,16 +36,20 @@ public class SubPlanHelper {
    * Creates a subplan per given previous result.
    *
    * <p>The given types can only be passed, failed or not_executed.
+   *
+   * @param passedInModules When from "run retry" command, if not empty, only the matched modules
+   *     will be added to the subplan
    */
   public static SubPlan createSubPlanForPreviousResult(
       Result previousResult,
       Set<String> types,
       boolean addSubPlanCmd,
       ImmutableSet<SuiteTestFilter> includeFilters,
-      ImmutableSet<SuiteTestFilter> excludeFilters) {
+      ImmutableSet<SuiteTestFilter> excludeFilters,
+      ImmutableSet<String> passedInModules) {
     SubPlan subPlan = new SubPlan();
     for (Module module : previousResult.getModuleInfoList()) {
-      if (RetryResultHelper.shouldRunModule(module, types, addSubPlanCmd)) {
+      if (RetryResultHelper.shouldRunModule(module, types, addSubPlanCmd, passedInModules)) {
         boolean isNonTfModule = module.getIsNonTfModule();
         if (RetryResultHelper.shouldRunEntireModule(
             module, types, addSubPlanCmd, includeFilters, excludeFilters)) {

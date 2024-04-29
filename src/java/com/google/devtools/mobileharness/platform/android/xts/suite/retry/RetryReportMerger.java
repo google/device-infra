@@ -20,7 +20,9 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.primitives.Longs;
@@ -70,12 +72,14 @@ public class RetryReportMerger {
    * @param previousSessionIndex index of the previous session being retried
    * @param retryType test statuses for retry
    * @param retryResult the result report for the "retry" run
+   * @param passedInModules passed in module names from the command
    */
   public Result mergeReports(
       Path resultsDir,
       int previousSessionIndex,
       @Nullable RetryType retryType,
-      @Nullable Result retryResult)
+      @Nullable Result retryResult,
+      ImmutableList<String> passedInModules)
       throws MobileHarnessException {
     // Loads the previous session result and its subplan used for the retry
     Result previousResult =
@@ -84,6 +88,9 @@ public class RetryReportMerger {
         RetryArgs.builder().setResultsDir(resultsDir).setPreviousSessionIndex(previousSessionIndex);
     if (retryType != null) {
       retryArgs.setRetryType(retryType);
+    }
+    if (!passedInModules.isEmpty()) {
+      retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
     return mergeReports(previousResult, subPlan, retryResult);
@@ -98,12 +105,14 @@ public class RetryReportMerger {
    * @param previousSessionId id of the previous session being retried
    * @param retryType test statuses for retry
    * @param retryResult the result report for the "retry" run
+   * @param passedInModules passed in module names from the command
    */
   public Result mergeReports(
       Path resultsDir,
       String previousSessionId,
       @Nullable RetryType retryType,
-      @Nullable Result retryResult)
+      @Nullable Result retryResult,
+      ImmutableList<String> passedInModules)
       throws MobileHarnessException {
     // Loads the previous session result and its subplan used for the retry
     Result previousResult = previousResultLoader.loadPreviousResult(resultsDir, previousSessionId);
@@ -111,6 +120,9 @@ public class RetryReportMerger {
         RetryArgs.builder().setResultsDir(resultsDir).setPreviousSessionId(previousSessionId);
     if (retryType != null) {
       retryArgs.setRetryType(retryType);
+    }
+    if (!passedInModules.isEmpty()) {
+      retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
     }
     SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs.build());
     return mergeReports(previousResult, subPlan, retryResult);

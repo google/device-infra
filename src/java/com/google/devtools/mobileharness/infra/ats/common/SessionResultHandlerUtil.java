@@ -249,7 +249,8 @@ public class SessionResultHandlerUtil {
                 Path.of(sessionRequestInfo.retryResultDir().orElseThrow()),
                 sessionRequestInfo.retrySessionId().get(),
                 sessionRequestInfo.retryType().orElse(null),
-                mergedReport.orElse(null));
+                mergedReport.orElse(null),
+                sessionRequestInfo.moduleNames());
       } else {
         int previousSessionIndex =
             sessionRequestInfo
@@ -265,7 +266,8 @@ public class SessionResultHandlerUtil {
                     Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
                 previousSessionIndex,
                 sessionRequestInfo.retryType().orElse(null),
-                mergedReport.orElse(null));
+                mergedReport.orElse(null),
+                sessionRequestInfo.moduleNames());
       }
       reportCreator.createReport(finalReport, resultDir, null, sessionRequestInfo.htmlInZip());
     } else {
