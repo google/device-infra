@@ -95,7 +95,6 @@ class ListDevicesCommandHandler {
     DeviceQueryResult deviceQueryResult = queryDevice();
     return deviceQueryResult.getDeviceInfoList().stream()
         .map(ListDevicesCommandHandler::convertDeviceInfo)
-        .flatMap(Optional::stream)
         .collect(toImmutableList());
   }
 
@@ -108,26 +107,24 @@ class ListDevicesCommandHandler {
     }
   }
 
-  private static Optional<DeviceDescriptor> convertDeviceInfo(DeviceInfo deviceInfo) {
+  private static DeviceDescriptor convertDeviceInfo(DeviceInfo deviceInfo) {
     ImmutableListMultimap<String, String> dimensions =
         deviceInfo.getDimensionList().stream()
             .collect(
                 toImmutableListMultimap(
                     DeviceQuery.Dimension::getName, DeviceQuery.Dimension::getValue));
-    return Optional.of(
-        DeviceDescriptor.newBuilder()
-            .setSerial(deviceInfo.getId())
-            .setDeviceState(getDeviceState(deviceInfo.getTypeList()))
-            .setAllocationState(getAllocationState(deviceInfo.getStatus()))
-            .setProduct("n/a")
-            .setProductVariant("n/a")
-            .setBuildId("n/a")
-            .setBatteryLevel(
-                getDimension(dimensions, Name.BATTERY_LEVEL.lowerCaseName()).orElse("n/a"))
-            .setDeviceClass("n/a")
-            .setTestDeviceState("n/a")
-            .setIsStubDevice(false)
-            .build());
+    return DeviceDescriptor.newBuilder()
+        .setSerial(deviceInfo.getId())
+        .setDeviceState(getDeviceState(deviceInfo.getTypeList()))
+        .setAllocationState(getAllocationState(deviceInfo.getStatus()))
+        .setProduct(getDimension(dimensions, Name.PRODUCT_BOARD.lowerCaseName()).orElse("n/a"))
+        .setProductVariant(getDimension(dimensions, Name.DEVICE.lowerCaseName()).orElse("n/a"))
+        .setBuildId(getDimension(dimensions, Name.BUILD_ALIAS.lowerCaseName()).orElse("n/a"))
+        .setBatteryLevel(getDimension(dimensions, Name.BATTERY_LEVEL.lowerCaseName()).orElse("n/a"))
+        .setDeviceClass("n/a")
+        .setTestDeviceState("n/a")
+        .setIsStubDevice(false)
+        .build();
   }
 
   private static String getDeviceState(List<String> deviceTypes) {
@@ -138,6 +135,7 @@ class ListDevicesCommandHandler {
     boolean androidUnauthorizedDevice = false;
     for (String deviceType : deviceTypes) {
       switch (deviceType) {
+        case "AndroidLocalEmulator":
         case AndroidRealDeviceConstants.ANDROID_ONLINE_DEVICE:
           androidOnlineDevice = true;
           break;

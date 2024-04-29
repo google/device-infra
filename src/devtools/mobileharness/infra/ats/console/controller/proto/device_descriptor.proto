@@ -22,6 +22,7 @@ option java_package = "com.google.devtools.mobileharness.infra.ats.console.contr
 option java_outer_classname = "DeviceDescriptorProto";
 
 // See com.android.tradefed.command.remote.DeviceDescriptor.
+// https://cs.android.com/android/platform/superproject/main/+/main:tools/tradefederation/core/src/com/android/tradefed/device/NativeDevice.java;l=5426;drc=a32c94aa969fafe799f512744c954652024080aa
 message DeviceDescriptor {
   string serial = 1;
   // Optional.
@@ -32,8 +33,20 @@ message DeviceDescriptor {
   // com.android.tradefed.device.DeviceAllocationState.toString():
   // Unknown/Ignored/Available/Unavailable/Allocated/Checking_Availability
   string allocation_state = 4;
+  // AndroidProperty.PRODUCT_BOARD.
+  //
+  // ro.product.board,
+  // or ro.hardware.
   string product = 5;
+  // AndroidProperty.DEVICE.
+  //
+  // ro.product.vendor.device,
+  // or ro.vendor.product.device,
+  // or ro.product.device.
   string product_variant = 6;
+  // AndroidProperty.BUILD_ALIAS.
+  //
+  // ro.build.id.
   string build_id = 7;
   string battery_level = 8;
   string device_class = 9;

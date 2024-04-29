@@ -46,7 +46,11 @@ public final class Dimension {
     COMMUNICATION_TYPE,
     /** The control id of the device. */
     CONTROL_ID,
-    /** The device name. */
+    /**
+     * The device name.
+     *
+     * @see com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty#DEVICE
+     */
     DEVICE,
     /** Whether a device supports running test in container mode. */
     DEVICE_SUPPORTS_CONTAINER,
@@ -103,7 +107,6 @@ public final class Dimension {
     /** Customized dimension, SSID for network simulation. */
     NETWORK_SIMULATION_USE_NETTROL,
     PING_GOOGLE_STABILITY,
-    /** The mac address */
     /** Device pool name. Values include: shared/shared_without_recovery/group_shared/dedicated. */
     POOL,
     /** The release version of the device. */
@@ -143,6 +146,13 @@ public final class Dimension {
     BRAND,
     /** The build name of the device. */
     BUILD,
+    /**
+     * The alias of the build name.
+     *
+     * @see
+     *     com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty#BUILD_ALIAS
+     */
+    BUILD_ALIAS,
     /** Customized dimension: Chrome version */
     CHROME_VERSION,
     /** The current development codename, or the string "REL" if this is a release build. */
@@ -204,7 +214,12 @@ public final class Dimension {
     SVELTE_DEVICE,
     /** Supports GmsCore. */
     SUPPORTS_GMSCORE,
-    /** The product_board dimension. */
+    /**
+     * The product_board dimension.
+     *
+     * @see
+     *     com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty#PRODUCT_BOARD
+     */
     PRODUCT_BOARD,
     /** The path of writable external storage on the device. */
     WRITABLE_EXTERNAL_STORAGE,

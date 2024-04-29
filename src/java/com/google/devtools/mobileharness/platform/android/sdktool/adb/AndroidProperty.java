@@ -18,17 +18,23 @@ package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 
 import com.google.common.collect.ImmutableList;
 
-/** Android device properties. */
+/**
+ * Android device properties.
+ *
+ * @see
+ *     com.google.devtools.mobileharness.platform.android.device.AndroidDeviceHelper#updateAndroidPropertyDimensions
+ */
 public enum AndroidProperty {
   ABI("ro.product.cpu.abi", "ro.product.cpu.abi2"),
   ABILIST("ro.product.cpu.abilist"),
   BOOT_TO_VR("ro.boot.vr"),
   BRAND("ro.product.brand"),
   BUILD("ro.build.display.id"),
+  BUILD_ALIAS("ro.build.id"),
   BUILD_TYPE("ro.build.type"),
   CHARACTERISTICS("ro.build.characteristics"),
   CODENAME("ro.build.version.codename"),
-  DEVICE("ro.product.device"),
+  DEVICE("ro.product.vendor.device", "ro.vendor.product.device", "ro.product.device"),
   FLAVOR("ro.build.flavor"),
   HARDWARE("ro.hardware"),
   HARDWARE_TYPE("ro.hardware.type"),
@@ -61,8 +67,8 @@ public enum AndroidProperty {
    * Creates an enum type with the given Android system property keys. If we can get system property
    * with the first key, the remaining keys are not used. Else will use the second key and so on.
    */
-  private AndroidProperty(String... keys) {
-    this.keys = ImmutableList.<String>copyOf(keys);
+  AndroidProperty(String... keys) {
+    this.keys = ImmutableList.copyOf(keys);
   }
 
   /** Returns list of Android system property keys. */
