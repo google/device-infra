@@ -18,7 +18,6 @@ package com.google.wireless.qa.mobileharness.shared.util;
 
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
-import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Dimension;
@@ -28,42 +27,6 @@ import java.util.stream.Collectors;
 public class DeviceInfoUtil {
 
   private DeviceInfoUtil() {}
-
-  public static DeviceInfo getDeviceInfoForCurrentTest(Device device, TestInfo testInfo) {
-    return DeviceInfo.newBuilder()
-        .setId(device.getDeviceId())
-        .setStatus("busy")
-        .addAllOwner(device.getOwners())
-        .addAllExecutor(device.getExecutors())
-        .addAllType(device.getDeviceTypes())
-        .addAllDriver(device.getDriverTypes())
-        .addAllDecorator(device.getDecoratorTypes())
-        .addAllDimension(
-            device.getDimensions().stream()
-                .map(
-                    dimension ->
-                        Dimension.newBuilder()
-                            .setRequired(false)
-                            .setName(dimension.getName())
-                            .setValue(dimension.getValue())
-                            .build())
-                .collect(Collectors.toList()))
-        .addAllDimension(
-            device.getRequiredDimensions().stream()
-                .map(
-                    dimension ->
-                        Dimension.newBuilder()
-                            .setRequired(true)
-                            .setName(dimension.getName())
-                            .setValue(dimension.getValue())
-                            .build())
-                .collect(Collectors.toList()))
-        .setJobId(testInfo.jobInfo().locator().getId())
-        .setJobName(testInfo.jobInfo().locator().getName())
-        .setTestId(testInfo.locator().getId())
-        .setTestName(testInfo.locator().getName())
-        .build();
-  }
 
   public static DeviceInfo getDeviceInfoForCurrentTest(
       String deviceId, DeviceFeature deviceFeature, TestInfo testInfo) {

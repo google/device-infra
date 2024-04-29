@@ -22,7 +22,7 @@ package(
 )
 
 java_library(
-    name = "job_core",
+    name = "job",
     srcs = [
         "JobManager.java",
         "JobRunner.java",
@@ -46,6 +46,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:exception",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:test_retry_handler",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/util/result:client_alloc_error_util",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/plugin:common_setup_module",
         "//src/java/com/google/devtools/mobileharness/infra/controller/plugin:plugin_creator",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner_setting",

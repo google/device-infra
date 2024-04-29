@@ -27,7 +27,7 @@ java_library(
     deps = [
         ":annotations",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:job_core",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode:util",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/plugin:job_reporter",

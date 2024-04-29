@@ -27,23 +27,21 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Option;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.TargetPreparer;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Test;
-import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Message;
-import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.DriverDecoratorSpecMapper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecWalker.Visitor;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -110,21 +108,20 @@ public class ModuleConfigurationHelper {
 
   private void updateDriverSpecs(Test config, JobInfo jobInfo, Visitor fileResolver)
       throws MobileHarnessException, InterruptedException {
-    String className = ConfigurationUtil.getSimpleClassName(config.getClazz());
-    if (!jobInfo.type().getDriver().equals(className)
-        && !jobInfo.type().getDriver().equals(DRIVER_ALIAS_MAP.get(className))) {
+    String driverName = ConfigurationUtil.getSimpleClassName(config.getClazz());
+    if (!jobInfo.type().getDriver().equals(driverName)
+        && !jobInfo.type().getDriver().equals(DRIVER_ALIAS_MAP.get(driverName))) {
       throw new MobileHarnessException(
           ExtErrorId.MODULE_CONFIG_DRIVER_NOT_MATCH,
           String.format(
               "The module requires driver %s but %s is used for the job.",
-              className, jobInfo.type().getDriver()));
+              driverName, jobInfo.type().getDriver()));
     }
 
-    Class<?> clazz = ClassUtil.getDriverClass(className);
-    Entry<String, JsonObject> scopedSpec =
-        convertOptionsToScopedSpec(clazz, config.getOptionsList());
     ScopedSpecs jobScopedSpecs = jobInfo.scopedSpecs();
-    jobScopedSpecs.add(scopedSpec.getKey(), scopedSpec.getValue());
+    Optional<Entry<String, JsonObject>> scopedSpec =
+        convertOptionsToScopedSpec(driverName, config.getOptionsList());
+    scopedSpec.ifPresent(spec -> jobScopedSpecs.add(spec.getKey(), spec.getValue()));
     jobScopedSpecs.addAll(
         JobSpecWalker.resolve(
             jobScopedSpecs.toJobSpec(JobSpecHelper.getDefaultHelper()), fileResolver));
@@ -176,25 +173,30 @@ public class ModuleConfigurationHelper {
         String.format("Cannot find test artifact %s", fileName));
   }
 
-  private Entry<String, JsonObject> convertOptionsToScopedSpec(Class<?> clazz, List<Option> options)
-      throws MobileHarnessException {
-    if (!JobSpecHelper.isSpecConfigable(clazz)) {
-      Map<String, String> params = new HashMap<>();
-      for (Option option : options) {
-        params.put(option.getKey(), option.getValue());
-      }
-      return Map.entry(clazz.getName(), new Gson().toJsonTree(params).getAsJsonObject());
+  private Optional<Entry<String, JsonObject>> convertOptionsToScopedSpec(
+      String driverOrDecoratorName, List<Option> options) throws MobileHarnessException {
+    Optional<String> specName =
+        DriverDecoratorSpecMapper.getSpecNameByDriverOrDecorator(driverOrDecoratorName);
+    if (specName.isEmpty()) {
+      return Optional.empty();
+    }
+    Optional<Class<? extends Message>> specClass =
+        JobSpecHelper.getDefaultHelper().getRegisteredExtensionClasses().stream()
+            .filter(clazz -> clazz.getSimpleName().equals(specName.get()))
+            .findFirst();
+    if (specClass.isEmpty()) {
+      return Optional.empty();
     }
 
     JsonObject spec = new JsonObject();
-    Class<? extends Message> specClass = JobSpecHelper.getSpecClass(clazz);
-    Descriptor specDescriptor = JobSpecHelper.getDefaultInstance(specClass).getDescriptorForType();
+    Descriptor specDescriptor =
+        JobSpecHelper.getDefaultInstance(specClass.get()).getDescriptorForType();
     for (Option option : options) {
       FieldDescriptor fieldDescriptor = specDescriptor.findFieldByName(option.getName());
       if (fieldDescriptor == null) {
         throw new MobileHarnessException(
             ExtErrorId.MODULE_CONFIG_UNRECOGNIZED_OPTION_ERROR,
-            String.format("Unrecognized option %s for %s", option.getName(), clazz.getName()));
+            String.format("Unrecognized option %s for %s", option.getName(), specName));
       }
       if (fieldDescriptor.isRepeated()) {
         JsonArray jsonArray =
@@ -205,7 +207,7 @@ public class ModuleConfigurationHelper {
         spec.addProperty(option.getName(), option.getValue());
       }
     }
-    return Map.entry(specClass.getSimpleName(), spec);
+    return Optional.of(Map.entry(specClass.get().getSimpleName(), spec));
   }
 
   private void addDecorators(
@@ -218,13 +220,12 @@ public class ModuleConfigurationHelper {
       // Add decorators and scoped specs
       List<String> decorators = new ArrayList<>();
       for (TargetPreparer targetPreparer : deviceConfig.getTargetPreparersList()) {
-        String className = ConfigurationUtil.getSimpleClassName(targetPreparer.getClazz());
-        decorators.add(className);
+        String decoratorName = ConfigurationUtil.getSimpleClassName(targetPreparer.getClazz());
+        decorators.add(decoratorName);
         if (!targetPreparer.getOptionsList().isEmpty()) {
-          Class<?> clazz = ClassUtil.getDecoratorClass(className);
-          Entry<String, JsonObject> scopedSpec =
-              convertOptionsToScopedSpec(clazz, targetPreparer.getOptionsList());
-          deviceScopedSpecs.add(scopedSpec.getKey(), scopedSpec.getValue());
+          Optional<Entry<String, JsonObject>> scopedSpec =
+              convertOptionsToScopedSpec(decoratorName, targetPreparer.getOptionsList());
+          scopedSpec.ifPresent(spec -> deviceScopedSpecs.add(spec.getKey(), spec.getValue()));
         }
       }
       deviceScopedSpecs.addAll(

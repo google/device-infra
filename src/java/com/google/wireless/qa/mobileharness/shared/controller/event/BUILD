@@ -23,12 +23,21 @@ package(
 
 java_library(
     name = "base",
-    srcs = ["ControllerEvent.java"],
+    srcs = [
+        "ControllerEvent.java",
+    ],
 )
 
 java_library(
     name = "device",
-    srcs = glob(["LocalDevice*.java"]) + ["ControllerEvent.java"],
+    srcs = [
+        "ControllerEvent.java",
+        "LocalDeviceChangeEvent.java",
+        "LocalDeviceDownEvent.java",
+        "LocalDeviceErrorEvent.java",
+        "LocalDeviceEvent.java",
+        "LocalDeviceUpEvent.java",
+    ],
     deps = [
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
     ],
@@ -47,16 +56,69 @@ java_library(
 
 java_library(
     name = "test",
-    srcs = glob(["*Test*.java"]),
+    exports = [
+        ":base_test_events",
+        ":client_test_events",
+        ":lab_test_events",
+    ],
+)
+
+java_library(
+    name = "client_test_events",
+    srcs = [
+        "TestEndedEvent.java",
+        "TestEndingEvent.java",
+        "TestStartEvent.java",
+        "TestStartedEvent.java",
+        "TestStartingEvent.java",
+    ],
+    deps = [
+        ":base_test_events",
+        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "lab_test_events",
+    srcs = [
+        "LocalTestEndedEvent.java",
+        "LocalTestEndingEvent.java",
+        "LocalTestEvent.java",
+        "LocalTestStartEvent.java",
+        "LocalTestStartedEvent.java",
+        "LocalTestStartingEvent.java",
+    ],
+    deps = [
+        ":base",
+        ":client_test_events",
+        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "base_test_events",
+    srcs = [
+        "DeviceCheckedTestEvent.java",
+        "TestEvent.java",
+    ],
     deps = [
         ":base",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
     ],

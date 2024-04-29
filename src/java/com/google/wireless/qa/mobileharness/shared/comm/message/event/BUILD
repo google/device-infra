@@ -29,7 +29,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:base_test_events",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",

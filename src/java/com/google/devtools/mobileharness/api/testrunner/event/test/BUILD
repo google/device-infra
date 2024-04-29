@@ -16,25 +16,29 @@
 # Description:
 #   Mobile Harness test events.
 
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
+)
+
 java_library(
     name = "test",
+    exports = [
+        ":client_test_events",
+        ":lab_test_events",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:annotation",
+    ],
+)
+
+java_library(
+    name = "client_test_events",
     srcs = [
-        "LocalDecoratorPostForwardEvent.java",
-        "LocalDecoratorPreForwardEvent.java",
-        "LocalDriverEndedEvent.java",
-        "LocalDriverStartingEvent.java",
-        "LocalTestEndedEvent.java",
-        "LocalTestEndingEvent.java",
         "TestEndedEvent.java",
         "TestEndingEvent.java",
         "TestStartedEvent.java",
         "TestStartingEvent.java",
-    ],
-    visibility = [
-        "//:deviceinfra_all_pkg",
-    ],
-    exports = [
-        "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:annotation",
     ],
     deps = [
         ":base",
@@ -42,11 +46,26 @@ java_library(
 )
 
 java_library(
+    name = "lab_test_events",
+    srcs = [
+        "LocalDecoratorPostForwardEvent.java",
+        "LocalDecoratorPreForwardEvent.java",
+        "LocalDriverEndedEvent.java",
+        "LocalDriverStartingEvent.java",
+        "LocalTestEndedEvent.java",
+        "LocalTestEndingEvent.java",
+    ],
+    deps = [
+        ":base",
+        ":client_test_events",
+        ":lab_base",
+    ],
+)
+
+java_library(
     name = "base",
     srcs = [
         "DeviceFeaturedEvent.java",
-        "DeviceHelperEvent.java",
-        "DriverEvent.java",
         "ExecutionEndEvent.java",
         "TestEvent.java",
     ],
@@ -58,8 +77,23 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/allocation",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "lab_base",
+    srcs = [
+        "DeviceHelperEvent.java",
+        "DriverEvent.java",
+    ],
+    visibility = [
+        # Only for Mobile Harness internal use.
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__subpackages__",
+    ],
+    deps = [
+        ":base",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
     ],
 )

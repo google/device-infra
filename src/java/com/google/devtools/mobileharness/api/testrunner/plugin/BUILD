@@ -59,6 +59,6 @@ java_library(
         "SubscribeEventOfAllDrivers.java",
     ],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness:__subpackages__",
+        "//:deviceinfra_all_pkg",
     ],
 )

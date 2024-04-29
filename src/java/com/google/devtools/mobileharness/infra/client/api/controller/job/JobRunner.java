@@ -56,7 +56,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.mode.remote.JobCancelledException;
 import com.google.devtools.mobileharness.infra.client.api.util.result.ClientAllocErrorUtil;
-import com.google.devtools.mobileharness.infra.controller.plugin.CommonPluginCreatorFactory;
+import com.google.devtools.mobileharness.infra.controller.plugin.CommonSetupModule;
 import com.google.devtools.mobileharness.infra.controller.plugin.PluginCreator;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunnerSetting;
@@ -232,8 +232,6 @@ public class JobRunner implements Runnable {
   /** Checker for validating the job config. */
   private final JobChecker jobChecker;
 
-  private final PluginCreator.Factory pluginLoaderFactory;
-
   private final DeviceQuerier deviceQuerier;
 
   private final DeviceQueryFilter deviceQueryFilter;
@@ -262,7 +260,6 @@ public class JobRunner implements Runnable {
         Clock.systemUTC(),
         Sleeper.defaultSleeper(),
         new JobChecker(),
-        new CommonPluginCreatorFactory(),
         globalInternalBus);
   }
 
@@ -277,7 +274,6 @@ public class JobRunner implements Runnable {
       Clock clock,
       Sleeper sleeper,
       JobChecker jobChecker,
-      PluginCreator.Factory pluginLoaderFactory,
       @Nullable EventBus globalInternalBus) {
     this.jobInfo = jobInfo;
     this.deviceAllocator = deviceAllocator;
@@ -309,7 +305,6 @@ public class JobRunner implements Runnable {
         new SubscriberExceptionLoggingHandler(/* saveException= */ true, /* isUserPlugin= */ true);
     scopedEventBus.add(EventScope.JAR_PLUGIN, new EventBus(jarPluginExceptionHandler));
     this.jobChecker = jobChecker;
-    this.pluginLoaderFactory = pluginLoaderFactory;
     switch (jobInfo.setting().getAllocationExitStrategy()) {
       case FAIL_FAST_NO_IDLE:
         deviceQueryFilter =
@@ -826,7 +821,7 @@ public class JobRunner implements Runnable {
           .alsoTo(logger)
           .log("Loading client jar plugins for job %s", jobInfo.locator().getId());
       final PluginCreator loader =
-          pluginLoaderFactory.create(
+          new PluginCreator(
               jobInfo.files().get(JobInfo.TAG_CLIENT_PLUGIN),
               jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN, null),
               jobInfo.params().getList(JobInfo.PARAM_CLIENT_PLUGIN_MODULES, null),
@@ -839,7 +834,8 @@ public class JobRunner implements Runnable {
                 public void configure() {
                   bind(ExecMode.class).toInstance(execMode);
                 }
-              });
+              },
+              new CommonSetupModule());
       if (loader.load()) {
         registerEventHandler(
             new Object() {

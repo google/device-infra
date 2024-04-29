@@ -40,7 +40,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceFeature;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto;
-import com.google.devtools.mobileharness.infra.controller.plugin.CommonPluginCreatorFactory;
+import com.google.devtools.mobileharness.infra.controller.plugin.LabCommonSetupModule;
 import com.google.devtools.mobileharness.infra.controller.plugin.PluginCreator;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner.EventScope;
@@ -102,8 +102,6 @@ public class LocalTestFlow {
 
   private final AdhocTestbedDriverFactory adhocTestbedDriverFactory;
 
-  private final PluginCreator.Factory pluginLoaderFactory;
-
   private final ListeningExecutorService testThreadPool;
 
   private final TestFlowConverter testFlowConverter;
@@ -128,7 +126,6 @@ public class LocalTestFlow {
     this.testThreadPool = threadPool;
     this.driverFactory = driverFactory;
     this.adhocTestbedDriverFactory = adhocTestbedDriverFactory;
-    this.pluginLoaderFactory = new CommonPluginCreatorFactory();
     this.testFlowConverter = testFlowConverter;
   }
 
@@ -179,13 +176,14 @@ public class LocalTestFlow {
     // Always create a new ClassLoader for the lab plugin of a new test, and close it when test
     // ends.
     PluginCreator loader =
-        pluginLoaderFactory.create(
+        new PluginCreator(
             labPluginPaths,
             labPluginClasses,
             labPluginModuleClasses,
             /* forceLoadFromJarClassRegex= */ labPluginForceLoadFromJarClassRegex,
             PluginType.LAB,
-            testInfo.log());
+            testInfo.log(),
+            new LabCommonSetupModule());
     if (loader.load()) {
       testInfo
           .log()

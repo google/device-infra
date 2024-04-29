@@ -143,7 +143,7 @@ public class PluginCreator implements AutoCloseable {
    * @param systemModules extra modules to load first. These are modules that the system will use to
    *     interact with the plugins.
    */
-  PluginCreator(
+  public PluginCreator(
       Collection<String> jarPaths,
       @Nullable Collection<String> classNames,
       @Nullable Collection<String> moduleClassNames,

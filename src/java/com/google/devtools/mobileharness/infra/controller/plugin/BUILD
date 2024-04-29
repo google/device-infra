@@ -13,10 +13,42 @@
 # limitations under the License.
 #
 
+package(
+    default_applicable_licenses = ["//:license"],
+)
+
+java_library(
+    name = "common_setup_module",
+    srcs = ["CommonSetupModule.java"],
+    visibility = [
+        "//java/com/google/devtools/mobileharness/service/gateway/controller:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:event_scoped",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "lab_common_setup_module",
+    srcs = ["LabCommonSetupModule.java"],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__"],
+    deps = [
+        ":common_setup_module",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:event_scoped",
+    ],
+)
+
 java_library(
     name = "plugin_creator",
     srcs = [
-        "CommonPluginCreatorFactory.java",
         "PluginCreator.java",
     ],
     visibility = [
@@ -24,25 +56,17 @@ java_library(
     ],
     deps = [
         ":plugin_loader",
-        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/plugin/loader:plugin_instantiator",
         "//src/java/com/google/devtools/mobileharness/infra/controller/plugin/provider:plugin_class_provider",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:event_scoped",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
         "//src/java/com/google/wireless/qa/mobileharness/shared/log",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
-        "@maven//:org_apache_commons_commons_lang3",
         "@maven//:org_reflections_reflections",
     ],
 )
