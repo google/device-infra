@@ -43,6 +43,7 @@ public class TradefedConfigGenerator {
   private static final String BUILD_PROVIDER_TAG = "build_provider";
   private static final String CMD_OPTIONS_TAG = "cmd_options";
   private static final String CONFIGURATION_TAG = "configuration";
+  private static final String DEVICE_TAG = "device";
   private static final String OPTION_TAG = "option";
   private static final String RESULT_REPORTER_TAG = "result_reporter";
   private static final String TARGET_PREPARER_TAG = "target_preparer";
@@ -69,7 +70,10 @@ public class TradefedConfigGenerator {
   private TradefedConfigGenerator() {}
 
   public static void generateXml(
-      OutputStream outputStream, TestEnvironment testEnvironment, List<TestResource> testResources)
+      OutputStream outputStream,
+      TestEnvironment testEnvironment,
+      List<TestResource> testResources,
+      int deviceCount)
       throws XmlPullParserException, IOException {
     XmlSerializer serializer = XmlPullParserFactory.newInstance().newSerializer();
     serializer.setOutput(outputStream, ENCODING);
@@ -79,41 +83,37 @@ public class TradefedConfigGenerator {
     serializer.startDocument(ENCODING, /* standalone= */ false);
     serializer.startTag(NULL_NS, CONFIGURATION_TAG);
 
-    for (DeviceActionConfigObject deviceActionConfigObject :
-        testEnvironment.getDeviceActionConfigObjectsList()) {
-      serializeDeviceAction(serializer, deviceActionConfigObject);
+    if (deviceCount > 1) {
+      for (int i = 0; i < deviceCount; i++) {
+        serializer.startTag(NULL_NS, DEVICE_TAG);
+        serializer.attribute(NULL_NS, NAME_ATTR, String.format("TF_DEVICE_%d", i));
+        serializedDevicePreparers(
+            serializer, testEnvironment.getDeviceActionConfigObjectsList(), testResources);
+        serializer.endTag(NULL_NS, DEVICE_TAG);
+      }
+    } else {
+      serializedDevicePreparers(
+          serializer, testEnvironment.getDeviceActionConfigObjectsList(), testResources);
     }
     serializeTest(serializer, testEnvironment);
     serializeCmdOptions(serializer, testEnvironment);
-    if (!testResources.isEmpty()) {
-      serializeBuildProvider(serializer, testResources);
-    }
     // TODO: redirect tool logs
 
     serializer.endTag(NULL_NS, CONFIGURATION_TAG);
     serializer.endDocument();
   }
 
-  private static void serializeDeviceAction(
-      XmlSerializer serializer, DeviceActionConfigObject configObject) throws IOException {
-    String actionTag;
-    switch (configObject.getType()) {
-      case TARGET_PREPARER:
-        actionTag = TARGET_PREPARER_TAG;
-        break;
-      case RESULT_REPORTER:
-        actionTag = RESULT_REPORTER_TAG;
-        break;
-      default:
-        // Skip for non-TF device action
-        return;
+  private static void serializedDevicePreparers(
+      XmlSerializer serializer,
+      List<DeviceActionConfigObject> deviceActionConfigObjects,
+      List<TestResource> testResources)
+      throws IOException {
+    for (DeviceActionConfigObject deviceActionConfigObject : deviceActionConfigObjects) {
+      serializeDeviceAction(serializer, deviceActionConfigObject);
     }
-    serializer.startTag(NULL_NS, actionTag);
-    serializer.attribute(NULL_NS, CLASS_ATTR, configObject.getClassName());
-    for (Option option : configObject.getOptionValuesList()) {
-      serializeOptionObject(serializer, option);
+    if (!testResources.isEmpty()) {
+      serializeBuildProvider(serializer, testResources);
     }
-    serializer.endTag(NULL_NS, actionTag);
   }
 
   private static void serializeTest(XmlSerializer serializer, TestEnvironment testEnvironment)
@@ -157,6 +157,28 @@ public class TradefedConfigGenerator {
       serializeOption(serializer, "parallel-setup-timeout", "PT0S");
     }
     serializer.endTag(NULL_NS, CMD_OPTIONS_TAG);
+  }
+
+  private static void serializeDeviceAction(
+      XmlSerializer serializer, DeviceActionConfigObject configObject) throws IOException {
+    String actionTag;
+    switch (configObject.getType()) {
+      case TARGET_PREPARER:
+        actionTag = TARGET_PREPARER_TAG;
+        break;
+      case RESULT_REPORTER:
+        actionTag = RESULT_REPORTER_TAG;
+        break;
+      default:
+        // Skip for non-TF device action
+        return;
+    }
+    serializer.startTag(NULL_NS, actionTag);
+    serializer.attribute(NULL_NS, CLASS_ATTR, configObject.getClassName());
+    for (Option option : configObject.getOptionValuesList()) {
+      serializeOptionObject(serializer, option);
+    }
+    serializer.endTag(NULL_NS, actionTag);
   }
 
   private static void serializeBuildProvider(

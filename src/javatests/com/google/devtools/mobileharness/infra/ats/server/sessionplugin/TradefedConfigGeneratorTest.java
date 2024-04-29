@@ -50,7 +50,7 @@ public class TradefedConfigGeneratorTest {
   public void generateXml_empty() throws Exception {
     try (OutputStream outputStream = new ByteArrayOutputStream()) {
       TradefedConfigGenerator.generateXml(
-          outputStream, TestEnvironment.getDefaultInstance(), ImmutableList.of());
+          outputStream, TestEnvironment.getDefaultInstance(), ImmutableList.of(), 1);
       // Replace line-breaks
       String config = outputStream.toString().replace("\r\n", "\n");
       assertThat(config).isEqualTo(localFileUtil.readFile(EMPTY_PATH).trim());
@@ -105,7 +105,7 @@ public class TradefedConfigGeneratorTest {
 
     try (OutputStream outputStream = new ByteArrayOutputStream()) {
       TradefedConfigGenerator.generateXml(
-          outputStream, testEnvironment, ImmutableList.of(testResource));
+          outputStream, testEnvironment, ImmutableList.of(testResource), 2);
       // Replace line-breaks
       String config = outputStream.toString().replace("\r\n", "\n");
       assertThat(config).isEqualTo(localFileUtil.readFile(COMMAND_PATH).trim());

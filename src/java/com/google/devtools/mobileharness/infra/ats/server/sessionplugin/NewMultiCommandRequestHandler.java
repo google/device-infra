@@ -404,7 +404,10 @@ final class NewMultiCommandRequestHandler {
     Path commandPath = Path.of(xtsRootDir).resolveSibling("command.xml");
     try (OutputStream outputStream = new FileOutputStream(commandPath.toFile())) {
       TradefedConfigGenerator.generateXml(
-          outputStream, request.getTestEnvironment(), fileTestResources.build());
+          outputStream,
+          request.getTestEnvironment(),
+          fileTestResources.build(),
+          deviceSerials.size());
     } catch (IOException | XmlPullParserException e) {
       throw new MobileHarnessException(
           InfraErrorId.ATS_SERVER_FAILED_TO_GENERATE_XML_TEST_CONFIG,
