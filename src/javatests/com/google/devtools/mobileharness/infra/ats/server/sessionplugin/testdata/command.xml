@@ -22,4 +22,8 @@
     <option name="parallel-setup" value="true" />
     <option name="parallel-setup-timeout" value="PT0S" />
   </cmd_options>
+  <build_provider class="com.android.tradefed.cluster.ClusterBuildProvider">
+    <option name="root-dir" value="${TF_WORK_DIR}" />
+    <option name="test-resource" value='{"url":"${FILE_zip}","name":"zip","path":"path","decompress":false,"decompress_dir":"decompress_dir","mount_zip":true,"params":{"decompress_files":["file"]}}' />
+  </build_provider>
 </configuration>

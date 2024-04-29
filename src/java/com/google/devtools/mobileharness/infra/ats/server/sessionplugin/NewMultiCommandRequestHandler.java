@@ -359,6 +359,7 @@ final class NewMultiCommandRequestHandler {
       // TODO: need to handle non device serial case.
     }
     String androidXtsZipPath = "";
+    ImmutableList.Builder<TestResource> fileTestResources = ImmutableList.builder();
     for (TestResource testResource : request.getTestResourcesList()) {
       URL testResourceUrl;
       try {
@@ -369,10 +370,12 @@ final class NewMultiCommandRequestHandler {
         continue;
       }
 
-      if (ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()
-          && testResourceUrl.getProtocol().equals("file")) {
-        androidXtsZipPath = testResourceUrl.getPath();
-        break;
+      if (testResourceUrl.getProtocol().equals("file")) {
+        if (ANDROID_XTS_ZIP_FILENAME_REGEX.matcher(testResource.getName()).matches()) {
+          androidXtsZipPath = testResourceUrl.getPath();
+        } else {
+          fileTestResources.add(testResource);
+        }
       }
     }
     if (androidXtsZipPath.isEmpty()) {
@@ -400,7 +403,8 @@ final class NewMultiCommandRequestHandler {
     // Generate XML test config template for ClusterCommandLauncher.
     Path commandPath = Path.of(xtsRootDir).resolveSibling("command.xml");
     try (OutputStream outputStream = new FileOutputStream(commandPath.toFile())) {
-      TradefedConfigGenerator.generateXml(outputStream, request.getTestEnvironment());
+      TradefedConfigGenerator.generateXml(
+          outputStream, request.getTestEnvironment(), fileTestResources.build());
     } catch (IOException | XmlPullParserException e) {
       throw new MobileHarnessException(
           InfraErrorId.ATS_SERVER_FAILED_TO_GENERATE_XML_TEST_CONFIG,

@@ -18,11 +18,14 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject.DeviceActionConfigObjectType;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject.Option;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment.LogLevel;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResourceParameters;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.protobuf.Duration;
@@ -46,7 +49,8 @@ public class TradefedConfigGeneratorTest {
   @Test
   public void generateXml_empty() throws Exception {
     try (OutputStream outputStream = new ByteArrayOutputStream()) {
-      TradefedConfigGenerator.generateXml(outputStream, TestEnvironment.getDefaultInstance());
+      TradefedConfigGenerator.generateXml(
+          outputStream, TestEnvironment.getDefaultInstance(), ImmutableList.of());
       // Replace line-breaks
       String config = outputStream.toString().replace("\r\n", "\n");
       assertThat(config).isEqualTo(localFileUtil.readFile(EMPTY_PATH).trim());
@@ -88,9 +92,20 @@ public class TradefedConfigGeneratorTest {
             .setRetryCommandLine("retry")
             .setLogLevel(LogLevel.DEBUG)
             .build();
+    TestResource testResource =
+        TestResource.newBuilder()
+            .setUrl("url")
+            .setName("zip")
+            .setPath("path")
+            .setDecompress(false)
+            .setDecompressDir("decompress_dir")
+            .setMountZip(true)
+            .setParams(TestResourceParameters.newBuilder().addDecompressFiles("file"))
+            .build();
 
     try (OutputStream outputStream = new ByteArrayOutputStream()) {
-      TradefedConfigGenerator.generateXml(outputStream, testEnvironment);
+      TradefedConfigGenerator.generateXml(
+          outputStream, testEnvironment, ImmutableList.of(testResource));
       // Replace line-breaks
       String config = outputStream.toString().replace("\r\n", "\n");
       assertThat(config).isEqualTo(localFileUtil.readFile(COMMAND_PATH).trim());

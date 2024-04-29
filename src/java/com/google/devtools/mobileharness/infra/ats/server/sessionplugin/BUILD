@@ -125,10 +125,15 @@ java_library(
 java_library(
     name = "tradefed_config_generator",
     srcs = ["TradefedConfigGenerator.java"],
-    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+    ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf//:protobuf_java_util",
         "@maven//:com_google_guava_guava",
         "@maven//:xmlpull_xmlpull",
     ],

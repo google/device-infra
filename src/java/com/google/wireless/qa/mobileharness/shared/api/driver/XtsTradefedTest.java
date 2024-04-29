@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
+import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
@@ -88,6 +89,7 @@ import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -339,7 +341,7 @@ public class XtsTradefedTest extends BaseDriver
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, String> env =
         getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType, spec);
-    String[] cmd = getXtsCommand(spec, tmpXtsRootDir, xtsType, env);
+    String[] cmd = getXtsCommand(spec, tmpXtsRootDir, xtsType, env, testInfo);
     // Logs command string for debug purpose
     StringBuilder commandString =
         new StringBuilder(Joiner.on(' ').withKeyValueSeparator("=").join(env));
@@ -495,7 +497,8 @@ public class XtsTradefedTest extends BaseDriver
       XtsTradefedTestDriverSpec spec,
       Path tmpXtsRootDir,
       String xtsType,
-      ImmutableMap<String, String> envVars)
+      ImmutableMap<String, String> envVars,
+      TestInfo testInfo)
       throws MobileHarnessException {
     ImmutableList.Builder<String> xtsCommand =
         ImmutableList.<String>builder()
@@ -508,7 +511,7 @@ public class XtsTradefedTest extends BaseDriver
                     TF_PATH_KEY, getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType))))
         .add(String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType), tmpXtsRootDir))
         .add(COMPATIBILITY_CONSOLE_CLASS)
-        .addAll(getXtsRunCommandArgs(spec, envVars));
+        .addAll(getXtsRunCommandArgs(spec, envVars, testInfo));
 
     return xtsCommand.build().toArray(new String[0]);
   }
@@ -739,7 +742,8 @@ public class XtsTradefedTest extends BaseDriver
   }
 
   private ImmutableList<String> getXtsRunCommandArgs(
-      XtsTradefedTestDriverSpec spec, Map<String, String> envVars) throws MobileHarnessException {
+      XtsTradefedTestDriverSpec spec, Map<String, String> envVars, TestInfo testInfo)
+      throws MobileHarnessException {
     ImmutableList.Builder<String> xtsRunCommand =
         ImmutableList.<String>builder().add("run", "commandAndExit");
 
@@ -761,7 +765,15 @@ public class XtsTradefedTest extends BaseDriver
       StringSubstitutor sub = new StringSubstitutor(envVars);
       // Replace ${COMMAND} with the xTS command
       String config =
-          sub.replace(configTemplate).replace("${COMMAND}", String.join(" ", xtsCommand));
+          sub.replace(configTemplate)
+              .replace(TradefedConfigGenerator.COMMAND_LINE_TEMPLATE, String.join(" ", xtsCommand));
+      // Replace ${FILE_tag} with the real file path
+      for (Entry<String, String> entry : testInfo.jobInfo().files().getAll().entries()) {
+        config =
+            config.replace(
+                String.format(TradefedConfigGenerator.FILE_TEMPLATE, entry.getKey()),
+                "file://" + entry.getValue());
+      }
       logger.atInfo().log("Run xTS cluster command with config:\n%s", config);
       localFileUtil.writeToFile(spec.getXtsTestPlanFile(), config);
       xtsRunCommand.add(spec.getXtsTestPlanFile());

@@ -20,9 +20,14 @@ import com.google.common.base.Strings;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.DeviceActionConfigObject.Option;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
+import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.JsonFormat;
+import com.google.protobuf.util.JsonFormat.Printer;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,6 +40,7 @@ public class TradefedConfigGenerator {
   private static final String ENCODING = "UTF-8";
   private static final String NULL_NS = null; // namespace used for XML serializer
 
+  private static final String BUILD_PROVIDER_TAG = "build_provider";
   private static final String CMD_OPTIONS_TAG = "cmd_options";
   private static final String CONFIGURATION_TAG = "configuration";
   private static final String OPTION_TAG = "option";
@@ -47,14 +53,23 @@ public class TradefedConfigGenerator {
   private static final String NAME_ATTR = "name";
   private static final String VALUE_ATTR = "value";
 
-  private static final String TEST_CLASS = "com.android.tradefed.cluster.ClusterCommandLauncher";
+  private static final String BUILD_PROVIDER_CLASS =
+      "com.android.tradefed.cluster.ClusterBuildProvider";
   private static final String CMD_OPTIONS_CLASS = "com.android.tradefed.command.CommandOptions";
+  private static final String TEST_CLASS = "com.android.tradefed.cluster.ClusterCommandLauncher";
 
-  static final Pattern BOOL_PATTERN = Pattern.compile("(?<prefix>no-)?(?<name>.+)");
+  private static final Pattern BOOL_PATTERN = Pattern.compile("(?<prefix>no-)?(?<name>.+)");
+
+  private static final Printer JSON_PRINTER =
+      JsonFormat.printer().omittingInsignificantWhitespace().preservingProtoFieldNames();
+
+  public static final String COMMAND_LINE_TEMPLATE = "${COMMAND}";
+  public static final String FILE_TEMPLATE = "${FILE_%s}";
 
   private TradefedConfigGenerator() {}
 
-  public static void generateXml(OutputStream outputStream, TestEnvironment testEnvironment)
+  public static void generateXml(
+      OutputStream outputStream, TestEnvironment testEnvironment, List<TestResource> testResources)
       throws XmlPullParserException, IOException {
     XmlSerializer serializer = XmlPullParserFactory.newInstance().newSerializer();
     serializer.setOutput(outputStream, ENCODING);
@@ -70,6 +85,9 @@ public class TradefedConfigGenerator {
     }
     serializeTest(serializer, testEnvironment);
     serializeCmdOptions(serializer, testEnvironment);
+    if (!testResources.isEmpty()) {
+      serializeBuildProvider(serializer, testResources);
+    }
     // TODO: redirect tool logs
 
     serializer.endTag(NULL_NS, CONFIGURATION_TAG);
@@ -103,7 +121,7 @@ public class TradefedConfigGenerator {
     serializer.startTag(NULL_NS, TEST_TAG);
     serializer.attribute(NULL_NS, CLASS_ATTR, TEST_CLASS);
     serializeOption(serializer, "root-dir", "${TF_WORK_DIR}");
-    serializeOption(serializer, "command-line", "${COMMAND}");
+    serializeOption(serializer, "command-line", COMMAND_LINE_TEMPLATE);
     for (String key : testEnvironment.getEnvVarsMap().keySet()) {
       // Generate templates for env vars. Resolve them on the lab side.
       serializeOption(serializer, "env-var", key, String.format("${%s}", key));
@@ -139,6 +157,17 @@ public class TradefedConfigGenerator {
       serializeOption(serializer, "parallel-setup-timeout", "PT0S");
     }
     serializer.endTag(NULL_NS, CMD_OPTIONS_TAG);
+  }
+
+  private static void serializeBuildProvider(
+      XmlSerializer serializer, List<TestResource> testResources) throws IOException {
+    serializer.startTag(NULL_NS, BUILD_PROVIDER_TAG);
+    serializer.attribute(NULL_NS, CLASS_ATTR, BUILD_PROVIDER_CLASS);
+    serializeOption(serializer, "root-dir", "${TF_WORK_DIR}");
+    for (TestResource testResource : testResources) {
+      serializeOption(serializer, "test-resource", serializeTestResource(testResource));
+    }
+    serializer.endTag(NULL_NS, BUILD_PROVIDER_TAG);
   }
 
   private static void serializeOptionObject(XmlSerializer serializer, Option option)
@@ -180,5 +209,14 @@ public class TradefedConfigGenerator {
     serializer.attribute(NULL_NS, KEY_ATTR, key);
     serializer.attribute(NULL_NS, VALUE_ATTR, value);
     serializer.endTag(NULL_NS, OPTION_TAG);
+  }
+
+  private static String serializeTestResource(TestResource testResource)
+      throws InvalidProtocolBufferException {
+    return JSON_PRINTER.print(
+        testResource.toBuilder()
+            // Replace the url with the template. Resolve it on the lab side.
+            .setUrl(String.format(FILE_TEMPLATE, testResource.getName()))
+            .build());
   }
 }
