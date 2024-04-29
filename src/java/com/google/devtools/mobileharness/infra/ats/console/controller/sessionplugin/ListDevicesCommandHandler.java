@@ -121,7 +121,8 @@ class ListDevicesCommandHandler {
         .setProductVariant(getDimension(dimensions, Name.DEVICE.lowerCaseName()).orElse("n/a"))
         .setBuildId(getDimension(dimensions, Name.BUILD_ALIAS.lowerCaseName()).orElse("n/a"))
         .setBatteryLevel(getDimension(dimensions, Name.BATTERY_LEVEL.lowerCaseName()).orElse("n/a"))
-        .setDeviceClass("n/a")
+        .setDeviceClass(
+            getDimension(dimensions, Name.DEVICE_CLASS_NAME.lowerCaseName()).orElse("n/a"))
         .setTestDeviceState("n/a")
         .setIsStubDevice(false)
         .build();

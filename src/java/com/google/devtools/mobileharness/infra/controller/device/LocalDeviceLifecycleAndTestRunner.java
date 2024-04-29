@@ -170,7 +170,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         .add(deviceId, apiConfig, type.isAnnotationPresent(RetainDeviceInfoAnnotation.class));
 
     device = new DeviceFactory().createDevice(type, deviceId.controlId());
-    addDeviceIdToDimension(deviceId);
+    addDeviceIdAndClassNameToDimension(deviceId);
     deviceStat = stat;
     deviceStat.onShowUp();
     clock = Clock.systemUTC();
@@ -191,7 +191,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       Thread runningThread,
       ExternalDeviceManager externalDeviceManager) {
     this.device = device;
-    addDeviceIdToDimension(deviceId);
+    addDeviceIdAndClassNameToDimension(deviceId);
     this.deviceStat = stat;
     this.apiConfig = apiConfig;
     this.clock = clock;
@@ -628,8 +628,8 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     deviceStat.countStatus(status);
   }
 
-  /** Adds the device id to the device dimension. */
-  private void addDeviceIdToDimension(DeviceId deviceId) {
+  /** Adds the device ID and class name to the device dimensions. */
+  private void addDeviceIdAndClassNameToDimension(DeviceId deviceId) {
     // Currently it's control id, need to reconsider whether to keep this field.
     device.addDimension(Dimension.Name.ID, deviceId.controlId());
     device.addDimension(Dimension.Name.CONTROL_ID, deviceId.controlId());
@@ -637,6 +637,8 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       device.addDimension(Dimension.Name.UUID, deviceId.uuid());
       device.addDimension(Dimension.Name.UUID_VOLATILE, String.valueOf(deviceId.isUuidVolatile()));
     }
+
+    device.addDimension(Dimension.Name.DEVICE_CLASS_NAME, device.getClass().getSimpleName());
   }
 
   /**

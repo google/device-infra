@@ -52,6 +52,8 @@ public final class Dimension {
      * @see com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty#DEVICE
      */
     DEVICE,
+    /** Class simple name of the {@code Device} class. */
+    DEVICE_CLASS_NAME,
     /** Whether a device supports running test in container mode. */
     DEVICE_SUPPORTS_CONTAINER,
     /** Whether a device is supports running on Moreto. */
@@ -122,7 +124,7 @@ public final class Dimension {
     SCREENSHOT_ABLE,
     /** Whether a lab/device supports running tests on ad hoc testbeds. */
     SUPPORTS_ADHOC,
-    /** Whethere a device is responsive on serial. */
+    /** Whether a device is responsive on serial. */
     SERIAL_RESPONSIVE,
     /** The total memory size in MB. */
     TOTAL_MEMORY,
