@@ -17,15 +17,19 @@
 package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -204,6 +208,192 @@ public final class RetryGeneratorTest {
 
     assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
         .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+  }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_excludeModule() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    String previousSessionId = "session_id";
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionId))
+        .thenReturn(REPORT_1);
+
+    SuiteTestFilter filter = SuiteTestFilter.create("Module1");
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setPassedInExcludeFilters(ImmutableSet.of(filter))
+                .setPreviousSessionId(previousSessionId)
+                .build());
+
+    SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"));
+
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
+    assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
+        .containsExactly("Module1", ImmutableSet.of("ALL"));
+
+    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
+        subPlan.getNonTfIncludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+  }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_excludeNonTfModule() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    String previousSessionId = "session_id";
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionId))
+        .thenReturn(REPORT_1);
+
+    SuiteTestFilter filter = SuiteTestFilter.create("Module3[Instant]");
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setAllNonTfModules(ImmutableSet.of("Module3"))
+                .setPassedInExcludeFilters(ImmutableSet.of(filter))
+                .setPreviousSessionId(previousSessionId)
+                .build());
+
+    SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"));
+
+    SetMultimap<String, String> subPlanNonTfExcludeFiltersMultimap =
+        subPlan.getNonTfExcludeFiltersMultimap();
+    assertThat(Multimaps.asMap(subPlanNonTfExcludeFiltersMultimap))
+        .containsExactly("Module3[Instant]", ImmutableSet.of("ALL"));
+
+    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
+        subPlan.getNonTfIncludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+  }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_excludeTest() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    String previousSessionId = "session_id";
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionId))
+        .thenReturn(REPORT_1);
+
+    SuiteTestFilter filter = SuiteTestFilter.create("arm64-v8a Module1 TestClass1#Test2");
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setPassedInExcludeFilters(ImmutableSet.of(filter))
+                .setPreviousSessionId(previousSessionId)
+                .build());
+
+    SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"));
+
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
+    assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
+        .containsExactly("arm64-v8a Module1", ImmutableSet.of("TestClass1#Test2"));
+
+    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
+        subPlan.getNonTfIncludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+  }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_excludeAbiAndModule() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    String previousSessionId = "session_id";
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionId))
+        .thenReturn(REPORT_1);
+
+    SuiteTestFilter filter = SuiteTestFilter.create("arm64-v8a Module1");
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setPassedInExcludeFilters(ImmutableSet.of(filter))
+                .setPreviousSessionId(previousSessionId)
+                .build());
+
+    SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"));
+
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
+    assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
+        .containsExactly("arm64-v8a Module1", ImmutableSet.of("ALL"));
+
+    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
+        subPlan.getNonTfIncludeFiltersMultimap();
+
+    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+  }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_nonTFModuleWithTestCaseInFilter() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    String previousSessionId = "session_id";
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionId))
+        .thenReturn(REPORT_1);
+
+    SuiteTestFilter filter = SuiteTestFilter.create("arm64-v8a Module3[Instant] TestClass2#Test1");
+    MobileHarnessException exception1 =
+        assertThrows(
+            MobileHarnessException.class,
+            () ->
+                retryGenerator.generateRetrySubPlan(
+                    RetryArgs.builder()
+                        .setResultsDir(resultsDir)
+                        .setPassedInExcludeFilters(ImmutableSet.of(filter))
+                        .setAllNonTfModules(ImmutableSet.of("Module3"))
+                        .setPreviousSessionId(previousSessionId)
+                        .build()));
+    assertThat(exception1.getErrorId()).isEqualTo(InfraErrorId.ATSC_RUN_RETRY_INVALID_FILTER_ERROR);
+
+    SuiteTestFilter filter2 = SuiteTestFilter.create("arm64-v8a Module3 TestClass1#Test1");
+    MobileHarnessException exception2 =
+        assertThrows(
+            MobileHarnessException.class,
+            () ->
+                retryGenerator.generateRetrySubPlan(
+                    RetryArgs.builder()
+                        .setResultsDir(resultsDir)
+                        .setPassedInExcludeFilters(ImmutableSet.of(filter2))
+                        .setAllNonTfModules(ImmutableSet.of("Module3"))
+                        .setPreviousSessionId(previousSessionId)
+                        .build()));
+    assertThat(exception2.getErrorId()).isEqualTo(InfraErrorId.ATSC_RUN_RETRY_INVALID_FILTER_ERROR);
   }
 
   @org.junit.Test

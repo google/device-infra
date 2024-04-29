@@ -338,6 +338,133 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void createXtsTradefedTestJobConfig_retrySubplanWithFiltersAtsConsole() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .build());
+    SubPlan subPlan = new SubPlan();
+    subPlan.setPreviousSessionXtsTestPlan("cts");
+    subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
+    subPlan.addExcludeFilter("armeabi-v7a ModuleB android.test.Foo#test1");
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+    doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
+
+    File xtsRootDir = folder.newFolder("xts_root_dir");
+
+    Optional<JobConfig> jobConfigOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+            SessionRequestInfo.builder()
+                .setTestPlan("retry")
+                .setCommandLineArgs("retry --retry 0")
+                .setXtsType("cts")
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setRetrySessionIndex(0)
+                .setIncludeFilters(ImmutableList.of("armeabi-v7a ModuleA android.test.Foo#test1"))
+                .setExcludeFilters(ImmutableList.of("armeabi-v7a ModuleB android.test.Foo#test1"))
+                .build(),
+            ImmutableList.of());
+
+    assertThat(jobConfigOpt).isPresent();
+    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+
+    // Verify generator got correct input.
+    ArgumentCaptor<RetryArgs> retryArgsCaptor = ArgumentCaptor.forClass(RetryArgs.class);
+    verify(retryGenerator).generateRetrySubPlan(retryArgsCaptor.capture());
+    assertThat(retryArgsCaptor.getValue().passedInIncludeFilters()).hasSize(1);
+    assertThat(retryArgsCaptor.getValue().passedInIncludeFilters().iterator().next().filterString())
+        .isEqualTo("armeabi-v7a ModuleA android.test.Foo#test1");
+    assertThat(retryArgsCaptor.getValue().passedInExcludeFilters()).hasSize(1);
+    assertThat(retryArgsCaptor.getValue().passedInExcludeFilters().iterator().next().filterString())
+        .isEqualTo("armeabi-v7a ModuleB android.test.Foo#test1");
+
+    // Asserts the driver
+    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
+    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    Map<String, String> driverParamsMap =
+        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
+    assertThat(driverParamsMap).hasSize(5);
+    assertThat(driverParamsMap)
+        .containsAtLeast(
+            "xts_type",
+            "cts",
+            "xts_root_dir",
+            xtsRootDir.getAbsolutePath(),
+            "xts_test_plan",
+            "retry",
+            "prev_session_xts_test_plan",
+            "cts");
+    assertThat(driverParamsMap.get("subplan_xml")).startsWith(xtsRootDir.getAbsolutePath());
+  }
+
+  @Test
+  public void createXtsTradefedTestJobConfig_retrySubplanWithFiltersAtsServer() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .build());
+    SubPlan subPlan = new SubPlan();
+    subPlan.setPreviousSessionXtsTestPlan("cts");
+    subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
+    subPlan.addExcludeFilter("armeabi-v7a ModuleB android.test.Foo#test1");
+    when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
+    doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
+
+    File xtsRootDir = folder.newFolder("xts_root_dir");
+
+    Optional<JobConfig> jobConfigOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+            SessionRequestInfo.builder()
+                .setTestPlan("retry")
+                .setCommandLineArgs("retry --retry 0")
+                .setXtsType("cts")
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setRetrySessionId("previous_session_id")
+                .setRetryResultDir("/retry/result/dir")
+                .setIncludeFilters(ImmutableList.of("armeabi-v7a ModuleA android.test.Foo#test1"))
+                .setExcludeFilters(ImmutableList.of("armeabi-v7a ModuleB android.test.Foo#test1"))
+                .build(),
+            ImmutableList.of());
+
+    assertThat(jobConfigOpt).isPresent();
+    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+
+    // Verify generator got correct input.
+    ArgumentCaptor<RetryArgs> retryArgsCaptor = ArgumentCaptor.forClass(RetryArgs.class);
+    verify(retryGenerator).generateRetrySubPlan(retryArgsCaptor.capture());
+    assertThat(retryArgsCaptor.getValue().passedInIncludeFilters()).hasSize(1);
+    assertThat(retryArgsCaptor.getValue().passedInIncludeFilters().iterator().next().filterString())
+        .isEqualTo("armeabi-v7a ModuleA android.test.Foo#test1");
+    assertThat(retryArgsCaptor.getValue().passedInExcludeFilters()).hasSize(1);
+    assertThat(retryArgsCaptor.getValue().passedInExcludeFilters().iterator().next().filterString())
+        .isEqualTo("armeabi-v7a ModuleB android.test.Foo#test1");
+
+    // Asserts the driver
+    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
+    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    Map<String, String> driverParamsMap =
+        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
+    assertThat(driverParamsMap).hasSize(5);
+    assertThat(driverParamsMap)
+        .containsAtLeast(
+            "xts_type",
+            "cts",
+            "xts_root_dir",
+            xtsRootDir.getAbsolutePath(),
+            "xts_test_plan",
+            "retry",
+            "prev_session_xts_test_plan",
+            "cts");
+    assertThat(driverParamsMap.get("subplan_xml")).startsWith(xtsRootDir.getParent());
+  }
+
+  @Test
   public void createXtsTradefedTestJobConfig_addSubPlanXmlPathForRetryInAtsServer()
       throws Exception {
     when(deviceQuerier.queryDevice(any()))

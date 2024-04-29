@@ -41,7 +41,6 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Stream;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -103,15 +102,24 @@ public class SubPlanCreator {
             previousResult,
             resultTypes,
             /* addSubPlanCmd= */ true,
-            Stream.concat(
-                    addSubPlanArgs.passedInIncludeFilters().stream(),
-                    includeFiltersFromPrevResult.stream().map(SuiteTestFilter::create))
+            includeFiltersFromPrevResult.stream()
+                .map(SuiteTestFilter::create)
                 .collect(toImmutableSet()),
-            Stream.concat(
-                    addSubPlanArgs.passedInExcludeFilters().stream(),
-                    excludeFiltersFromPrevResult.stream().map(SuiteTestFilter::create))
+            excludeFiltersFromPrevResult.stream()
+                .map(SuiteTestFilter::create)
                 .collect(toImmutableSet()),
             /* passedInModules= */ ImmutableSet.of()); // TODO
+
+    // TODO: support filters for subplan command. Currently the passed in filters are
+    // empty.
+    subPlan.addAllIncludeFilters(
+        addSubPlanArgs.passedInIncludeFilters().stream()
+            .map(SuiteTestFilter::filterString)
+            .collect(toImmutableSet()));
+    subPlan.addAllExcludeFilters(
+        addSubPlanArgs.passedInExcludeFilters().stream()
+            .map(SuiteTestFilter::filterString)
+            .collect(toImmutableSet()));
 
     try {
       subPlan.serialize(

@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
@@ -29,7 +30,6 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Stream;
 import javax.inject.Inject;
 
 /** To generate the subplan for retrying a previous session. */
@@ -67,18 +67,47 @@ public class RetryGenerator {
     ImmutableSet<String> retryTypesStr =
         retryTypes.stream().map(rt -> Ascii.toLowerCase(rt.name())).collect(toImmutableSet());
 
-    return SubPlanHelper.createSubPlanForPreviousResult(
-        previousResult,
-        retryTypesStr,
-        /* addSubPlanCmd= */ false,
-        Stream.concat(
-                retryArgs.passedInIncludeFilters().stream(),
-                includeFiltersFromPrevResult.stream().map(SuiteTestFilter::create))
-            .collect(toImmutableSet()),
-        Stream.concat(
-                retryArgs.passedInExcludeFilters().stream(),
-                excludeFiltersFromPrevResult.stream().map(SuiteTestFilter::create))
-            .collect(toImmutableSet()),
-        retryArgs.passedInModules());
+    SubPlan subPlan =
+        SubPlanHelper.createSubPlanForPreviousResult(
+            previousResult,
+            retryTypesStr,
+            /* addSubPlanCmd= */ false,
+            includeFiltersFromPrevResult.stream()
+                .map(SuiteTestFilter::create)
+                .collect(toImmutableSet()),
+            excludeFiltersFromPrevResult.stream()
+                .map(SuiteTestFilter::create)
+                .collect(toImmutableSet()),
+            retryArgs.passedInModules());
+    for (SuiteTestFilter filter : retryArgs.passedInIncludeFilters()) {
+      if (retryArgs.allNonTfModules().stream()
+          .map(Ascii::toLowerCase)
+          .anyMatch(Ascii.toLowerCase(filter.moduleName())::contains)) {
+        subPlan.addNonTfIncludeFilter(filter.filterString());
+      } else {
+        subPlan.addIncludeFilter(filter.filterString());
+      }
+    }
+
+    for (SuiteTestFilter filter : retryArgs.passedInExcludeFilters()) {
+      if (retryArgs.allNonTfModules().stream()
+          .map(Ascii::toLowerCase)
+          .anyMatch(Ascii.toLowerCase(filter.moduleName())::contains)) {
+        if (filter.testName().isPresent()) {
+          throw new MobileHarnessException(
+              InfraErrorId.ATSC_RUN_RETRY_INVALID_FILTER_ERROR,
+              "Non tradefed test filter only support module level filter. Filter: "
+                  + filter.filterString()
+                  + ", session being retried : "
+                  + retryArgs
+                      .previousSessionId()
+                      .orElse(String.valueOf(retryArgs.previousSessionIndex())));
+        }
+        subPlan.addNonTfExcludeFilter(filter.filterString());
+      } else {
+        subPlan.addExcludeFilter(filter.filterString());
+      }
+    }
+    return subPlan;
   }
 }

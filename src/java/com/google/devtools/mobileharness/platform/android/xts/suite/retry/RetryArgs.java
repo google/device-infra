@@ -60,11 +60,15 @@ public abstract class RetryArgs {
   /** Modules passed in by the command. */
   public abstract ImmutableSet<String> passedInModules();
 
+  /** Collection of all non-TF modules in xTS root directory. */
+  public abstract ImmutableSet<String> allNonTfModules();
+
   public static Builder builder() {
     return new AutoValue_RetryArgs.Builder()
         .setPassedInIncludeFilters(ImmutableSet.of())
         .setPassedInExcludeFilters(ImmutableSet.of())
-        .setPassedInModules(ImmutableSet.of());
+        .setPassedInModules(ImmutableSet.of())
+        .setAllNonTfModules(ImmutableSet.of());
   }
 
   /** Builder for {@link RetryArgs}. */
@@ -87,6 +91,8 @@ public abstract class RetryArgs {
         ImmutableSet<SuiteTestFilter> passedInExcludeFilters);
 
     public abstract Builder setPassedInModules(ImmutableSet<String> passedInModules);
+
+    public abstract Builder setAllNonTfModules(ImmutableSet<String> allNonTfModules);
 
     protected abstract RetryArgs autoBuild();
 

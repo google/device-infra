@@ -44,15 +44,15 @@ public class SubPlanHelper {
       Result previousResult,
       Set<String> types,
       boolean addSubPlanCmd,
-      ImmutableSet<SuiteTestFilter> includeFilters,
-      ImmutableSet<SuiteTestFilter> excludeFilters,
+      ImmutableSet<SuiteTestFilter> prevResultIncludeFilters,
+      ImmutableSet<SuiteTestFilter> prevResultExcludeFilters,
       ImmutableSet<String> passedInModules) {
     SubPlan subPlan = new SubPlan();
     for (Module module : previousResult.getModuleInfoList()) {
       if (RetryResultHelper.shouldRunModule(module, types, addSubPlanCmd, passedInModules)) {
         boolean isNonTfModule = module.getIsNonTfModule();
         if (RetryResultHelper.shouldRunEntireModule(
-            module, types, addSubPlanCmd, includeFilters, excludeFilters)) {
+            module, types, addSubPlanCmd, prevResultIncludeFilters, prevResultExcludeFilters)) {
           if (isNonTfModule) {
             subPlan.addNonTfIncludeFilter(
                 String.format("%s %s", module.getAbi(), module.getName()));

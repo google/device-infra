@@ -77,8 +77,8 @@ public final class RetryResultHelper {
       Module module,
       Set<String> types,
       boolean addSubPlanCmd,
-      Set<SuiteTestFilter> passedInIncludeFilters,
-      Set<SuiteTestFilter> passedInExcludeFilters) {
+      Set<SuiteTestFilter> prevResultIncludeFilters,
+      Set<SuiteTestFilter> prevResultExcludeFilters) {
     // Not run the entire module if any of tests has a status out of the retry types.
     Set<String> statusesToRun = getStatusesToRun(types, addSubPlanCmd);
     for (TestStatus status : TestStatus.values()) {
@@ -92,8 +92,8 @@ public final class RetryResultHelper {
 
     // User passed in include-filter matches a test in the module, so only part of the module tests
     // were ran.
-    if (!passedInIncludeFilters.isEmpty()
-        && passedInIncludeFilters.stream()
+    if (!prevResultIncludeFilters.isEmpty()
+        && prevResultIncludeFilters.stream()
             .anyMatch(
                 filter ->
                     filter.matchModule(
@@ -103,8 +103,8 @@ public final class RetryResultHelper {
     }
     // User passed in exclude-filter matches a test in the module, so only part of the module tests
     // were ran.
-    if (!passedInExcludeFilters.isEmpty()
-        && passedInExcludeFilters.stream()
+    if (!prevResultExcludeFilters.isEmpty()
+        && prevResultExcludeFilters.stream()
             .anyMatch(
                 filter ->
                     filter.matchModule(
