@@ -28,7 +28,8 @@ public class AndroidEmulatorIds {
     }
     return deviceId.startsWith("emulator")
         || deviceId.startsWith("localhost")
-        || deviceId.startsWith("127.0.0.1");
+        || deviceId.startsWith("127.0.0.1")
+        || deviceId.startsWith("0.0.0.0");
   }
 
   private AndroidEmulatorIds() {}
