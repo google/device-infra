@@ -39,7 +39,6 @@ import java.lang.annotation.Target;
  *
  * @see ParamAnnotation
  * @see FileAnnotation
- * @see ValidatorAnnotation
  * @see com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent
  */
 @Target(ElementType.FIELD)

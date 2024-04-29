@@ -16,10 +16,54 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
+    name = "class_constants",
+    srcs = ["ClassConstants.java"],
+    visibility = ["//src/java/com/google/wireless/qa/mobileharness/shared/api:__pkg__"],
+)
+
+java_library(
+    name = "client_class_util",
+    srcs = ["ClientClassUtil.java"],
+    visibility = [
+        "//java/com/google/devtools/mobileharness/shared/util/metadata:__pkg__",
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/util/lister:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
+    ],
+    deps = [
+        ":class_constants",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/lister",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:reflection",
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
+)
+
+java_library(
     name = "reflection_util",
     srcs = ["ReflectionUtil.java"],
     visibility = [
         "//:deviceinfra_all_pkg",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/api/model/error"],
+)
+
+java_library(
+    name = "validator_class_util",
+    srcs = ["ValidatorClassUtil.java"],
+    visibility = [
+        "//java/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//javatests/com/google/wireless/qa/mobileharness/shared/api:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
+    ],
+    deps = [
+        ":class_constants",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:reflection",
+    ],
 )

@@ -27,6 +27,7 @@ java_library(
         "InstallSystemApkStep.java",
     ],
     deps = [
+        ":install_apk_step_constants",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/converter",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -47,11 +48,9 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/user:android_user_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/android:aapt",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
@@ -63,5 +62,28 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "install_apk_step_job_validator",
+    srcs = ["InstallApkStepJobValidator.java"],
+    deps = [
+        ":install_apk_step_constants",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator/job:job_validator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "install_apk_step_constants",
+    srcs = ["InstallApkStepConstants.java"],
+    deps = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation:basic_annotation",
     ],
 )

@@ -21,9 +21,9 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.shared.util.reflection.ClientClassUtil;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.lister.Lister;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
@@ -68,7 +68,7 @@ public class TestLister {
 
     // Only use test lister when no test specified.
     String driver = jobInfo.type().getDriver();
-    Class<? extends Lister> listerClass = ClassUtil.getListerClass(driver);
+    Class<? extends Lister> listerClass = ClientClassUtil.getListerClass(driver);
     MobileHarnessException.checkNotNull(
         listerClass,
         ErrorCode.TEST_LISTER_ERROR,

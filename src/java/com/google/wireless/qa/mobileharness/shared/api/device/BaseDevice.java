@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.infra.controller.device.DeviceInfoManag
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.reflection.ValidatorClassUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
@@ -425,7 +426,7 @@ public abstract class BaseDevice implements Device {
   }
 
   /**
-   * Returns the communication property of the device, indexed by key {@link PROP_COMMUNICATION}.
+   * Returns the communication property of the device, indexed by key {@link #PROP_COMMUNICATION}.
    *
    * @return the communication property
    */
@@ -503,7 +504,7 @@ public abstract class BaseDevice implements Device {
       } else {
         // Runs the legacy validator.
         Optional<Class<? extends Validator>> validatorClass =
-            ClassUtil.getValidatorClass(driverClass.getSimpleName());
+            ValidatorClassUtil.getValidatorClass(driverClass.getSimpleName());
         if (validatorClass.isPresent()) {
           validatorFactory.createValidator(validatorClass.get()).validateEnv(this);
         }
@@ -577,7 +578,7 @@ public abstract class BaseDevice implements Device {
       } else {
         // Runs the legacy validator.
         Optional<Class<? extends Validator>> validatorClass =
-            ClassUtil.getValidatorClass(decoratorClass.getSimpleName());
+            ValidatorClassUtil.getValidatorClass(decoratorClass.getSimpleName());
         // If there is no Validator for the given decorator type, will skip the validation.
         if (validatorClass.isPresent()) {
           validatorFactory.createValidator(validatorClass.get()).validateEnv(this);

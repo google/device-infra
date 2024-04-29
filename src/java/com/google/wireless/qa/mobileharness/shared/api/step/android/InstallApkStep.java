@@ -21,7 +21,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
@@ -46,14 +45,10 @@ import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidS
 import com.google.devtools.mobileharness.platform.android.systemsetting.AppOperationMode;
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Inject;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.FileAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.annotation.ValidatorAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
@@ -66,99 +61,19 @@ import com.google.wireless.qa.mobileharness.shared.proto.spec.decorator.InstallA
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import javax.annotation.Nullable;
 
 /** Utility methods of apk installation for drivers. */
-public class InstallApkStep {
+public class InstallApkStep implements InstallApkStepConstants {
+
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  @FileAnnotation(
-      required = false,
-      help =
-          "The build apks. Typically it is the AUT(app under test). "
-              + "If you have packed your AUT and your test code together into a single apk, "
-              + "you can ignore this parameter. "
-              + "If you have dependencies apks needed for your test, you can also list them here.")
-  public static final String TAG_BUILD_APK = "build_apk";
-
-  @FileAnnotation(
-      required = false,
-      help = "Extra apks to install.  Used in combination with TAG_BUILD_APK")
-  public static final String TAG_EXTRA_APK = "extra_apk";
-
-  @ParamAnnotation(
-      required = false,
-      help = "File tags separated by comma. Apks in these tags will also be installed.")
-  public static final String PARAM_INSTALL_APK_EXTRA_FILE_TAGS = "install_apk_extra_file_tags";
-
-  @FileAnnotation(
-      required = false,
-      help =
-          "Dex metadata files to install with the apks. Each Dex metadata file must match by name"
-              + " with one of the apks being installed.")
-  public static final String TAG_DEX_METADATA = "dex_metadata";
-
-  @ParamAnnotation(
-      required = false,
-      help = "Skip installing GMS if it is a downgrade. Default value is true.")
-  public static final String PARAM_SKIP_GMS_DOWNGRADE = "skip_gms_downgrade";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "Max execution time of the 'adb install ...' command for each build APK. "
-              + "No effect if large than test timeout setting. ")
-  public static final String PARAM_INSTALL_APK_TIMEOUT_SEC = "install_apk_timeout_sec";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "Use -g for installing build apks. Default value is true."
-              + "We didn't get the feature request for supporting different runtime permissions "
-              + "when installing multiple build apks, so simply add the entire switch now.")
-  public static final String PARAM_GRANT_PERMISSIONS_ON_INSTALL = "grant_permissions_on_install";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "Whether to broadcast message when starting and finishing installing the app. Default "
-              + "value is false. Specify this as true when you need to register message listener.")
-  public static final String PARAM_BROADCAST_INSTALL_MESSAGE = "broadcast_install_message";
-
-  @ParamAnnotation(
-      help = "Whether to clear GMS app data before and after installation. Default value is false.")
-  public static final String PARAM_CLEAR_GMS_APP_DATA = "clear_gms_app_data";
-
-  @ParamAnnotation(help = "Whether to force install apks. Default value is false.")
-  public static final String PARAM_FORCE_INSTALL_APKS = "force_install_apks";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "The time to sleep after installing GMS core APK. "
-              + "Should smaller than test timeout setting. ")
-  public static final String PARAM_SLEEP_AFTER_INSTALL_GMS_SEC = "sleep_after_install_gms_sec";
-
-  @ParamAnnotation(
-      required = false,
-      help = "Force to reboot the device after installing all build APKs.")
-  public static final String PARAM_REBOOT_AFTER_ALL_BUILD_APKS_INSTALLATION =
-      "reboot_after_all_build_apks_installation";
-
-  @ParamAnnotation(
-      required = false,
-      help =
-          "Whether to bypass low target sdk check, only works on the device with sdk >= 34."
-              + "Default is false.")
-  public static final String PARAM_BYPASS_LOW_TARGET_SDK_BLOCK = "bypass_low_target_sdk_block";
 
   private static final String APP_OP_MANAGE_EXTERNAL_STORAGE = "MANAGE_EXTERNAL_STORAGE";
 
@@ -372,7 +287,8 @@ public class InstallApkStep {
 
     // Install non-GMS app bundles.
     SetMultimap<String, String> remainToInstall =
-        Multimaps.filterKeys(allPackages, pkg -> !pkg.equals(PackageConstants.PACKAGE_NAME_GMS));
+        Multimaps.filterKeys(
+            allPackages, pkg -> !Objects.equals(pkg, PackageConstants.PACKAGE_NAME_GMS));
     SetMultimap<String, String> splitPackages =
         Multimaps.filterKeys(remainToInstall, pkg -> allPackages.get(pkg).size() > 1);
     if (deviceSdkVersion > AndroidVersion.PI.getEndSdkVersion() && !splitPackages.isEmpty()) {
@@ -503,7 +419,7 @@ public class InstallApkStep {
           deviceSdkVersion >= AndroidVersion.ANDROID_11.getStartSdkVersion()
               && PackageConstants.ANDROIDX_SERVICES_APK_PACKAGE_NAMES.contains(packageName);
       if (forceQueryable) {
-        installArgsBuilder.setForceQueryable(forceQueryable);
+        installArgsBuilder.setForceQueryable(true);
       }
       installTimeout.ifPresent(installArgsBuilder::setInstallTimeout);
       sleepAfterInstallGms.ifPresent(installArgsBuilder::setSleepAfterInstallGms);
@@ -672,79 +588,6 @@ public class InstallApkStep {
           .setNonPassing(TestResult.FAIL, ErrorModelConverter.toExceptionDetail(e));
     }
     return isInstallationFailure;
-  }
-
-  @ValidatorAnnotation(type = ValidatorAnnotation.Type.JOB)
-  private static List<String> validateInstall(JobInfo job) throws InterruptedException {
-    List<String> errors = new ArrayList<>();
-    String apkExtName = ".apk";
-    LocalFileUtil fileUtil = new LocalFileUtil();
-
-    // {apk_path, apk_tag} mapping.
-    Map<String, String> apks = new HashMap<>();
-    ImmutableSet<String> buildApkPaths = job.files().get(TAG_BUILD_APK);
-    if (buildApkPaths != null) {
-      for (String buildApkPath : buildApkPaths) {
-        apks.put(buildApkPath, TAG_BUILD_APK);
-      }
-    }
-
-    ImmutableSet<String> extraApkPaths = job.files().get(TAG_EXTRA_APK);
-    if (extraApkPaths != null) {
-      for (String extraApkPath : extraApkPaths) {
-        apks.put(extraApkPath, TAG_EXTRA_APK);
-      }
-    }
-
-    // Appends .apk extension name if missing. Otherwise, adb(version 21) won't be able to install
-    // the apk.
-    for (Map.Entry<String, String> apk : apks.entrySet()) {
-      String path = apk.getKey();
-      String tag = apk.getValue();
-      if (!path.toLowerCase(Locale.ROOT).endsWith(apkExtName)) {
-        logger.atInfo().log("Missing %s extension name with %s %s", apkExtName, tag, path);
-        String newPath = null;
-        try {
-          newPath = PathUtil.join(job.setting().getRunFileDir(), path + apkExtName);
-          fileUtil.prepareParentDir(newPath);
-          fileUtil.copyFileOrDir(path, newPath);
-          job.files().replace(tag, path, ImmutableList.of(newPath));
-        } catch (MobileHarnessException e) {
-          errors.add(
-              String.format(
-                  "%s error found by %s:%nOriginal path: %s%nNew path: %s%nerror: %s",
-                  tag, InstallApkStep.class.getSimpleName(), path, newPath, e.getMessage()));
-        }
-      }
-    }
-
-    // Check the APK installation timeouts parameter
-    if (job.params().has(PARAM_INSTALL_APK_TIMEOUT_SEC)) {
-      try {
-        job.params().checkInt(PARAM_INSTALL_APK_TIMEOUT_SEC, 0, Integer.MAX_VALUE);
-      } catch (MobileHarnessException e) {
-        errors.add("Illegal job param integer format: " + PARAM_INSTALL_APK_TIMEOUT_SEC);
-      }
-    }
-
-    // Check the APK installation skip downgrade parameter
-    if (job.params().has(PARAM_SKIP_GMS_DOWNGRADE)) {
-      try {
-        job.params().checkBool(PARAM_SKIP_GMS_DOWNGRADE, true);
-      } catch (MobileHarnessException e) {
-        errors.add("Illegal job param boolean format: " + PARAM_SKIP_GMS_DOWNGRADE);
-      }
-    }
-
-    // Check the APK installation clear data parameter
-    if (job.params().has(PARAM_CLEAR_GMS_APP_DATA)) {
-      try {
-        job.params().checkBool(PARAM_CLEAR_GMS_APP_DATA, true);
-      } catch (MobileHarnessException e) {
-        errors.add("Illegal job param boolean format: " + PARAM_CLEAR_GMS_APP_DATA);
-      }
-    }
-    return errors;
   }
 
   private void checkSizeInfo(TestInfo testInfo, String packageName, Collection<String> apks) {
