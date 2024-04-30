@@ -123,7 +123,7 @@ class ListDevicesCommandHandler {
         .setBatteryLevel(getDimension(dimensions, Name.BATTERY_LEVEL.lowerCaseName()).orElse("n/a"))
         .setDeviceClass(
             getDimension(dimensions, Name.DEVICE_CLASS_NAME.lowerCaseName()).orElse("n/a"))
-        .setTestDeviceState("n/a")
+        .setTestDeviceState(getTestDeviceState(deviceInfo.getTypeList()))
         .setIsStubDevice(false)
         .build();
   }
@@ -169,6 +169,31 @@ class ListDevicesCommandHandler {
       return "FASTBOOTD";
     }
     return "n/a";
+  }
+
+  private static String getTestDeviceState(List<String> deviceTypes) {
+    boolean androidOnlineDevice = false;
+    boolean androidFastbootDevice = false;
+    for (String deviceType : deviceTypes) {
+      switch (deviceType) {
+        case "AndroidLocalEmulator":
+        case AndroidRealDeviceConstants.ANDROID_ONLINE_DEVICE:
+          androidOnlineDevice = true;
+          break;
+        case AndroidRealDeviceConstants.ANDROID_FASTBOOT_DEVICE:
+          androidFastbootDevice = true;
+          break;
+        default:
+          break;
+      }
+    }
+    if (androidOnlineDevice) {
+      return "ONLINE";
+    }
+    if (androidFastbootDevice) {
+      return "FASTBOOT";
+    }
+    return "NOT_AVAILABLE";
   }
 
   private static String getAllocationState(String deviceStatus) {
