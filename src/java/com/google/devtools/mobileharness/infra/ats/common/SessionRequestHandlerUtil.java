@@ -180,7 +180,7 @@ public class SessionRequestHandlerUtil {
             serial ->
                 SubDeviceSpec.newBuilder()
                     .setType(getTradefedRequiredDeviceType())
-                    .setDimensions(StringMap.newBuilder().putContent("serial", serial))
+                    .setDimensions(StringMap.newBuilder().putContent("id", serial))
                     .build())
         .collect(toImmutableList());
   }
@@ -931,7 +931,7 @@ public class SessionRequestHandlerUtil {
                         subDeviceSpec
                             .deviceRequirement()
                             .dimensions()
-                            .add("serial", serialDimensionValue));
+                            .add("id", serialDimensionValue));
           }
           addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
           jobInfos.add(jobInfo);

@@ -729,7 +729,7 @@ public final class SessionRequestHandlerUtilTest {
         .containsExactly(
             SubDeviceSpec.newBuilder()
                 .setType("AndroidDevice")
-                .setDimensions(StringMap.newBuilder().putContent("serial", "device_id_1"))
+                .setDimensions(StringMap.newBuilder().putContent("id", "device_id_1"))
                 .build());
 
     // Asserts the driver
@@ -782,11 +782,11 @@ public final class SessionRequestHandlerUtilTest {
         .containsExactly(
             SubDeviceSpec.newBuilder()
                 .setType("AndroidDevice")
-                .setDimensions(StringMap.newBuilder().putContent("serial", "device_id_1"))
+                .setDimensions(StringMap.newBuilder().putContent("id", "device_id_1"))
                 .build(),
             SubDeviceSpec.newBuilder()
                 .setType("AndroidDevice")
-                .setDimensions(StringMap.newBuilder().putContent("serial", "device_id_3"))
+                .setDimensions(StringMap.newBuilder().putContent("id", "device_id_3"))
                 .build());
   }
 
