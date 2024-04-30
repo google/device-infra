@@ -322,7 +322,9 @@ public abstract class BaseDevice implements Device {
 
   @CanIgnoreReturnValue
   @Override
-  public boolean checkDevice() throws MobileHarnessException, InterruptedException {
+  public boolean checkDevice()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     return false;
   }
 

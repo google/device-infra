@@ -71,7 +71,9 @@ public abstract class AndroidDevice extends BaseDevice {
 
   @CanIgnoreReturnValue
   @Override
-  public boolean checkDevice() throws MobileHarnessException, InterruptedException {
+  public boolean checkDevice()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     return delegate.checkDevice();
   }
 

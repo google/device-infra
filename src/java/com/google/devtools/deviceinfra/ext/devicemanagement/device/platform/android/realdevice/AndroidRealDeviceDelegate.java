@@ -779,7 +779,7 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   public boolean checkDevice()
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
           InterruptedException {
     if (!ifSkipCheckAbnormalDevice()) {
       Optional<Boolean> abnormalDeviceCheckResult = checkAbnormalDevice();
@@ -804,17 +804,16 @@ public abstract class AndroidRealDeviceDelegate {
    * device regular check.
    */
   private Optional<Boolean> checkAbnormalDevice()
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
           InterruptedException {
-    /*
-     Any recovery mode device should not be found when checking device. Reboot it to fastboot
-     mode to notify the lab admins.
-    */
+    // Any recovery mode device should not be found when checking device. Reboot it to fastboot
+    // mode to notify the lab admins.
     if (androidAdbInternalUtil.getDeviceSerialsByState(DeviceState.RECOVERY).contains(deviceId)) {
       logger.atInfo().log("Checking recovery device %s. Rebooting...", deviceId);
       AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
-      throw new com.google.wireless.qa.mobileharness.shared.MobileHarnessException(
-          ErrorCode.ANDROID_INIT_ERROR, "Checking recovery device. Rebooting to fastboot mode.");
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_REAL_DEVICE_DELEGATE_RECOVERY_DEVICE_TO_REBOOT,
+          "Checking recovery device. Rebooting to fastboot mode.");
     }
 
     // Checks the device which is the fastboot mode.
@@ -825,16 +824,16 @@ public abstract class AndroidRealDeviceDelegate {
                 .instant()
                 .isAfter(lastSetupTime.plus(AndroidRealDeviceConstants.AUTO_FASTWIPE_TIMEOUT))) {
           AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
-          throw new com.google.wireless.qa.mobileharness.shared.MobileHarnessException(
-              ErrorCode.ANDROID_INIT_ERROR,
+          throw new MobileHarnessException(
+              AndroidErrorId.ANDROID_REAL_DEVICE_DELEGATE_FASTBOOT_DEVICE_TO_REBOOT,
               "Checking fastboot device. Rebooting to fastboot mode.");
         } else if (!isRecoveryDevice()
             && clock
                 .instant()
                 .isAfter(lastSetupTime.plus(AndroidRealDeviceConstants.AUTO_RECOVERY_TIMEOUT))) {
           AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
-          throw new com.google.wireless.qa.mobileharness.shared.MobileHarnessException(
-              ErrorCode.ANDROID_INIT_ERROR,
+          throw new MobileHarnessException(
+              AndroidErrorId.ANDROID_REAL_DEVICE_DELEGATE_FASTBOOT_DEVICE_TO_REBOOT,
               "Checking fastboot device. Rebooting to fastboot mode.");
         }
         return Optional.of(false);

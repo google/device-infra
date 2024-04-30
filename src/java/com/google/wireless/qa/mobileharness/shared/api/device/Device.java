@@ -365,10 +365,13 @@ public interface Device {
    * can set the {@link #isPrepping()} to false so it can be allocated by users.
    *
    * @return whether the device is changed, to notify the Device Manager to sync the new device info
-   * @throws MobileHarnessException if fails to check the device, will cause the device to {@link
-   *     #tearDown()}, and {@link #reboot()} if {@link #canReboot()} is {@code true}
+   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
+   *     check the device, will cause the device to {@link #tearDown()}, and {@link #reboot()} if
+   *     {@link #canReboot()} is {@code true}
    */
-  boolean checkDevice() throws MobileHarnessException, InterruptedException;
+  boolean checkDevice()
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException;
 
   /** Returns whether the device is is not yet ready for use; e.g. needs to recharge its battery. */
   boolean isPrepping();
