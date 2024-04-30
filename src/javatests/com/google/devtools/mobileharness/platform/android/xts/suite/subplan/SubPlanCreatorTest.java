@@ -32,6 +32,8 @@ import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.TextFormat;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.Optional;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
@@ -175,6 +177,111 @@ public final class SubPlanCreatorTest {
         .isEqualTo(
             replaceLineBreak(
                 realLocalFileUtil.readFile(EXPECTED_SUBPLAN_FOR_RESULT_TYPE_FAILED).trim()));
+  }
+
+  @Test
+  public void createAndSerializeSubPlan_setModule() throws Exception {
+    String subPlanName = "test-subplan";
+    int sessionIndex = 0;
+    String xtsType = "cts";
+    File xtsRootDir = temporaryFolder.newFolder("xts_root_dir");
+    temporaryFolder.newFolder(xtsRootDir.getName(), String.format("android-%s", xtsType));
+
+    Result prevReport =
+        TextFormat.parse(
+            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
+    when(previousResultLoader.loadPreviousResult(
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+        .thenReturn(prevReport);
+
+    Optional<File> subPlanFile =
+        subPlanCreator.createAndSerializeSubPlan(
+            AddSubPlanArgs.builder()
+                .setXtsRootDir(xtsRootDir.toPath())
+                .setXtsType(xtsType)
+                .setSessionIndex(sessionIndex)
+                .setSubPlanName(subPlanName)
+                .setModule("AddedModule")
+                .build());
+
+    assertThat(subPlanFile).isPresent();
+    SubPlan genSubPlan = new SubPlan();
+    try (InputStream inputStream = new FileInputStream(subPlanFile.get())) {
+      genSubPlan.parse(inputStream);
+    }
+    assertThat(genSubPlan.getIncludeFiltersMultimap())
+        .containsEntry("AddedModule", SubPlan.ALL_TESTS_IN_MODULE);
+  }
+
+  @Test
+  public void createAndSerializeSubPlan_setModuleWithAbiAndTest() throws Exception {
+    String subPlanName = "test-subplan";
+    int sessionIndex = 0;
+    String xtsType = "cts";
+    File xtsRootDir = temporaryFolder.newFolder("xts_root_dir");
+    temporaryFolder.newFolder(xtsRootDir.getName(), String.format("android-%s", xtsType));
+
+    Result prevReport =
+        TextFormat.parse(
+            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
+    when(previousResultLoader.loadPreviousResult(
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+        .thenReturn(prevReport);
+
+    Optional<File> subPlanFile =
+        subPlanCreator.createAndSerializeSubPlan(
+            AddSubPlanArgs.builder()
+                .setXtsRootDir(xtsRootDir.toPath())
+                .setXtsType(xtsType)
+                .setSessionIndex(sessionIndex)
+                .setSubPlanName(subPlanName)
+                .setModule("AddedModule")
+                .setAbi("armeabi-v7a")
+                .setTest("android.test.Foo#test1")
+                .build());
+
+    assertThat(subPlanFile).isPresent();
+    SubPlan genSubPlan = new SubPlan();
+    try (InputStream inputStream = new FileInputStream(subPlanFile.get())) {
+      genSubPlan.parse(inputStream);
+    }
+    assertThat(genSubPlan.getIncludeFiltersMultimap())
+        .containsEntry("armeabi-v7a AddedModule", "android.test.Foo#test1");
+  }
+
+  @Test
+  public void createAndSerializeSubPlan_setModuleForNonTf() throws Exception {
+    String subPlanName = "test-subplan";
+    int sessionIndex = 0;
+    String xtsType = "cts";
+    File xtsRootDir = temporaryFolder.newFolder("xts_root_dir");
+    temporaryFolder.newFolder(xtsRootDir.getName(), String.format("android-%s", xtsType));
+
+    Result prevReport =
+        TextFormat.parse(
+            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
+    when(previousResultLoader.loadPreviousResult(
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+        .thenReturn(prevReport);
+
+    Optional<File> subPlanFile =
+        subPlanCreator.createAndSerializeSubPlan(
+            AddSubPlanArgs.builder()
+                .setXtsRootDir(xtsRootDir.toPath())
+                .setXtsType(xtsType)
+                .setSessionIndex(sessionIndex)
+                .setSubPlanName(subPlanName)
+                .setModule("AddedModule")
+                .setIsNonTradefedModule(true)
+                .build());
+
+    assertThat(subPlanFile).isPresent();
+    SubPlan genSubPlan = new SubPlan();
+    try (InputStream inputStream = new FileInputStream(subPlanFile.get())) {
+      genSubPlan.parse(inputStream);
+    }
+    assertThat(genSubPlan.getNonTfIncludeFiltersMultimap())
+        .containsEntry("AddedModule", SubPlan.ALL_TESTS_IN_MODULE);
   }
 
   private static String replaceLineBreak(String str) {

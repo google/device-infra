@@ -97,7 +97,31 @@ class AddCommand implements Callable<Integer> {
                   "Which results to include in the subplan. One of: ${COMPLETION-CANDIDATES}."
                       + " Repeatable.",
               split = "\\s*,\\s*")
-          List<ResultType> resultTypes)
+          List<ResultType> resultTypes,
+      @Option(
+              names = {"--module", "-m"},
+              required = false,
+              description = "The test module to run.")
+          String module,
+      @Option(
+              names = {"--is-non-tradefed-module"},
+              required = false,
+              description = "Whether the given module is for Non-Tradefed. False by default.")
+          boolean isNonTradefedModule,
+      @Option(
+              names = {"--test", "-t"},
+              required = false,
+              description =
+                  "The test to run, combined with the given module. Only works when module"
+                      + " specified.")
+          String test,
+      @Option(
+              names = {"--abi", "-a"},
+              required = false,
+              description =
+                  "The abi to test, combined with the given module. Only works when module"
+                      + " specified.")
+          String abi)
       throws MobileHarnessException {
     String xtsRootDirectory = consoleInfo.getXtsRootDirectoryNonEmpty();
     String xtsType = commandHelper.getXtsType(xtsRootDirectory);
@@ -112,6 +136,18 @@ class AddCommand implements Callable<Integer> {
     }
     if (resultTypes != null) {
       addSubPlanArgsBuilder.setResultTypes(ImmutableSet.copyOf(resultTypes));
+    }
+    if (!Strings.isNullOrEmpty(module)) {
+      addSubPlanArgsBuilder.setModule(module);
+    }
+    if (isNonTradefedModule) {
+      addSubPlanArgsBuilder.setIsNonTradefedModule(true);
+    }
+    if (!Strings.isNullOrEmpty(test)) {
+      addSubPlanArgsBuilder.setTest(test);
+    }
+    if (!Strings.isNullOrEmpty(abi)) {
+      addSubPlanArgsBuilder.setAbi(abi);
     }
 
     Optional<File> subPlanFile =

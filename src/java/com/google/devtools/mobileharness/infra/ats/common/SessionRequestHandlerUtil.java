@@ -459,11 +459,9 @@ public class SessionRequestHandlerUtil {
         Joiner.on(' ')
             .join(
                 Streams.concat(
-                        // For "run retry" command, the given module won't make difference to the
-                        // result no matter whether the given module was ran in the previous result.
-                        // If the given module was not ran in the previous result, it won't run the
-                        // given module based on TF current behavior. If the given module was ran in
-                        // the previous result, it won't forcibly rerun the module either.
+                        // For "run retry" command, the given modules have been processed when
+                        // generating the subplan above, no need to pass these again to underneath
+                        // TF
                         (isRunRetry(testPlan)
                             ? Stream.empty()
                             : tfModules.stream().map(module -> String.format("-m %s", module))),

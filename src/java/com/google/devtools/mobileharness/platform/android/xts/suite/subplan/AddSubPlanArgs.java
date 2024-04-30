@@ -50,11 +50,24 @@ public abstract class AddSubPlanArgs {
   /** Exclude filters passed in for the session. */
   public abstract ImmutableSet<SuiteTestFilter> passedInExcludeFilters();
 
+  /** The test module to run. */
+  public abstract Optional<String> module();
+
+  /** Whether the given module is for Non-Tradefed. False by default. */
+  public abstract boolean isNonTradefedModule();
+
+  /** The test to run, combined with the given module. Only works when module specified. */
+  public abstract Optional<String> test();
+
+  /** The abi to test, combined with the given module. Only works when module specified. */
+  public abstract Optional<String> abi();
+
   public static Builder builder() {
     return new AutoValue_AddSubPlanArgs.Builder()
         .setResultTypes(ImmutableSet.of())
         .setPassedInIncludeFilters(ImmutableSet.of())
-        .setPassedInExcludeFilters(ImmutableSet.of());
+        .setPassedInExcludeFilters(ImmutableSet.of())
+        .setIsNonTradefedModule(false);
   }
 
   /** Builder for {@link AddSubPlanArgs}. */
@@ -75,6 +88,14 @@ public abstract class AddSubPlanArgs {
 
     public abstract Builder setPassedInExcludeFilters(
         ImmutableSet<SuiteTestFilter> passedInExcludeFilters);
+
+    public abstract Builder setModule(String module);
+
+    public abstract Builder setIsNonTradefedModule(boolean isNonTradefedModule);
+
+    public abstract Builder setTest(String test);
+
+    public abstract Builder setAbi(String abi);
 
     public abstract AddSubPlanArgs build();
   }

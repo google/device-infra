@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite.subplan;
 
+import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Arrays.stream;
 
@@ -108,7 +109,7 @@ public class SubPlanCreator {
             excludeFiltersFromPrevResult.stream()
                 .map(SuiteTestFilter::create)
                 .collect(toImmutableSet()),
-            /* passedInModules= */ ImmutableSet.of()); // TODO
+            /* passedInModules= */ ImmutableSet.of());
 
     // TODO: support filters for subplan command. Currently the passed in filters are
     // empty.
@@ -120,6 +121,23 @@ public class SubPlanCreator {
         addSubPlanArgs.passedInExcludeFilters().stream()
             .map(SuiteTestFilter::filterString)
             .collect(toImmutableSet()));
+
+    //  The given module (which may combine with abi and test) is added to subplan created based on
+    // previous result
+    String module = addSubPlanArgs.module().orElse("");
+    if (!module.isEmpty()) {
+      String moduleWithAbi =
+          addSubPlanArgs.abi().isPresent()
+              ? String.format("%s %s", addSubPlanArgs.abi().get(), module)
+              : module;
+      String test = addSubPlanArgs.test().orElse("");
+      String includeEntry = moduleWithAbi + (isNullOrEmpty(test) ? "" : " " + test);
+      if (addSubPlanArgs.isNonTradefedModule()) {
+        subPlan.addNonTfIncludeFilter(includeEntry);
+      } else {
+        subPlan.addIncludeFilter(includeEntry);
+      }
+    }
 
     try {
       subPlan.serialize(
