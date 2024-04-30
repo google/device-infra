@@ -464,7 +464,8 @@ public interface Device {
    *     Thread#interrupt() interrupted} by another thread
    */
   String getDeviceLog(DeviceLogType deviceLogType)
-      throws MobileHarnessException, InterruptedException;
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException;
 
   /** Gets general file directory. */
   String getGenFileDir()

@@ -382,7 +382,8 @@ public abstract class BaseDevice implements Device {
 
   @Override
   public String getDeviceLog(DeviceLogType deviceLogType)
-      throws MobileHarnessException, InterruptedException {
+      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
+          InterruptedException {
     throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
         InfraErrorId.LAB_GET_DEVICE_LOG_METHOD_UNSUPPORTED, "Unsupported getDeviceLog");
   }
