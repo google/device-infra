@@ -174,7 +174,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
     return new Builder();
   }
 
-  /** Builder for creating {@link JobInfo} instances. */
+  /** Builder for creating {@link TestInfo} instances. */
   public static class Builder {
     @Nullable private String id;
     private String name;
