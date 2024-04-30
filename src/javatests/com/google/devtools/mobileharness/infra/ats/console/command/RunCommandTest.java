@@ -91,4 +91,14 @@ public final class RunCommandTest {
         .hasMessageThat()
         .contains("Option '--retry <retry_session_id>' is required for retry command");
   }
+
+  @Test
+  public void validateCommandParameters_cannotSpecifyIncludeFilterAndModuleAtTheSameTime()
+      throws Exception {
+    commandLine.parseArgs("cts", "--module", "module_a", "--include-filter", "module_b");
+
+    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+        .hasMessageThat()
+        .contains("Don't use '--include-filter' and '--module/-m' options at the same time");
+  }
 }

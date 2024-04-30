@@ -304,6 +304,15 @@ public final class RunCommand implements Callable<Integer> {
             Ansi.AUTO.string("Multiple modules are unsupported if a test case is specified.\n"));
       }
     }
+    if (includeFilters != null
+        && !includeFilters.isEmpty()
+        && moduleTestOptionsGroups != null
+        && !moduleTestOptionsGroups.isEmpty()) {
+      throw new ParameterException(
+          spec.commandLine(),
+          Ansi.AUTO.string(
+              "Don't use '--include-filter' and '--module/-m' options at the same time.\n"));
+    }
     if (config.equals("retry")) {
       validateRunRetryCommandParameters();
     }
