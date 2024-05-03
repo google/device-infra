@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"time"
@@ -68,8 +69,10 @@ func (zu *ZipUploader) DoUpload() (digest.Digest, error) {
 	}
 	defer unarchiver.Close()
 
-	// For in-zip chunking, the entire zip file needs to be decompressed.
-	err = unarchiver.extractAll(zu.CommonConfig.chunk == false)
+	err = unarchiver.extractAll(extractOptions{
+		// For in-zip chunking, the entire zip file needs to be decompressed.
+		skipIfDigestExists: zu.CommonConfig.chunk == false,
+	})
 	if err != nil {
 		return digest.Digest{}, fmt.Errorf("failed to extract %s to %s: %v", zu.zipPath, targetDir, err)
 	}
@@ -83,9 +86,10 @@ func (zu *ZipUploader) DoUpload() (digest.Digest, error) {
 }
 
 type zipUnarchiver struct {
-	zipPath string
-	dstRoot string
-	zr      *zip.ReadCloser
+	zipPath  string
+	dstRoot  string
+	zr       *zip.ReadCloser
+	zfByName map[string]*zip.File
 }
 
 func newZipUnarchiver(zipPath string, dstRoot string) (*zipUnarchiver, error) {
@@ -107,7 +111,7 @@ func (zu *zipUnarchiver) Close() error {
 // extractAll extracts all files from the zip file to the destination directory. If skipFileWithDigest
 // is true, for files with SHA256 value stored in the zip file header, this extractor will only
 // create an empty file, and set the digest to xattr values.
-func (zu *zipUnarchiver) extractAll(skipFileWithDigest bool) error {
+func (zu *zipUnarchiver) extractAll(o extractOptions) error {
 	for _, f := range zu.zr.File {
 		if f.FileHeader.Mode().IsDir() {
 			if err := zu.extractDir(f); err != nil {
@@ -115,7 +119,7 @@ func (zu *zipUnarchiver) extractAll(skipFileWithDigest bool) error {
 			}
 			continue
 		}
-		if err := zu.extractFile(f, skipFileWithDigest); err != nil {
+		if err := zu.extractFile(f, o); err != nil {
 			return fmt.Errorf("failed to extract file %s: %v", f.Name, err)
 		}
 	}
@@ -130,13 +134,20 @@ func (zu *zipUnarchiver) extractDir(zf *zip.File) error {
 	return nil
 }
 
-func (zu *zipUnarchiver) extractFile(zf *zip.File, skipIfDigestExists bool) error {
+type extractOptions struct {
+	// If true, create a 0 size file with setting xattr value to the digest, if the zip file header contains a digest.
+	skipIfDigestExists bool
+	// If true, follow sym links and write file contents into the file. A symlink is created otherwise.
+	followSymLinks bool
+}
+
+func (zu *zipUnarchiver) extractFile(zf *zip.File, o extractOptions) error {
 	filePath := filepath.Join(zu.dstRoot, zf.Name)
 	if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
 		return fmt.Errorf("failed to create directory %s: %v", filepath.Dir(filePath), err)
 	}
 
-	if skipIfDigestExists {
+	if o.skipIfDigestExists {
 		sha256, err := readSHA256(zf.FileHeader.Extra)
 		if err != nil {
 			log.Warningf("Failed to read SHA256 of file %s, skip. Error: %v\n", zf.Name, err)
@@ -164,12 +175,17 @@ func (zu *zipUnarchiver) extractFile(zf *zip.File, skipIfDigestExists bool) erro
 		}
 	}
 
-	// Write the file content to the destination.
-	dst, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
-	if err != nil {
-		return fmt.Errorf("failed to open file %s: %v", filePath, err)
+	if err := zu.resolve(zf, filePath, o.followSymLinks); err != nil {
+		return fmt.Errorf("failed to resolve %s: %v", zf.Name, err)
 	}
-	defer dst.Close()
+
+	return nil
+}
+
+func (zu *zipUnarchiver) resolve(zf *zip.File, filePath string, followSymLinks bool) error {
+	if err := os.MkdirAll(filepath.Dir(filePath), os.ModePerm); err != nil {
+		return fmt.Errorf("failed to create directory %s: %v", filepath.Dir(filePath), err)
+	}
 
 	src, err := zf.Open()
 	if err != nil {
@@ -177,16 +193,53 @@ func (zu *zipUnarchiver) extractFile(zf *zip.File, skipIfDigestExists bool) erro
 	}
 	defer src.Close()
 
-	if _, err = io.Copy(dst, src); err != nil {
-		return fmt.Errorf("failed to extract file %s in archive: %v", zf.Name, err)
+	if zf.FileHeader.Mode().Type()&fs.ModeSymlink == 0 {
+		// Write the file content to the destination.
+		dst, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, zf.Mode())
+		if err != nil {
+			return fmt.Errorf("failed to open file %s: %v", filePath, err)
+		}
+		defer dst.Close()
+
+		if _, err = io.Copy(dst, src); err != nil {
+			return fmt.Errorf("failed to extract file %s in archive: %v", zf.Name, err)
+		}
+
+		if err := os.Chmod(filePath, zf.Mode()); err != nil {
+			return fmt.Errorf("failed to set mode %s to file %s: %v", zf.Mode(), filePath, err)
+		}
+
+		if err := os.Chtimes(filePath, time.Time{}, zf.Modified); err != nil {
+			return fmt.Errorf("failed to set modified time %s to file %s: %v", zf.Modified, filePath, err)
+		}
+
+		return nil
 	}
-	if err := os.Chmod(filePath, zf.Mode()); err != nil {
-		return fmt.Errorf("failed to set mode %s to file %s: %v", zf.Mode(), filePath, err)
+
+	// Handle symlinks.
+	b, err := io.ReadAll(src)
+	if err != nil {
+		return fmt.Errorf("failed to read file %s in archive: %v", zf.Name, err)
 	}
-	if err := os.Chtimes(filePath, time.Time{}, zf.Modified); err != nil {
-		return fmt.Errorf("failed to set modified time %s to file %s: %v", zf.Modified, filePath, err)
+
+	target := string(b)
+	if !followSymLinks {
+		return os.Symlink(string(target), filePath)
 	}
-	return nil
+
+	if zu.zfByName == nil {
+		zu.zfByName = make(map[string]*zip.File)
+		for _, f := range zu.zr.File {
+			zu.zfByName[f.Name] = f
+		}
+	}
+
+	resolvedName := filepath.Clean(filepath.Join(filepath.Dir(zf.Name), target))
+	resolvedZF, ok := zu.zfByName[resolvedName]
+	if !ok {
+		return fmt.Errorf("failed to resolve %s: no zip entry for %s", zf.Name, resolvedName)
+	}
+	return zu.resolve(resolvedZF, filePath, followSymLinks)
 }
 
 // readSHA256 reads SHA256 checksum from the `extra` field in the file header.
@@ -236,7 +289,9 @@ func (zfl *zipFileLoader) LoadFiles(dstPaths []string) error {
 	var size int64
 	for _, f := range zfl.Unarchiver.zr.File {
 		if targetPath, ok := paths[f.Name]; ok {
-			if err := zfl.Unarchiver.extractFile(f, false); err != nil {
+			if err := zfl.Unarchiver.extractFile(f, extractOptions{
+				followSymLinks: true,
+			}); err != nil {
 				return fmt.Errorf("failed to load file content of %s from archive: %v", targetPath, err)
 			}
 			count++

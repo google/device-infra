@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("@io_bazel_rules_go//go:def.bzl", "go_library")
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -42,4 +42,11 @@ go_library(
         "@com_github_pkg_xattr//:xattr",
         "@org_golang_google_protobuf//proto",
     ],
+)
+
+go_test(
+    name = "uploader_test",
+    srcs = ["zip_test.go"],
+    data = ["test_data/partial_zip.zip"],
+    embed = [":uploader"],
 )
