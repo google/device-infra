@@ -278,7 +278,11 @@ public final class Dimension {
     /** Pool name used by shared lab. */
     POOL_NAME,
     /** The ATE cluster name */
-    CLUSTER;
+    CLUSTER,
+
+    // Riemann's custom dimensions, go/portable-lab-device-dimension.
+    /** A comma-separated string containing the carrier ID of each SIM on the device. */
+    CARRIER_IDS;
 
     public String lowerCaseName() {
       return Ascii.toLowerCase(name());

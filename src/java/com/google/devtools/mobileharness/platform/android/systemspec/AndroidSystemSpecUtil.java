@@ -41,6 +41,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 /** Utility class to query Android device hardware related specs. */
 public class AndroidSystemSpecUtil {
@@ -90,8 +91,12 @@ public class AndroidSystemSpecUtil {
   @VisibleForTesting
   static final String ADB_SHELL_QUERY_SIM_INFO = "content query --uri content://telephony/siminfo";
 
+  /** Pattern to find carrier IDs from queried SIM info. */
+  private static final Pattern PATTERN_SIM_INFO_CARRIER_ID =
+      Pattern.compile("\\bcarrier_id=(-?\\d+)");
+
   /** Pattern to find ICCIDs from queried SIM info. */
-  private static final Pattern PATTERN_SIM_INFO_ICCID = Pattern.compile("\\bicc_id=\\d+");
+  private static final Pattern PATTERN_SIM_INFO_ICCID = Pattern.compile("\\bicc_id=(\\d+)");
 
   /** Pattern to find physical SIM slot from queried SIM info. */
   private static final Pattern PATTERN_SIM_INFO_PHYSICAL_SLOT = Pattern.compile("\\bsim_id=-?\\d+");
@@ -590,6 +595,23 @@ public class AndroidSystemSpecUtil {
    */
   public ImmutableList<String> getIccids(String serial)
       throws MobileHarnessException, InterruptedException {
+    return getAvailableSimInfoStream(serial)
+        .map(AndroidSystemSpecUtil::iccidFromSimInfo)
+        .filter(iccid -> !isNullOrEmpty(iccid))
+        .collect(toImmutableList());
+  }
+
+  /** Returns a list of carrier IDs of each available SIM on the device. */
+  public ImmutableList<String> getCarrierIds(String serial)
+      throws MobileHarnessException, InterruptedException {
+    return getAvailableSimInfoStream(serial)
+        .map(AndroidSystemSpecUtil::carrierIdFromSimInfo)
+        .filter(AndroidSystemSpecUtil::isValidCarrierId)
+        .collect(toImmutableList());
+  }
+
+  private Stream<String> getAvailableSimInfoStream(String serial)
+      throws MobileHarnessException, InterruptedException {
     String adbOutput = "";
     try {
       adbOutput = adb.runShellWithRetry(serial, ADB_SHELL_QUERY_SIM_INFO);
@@ -598,15 +620,10 @@ public class AndroidSystemSpecUtil {
           AndroidErrorId.ANDROID_SYSTEM_SPEC_QUERY_SIM_INFO_ERROR, e.getMessage(), e);
     }
 
-    Splitter splitter = Splitter.onPattern("\n").omitEmptyStrings().trimResults();
-
-    return splitter
-        .splitToStream(adbOutput)
-        .filter(AndroidSystemSpecUtil::isAvailableSim)
-        .map(AndroidSystemSpecUtil::iccidFromSimInfo)
-        .filter(iccid -> !isNullOrEmpty(iccid))
-        .collect(toImmutableList());
+    return LINE_SPLITTER.splitToStream(adbOutput).filter(AndroidSystemSpecUtil::isAvailableSim);
   }
+
+  private static final Splitter LINE_SPLITTER = Splitter.on("\n").omitEmptyStrings().trimResults();
 
   /** Parses the {@code simInfo} string and returns {@code true} if the SIM is available. */
   private static final boolean isAvailableSim(String simInfo) {
@@ -637,7 +654,22 @@ public class AndroidSystemSpecUtil {
     if (!matcher.find()) {
       return "";
     }
-    return matcher.group().split("=", -1)[1];
+    return matcher.group(1);
+  }
+
+  /** Parses the {@code simInfo} string and returns the SIM's carrier ID. */
+  private static final String carrierIdFromSimInfo(String simInfo) {
+    Matcher matcher = PATTERN_SIM_INFO_CARRIER_ID.matcher(simInfo);
+    // Example match: "carrier_id=1435"
+    if (!matcher.find()) {
+      return "";
+    }
+    return matcher.group(1);
+  }
+
+  /** Returns {@code true} if {@code carrierId} is valid. */
+  private static final boolean isValidCarrierId(String carrierId) {
+    return !isNullOrEmpty(carrierId) && !carrierId.equals("-1");
   }
 
   /** Gets the appropriate command number in IPhoneSubInfo.aidl to use for looking up ICCID. */
