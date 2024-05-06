@@ -281,7 +281,7 @@ public class SessionResultHandlerUtil {
 
     // Create the latest result link and the latest log link. Catch the exception to avoid breaking
     // the session.
-    if (latestResultLink != null) {
+    if (latestResultLink != null && localFileUtil.isDirExist(resultDir)) {
       try {
         localFileUtil.removeFileOrDir(latestResultLink);
         localFileUtil.linkFileOrDir(resultDir.toString(), latestResultLink.toString());
@@ -289,7 +289,7 @@ public class SessionResultHandlerUtil {
         logger.atWarning().withCause(e).log("Failed to create the latest result link.");
       }
     }
-    if (latestLogLink != null) {
+    if (latestLogLink != null && localFileUtil.isDirExist(logDir)) {
       try {
         localFileUtil.removeFileOrDir(latestLogLink);
         localFileUtil.linkFileOrDir(logDir.toString(), latestLogLink.toString());

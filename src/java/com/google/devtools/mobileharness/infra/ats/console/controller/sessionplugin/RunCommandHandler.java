@@ -179,8 +179,11 @@ class RunCommandHandler {
       String xtsType = command.getXtsType();
       String timestampDirName =
           sessionInfo.getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME).orElseThrow();
-      resultDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve(timestampDirName);
-      logDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve(timestampDirName);
+      Path resultsDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType);
+      resultDir = resultsDir.resolve(timestampDirName);
+      Path logsDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType);
+      logDir = logsDir.resolve(timestampDirName);
+      localFileUtil.prepareDir(logDir);
       SessionRequestInfo sessionRequestInfo = this.sessionRequestInfo;
       if (sessionRequestInfo != null) {
         result =
@@ -188,8 +191,8 @@ class RunCommandHandler {
                 .processResult(
                     resultDir,
                     logDir,
-                    XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).resolve("latest"),
-                    XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType).resolve("latest"),
+                    resultsDir.resolve("latest"),
+                    logsDir.resolve("latest"),
                     allJobs,
                     sessionRequestInfo)
                 .orElse(null);
@@ -199,12 +202,7 @@ class RunCommandHandler {
     } finally {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);
 
-      String xtsTestResultSummary =
-          createXtsTestResultSummary(
-              result,
-              command,
-              resultDir != null ? resultDir.toString() : "N/A",
-              logDir != null ? logDir.toString() : "N/A");
+      String xtsTestResultSummary = createXtsTestResultSummary(result, command, resultDir, logDir);
       boolean isSessionPassed = sessionResultHandlerUtil.isSessionPassed(allJobs);
       String sessionSummary =
           String.format(
@@ -270,8 +268,11 @@ class RunCommandHandler {
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(builder.build());
   }
 
-  private static String createXtsTestResultSummary(
-      @Nullable Result result, RunCommand runCommand, String resultDir, String logDir) {
+  private String createXtsTestResultSummary(
+      @Nullable Result result,
+      RunCommand runCommand,
+      @Nullable Path resultDir,
+      @Nullable Path logDir) {
     int doneModuleNumber = 0;
     int totalModuleNumber = 0;
     long totalPassedTestNumber = 0L;
@@ -315,8 +316,12 @@ class RunCommandHandler {
         + (totalAssumeFailureTestNumber > 0
             ? String.format("ASSUMPTION_FAILURE TESTCASES: %s\n", totalAssumeFailureTestNumber)
             : "")
-        + String.format("LOG DIRECTORY               : %s\n", logDir)
-        + String.format("RESULT DIRECTORY            : %s\n", resultDir)
+        + (logDir != null && localFileUtil.isDirExist(logDir)
+            ? String.format("LOG DIRECTORY               : %s\n", logDir)
+            : "")
+        + (resultDir != null && localFileUtil.isDirExist(resultDir)
+            ? String.format("RESULT DIRECTORY            : %s\n", resultDir)
+            : "")
         + "=================== End of Results =============================\n"
         + "================================================================\n";
   }
