@@ -8,4 +8,11 @@
   <cmd_options class="com.android.tradefed.command.CommandOptions">
     <option name="test-tag" value="cluster_command_launcher" />
   </cmd_options>
+  <log_saver class="com.android.tradefed.cluster.ClusterLogSaver">
+    <option name="root-dir" value="${TF_WORK_DIR}" />
+    <option name="output-file-upload-url" value="${OUTPUT_DIR}" />
+    <option name="request-id" value="" />
+    <option name="command-id" value="" />
+    <option name="attempt-id" value="" />
+  </log_saver>
 </configuration>

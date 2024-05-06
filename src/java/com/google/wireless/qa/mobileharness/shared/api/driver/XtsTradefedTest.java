@@ -760,13 +760,14 @@ public class XtsTradefedTest extends BaseDriver
     if (spec.getXtsTestPlanFile().isEmpty()) {
       xtsRunCommand.addAll(xtsCommand);
     } else {
-      // Build final config based with local env vars
+      // Build final config based on local env vars
       String configTemplate = localFileUtil.readFile(spec.getXtsTestPlanFile());
       StringSubstitutor sub = new StringSubstitutor(envVars);
+      String config = sub.replace(configTemplate);
       // Replace ${COMMAND} with the xTS command
-      String config =
-          sub.replace(configTemplate)
-              .replace(TradefedConfigGenerator.COMMAND_LINE_TEMPLATE, String.join(" ", xtsCommand));
+      config =
+          config.replace(
+              TradefedConfigGenerator.COMMAND_LINE_TEMPLATE, String.join(" ", xtsCommand));
       // Replace ${FILE_tag} with the real file path
       for (Entry<String, String> entry : testInfo.jobInfo().files().getAll().entries()) {
         config =
@@ -774,6 +775,10 @@ public class XtsTradefedTest extends BaseDriver
                 String.format(TradefedConfigGenerator.FILE_TEMPLATE, entry.getKey()),
                 "file://" + entry.getValue());
       }
+      // Redirect output to the gen file dir.
+      config =
+          config.replace(
+              TradefedConfigGenerator.OUTPUT_DIR_TEMPLATE, "file://" + testInfo.getGenFileDir());
       logger.atInfo().log("Run xTS cluster command with config:\n%s", config);
       localFileUtil.writeToFile(spec.getXtsTestPlanFile(), config);
       xtsRunCommand.add(spec.getXtsTestPlanFile());

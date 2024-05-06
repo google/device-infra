@@ -44,6 +44,7 @@ public class TradefedConfigGenerator {
   private static final String CMD_OPTIONS_TAG = "cmd_options";
   private static final String CONFIGURATION_TAG = "configuration";
   private static final String DEVICE_TAG = "device";
+  private static final String LOG_SAVER_TAG = "log_saver";
   private static final String OPTION_TAG = "option";
   private static final String RESULT_REPORTER_TAG = "result_reporter";
   private static final String TARGET_PREPARER_TAG = "target_preparer";
@@ -56,6 +57,8 @@ public class TradefedConfigGenerator {
 
   private static final String BUILD_PROVIDER_CLASS =
       "com.android.tradefed.cluster.ClusterBuildProvider";
+  private static final String CLUSTER_LOG_SAVER_CLASS =
+      "com.android.tradefed.cluster.ClusterLogSaver";
   private static final String CMD_OPTIONS_CLASS = "com.android.tradefed.command.CommandOptions";
   private static final String TEST_CLASS = "com.android.tradefed.cluster.ClusterCommandLauncher";
 
@@ -66,6 +69,7 @@ public class TradefedConfigGenerator {
 
   public static final String COMMAND_LINE_TEMPLATE = "${COMMAND}";
   public static final String FILE_TEMPLATE = "${FILE_%s}";
+  public static final String OUTPUT_DIR_TEMPLATE = "${OUTPUT_DIR}";
 
   private TradefedConfigGenerator() {}
 
@@ -97,7 +101,7 @@ public class TradefedConfigGenerator {
     }
     serializeTest(serializer, testEnvironment);
     serializeCmdOptions(serializer, testEnvironment);
-    // TODO: redirect tool logs
+    serializeLogSaver(serializer);
 
     serializer.endTag(NULL_NS, CONFIGURATION_TAG);
     serializer.endDocument();
@@ -157,6 +161,18 @@ public class TradefedConfigGenerator {
       serializeOption(serializer, "parallel-setup-timeout", "PT0S");
     }
     serializer.endTag(NULL_NS, CMD_OPTIONS_TAG);
+  }
+
+  private static void serializeLogSaver(XmlSerializer serializer) throws IOException {
+    serializer.startTag(NULL_NS, LOG_SAVER_TAG);
+    serializer.attribute(NULL_NS, CLASS_ATTR, CLUSTER_LOG_SAVER_CLASS);
+    serializeOption(serializer, "root-dir", "${TF_WORK_DIR}");
+    serializeOption(serializer, "output-file-upload-url", OUTPUT_DIR_TEMPLATE);
+    // Unused but required options
+    serializeOption(serializer, "request-id", "");
+    serializeOption(serializer, "command-id", "");
+    serializeOption(serializer, "attempt-id", "");
+    serializer.endTag(NULL_NS, LOG_SAVER_TAG);
   }
 
   private static void serializeDeviceAction(
