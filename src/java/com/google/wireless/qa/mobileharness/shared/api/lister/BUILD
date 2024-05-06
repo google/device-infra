@@ -25,17 +25,6 @@ package(
 ################################################################################
 
 java_library(
-    name = "base_lister",
-    srcs = ["BaseLister.java"],
-    deps = [
-        ":lister",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-    ],
-)
-
-java_library(
     name = "lister",
     srcs = ["Lister.java"],
     deps = [
