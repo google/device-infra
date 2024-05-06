@@ -175,6 +175,7 @@ public final class AtsConsoleTest {
     verify(lineReader, timeout(TimeUnit.SECONDS.toMillis(15L)))
         .printAbove(
             (AttributedString)
-                argThat(argument -> argument.toString().contains(" No tradefed jobs created")));
+                argThat(
+                    argument -> argument.toString().contains("SessionRunner: Session detail:")));
   }
 }

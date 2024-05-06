@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import io.grpc.stub.StreamObserver;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
@@ -48,6 +49,8 @@ public class ServerLogPrinter {
   private final String consoleId;
 
   private final GetLogResponseObserver responseObserver = new GetLogResponseObserver();
+  private final int minLogRecordImportance =
+      Flags.instance().atsConsoleOlcServerMinLogRecordImportance.getNonNull();
 
   private final Object lock = new Object();
 
@@ -103,8 +106,10 @@ public class ServerLogPrinter {
     @Override
     public void onNext(GetLogResponse response) {
       for (LogRecord logRecord : response.getLogRecords().getLogRecordList()) {
-        consoleUtil.printlnDirect(
-            logRecord.getFormattedLogRecord(), getLogRecordStyle(logRecord), System.err);
+        if (logRecord.getImportance() >= minLogRecordImportance) {
+          consoleUtil.printlnDirect(
+              logRecord.getFormattedLogRecord(), getLogRecordStyle(logRecord), System.err);
+        }
       }
     }
 

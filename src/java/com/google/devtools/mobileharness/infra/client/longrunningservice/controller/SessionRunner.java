@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.getUnchecked;
 import static com.google.common.util.concurrent.Futures.whenAllComplete;
+import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.OLC_SERVER_IMPORTANT_LOG;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 
 import com.google.common.collect.ImmutableList;
@@ -122,11 +124,14 @@ public class SessionRunner implements Callable<Void> {
                     .collect(toImmutableList()))
             .build());
 
-    logger.atInfo().log(
-        "Session_detail:\n%s",
-        sessionDetailHolder
-            .getProtoPrinter()
-            .printToString(sessionDetailHolder.buildSessionDetail(/* fieldMask= */ null)));
+    logger
+        .atInfo()
+        .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+        .log(
+            "Session detail:\n%s",
+            sessionDetailHolder
+                .getProtoPrinter()
+                .shortDebugString(sessionDetailHolder.buildSessionDetail(/* fieldMask= */ null)));
 
     // Creates OmniLab jobs.
     sessionJobCreator.createAndAddJobs(sessionDetailHolder);

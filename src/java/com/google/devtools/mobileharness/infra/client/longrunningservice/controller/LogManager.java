@@ -20,10 +20,12 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.Callables
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
+import com.google.devtools.mobileharness.shared.util.logging.LogDataExtractor;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -222,10 +224,15 @@ public class LogManager<D> {
 
   private LogProto.LogRecord generateLogRecord(Object logRecord) {
     if (logRecord instanceof LogRecord) {
-      String formattedLogRecord = logHandler.getFormatter().format((LogRecord) logRecord);
+      LogRecord record = (LogRecord) logRecord;
+      String formattedLogRecord = logHandler.getFormatter().format(record);
+      int importance =
+          LogDataExtractor.getSingleMetadataValue(record, LogRecordImportance.IMPORTANCE)
+              .orElse(LogRecordImportance.OLC_SERVER_LOG);
       return LogProto.LogRecord.newBuilder()
           .setFormattedLogRecord(formattedLogRecord)
           .setSourceType(SourceType.SELF)
+          .setImportance(importance)
           .build();
     } else {
       return (LogProto.LogRecord) logRecord;

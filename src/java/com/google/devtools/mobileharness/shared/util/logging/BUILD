@@ -39,6 +39,15 @@ java_library(
 )
 
 java_library(
+    name = "log_data_extractor",
+    srcs = ["LogDataExtractor.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
+    ],
+    deps = ["//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger"],
+)
+
+java_library(
     name = "tag",
     srcs = ["MobileHarnessLogTag.java"],
     visibility = [

@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
@@ -386,7 +387,8 @@ public class XtsTradefedTest extends BaseDriver
                             LogRecord.Builder logRecord =
                                 LogRecord.newBuilder()
                                     .setFormattedLogRecord(line + "\n")
-                                    .setSourceType(SourceType.TF);
+                                    .setSourceType(SourceType.TF)
+                                    .setImportance(LogRecordImportance.TF_LOG);
                             if (olcSessionClientId != null) {
                               logRecord.setClientId(olcSessionClientId);
                             }

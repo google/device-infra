@@ -44,4 +44,7 @@ message LogRecord {
 
   // ID of the client to which the log record is associated.
   optional string client_id = 3;
+
+  // Importance of the record.
+  optional int32 importance = 4;
 }

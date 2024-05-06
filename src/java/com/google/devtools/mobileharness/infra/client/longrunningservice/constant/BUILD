@@ -18,6 +18,16 @@ package(
 )
 
 java_library(
+    name = "log_record_importance",
+    srcs = ["LogRecordImportance.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+    ],
+    deps = ["//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger"],
+)
+
+java_library(
     name = "dirs",
     srcs = ["OlcServerDirs.java"],
     visibility = [
