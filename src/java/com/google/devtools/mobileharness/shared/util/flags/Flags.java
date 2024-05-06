@@ -151,31 +151,6 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> alwaysUseOssDetectorAndDispatcher = alwaysUseOssDetectorAndDispatcherDefault;
 
-  private static final Flag<Duration> atsDdaLeaseExpirationTimeDefault =
-      DurationFlag.value(Duration.ofMinutes(5L));
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_dda_lease_expiration_time",
-      description = "Lease expiration time of ATS DDA. Default is 5 minutes",
-      converter = DurationFlag.DurationConverter.class)
-  public Flag<Duration> atsDdaLeaseExpirationTime = atsDdaLeaseExpirationTimeDefault;
-
-  private static final Flag<String> atsFileServerDefault = Flag.value("localhost:8006");
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_file_server",
-      description = "The ATS file server address:port, Default is localhost:8006.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> atsFileServer = atsFileServerDefault;
-
-  private static final Flag<String> atsStoragePathDefault = Flag.value("/data");
-
-  @com.beust.jcommander.Parameter(
-      names = "--ats_storage_path",
-      description = "The ATS storage path, Default is /data.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> atsStoragePath = atsStoragePathDefault;
-
   private static final Flag<Boolean> enableDaemonDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -220,6 +195,23 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> atsConsolePrintAboveInput = atsConsolePrintAboveInputDefault;
 
+  private static final Flag<Duration> atsDdaLeaseExpirationTimeDefault =
+      DurationFlag.value(Duration.ofMinutes(5L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_dda_lease_expiration_time",
+      description = "Lease expiration time of ATS DDA. Default is 5 minutes",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> atsDdaLeaseExpirationTime = atsDdaLeaseExpirationTimeDefault;
+
+  private static final Flag<String> atsFileServerDefault = Flag.value("localhost:8006");
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_file_server",
+      description = "The ATS file server address:port, Default is localhost:8006.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> atsFileServer = atsFileServerDefault;
+
   private static final Flag<Boolean> atsRunTfOnAndroidRealDeviceDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -229,6 +221,14 @@ public class Flags {
               + " is allowed. Default is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> atsRunTfOnAndroidRealDevice = atsRunTfOnAndroidRealDeviceDefault;
+
+  private static final Flag<String> atsStoragePathDefault = Flag.value("/data");
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_storage_path",
+      description = "The ATS storage path, Default is /data.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> atsStoragePath = atsStoragePathDefault;
 
   private static final Flag<Boolean> cacheInstalledApksDefault = Flag.value(true);
 
