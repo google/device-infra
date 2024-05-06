@@ -31,10 +31,7 @@ java_library(
 java_library(
     name = "ats_server_session_plugin_lib",
     srcs = ["AtsServerSessionPlugin.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
-    ],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__"],
     deps = [
         ":new_multi_command_request_handler",
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
