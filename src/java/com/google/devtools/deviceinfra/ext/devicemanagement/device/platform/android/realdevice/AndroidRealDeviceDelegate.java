@@ -873,6 +873,7 @@ public abstract class AndroidRealDeviceDelegate {
     // Device services should be available at this point but need to confirm, otherwise latter adb
     // commands may fail (b/134529577). In this case, try to reboot device to recover it.
     checkOnlineModeDeviceServiceAvailable(deviceId);
+    // Uses non-circuit OR to make sure all checks are executed.
     isDimensionChanged =
         isDimensionChanged
             | isNetworkChanged
@@ -1855,8 +1856,10 @@ public abstract class AndroidRealDeviceDelegate {
   /** Returns a comma-separated string of the ICCIDs of the SIMs on the device. */
   private String getCommaSeparatedIccids() throws MobileHarnessException, InterruptedException {
     ImmutableList<String> iccids = systemSpecUtil.getIccids(deviceId);
-    return iccids == null ? "" : Joiner.on(",").join(iccids);
+    return iccids == null ? "" : COMMA_JOINER.join(iccids);
   }
+
+  private static final Joiner COMMA_JOINER = Joiner.on(",");
 
   /**
    * Checks network connection stability.
