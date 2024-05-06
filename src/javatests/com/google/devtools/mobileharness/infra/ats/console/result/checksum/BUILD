@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(default_applicable_licenses = ["//:license"])
 
@@ -24,7 +24,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/checksum:compatibility_report_checksum_helper",
-        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:junit_junit",
     ],
 )

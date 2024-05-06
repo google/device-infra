@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-load("//src/javatests/com/google/devtools/deviceinfra/builddefs:junit_test_suites.bzl", "junit_test_suites")
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(default_applicable_licenses = ["//:license"])
 
@@ -27,7 +27,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/model:error_id",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_comparator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/javatests/com/google/devtools/deviceinfra/builddefs:truth",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:junit_junit",
     ],
 )

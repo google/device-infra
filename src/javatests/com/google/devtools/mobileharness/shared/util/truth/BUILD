@@ -22,5 +22,5 @@ package(
 java_library(
     name = "correspondences",
     srcs = ["Correspondences.java"],
-    deps = ["//src/javatests/com/google/devtools/deviceinfra/builddefs:truth"],
+    deps = ["//src/javatests/com/google/devtools/mobileharness/builddefs:truth"],
 )

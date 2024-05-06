@@ -15,6 +15,8 @@
 
 load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
 
+package(default_applicable_licenses = ["//:license"])
+
 bzl_library(
     name = "junit_test_suites_bzl",
     srcs = [
@@ -31,5 +33,3 @@ java_library(
         "@maven//:com_google_truth_truth",
     ],
 )
-
-package(default_applicable_licenses = ["//:license"])
