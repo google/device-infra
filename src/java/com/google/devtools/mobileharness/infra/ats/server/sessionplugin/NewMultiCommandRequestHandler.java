@@ -101,6 +101,9 @@ final class NewMultiCommandRequestHandler {
   private static final DateTimeFormatter TIMESTAMP_DIR_NAME_FORMATTER =
       DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss.SSS").withZone(ZoneId.systemDefault());
 
+  private static final Pattern RESULT_ZIP_FILENAME_PATTERN =
+      Pattern.compile("^\\d{4}\\.\\d{2}\\.\\d{2}_\\d{2}\\.\\d{2}\\.\\d{2}\\.\\d{3}_\\d{4}\\.zip$");
+
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
       Pattern.compile("android-[a-z]+\\.zip");
   @VisibleForTesting static final String XTS_TF_JOB_PROP = "xts-tradefed-job";
@@ -461,13 +464,36 @@ final class NewMultiCommandRequestHandler {
                 + " session: %s. Will rerun the command directly.",
             request.getRetryPreviousSessionId());
       }
+    } else if (request.hasPrevTestContext()) {
+      for (TestResource testResource : request.getPrevTestContext().getTestResourceList()) {
+        URL testResourceUrl;
+        try {
+          testResourceUrl = URI.create(testResource.getUrl()).toURL();
+        } catch (IllegalArgumentException | MalformedURLException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to parse url from url: %s", testResource.getUrl());
+          continue;
+        }
+        logger.atInfo().log("testResourceUrl: %s", testResourceUrl);
+        if (testResourceUrl.getProtocol().equals("file")) {
+          if (RESULT_ZIP_FILENAME_PATTERN.matcher(testResource.getName()).matches()) {
+            logger.atInfo().log("resource name: %s", testResource.getName());
+            Path prevResultZipPath = Path.of(testResourceUrl.getPath());
+            sessionRequestInfoBuilder.setRetryResultDir(prevResultZipPath.getParent().toString());
+            String prevSessionId =
+                prevResultZipPath.getParent().getParent().getFileName().toString();
+            sessionRequestInfoBuilder.setRetrySessionId(prevSessionId).setTestPlan("retry");
+            break;
+          }
+        }
+      }
     }
 
     // Insert timeout.
-    sessionRequestInfoBuilder.setJobTimeout(
-        toJavaDuration(request.getTestEnvironment().getInvocationTimeout()));
-    sessionRequestInfoBuilder.setStartTimeout(toJavaDuration(request.getQueueTimeout()));
-    sessionRequestInfoBuilder.setIsAtsServerRequest(true);
+    sessionRequestInfoBuilder
+        .setJobTimeout(toJavaDuration(request.getTestEnvironment().getInvocationTimeout()))
+        .setStartTimeout(toJavaDuration(request.getQueueTimeout()))
+        .setIsAtsServerRequest(true);
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(sessionRequestInfoBuilder.build());
   }
 
