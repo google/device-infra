@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("//third_party/protobuf/build_defs:kt_jvm_proto_library.bzl", "kt_jvm_proto_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -82,6 +84,11 @@ java_proto_library(
 
 java_proto_library(
     name = "device_dimension_java_proto",
+    deps = [":device_dimension_proto"],
+)
+
+kt_jvm_proto_library(
+    name = "device_dimension_kt_proto",
     deps = [":device_dimension_proto"],
 )
 
