@@ -268,6 +268,7 @@ final class AtsServerSessionPlugin {
   private void retrySession() throws MobileHarnessException {
     NewMultiCommandRequest.Builder retryRequestBuilder =
         requestDetail.getOriginalRequest().toBuilder();
+    retryRequestBuilder.clearPrevTestContext();
     retryRequestBuilder.setRetryPreviousSessionId(sessionInfo.getSessionId());
     // TODO: customize retry type
     retryRequestBuilder.setMaxRetryOnTestFailures(requestDetail.getMaxRetryOnTestFailures() - 1);
