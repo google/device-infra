@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.common;
 
-import com.google.common.base.Ascii;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.MoblyResult;
 
 /** Representation possible statuses for test methods for Tradefed and Non-Tradefed tests. */
@@ -42,7 +41,7 @@ public enum TestStatus {
       case FAILURE:
         return "fail";
       default:
-        return Ascii.toLowerCase(status.toString());
+        return status.toString();
     }
   }
 
@@ -53,7 +52,7 @@ public enum TestStatus {
       case "fail":
         return TestStatus.FAILURE;
       default:
-        return TestStatus.valueOf(Ascii.toUpperCase(status));
+        return TestStatus.valueOf(status);
     }
   }
 
@@ -65,11 +64,11 @@ public enum TestStatus {
       case ERROR:
         return "fail";
       case SKIP:
-        return Ascii.toLowerCase(TestStatus.SKIPPED.toString());
+        return TestStatus.SKIPPED.toString();
       case NULL:
-        return Ascii.toLowerCase(TestStatus.INCOMPLETE.toString());
+        return TestStatus.INCOMPLETE.toString();
       default:
-        return Ascii.toLowerCase(moblyResult.toString());
+        return moblyResult.toString();
     }
   }
 }

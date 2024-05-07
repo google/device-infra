@@ -59,8 +59,8 @@ public final class RetryGeneratorTest {
           .addTestCase(
               TestCase.newBuilder()
                   .setName("TestClass2")
-                  .addTest(Test.newBuilder().setName("Test1").setResult("incomplete"))
-                  .addTest(Test.newBuilder().setName("Test2").setResult("skipped")))
+                  .addTest(Test.newBuilder().setName("Test1").setResult("INCOMPLETE"))
+                  .addTest(Test.newBuilder().setName("Test2").setResult("SKIPPED")))
           .build();
 
   private static final Module MODULE_1_V7A =
@@ -75,8 +75,8 @@ public final class RetryGeneratorTest {
           .addTestCase(
               TestCase.newBuilder()
                   .setName("TestClass2")
-                  .addTest(Test.newBuilder().setName("Test1").setResult("skipped"))
-                  .addTest(Test.newBuilder().setName("Test2").setResult("incomplete")))
+                  .addTest(Test.newBuilder().setName("Test1").setResult("SKIPPED"))
+                  .addTest(Test.newBuilder().setName("Test2").setResult("INCOMPLETE")))
           .build();
 
   private static final Module MODULE_2_V8A =
@@ -119,8 +119,8 @@ public final class RetryGeneratorTest {
           .addTestCase(
               TestCase.newBuilder()
                   .setName("TestClass2")
-                  .addTest(Test.newBuilder().setName("Test1").setResult("incomplete"))
-                  .addTest(Test.newBuilder().setName("Test2").setResult("skipped")))
+                  .addTest(Test.newBuilder().setName("Test1").setResult("INCOMPLETE"))
+                  .addTest(Test.newBuilder().setName("Test2").setResult("SKIPPED")))
           .build();
 
   private static final Result REPORT_1 =

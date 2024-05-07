@@ -24,6 +24,5 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
-        "@maven//:com_google_guava_guava",
     ],
 )
