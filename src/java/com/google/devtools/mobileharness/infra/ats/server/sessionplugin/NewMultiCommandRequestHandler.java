@@ -444,6 +444,17 @@ final class NewMultiCommandRequestHandler {
               Path.of(outputUrl.getPath())
                   .resolve(request.getRetryPreviousSessionId())
                   .resolve(previousCommandId);
+          // Resolve another test run's output dir.
+          if (!request.getRetryPreviousTestRunId().isEmpty()) {
+            outputDirPath =
+                Path.of(outputUrl.getPath())
+                    .getParent()
+                    .getParent()
+                    .resolve(request.getRetryPreviousTestRunId())
+                    .resolve("output")
+                    .resolve(request.getRetryPreviousSessionId())
+                    .resolve(previousCommandId);
+          }
           sessionRequestInfoBuilder.setRetryResultDir(outputDirPath.toString());
         }
       } catch (MalformedURLException e) {
