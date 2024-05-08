@@ -17,8 +17,8 @@
 package com.google.wireless.qa.mobileharness.shared.model.job.in;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.util.List;
 import java.util.Map;
@@ -197,8 +197,7 @@ public class Params {
    * @throws MobileHarnessException if there is any param that doesn't exist or has empty value
    */
   public void checkExist(String... paramNames) throws MobileHarnessException {
-    List<com.google.devtools.mobileharness.api.model.error.MobileHarnessException> errors =
-        newParams.validateExist(paramNames);
+    List<MobileHarnessException> errors = newParams.validateExist(paramNames);
     if (!errors.isEmpty()) {
       throw errors.get(0);
     }
@@ -212,8 +211,7 @@ public class Params {
    *     range
    */
   public void checkInt(String paramName, int min, int max) throws MobileHarnessException {
-    List<com.google.devtools.mobileharness.api.model.error.MobileHarnessException> errors =
-        newParams.validateInt(paramName, min, max);
+    List<MobileHarnessException> errors = newParams.validateInt(paramName, min, max);
     if (!errors.isEmpty()) {
       throw errors.get(0);
     }
@@ -229,8 +227,7 @@ public class Params {
    * @throws MobileHarnessException if the parameter value is not a valid boolean
    */
   public void checkBool(String paramName, boolean optional) throws MobileHarnessException {
-    List<com.google.devtools.mobileharness.api.model.error.MobileHarnessException> errors =
-        newParams.validateBool(paramName, optional);
+    List<MobileHarnessException> errors = newParams.validateBool(paramName, optional);
     if (!errors.isEmpty()) {
       throw errors.get(0);
     }

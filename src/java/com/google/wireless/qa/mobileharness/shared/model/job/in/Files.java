@@ -153,8 +153,7 @@ public class Files {
    * @throws MobileHarnessException if there is any tag doesn't map to any path
    */
   public void checkNotEmpty(String... tags) throws MobileHarnessException {
-    List<com.google.devtools.mobileharness.api.model.error.MobileHarnessException> errors =
-        newFiles.validateNotEmpty(tags);
+    List<MobileHarnessException> errors = newFiles.validateNotEmpty(tags);
     if (!errors.isEmpty()) {
       throw errors.get(0);
     }
@@ -177,8 +176,7 @@ public class Files {
    * @throws MobileHarnessException if there is any tag doesn't map to exactly one single path
    */
   public synchronized void checkUnique(String... tags) throws MobileHarnessException {
-    List<com.google.devtools.mobileharness.api.model.error.MobileHarnessException> errors =
-        newFiles.validateUnique(tags);
+    List<MobileHarnessException> errors = newFiles.validateUnique(tags);
     if (!errors.isEmpty()) {
       throw errors.get(0);
     }
