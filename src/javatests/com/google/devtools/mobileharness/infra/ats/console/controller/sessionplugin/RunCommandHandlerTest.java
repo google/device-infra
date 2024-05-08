@@ -28,8 +28,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
@@ -37,6 +39,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
@@ -117,6 +120,52 @@ public final class RunCommandHandlerTest {
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
     sessionResultHandlerUtil = spy(sessionResultHandlerUtil);
     runCommandHandler = spy(runCommandHandler);
+  }
+
+  @Test
+  public void generateSessionRequestInfo_success() throws Exception {
+    RunCommand command =
+        RunCommand.newBuilder()
+            .setTestPlan("test")
+            .setXtsRootDir("xts_root_dir")
+            .setXtsType("cts")
+            .setInitialState(
+                RunCommandState.newBuilder().setCommandId("123").setCommandLineArgs("run cts xxx"))
+            .addAllDeviceSerial(ImmutableList.of("device_1", "device_2"))
+            .addAllModuleName(ImmutableList.of("module_1", "module_2"))
+            .setHtmlInZip(true)
+            .addAllIncludeFilter(ImmutableList.of("filter_1", "filter_2"))
+            .addAllExcludeFilter(ImmutableList.of("exclude_filter_1", "exclude_filter_2"))
+            .addAllExtraArg(ImmutableList.of("arg1", "arg2"))
+            .setTestName("test_name")
+            .setShardCount(10)
+            .setPythonPkgIndexUrl("python_pkg_index_url")
+            .setRetrySessionIndex(1)
+            .setRetryType("FAILED")
+            .setSubPlanName("sub_plan_name")
+            .build();
+
+    SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
+
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("test");
+    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo("xts_root_dir");
+    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
+    assertThat(sessionRequestInfo.enableModuleParameter()).isTrue();
+    assertThat(sessionRequestInfo.enableModuleOptionalParameter()).isFalse();
+    assertThat(sessionRequestInfo.commandLineArgs()).isEqualTo("run cts xxx");
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_1", "device_2");
+    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module_1", "module_2");
+    assertThat(sessionRequestInfo.htmlInZip()).isTrue();
+    assertThat(sessionRequestInfo.includeFilters()).containsExactly("filter_1", "filter_2");
+    assertThat(sessionRequestInfo.excludeFilters())
+        .containsExactly("exclude_filter_1", "exclude_filter_2");
+    assertThat(sessionRequestInfo.extraArgs()).containsExactly("arg1", "arg2");
+    assertThat(sessionRequestInfo.testName()).hasValue("test_name");
+    assertThat(sessionRequestInfo.shardCount()).hasValue(10);
+    assertThat(sessionRequestInfo.pythonPkgIndexUrl()).hasValue("python_pkg_index_url");
+    assertThat(sessionRequestInfo.retrySessionIndex()).hasValue(1);
+    assertThat(sessionRequestInfo.retryType()).hasValue(RetryType.FAILED);
+    assertThat(sessionRequestInfo.subPlanName()).hasValue("sub_plan_name");
   }
 
   @Test

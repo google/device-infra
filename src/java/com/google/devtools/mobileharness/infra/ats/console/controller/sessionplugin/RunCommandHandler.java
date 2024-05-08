@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import static com.google.common.base.Ascii.toUpperCase;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -229,7 +230,8 @@ class RunCommandHandler {
     }
   }
 
-  private SessionRequestInfo generateSessionRequestInfo(RunCommand runCommand)
+  @VisibleForTesting
+  SessionRequestInfo generateSessionRequestInfo(RunCommand runCommand)
       throws MobileHarnessException, InterruptedException {
     SessionRequestInfo.Builder builder =
         SessionRequestInfo.builder()
@@ -243,7 +245,8 @@ class RunCommandHandler {
             .setModuleNames(runCommand.getModuleNameList())
             .setHtmlInZip(runCommand.getHtmlInZip())
             .setIncludeFilters(runCommand.getIncludeFilterList())
-            .setExcludeFilters(runCommand.getExcludeFilterList());
+            .setExcludeFilters(runCommand.getExcludeFilterList())
+            .setExtraArgs(runCommand.getExtraArgList());
     if (runCommand.hasTestName()) {
       builder.setTestName(runCommand.getTestName());
     }
