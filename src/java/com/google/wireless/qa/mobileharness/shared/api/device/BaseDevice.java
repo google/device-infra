@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.BaseDeviceHelper;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.api.model.lab.LiteDeviceInfoFactory;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLogType;
@@ -41,7 +42,6 @@ import com.google.devtools.mobileharness.shared.util.reflection.ValidatorClassUt
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.api.decorator.Decorator;
 import com.google.wireless.qa.mobileharness.shared.api.driver.Driver;
@@ -322,9 +322,7 @@ public abstract class BaseDevice implements Device {
 
   @CanIgnoreReturnValue
   @Override
-  public boolean checkDevice()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public boolean checkDevice() throws MobileHarnessException, InterruptedException {
     return false;
   }
 
@@ -334,9 +332,7 @@ public abstract class BaseDevice implements Device {
   }
 
   @Override
-  public void preRunTest(TestInfo testInfo)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     // Does nothing.
   }
 
@@ -513,7 +509,7 @@ public abstract class BaseDevice implements Device {
           validatorFactory.createValidator(validatorClass.get()).validateEnv(this);
         }
       }
-    } catch (MobileHarnessException e) {
+    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       logger.atInfo().log(
           "Driver %s not supported: %s", driverClass.getSimpleName(), e.getMessage());
       return;
@@ -588,7 +584,7 @@ public abstract class BaseDevice implements Device {
           validatorFactory.createValidator(validatorClass.get()).validateEnv(this);
         }
       }
-    } catch (MobileHarnessException e) {
+    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       logger.atInfo().log("%s not supported: %s", decoratorClass.getSimpleName(), e.getMessage());
       return;
     }

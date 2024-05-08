@@ -16,7 +16,7 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 
 /**
  * A virtual device which acts as a placeholder for the device that has no supported representation

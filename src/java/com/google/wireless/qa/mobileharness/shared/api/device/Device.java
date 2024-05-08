@@ -18,6 +18,7 @@ package com.google.wireless.qa.mobileharness.shared.api.device;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceInfo;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
@@ -26,7 +27,6 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLogType;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.UnsupportedDeviceSandboxController;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
@@ -365,13 +365,10 @@ public interface Device {
    * can set the {@link #isPrepping()} to false so it can be allocated by users.
    *
    * @return whether the device is changed, to notify the Device Manager to sync the new device info
-   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
-   *     check the device, will cause the device to {@link #tearDown()}, and {@link #reboot()} if
-   *     {@link #canReboot()} is {@code true}
+   * @throws MobileHarnessException if fails to check the device, will cause the device to {@link
+   *     #tearDown()}, and {@link #reboot()} if {@link #canReboot()} is {@code true}
    */
-  boolean checkDevice()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException;
+  boolean checkDevice() throws MobileHarnessException, InterruptedException;
 
   /** Returns whether the device is is not yet ready for use; e.g. needs to recharge its battery. */
   boolean isPrepping();
@@ -382,34 +379,27 @@ public interface Device {
    * @param testInfo the test going to run on this device
    * @throws MobileHarnessException if fails to do the preparation
    */
-  void preRunTest(TestInfo testInfo)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException;
+  void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException;
 
   /**
    * Operations after a test and before resetting/reloading the driver. If any {@link
    * MobileHarnessException} is thrown out, will cause the device to reboot.
    *
    * @param testInfo the test just finished with this device
-   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to do
-   *     the operation
+   * @throws MobileHarnessException if fails to do the operation
    */
   PostTestDeviceOp postRunTest(TestInfo testInfo)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException;
+      throws MobileHarnessException, InterruptedException;
 
   /**
    * Cleans up when the device becomes undetectable/disconnected. Should have no effect if this
    * method is invoked for the second time.
    *
-   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
-   *     clean up
+   * @throws MobileHarnessException if fails to clean up
    * @throws InterruptedException if the current thread or its sub-thread is {@linkplain
    *     Thread#interrupt() interrupted} by another thread
    */
-  void tearDown()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException;
+  void tearDown() throws MobileHarnessException, InterruptedException;
 
   /**
    * Returns whether the device can be rebooted. If false, it is useless to implement {@link
@@ -431,28 +421,22 @@ public interface Device {
    *       run on the device.
    * </ul>
    *
-   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
-   *     restart the device
+   * @throws MobileHarnessException if fails to restart the device
    * @throws InterruptedException if the current thread or its sub-thread is {@linkplain
    *     Thread#interrupt() interrupted} by another thread
    */
-  void reboot()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException;
+  void reboot() throws MobileHarnessException, InterruptedException;
 
   /**
    * Takes screen shot on device and uploads it to host machine.
    *
    * @return device screenshot full path on host machine, which looks like:
    *     <PublicGenDir>/screen_shot_files/<DeviceID>/<Timestamp>.png
-   * @throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException if fails to
-   *     get screen shot
+   * @throws MobileHarnessException if fails to get screen shot
    * @throws InterruptedException if the current thread or its sub-thread is {@linkplain
    *     Thread#interrupt() interrupted} by another thread
    */
-  String takeScreenshot()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException;
+  String takeScreenshot() throws MobileHarnessException, InterruptedException;
 
   /**
    * Gets the device log based on the log type.
@@ -464,12 +448,10 @@ public interface Device {
    *     Thread#interrupt() interrupted} by another thread
    */
   String getDeviceLog(DeviceLogType deviceLogType)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException;
+      throws MobileHarnessException, InterruptedException;
 
   /** Gets general file directory. */
-  String getGenFileDir()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+  String getGenFileDir() throws MobileHarnessException;
 
   default DeviceFeature toFeature() {
     return DeviceFeature.newBuilder()

@@ -68,7 +68,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/spec:android_real_device_spec",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",

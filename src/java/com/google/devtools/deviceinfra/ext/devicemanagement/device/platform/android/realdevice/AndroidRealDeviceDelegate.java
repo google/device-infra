@@ -79,7 +79,6 @@ import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.spec.AndroidRealDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.AndroidSetWifiDecorator;
 import com.google.wireless.qa.mobileharness.shared.controller.stat.DeviceStat;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -202,9 +201,7 @@ public abstract class AndroidRealDeviceDelegate {
    * Initializes the Android real device. Prepares the supported device types, dimensions,
    * drivers/decorators.
    */
-  public void setUp()
-      throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
-          InterruptedException {
+  public void setUp() throws MobileHarnessException, InterruptedException {
     if (shouldSetUpAsOnlineModeDevice()) {
       logger.atInfo().log(
           "Set up online mode device (%s). SetupFailureTimes=%d",
@@ -218,8 +215,8 @@ public abstract class AndroidRealDeviceDelegate {
       setUpRecoveryModeDevice();
     } else {
       // Bad connection devices could not be detected sometime.
-      throw new com.google.wireless.qa.mobileharness.shared.MobileHarnessException(
-          ErrorCode.ANDROID_INIT_ERROR,
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_REAL_DEVICE_DELEGATE_UNDETECTED_DURING_INIT,
           "Device is undetectable. Please replug the usb cable or reboot the device.");
     }
 
@@ -764,7 +761,7 @@ public abstract class AndroidRealDeviceDelegate {
       setUpOnlineModeDevice();
     } else {
       AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           AndroidErrorId.ANDROID_REAL_DEVICE_RECOVER_RECOVERY_DEVICE_FAILED,
           String.format("Failed to recover recovery device %s, reboot device later.", deviceId));
     }
@@ -778,9 +775,7 @@ public abstract class AndroidRealDeviceDelegate {
     androidDeviceHelper.updateAndroidPropertyDimensions(device);
   }
 
-  public boolean checkDevice()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public boolean checkDevice() throws MobileHarnessException, InterruptedException {
     if (!ifSkipCheckAbnormalDevice()) {
       Optional<Boolean> abnormalDeviceCheckResult = checkAbnormalDevice();
       if (abnormalDeviceCheckResult.isPresent()) {
@@ -804,8 +799,7 @@ public abstract class AndroidRealDeviceDelegate {
    * device regular check.
    */
   private Optional<Boolean> checkAbnormalDevice()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     // Any recovery mode device should not be found when checking device. Reboot it to fastboot
     // mode to notify the lab admins.
     if (androidAdbInternalUtil.getDeviceSerialsByState(DeviceState.RECOVERY).contains(deviceId)) {
@@ -1054,8 +1048,7 @@ public abstract class AndroidRealDeviceDelegate {
    * Customized device preparation before running the test which is executed before the default one.
    */
   protected abstract void prependedRealDevicePreparationBeforeTest(TestInfo testInfo)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException;
+      throws MobileHarnessException, InterruptedException;
 
   /** Returns {@code true} if skip default device prepration before running the test. */
   protected abstract boolean skipRealDeviceDefaultPreparationBeforeTest();
@@ -1063,8 +1056,7 @@ public abstract class AndroidRealDeviceDelegate {
   /** Operations after a test and before resetting/reloading the driver. */
   @CanIgnoreReturnValue
   public PostTestDeviceOp postRunTest(TestInfo testInfo)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     // Removes the device cache after tests finish, otherwise device status may be wrong. b/32101092
     DeviceCache.getInstance().invalidateCache(device.info().deviceId().controlId());
 
@@ -1269,8 +1261,7 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Gets the device log based on the log type. */
   public String getDeviceLog(DeviceLogType deviceLogType)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     try {
       String filePathPrefix = PathUtil.join(device.getGenFileDir(), UUID.randomUUID().toString());
       if (deviceLogType.equals(DeviceLogType.DEVICE_LOG_TYPE_ANDROID_LOGCAT)) {
@@ -1280,10 +1271,10 @@ public abstract class AndroidRealDeviceDelegate {
         return desFilePathOnHost;
       }
     } catch (MobileHarnessException e) {
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           InfraErrorId.LAB_GET_DEVICE_LOG_LOGCAT_ERROR, "Failed to get logcat.", e);
     }
-    throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+    throw new MobileHarnessException(
         InfraErrorId.LAB_GET_DEVICE_LOG_METHOD_UNSUPPORTED,
         String.format(
             "The device log type %s for the device %s[%s] is not supported.",
@@ -1302,9 +1293,7 @@ public abstract class AndroidRealDeviceDelegate {
    * are rooted. There seems no method to check root on a device with release keys which is more
    * reliable than the "adb root" command.
    */
-  private boolean isRootable(String deviceId)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  private boolean isRootable(String deviceId) throws MobileHarnessException, InterruptedException {
     String signKeys = androidAdbUtil.getProperty(deviceId, AndroidProperty.SIGN);
     if (!Ascii.equalsIgnoreCase(signKeys, "release-keys")) {
       return true;
@@ -1329,9 +1318,7 @@ public abstract class AndroidRealDeviceDelegate {
    * device setup process, because it's likely the implementation of this method will issue some adb
    * commands to the device.
    */
-  public boolean isRooted()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public boolean isRooted() throws MobileHarnessException, InterruptedException {
     if (!device.hasProperty(AndroidRealDeviceConstants.PROPERTY_NAME_ROOTED)) {
       synchronized (checkRootLock) {
         if (!device.hasProperty(AndroidRealDeviceConstants.PROPERTY_NAME_ROOTED)) {
@@ -1418,15 +1405,11 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   /** Cleans up when the device becomes undetectable/disconnected. */
-  public void tearDown()
-      throws InterruptedException,
-          com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  public void tearDown() throws InterruptedException, MobileHarnessException {
     deviceTearDown();
   }
 
-  protected abstract void deviceTearDown()
-      throws InterruptedException,
-          com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+  protected abstract void deviceTearDown() throws InterruptedException, MobileHarnessException;
 
   /**
    * Sets device properties and packages to let the device know it is running in a test harness and
@@ -1447,7 +1430,7 @@ public abstract class AndroidRealDeviceDelegate {
         logger.atInfo().log("Reboot device %s to clear ro properties", serial);
         systemStateManager.reboot(device, /* log= */ null, /* deviceReadyTimeout= */ null);
       }
-    } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
+    } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to check device %s read only properties: %s",
           serial, MoreThrowables.shortDebugString(e));
@@ -1467,7 +1450,7 @@ public abstract class AndroidRealDeviceDelegate {
     if (Flags.instance().disableCellBroadcastReceiver.getNonNull()) {
       try {
         androidPkgManagerUtil.disablePackage(serial, "com.android.cellbroadcastreceiver");
-      } catch (com.google.devtools.mobileharness.api.model.error.MobileHarnessException e) {
+      } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Failed to disable package com.android.cellbroadcastreceiver when setup the device "
                 + "%s: %s",
@@ -1478,8 +1461,7 @@ public abstract class AndroidRealDeviceDelegate {
 
   @VisibleForTesting
   boolean needRebootToClearReadOnlyTestProperties()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     if (!ifClearAnyReadOnlyTestProperties()) {
       return false;
     }
@@ -1499,8 +1481,7 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   private boolean needRebootToClearTestProperty(String roPropName, String newValue)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     String devicePropValue = androidAdbUtil.getProperty(deviceId, ImmutableList.of(roPropName));
     // If current read only prop is not set, no need device reboot.
     if (Strings.isNullOrEmpty(devicePropValue)) {
@@ -2067,7 +2048,7 @@ public abstract class AndroidRealDeviceDelegate {
     }
     if (!serviceAvailable) {
       AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
-      throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+      throw new MobileHarnessException(
           AndroidErrorId.ANDROID_REAL_DEVICE_ONLINE_DEVICE_NOT_READY,
           String.format(
               "Online mode device %s services aren't available yet. Reboot to recover.", deviceId));

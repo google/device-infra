@@ -21,10 +21,10 @@ import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegate;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -71,16 +71,12 @@ public abstract class AndroidDevice extends BaseDevice {
 
   @CanIgnoreReturnValue
   @Override
-  public boolean checkDevice()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public boolean checkDevice() throws MobileHarnessException, InterruptedException {
     return delegate.checkDevice();
   }
 
   @Override
-  public void preRunTest(TestInfo testInfo)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     delegate.preRunTest(testInfo, isRooted());
   }
 
@@ -89,9 +85,7 @@ public abstract class AndroidDevice extends BaseDevice {
    * saved in device properties by drivers. Not thread safe.
    */
   @Override
-  public void tearDown()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {}
+  public void tearDown() throws MobileHarnessException, InterruptedException {}
 
   /** Returns the ABI of this device. */
   @Nullable
@@ -133,9 +127,7 @@ public abstract class AndroidDevice extends BaseDevice {
    * device setup process, because it's likely the implementation of this method will issue some adb
    * commands to the device.
    */
-  public abstract boolean isRooted()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException;
+  public abstract boolean isRooted() throws MobileHarnessException, InterruptedException;
 
   /** Gets property value. */
   protected String getPropertyValue(String deviceId, AndroidProperty key)

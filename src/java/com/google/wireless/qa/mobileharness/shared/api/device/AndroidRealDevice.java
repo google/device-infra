@@ -18,12 +18,12 @@ package com.google.wireless.qa.mobileharness.shared.api.device;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceDelegate;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLogType;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.time.Duration;
@@ -71,9 +71,7 @@ public class AndroidRealDevice extends AndroidDevice {
   }
 
   @Override
-  public boolean checkDevice()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public boolean checkDevice() throws MobileHarnessException, InterruptedException {
     return delegate.checkDevice();
   }
 
@@ -88,17 +86,14 @@ public class AndroidRealDevice extends AndroidDevice {
   }
 
   @Override
-  public void preRunTest(TestInfo testInfo)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public void preRunTest(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     delegate.preRunTest(testInfo);
   }
 
   @CanIgnoreReturnValue
   @Override
   public PostTestDeviceOp postRunTest(TestInfo testInfo)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     return delegate.postRunTest(testInfo);
   }
 
@@ -108,9 +103,7 @@ public class AndroidRealDevice extends AndroidDevice {
   }
 
   @Override
-  public void reboot()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public void reboot() throws MobileHarnessException, InterruptedException {
     if (canReboot()) {
       delegate.reboot();
     } else {
@@ -120,23 +113,18 @@ public class AndroidRealDevice extends AndroidDevice {
   }
 
   @Override
-  public String takeScreenshot()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public String takeScreenshot() throws MobileHarnessException, InterruptedException {
     return delegate.takeScreenshot();
   }
 
   @Override
   public String getDeviceLog(DeviceLogType deviceLogType)
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+      throws MobileHarnessException, InterruptedException {
     return delegate.getDeviceLog(deviceLogType);
   }
 
   @Override
-  public boolean isRooted()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public boolean isRooted() throws MobileHarnessException, InterruptedException {
     return delegate.isRooted();
   }
 
@@ -146,9 +134,7 @@ public class AndroidRealDevice extends AndroidDevice {
   }
 
   @Override
-  public void tearDown()
-      throws InterruptedException,
-          com.google.devtools.mobileharness.api.model.error.MobileHarnessException {
+  public void tearDown() throws InterruptedException, MobileHarnessException {
     delegate.tearDown();
   }
 

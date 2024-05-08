@@ -31,6 +31,7 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.E
 import com.google.devtools.mobileharness.api.model.allocation.Allocation;
 import com.google.devtools.mobileharness.api.model.constant.DeviceProperty;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
@@ -47,7 +48,6 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogTag;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.RetainDeviceInfoAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.api.device.DeviceFactory;
@@ -724,8 +724,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       return device.checkDevice();
     } catch (MobileHarnessException e) {
       postDeviceErrorEvent(e);
-      throw new MobileHarnessException(
-          e.getErrorCode(), "Error occurs when checking device: " + e.getMessage());
+      throw e;
     } finally {
       logger.atInfo().log("Finish periodical check");
     }

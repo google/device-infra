@@ -78,7 +78,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/lab:device_info",
         "//src/java/com/google/devtools/mobileharness/infra/container/sandbox/device:device_sandbox_controller",
         "//src/java/com/google/devtools/mobileharness/infra/container/sandbox/device:unsupported_device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
@@ -123,7 +122,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:validator_factory",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
@@ -146,7 +144,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/version",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:validator_factory",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
@@ -168,7 +165,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/container/sandbox/device:device_sandbox_controller",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:validator_factory",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -181,7 +177,7 @@ java_library(
     srcs = ["MiscDevice.java"],
     deps = [
         ":base_device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
     ],
 )
 
@@ -203,7 +199,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/container/sandbox/device:no_op_device",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:validator_factory",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",

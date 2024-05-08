@@ -20,12 +20,12 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -124,9 +124,7 @@ public class AndroidLocalEmulator extends AndroidDevice {
   }
 
   @Override
-  public void reboot()
-      throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
-          InterruptedException {
+  public void reboot() throws MobileHarnessException, InterruptedException {
     if (canReboot()) {
       String deviceId = getDeviceId();
       // Only invokes the reboot command when the device is detected, otherwise will fail.
