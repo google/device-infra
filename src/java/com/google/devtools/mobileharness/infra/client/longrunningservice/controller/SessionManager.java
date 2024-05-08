@@ -88,13 +88,13 @@ public class SessionManager {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /** Queue capacity for submitted and non-started sessions. */
-  private static final int SESSION_QUEUE_CAPACITY = 5000;
+  private static final int SESSION_QUEUE_CAPACITY = 50_000;
 
   /** Capacity for concurrently running sessions. */
-  private static final int RUNNING_SESSION_CAPACITY = 100;
+  private static final int RUNNING_SESSION_CAPACITY = 50;
 
   /** Capacity for archived sessions. */
-  private static final int ARCHIVED_SESSION_CAPACITY = 500;
+  private static final int ARCHIVED_SESSION_CAPACITY = 1000;
 
   private final SessionDetailCreator sessionDetailCreator;
   private final SessionRunner.Factory sessionRunnerFactory;

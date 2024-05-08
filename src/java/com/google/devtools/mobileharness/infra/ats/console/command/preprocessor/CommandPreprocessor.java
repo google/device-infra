@@ -17,14 +17,15 @@
 package com.google.devtools.mobileharness.infra.ats.console.command.preprocessor;
 
 import static com.google.common.base.Ascii.equalsIgnoreCase;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
-import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
+import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandFileParser.CommandLine;
+import java.io.File;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -36,32 +37,33 @@ public class CommandPreprocessor {
   @AutoValue
   public abstract static class PreprocessingResult {
 
-    public abstract Optional<ImmutableList<String>> modifiedTokens();
+    public abstract Optional<ImmutableList<ImmutableList<String>>> modifiedCommands();
 
     public abstract Optional<String> errorMessage();
 
     public static PreprocessingResult of(
-        @Nullable ImmutableList<String> modifiedTokens, @Nullable String errorMessage) {
+        @Nullable ImmutableList<ImmutableList<String>> modifiedCommands,
+        @Nullable String errorMessage) {
       return new AutoValue_CommandPreprocessor_PreprocessingResult(
-          Optional.ofNullable(modifiedTokens), Optional.ofNullable(errorMessage));
+          Optional.ofNullable(modifiedCommands), Optional.ofNullable(errorMessage));
     }
   }
 
   private static final String OPTION_EXIT_AFTER_RUN = "--exit-after-run=true";
 
-  private final LocalFileUtil localFileUtil;
+  private final CommandFileParser commandFileParser;
 
   @Inject
-  CommandPreprocessor(LocalFileUtil localFileUtil) {
-    this.localFileUtil = localFileUtil;
+  CommandPreprocessor(CommandFileParser commandFileParser) {
+    this.commandFileParser = commandFileParser;
   }
 
   public PreprocessingResult preprocess(ImmutableList<String> tokens) {
     if (tokens.size() < 2) {
-      return PreprocessingResult.of(/* modifiedTokens= */ null, /* errorMessage= */ null);
+      return PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
     }
     if (!equalsIgnoreCase(tokens.get(0), "run")) {
-      return PreprocessingResult.of(/* modifiedTokens= */ null, /* errorMessage= */ null);
+      return PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
     }
     switch (tokens.get(1)) {
       case "command":
@@ -73,7 +75,7 @@ public class CommandPreprocessor {
       case "cmdfileAndExit":
         return preprocessRunCmdfileCommand(tokens, /* exitAfterRun= */ true);
       default:
-        return PreprocessingResult.of(/* modifiedTokens= */ null, /* errorMessage= */ null);
+        return PreprocessingResult.of(/* modifiedCommands= */ null, /* errorMessage= */ null);
     }
   }
 
@@ -84,39 +86,40 @@ public class CommandPreprocessor {
     if (exitAfterRun) {
       modifiedTokens.add(OPTION_EXIT_AFTER_RUN);
     }
-    return PreprocessingResult.of(modifiedTokens.build(), /* errorMessage= */ null);
+    return PreprocessingResult.of(
+        ImmutableList.of(modifiedTokens.build()), /* errorMessage= */ null);
   }
 
   private PreprocessingResult preprocessRunCmdfileCommand(
       ImmutableList<String> tokens, boolean exitAfterRun) {
     if (tokens.size() < 3) {
-      return PreprocessingResult.of(/* modifiedTokens= */ null, "Cmdfile path is not specified");
+      return PreprocessingResult.of(/* modifiedCommands= */ null, "Cmdfile path is not specified");
     }
-    String fileContent;
+    List<CommandLine> commandsFromFile;
     try {
-      fileContent = localFileUtil.readFile(tokens.get(2)).trim();
+      commandsFromFile = commandFileParser.parseFile(new File(tokens.get(2)));
     } catch (MobileHarnessException e) {
       return PreprocessingResult.of(
-          /* modifiedTokens= */ null,
+          /* modifiedCommands= */ null,
           String.format("Failed to read cmdfile: %s", shortDebugString(e)));
     }
-    ImmutableList<String> tokensFromFile;
-    try {
-      tokensFromFile = ShellUtils.tokenize(fileContent);
-    } catch (TokenizationException e) {
-      return PreprocessingResult.of(
-          /* modifiedTokens= */ null,
-          String.format(
-              "Invalid input from cmdfile: [%s], error=[%s]", fileContent, shortDebugString(e)));
-    }
-    ImmutableList.Builder<String> modifiedTokens =
-        ImmutableList.<String>builder()
-            .add(tokens.get(0))
-            .addAll(tokensFromFile)
-            .addAll(tokens.subList(3, tokens.size()));
-    if (exitAfterRun) {
-      modifiedTokens.add(OPTION_EXIT_AFTER_RUN);
-    }
-    return PreprocessingResult.of(modifiedTokens.build(), /* errorMessage= */ null);
+    String firstToken = tokens.get(0);
+    ImmutableList<String> extraArgs = tokens.subList(3, tokens.size());
+    return PreprocessingResult.of(
+        commandsFromFile.stream()
+            .map(
+                command -> {
+                  ImmutableList.Builder<String> modifiedTokens =
+                      ImmutableList.<String>builder()
+                          .add(firstToken)
+                          .addAll(command)
+                          .addAll(extraArgs);
+                  if (exitAfterRun) {
+                    modifiedTokens.add(OPTION_EXIT_AFTER_RUN);
+                  }
+                  return modifiedTokens.build();
+                })
+            .collect(toImmutableList()),
+        /* errorMessage= */ null);
   }
 }

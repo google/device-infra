@@ -21,14 +21,36 @@ package(
 )
 
 java_library(
+    name = "command_file_parser",
+    srcs = ["CommandFileParser.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/shell",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "command_file_watcher",
+    srcs = ["CommandFileWatcher.java"],
+    deps = [
+        ":command_file_parser",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "command_preprocessor",
     srcs = ["CommandPreprocessor.java"],
     deps = [
+        ":command_file_parser",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

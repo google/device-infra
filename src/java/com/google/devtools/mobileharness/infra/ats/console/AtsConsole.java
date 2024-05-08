@@ -256,20 +256,24 @@ public class AtsConsole {
       }
 
       // Preprocesses the command.
+      ImmutableList<ImmutableList<String>> preprocessedCommands;
       PreprocessingResult preprocessingResult = commandPreprocessor.preprocess(tokens);
       if (preprocessingResult.errorMessage().isPresent()) {
         consoleUtil.printlnStderr(preprocessingResult.errorMessage().get());
         continue;
       }
-      if (preprocessingResult.modifiedTokens().isPresent()) {
-        logger.atInfo().log(
-            "Replace command %s by %s", tokens, preprocessingResult.modifiedTokens().get());
-        tokens = preprocessingResult.modifiedTokens().get();
+      if (preprocessingResult.modifiedCommands().isPresent()) {
+        preprocessedCommands = preprocessingResult.modifiedCommands().get();
+        logger.atInfo().log("Replace command %s by %s", tokens, preprocessedCommands);
+      } else {
+        preprocessedCommands = ImmutableList.of(tokens);
       }
 
-      // Executes the command.
-      consoleInfo.setLastCommand(tokens);
-      commandLine.execute(tokens.toArray(new String[0]));
+      // Executes the commands.
+      for (ImmutableList<String> command : preprocessedCommands) {
+        consoleInfo.setLastCommand(command);
+        commandLine.execute(command.toArray(new String[0]));
+      }
 
       sleeper.sleep(Duration.ofMillis(100L));
     } while (!consoleInfo.getShouldExitConsole());
