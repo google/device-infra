@@ -233,6 +233,10 @@ public class SessionResultHandlerUtil {
       if (!sessionRequestInfo.moduleNames().isEmpty()) {
         finalReportBuilder.addAllModuleFilter(sessionRequestInfo.moduleNames());
       }
+      if (sessionRequestInfo.testName().isPresent()
+          && !sessionRequestInfo.testName().get().isEmpty()) {
+        finalReportBuilder.setTestFilter(sessionRequestInfo.testName().get());
+      }
       if (!sessionRequestInfo.includeFilters().isEmpty()) {
         finalReportBuilder.addAllIncludeFilter(sessionRequestInfo.includeFilters());
       }

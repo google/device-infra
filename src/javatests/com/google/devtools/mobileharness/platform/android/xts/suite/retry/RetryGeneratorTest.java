@@ -468,4 +468,33 @@ public final class RetryGeneratorTest {
     assertThat(subPlan.getIncludeFiltersMultimap()).isEmpty();
     assertThat(subPlan.getNonTfIncludeFiltersMultimap()).isEmpty();
   }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_withTestFilter() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    int previousSessionIndex = 0;
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+        .thenReturn(
+            Result.newBuilder()
+                .addModuleInfo(
+                    Module.newBuilder()
+                        .setName("Module")
+                        .addTestCase(
+                            TestCase.newBuilder()
+                                .setName("TestClass")
+                                .addTest(Test.newBuilder().setName("Test").setResult("fail"))))
+                .addModuleFilter("Module")
+                .setTestFilter("TestClass#Test")
+                .build());
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setPreviousSessionIndex(previousSessionIndex)
+                .build());
+
+    assertThat(Multimaps.asMap(subPlan.getIncludeFiltersMultimap()))
+        .containsExactly("Module", ImmutableSet.of("TestClass#Test"));
+  }
 }

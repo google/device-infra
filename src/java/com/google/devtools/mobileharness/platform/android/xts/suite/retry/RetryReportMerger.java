@@ -137,6 +137,9 @@ public class RetryReportMerger {
     if (!previousResult.getModuleFilterList().isEmpty()) {
       mergedResult.addAllModuleFilter(previousResult.getModuleFilterList());
     }
+    if (!previousResult.getTestFilter().isEmpty()) {
+      mergedResult.setTestFilter(previousResult.getTestFilter());
+    }
     if (!previousResult.getIncludeFilterList().isEmpty()) {
       mergedResult.addAllIncludeFilter(previousResult.getIncludeFilterList());
     }

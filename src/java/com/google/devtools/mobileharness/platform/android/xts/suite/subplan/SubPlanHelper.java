@@ -51,8 +51,10 @@ public class SubPlanHelper {
     for (Module module : previousResult.getModuleInfoList()) {
       if (RetryResultHelper.shouldRunModule(module, types, addSubPlanCmd, passedInModules)) {
         boolean isNonTfModule = module.getIsNonTfModule();
-        if (RetryResultHelper.shouldRunEntireModule(
-            module, types, addSubPlanCmd, prevResultIncludeFilters, prevResultExcludeFilters)) {
+        // If the previous result has test filter, should not run the entire module
+        if (previousResult.getTestFilter().isEmpty()
+            && RetryResultHelper.shouldRunEntireModule(
+                module, types, addSubPlanCmd, prevResultIncludeFilters, prevResultExcludeFilters)) {
           if (isNonTfModule) {
             subPlan.addNonTfIncludeFilter(
                 String.format("%s %s", module.getAbi(), module.getName()));
@@ -85,15 +87,15 @@ public class SubPlanHelper {
         previousResult.getAttributeList().stream()
             .filter(attribute -> attribute.getKey().equals(XmlConstants.COMMAND_LINE_ARGS))
             .findFirst();
-    if (commandLineArgs.isPresent()) {
-      subPlan.setPreviousSessionXtsTestPlan(
-          Splitter.on(' ')
-              .trimResults()
-              .omitEmptyStrings()
-              .splitToStream(commandLineArgs.get().getValue())
-              .findFirst()
-              .orElse(""));
-    }
+    commandLineArgs.ifPresent(
+        args ->
+            subPlan.setPreviousSessionXtsTestPlan(
+                Splitter.on(' ')
+                    .trimResults()
+                    .omitEmptyStrings()
+                    .splitToStream(args.getValue())
+                    .findFirst()
+                    .orElse("")));
     return subPlan;
   }
 

@@ -29,7 +29,6 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubP
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import javax.inject.Inject;
 
 /** To generate the subplan for retrying a previous session. */
@@ -56,10 +55,10 @@ public class RetryGenerator {
     }
 
     Optional<RetryType> retryType = retryArgs.retryType();
-    Set<RetryType> retryTypes =
-        retryType.isPresent()
-            ? ImmutableSet.of(retryType.get())
-            : ImmutableSet.of(RetryType.FAILED, RetryType.NOT_EXECUTED);
+    ImmutableSet<RetryType> retryTypes =
+        retryType
+            .map(ImmutableSet::of)
+            .orElseGet(() -> ImmutableSet.of(RetryType.FAILED, RetryType.NOT_EXECUTED));
 
     List<String> includeFiltersFromPrevResult = previousResult.getIncludeFilterList();
     List<String> excludeFiltersFromPrevResult = previousResult.getExcludeFilterList();
