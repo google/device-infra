@@ -103,6 +103,10 @@ public class SubPlanHelper {
                     .splitToStream(args.getValue())
                     .findFirst()
                     .orElse("")));
+    if (previousResult.hasBuild()) {
+      subPlan.setPreviousSessionDeviceBuildFingerprint(
+          previousResult.getBuild().getBuildFingerprint());
+    }
     return subPlan;
   }
 

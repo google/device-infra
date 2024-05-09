@@ -26,7 +26,6 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
-        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",

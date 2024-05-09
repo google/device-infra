@@ -23,7 +23,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
@@ -106,7 +105,6 @@ class RunCommandHandler {
           shortDebugString(command));
       return ImmutableList.of();
     }
-    jobInfo.get().properties().add(SessionHandlerHelper.XTS_TF_JOB_PROP, "true");
 
     // Lets the driver write TF output to XTS log dir directly.
     jobInfo

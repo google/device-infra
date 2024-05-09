@@ -26,6 +26,7 @@ import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.a
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
@@ -131,6 +132,15 @@ public final class NonTradefedReportGenerator {
       Instant testStartTime,
       Instant testEndTime)
       throws MobileHarnessException, InterruptedException {
+    if (testInfo
+        .jobInfo()
+        .properties()
+        .getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS)
+        .orElse(false)) {
+      logger.atInfo().log("Skip collecting non tradefed reports.");
+      return;
+    }
+
     boolean runCertificationTestSuite =
         testInfo.jobInfo().params().getBool(PARAM_RUN_CERTIFICATION_TEST_SUITE, false);
     if (!runCertificationTestSuite) {

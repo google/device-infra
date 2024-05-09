@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
@@ -202,7 +203,7 @@ public final class RunCommandHandlerTest {
                     .build())
             .setTiming(new Timing())
             .build();
-    tradefedJobInfo.properties().add(SessionHandlerHelper.XTS_TF_JOB_PROP, "true");
+    tradefedJobInfo.properties().add(Job.IS_XTS_TF_JOB, "true");
     tradefedJobInfo.tests().add("1", "test_name");
 
     JobInfo nonTradefedJobInfo =
@@ -219,7 +220,7 @@ public final class RunCommandHandlerTest {
                     .build())
             .setTiming(new Timing())
             .build();
-    nonTradefedJobInfo.properties().add(SessionHandlerHelper.XTS_NON_TF_JOB_PROP, "true");
+    nonTradefedJobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
     nonTradefedJobInfo
         .properties()
         .add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, "mobly_test_module_name");

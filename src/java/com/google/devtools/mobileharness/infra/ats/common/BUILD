@@ -34,6 +34,7 @@ java_library(
         ":session_handler_helper",
         ":session_request_info",
         ":test_plan_loader",
+        ":xts_property_name",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -53,6 +54,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_generator",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
@@ -125,6 +127,7 @@ java_library(
     deps = [
         ":session_handler_helper",
         ":session_request_info",
+        ":xts_property_name",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
@@ -154,4 +157,15 @@ java_library(
     name = "session_handler_helper",
     srcs = ["SessionHandlerHelper.java"],
     deps = ["@maven//:com_google_guava_guava"],
+)
+
+java_library(
+    name = "xts_property_name",
+    srcs = ["XtsPropertyName.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
+    ],
+    deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/constant:property"],
 )

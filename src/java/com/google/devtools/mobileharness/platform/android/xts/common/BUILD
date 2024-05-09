@@ -26,3 +26,14 @@ java_library(
         "//src/devtools/mobileharness/infra/ats/console/result/proto:result_java_proto",
     ],
 )
+
+java_library(
+    name = "device_build_info",
+    srcs = ["DeviceBuildInfo.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
+    ],
+    deps = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants"],
+)

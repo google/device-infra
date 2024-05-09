@@ -28,6 +28,7 @@ import static java.lang.Math.min;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.Objects.requireNonNull;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
@@ -39,6 +40,7 @@ import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
@@ -147,6 +149,23 @@ public class SessionRequestHandlerUtil {
     this.sessionGenDir = sessionGenDir;
     this.sessionTempDir = sessionTempDir;
     this.resUtilProvider = resUtilProvider;
+  }
+
+  /** Information used to create the Tradefed job. */
+  @AutoValue
+  public abstract static class TradefedJobInfo {
+
+    /** Creates a {@link TradefedJobInfo}. */
+    public static TradefedJobInfo of(
+        JobConfig jobConfig, ImmutableMap<XtsPropertyName, String> extraJobProperties) {
+      return new AutoValue_SessionRequestHandlerUtil_TradefedJobInfo(jobConfig, extraJobProperties);
+    }
+
+    /** The job config. */
+    public abstract JobConfig jobConfig();
+
+    /** Extra properties to set in the created job. */
+    public abstract ImmutableMap<XtsPropertyName, String> extraJobProperties();
   }
 
   /**
@@ -310,24 +329,29 @@ public class SessionRequestHandlerUtil {
       return Optional.empty();
     }
 
-    Optional<JobConfig> jobConfig =
-        createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfo =
+        createXtsTradefedTestJobInfo(
             sessionRequestInfo, modules.isEmpty() ? ImmutableList.of() : filteredModules);
-    if (jobConfig.isEmpty()) {
+    if (tradefedJobInfo.isEmpty()) {
       return Optional.empty();
     }
     JobInfo jobInfo =
         JobInfoCreator.createJobInfo(
-            jobConfig.get(),
+            tradefedJobInfo.get().jobConfig(),
             ImmutableList.of(),
-            jobConfig.get().getGenFileDir(),
-            createJobTmpDir(jobConfig.get().getName()).toString());
+            tradefedJobInfo.get().jobConfig().getGenFileDir(),
+            createJobTmpDir(tradefedJobInfo.get().jobConfig().getName()).toString());
     addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
+    jobInfo.properties().add(Job.IS_XTS_TF_JOB, "true");
+    tradefedJobInfo
+        .get()
+        .extraJobProperties()
+        .forEach((key, value) -> jobInfo.properties().add(key, value));
     return Optional.of(jobInfo);
   }
 
   @VisibleForTesting
-  Optional<JobConfig> createXtsTradefedTestJobConfig(
+  Optional<TradefedJobInfo> createXtsTradefedTestJobInfo(
       SessionRequestInfo sessionRequestInfo, ImmutableList<String> tfModules)
       throws MobileHarnessException, InterruptedException {
     String testPlan = sessionRequestInfo.testPlan();
@@ -336,6 +360,7 @@ public class SessionRequestHandlerUtil {
     ImmutableList<String> deviceSerials = sessionRequestInfo.deviceSerials();
     int shardCount = sessionRequestInfo.shardCount().orElse(0);
     ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
+    ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
 
     // TODO: migrate multi-device tests to non-TF
     int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
@@ -383,6 +408,7 @@ public class SessionRequestHandlerUtil {
     }
     driverParams.put("xts_test_plan", testPlan);
     if (isRunRetry(testPlan)) {
+      extraJobProperties.put(Job.IS_RUN_RETRY, "true");
       Optional<SubPlan> runRetryTfSubPlan;
       final ImmutableSet<String> allNonTfModules =
           getNonTfModules(sessionRequestInfo.v2ConfigsMap());
@@ -415,6 +441,9 @@ public class SessionRequestHandlerUtil {
       }
       driverParams.put(
           "prev_session_xts_test_plan", runRetryTfSubPlan.get().getPreviousSessionXtsTestPlan());
+      extraJobProperties.put(
+          Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT,
+          runRetryTfSubPlan.get().getPreviousSessionDeviceBuildFingerprint().orElse(""));
       Path runRetryTfSubPlanXmlFile;
       if (sessionRequestInfo.retrySessionIndex().isPresent()) {
         runRetryTfSubPlanXmlFile =
@@ -496,7 +525,7 @@ public class SessionRequestHandlerUtil {
     JobConfig jobConfig = jobConfigBuilder.build();
     logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
 
-    return Optional.of(jobConfig);
+    return Optional.of(TradefedJobInfo.of(jobConfig, extraJobProperties.buildOrThrow()));
   }
 
   private Optional<Path> prepareTfSubPlan(String xtsRootDir, String xtsType, String subPlanName)
@@ -763,9 +792,11 @@ public class SessionRequestHandlerUtil {
       return ImmutableList.of();
     }
 
+    Map<XtsPropertyName, String> extraJobProperties = new HashMap<>();
     String xtsType = sessionRequestInfo.xtsType();
     Optional<SubPlan> subPlanOpt = Optional.empty();
     if (isRunRetry(testPlan)) {
+      extraJobProperties.put(Job.IS_RUN_RETRY, "true");
       if (sessionRequestInfo.retrySessionIndex().isPresent()) {
         subPlanOpt =
             prepareRunRetrySubPlan(
@@ -793,6 +824,9 @@ public class SessionRequestHandlerUtil {
       if (subPlanOpt.isEmpty()) {
         return ImmutableList.of();
       }
+      extraJobProperties.put(
+          Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT,
+          subPlanOpt.get().getPreviousSessionDeviceBuildFingerprint().orElse(""));
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
       subPlanOpt =
           prepareNonTfSubPlan(
@@ -932,6 +966,7 @@ public class SessionRequestHandlerUtil {
                             .add("id", serialDimensionValue));
           }
           addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
+          extraJobProperties.forEach((key, value) -> jobInfo.properties().add(key, value));
           jobInfos.add(jobInfo);
         }
       }
@@ -985,7 +1020,7 @@ public class SessionRequestHandlerUtil {
 
     JobInfo jobInfo = jobInfoOpt.get();
     moduleConfigurationHelper.updateJobInfo(jobInfo, moduleConfig, fileDepDirs);
-    jobInfo.properties().add(SessionHandlerHelper.XTS_NON_TF_JOB_PROP, "true");
+    jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
     jobInfo
         .properties()
         .add(SessionHandlerHelper.XTS_MODULE_NAME_PROP, moduleConfig.getMetadata().getXtsModule());

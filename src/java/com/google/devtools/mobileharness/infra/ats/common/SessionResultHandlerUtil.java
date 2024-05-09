@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
@@ -126,7 +127,7 @@ public class SessionResultHandlerUtil {
     Result finalReport = null;
     ImmutableMap<JobInfo, Optional<TestInfo>> tradefedTests =
         jobs.stream()
-            .filter(jobInfo -> jobInfo.properties().has(SessionHandlerHelper.XTS_TF_JOB_PROP))
+            .filter(jobInfo -> jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false))
             .collect(
                 toImmutableMap(
                     Function.identity(),
@@ -134,7 +135,7 @@ public class SessionResultHandlerUtil {
 
     ImmutableMap<JobInfo, Optional<TestInfo>> nonTradefedTests =
         jobs.stream()
-            .filter(jobInfo -> jobInfo.properties().has(SessionHandlerHelper.XTS_NON_TF_JOB_PROP))
+            .filter(jobInfo -> jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false))
             .collect(
                 toImmutableMap(
                     Function.identity(),
@@ -180,25 +181,33 @@ public class SessionResultHandlerUtil {
       TestInfo test = testEntry.getValue().get();
 
       copyNonTradefedTestLogFiles(test, nonTradefedTestLogsDir);
-      Optional<NonTradefedTestResult> nonTradefedTestResult =
-          copyNonTradefedTestResultFiles(
-              test,
-              nonTradefedTestResultsDir,
-              testEntry.getKey().properties().get(SessionHandlerHelper.XTS_MODULE_NAME_PROP),
-              testEntry.getKey().properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
-              testEntry.getKey().properties().get(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP));
-      nonTradefedTestResult.ifPresent(
-          res ->
-              moblyReportInfos.add(
-                  MoblyReportInfo.of(
-                      res.moduleName(),
-                      res.moduleAbi().orElse(null),
-                      res.moduleParameter().orElse(null),
-                      res.testSummaryFile().orElse(null),
-                      res.resultAttributesFile(),
-                      res.deviceBuildFingerprint(),
-                      res.buildAttributesFile(),
-                      res.moduleResultFile())));
+      if (!test.jobInfo()
+          .properties()
+          .getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS)
+          .orElse(false)) {
+        Optional<NonTradefedTestResult> nonTradefedTestResult =
+            copyNonTradefedTestResultFiles(
+                test,
+                nonTradefedTestResultsDir,
+                testEntry.getKey().properties().get(SessionHandlerHelper.XTS_MODULE_NAME_PROP),
+                testEntry.getKey().properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
+                testEntry
+                    .getKey()
+                    .properties()
+                    .get(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP));
+        nonTradefedTestResult.ifPresent(
+            res ->
+                moblyReportInfos.add(
+                    MoblyReportInfo.of(
+                        res.moduleName(),
+                        res.moduleAbi().orElse(null),
+                        res.moduleParameter().orElse(null),
+                        res.testSummaryFile().orElse(null),
+                        res.resultAttributesFile(),
+                        res.deviceBuildFingerprint(),
+                        res.buildAttributesFile(),
+                        res.moduleResultFile())));
+      }
     }
 
     Optional<Result> mergedTradefedReport = Optional.empty();
@@ -715,7 +724,7 @@ public class SessionResultHandlerUtil {
     }
     for (JobInfo jobInfo : jobInfos) {
       // Tradefed Jobs.
-      if (jobInfo.properties().has(SessionHandlerHelper.XTS_TF_JOB_PROP)) {
+      if (jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false)) {
         for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
           if (!testInfo.properties().has(XtsConstants.TRADEFED_JOBS_PASSED)) {
             return false;
@@ -723,7 +732,7 @@ public class SessionResultHandlerUtil {
         }
       }
       // Non Tradefed Jobs.
-      if (jobInfo.properties().has(SessionHandlerHelper.XTS_NON_TF_JOB_PROP)) {
+      if (jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
         for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
           if (!testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_JOBS_PASSED)) {
             return false;

@@ -43,6 +43,8 @@ import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
+import com.google.wireless.qa.mobileharness.shared.model.job.out.Timing;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
@@ -76,6 +78,8 @@ public final class NonTradefedReportGeneratorTest {
   @Mock private CertificationSuiteInfoFactory certificationSuiteInfoFactory;
 
   private Params params;
+  private Timing timing;
+  private Properties properties;
 
   private NonTradefedReportGenerator generator;
 
@@ -89,6 +93,9 @@ public final class NonTradefedReportGeneratorTest {
             localFileUtil,
             certificationSuiteInfoFactory,
             moblyReportHelper);
+    timing = new Timing();
+    properties = new Properties(timing);
+    when(jobInfo.properties()).thenReturn(properties);
     when(testInfo.jobInfo()).thenReturn(jobInfo);
     when(testInfo.getGenFileDir()).thenReturn("/gen");
     when(testInfo.resultWithCause()).thenReturn(result);

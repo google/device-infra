@@ -16,21 +16,21 @@
 
 package com.google.devtools.mobileharness.infra.ats.common;
 
-import com.google.common.base.Ascii;
+import com.google.wireless.qa.mobileharness.shared.constant.PropertyName;
 
-/** Helper class for session handler utils. */
-public class SessionHandlerHelper {
+/** xTS property name constants. */
+public interface XtsPropertyName extends PropertyName {
 
-  public static final String XTS_MODULE_NAME_PROP = "xts-module-name";
-  public static final String XTS_MODULE_ABI_PROP = "xts-module-abi";
-  public static final String XTS_MODULE_PARAMETER_PROP = "xts-module-parameter";
+  /** xTS job property name constants. */
+  enum Job implements XtsPropertyName {
+    IS_XTS_TF_JOB,
 
-  public static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
+    IS_XTS_NON_TF_JOB,
 
-  /** Checks if the test plan is retry. */
-  public static boolean isRunRetry(String testPlan) {
-    return Ascii.equalsIgnoreCase(testPlan, "retry");
+    IS_RUN_RETRY,
+
+    PREV_SESSION_DEVICE_BUILD_FINGERPRINT,
+
+    SKIP_COLLECTING_NON_TF_REPORTS,
   }
-
-  private SessionHandlerHelper() {}
 }

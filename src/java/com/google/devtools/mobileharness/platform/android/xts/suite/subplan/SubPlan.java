@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SortedSet;
 import org.xml.sax.Attributes;
@@ -58,6 +59,7 @@ public class SubPlan extends AbstractXmlParser {
   public static final String ALL_TESTS_IN_MODULE = "ALL";
 
   private String prevSessionXtsTestPlan;
+  private String prevSessionDeviceBuildFingerprint;
 
   public SubPlan() {
     includeFiltersMultimap = TreeMultimap.create();
@@ -151,6 +153,16 @@ public class SubPlan extends AbstractXmlParser {
   /** Gets the previous session's test plan. */
   public String getPreviousSessionXtsTestPlan() {
     return prevSessionXtsTestPlan;
+  }
+
+  /** Sets the previous session's device build fingerprint. */
+  public void setPreviousSessionDeviceBuildFingerprint(String prevSessionDeviceBuildFingerprint) {
+    this.prevSessionDeviceBuildFingerprint = prevSessionDeviceBuildFingerprint;
+  }
+
+  /** Gets the previous session's device build fingerprint. */
+  public Optional<String> getPreviousSessionDeviceBuildFingerprint() {
+    return Optional.ofNullable(prevSessionDeviceBuildFingerprint);
   }
 
   /**

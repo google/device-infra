@@ -29,6 +29,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
@@ -55,7 +56,6 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
-import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.StringMap;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
@@ -140,7 +140,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_calculateTimeout() throws Exception {
+  public void createXtsTradefedTestJobInfo_calculateTimeout() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -150,8 +150,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts")
@@ -162,14 +162,14 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getJobTimeoutSec()).isEqualTo(3000L);
-    assertThat(jobConfigOpt.get().getTestTimeoutSec()).isEqualTo(3000L);
-    assertThat(jobConfigOpt.get().getStartTimeoutSec()).isEqualTo(1000L);
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getJobTimeoutSec()).isEqualTo(3000L);
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getTestTimeoutSec()).isEqualTo(3000L);
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getStartTimeoutSec()).isEqualTo(1000L);
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_pickOneDevice() throws Exception {
+  public void createXtsTradefedTestJobInfo_pickOneDevice() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -179,8 +179,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts")
@@ -189,13 +189,14 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap)
@@ -204,7 +205,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_multiDevice_pick2Devices() throws Exception {
+  public void createXtsTradefedTestJobInfo_multiDevice_pick2Devices() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -214,8 +215,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts-multidevice")
                 .setCommandLineArgs("cts")
@@ -224,15 +225,15 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder().setType("AndroidDevice").build(),
             SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_multiDevice_noEnoughDevices() throws Exception {
+  public void createXtsTradefedTestJobInfo_multiDevice_noEnoughDevices() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -240,8 +241,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts-multi-device")
                 .setCommandLineArgs("cts")
@@ -250,11 +251,11 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isEmpty();
+    assertThat(tradefedJobInfoOpt).isEmpty();
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_addAndroidXtsZipPathIfAvailable() throws Exception {
+  public void createXtsTradefedTestJobInfo_addAndroidXtsZipPathIfAvailable() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -262,8 +263,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts")
@@ -273,13 +274,14 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap)
@@ -288,7 +290,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_addSubPlanXmlPathForRetry() throws Exception {
+  public void createXtsTradefedTestJobInfo_addSubPlanXmlPathForRetry() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -303,8 +305,8 @@ public final class SessionRequestHandlerUtilTest {
 
     File xtsRootDir = folder.newFolder("xts_root_dir");
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("retry")
                 .setCommandLineArgs("retry --retry 0")
@@ -314,13 +316,14 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap).hasSize(5);
@@ -338,7 +341,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_retrySubplanWithFiltersAtsConsole() throws Exception {
+  public void createXtsTradefedTestJobInfo_retrySubplanWithFiltersAtsConsole() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -354,8 +357,8 @@ public final class SessionRequestHandlerUtilTest {
 
     File xtsRootDir = folder.newFolder("xts_root_dir");
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("retry")
                 .setCommandLineArgs("retry --retry 0")
@@ -367,8 +370,8 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Verify generator got correct input.
@@ -382,8 +385,9 @@ public final class SessionRequestHandlerUtilTest {
         .isEqualTo("armeabi-v7a ModuleB android.test.Foo#test1");
 
     // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap).hasSize(5);
@@ -401,7 +405,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_retrySubplanWithFiltersAtsServer() throws Exception {
+  public void createXtsTradefedTestJobInfo_retrySubplanWithFiltersAtsServer() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -417,8 +421,8 @@ public final class SessionRequestHandlerUtilTest {
 
     File xtsRootDir = folder.newFolder("xts_root_dir");
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("retry")
                 .setCommandLineArgs("retry --retry 0")
@@ -431,8 +435,8 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Verify generator got correct input.
@@ -446,8 +450,9 @@ public final class SessionRequestHandlerUtilTest {
         .isEqualTo("armeabi-v7a ModuleB android.test.Foo#test1");
 
     // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap).hasSize(5);
@@ -465,8 +470,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_addSubPlanXmlPathForRetryInAtsServer()
-      throws Exception {
+  public void createXtsTradefedTestJobInfo_addSubPlanXmlPathForRetryInAtsServer() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -481,8 +485,8 @@ public final class SessionRequestHandlerUtilTest {
 
     File xtsRootDir = folder.newFolder("xts_root_dir");
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("retry")
                 .setCommandLineArgs("cts")
@@ -493,13 +497,14 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap).hasSize(5);
@@ -523,7 +528,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_addSubPlanXmlPathForSubPlanCommand() throws Exception {
+  public void createXtsTradefedTestJobInfo_addSubPlanXmlPathForSubPlanCommand() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -538,8 +543,8 @@ public final class SessionRequestHandlerUtilTest {
     realLocalFileUtil.prepareDir(subPlansDir);
     realLocalFileUtil.copyFileOrDir(SUBPLAN1_XML, subPlansDir.toAbsolutePath().toString());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts --subplan subplan1")
@@ -549,13 +554,14 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap).hasSize(4);
@@ -573,7 +579,7 @@ public final class SessionRequestHandlerUtilTest {
 
   @Test
   public void
-      createXtsTradefedTestJobConfig_addSubPlanXmlPathForSubPlanCommand_useOriginalSubPlanXml()
+      createXtsTradefedTestJobInfo_addSubPlanXmlPathForSubPlanCommand_useOriginalSubPlanXml()
           throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
@@ -589,8 +595,8 @@ public final class SessionRequestHandlerUtilTest {
     realLocalFileUtil.prepareDir(subPlansDir);
     realLocalFileUtil.copyFileOrDir(SUBPLAN2_XML, subPlansDir.toAbsolutePath().toString());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts --subplan subplan2")
@@ -600,13 +606,14 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap).hasSize(4);
@@ -623,7 +630,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_shardCount2_pick2Devices() throws Exception {
+  public void createXtsTradefedTestJobInfo_shardCount2_pick2Devices() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -633,8 +640,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts --shard-count 2")
@@ -644,15 +651,15 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder().setType("AndroidDevice").build(),
             SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_shardCount3_only2OnlineDevices_pick2Devices()
+  public void createXtsTradefedTestJobInfo_shardCount3_only2OnlineDevices_pick2Devices()
       throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
@@ -663,8 +670,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts --shard-count 3")
@@ -674,19 +681,19 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder().setType("AndroidDevice").build(),
             SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_noOnlineDevices_noJobConfig() throws Exception {
+  public void createXtsTradefedTestJobInfo_noOnlineDevices_noJobConfig() throws Exception {
     when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts")
@@ -695,11 +702,11 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isEmpty();
+    assertThat(tradefedJobInfoOpt).isEmpty();
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_withGivenSerial() throws Exception {
+  public void createXtsTradefedTestJobInfo_withGivenSerial() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -709,8 +716,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts")
@@ -724,8 +731,8 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of("module1"));
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder()
                 .setType("AndroidDevice")
@@ -733,8 +740,9 @@ public final class SessionRequestHandlerUtilTest {
                 .build());
 
     // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap)
@@ -752,7 +760,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_someGivenSerialsNotExist_pickExistingDevicesOnly()
+  public void createXtsTradefedTestJobInfo_someGivenSerialsNotExist_pickExistingDevicesOnly()
       throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
@@ -765,8 +773,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts")
@@ -777,8 +785,8 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(
             SubDeviceSpec.newBuilder()
                 .setType("AndroidDevice")
@@ -791,8 +799,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_allGivenSerialsNotExist_noJobConfig()
-      throws Exception {
+  public void createXtsTradefedTestJobInfo_allGivenSerialsNotExist_noJobConfig() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -804,8 +811,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts")
@@ -815,11 +822,11 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isEmpty();
+    assertThat(tradefedJobInfoOpt).isEmpty();
   }
 
   @Test
-  public void createXtsTradefedTestJobConfig_withGivenTest() throws Exception {
+  public void createXtsTradefedTestJobInfo_withGivenTest() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -829,8 +836,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts")
@@ -844,11 +851,12 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of("module1"));
 
-    assertThat(jobConfigOpt).isPresent();
+    assertThat(tradefedJobInfoOpt).isPresent();
 
     // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap)
@@ -948,7 +956,7 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
-  public void createXtsTradefedTestJob_hasTestPlanFile() throws Exception {
+  public void createXtsTradefedTestJobInfo_hasTestPlanFile() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -958,8 +966,8 @@ public final class SessionRequestHandlerUtilTest {
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
 
-    Optional<JobConfig> jobConfigOpt =
-        sessionRequestHandlerUtil.createXtsTradefedTestJobConfig(
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
             SessionRequestInfo.builder()
                 .setTestPlan("cts")
                 .setCommandLineArgs("cts")
@@ -969,13 +977,14 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             ImmutableList.of());
 
-    assertThat(jobConfigOpt).isPresent();
-    assertThat(jobConfigOpt.get().getDevice().getSubDeviceSpecList())
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
 
     // Asserts the driver
-    assertThat(jobConfigOpt.get().getDriver().getName()).isEqualTo("XtsTradefedTest");
-    String driverParams = jobConfigOpt.get().getDriver().getParam();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
     Map<String, String> driverParamsMap =
         new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
     assertThat(driverParamsMap)

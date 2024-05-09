@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandH
 import com.google.devtools.mobileharness.infra.controller.test.util.atsfileserveruploader.AtsFileServerUploaderPlugin;
 import com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader.MctsDynamicDownloadPlugin;
 import com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator;
+import com.google.devtools.mobileharness.platform.android.xts.plugin.XtsDeviceCompatibilityChecker;
 import com.google.devtools.mobileharness.platform.testbed.adhoc.controller.AdhocTestbedDriverFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ConcurrencyUtil.SubTask;
@@ -148,6 +149,10 @@ public class LocalTestFlow {
     builtinPluginsBuilder.add(
         PluginItem.create(new TestCommandHistorySaver(), EventScope.CLASS_INTERNAL),
         PluginItem.create(new NonTradefedReportGenerator(), EventScope.CLASS_INTERNAL));
+    if (XtsDeviceCompatibilityChecker.isEnabled(testInfo.jobInfo())) {
+      builtinPluginsBuilder.add(
+          PluginItem.create(new XtsDeviceCompatibilityChecker(), EventScope.INTERNAL_PLUGIN));
+    }
 
     ImmutableList<PluginItem<?>> builtinPlugins = builtinPluginsBuilder.build();
     for (PluginItem<?> pluginItem : builtinPlugins) {

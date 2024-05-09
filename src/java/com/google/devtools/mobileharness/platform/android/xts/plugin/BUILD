@@ -26,6 +26,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/job/out",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:mobly_report_helper",
@@ -40,6 +41,30 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
         "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "xts_device_compatibility_checker",
+    srcs = ["XtsDeviceCompatibilityChecker.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:log_record_importance",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:device_build_info",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:lab_test_events",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab",
         "@maven//:com_google_guava_guava",
     ],
 )
