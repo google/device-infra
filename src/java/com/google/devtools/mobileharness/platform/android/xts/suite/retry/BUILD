@@ -25,10 +25,14 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:test_result_proto_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:result_lister_helper",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:command_line_parser",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
 )

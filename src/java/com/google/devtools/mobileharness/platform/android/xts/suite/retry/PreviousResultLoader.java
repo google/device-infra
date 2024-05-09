@@ -16,21 +16,30 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.TestResultProtoUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
+import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.CommandLineParser;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import javax.inject.Inject;
 
 /** Class to load xTS previous results. */
 public class PreviousResultLoader {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final LocalFileUtil localFileUtil;
   private final ResultListerHelper resultListerHelper;
@@ -50,7 +59,23 @@ public class PreviousResultLoader {
   public Result loadPreviousResult(Path resultsDir, int previousSessionIndex)
       throws MobileHarnessException {
     Path testResultProtoFile = getPrevSessionTestResultProtoFile(resultsDir, previousSessionIndex);
-    return loadResult(testResultProtoFile, String.valueOf(previousSessionIndex));
+    if (localFileUtil.isFileExist(testResultProtoFile)) {
+      return loadResult(testResultProtoFile, String.valueOf(previousSessionIndex));
+    } else {
+      // TODO: Remove the legacy result support.
+      Optional<Result> result = getPrevLegacySessionTestResult(resultsDir, previousSessionIndex);
+      if (result.isPresent()) {
+        logger.atInfo().log(
+            "Will retry legacy session result for session %s", previousSessionIndex);
+        return result.get();
+      } else {
+        throw new MobileHarnessException(
+            ExtErrorId.PREV_RESULT_LOADER_MISSING_TEST_RESULT_PROTO_FILE_IN_SESSION,
+            String.format(
+                "The test result proto file %s does not exist for session %s.",
+                testResultProtoFile.toAbsolutePath(), previousSessionIndex));
+      }
+    }
   }
 
   /**
@@ -100,13 +125,53 @@ public class PreviousResultLoader {
             .get(previousSessionIndex)
             .toPath()
             .resolve(SuiteCommon.TEST_RESULT_PB_FILE_NAME);
-    if (!localFileUtil.isFileExist(testResultProtoFile)) {
-      throw new MobileHarnessException(
-          ExtErrorId.PREV_RESULT_LOADER_MISSING_TEST_RESULT_PROTO_FILE_IN_SESSION,
-          String.format(
-              "The test result proto file %s does not exist for session %s.",
-              testResultProtoFile.toAbsolutePath(), previousSessionIndex));
-    }
     return testResultProtoFile;
+  }
+
+  /** Try to find the result with the legacy path. */
+  private Optional<Result> getPrevLegacySessionTestResult(Path resultsDir, int previousSessionIndex)
+      throws MobileHarnessException {
+    Map<Result, File> results =
+        resultListerHelper.listResults(resultsDir.toAbsolutePath().toString());
+    ImmutableList<Result> resultsList = ImmutableList.copyOf(results.keySet());
+    Result result = resultsList.get(previousSessionIndex);
+    return Optional.of(injectArgsFromCommandLine(result));
+  }
+
+  /** Injects missing args like modules and filters from command line to the result. */
+  private Result injectArgsFromCommandLine(Result result) throws MobileHarnessException {
+    Optional<Attribute> commandLineArgs =
+        result.getAttributeList().stream()
+            .filter(attr -> attr.getKey().equals("command_line_args"))
+            .findFirst();
+    String commandLineArgsStr = commandLineArgs.isPresent() ? commandLineArgs.get().getValue() : "";
+    if (commandLineArgsStr.isEmpty()) {
+      return result;
+    }
+
+    // Generates the SessionRequestInfo from the command line args. Inserted empty values for
+    // xts_root_dir, xts_type and command_line_args to avoid error.
+    CommandLineParser parser = CommandLineParser.getInstance();
+    SessionRequestInfo info =
+        parser
+            .parseCommandLine(commandLineArgsStr)
+            .setCommandLineArgs("")
+            .setXtsRootDir("")
+            .setXtsType("")
+            .build();
+    Result.Builder resultBuilder = result.toBuilder();
+    if (info.testName().isPresent()) {
+      resultBuilder.setTestFilter(info.testName().get());
+    }
+    if (!info.moduleNames().isEmpty()) {
+      resultBuilder.addAllModuleFilter(info.moduleNames());
+    }
+    if (!info.includeFilters().isEmpty()) {
+      resultBuilder.addAllIncludeFilter(info.includeFilters());
+    }
+    if (!info.excludeFilters().isEmpty()) {
+      resultBuilder.addAllExcludeFilter(info.excludeFilters());
+    }
+    return resultBuilder.build();
   }
 }

@@ -104,7 +104,10 @@ java_library(
 java_library(
     name = "command_line_parser",
     srcs = ["CommandLineParser.java"],
-    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+    ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",

@@ -40,7 +40,7 @@ import java.util.function.Consumer;
 import picocli.CommandLine;
 
 /** A parser that parses a xTS Tradefed command. */
-final class CommandLineParser {
+public final class CommandLineParser {
 
   @SuppressWarnings("NonFinalStaticField")
   private static volatile CommandLineParser instance;

@@ -67,6 +67,14 @@ public class ResultListerHelper {
       File resultFile = new File(resultDir, "test_result.xml");
       try {
         Optional<Result> result = compatibilityReportParser.parse(resultFile.toPath());
+        if (result.isEmpty()) {
+          // TODO: Remove the legacy result support.
+          // Legacy result xml file locates at resultsDir/sessionId/sessionId/test_result.xml.
+          File legacyResultFile =
+              new File(resultDir, String.format("%s/test_result.xml", resultDir.getName()));
+          result = compatibilityReportParser.parse(legacyResultFile.toPath());
+        }
+
         result.ifPresent(value -> results.put(value, resultDir));
       } catch (MobileHarnessException e) {
         logger.atWarning().withCause(e).log(
