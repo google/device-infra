@@ -228,8 +228,8 @@ public class Flags {
   @com.beust.jcommander.Parameter(
       names = "--ats_run_tf_on_android_real_device",
       description =
-          "Whether to require to run ATS TF jobs on Android real device. Otherwise Android emulator"
-              + " is allowed. Default is false.",
+          "Whether to require to run ATS TF jobs on Android real device. Otherwise, Android "
+              + "emulator is allowed. Default is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> atsRunTfOnAndroidRealDevice = atsRunTfOnAndroidRealDeviceDefault;
 
@@ -443,7 +443,7 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableClientFileTransfer = enableClientFileTransferDefault;
 
-  private static final Flag<Boolean> enableCloudLoggingDefault = Flag.value(true);
+  private static final Flag<Boolean> enableCloudLoggingDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
       names = "--enable_cloud_logging",
@@ -565,6 +565,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableRdh = enableRdhDefault;
 
+  private static final Flag<Boolean> enableStackdriverDebugModeDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_stackdriver_debug_mode",
+      description = "Whether enable debug mode to print more detailed logs in Stackdriver.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableStackdriverDebugMode = enableStackdriverDebugModeDefault;
+
   private static final Flag<Boolean> enableStubbyFileTransferDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -684,6 +692,14 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> jobGenFileExpiredTime = jobGenFileExpiredTimeDefault;
 
+  private static final Flag<Integer> logFileNumberDefault = Flag.value(100);
+
+  @com.beust.jcommander.Parameter(
+      names = "--log_file_number",
+      description = "Max number of the rotated log files in local host.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> logFileNumber = logFileNumberDefault;
+
   private static final Flag<Boolean> logFileSizeNoLimitDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
@@ -692,13 +708,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> logFileSizeNoLimit = logFileSizeNoLimitDefault;
 
-  private static final Flag<Integer> logFileNumDefault = Flag.value(100);
+  private static final Flag<Duration> logUploadDelayDefault =
+      DurationFlag.value(Duration.ofSeconds(20L));
 
   @com.beust.jcommander.Parameter(
-      names = "--log_file_num",
-      description = "Max number of the rotated log files. Max size of each file is 10 MB.",
-      converter = Flag.IntegerConverter.class)
-  public Flag<Integer> logFileNum = logFileNumDefault;
+      names = "--log_upload_delay",
+      description =
+          "The interval in seconds between end of last periodic log uploading to the start of the"
+              + " next one.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> logUploadDelay = logUploadDelayDefault;
 
   private static final Flag<String> masterGrpcTargetDefault = Flag.value("localhost:9990");
 
@@ -1042,6 +1061,30 @@ public class Flags {
       description = "Socket port of the file transfer service of the lab server",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> socketPort = socketPortDefault;
+
+  private static final Flag<String> stackdriverCredentialFileDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--stackdriver_cred_file",
+      description = "Path to the credential key file for stackdriver api.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> stackdriverCredentialFile = stackdriverCredentialFileDefault;
+
+  private static final Flag<String> stackdriverGcpProjectNameDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--stackdriver_gcp_project_name",
+      description = "The GCP name of stackdriver logging",
+      converter = Flag.StringConverter.class)
+  public Flag<String> stackdriverGcpProjectName = stackdriverGcpProjectNameDefault;
+
+  private static final Flag<String> stackdriverResourceTypeDefault = Flag.value("deployment");
+
+  @com.beust.jcommander.Parameter(
+      names = "--stackdriver_resource_type",
+      description = "The resource type of stackdriver logging",
+      converter = Flag.StringConverter.class)
+  public Flag<String> stackdriverResourceType = stackdriverResourceTypeDefault;
 
   private static final Flag<Integer> startChargeLevelDefault = Flag.value(40);
 

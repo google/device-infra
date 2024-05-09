@@ -228,11 +228,12 @@ http_archive(
 
 load("@com_google_googleapis//:repository_rules.bzl", "switched_rules_by_language")
 
-# Initialize Google APIs with only C++ and Python targets
+# Initialize Google APIs with only C++ , Java and Python targets
 switched_rules_by_language(
     name = "com_google_googleapis_imports",
     cc = True,
     grpc = True,
+    java = True,
     python = True,
 )
 
@@ -245,6 +246,10 @@ maven_install(
         "com.google.apis:google-api-services-storage:v1-rev20211201-1.32.1",
         "com.google.auto.value:auto-value:1.10.4",
         "com.google.auto.value:auto-value-annotations:1.10.4",
+        "com.google.api.grpc:grpc-google-cloud-logging-v2:0.63.0",
+        "com.google.api.grpc:proto-google-cloud-logging-v2:0.63.0",
+        "com.google.auth:google-auth-library-credentials:1.23.0",
+        "com.google.auth:google-auth-library-oauth2-http:1.23.0",
         "com.google.code.findbugs:jsr305:3.0.2",
         "com.google.code.gson:gson:2.10.1",
         "com.google.errorprone:error_prone_annotations:2.24.1",
@@ -255,6 +260,7 @@ maven_install(
         "com.google.http-client:google-http-client-gson:1.43.0",
         "com.google.inject.extensions:guice-assistedinject:5.1.0",
         "com.google.inject.extensions:guice-testlib:5.1.0",
+        "com.google.inject.extensions:guice-throwingproviders:5.1.0",
         "com.google.inject:guice:5.1.0",
         "com.google.testparameterinjector:test-parameter-injector:1.15",
         "com.google.truth.extensions:truth-proto-extension:1.4.0",

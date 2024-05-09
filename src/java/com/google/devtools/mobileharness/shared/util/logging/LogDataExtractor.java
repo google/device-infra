@@ -16,7 +16,12 @@
 
 package com.google.devtools.mobileharness.shared.util.logging;
 
+import com.google.common.flogger.LogContext;
+import com.google.common.flogger.LogSite;
+import com.google.common.flogger.LogSites;
 import com.google.common.flogger.MetadataKey;
+import com.google.common.flogger.backend.system.AbstractLogRecord;
+import com.google.common.flogger.context.Tags;
 import java.util.Optional;
 import java.util.logging.LogRecord;
 
@@ -27,13 +32,44 @@ public class LogDataExtractor {
    * See {@link com.google.common.flogger.backend.system.LogDataExtractor#getSingleMetadataValue}.
    */
   public static <T> Optional<T> getSingleMetadataValue(LogRecord record, MetadataKey<T> key) {
-    if (record instanceof com.google.common.flogger.backend.system.AbstractLogRecord) {
+    if (record instanceof AbstractLogRecord) {
       return Optional.ofNullable(
-          ((com.google.common.flogger.backend.system.AbstractLogRecord) record)
-              .getMetadataProcessor()
-              .getSingleValue(key));
+          ((AbstractLogRecord) record).getMetadataProcessor().getSingleValue(key));
     }
     return Optional.empty();
+  }
+
+  /** See {@link com.google.common.flogger.backend.system.LogDataExtractor#getLogSite}. */
+  public static LogSite getLogSite(LogRecord record) {
+    if (record instanceof AbstractLogRecord) {
+      return ((AbstractLogRecord) record).getLogData().getLogSite();
+    }
+    // In theory the class and/or method name in a log record can be null...
+    if (record.getSourceClassName() != null && record.getSourceMethodName() != null) {
+      // This should almost never happen so it's not worth optimizing to avoid extra allocations.
+      return LogSites.logSiteFrom(
+          new StackTraceElement(
+              record.getSourceClassName(),
+              record.getSourceMethodName(),
+              null,
+              LogSite.UNKNOWN_LINE));
+    }
+    return LogSite.INVALID;
+  }
+
+  /** See {@link com.google.common.flogger.backend.system.LogDataExtractor#getTags}. */
+  // NOTE: At some stage "Tags" will not be added to the log-site metadata and will instead come
+  // directly from the scoped logging context (not via the Metadata API at all). At that point
+  // LogContext.Key.TAGS can be deleted and this method switched access tags directly.
+  public static Tags getTags(LogRecord record) {
+    if (record instanceof AbstractLogRecord) {
+      Tags tags =
+          ((AbstractLogRecord) record).getMetadataProcessor().getSingleValue(LogContext.Key.TAGS);
+      if (tags != null) {
+        return tags;
+      }
+    }
+    return Tags.empty();
   }
 
   private LogDataExtractor() {}

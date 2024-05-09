@@ -116,7 +116,7 @@ public class MobileHarnessLogger {
       createFileHandler(
               /* subDir= */ "",
               DirCommon.DEFAULT_LOG_FILE_NAME,
-              Flags.instance().logFileNum.getNonNull())
+              Flags.instance().logFileNumber.getNonNull())
           .ifPresent(rootLogger::addHandler);
     } catch (MobileHarnessException e) {
       throw new IllegalArgumentException(e);

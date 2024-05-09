@@ -21,6 +21,11 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
+import com.google.devtools.mobileharness.shared.logging.MobileHarnessHostLogManager;
+import com.google.devtools.mobileharness.shared.logging.MobileHarnessHostLogManagerModule;
+import com.google.devtools.mobileharness.shared.logging.parameter.LogManagerParameters;
+import com.google.devtools.mobileharness.shared.logging.parameter.LogProject;
+import com.google.devtools.mobileharness.shared.logging.parameter.StackdriverLogUploaderParameters;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -113,6 +118,25 @@ public class LabServerLauncher {
     Injector injector = Guice.createInjector(new LabServerModule(labArgs, globalInternalBus));
     LabServer.initializeEnv();
     labServer = injector.getInstance(LabServer.class);
+
+    if (Flags.instance().enableCloudLogging.getNonNull()) {
+      MobileHarnessHostLogManager mobileHarnessHostLogManager =
+          Guice.createInjector(
+                  new MobileHarnessHostLogManagerModule(
+                      LogManagerParameters.newBuilder()
+                          .setLogProject(LogProject.LAB_SERVER)
+                          .setLogUploaderParameters(
+                              StackdriverLogUploaderParameters.of(LogProject.LAB_SERVER))
+                          .build()))
+              .getInstance(MobileHarnessHostLogManager.class);
+      try {
+        mobileHarnessHostLogManager.init();
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to initialize the MobileHarnessHostLogManager.");
+        // Does nothing
+      }
+    }
 
     logger.atInfo().log("Lab server arguments: %s", Arrays.toString(labArgs));
   }
