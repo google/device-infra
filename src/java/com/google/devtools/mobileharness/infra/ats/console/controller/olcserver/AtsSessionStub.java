@@ -328,10 +328,19 @@ public class AtsSessionStub {
   private static AtsSessionPluginOutput getSessionPluginOutput(SessionDetail sessionDetail)
       throws MobileHarnessException {
     Optional<AtsSessionPluginOutput> result = getSessionPluginOutputIfAny(sessionDetail);
+    Optional<MobileHarnessException> sessionError = getSessionError(sessionDetail);
     if (result.isPresent()) {
+      sessionError.ifPresent(
+          e ->
+              logger.atWarning().withCause(e).log(
+                  "Warning of session %s:", sessionDetail.getSessionId().getId()));
       return result.get();
     } else {
-      throw getSessionError(sessionDetail);
+      throw sessionError.orElseGet(
+          () ->
+              new MobileHarnessException(
+                  InfraErrorId.ATSC_SESSION_STUB_ATS_SESSION_PLUGIN_NO_OUTPUT_ERROR,
+                  "ATS session plugin didn't set output"));
     }
   }
 
@@ -363,7 +372,7 @@ public class AtsSessionStub {
    * <p>Priority: exceptions from AtsSessionPlugin -> exception from session runner -> exception
    * from other session plugins.
    */
-  private static MobileHarnessException getSessionError(SessionDetail sessionDetail) {
+  private static Optional<MobileHarnessException> getSessionError(SessionDetail sessionDetail) {
     Optional<MobileHarnessException> sessionRunnerError =
         sessionDetail.hasSessionRunnerError()
             ? Optional.of(
@@ -416,15 +425,13 @@ public class AtsSessionStub {
                 otherSessionPluginErrors.stream())
             .collect(toImmutableList());
     if (sortedSessionErrors.isEmpty()) {
-      return new MobileHarnessException(
-          InfraErrorId.ATSC_SESSION_STUB_ATS_SESSION_PLUGIN_NO_OUTPUT_ERROR,
-          "ATS session plugin didn't set output");
+      return Optional.empty();
     }
 
     // Adds other errors as suppressed errors of the first one.
     MobileHarnessException result = sortedSessionErrors.get(0);
     sortedSessionErrors.stream().skip(1L).forEach(result::addSuppressed);
 
-    return result;
+    return Optional.of(result);
   }
 }
