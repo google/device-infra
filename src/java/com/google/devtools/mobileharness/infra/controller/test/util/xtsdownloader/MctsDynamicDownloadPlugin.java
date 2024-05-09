@@ -74,7 +74,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "31", 2021,
           "32", 2022,
           "33", 2022,
-          "34", 2023);
+          "34", 2023,
+          "35", 2024);
   private static final ImmutableMap<String, String> DEVICE_ABI_MAP =
       ImmutableMap.of(
           "armeabi", "arm",
@@ -125,7 +126,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       // from source, rather than prebuilt dropped. 310000000 is just the default value in
       // http://ac/vendor/unbundled_google/modules/ModuleMetadataGoogle/Primary_AndroidManifest.xml
       String preloadedMainlineVersion =
-          versioncode.equals("310000000") ? aospVersion : getPreloadedMainlineVersion(versioncode);
+          versioncode.equals("310000000")
+              ? aospVersion
+              : getPreloadedMainlineVersion(versioncode, aospVersion);
       for (String mctsName : mctsNamesOfPreloadedMainlineModules.get("preloaded")) {
         String downloadUrl =
             String.format(
@@ -240,12 +243,16 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     return mctsNamesOfAllModules;
   }
 
-  private String getPreloadedMainlineVersion(String versioncode) throws MobileHarnessException {
+  private String getPreloadedMainlineVersion(String versioncode, String aospVersion)
+      throws MobileHarnessException {
     // Get the release time of the preloaded mainline train, the format is YYYY-MM.
     // Note that version codes must always increase to successfully install newer builds. For this
     // reason, the version code "wraps" in January, making the month digits wrap to 13, instead of
-    // 01 (for the first month of the year) and so on.
+    // 01 (for the first month of the year) and so on, if the month is 0 then it's aosp version.
     int month = Integer.parseInt(versioncode, 2, 4, 10);
+    if (month == 0) {
+      return aospVersion;
+    }
     Integer sdkLevelYear = SDK_LEVEL_TO_YEAR.get(versioncode.substring(0, 2));
     if (sdkLevelYear == null) {
       throw new MobileHarnessException(
