@@ -49,8 +49,8 @@ public class SubPlanHelper {
       ImmutableSet<String> passedInModules) {
     SubPlan subPlan = new SubPlan();
     for (Module module : previousResult.getModuleInfoList()) {
+      boolean isNonTfModule = module.getIsNonTfModule();
       if (RetryResultHelper.shouldRunModule(module, types, addSubPlanCmd, passedInModules)) {
-        boolean isNonTfModule = module.getIsNonTfModule();
         // If the previous result has test filter, should not run the entire module
         if (previousResult.getTestFilter().isEmpty()
             && RetryResultHelper.shouldRunEntireModule(
@@ -79,6 +79,13 @@ public class SubPlanHelper {
               }
             }
           }
+        }
+      } else {
+        // Should not run the module, exclude it explicitly to avoid test plans including it
+        if (isNonTfModule) {
+          subPlan.addNonTfExcludeFilter(String.format("%s %s", module.getAbi(), module.getName()));
+        } else {
+          subPlan.addExcludeFilter(String.format("%s %s", module.getAbi(), module.getName()));
         }
       }
     }
