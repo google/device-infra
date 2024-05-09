@@ -510,7 +510,8 @@ public class SessionRequestHandlerUtil {
                                 .map(
                                     excludeFilter ->
                                         String.format("--exclude-filter \"%s\"", excludeFilter)),
-                        extraArgs.stream())
+                        extraArgs.stream()
+                            .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
                     .collect(toImmutableList()));
     if (!sessionRequestInfoArgs.isEmpty()) {
       driverParams.put("run_command_args", sessionRequestInfoArgs);
