@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceRunner;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
@@ -31,12 +32,16 @@ import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractSche
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceChangeEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceDownEvent;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Observable;
+import java.util.Observer;
 
 /**
  * Event handler to sync the local device/test change between {@link LocalDeviceManager} and local
  * {@link AbstractScheduler}.
  */
-class LocalDeviceManagerSchedulerSyncer {
+class LocalDeviceManagerSchedulerSyncer implements Observer {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
   private static final LabScheduleUnit LOCAL_LAB_UNIT = new LabScheduleUnit(LabLocator.LOCALHOST);
   private final LocalDeviceManager deviceManager;
@@ -65,6 +70,12 @@ class LocalDeviceManagerSchedulerSyncer {
     LocalDeviceRunner deviceRunner = deviceManager.getLocalDeviceRunner(deviceId, deviceType);
     DeviceStatus deviceStatus = deviceRunner.getDeviceStatus();
 
+    upsertDeviceToScheduler(deviceStatus, deviceId, deviceType, deviceRunner);
+  }
+
+  private void upsertDeviceToScheduler(
+      DeviceStatus deviceStatus, String deviceId, String deviceType, LocalDeviceRunner deviceRunner)
+      throws InterruptedException {
     if (deviceStatus == DeviceStatus.IDLE) {
       logger.atInfo().log("Update device %s(%s) to scheduler", deviceId, deviceType);
       scheduler.upsertDevice(toDeviceScheduleUnit(deviceRunner.getDevice()), LOCAL_LAB_UNIT);
@@ -99,5 +110,24 @@ class LocalDeviceManagerSchedulerSyncer {
     deviceUnit.dimensions().supported().addAll(device.getDimensions());
     deviceUnit.owners().addAll(apiConfig.getOwners(deviceId));
     return deviceUnit;
+  }
+
+  @Override
+  public void update(Observable o, Object arg) {
+    try {
+      Map<Device, DeviceStatusInfo> deviceStatusMap = deviceManager.getAllDeviceStatus(true);
+      for (Entry<Device, DeviceStatusInfo> entry : deviceStatusMap.entrySet()) {
+        LocalDeviceRunner deviceRunner =
+            deviceManager.getLocalDeviceRunner(entry.getKey().getDeviceId());
+        upsertDeviceToScheduler(
+            entry.getValue().getDeviceStatusWithTimestamp().getStatus(),
+            entry.getKey().getDeviceId(),
+            null,
+            deviceRunner);
+      }
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      logger.atWarning().withCause(e).log("Failed to get all device status");
+    }
   }
 }

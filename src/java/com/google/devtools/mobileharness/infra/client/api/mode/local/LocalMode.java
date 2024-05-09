@@ -129,9 +129,11 @@ public class LocalMode implements ExecMode {
           localScheduler = new SimpleScheduler(localEnvThreadPool);
           localSchedulerFuture.set(localScheduler);
 
+          LocalDeviceManagerSchedulerSyncer localDeviceManagerSchedulerSyncer =
+              new LocalDeviceManagerSchedulerSyncer(localDeviceManager, localScheduler);
+          ApiConfig.getInstance().addObserver(localDeviceManagerSchedulerSyncer);
           // Notifies scheduler about device/test change.
-          globalInternalBus.register(
-              new LocalDeviceManagerSchedulerSyncer(localDeviceManager, localScheduler));
+          globalInternalBus.register(localDeviceManagerSchedulerSyncer);
 
           // Starts local device manager and scheduler.
           logFailure(
