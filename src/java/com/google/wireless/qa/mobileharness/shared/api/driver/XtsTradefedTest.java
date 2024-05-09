@@ -74,6 +74,7 @@ import com.google.gson.reflect.TypeToken;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
+import com.google.wireless.qa.mobileharness.shared.api.device.AndroidLocalEmulator;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -808,12 +809,23 @@ public class XtsTradefedTest extends BaseDriver
   private ImmutableList<String> getDeviceIds() {
     Device device = getDevice();
     if (!(device instanceof CompositeDevice)) {
-      return ImmutableList.of(device.getDeviceId());
+      return ImmutableList.of(getDeviceSerial(device));
     }
     CompositeDevice compositeDevice = (CompositeDevice) device;
     return compositeDevice.getManagedDevices().stream()
-        .map(Device::getDeviceId)
+        .map(this::getDeviceSerial)
         .collect(toImmutableList());
+  }
+
+  private String getDeviceSerial(Device device) {
+    if (device instanceof AndroidLocalEmulator) {
+      return device.getDeviceId();
+    }
+    List<String> serials = device.getDimension("serial");
+    if (!serials.isEmpty()) {
+      return serials.get(0);
+    }
+    return device.getDeviceId();
   }
 
   private static Duration getXtsTimeout(TestInfo testInfo) throws MobileHarnessException {

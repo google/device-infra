@@ -186,6 +186,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:composite_device_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/annotation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_local_emulator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in/spec",
