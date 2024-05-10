@@ -627,6 +627,16 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> adbKeyPathsFromUser = adbKeyPathsFromUserDefault;
 
+  private static final Flag<List<String>> extraDeviceLabelsDefault = Flag.stringList();
+
+  @com.beust.jcommander.Parameter(
+      names = "--extra_device_labels",
+      description =
+          "Device labels which will be appended to the dimensions of all the devices "
+              + "in the current host.",
+      converter = Flag.StringListConverter.class)
+  public Flag<List<String>> extraDeviceLabels = extraDeviceLabelsDefault;
+
   private static final Flag<String> fastbootPathFromUserDefault = Flag.value("");
 
   @com.beust.jcommander.Parameter(

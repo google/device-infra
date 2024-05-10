@@ -24,6 +24,24 @@ package(
 )
 
 java_library(
+    name = "device_config_manager",
+    srcs = ["DeviceConfigManager.java"],
+    deps = [
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "file_publisher",
     srcs = ["FilePublisher.java"],
     deps = [

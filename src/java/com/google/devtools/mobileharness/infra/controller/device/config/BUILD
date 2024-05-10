@@ -14,23 +14,19 @@
 #
 
 # Shared libs for mobile device management and test execution.
-DEFAULT_VISIBILITY = [
-    "//:deviceinfra_all_pkg",
-]
-
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = DEFAULT_VISIBILITY,
+    default_visibility = [
+        "//:deviceinfra_all_pkg",
+    ],
 )
 
 java_library(
     name = "config",
     srcs = [
         "ApiConfig.java",
+        "ApiConfigV5.java",
         "DummyApiConfig.java",
-    ],
-    visibility = [
-        "//:deviceinfra_pkg",
     ],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
@@ -38,8 +34,11 @@ java_library(
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",

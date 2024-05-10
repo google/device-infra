@@ -27,6 +27,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions;
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
@@ -51,9 +53,7 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.I
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException.ErrorType;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceUpEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
@@ -174,21 +174,15 @@ public class LocalMode implements ExecMode {
   public DirectTestRunner createTestRunner(
       DirectTestRunnerSetting setting, ListeningExecutorService threadPool)
       throws MobileHarnessException, InterruptedException {
-    initialize(
-        setting
-            .globalInternalBus()
-            .orElseThrow(
-                () ->
-                    new MobileHarnessException(
-                        ErrorCode.ILLEGAL_ARGUMENT,
-                        ErrorType.INFRA_ERROR,
-                        "Local mode test runner should have global internal event bus")));
+    initialize(setting.globalInternalBus().orElseThrow());
     List<LocalDeviceTestRunner> deviceRunners = new ArrayList<>();
     for (DeviceLocator deviceLocator : setting.allocation().getAllDeviceLocators()) {
       String deviceSerial = deviceLocator.getSerial();
-      LocalDeviceTestRunner deviceRunner = localDeviceManager.getLocalDeviceRunner(deviceSerial);
-      MobileHarnessException.checkNotNull(
-          deviceRunner, ErrorCode.DEVICE_NOT_FOUND, "Device " + deviceSerial + " not found");
+      LocalDeviceTestRunner deviceRunner =
+          MobileHarnessExceptions.checkNotNull(
+              localDeviceManager.getLocalDeviceRunner(deviceSerial),
+              InfraErrorId.CLIENT_LOCAL_MODE_ALLOCATED_DEVICE_NOT_FOUND,
+              String.format("Device %s not found", deviceSerial));
       deviceRunners.add(deviceRunner);
     }
     LocalDeviceTestRunner primaryDeviceRunner = deviceRunners.get(0);
