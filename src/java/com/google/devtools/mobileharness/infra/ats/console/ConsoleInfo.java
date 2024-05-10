@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.console;
 
+import static com.google.common.base.Preconditions.checkState;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -29,6 +31,8 @@ import javax.inject.Singleton;
 /** Class to store console info. */
 @Singleton
 public class ConsoleInfo {
+
+  public static final String XTS_TYPE_PROPERTY_KEY = "XTS_TYPE";
 
   private static final String XTS_ROOT_DIR_PROPERTY_KEY = "XTS_ROOT";
   private static final String PYTHON_PACKAGE_INDEX_URL_PROPERTY_KEY = "PYTHON_PACKAGE_INDEX_URL";
@@ -65,15 +69,16 @@ public class ConsoleInfo {
     return shouldExitConsole.get();
   }
 
-  private Optional<String> getXtsRootDirectory() {
-    return Optional.ofNullable(systemProperties.get(XTS_ROOT_DIR_PROPERTY_KEY));
-  }
-
   /** Gets the xTS root directory. */
   public String getXtsRootDirectoryNonEmpty() {
-    return getXtsRootDirectory()
-        .orElseThrow(
-            () -> new IllegalStateException("XTS root dir is not specified by -DXTS_ROOT"));
+    String result = systemProperties.get(XTS_ROOT_DIR_PROPERTY_KEY);
+    checkState(result != null, "XTS root dir is not specified by -D%s", XTS_ROOT_DIR_PROPERTY_KEY);
+    return result;
+  }
+
+  /** Gets the xTS type. */
+  public Optional<String> getXtsType() {
+    return Optional.ofNullable(systemProperties.get(XTS_TYPE_PROPERTY_KEY));
   }
 
   /** Sets the base URL of Python Package Index. */

@@ -398,6 +398,7 @@ final class NewMultiCommandRequestHandler {
       mountZip(androidXtsZipPath, xtsRootDir);
       hasMountedAndroidXtsZip = true;
     }
+    // TODO: Change the logic.
     String xtsType = commandHelper.getXtsType(xtsRootDir);
 
     // Generate XML test config template for ClusterCommandLauncher.

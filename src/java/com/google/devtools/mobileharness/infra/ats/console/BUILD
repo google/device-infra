@@ -106,6 +106,9 @@ java_library(
 java_library(
     name = "console_info",
     srcs = ["ConsoleInfo.java"],
+    visibility = DEFAULT_VISIBILITY + [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+    ],
     deps = [
         ":annotations",
         "@maven//:com_google_guava_guava",
