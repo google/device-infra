@@ -207,17 +207,19 @@ public abstract class AndroidRealDeviceDelegate {
           "Set up online mode device (%s). SetupFailureTimes=%d",
           deviceId, deviceStat != null ? deviceStat.getConsecutiveSetupFailureTimes() : -1);
       setUpOnlineModeDevice();
-    } else if (fastboot.getDeviceSerials().contains(deviceId)) {
-      setUpFastbootModeDevice();
-    } else if (androidAdbInternalUtil
-        .getDeviceSerialsByState(DeviceState.RECOVERY)
-        .contains(deviceId)) {
-      setUpRecoveryModeDevice();
-    } else {
-      // Bad connection devices could not be detected sometime.
-      throw new MobileHarnessException(
-          AndroidErrorId.ANDROID_REAL_DEVICE_DELEGATE_UNDETECTED_DURING_INIT,
-          "Device is undetectable. Please replug the usb cable or reboot the device.");
+    } else if (Flags.instance().enableFastbootInAndroidRealDevice.getNonNull()) {
+      if (fastboot.getDeviceSerials().contains(deviceId)) {
+        setUpFastbootModeDevice();
+      } else if (androidAdbInternalUtil
+          .getDeviceSerialsByState(DeviceState.RECOVERY)
+          .contains(deviceId)) {
+        setUpRecoveryModeDevice();
+      } else {
+        // Bad connection devices could not be detected sometime.
+        throw new MobileHarnessException(
+            AndroidErrorId.ANDROID_REAL_DEVICE_DELEGATE_UNDETECTED_DURING_INIT,
+            "Device is undetectable. Please replug the usb cable or reboot the device.");
+      }
     }
 
     device.updateDimension(Dimension.Name.SUPPORTS_GMSCORE, Dimension.Value.TRUE);
@@ -811,7 +813,8 @@ public abstract class AndroidRealDeviceDelegate {
     }
 
     // Checks the device which is the fastboot mode.
-    if (fastboot.getDeviceSerials().contains(deviceId)) {
+    if (Flags.instance().enableFastbootInAndroidRealDevice.getNonNull()
+        && fastboot.getDeviceSerials().contains(deviceId)) {
       if (device.getDeviceTypes().contains(AndroidRealDeviceConstants.ANDROID_FASTBOOT_DEVICE)) {
         if (isWipeRecoveryDevice()
             && clock
@@ -1213,7 +1216,8 @@ public abstract class AndroidRealDeviceDelegate {
           systemStateUtil.rebootToBootloader(deviceId);
           break;
       }
-    } else if (fastboot.getDeviceSerials().contains(deviceId)) {
+    } else if (Flags.instance().enableFastbootInAndroidRealDevice.getNonNull()
+        && fastboot.getDeviceSerials().contains(deviceId)) {
       switch (DeviceState.valueOf(
           device.getProperty(AndroidRealDeviceConstants.PROPERTY_NAME_REBOOT_TO_STATE))) {
         case FASTBOOT:
@@ -1344,10 +1348,12 @@ public abstract class AndroidRealDeviceDelegate {
 
   /** Gets the timeout value for {@link #setUp()}. */
   public Duration getSetupTimeout() throws MobileHarnessException, InterruptedException {
-    Optional<Duration> setupTimeoutForRecoveryAndFastbootDevice =
-        getSetupTimeoutForRecoveryAndFastbootDevice();
-    if (setupTimeoutForRecoveryAndFastbootDevice.isPresent()) {
-      return setupTimeoutForRecoveryAndFastbootDevice.get();
+    if (Flags.instance().enableFastbootInAndroidRealDevice.getNonNull()) {
+      Optional<Duration> setupTimeoutForRecoveryAndFastbootDevice =
+          getSetupTimeoutForRecoveryAndFastbootDevice();
+      if (setupTimeoutForRecoveryAndFastbootDevice.isPresent()) {
+        return setupTimeoutForRecoveryAndFastbootDevice.get();
+      }
     }
     // Add a timeout shift to make sure setup timeout is bigger than command timeout.
     // Check b/36156147 for more information.

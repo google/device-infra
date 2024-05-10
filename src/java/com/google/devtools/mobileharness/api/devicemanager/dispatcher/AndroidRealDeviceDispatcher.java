@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.lab.DeviceId;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.util.DeviceUtil;
 import java.util.ArrayList;
@@ -62,10 +63,12 @@ public class AndroidRealDeviceDispatcher extends CacheableDispatcher {
 
     // Checks fastboot.
     List<String> errors = new ArrayList<>();
-    try {
-      new Fastboot().checkFastboot();
-    } catch (MobileHarnessException e) {
-      errors.add(MoreThrowables.shortDebugString(e));
+    if (Flags.instance().enableFastbootInAndroidRealDevice.getNonNull()) {
+      try {
+        new Fastboot().checkFastboot();
+      } catch (MobileHarnessException e) {
+        errors.add(MoreThrowables.shortDebugString(e));
+      }
     }
 
     // Checks AAPT.
