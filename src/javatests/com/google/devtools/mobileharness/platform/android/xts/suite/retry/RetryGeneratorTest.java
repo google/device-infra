@@ -51,6 +51,7 @@ public final class RetryGeneratorTest {
       Module.newBuilder()
           .setAbi("arm64-v8a")
           .setName("Module1")
+          .setDone(true)
           .addTestCase(
               TestCase.newBuilder()
                   .setName("TestClass1")
@@ -67,6 +68,7 @@ public final class RetryGeneratorTest {
       Module.newBuilder()
           .setAbi("armeabi-v7a")
           .setName("Module1")
+          .setDone(true)
           .addTestCase(
               TestCase.newBuilder()
                   .setName("TestClass1")
@@ -83,6 +85,7 @@ public final class RetryGeneratorTest {
       Module.newBuilder()
           .setAbi("arm64-v8a")
           .setName("Module2")
+          .setDone(true)
           .addTestCase(
               TestCase.newBuilder()
                   .setName("TestClass1")
@@ -99,6 +102,7 @@ public final class RetryGeneratorTest {
       Module.newBuilder()
           .setAbi("arm64-v8a")
           .setName("Module3")
+          .setDone(true)
           .setIsNonTfModule(true)
           .addTestCase(
               TestCase.newBuilder()
@@ -111,6 +115,7 @@ public final class RetryGeneratorTest {
       Module.newBuilder()
           .setAbi("arm64-v8a")
           .setName("Module4")
+          .setDone(true)
           .addTestCase(
               TestCase.newBuilder()
                   .setName("TestClass1")
@@ -122,6 +127,22 @@ public final class RetryGeneratorTest {
                   .addTest(Test.newBuilder().setName("Test1").setResult("INCOMPLETE"))
                   .addTest(Test.newBuilder().setName("Test2").setResult("SKIPPED")))
           .build();
+  private static final Module MODULE_5_V7A =
+      Module.newBuilder()
+          .setAbi("armeabi-v7a")
+          .setName("Module5")
+          .setDone(false)
+          .addTestCase(
+              TestCase.newBuilder()
+                  .setName("TestClass1")
+                  .addTest(Test.newBuilder().setName("Test1").setResult("pass"))
+                  .addTest(Test.newBuilder().setName("Test2").setResult("fail")))
+          .addTestCase(
+              TestCase.newBuilder()
+                  .setName("TestClass2")
+                  .addTest(Test.newBuilder().setName("Test1").setResult("SKIPPED"))
+                  .addTest(Test.newBuilder().setName("Test2").setResult("INCOMPLETE")))
+          .build();
 
   private static final Result REPORT_1 =
       Result.newBuilder()
@@ -129,6 +150,7 @@ public final class RetryGeneratorTest {
           .addModuleInfo(MODULE_1_V7A)
           .addModuleInfo(MODULE_2_V8A)
           .addModuleInfo(NON_TF_MODULE_3_V8A)
+          .addModuleInfo(MODULE_5_V7A)
           .build();
 
   private static final Result REPORT_2 =
@@ -137,6 +159,7 @@ public final class RetryGeneratorTest {
           .addModuleInfo(MODULE_1_V7A)
           .addModuleInfo(MODULE_2_V8A)
           .addModuleInfo(MODULE_4_V8A)
+          .addModuleInfo(MODULE_5_V7A)
           .build();
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
@@ -165,13 +188,20 @@ public final class RetryGeneratorTest {
                 .build());
 
     SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
 
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
             ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
             "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
             ImmutableSet.of("ALL"));
+    assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module2", ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"));
 
     SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
         subPlan.getNonTfIncludeFiltersMultimap();
@@ -195,13 +225,20 @@ public final class RetryGeneratorTest {
                 .build());
 
     SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
 
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
             ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
             "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
             ImmutableSet.of("ALL"));
+    assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module2", ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"));
 
     SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
         subPlan.getNonTfIncludeFiltersMultimap();
@@ -228,17 +265,21 @@ public final class RetryGeneratorTest {
                 .build());
 
     SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
 
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
             ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
             "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
             ImmutableSet.of("ALL"));
-
-    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
     assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
-        .containsExactly("Module1", ImmutableSet.of("ALL"));
+        .containsExactly(
+            "arm64-v8a Module2", ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"),
+            "Module1", ImmutableSet.of("ALL"));
 
     SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
         subPlan.getNonTfIncludeFiltersMultimap();
@@ -266,13 +307,20 @@ public final class RetryGeneratorTest {
                 .build());
 
     SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
 
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
             ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
             "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
             ImmutableSet.of("ALL"));
+    assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module2", ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"));
 
     SetMultimap<String, String> subPlanNonTfExcludeFiltersMultimap =
         subPlan.getNonTfExcludeFiltersMultimap();
@@ -304,17 +352,21 @@ public final class RetryGeneratorTest {
                 .build());
 
     SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
 
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
             ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
             "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
             ImmutableSet.of("ALL"));
-
-    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
     assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
-        .containsExactly("arm64-v8a Module1", ImmutableSet.of("TestClass1#Test2"));
+        .containsExactly(
+            "arm64-v8a Module2", ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"),
+            "arm64-v8a Module1", ImmutableSet.of("TestClass1#Test2"));
 
     SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
         subPlan.getNonTfIncludeFiltersMultimap();
@@ -341,17 +393,24 @@ public final class RetryGeneratorTest {
                 .build());
 
     SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
 
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
             ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
             "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
             ImmutableSet.of("ALL"));
-
-    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
     assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
-        .containsExactly("arm64-v8a Module1", ImmutableSet.of("ALL"));
+        .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("ALL"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
+            ImmutableSet.of("TestClass1#Test1"));
 
     SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
         subPlan.getNonTfIncludeFiltersMultimap();
@@ -412,13 +471,20 @@ public final class RetryGeneratorTest {
                 .build());
 
     SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
+    SetMultimap<String, String> subPlanExcludeFiltersMultimap = subPlan.getExcludeFiltersMultimap();
 
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
             ImmutableSet.of("TestClass2#Test1", "TestClass2#Test2"),
             "armeabi-v7a Module1",
-            ImmutableSet.of("TestClass2#Test1", "TestClass2#Test2"));
+            ImmutableSet.of("TestClass2#Test1", "TestClass2#Test2"),
+            "armeabi-v7a Module5",
+            ImmutableSet.of("ALL"));
+    assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
+        .containsExactly(
+            "arm64-v8a Module2", ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1", "TestClass1#Test2"));
 
     SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
         subPlan.getNonTfIncludeFiltersMultimap();
@@ -479,6 +545,7 @@ public final class RetryGeneratorTest {
                 .addModuleInfo(
                     Module.newBuilder()
                         .setName("Module")
+                        .setDone(true)
                         .addTestCase(
                             TestCase.newBuilder()
                                 .setName("TestClass")
@@ -496,5 +563,38 @@ public final class RetryGeneratorTest {
 
     assertThat(Multimaps.asMap(subPlan.getIncludeFiltersMultimap()))
         .containsExactly("Module", ImmutableSet.of("TestClass#Test"));
+  }
+
+  @org.junit.Test
+  public void generateRetrySubPlan_withTestFilter_notExecuted() throws Exception {
+    Path resultsDir = Path.of("/path/to/results_dir");
+    int previousSessionIndex = 0;
+    when(previousResultLoader.loadPreviousResult(resultsDir, previousSessionIndex))
+        .thenReturn(
+            Result.newBuilder()
+                .addModuleInfo(
+                    Module.newBuilder()
+                        .setName("Module")
+                        .setDone(false)
+                        .addTestCase(
+                            TestCase.newBuilder()
+                                .setName("TestClass")
+                                .addTest(Test.newBuilder().setName("Test1").setResult("pass"))
+                                .addTest(Test.newBuilder().setName("Test2").setResult("fail"))))
+                .addModuleFilter("Module")
+                .setTestFilter("TestClass")
+                .build());
+
+    SubPlan subPlan =
+        retryGenerator.generateRetrySubPlan(
+            RetryArgs.builder()
+                .setResultsDir(resultsDir)
+                .setPreviousSessionIndex(previousSessionIndex)
+                .build());
+
+    assertThat(Multimaps.asMap(subPlan.getIncludeFiltersMultimap()))
+        .containsExactly("Module", ImmutableSet.of("ALL", "TestClass"));
+    assertThat(Multimaps.asMap(subPlan.getExcludeFiltersMultimap()))
+        .containsExactly("Module", ImmutableSet.of("TestClass#Test1"));
   }
 }

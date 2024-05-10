@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no' ?>
+<SubPlan version="2.0">
+  <Entry include="armeabi-v7a CtsAccelerationTestCases" />
+  <Entry exclude="arm64-v8a CtsAccelerationTestCases" />
+  <Entry exclude="arm64-v8a CtsAccelerationTestCases[instant]" />
+  <Entry exclude="armeabi-v7a CtsAccelerationTestCases android.acceleration.cts.HardwareAccelerationTest#testIsHardwareAccelerated" />
+  <Entry include="armeabi-v7a HelloWorldTest" isNonTf="true" />
+  <Entry exclude="arm64-v8a HelloWorldTest" isNonTf="true" />
+  <Entry exclude="armeabi-v7a HelloWorldTest HelloWorldTest#test_hello_1" isNonTf="true" />
+</SubPlan>

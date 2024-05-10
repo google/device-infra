@@ -53,8 +53,9 @@ public final class SubPlanCreatorTest {
   private static final String TEST_DATA_DIR =
       "javatests/com/google/devtools/mobileharness/platform/android/xts/suite/subplan/testdata/";
 
-  private static final String PREV_REPORT_SOME_FAILED_TEXTPROTO =
-      RunfilesUtil.getRunfilesLocation(TEST_DATA_DIR + "prev_report_some_failed.textproto");
+  private static final String PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO =
+      RunfilesUtil.getRunfilesLocation(
+          TEST_DATA_DIR + "prev_report_some_failed_and_not_executed.textproto");
   private static final String EXPECTED_SUBPLAN_FOR_ALL_RESULT_TYPES =
       RunfilesUtil.getRunfilesLocation(TEST_DATA_DIR + "expected_subplan_for_all_result_types.xml");
   private static final String EXPECTED_SUBPLAN_FOR_RESULT_TYPE_PASSED =
@@ -63,6 +64,9 @@ public final class SubPlanCreatorTest {
   private static final String EXPECTED_SUBPLAN_FOR_RESULT_TYPE_FAILED =
       RunfilesUtil.getRunfilesLocation(
           TEST_DATA_DIR + "expected_subplan_for_result_type_failed.xml");
+  private static final String EXPECTED_SUBPLAN_FOR_RESULT_TYPE_NOT_EXECUTED =
+      RunfilesUtil.getRunfilesLocation(
+          TEST_DATA_DIR + "expected_subplan_for_result_type_not_executed.xml");
 
   private static final Splitter LINE_SPLITTER = Splitter.on(Pattern.compile("\r\n|\n|\r"));
 
@@ -91,7 +95,8 @@ public final class SubPlanCreatorTest {
 
     Result prevReport =
         TextFormat.parse(
-            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
+            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
+            Result.class);
     when(previousResultLoader.loadPreviousResult(
             XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
         .thenReturn(prevReport);
@@ -124,7 +129,8 @@ public final class SubPlanCreatorTest {
 
     Result prevReport =
         TextFormat.parse(
-            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
+            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
+            Result.class);
     when(previousResultLoader.loadPreviousResult(
             XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
         .thenReturn(prevReport);
@@ -156,7 +162,8 @@ public final class SubPlanCreatorTest {
 
     Result prevReport =
         TextFormat.parse(
-            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
+            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
+            Result.class);
     when(previousResultLoader.loadPreviousResult(
             XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
         .thenReturn(prevReport);
@@ -180,6 +187,39 @@ public final class SubPlanCreatorTest {
   }
 
   @Test
+  public void createAndSerializeSubPlan_resultTypeNotExecuted() throws Exception {
+    int sessionIndex = 0;
+    String xtsType = "cts";
+    File xtsRootDir = temporaryFolder.newFolder("xts_root_dir");
+    temporaryFolder.newFolder(xtsRootDir.getName(), String.format("android-%s", xtsType));
+
+    Result prevReport =
+        TextFormat.parse(
+            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
+            Result.class);
+    when(previousResultLoader.loadPreviousResult(
+            XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
+        .thenReturn(prevReport);
+
+    Optional<File> subPlanFile =
+        subPlanCreator.createAndSerializeSubPlan(
+            AddSubPlanArgs.builder()
+                .setXtsRootDir(xtsRootDir.toPath())
+                .setXtsType(xtsType)
+                .setSessionIndex(sessionIndex)
+                .setResultTypes(ImmutableSet.of(ResultType.NOT_EXECUTED))
+                .build());
+
+    assertThat(subPlanFile).isPresent();
+    assertThat(
+            replaceLineBreak(
+                realLocalFileUtil.readFile(subPlanFile.get().toPath().toString()).trim()))
+        .isEqualTo(
+            replaceLineBreak(
+                realLocalFileUtil.readFile(EXPECTED_SUBPLAN_FOR_RESULT_TYPE_NOT_EXECUTED).trim()));
+  }
+
+  @Test
   public void createAndSerializeSubPlan_setModule() throws Exception {
     String subPlanName = "test-subplan";
     int sessionIndex = 0;
@@ -189,7 +229,8 @@ public final class SubPlanCreatorTest {
 
     Result prevReport =
         TextFormat.parse(
-            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
+            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
+            Result.class);
     when(previousResultLoader.loadPreviousResult(
             XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
         .thenReturn(prevReport);
@@ -223,7 +264,8 @@ public final class SubPlanCreatorTest {
 
     Result prevReport =
         TextFormat.parse(
-            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
+            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
+            Result.class);
     when(previousResultLoader.loadPreviousResult(
             XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
         .thenReturn(prevReport);
@@ -259,7 +301,8 @@ public final class SubPlanCreatorTest {
 
     Result prevReport =
         TextFormat.parse(
-            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_TEXTPROTO), Result.class);
+            realLocalFileUtil.readFile(PREV_REPORT_SOME_FAILED_AND_NOT_EXECUTED_TEXTPROTO),
+            Result.class);
     when(previousResultLoader.loadPreviousResult(
             XtsDirUtil.getXtsResultsDir(xtsRootDir.toPath(), xtsType), sessionIndex))
         .thenReturn(prevReport);

@@ -4,6 +4,8 @@
   <Entry include="arm64-v8a CtsAccelerationTestCases android.acceleration.cts.SoftwareAccelerationTest#testIsHardwareAccelerated" />
   <Entry include="arm64-v8a CtsAccelerationTestCases android.acceleration.cts.SoftwareAccelerationTest#testNotAttachedView" />
   <Entry exclude="arm64-v8a CtsAccelerationTestCases[instant]" />
+  <Entry exclude="armeabi-v7a CtsAccelerationTestCases" />
   <Entry include="arm64-v8a HelloWorldTest HelloFooTest#test_foo_1" isNonTf="true" />
   <Entry include="arm64-v8a HelloWorldTest HelloWorldTest#test_hello_2" isNonTf="true" />
+  <Entry include="armeabi-v7a HelloWorldTest HelloWorldTest#test_hello_1" isNonTf="true" />
 </SubPlan>

@@ -55,38 +55,52 @@ public class SubPlanHelper {
         if (previousResult.getTestFilter().isEmpty()
             && RetryResultHelper.shouldRunEntireModule(
                 module, types, addSubPlanCmd, prevResultIncludeFilters, prevResultExcludeFilters)) {
-          if (isNonTfModule) {
-            subPlan.addNonTfIncludeFilter(
-                String.format("%s %s", module.getAbi(), module.getName()));
-          } else {
-            subPlan.addIncludeFilter(String.format("%s %s", module.getAbi(), module.getName()));
+          addIncludeFilter(
+              subPlan, String.format("%s %s", module.getAbi(), module.getName()), isNonTfModule);
+        } else if (types.contains("not_executed") && !module.getDone()) {
+          // Include the module since it is not done
+          addIncludeFilter(
+              subPlan, String.format("%s %s", module.getAbi(), module.getName()), isNonTfModule);
+          if (!previousResult.getTestFilter().isEmpty()) {
+            // If the previous result has test filter, include the test
+            addIncludeFilter(
+                subPlan,
+                String.format(
+                    "%s %s %s", module.getAbi(), module.getName(), previousResult.getTestFilter()),
+                isNonTfModule);
           }
-        } else { // If not run the entire module
+          // Exclude tests that should not be run
+          for (TestCase testCase : module.getTestCaseList()) {
+            for (Test test : testCase.getTestList()) {
+              if (!RetryResultHelper.shouldRunTest(test, types, addSubPlanCmd)) {
+                addExcludeFilter(
+                    subPlan,
+                    String.format(
+                        "%s %s %s#%s",
+                        module.getAbi(), module.getName(), testCase.getName(), test.getName()),
+                    isNonTfModule);
+              }
+            }
+          }
+        } else {
+          // Only include test cases that should be run if the module is done in previous run
           for (TestCase testCase : module.getTestCaseList()) {
             for (Test test : testCase.getTestList()) {
               if (RetryResultHelper.shouldRunTest(test, types, addSubPlanCmd)) {
-                if (isNonTfModule) {
-                  subPlan.addNonTfIncludeFilter(
-                      String.format(
-                          "%s %s %s#%s",
-                          module.getAbi(), module.getName(), testCase.getName(), test.getName()));
-                } else {
-                  subPlan.addIncludeFilter(
-                      String.format(
-                          "%s %s %s#%s",
-                          module.getAbi(), module.getName(), testCase.getName(), test.getName()));
-                }
+                addIncludeFilter(
+                    subPlan,
+                    String.format(
+                        "%s %s %s#%s",
+                        module.getAbi(), module.getName(), testCase.getName(), test.getName()),
+                    isNonTfModule);
               }
             }
           }
         }
       } else {
         // Should not run the module, exclude it explicitly to avoid test plans including it
-        if (isNonTfModule) {
-          subPlan.addNonTfExcludeFilter(String.format("%s %s", module.getAbi(), module.getName()));
-        } else {
-          subPlan.addExcludeFilter(String.format("%s %s", module.getAbi(), module.getName()));
-        }
+        addExcludeFilter(
+            subPlan, String.format("%s %s", module.getAbi(), module.getName()), isNonTfModule);
       }
     }
     // Need to retrieve the test plan from the COMMAND_LINE_ARGS in the previous result
@@ -108,6 +122,22 @@ public class SubPlanHelper {
           previousResult.getBuild().getBuildFingerprint());
     }
     return subPlan;
+  }
+
+  private static void addIncludeFilter(SubPlan subPlan, String filter, boolean isNonTfModule) {
+    if (isNonTfModule) {
+      subPlan.addNonTfIncludeFilter(filter);
+    } else {
+      subPlan.addIncludeFilter(filter);
+    }
+  }
+
+  private static void addExcludeFilter(SubPlan subPlan, String filter, boolean isNonTfModule) {
+    if (isNonTfModule) {
+      subPlan.addNonTfExcludeFilter(filter);
+    } else {
+      subPlan.addExcludeFilter(filter);
+    }
   }
 
   private SubPlanHelper() {}

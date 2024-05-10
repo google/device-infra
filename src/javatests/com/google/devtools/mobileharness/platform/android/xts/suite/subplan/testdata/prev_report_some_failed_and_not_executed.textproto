@@ -129,6 +129,22 @@ module_info {
   failed_tests: 0
 }
 module_info {
+  name: "CtsAccelerationTestCases"
+  abi: "armeabi-v7a"
+  runtime_millis: 10643
+  done: false
+  passed: 1
+  total_tests: 1
+  test_case {
+    name: "android.acceleration.cts.HardwareAccelerationTest"
+    test {
+      result: "pass"
+      name: "testIsHardwareAccelerated"
+    }
+  }
+  failed_tests: 1
+}
+module_info {
   name: "HelloWorldTest"
   abi: "arm64-v8a"
   runtime_millis: 28
@@ -159,6 +175,23 @@ module_info {
   }
   is_non_tf_module: true
   failed_tests: 2
+}
+module_info {
+  name: "HelloWorldTest"
+  abi: "armeabi-v7a"
+  runtime_millis: 28
+  done: false
+  passed: 0
+  total_tests: 1
+  test_case {
+    name: "HelloWorldTest"
+    test {
+      result: "fail"
+      name: "test_hello_1"
+    }
+  }
+  is_non_tf_module: true
+  failed_tests: 1
 }
 attribute {
   key: "start"

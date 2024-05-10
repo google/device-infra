@@ -79,6 +79,12 @@ public final class RetryResultHelper {
       boolean addSubPlanCmd,
       Set<SuiteTestFilter> prevResultIncludeFilters,
       Set<SuiteTestFilter> prevResultExcludeFilters) {
+    if (!types.contains("not_executed") && !module.getDone()) {
+      // If module is not done but types do not contain not_executed, should not run the entire
+      // module.
+      return false;
+    }
+
     // Not run the entire module if any of tests has a status out of the retry types.
     Set<String> statusesToRun = getStatusesToRun(types, addSubPlanCmd);
     for (TestStatus status : TestStatus.values()) {
