@@ -129,7 +129,7 @@ public final class RunCommand implements Callable<Integer> {
   private int shardCount;
 
   @Option(
-      names = {"--include-filter"},
+      names = {"--include-filter", "--compatibility:include-filter"},
       paramLabel = "\"<test_module_name> <test_name>\"",
       description =
           "Run with the specified modules, or test packages, classes, and cases. For example, run"
@@ -140,7 +140,7 @@ public final class RunCommand implements Callable<Integer> {
   private List<String> includeFilters;
 
   @Option(
-      names = {"--exclude-filter"},
+      names = {"--exclude-filter", "--compatibility:exclude-filter"},
       paramLabel = "\"<test_module_name> <test_name>\"",
       description =
           "Exclude the specified modules, or test packages, classes, and cases, from the run. For"
