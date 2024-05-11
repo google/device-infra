@@ -25,16 +25,6 @@ package(
 ################################################################################
 
 java_library(
-    name = "adapter_validator",
-    srcs = ["AdapterValidator.java"],
-    deps = [
-        ":base_validator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-    ],
-)
-
-java_library(
     name = "base_validator",
     srcs = ["BaseValidator.java"],
     deps = [
