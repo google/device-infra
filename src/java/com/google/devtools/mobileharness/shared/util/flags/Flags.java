@@ -159,6 +159,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDaemon = enableDaemonDefault;
 
+  private static final Flag<String> apiConfigFileDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--api_config",
+      description = "Path of the text format protobuf API config file.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> apiConfigFile = apiConfigFileDefault;
+
   private static final Flag<Boolean> asOnBorgDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

@@ -17,7 +17,52 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//:deviceinfra_all_pkg",
+    ],
+)
+
+java_library(
+    name = "api_config_proto_util",
+    srcs = ["ApiConfigProtoUtil.java"],
+    visibility = [
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api:class_util",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:error_code",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:config_java_proto",
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+    ],
+)
+
+java_library(
+    name = "api_config_file_processor",
+    srcs = ["ApiConfigFileProcessor.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
+    ],
+    deps = [
+        ":api_config_proto_util",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/service/deviceconfig/util/generator",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:config_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/util:net_util",
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_guava_guava",
     ],
 )
 
@@ -27,6 +72,9 @@ java_library(
         "ApiConfig.java",
         "ApiConfigV5.java",
         "DummyApiConfig.java",
+    ],
+    visibility = [
+        "//:deviceinfra_all_pkg",
     ],
     deps = [
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",

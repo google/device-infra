@@ -31,6 +31,7 @@ package_group(
 
 exports_files([
     "common.proto",
+    "config.proto",
     "job.proto",
 ])
 
@@ -52,6 +53,20 @@ proto_library(
 java_proto_library(
     name = "communication_java_proto",
     deps = [":communication_proto"],
+)
+
+proto_library(
+    name = "config_proto",
+    srcs = ["config.proto"],
+    deps = [
+        ":common_proto",
+        "//src/devtools/mobileharness/api/model/proto:device_proto",
+    ],
+)
+
+java_proto_library(
+    name = "config_java_proto",
+    deps = [":config_proto"],
 )
 
 proto_library(

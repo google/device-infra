@@ -129,6 +129,22 @@ java_library(
 )
 
 java_library(
+    name = "local_file_based_device_config_manager",
+    srcs = ["LocalFileBasedDeviceConfigManager.java"],
+    deps = [
+        ":device_config_manager",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_id_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/config:api_config_file_processor",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "master_syncer_for_device",
     srcs = ["MasterSyncerForDevice.java"],
     deps = [

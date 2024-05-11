@@ -30,6 +30,18 @@ java_library(
 )
 
 java_library(
+    name = "proto_util",
+    srcs = ["ProtoUtil.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_errorprone_error_prone_annotations",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "str_pair",
     srcs = ["StrPairUtil.java"],
     deps = [

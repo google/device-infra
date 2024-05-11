@@ -1,0 +1,245 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared;
+
+import "src/devtools/mobileharness/api/model/proto/device.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
+
+// Configuration of the shared API lib. All of the fields are optional or
+// repeated.
+message ApiConfig {
+  // The max consecutive tests allowed between two reboots, for a device, no
+  // matter test passed or failed. If the number is reached, the device will be
+  // rebooted if it is rebootable. If <=0, device will be rebooted after ever
+  // test. Default to 10000 which should be big enough.
+  optional int32 max_consecutive_test = 2 [default = 10000];
+
+  // The max consecutive failed test for all driver. Could be overrided by the
+  // driver specific setting. If the number is reached, the device will be
+  // rebooted if it is rebootable. If it is 1, the device will be rebooted after
+  // each failed test. If <=0, device will be rebooted after every test no
+  // matter the test passed or failed.
+  optional int32 max_consecutive_fail = 3 [default = 5];
+
+  // Owners of all the devices. Can be a user or MDB group. For example:
+  // derekchen or gmm-prebuild. Note currently we can not check whether a user
+  // belongs to a MDB groups. If owners are set, all the devices in this lab
+  // server will be reserved to the owners. Otherwise they are public and can be
+  // used by anybody.
+  repeated string owner = 4;
+
+  // Email alert receivers of the mail alert for labs/devices. If no domain name
+  // provided,
+  // '@google.com' will be added as default.
+  repeated string mail_to = 5;
+
+  // Additional dimensions to be added to all devices in this lab server.
+  // Dimension value can not start with "regex:".
+  // Use composite_dimension.supported_dimension instead.
+  repeated mobileharness.shared.StrPair dimension = 6 [deprecated = true];
+
+  // Device specific config.
+  repeated DeviceConfig device_config = 7;
+
+  // Driver specific config.
+  repeated DriverConfig driver_config = 8;
+
+  // Default WIFI of this lab server. All devices in this lab server will
+  // connect to it preferentially.
+  optional WifiConfig default_wifi = 9;
+
+  // Additional supported/required dimensions to be added to all devices in this
+  // lab server. See go/mh-required-dimensions.
+  optional mobileharness.api.model.DeviceCompositeDimension
+      composite_dimension = 10;
+
+  // Show the device in this list on FE when the device is disconnected but
+  // marked as "DisconnectedDevice". If the mail receivers (LabConfig.mail_to)
+  // are set, mail alert will be sent.
+  repeated string monitored_device_id = 11;
+
+  // Testbed specific config.
+  repeated TestbedConfig testbed_config = 12;
+}
+
+// Configuration of a specific device.
+message DeviceConfig {
+  // Id of the device. Should be unique, required.
+  optional string id = 1;
+
+  // Whether this device is monitored for disconnection. If set to true, will
+  // still show this device on FE when the device is disconnected but marked as
+  // "DisconnectedDevice". If the mail receivers (LabConfig.mail_to) are set,
+  // mail alert will be sent.
+  // Deprecated. Add the monitored device id to ApiConfig.monitored_device.
+  optional bool monitor = 2 [default = false, deprecated = true];
+
+  // Additional owners of this device. Can be a user or MDB group. For example:
+  // derekchen or gmm-prebuild. Note currently we can not check whether a user
+  // belongs to a MDB groups. If owners are set, the device will be reserved to
+  // the owners. Otherwise it is public and can be used by anybody.
+  repeated string owner = 3;
+
+  // Additional dimensions to be added to this device. Dimension value can not
+  // start with "regex:".
+  // Use composite_dimension.supported_dimension instead.
+  repeated mobileharness.shared.StrPair dimension = 4 [deprecated = true];
+
+  // Whether the device is over tcp. If it is true, Mobile Harness will try to
+  // connect the device with "adb connect ${id}".
+  optional bool over_tcp = 5;
+
+  // Default SSID that the device will connect to preferentially.
+  optional string default_ssid = 6 [deprecated = true];
+
+  // Default WIFI that the device will connect to preferentially.
+  optional WifiConfig default_wifi = 7;
+
+  // Additional supported/required dimensions to be added to this device. See
+  // go/mh-required-dimensions.
+  optional mobileharness.api.model.DeviceCompositeDimension
+      composite_dimension = 8;
+
+  // Device class name for non-discoverable devices. See go/mh-nd-devices.
+  optional string device_type = 9;
+
+  // The max consecutive tests allowed between two reboots, for a device, no
+  // matter test passed or failed. If the number is reached, the device will be
+  // rebooted if it is rebootable. If <=0, device will be rebooted after ever
+  // test. Default to 10000 which should be big enough.
+  optional int32 max_consecutive_test = 10 [default = 10000];
+
+  // The max consecutive failed test for all driver. Could be overrided by the
+  // driver specific setting. If the number is reached, the device will be
+  // rebooted if it is rebootable. If it is 1, the device will be rebooted after
+  // each failed test. If <=0, device will be rebooted after every test no
+  // matter the test passed or failed.
+  optional int32 max_consecutive_fail = 11 [default = 5];
+}
+
+// Configuration of a specific testbed (see go/mh-testbeds-static).
+message TestbedConfig {
+  // Id of the testbed. Should be unique, required.
+  optional string name = 1;
+  // A list of configurations for all sub-devices this owns, required non-empty.
+  repeated TestbedSubdeviceConfig device = 2;
+  // Dimensions for the testbed.
+  optional mobileharness.api.model.DeviceCompositeDimension dimension = 3;
+  // Used to store additional info that drivers can use. Values are string
+  // representations of any JSON-serializable type.
+  repeated mobileharness.shared.StrPair property = 4;
+}
+
+// Configuration of a specific testbed subdevice (see go/mh-testbeds-static).
+message TestbedSubdeviceConfig {
+  // Id of the device. Should be unique, required except for
+  // MiscTestbedSubdevice subdevices.
+  optional string id = 1;
+  // The class name of the device, required.
+  optional string type = 2;
+  // A list of alternate MobileHarness device type names.
+  repeated string alias = 3;
+  // Dimensions for the testbed.
+  optional mobileharness.api.model.DeviceCompositeDimension dimension = 4;
+  // Used to store additional info that drivers can use. Values are string
+  // representations of any JSON-serializable type.
+  repeated mobileharness.shared.StrPair property = 5;
+}
+
+// Configuration of a core driver. Note this can NOT work for decorators.
+message DriverConfig {
+  // Name of the core driver. Can NOT be the name of a driver decorator,
+  // required.
+  optional string name = 1;
+
+  // The max consecutive failed test number for this driver. Will override the
+  // lab-server-wide setting. If the number is reached, the device will be
+  // rebooted if it is rebootable. If it is 1, the device will be reboot after
+  // each failed test. If <=0, device will reboot after every test no matter the
+  // test is passed or failed.
+  optional int32 max_consecutive_fail = 2;
+}
+
+// Configuration of the WIFI configuration, containing the SSID and PSK.
+message WifiConfig {
+  // SSID of the WiFi, required.
+  optional string ssid = 1;
+  // PSK of the WiFi, required.
+  optional string psk = 2;
+}
+
+// Local file, or the RemoteFileTypes supported by MH.
+message FilePath {
+  optional string path = 1;  // required
+  // For google3 file, it can include the build_flags, build_cl, etc.
+  // For Android build file, it can include the android build id.
+  oneof parameter {
+    Google3FileParameter google3_file_param = 2;
+    AndroidBuildFileParameter android_build_file_param = 3;
+  }
+}
+
+// The parameter for google3 file.
+message Google3FileParameter {
+  optional string build_flags = 1;  // flags are separated by space
+  optional Google3ClientParameter build_client_param = 6;
+}
+
+// The parameter for google3 client used in rabbit build.
+// More info about google3 branch types: go/hdm/branches
+message Google3ClientParameter {
+  oneof build_client_param {
+    CitcClientParameter citc_client_param = 1;
+    ComponentsClientParameter components_client_param = 2;
+    S4BranchClientParameter s4_branch_client_param = 3;
+    SourceUriClientParameter source_uri_client_param = 4;
+  }
+}
+
+// The parameter for citc client used in rabbit build.
+message CitcClientParameter {
+  optional string citc_workspace_id = 1;
+  optional int32 citc_snapshot_version = 2;
+}
+
+// The parameter for components client used in rabbit build.
+message ComponentsClientParameter {
+  oneof changelist {
+    int32 build_cl = 1;
+    string tap_projects = 2;  // projects are separated by comma
+  }
+}
+
+// The parameter for s4 branch client used in rabbit build.
+message S4BranchClientParameter {
+  optional string s4_branch_name = 1;
+  optional string s4_branch_version = 2;
+  optional int32 s4_cl = 3;
+}
+
+message SourceUriClientParameter {
+  optional string source_uri = 1;
+}
+
+// The parameter for android file.
+message AndroidBuildFileParameter {
+  optional string android_build_id = 1;
+}
