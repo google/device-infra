@@ -226,7 +226,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
       // Initializes the device.
       deviceReservation =
           externalDeviceManager.reserveDevice(
-              device.getDeviceId(), Duration.ofDays(1).minusMinutes(1));
+              device.getDeviceId(), device.getDeviceTypes(), Duration.ofDays(1).minusMinutes(1));
       initDevice();
       // Release the reservation if it can be successfully initialized.
       if (deviceReservation != null) {
@@ -242,7 +242,8 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         try {
           // Try to reserve device for 5 seconds. Even it failed, we can try in another iteration.
           deviceReservation =
-              externalDeviceManager.reserveDevice(device.getDeviceId(), Duration.ofSeconds(5));
+              externalDeviceManager.reserveDevice(
+                  device.getDeviceId(), device.getDeviceTypes(), Duration.ofSeconds(5));
           if (!deviceReservation.getReservationId().isEmpty()) {
             device
                 .info()
@@ -313,7 +314,9 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
           deviceReservation != null
               ? deviceReservation
               : externalDeviceManager.reserveDevice(
-                  device.getDeviceId(), Duration.between(clock.instant(), expireTime))) {
+                  device.getDeviceId(),
+                  device.getDeviceTypes(),
+                  Duration.between(clock.instant(), expireTime))) {
         device.tearDown();
         if (needReboot
             && (!externalDeviceManager.isManagingDeviceLifeCycle()
@@ -369,7 +372,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
   /** If the device is IDLE in external device manager, it's of course available in external DM. */
   private boolean isAvailableInExternalDeviceManager() {
     ExternalDeviceManager.DeviceStatus deviceStatus =
-        externalDeviceManager.getDeviceStatus(device.getDeviceId());
+        externalDeviceManager.getDeviceStatus(device.getDeviceId(), device.getDeviceTypes());
     return deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE);
   }
 
@@ -380,7 +383,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
     Instant expireTime = clock.instant().plus(timeout);
     while (clock.instant().isBefore(expireTime)) {
       ExternalDeviceManager.DeviceStatus deviceStatus =
-          externalDeviceManager.getDeviceStatus(device.getDeviceId());
+          externalDeviceManager.getDeviceStatus(device.getDeviceId(), device.getDeviceTypes());
       if (deviceStatus.equals(ExternalDeviceManager.DeviceStatus.IDLE)
           || deviceStatus.equals(ExternalDeviceManager.DeviceStatus.NEAR_IDLE)) {
         return true;

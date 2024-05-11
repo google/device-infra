@@ -109,7 +109,7 @@ public abstract class DeviceConfigManager implements Runnable {
 
   @VisibleForTesting
   void refreshDeviceConfigs() throws MobileHarnessException, InterruptedException {
-    logger.atFine().log("Start to load device configs from config service.");
+    logger.atInfo().log("Start to load device configs from config service.");
     // Get the active device UUID.
     ImmutableSet<String> activeDeviceUuids =
         localDeviceManager.getAllDeviceStatus(false).keySet().stream()
@@ -201,7 +201,7 @@ public abstract class DeviceConfigManager implements Runnable {
       storeLabConfig(localLabConfig);
       return;
     }
-    logger.atFine().log("Update local lab config to %s.", remoteLabConfig);
+    logger.atInfo().log("Update local lab config to %s.", remoteLabConfig);
     apiConfig.setLabConfig(remoteLabConfig.get());
   }
 
