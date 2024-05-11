@@ -25,19 +25,6 @@ package(
 ################################################################################
 
 java_library(
-    name = "adapter_decorator",
-    srcs = ["AdapterDecorator.java"],
-    deps = [
-        ":decorator",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:base_driver",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-    ],
-)
-
-java_library(
     name = "decorator",
     srcs = ["Decorator.java"],
     deps = [
