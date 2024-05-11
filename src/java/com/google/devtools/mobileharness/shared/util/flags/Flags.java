@@ -739,6 +739,17 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> logUploadDelay = logUploadDelayDefault;
 
+  private static final Flag<Long> lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnosticDefault =
+      Flag.value(1L * 1024 * 1024 * 1024);
+
+  @com.beust.jcommander.Parameter(
+      names = "--lower_limit_of_jvm_max_memory_allow_for_allocation_diagnostic",
+      description =
+          "The lower limit of jvm -Xmx that allows to generate allocation diagnostic without OOM.",
+      converter = Flag.LongConverter.class)
+  public Flag<Long> lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic =
+      lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnosticDefault;
+
   private static final Flag<String> masterGrpcTargetDefault = Flag.value("localhost:9990");
 
   @com.beust.jcommander.Parameter(

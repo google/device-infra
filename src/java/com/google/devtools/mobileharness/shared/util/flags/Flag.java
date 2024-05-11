@@ -43,6 +43,15 @@ public class Flag<T> {
     }
   }
 
+  /** Converter for creating long flag from JCommander. */
+  public static class LongConverter implements IStringConverter<Flag<Long>> {
+
+    @Override
+    public Flag<Long> convert(String value) {
+      return value(Long.parseLong(value));
+    }
+  }
+
   /** Converter for creating string flag from JCommander. */
   public static class StringConverter implements IStringConverter<Flag<String>> {
 

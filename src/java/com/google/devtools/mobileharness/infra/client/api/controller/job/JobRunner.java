@@ -1480,14 +1480,34 @@ public class JobRunner implements Runnable {
               .atInfo()
               .alsoTo(logger)
               .log("Diagnose allocation failure of job %s...", jobInfo.locator().getId());
-          allocDiagnostician.diagnoseJob(noPerfectCandidate);
-          jobInfo
-              .log()
-              .atInfo()
-              .alsoTo(logger)
-              .log(
-                  "Successfully generated allocation diagnostic report for job %s",
-                  jobInfo.locator().getId());
+          // TODO: after the long-term solution is launched, always generate
+          // diagnostic.
+          if (Runtime.getRuntime().maxMemory()
+              <= Flags.instance()
+                  .lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic
+                  .getNonNull()) {
+            String message =
+                String.format(
+                    "Current max memory is set as %d, less than %d. To avoid OOM when querying all"
+                        + " devices, we stop the diagnose.",
+                    Runtime.getRuntime().maxMemory(),
+                    Flags.instance()
+                        .lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnostic
+                        .getNonNull());
+            jobInfo
+                .warnings()
+                .addAndLog(InfraErrorId.CLIENT_JR_ALLOC_DIAGNOSTIC_ERROR, message, logger);
+            return Optional.empty();
+          } else {
+            allocDiagnostician.diagnoseJob(noPerfectCandidate);
+            jobInfo
+                .log()
+                .atInfo()
+                .alsoTo(logger)
+                .log(
+                    "Successfully generated allocation diagnostic report for job %s",
+                    jobInfo.locator().getId());
+          }
         }
         return allocDiagnostician.getLastReport();
       }
