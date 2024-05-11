@@ -242,7 +242,7 @@ public final class CompatibilityReportMergerTest {
         .isEqualTo(
             Summary.newBuilder()
                 .setPassed(1)
-                .setFailed(2)
+                .setFailed(3)
                 .setModulesDone(2)
                 .setModulesTotal(2)
                 .build());

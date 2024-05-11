@@ -3,6 +3,7 @@ Requested Tests:
 - test_hello_world1_1
 - test_hello_world1_2
 - test_hello_world2_1
+- test_hello_world2_2
 Type: TestNameList
 ---
 Begin Time: 1663584277766
@@ -41,10 +42,16 @@ Test Name: test_hello_world2_1
 Type: Record
 UID: null
 ---
-Error: 0
-Executed: 2
+Result: ERROR
+Test Class: HelloWorldTest2
+Test Name: test_hello_world2_2
+Type: Record
+UID: null
+---
+Error: 1
+Executed: 3
 Failed: 1
 Passed: 1
-Requested: 3
+Requested: 4
 Skipped: 1
 Type: Summary

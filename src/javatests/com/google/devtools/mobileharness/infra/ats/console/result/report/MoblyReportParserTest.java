@@ -86,7 +86,7 @@ public final class MoblyReportParserTest {
         .isEqualTo(
             Summary.newBuilder()
                 .setPassed(1)
-                .setFailed(1)
+                .setFailed(2)
                 .setModulesDone(1)
                 .setModulesTotal(1)
                 .build());
@@ -99,9 +99,9 @@ public final class MoblyReportParserTest {
                 .setIsNonTfModule(true)
                 .setAbi("module-abi")
                 .setDone(true)
-                .setTotalTests(3)
+                .setTotalTests(4)
                 .setPassed(1)
-                .setFailedTests(1)
+                .setFailedTests(2)
                 .setRuntimeMillis(6046L)
                 .addTestCase(
                     TestCase.newBuilder()
@@ -124,7 +124,12 @@ public final class MoblyReportParserTest {
                                 .ReportProto.Test.newBuilder()
                                 .setResult("SKIPPED")
                                 .setSkipped(true)
-                                .setName("test_hello_world2_1")))
+                                .setName("test_hello_world2_1"))
+                        .addTest(
+                            com.google.devtools.mobileharness.infra.ats.console.result.proto
+                                .ReportProto.Test.newBuilder()
+                                .setResult("fail")
+                                .setName("test_hello_world2_2")))
                 .build());
   }
 }

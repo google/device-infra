@@ -167,7 +167,7 @@ public class MoblyReportParser {
               .setDone(true)
               .setTotalTests(summaryEntry.requested())
               .setPassed(summaryEntry.passed());
-          failedTestsInModule = summaryEntry.failed();
+          failedTestsInModule = summaryEntry.failed() + summaryEntry.error();
           moduleBuilder.setFailedTests(failedTestsInModule);
         } else {
           // Do not handle other MoblyYamlDocEntry at this moment.
