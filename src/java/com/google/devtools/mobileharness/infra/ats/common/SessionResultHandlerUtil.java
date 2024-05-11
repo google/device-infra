@@ -39,6 +39,8 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCon
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
+import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
+import com.google.devtools.mobileharness.shared.util.concurrent.MobileHarnessCallable;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -122,9 +124,8 @@ public class SessionResultHandlerUtil {
       @Nullable Path latestResultLink,
       @Nullable Path latestLogLink,
       List<JobInfo> jobs,
-      SessionRequestInfo sessionRequestInfo)
+      @Nullable SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    Result finalReport = null;
     ImmutableMap<JobInfo, Optional<TestInfo>> tradefedTests =
         jobs.stream()
             .filter(jobInfo -> jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false))
@@ -140,19 +141,86 @@ public class SessionResultHandlerUtil {
                 toImmutableMap(
                     Function.identity(),
                     jobInfo -> jobInfo.tests().getAll().values().stream().findFirst()));
-    Path tmpTradefedTestResultsDir =
-        Path.of(localFileUtil.createTempDir(Flags.instance().tmpDirRoot.getNonNull()));
+
     Path nonTradefedTestResultsDir = resultDir.resolve("non-tradefed_results");
     Path tradefedTestLogsDir = logDir.resolve(XtsConstants.TRADEFED_LOGS_DIR_NAME);
     Path nonTradefedTestLogsDir = logDir.resolve("non-tradefed_logs");
     Path serverSessionLogsDir = logDir.resolve("olc_server_session_logs");
+    Path tmpTradefedTestResultsDir = null;
+    try {
+      localFileUtil.prepareDir(logDir);
+      localFileUtil.prepareDir(resultDir);
+      tmpTradefedTestResultsDir =
+          Path.of(localFileUtil.createTempDir(Flags.instance().tmpDirRoot.getNonNull()));
+      if (sessionRequestInfo == null) {
+        return Optional.empty();
+      }
+      return processResultHelper(
+          sessionRequestInfo,
+          tradefedTests,
+          nonTradefedTests,
+          resultDir,
+          tradefedTestLogsDir,
+          nonTradefedTestLogsDir,
+          tmpTradefedTestResultsDir,
+          nonTradefedTestResultsDir);
+    } finally {
+      // Copies OLC server session logs.
+      MobileHarnessCallable<Void> prepareOlcServerSessionLogsDir =
+          () -> {
+            localFileUtil.prepareDir(serverSessionLogsDir);
+            sessionInfo.putSessionProperty(
+                SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
+                serverSessionLogsDir.resolve("olc_server_session_log.txt").toString());
+            return null;
+          };
+      // Cleans up the temp tradefed test results dir
+      final Path tmpTradefedTestResultsDirFinal = tmpTradefedTestResultsDir;
+      MobileHarnessCallable<Void> cleanupTmpTradefedTestResultsDir =
+          () -> {
+            if (tmpTradefedTestResultsDirFinal != null
+                && localFileUtil.isDirExist(tmpTradefedTestResultsDirFinal)) {
+              localFileUtil.removeFileOrDir(tmpTradefedTestResultsDirFinal);
+            }
+            return null;
+          };
+      // Create the latest result link and the latest log link.
+      MobileHarnessCallable<Void> createLatestResultLink =
+          () -> {
+            if (latestResultLink != null && localFileUtil.isDirExist(resultDir)) {
+              localFileUtil.removeFileOrDir(latestResultLink);
+              localFileUtil.linkFileOrDir(resultDir.toString(), latestResultLink.toString());
+            }
+            return null;
+          };
+      MobileHarnessCallable<Void> createLatestLogLink =
+          () -> {
+            if (latestLogLink != null && localFileUtil.isDirExist(logDir)) {
+              localFileUtil.removeFileOrDir(latestLogLink);
+              localFileUtil.linkFileOrDir(logDir.toString(), latestLogLink.toString());
+            }
+            return null;
+          };
 
-    // Copies OLC server session logs.
-    localFileUtil.prepareDir(serverSessionLogsDir);
-    sessionInfo.putSessionProperty(
-        SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
-        serverSessionLogsDir.resolve("olc_server_session_log.txt").toString());
+      Callables.callAll(
+          prepareOlcServerSessionLogsDir,
+          cleanupTmpTradefedTestResultsDir,
+          createLatestResultLink,
+          createLatestLogLink);
+    }
+  }
 
+  private Optional<Result> processResultHelper(
+      SessionRequestInfo sessionRequestInfo,
+      ImmutableMap<JobInfo, Optional<TestInfo>> tradefedTests,
+      ImmutableMap<JobInfo, Optional<TestInfo>> nonTradefedTests,
+      Path resultDir,
+      Path tradefedTestLogsDir,
+      Path nonTradefedTestLogsDir,
+      Path tmpTradefedTestResultsDir,
+      Path nonTradefedTestResultsDir)
+      throws MobileHarnessException, InterruptedException {
+    Result finalReport = null;
     List<Path> tradefedTestResultXmlFiles = new ArrayList<>();
     // Copies tradefed test relevant log and result files to dedicated locations
     for (Entry<JobInfo, Optional<TestInfo>> testEntry : tradefedTests.entrySet()) {
@@ -287,30 +355,6 @@ public class SessionResultHandlerUtil {
       logger.atWarning().log("Failed to merge reports.");
     }
 
-    // Cleans up the temp tradefed test results dir
-    if (localFileUtil.isDirExist(tmpTradefedTestResultsDir)) {
-      localFileUtil.removeFileOrDir(tmpTradefedTestResultsDir);
-    }
-
-    // Create the latest result link and the latest log link. Catch the exception to avoid breaking
-    // the session.
-    if (latestResultLink != null && localFileUtil.isDirExist(resultDir)) {
-      try {
-        localFileUtil.removeFileOrDir(latestResultLink);
-        localFileUtil.linkFileOrDir(resultDir.toString(), latestResultLink.toString());
-      } catch (MobileHarnessException e) {
-        logger.atWarning().withCause(e).log("Failed to create the latest result link.");
-      }
-    }
-    if (latestLogLink != null && localFileUtil.isDirExist(logDir)) {
-      try {
-        localFileUtil.removeFileOrDir(latestLogLink);
-        localFileUtil.linkFileOrDir(logDir.toString(), latestLogLink.toString());
-      } catch (MobileHarnessException e) {
-        // Ignore the error here as it is possible that the latest link wasn't created.
-        logger.atWarning().withCause(e).log("Failed to create the latest log link.");
-      }
-    }
     return Optional.ofNullable(finalReport);
   }
 

@@ -182,22 +182,16 @@ class RunCommandHandler {
       resultDir = resultsDir.resolve(timestampDirName);
       Path logsDir = XtsDirUtil.getXtsLogsDir(xtsRootDir, xtsType);
       logDir = logsDir.resolve(timestampDirName);
-      localFileUtil.prepareDir(logDir);
-      SessionRequestInfo sessionRequestInfo = this.sessionRequestInfo;
-      if (sessionRequestInfo != null) {
-        result =
-            sessionResultHandlerUtil
-                .processResult(
-                    resultDir,
-                    logDir,
-                    resultsDir.resolve("latest"),
-                    logsDir.resolve("latest"),
-                    allJobs,
-                    sessionRequestInfo)
-                .orElse(null);
-      } else {
-        logger.atInfo().log("Skip result processing due to initialization failure");
-      }
+      result =
+          sessionResultHandlerUtil
+              .processResult(
+                  resultDir,
+                  logDir,
+                  resultsDir.resolve("latest"),
+                  logsDir.resolve("latest"),
+                  allJobs,
+                  sessionRequestInfo)
+              .orElse(null);
     } finally {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);
 
