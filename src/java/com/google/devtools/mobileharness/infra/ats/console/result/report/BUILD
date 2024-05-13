@@ -51,7 +51,6 @@ java_library(
     srcs = ["CompatibilityReportMerger.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
@@ -92,7 +91,6 @@ java_library(
     ],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
@@ -128,7 +126,6 @@ java_library(
     srcs = ["MoblyReportParser.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
     ],
     deps = [
@@ -195,7 +192,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform:__subpackages__",
