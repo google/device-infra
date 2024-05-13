@@ -65,6 +65,7 @@ public class AtsLocalRunnerIntegrationTest {
     String olcServerTmpDir = tmpFolder.newFolder("olc_server_tmp_dir").toString();
     ImmutableList<String> deviceInfraServiceFlags =
         ImmutableList.of(
+            "--adb_dont_kill_server=true",
             "--alr_olc_server_path=" + OLC_SERVER_BINARY,
             "--android_device_daemon=false",
             "--detect_adb_device=false",

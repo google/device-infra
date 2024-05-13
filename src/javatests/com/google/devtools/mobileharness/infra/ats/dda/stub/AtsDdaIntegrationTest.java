@@ -355,6 +355,7 @@ public class AtsDdaIntegrationTest {
                     .createJavaCommand(
                         LAB_SERVER_FILE_PATH,
                         ImmutableList.of(
+                            "--adb_dont_kill_server=true",
                             "--android_device_daemon=false",
                             "--detect_adb_device=false",
                             "--enable_android_device_ready_check=false",

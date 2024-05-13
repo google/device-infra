@@ -66,6 +66,7 @@ main() {
   local device_infra_service_flags=" \
     --aapt=$(type -P aapt 2>/dev/null) \
     --adb=$(type -P adb 2>/dev/null) \
+    --adb_dont_kill_server=true \
     --adb_max_no_device_detection_rounds=1200 \
     --alr_olc_server_path=${ATS_OLC_SERVER_JAR} \
     --android_device_daemon=false \
