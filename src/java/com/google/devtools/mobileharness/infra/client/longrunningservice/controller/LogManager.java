@@ -228,7 +228,8 @@ public class LogManager<D> {
       String formattedLogRecord = logHandler.getFormatter().format(record);
       int importance =
           LogDataExtractor.getSingleMetadataValue(record, LogRecordImportance.IMPORTANCE)
-              .orElse(LogRecordImportance.OLC_SERVER_LOG);
+              .orElse(LogRecordImportance.Importance.OLC_SERVER_LOG)
+              .value();
       return LogProto.LogRecord.newBuilder()
           .setFormattedLogRecord(formattedLogRecord)
           .setSourceType(SourceType.SELF)

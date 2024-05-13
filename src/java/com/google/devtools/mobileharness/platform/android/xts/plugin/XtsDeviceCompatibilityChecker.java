@@ -17,8 +17,6 @@
 package com.google.devtools.mobileharness.platform.android.xts.plugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.IMPORTANCE;
-import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.OLC_SERVER_IMPORTANT_LOG;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -30,6 +28,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.DeviceBuildInfo;
@@ -108,7 +107,9 @@ public final class XtsDeviceCompatibilityChecker {
                   + " Skipping test [%s]";
           logger
               .atInfo()
-              .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+              .with(
+                  LogRecordImportance.IMPORTANCE,
+                  LogRecordImportance.Importance.OLC_SERVER_IMPORTANT_LOG)
               .log(
                   errorMsgTemplate,
                   serial,

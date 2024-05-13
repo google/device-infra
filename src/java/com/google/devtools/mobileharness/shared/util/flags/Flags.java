@@ -186,12 +186,12 @@ public class Flags {
   public Flag<Boolean> atsConsoleAlwaysRestartOlcServer = atsConsoleAlwaysRestartOlcServerDefault;
 
   private static final Flag<Integer> atsConsoleOlcServerMinLogRecordImportanceDefault =
-      Flag.value(200);
+      Flag.value(150);
 
   @com.beust.jcommander.Parameter(
       names = "--ats_console_olc_server_min_log_record_importance",
       description =
-          "Minimum OLC server log record importance shown in ATS console. Default is 200.",
+          "Minimum OLC server log record importance shown in ATS console. Default is 150.",
       converter = Flag.IntegerConverter.class)
   public Flag<Integer> atsConsoleOlcServerMinLogRecordImportance =
       atsConsoleOlcServerMinLogRecordImportanceDefault;

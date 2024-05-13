@@ -21,6 +21,7 @@ import static com.google.common.base.Strings.nullToEmpty;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.common.flogger.LogSites;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.errorprone.annotations.CompileTimeConstant;
 import com.google.errorprone.annotations.FormatMethod;
@@ -113,6 +114,7 @@ public abstract class LogContext<Api extends LoggingApi<Api>, Data extends LogDa
     if (googleLogger != null) {
       googleLogger
           .at(level)
+          .with(LogRecordImportance.IMPORTANCE, LogRecordImportance.Importance.TEST_INFO_LOG)
           .withCause(cause)
           .withInjectedLogSite(LogSites.callerOf(LogContext.class))
           .log(message);
@@ -134,6 +136,7 @@ public abstract class LogContext<Api extends LoggingApi<Api>, Data extends LogDa
     if (googleLogger != null) {
       googleLogger
           .at(level)
+          .with(LogRecordImportance.IMPORTANCE, LogRecordImportance.Importance.TEST_INFO_LOG)
           .withCause(cause)
           .withInjectedLogSite(LogSites.callerOf(LogContext.class))
           .logVarargs(message, args);

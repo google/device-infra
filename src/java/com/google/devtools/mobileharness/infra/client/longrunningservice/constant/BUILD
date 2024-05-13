@@ -24,6 +24,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/log:__pkg__",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger"],
 )

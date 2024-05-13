@@ -21,14 +21,26 @@ import com.google.common.flogger.MetadataKey;
 /** Constants of importance of log records. */
 public class LogRecordImportance {
 
-  public static final MetadataKey<Integer> IMPORTANCE =
-      MetadataKey.single("importance", Integer.class);
+  /** Values of importance. */
+  public enum Importance {
+    OLC_SERVER_LOG(100),
+    TEST_INFO_LOG(150),
+    OLC_SERVER_IMPORTANT_LOG(200),
+    TF_LOG(300);
 
-  public static final int OLC_SERVER_LOG = 100;
+    private final int value;
 
-  public static final int OLC_SERVER_IMPORTANT_LOG = 200;
+    Importance(int value) {
+      this.value = value;
+    }
 
-  public static final int TF_LOG = 300;
+    public int value() {
+      return value;
+    }
+  }
+
+  public static final MetadataKey<Importance> IMPORTANCE =
+      MetadataKey.single("importance", Importance.class);
 
   private LogRecordImportance() {}
 }
