@@ -24,7 +24,11 @@ option java_package = "com.google.devtools.mobileharness.api.model.proto";
 option java_outer_classname = "Error";
 
 // See java.lang.StackTraceElement.
+// DEPRECATED. Use http://google3/src/\
+// devtools/common/metrics/stability/model/proto/exception.proto instead.
 message StackTraceElement {
+  option deprecated = true;
+
   string declaring_class = 1;
   string method_name = 2;
   // Empty if the original file name is null.
@@ -33,7 +37,11 @@ message StackTraceElement {
 }
 
 // Summary of the exception, without the cause/suppressed exception recursion.
+// DEPRECATED. Use http://google3/src/\
+// devtools/common/metrics/stability/model/proto/exception.proto instead.
 message ExceptionSummary {
+  option deprecated = true;
+
   // Required. If the exception is not a MobileHarnessException, it will be
   // BasicErrorId.NON_MH_EXCEPTION.code().
   int32 error_code = 1;
@@ -53,8 +61,12 @@ message ExceptionSummary {
   repeated StackTraceElement stack_trace = 6;
 }
 
-// Full exception information.
+// Full exception information. DEPRECATED. Use http://google3/third_party/\
+// deviceinfra/src/devtools/common/metrics/stability/model/proto/exception.proto
+// instead.
 message ExceptionDetail {
+  option deprecated = true;
+
   ExceptionSummary summary = 1;
   // Optional.
   ExceptionDetail cause = 2;
