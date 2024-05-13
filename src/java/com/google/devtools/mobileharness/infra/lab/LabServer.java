@@ -33,8 +33,10 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigFileProcessor;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.test.manager.ProxyTestManager;
 import com.google.devtools.mobileharness.infra.lab.Annotations.DebugThreadPool;
@@ -42,8 +44,10 @@ import com.google.devtools.mobileharness.infra.lab.Annotations.GlobalEventBus;
 import com.google.devtools.mobileharness.infra.lab.Annotations.RpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
+import com.google.devtools.mobileharness.infra.lab.controller.DeviceConfigManager;
 import com.google.devtools.mobileharness.infra.lab.controller.JobManager;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDimensionManager;
+import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
 import com.google.devtools.mobileharness.infra.lab.controller.MasterSyncerForDevice;
 import com.google.devtools.mobileharness.infra.lab.controller.MasterSyncerForJob;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
@@ -154,7 +158,7 @@ public class LabServer {
 
       ApiConfig apiConfig = ApiConfig.getInstance();
       String hostName = netUtil.getLocalHostName();
-      apiConfig.init(/* defaultPublic= */ DeviceUtil.inSharedLab(), hostName);
+      apiConfig.init(/* defaultPublic= */ true, hostName);
 
       // Initializes the master service stub. If master host is set to empty, the lab server
       // will run independently without the master server for debugging.
@@ -206,6 +210,20 @@ public class LabServer {
             mainThreadPool.submit(masterSyncerForJob),
             Level.SEVERE,
             "Master syncer for job fatal error");
+      }
+
+      DeviceIdManager deviceIdManager = DeviceIdManager.getInstance();
+      DeviceConfigManager deviceConfigManager = null;
+      if (Flags.instance().enableDeviceConfigManager.getNonNull()) {
+        deviceConfigManager =
+            new LocalFileBasedDeviceConfigManager(
+                deviceManager, deviceIdManager, apiConfig, new ApiConfigFileProcessor());
+      }
+      if (deviceConfigManager != null) {
+        logFailure(
+            mainThreadPool.submit(deviceConfigManager),
+            Level.SEVERE,
+            "Device config manager fatal error");
       }
 
       // gRPC services for both local RPC and CloudRPC.

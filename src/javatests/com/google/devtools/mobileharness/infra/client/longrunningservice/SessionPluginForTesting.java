@@ -38,6 +38,8 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import com.google.wireless.qa.mobileharness.shared.proto.Job.Timeout;
+import java.time.Duration;
 import javax.inject.Inject;
 
 public class SessionPluginForTesting {
@@ -69,6 +71,10 @@ public class SessionPluginForTesting {
             .setSetting(
                 JobSetting.newBuilder()
                     .setRetry(Retry.newBuilder().setTestAttempts(1).build())
+                    .setTimeout(
+                        Timeout.newBuilder()
+                            .setStartTimeoutMs(Duration.ofSeconds(15L).toMillis())
+                            .build())
                     .build())
             .build();
     jobInfo.dimensions().addAll(config.getJobDeviceDimensionsMap());

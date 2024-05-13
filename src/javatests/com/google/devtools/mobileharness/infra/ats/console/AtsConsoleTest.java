@@ -86,14 +86,14 @@ public final class AtsConsoleTest {
 
     ImmutableMap<String, String> flagMap =
         ImmutableMap.of(
-            "olc_server_port",
-            Integer.toString(olcServerPort),
-            "public_dir",
-            publicDirPath,
             "detect_adb_device",
             "false",
             "external_adb_initializer_template",
             "true",
+            "olc_server_port",
+            Integer.toString(olcServerPort),
+            "public_dir",
+            publicDirPath,
             "simplified_log_format",
             "true",
             "tmp_dir_root",

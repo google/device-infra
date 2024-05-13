@@ -71,7 +71,6 @@ java_library(
     srcs = [
         "ApiConfig.java",
         "ApiConfigV5.java",
-        "DummyApiConfig.java",
     ],
     visibility = [
         "//:deviceinfra_all_pkg",

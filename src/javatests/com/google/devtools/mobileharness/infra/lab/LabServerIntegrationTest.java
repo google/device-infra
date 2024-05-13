@@ -119,6 +119,9 @@ public class LabServerIntegrationTest {
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_deploy.jar");
+  private static final String API_CONFIG_FILE_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "javatests/com/google/devtools/mobileharness/infra/lab/api_config.textproto");
 
   private StringBuilder labServerStdoutBuilder;
   private StringBuilder labServerStderrBuilder;
@@ -175,11 +178,10 @@ public class LabServerIntegrationTest {
                         ImmutableList.of(
                             "--adb_dont_kill_server=true",
                             "--android_device_daemon=false",
+                            "--api_config=" + API_CONFIG_FILE_PATH,
                             "--detect_adb_device=false",
                             "--enable_android_device_ready_check=false",
-                            "--enable_api_config=false",
                             "--enable_cloud_logging=false",
-                            "--enable_device_config_manager=false",
                             "--enable_external_master_server=true",
                             "--enable_file_cleaner=false",
                             "--enable_stubby_rpc_server=false",
@@ -271,6 +273,7 @@ public class LabServerIntegrationTest {
                     .build())
             .setJobUser(JobUser.newBuilder().setRunAs("fake_owner").build())
             .build();
+    jobInfo.dimensions().add("fake_dimension_name", "fake_dimension_value");
     jobInfo.tests().add("fake_test_id", "fake_test_name");
 
     // Creates DeviceAllocator.

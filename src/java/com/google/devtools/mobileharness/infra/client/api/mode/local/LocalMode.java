@@ -32,12 +32,14 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptions
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.allocator.DeviceAllocator;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
+import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceTestRunner;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorDispatcherSelector.Component;
 import com.google.devtools.mobileharness.infra.controller.device.bootstrap.DetectorsAndDispatchers;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
+import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigFileProcessor;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
@@ -50,7 +52,9 @@ import com.google.devtools.mobileharness.infra.controller.test.local.LocalTestRu
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.NoOpTestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto;
+import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -124,6 +128,20 @@ public class LocalMode implements ExecMode {
                   new NoopExternalDeviceManager());
           localDeviceManager.initialize();
           localDeviceManagerFuture.set(localDeviceManager);
+
+          if (Flags.instance().enableDeviceConfigManager.getNonNull()) {
+            logFailure(
+                localEnvThreadPool.submit(
+                    threadRenaming(
+                        new LocalFileBasedDeviceConfigManager(
+                            localDeviceManager,
+                            DeviceIdManager.getInstance(),
+                            ApiConfig.getInstance(),
+                            new ApiConfigFileProcessor()),
+                        () -> "device-config-manager")),
+                Level.SEVERE,
+                "Fatal error in device config manager");
+          }
 
           // Prepares the global scheduler.
           localScheduler = new SimpleScheduler(localEnvThreadPool);

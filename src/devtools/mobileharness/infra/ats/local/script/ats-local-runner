@@ -72,7 +72,6 @@ main() {
     --android_device_daemon=false \
     --check_device_interval=1h \
     --enable_android_device_ready_check=false \
-    --enable_api_config=false \
     --fastboot=$(type -P fastboot 2>/dev/null) \
     --public_dir=${DEFAULT_TMP_DIR} \
     --simplified_log_format=true \

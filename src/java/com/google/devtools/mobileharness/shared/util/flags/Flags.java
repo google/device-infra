@@ -392,14 +392,6 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAndroidDeviceReadyCheck = enableAndroidDeviceReadyCheckDefault;
 
-  private static final Flag<Boolean> enableApiConfigDefault = Flag.value(true);
-
-  @com.beust.jcommander.Parameter(
-      names = "--enable_api_config",
-      description = "Whether to enable ApiConfig in lab server. Default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> enableApiConfig = enableApiConfigDefault;
-
   private static final Flag<Boolean> enableAteDualStackDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

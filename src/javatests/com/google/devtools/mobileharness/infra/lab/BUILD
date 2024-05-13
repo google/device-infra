@@ -24,6 +24,7 @@ java_library(
     name = "lab",
     srcs = glob(["*.java"]),
     data = [
+        ":api_config.textproto",
         "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server_oss_deploy.jar",
     ],
     deps = [

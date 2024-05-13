@@ -32,7 +32,7 @@ import java.util.Optional;
 public interface ApiConfig {
 
   static ApiConfig getInstance() {
-    return DummyApiConfig.getInstance();
+    return ApiConfigV5.getInstance();
   }
 
   /** Initialize. */

@@ -82,7 +82,7 @@ message ApiConfig {
 
 // Configuration of a specific device.
 message DeviceConfig {
-  // Id of the device. Should be unique, required.
+  // UUID of the device. Should be unique, required.
   optional string id = 1;
 
   // Whether this device is monitored for disconnection. If set to true, will

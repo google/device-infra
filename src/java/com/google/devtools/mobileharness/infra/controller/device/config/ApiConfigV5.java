@@ -286,11 +286,13 @@ public class ApiConfigV5 extends Observable implements ApiConfig {
       if (!labConfig.getDefaultDeviceConfig().equals(BasicDeviceConfig.getDefaultInstance())) {
         BasicDeviceConfig.Builder defaultDeviceConfig =
             labConfig.getDefaultDeviceConfig().toBuilder();
-        if (defaultDeviceConfig.getOwnerCount() == 0) {
-          defaultDeviceConfig.addOwner(DEVICE_DEFAULT_OWNER);
-        }
-        if (defaultDeviceConfig.getExecutorCount() == 0) {
-          defaultDeviceConfig.addExecutor(DEVICE_DEFAULT_EXECUTOR);
+        if (!isDefaultPublic) {
+          if (defaultDeviceConfig.getOwnerCount() == 0) {
+            defaultDeviceConfig.addOwner(DEVICE_DEFAULT_OWNER);
+          }
+          if (defaultDeviceConfig.getExecutorCount() == 0) {
+            defaultDeviceConfig.addExecutor(DEVICE_DEFAULT_EXECUTOR);
+          }
         }
         return Optional.of(
             DeviceConfig.newBuilder()

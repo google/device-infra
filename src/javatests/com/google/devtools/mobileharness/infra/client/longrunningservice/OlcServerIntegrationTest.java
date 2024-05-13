@@ -30,6 +30,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
@@ -73,6 +74,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -167,6 +169,10 @@ public class OlcServerIntegrationTest {
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_deploy.jar");
+  private static final String API_CONFIG_TEMPLATE_FILE_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "javatests/com/google/devtools/mobileharness/infra/client/"
+              + "longrunningservice/api_config.textproto.template");
 
   private static final String PLUGIN_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.client.longrunningservice.SessionPluginForTesting";
@@ -178,7 +184,6 @@ public class OlcServerIntegrationTest {
                       SessionOutput.newBuilder()
                           .putSessionProperty("job_result", "PASS")
                           .putSessionProperty("job_result_from_job_event", "PASS")
-                          .putSessionProperty("allocated_device_control_id", "NoOpDevice-4")
                           .putSessionPluginOutput(
                               PLUGIN_CLASS_NAME,
                               SessionPluginOutput.newBuilder()
@@ -192,12 +197,15 @@ public class OlcServerIntegrationTest {
 
   private final CommandExecutor commandExecutor = new CommandExecutor();
   private final LocalFileUtil localFileUtil = new LocalFileUtil();
+  private final NetworkUtil networkUtil = new NetworkUtil();
 
   private final StringBuilder olcServerStdoutBuilder = new StringBuilder();
   private final StringBuilder olcServerStderrBuilder = new StringBuilder();
 
   private final StringBuilder labServerStdoutBuilder = new StringBuilder();
   private final StringBuilder labServerStderrBuilder = new StringBuilder();
+
+  private String localHostName;
 
   private int olcServerPort;
   private ManagedChannel olcServerChannel;
@@ -214,6 +222,8 @@ public class OlcServerIntegrationTest {
 
   @Before
   public void setUp() throws Exception {
+    localHostName = networkUtil.getLocalHostName();
+
     olcServerPort = PortProber.pickUnusedPort();
     olcServerChannel = ChannelFactory.createLocalChannel(olcServerPort, directExecutor());
     masterGrpcStubHelper = new MasterGrpcStubHelper(olcServerChannel);
@@ -239,7 +249,8 @@ public class OlcServerIntegrationTest {
 
   @Test
   public void noOpTest_localMode() throws Exception {
-    startServers(/* enableAtsMode= */ false);
+    String deviceControlId = "NoOpDevice-4";
+    startServers(/* enableAtsMode= */ false, createApiConfigFile(deviceControlId));
 
     // Checks the server version.
     VersionStub versionStub = new VersionStub(olcServerChannel);
@@ -260,7 +271,8 @@ public class OlcServerIntegrationTest {
         createCreateSessionRequest(
             SessionPluginForTestingConfig.newBuilder()
                 .setNoOpDriverSleepTimeSec(2)
-                .putJobDeviceDimensions("control_id", "NoOpDevice-4")
+                .putJobDeviceDimensions("control_id", deviceControlId)
+                .putJobDeviceDimensions("fake_dimension_name", "fake_dimension_value")
                 .build());
     CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
     SessionId sessionId = createSessionResponse.getSessionId();
@@ -290,7 +302,7 @@ public class OlcServerIntegrationTest {
     assertThat(getSessionResponse)
         .comparingExpectedFieldsOnly()
         .ignoringExtraRepeatedFieldElements()
-        .isEqualTo(GET_SESSION_RESPONSE);
+        .isEqualTo(createGetSessionResponse(deviceControlId));
 
     List<SessionDetail> allSessions =
         sessionStub
@@ -333,7 +345,8 @@ public class OlcServerIntegrationTest {
 
   @Test
   public void noOpTest_atsMode() throws Exception {
-    startServers(/* enableAtsMode= */ true);
+    String deviceControlId = "NoOpDevice-3";
+    startServers(/* enableAtsMode= */ true, createApiConfigFile(deviceControlId));
 
     // Checks the server version.
     VersionStub versionStub = new VersionStub(olcServerChannel);
@@ -369,7 +382,8 @@ public class OlcServerIntegrationTest {
             SessionPluginForTestingConfig.newBuilder()
                 .setNoOpDriverSleepTimeSec(2)
                 .putExtraJobFiles("fake_job_file_tag", fakeJobFilePath)
-                .putJobDeviceDimensions("control_id", "NoOpDevice-4")
+                .putJobDeviceDimensions("control_id", deviceControlId)
+                .putJobDeviceDimensions("fake_dimension_name", "fake_dimension_value")
                 .build());
     CreateSessionResponse createSessionResponse = sessionStub.createSession(createSessionRequest);
     SessionId sessionId = createSessionResponse.getSessionId();
@@ -382,7 +396,7 @@ public class OlcServerIntegrationTest {
     assertThat(getSessionResponse)
         .comparingExpectedFieldsOnly()
         .ignoringExtraRepeatedFieldElements()
-        .isEqualTo(GET_SESSION_RESPONSE);
+        .isEqualTo(createGetSessionResponse(deviceControlId));
 
     String olcServerStderr = olcServerStderrBuilder.toString();
     String labServerStderr = labServerStderrBuilder.toString();
@@ -393,7 +407,7 @@ public class OlcServerIntegrationTest {
     // Verifies the allocation is correct.
     assertWithMessage("olc server stderr")
         .that(olcServerStderr)
-        .containsMatch("Allocated devices.*NoOpDevice-4");
+        .containsMatch("Allocated devices.*" + deviceControlId);
 
     // Verifies job/test files have been transferred.
     assertWithMessage("lab server stderr")
@@ -420,7 +434,7 @@ public class OlcServerIntegrationTest {
     assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());
   }
 
-  private void startServers(boolean enableAtsMode)
+  private void startServers(boolean enableAtsMode, Path apiConfigFile)
       throws IOException, CommandStartException, InterruptedException, ExecutionException {
     int noOpDeviceNum = 5;
 
@@ -437,9 +451,9 @@ public class OlcServerIntegrationTest {
                         ImmutableList.of(
                             "--adb_dont_kill_server=true",
                             "--android_device_daemon=false",
+                            "--api_config=" + apiConfigFile,
                             "--detect_adb_device=false",
                             "--enable_android_device_ready_check=false",
-                            "--enable_api_config=false",
                             "--enable_ats_mode=" + enableAtsMode,
                             "--enable_client_experiment_manager=false",
                             "--enable_client_file_transfer=false",
@@ -502,11 +516,10 @@ public class OlcServerIntegrationTest {
                           ImmutableList.of(
                               "--adb_dont_kill_server=true",
                               "--android_device_daemon=false",
+                              "--api_config=" + apiConfigFile,
                               "--detect_adb_device=false",
                               "--enable_android_device_ready_check=false",
-                              "--enable_api_config=false",
                               "--enable_cloud_logging=false",
-                              "--enable_device_config_manager=false",
                               "--enable_external_master_server=true",
                               "--enable_file_cleaner=false",
                               "--enable_stubby_rpc_server=false",
@@ -639,6 +652,25 @@ public class OlcServerIntegrationTest {
                                         .setConfig(Any.pack(sessionPluginConfig))
                                         .build()))))
         .build();
+  }
+
+  private Path createApiConfigFile(String deviceControlId)
+      throws MobileHarnessException, IOException {
+    String template = localFileUtil.readFile(API_CONFIG_TEMPLATE_FILE_PATH);
+    String content =
+        template.replace("${device_uuid}", String.format("%s:%s", localHostName, deviceControlId));
+    Path filePath = tmpFolder.newFolder().toPath().resolve("api_config.textproto");
+    localFileUtil.writeToFile(filePath.toString(), content);
+    return filePath;
+  }
+
+  private static GetSessionResponse createGetSessionResponse(String deviceControlId) {
+    GetSessionResponse.Builder builder = GET_SESSION_RESPONSE.toBuilder();
+    builder
+        .getSessionDetailBuilder()
+        .getSessionOutputBuilder()
+        .putSessionProperty("allocated_device_control_id", deviceControlId);
+    return builder.build();
   }
 
   private static class OlcServerLogCollector implements StreamObserver<GetLogResponse> {

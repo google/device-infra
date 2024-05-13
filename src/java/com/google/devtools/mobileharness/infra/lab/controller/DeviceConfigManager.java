@@ -53,7 +53,8 @@ public abstract class DeviceConfigManager implements Runnable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final Duration CHECK_DEVICE_CONFIG_INTERVAL = Duration.ofSeconds(30);
+  protected static final Duration CHECK_DEVICE_CONFIG_SHORT_INTERVAL = Duration.ofSeconds(3L);
+  protected static final Duration CHECK_DEVICE_CONFIG_LONG_INTERVAL = Duration.ofSeconds(30L);
 
   private final ApiConfig apiConfig;
   private final String hostName;
@@ -75,8 +76,9 @@ public abstract class DeviceConfigManager implements Runnable {
 
   @Override
   public void run() {
-    long checkDeviceConfigIntervalMs = CHECK_DEVICE_CONFIG_INTERVAL.toMillis();
-    while (!Thread.currentThread().isInterrupted()) {
+    long checkCount = 0L;
+    boolean useLongCheckInterval = false;
+    while (!Thread.interrupted()) {
       // Only refresh configs when ApiConfigV5 is enabled.
       if (apiConfig != null) {
         try {
@@ -97,12 +99,19 @@ public abstract class DeviceConfigManager implements Runnable {
           logger.atSevere().withCause(e).log("FATAL ERROR");
         }
       }
+
+      checkCount++;
+      if (!useLongCheckInterval && beginUsingLongCheckInterval(checkCount)) {
+        useLongCheckInterval = true;
+      }
       try {
-        sleeper.sleep(Duration.ofMillis(checkDeviceConfigIntervalMs));
+        sleeper.sleep(
+            useLongCheckInterval
+                ? CHECK_DEVICE_CONFIG_LONG_INTERVAL
+                : CHECK_DEVICE_CONFIG_SHORT_INTERVAL);
       } catch (InterruptedException e) {
         logger.atSevere().log("Interrupted: %s", e.getMessage());
         Thread.currentThread().interrupt();
-        break;
       }
     }
   }
@@ -204,6 +213,14 @@ public abstract class DeviceConfigManager implements Runnable {
     logger.atInfo().log("Update local lab config to %s.", remoteLabConfig);
     apiConfig.setLabConfig(remoteLabConfig.get());
   }
+
+  /**
+   * {@code false} to keep using the short check interval. {@code true} to begin using the long
+   * check interval.
+   *
+   * @param checkCount the count of checks that have finished
+   */
+  protected abstract boolean beginUsingLongCheckInterval(long checkCount);
 
   /** Loads the lab config from the config storage, like config service, local file, etc. */
   protected abstract Optional<LabConfig> loadLabConfig(String hostName)
