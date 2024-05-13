@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
+import static com.google.common.base.Ascii.toUpperCase;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
 
@@ -119,7 +120,10 @@ class ListDevicesCommandHandler {
         .setAllocationState(getAllocationState(deviceInfo.getStatus()))
         .setProduct(getDimension(dimensions, Name.PRODUCT_BOARD.lowerCaseName()).orElse("n/a"))
         .setProductVariant(getDimension(dimensions, Name.DEVICE.lowerCaseName()).orElse("n/a"))
-        .setBuildId(getDimension(dimensions, Name.BUILD_ALIAS.lowerCaseName()).orElse("n/a"))
+        .setBuildId(
+            getDimension(dimensions, Name.BUILD_ALIAS.lowerCaseName())
+                .map(Ascii::toUpperCase)
+                .orElse("n/a"))
         .setBatteryLevel(getDimension(dimensions, Name.BATTERY_LEVEL.lowerCaseName()).orElse("n/a"))
         .setDeviceClass(
             getDimension(dimensions, Name.DEVICE_CLASS_NAME.lowerCaseName()).orElse("n/a"))
@@ -198,7 +202,7 @@ class ListDevicesCommandHandler {
 
   private static String getAllocationState(String deviceStatus) {
     Optional<DeviceStatus> statusEnum =
-        Enums.getIfPresent(DeviceStatus.class, Ascii.toUpperCase(deviceStatus)).toJavaUtil();
+        Enums.getIfPresent(DeviceStatus.class, toUpperCase(deviceStatus)).toJavaUtil();
     if (statusEnum.isPresent()) {
       switch (statusEnum.get()) {
         case IDLE:
