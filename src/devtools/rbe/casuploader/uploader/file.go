@@ -27,11 +27,6 @@ func NewFileUploader(config *CommonConfig, path string) Uploader {
 
 // DoUpload uploads the file to CAS, and returns the digest of the root.
 func (fu *FileUploader) DoUpload() (digest.Digest, error) {
-	// TODO: Support uploading single file with chunking disabled.
-	if !fu.CommonConfig.chunk {
-		return digest.Digest{}, fmt.Errorf("not supported - upload single file with chunking disabled: %s", fu.path)
-	}
-
 	targetDir := createTmpDir()
 	defer func() {
 		if err := os.RemoveAll(targetDir); err != nil {
@@ -39,16 +34,24 @@ func (fu *FileUploader) DoUpload() (digest.Digest, error) {
 		}
 	}()
 
-	chunksDir := filepath.Join(targetDir, chunkerutil.ChunksDirName)
-	os.MkdirAll(chunksDir, 0755)
+	if fu.CommonConfig.chunk {
+		chunksDir := filepath.Join(targetDir, chunkerutil.ChunksDirName)
+		os.MkdirAll(chunksDir, 0755)
 
-	chunksIndex, err := chunkerutil.ChunkFile(fu.path, path.Base(fu.path), chunksDir, fu.CommonConfig.avgChunkSize)
-	if err != nil {
-		return digest.Digest{}, fmt.Errorf("failed to chunk the file %s: %v", fu.path, err)
-	}
+		chunksIndex, err := chunkerutil.ChunkFile(fu.path, path.Base(fu.path), chunksDir, fu.CommonConfig.avgChunkSize)
+		if err != nil {
+			return digest.Digest{}, fmt.Errorf("failed to chunk the file %s: %v", fu.path, err)
+		}
 
-	if err := chunkerutil.CreateIndexFile(targetDir, []chunkerutil.ChunksIndex{chunksIndex}); err != nil {
-		return digest.Digest{}, fmt.Errorf("failed to create index file for file %s: %v", fu.path, err)
+		if err := chunkerutil.CreateIndexFile(targetDir, []chunkerutil.ChunksIndex{chunksIndex}); err != nil {
+			return digest.Digest{}, fmt.Errorf("failed to create index file for file %s: %v", fu.path, err)
+		}
+	} else {
+		// Upload as a dir with the file in it.
+		path := filepath.Join(targetDir, filepath.Base(fu.path))
+		if err := os.Link(fu.path, path); err != nil {
+			return digest.Digest{}, err
+		}
 	}
 
 	du := NewDirUploader(&fu.CommonConfig, targetDir, nil)
