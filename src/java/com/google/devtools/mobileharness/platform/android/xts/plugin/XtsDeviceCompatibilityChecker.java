@@ -28,7 +28,6 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException;
 import com.google.devtools.mobileharness.api.testrunner.plugin.SkipTestException.DesiredTestResult;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.DeviceBuildInfo;
@@ -102,24 +101,11 @@ public final class XtsDeviceCompatibilityChecker {
                 .trim();
         if (!prevSessionDeviceBuildFingerprint.isEmpty()
             && !Ascii.equalsIgnoreCase(deviceBuildFingerprint, prevSessionDeviceBuildFingerprint)) {
-          String errorMsgTemplate =
-              "Device %s build fingerprint [%s] must match the one in the retried session [%s]."
-                  + " Skipping test [%s]";
-          logger
-              .atInfo()
-              .with(
-                  LogRecordImportance.IMPORTANCE,
-                  LogRecordImportance.Importance.OLC_SERVER_IMPORTANT_LOG)
-              .log(
-                  errorMsgTemplate,
-                  serial,
-                  deviceBuildFingerprint,
-                  prevSessionDeviceBuildFingerprint,
-                  testInfo.locator().getName());
           setSkipCollectingNonTfReports(testInfo.jobInfo());
           throw SkipTestException.create(
               String.format(
-                  errorMsgTemplate,
+                  "Device %s build fingerprint [%s] must match the one in the retried session [%s]."
+                      + " Skipping test [%s]",
                   serial,
                   deviceBuildFingerprint,
                   prevSessionDeviceBuildFingerprint,

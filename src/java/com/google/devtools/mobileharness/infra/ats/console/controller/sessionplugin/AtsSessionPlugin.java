@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.Importance.OLC_SERVER_IMPORTANT_LOG;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
@@ -26,10 +28,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.api.model.proto.Device;
-import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
-import com.google.devtools.mobileharness.api.testrunner.event.test.TestEndedEvent;
-import com.google.devtools.mobileharness.api.testrunner.event.test.TestStartingEvent;
+import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig.CommandCase;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
@@ -46,6 +46,10 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
+import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
+import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
+import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
+import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
@@ -207,7 +211,7 @@ public class AtsSessionPlugin {
 
   @Subscribe
   public void onTestStarting(TestStartingEvent event) {
-    ImmutableList<DeviceInfo> devices = event.getAllDeviceInfos();
+    ImmutableList<DeviceLocator> devices = event.getAllocation().getAllDeviceLocators();
     setRunCommandState(
         oldState ->
             oldState.toBuilder()
@@ -218,8 +222,7 @@ public class AtsSessionPlugin {
                         .setStartTime(toProtoTimestamp(Instant.now()))
                         .addAllDeviceId(
                             devices.stream()
-                                .map(DeviceInfo::getDeviceLocator)
-                                .map(Device.DeviceLocator::getId)
+                                .map(DeviceLocator::getSerial)
                                 .collect(toImmutableList()))
                         .setStateSummary(config.getRunCommand().getTestPlan())
                         .build())
@@ -239,6 +242,19 @@ public class AtsSessionPlugin {
                                     event.getTest().timing().getStartTime(), Instant.now()))))
                 .removeRunningInvocation(event.getTest().locator().getId())
                 .build());
+
+    TestInfo testInfo = event.getTest();
+    ResultTypeWithCause resultTypeWithCause = testInfo.resultWithCause().get();
+    if (!resultTypeWithCause.type().equals(TestResult.PASS)) {
+      logger
+          .atWarning()
+          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .log(
+              "Warning of test [%s/%s]:\n%s",
+              testInfo.locator().getId(),
+              testInfo.locator().getName(),
+              resultTypeWithCause.toStringWithDetail());
+    }
   }
 
   private void setOutput(AtsSessionPluginOutput output) {

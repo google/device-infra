@@ -56,7 +56,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:device_build_info",
