@@ -338,7 +338,6 @@ CtsBionicAppTestCases
 CtsBionicTestCases
 CtsBlobStoreHostTestCases
 CtsBlobStoreTestCases
-CtsBluetoothMultiDevicesTestCases
 CtsBluetoothTestCases
 CtsBootDisplayModeApp
 CtsBootDisplayModeTestCases
@@ -374,7 +373,6 @@ CtsClasspathDeviceInfoTestCases
 CtsClasspathsTestCases
 CtsColorModeTestCases
 CtsCompanionDeviceManagerCoreTestCases
-CtsCompanionDeviceManagerMultiDeviceTestCases
 CtsCompanionDeviceManagerMultiProcessTestCases
 CtsCompanionDeviceManagerNoCompanionServicesTestCases
 CtsCompanionDeviceManagerUiAutomationTestCases
@@ -1027,7 +1025,6 @@ CtsNetTestCasesMaxTargetSdk30
 CtsNetTestCasesMaxTargetSdk31
 CtsNetTestCasesMaxTargetSdk33
 CtsNetTestCasesUpdateStatsPermission
-CtsNfcHceMultiDeviceTestCases
 CtsNfcTestCases
 CtsNNAPIBenchmarkTestCases
 CtsNNAPIJavaTestCases
@@ -1503,8 +1500,6 @@ CtsUseProcessSuccess
 CtsUsesLibraryHostTestCases
 CtsUsesNativeLibraryTest
 CtsUtilTestCases
-CtsUwbMultiDeviceTestCase_FiraRangingTests
-CtsUwbMultiDeviceTestCase_UwbManagerTests
 CtsUwbTestCases
 CtsV3SigningSchemeRotationTest
 CtsVcnTestCases
@@ -1550,7 +1545,6 @@ CtsWidgetApp
 CtsWidgetProviderApp
 CtsWidgetTestCases
 CtsWidgetTestCases29
-CtsWifiAwareTestCases
 CtsWifiBroadcastsDeviceApp
 CtsWifiBroadcastsHostTestCases
 CtsWifiConfigCreator
