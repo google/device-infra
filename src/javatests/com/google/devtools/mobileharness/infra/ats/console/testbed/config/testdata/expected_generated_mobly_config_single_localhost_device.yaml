@@ -1,5 +1,0 @@
-TestBeds:
-- Name: testbed_localhost-0001
-  Controllers:
-    AndroidDevice:
-    - {serial: 'localhost:0001'}

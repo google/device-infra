@@ -1,5 +1,0 @@
-<?xml version='1.0' encoding='UTF-8' standalone='no' ?>
-<SubPlan version="2.0">
-  <Entry include="arm64-v8a CtsAccelerationTestCases" />
-  <Entry include="arm64-v8a CtsAccelerationTestCases[instant]" />
-</SubPlan>
