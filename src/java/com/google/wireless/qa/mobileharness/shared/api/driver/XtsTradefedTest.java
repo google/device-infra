@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
+import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
@@ -76,6 +77,7 @@ import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
@@ -134,6 +136,8 @@ public class XtsTradefedTest extends BaseDriver
   private final LogRecorder logRecorder;
   private final ListeningExecutorService threadPool;
   private final Sleeper sleeper;
+  private final AtomicReference<CommandProcess> xtsProcess = new AtomicReference<>();
+  private final AtomicBoolean isTestCancelled = new AtomicBoolean(false);
 
   @Inject
   XtsTradefedTest(
@@ -197,7 +201,9 @@ public class XtsTradefedTest extends BaseDriver
       tmpXtsRootDir = prepareXtsWorkDir(xtsType);
       setUpXtsWorkDir(spec, getXtsRootDir(spec, testInfo), tmpXtsRootDir, xtsType, testInfo);
       logger.atInfo().log("xTS Tradefed temp working root directory is %s", tmpXtsRootDir);
-
+      if (isTestCancelled.get()) {
+        return;
+      }
       boolean xtsRunCommandSuccess = runXtsCommand(testInfo, spec, tmpXtsRootDir, xtsType);
       testInfo
           .log()
@@ -228,6 +234,17 @@ public class XtsTradefedTest extends BaseDriver
     } finally {
       CompositeDeviceUtil.uncacheTestbed(getDevice());
       postTest(tmpXtsRootDir, testInfo, xtsType);
+    }
+  }
+
+  @Subscribe
+  private void onTestMessage(TestMessageEvent event) throws InterruptedException {
+    logger.atInfo().log("Receive test message: %s", event.getMessage());
+    if (event.getMessage().containsKey("type")
+        && event.getMessage().get("type").equals("cancel_test")) {
+      forceKillTfProcess(event.getTest());
+      isTestCancelled.set(true);
+      event.getTest().log().atInfo().alsoTo(logger).log("Test cancelled by client side.");
     }
   }
 
@@ -396,8 +413,6 @@ public class XtsTradefedTest extends BaseDriver
       tfOutputPath =
           Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_OUTPUT_FILE_NAME);
     }
-
-    AtomicReference<CommandProcess> xtsProcess = new AtomicReference<>();
     AtomicBoolean tfHasFinished = new AtomicBoolean();
     try (BufferedWriter writer = Files.newBufferedWriter(tfOutputPath)) {
       xtsProcess.set(
@@ -430,6 +445,30 @@ public class XtsTradefedTest extends BaseDriver
                                   e,
                                   /* killCommand= */ false,
                                   /* stopReadingOutput= */ true);
+                            }
+
+                            // Checks if test is canceled.
+                            if (isTestCancelled.get()) {
+                              testInfo.log().atInfo().alsoTo(logger).log("Test is canceled");
+                              CommandProcess process = xtsProcess.get();
+                              if (process != null && process.isAlive()) {
+                                testInfo
+                                    .log()
+                                    .atInfo()
+                                    .alsoTo(logger)
+                                    .log("Kill TF process since test is canceled");
+                                logFailure(
+                                    threadPool.submit(
+                                        threadRenaming(
+                                            (Callable<Void>)
+                                                () -> {
+                                                  forceKillTfProcess(testInfo);
+                                                  return null;
+                                                },
+                                            () -> "tf-process-monitor-" + testId)),
+                                    Level.WARNING,
+                                    "Error occurred when waiting TF process exits");
+                              }
                             }
 
                             // Checks if finished.
@@ -616,6 +655,14 @@ public class XtsTradefedTest extends BaseDriver
           AndroidErrorId.XTS_TRADEFED_LIST_JARS_ERROR,
           "Failed to list jars in tools and testcases directories.",
           e);
+    }
+  }
+
+  private void forceKillTfProcess(TestInfo testInfo) throws InterruptedException {
+    CommandProcess process = xtsProcess.get();
+    if (process != null && process.isAlive()) {
+      testInfo.log().atInfo().alsoTo(logger).log("Kill TF process since test is canceled");
+      process.killWithSignal(2);
     }
   }
 

@@ -17,11 +17,16 @@
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification.NotificationCase;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandAttemptDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -33,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Ses
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest.RequestCase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
@@ -50,6 +56,7 @@ import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
+import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
@@ -72,33 +79,43 @@ final class AtsServerSessionPlugin {
       "com.google.devtools.mobileharness.infra.ats.server.sessionplugin.AtsServerSessionPluginModule";
   private static final String SESSION_PLUGIN_LABEL = "AtsServerSessionPlugin";
 
+  private static final String TEST_MESSAGE_TRADEFED_DRIVER_NAMESPACE = "mobileharness:ats";
+  private static final ImmutableMap<String, String> CANCEL_TEST_MESSAGE =
+      ImmutableMap.of("namespace", TEST_MESSAGE_TRADEFED_DRIVER_NAMESPACE, "type", "cancel_test");
+
   /** Set in {@link #onSessionStarting}. */
   private volatile SessionRequest request;
 
-  private final Object requestDetailLock = new Object();
+  private final Object sessionLock = new Object();
 
   // The source of truth for this session's request states.
-  @GuardedBy("requestDetailLock")
+  @GuardedBy("sessionLock")
   private final RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
 
-  @GuardedBy("requestDetailLock")
+  @GuardedBy("sessionLock")
   private int runningTradefedJobCount = 0;
+
+  @GuardedBy("sessionLock")
+  private boolean sessionCancelled = false;
 
   private final SessionInfo sessionInfo;
   private final NewMultiCommandRequestHandler newMultiCommandRequestHandler;
   private final LocalSessionStub localSessionStub;
   private final Clock clock;
+  private final TestMessageUtil testMessageUtil;
 
   @Inject
   AtsServerSessionPlugin(
       SessionInfo sessionInfo,
       NewMultiCommandRequestHandler newMultiCommandRequestHandler,
       LocalSessionStub localSessionStub,
-      Clock clock) {
+      Clock clock,
+      TestMessageUtil testMessageUtil) {
     this.sessionInfo = sessionInfo;
     this.newMultiCommandRequestHandler = newMultiCommandRequestHandler;
     this.localSessionStub = localSessionStub;
     this.clock = clock;
+    this.testMessageUtil = testMessageUtil;
   }
 
   @Subscribe
@@ -107,17 +124,22 @@ final class AtsServerSessionPlugin {
     request =
         sessionInfo.getSessionPluginExecutionConfig().getConfig().unpack(SessionRequest.class);
     if (request.getRequestCase().equals(RequestCase.NEW_MULTI_COMMAND_REQUEST)) {
-      synchronized (requestDetailLock) {
+      synchronized (sessionLock) {
         NewMultiCommandRequest newMultiCommandRequest = request.getNewMultiCommandRequest();
         requestDetail
             .setCreateTime(Timestamps.fromMillis(clock.millis()))
             .setStartTime(Timestamps.fromMillis(clock.millis()))
             .setId(sessionInfo.getSessionId())
-            .setState(RequestState.RUNNING)
             .setOriginalRequest(newMultiCommandRequest)
             .setMaxRetryOnTestFailures(newMultiCommandRequest.getMaxRetryOnTestFailures())
             .addAllCommandInfos(newMultiCommandRequest.getCommandsList());
         try {
+          // Check if user initiated cancellation.
+          if (requestDetail.getState().equals(RequestState.CANCELED)) {
+            return;
+          } else {
+            requestDetail.setState(RequestState.RUNNING);
+          }
           newMultiCommandRequestHandler.addTradefedJobs(
               newMultiCommandRequest, sessionInfo, requestDetail);
           runningTradefedJobCount = sessionInfo.getAllJobs().size();
@@ -143,7 +165,10 @@ final class AtsServerSessionPlugin {
     updateCommandDetail(jobInfo);
 
     // If all tradefed jobs have ended, create non tradefed jobs.
-    synchronized (requestDetailLock) {
+    synchronized (sessionLock) {
+      if (requestDetail.getState() == RequestState.CANCELED) {
+        return;
+      }
       // If a non-tradefed tests ended, that means all non-tradefed tests had already been created
       // and no need to create more.
       if (!jobInfo.type().getDriver().equals(TRADEFED_DRIVER_NAME)) {
@@ -160,7 +185,7 @@ final class AtsServerSessionPlugin {
 
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event) throws InterruptedException {
-    synchronized (requestDetailLock) {
+    synchronized (sessionLock) {
       try {
         newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
       } finally {
@@ -186,7 +211,34 @@ final class AtsServerSessionPlugin {
     }
   }
 
-  @GuardedBy("requestDetailLock")
+  @Subscribe
+  public void onSessionNotification(SessionNotificationEvent event)
+      throws InvalidProtocolBufferException {
+    AtsServerSessionNotification notification =
+        event.sessionNotification().getNotification().unpack(AtsServerSessionNotification.class);
+    logger.atInfo().log("Received notification: %s", shortDebugString(notification));
+    if (notification.getNotificationCase() == NotificationCase.CANCEL_SESSION) {
+      // send end signal to all jobs.
+      synchronized (sessionLock) {
+        requestDetail.setState(RequestState.CANCELED);
+        requestDetail.setCancelReason(CancelReason.REQUEST_API);
+        updateSessionPluginOutput();
+        for (JobInfo job : sessionInfo.getAllJobs()) {
+          for (TestInfo test : job.tests().getAll().values()) {
+            try {
+              testMessageUtil.sendMessageToTest(test, CANCEL_TEST_MESSAGE);
+              logger.atInfo().log("Sent cancel test message to test [%s]", test.locator().getId());
+            } catch (MobileHarnessException e) {
+              logger.atWarning().withCause(e).log(
+                  "Failed to send cancel test message to test [%s]", test.locator().getId());
+            }
+          }
+        }
+      }
+    }
+  }
+
+  @GuardedBy("sessionLock")
   private void retrySession() throws MobileHarnessException {
     NewMultiCommandRequest.Builder retryRequestBuilder =
         requestDetail.getOriginalRequest().toBuilder();
@@ -222,7 +274,7 @@ final class AtsServerSessionPlugin {
   }
 
   private void createNonTradefedJobs() throws MobileHarnessException, InterruptedException {
-    synchronized (requestDetailLock) {
+    synchronized (sessionLock) {
       for (CommandInfo commandInfo : requestDetail.getOriginalRequest().getCommandsList()) {
         Optional<CommandDetail> commandDetail =
             newMultiCommandRequestHandler.addNonTradefedJobs(
@@ -288,7 +340,7 @@ final class AtsServerSessionPlugin {
   }
 
   private void updateCommandDetail(JobInfo jobInfo) {
-    synchronized (requestDetailLock) {
+    synchronized (sessionLock) {
       if (!requestDetail.containsCommandDetails(
           newMultiCommandRequestHandler.getCommandIdOfJob(jobInfo))) {
         logger.atWarning().log(
@@ -306,7 +358,7 @@ final class AtsServerSessionPlugin {
   }
 
   private void updateSessionPluginOutput() {
-    synchronized (requestDetailLock) {
+    synchronized (sessionLock) {
       RequestDetail latestRequestDetail = requestDetail.build();
       sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
     }
