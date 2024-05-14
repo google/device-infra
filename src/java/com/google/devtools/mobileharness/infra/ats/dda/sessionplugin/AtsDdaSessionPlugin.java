@@ -23,6 +23,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Job.AllocationExitStrategy;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
@@ -41,6 +43,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
@@ -202,6 +205,22 @@ public class AtsDdaSessionPlugin {
         event.getTest().resultWithCause().get().causeException();
     if (testError.isPresent()) {
       throw testError.get();
+    }
+  }
+
+  @Subscribe
+  public void onJobEnded(JobEndEvent jobEndEvent) {
+    Optional<MobileHarnessException> jobError =
+        jobEndEvent.getJob().resultWithCause().get().causeException();
+    if (jobError.isPresent()) {
+      ExceptionDetail exceptionDetail = ErrorModelConverter.toExceptionDetail(jobError.get());
+      sessionInfo.setSessionPluginOutput(
+          oldOutput -> {
+            AtsDdaSessionPluginOutput.Builder builder =
+                oldOutput == null ? AtsDdaSessionPluginOutput.newBuilder() : oldOutput.toBuilder();
+            return builder.addErrors(exceptionDetail).build();
+          },
+          AtsDdaSessionPluginOutput.class);
     }
   }
 

@@ -19,6 +19,7 @@ proto_library(
     name = "session_plugin_proto",
     srcs = ["session_plugin.proto"],
     deps = [
+        "//src/devtools/common/metrics/stability/model/proto:error_proto",
         "//src/devtools/mobileharness/api/model/proto:job_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_proto",
         "@com_google_protobuf//:duration_proto",

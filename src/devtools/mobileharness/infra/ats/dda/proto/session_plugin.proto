@@ -19,6 +19,7 @@ syntax = "proto3";
 package mobileharness.infra.ats.dda;
 
 import "google/protobuf/duration.proto";
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/job.proto";
 import "src/devtools/mobileharness/api/query/proto/lab_query.proto";
 
@@ -43,6 +44,9 @@ message AtsDdaSessionPluginOutput {
   //
   // Becomes present when the device is allocated.
   mobileharness.api.query.DeviceInfo allocated_device = 1;
+
+  // Errors of jobs and tests
+  repeated stability.model.ExceptionDetail errors = 2;
 }
 
 message AtsDdaSessionNotification {

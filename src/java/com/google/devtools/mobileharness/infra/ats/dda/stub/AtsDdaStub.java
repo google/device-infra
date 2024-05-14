@@ -16,12 +16,16 @@
 
 package com.google.devtools.mobileharness.infra.ats.dda.stub;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.common.metrics.stability.converter.DeserializedException;
+import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
+import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
@@ -54,6 +58,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import io.grpc.Channel;
 import java.time.Duration;
+import java.util.List;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
@@ -73,16 +78,20 @@ public class AtsDdaStub {
 
     public abstract Optional<Throwable> sessionError();
 
+    public abstract ImmutableList<DeserializedException> jobOrTestErrors();
+
     public static SessionInfo of(
         String sessionId,
         SessionStatus sessionStatus,
         @Nullable DeviceInfo allocatedDevice,
-        @Nullable Throwable sessionError) {
+        @Nullable Throwable sessionError,
+        ImmutableList<DeserializedException> jobOrTestErrors) {
       return new AutoValue_AtsDdaStub_SessionInfo(
           sessionId,
           sessionStatus,
           Optional.ofNullable(allocatedDevice),
-          Optional.ofNullable(sessionError));
+          Optional.ofNullable(sessionError),
+          jobOrTestErrors);
     }
   }
 
@@ -156,15 +165,24 @@ public class AtsDdaStub {
                 .setSessionId(SessionId.newBuilder().setId(sessionId))
                 .build());
     SessionDetail sessionDetail = getSessionResponse.getSessionDetail();
+    Optional<AtsDdaSessionPluginOutput> pluginOutput = getPluginOutput(sessionDetail);
     Optional<DeviceInfo> deviceInfo =
-        getPluginOutput(sessionDetail).map(AtsDdaSessionPluginOutput::getAllocatedDevice);
+        pluginOutput.map(AtsDdaSessionPluginOutput::getAllocatedDevice);
     Optional<DeserializedException> sessionError =
         SessionErrorUtil.getSessionError(sessionDetail, SESSION_PLUGIN_LABEL);
+    List<ExceptionDetail> jobOrTestExceptionalDetails =
+        pluginOutput.map(AtsDdaSessionPluginOutput::getErrorsList).orElse(ImmutableList.of());
+    ImmutableList<DeserializedException> jobOrTestErrors =
+        jobOrTestExceptionalDetails.stream()
+            .map(exceptionDetail -> ErrorModelConverter.toDeserializedException(exceptionDetail))
+            .collect(toImmutableList());
+
     return SessionInfo.of(
         sessionId,
         sessionDetail.getSessionStatus(),
         deviceInfo.orElse(null),
-        sessionError.orElse(null));
+        sessionError.orElse(null),
+        jobOrTestErrors);
   }
 
   /**

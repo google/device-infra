@@ -38,7 +38,7 @@ public class BinarySizeTest {
       ImmutableSet.of();
 
   private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 25_150_000L;
-  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 32_350_000L;
+  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 32_400_000L;
   private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 30_850_000L;
   private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 32_050_000L;
   private static final long MAX_ATS_CONSOLE_BINARY_SIZE_BYTE = 23_150_000L;
