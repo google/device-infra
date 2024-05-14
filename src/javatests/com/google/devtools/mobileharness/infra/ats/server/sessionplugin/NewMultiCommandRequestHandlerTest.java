@@ -135,7 +135,7 @@ public final class NewMultiCommandRequestHandlerTest {
                 .addDeviceInfo(
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
-    when(commandHelper.getXtsType(any())).thenReturn("cts");
+    when(commandHelper.getXtsType()).thenReturn("cts");
     commandInfo =
         CommandInfo.newBuilder()
             .setName("command")

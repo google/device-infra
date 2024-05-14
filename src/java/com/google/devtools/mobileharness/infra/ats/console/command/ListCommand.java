@@ -172,7 +172,7 @@ class ListCommand implements Callable<Integer> {
     ListModulesCommand.Builder listModulesCommandBuilder =
         ListModulesCommand.newBuilder()
             .setXtsRootDir(xtsRootDir)
-            .setXtsType(commandHelper.getXtsType(xtsRootDir));
+            .setXtsType(commandHelper.getXtsType());
     if (moduleParameter != null) {
       listModulesCommandBuilder.setModuleParameter(moduleParameter.name());
     }
@@ -202,9 +202,7 @@ class ListCommand implements Callable<Integer> {
       aliases = {"r"},
       description = "List all results")
   public int results() throws MobileHarnessException {
-    consoleUtil.printlnStdout(
-        resultLister.listResults(
-            commandHelper.getXtsType(consoleInfo.getXtsRootDirectoryNonEmpty())));
+    consoleUtil.printlnStdout(resultLister.listResults(commandHelper.getXtsType()));
     return ExitCode.OK;
   }
 
@@ -215,7 +213,7 @@ class ListCommand implements Callable<Integer> {
   public int subplans() throws MobileHarnessException {
     String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     ImmutableList<String> subPlanFileNames =
-        subPlanLister.listSubPlans(xtsRootDir, commandHelper.getXtsType(xtsRootDir));
+        subPlanLister.listSubPlans(xtsRootDir, commandHelper.getXtsType());
 
     if (subPlanFileNames.isEmpty()) {
       consoleUtil.printlnStdout("No subplans found");

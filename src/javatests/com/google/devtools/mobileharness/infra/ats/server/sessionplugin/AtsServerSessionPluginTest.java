@@ -222,7 +222,7 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.result()).thenReturn(result);
     when(clock.instant()).thenReturn(baseTime);
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    when(commandHelper.getXtsType(any())).thenReturn("cts");
+    when(commandHelper.getXtsType()).thenReturn("cts");
   }
 
   @Test

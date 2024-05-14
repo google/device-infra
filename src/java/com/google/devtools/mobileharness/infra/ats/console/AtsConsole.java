@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
@@ -149,6 +150,7 @@ public class AtsConsole {
   private final VersionMessageUtil versionMessageUtil;
   private final CommandCompleter commandCompleter;
   private final CommandPreprocessor commandPreprocessor;
+  private final CommandHelper commandHelper;
 
   /** Set before {@link #run}; */
   @VisibleForTesting public volatile Injector injector;
@@ -169,7 +171,8 @@ public class AtsConsole {
       ServerLogPrinter serverLogPrinter,
       VersionMessageUtil versionMessageUtil,
       CommandCompleter commandCompleter,
-      CommandPreprocessor commandPreprocessor) {
+      CommandPreprocessor commandPreprocessor,
+      CommandHelper commandHelper) {
     this.mainArgs = mainArgs;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.lineReader = lineReader;
@@ -185,6 +188,7 @@ public class AtsConsole {
     this.versionMessageUtil = versionMessageUtil;
     this.commandCompleter = commandCompleter;
     this.commandPreprocessor = commandPreprocessor;
+    this.commandHelper = commandHelper;
   }
 
   public void run() throws MobileHarnessException, InterruptedException {
@@ -221,14 +225,12 @@ public class AtsConsole {
 
     // Starts to read input from console.
     ImmutableList<String> args = mainArgs;
-
+    String commandPrompt = String.format("%s-console > ", commandHelper.getXtsType());
     do {
-      // Have a new CommandLine instance to work around the issue of ArgGroup not reset(b/332503867)
-      CommandLine commandLine = getCommandLine();
       String input;
       ImmutableList<String> tokens;
       if (args.isEmpty()) {
-        input = getConsoleInput().orElse(null);
+        input = getConsoleInput(commandPrompt).orElse(null);
         if (input == null) {
           consoleUtil.printlnStderr("Input interrupted; quitting...");
           consoleInfo.setShouldExitConsole(true);
@@ -271,15 +273,17 @@ public class AtsConsole {
 
       // Executes the commands.
       for (ImmutableList<String> command : preprocessedCommands) {
+        // Have a new CommandLine instance to work around the issue of ArgGroup not
+        // reset(b/332503867)
+        CommandLine commandLine = createCommandLine();
         consoleInfo.setLastCommand(command);
         commandLine.execute(command.toArray(new String[0]));
+        sleeper.sleep(Duration.ofMillis(100L));
       }
-
-      sleeper.sleep(Duration.ofMillis(100L));
     } while (!consoleInfo.getShouldExitConsole());
   }
 
-  private CommandLine getCommandLine() {
+  private CommandLine createCommandLine() {
     return new CommandLine(RootCommand.class, new GuiceFactory(injector))
         .setCaseInsensitiveEnumValuesAllowed(true)
         .setOut(outWriter)
@@ -294,9 +298,9 @@ public class AtsConsole {
    * console is not available, readLine was interrupted (for example Ctrl-C), or an EOF has been
    * found (for example Ctrl-D).
    */
-  private Optional<String> getConsoleInput() {
+  private Optional<String> getConsoleInput(String commandPrompt) {
     try {
-      return Optional.of(lineReader.readLine("ats-console > "));
+      return Optional.of(lineReader.readLine(commandPrompt));
     } catch (UserInterruptException e) {
       consoleUtil.printlnStderr("\nInterrupted by the user.");
     } catch (EndOfFileException e) {

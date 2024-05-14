@@ -49,7 +49,7 @@ public class VersionMessageUtil {
    */
   public String getVersionMessage() {
     String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
-    String xtsType = commandHelper.getXtsType(xtsRootDir);
+    String xtsType = commandHelper.getXtsType();
     TestSuiteInfo testSuiteInfo = TestSuiteInfo.getInstance(xtsRootDir, xtsType);
     String buildNumber =
         versionParser.fetchVersion(testSuiteInfo).orElseGet(testSuiteInfo::getBuildNumber);

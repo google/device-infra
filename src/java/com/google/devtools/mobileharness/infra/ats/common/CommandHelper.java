@@ -18,14 +18,14 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
-import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
 import javax.inject.Inject;
 
 /** Helper class for commands. */
@@ -35,7 +35,7 @@ public class CommandHelper {
   private final LocalFileUtil localFileUtil;
   private final ConsoleInfo consoleInfo;
 
-  private final Map<String, String> xtsTypesByRootDir = new ConcurrentHashMap<>();
+  private final Supplier<String> xtsTypeSupplier = Suppliers.memoize(this::calculateXtsType);
 
   @Inject
   CommandHelper(LocalFileUtil localFileUtil, ConsoleInfo consoleInfo) {
@@ -44,16 +44,17 @@ public class CommandHelper {
   }
 
   /** Gets the xts type. */
-  public String getXtsType(String xtsRootDir) {
-    return xtsTypesByRootDir.computeIfAbsent(xtsRootDir, this::calculateXtsType);
+  public String getXtsType() {
+    return xtsTypeSupplier.get();
   }
 
-  private String calculateXtsType(String xtsRootDir) {
+  private String calculateXtsType() {
     Optional<String> xtsTypeFromConsoleInfo = consoleInfo.getXtsType();
     if (xtsTypeFromConsoleInfo.isPresent()) {
       return xtsTypeFromConsoleInfo.get();
     }
 
+    String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     if (xtsRootDir.isEmpty()) {
       throw new IllegalStateException("XTS root directory is empty.");
     }

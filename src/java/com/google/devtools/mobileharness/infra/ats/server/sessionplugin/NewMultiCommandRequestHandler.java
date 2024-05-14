@@ -400,7 +400,7 @@ final class NewMultiCommandRequestHandler {
       hasMountedAndroidXtsZip = true;
     }
     // TODO: Change the logic.
-    String xtsType = commandHelper.getXtsType(xtsRootDir);
+    String xtsType = commandHelper.getXtsType();
 
     // Generate XML test config template for ClusterCommandLauncher.
     Path commandPath = Path.of(xtsRootDir).resolveSibling("command.xml");

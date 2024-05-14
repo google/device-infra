@@ -51,6 +51,7 @@ java_library(
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_infra_service_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",

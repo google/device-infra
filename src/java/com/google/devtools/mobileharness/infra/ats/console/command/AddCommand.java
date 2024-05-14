@@ -124,7 +124,7 @@ class AddCommand implements Callable<Integer> {
           String abi)
       throws MobileHarnessException {
     String xtsRootDirectory = consoleInfo.getXtsRootDirectoryNonEmpty();
-    String xtsType = commandHelper.getXtsType(xtsRootDirectory);
+    String xtsType = commandHelper.getXtsType();
 
     AddSubPlanArgs.Builder addSubPlanArgsBuilder =
         AddSubPlanArgs.builder()

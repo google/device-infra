@@ -339,9 +339,7 @@ public final class RunCommand implements Callable<Integer> {
 
   private boolean isSubPlanExist(String subPlanName) throws MobileHarnessException {
     String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
-    return subPlanLister
-        .listSubPlans(xtsRootDir, commandHelper.getXtsType(xtsRootDir))
-        .contains(subPlanName);
+    return subPlanLister.listSubPlans(xtsRootDir, commandHelper.getXtsType()).contains(subPlanName);
   }
 
   private ImmutableList<String> getModules() {
@@ -379,7 +377,7 @@ public final class RunCommand implements Callable<Integer> {
         extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
 
     String xtsRootDirectory = consoleInfo.getXtsRootDirectoryNonEmpty();
-    String xtsType = commandHelper.getXtsType(xtsRootDirectory);
+    String xtsType = commandHelper.getXtsType();
     // Asynchronously runs the session.
     SessionPluginProto.RunCommand.Builder runCommand =
         SessionPluginProto.RunCommand.newBuilder()
