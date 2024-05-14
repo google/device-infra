@@ -23,9 +23,4 @@ public class JobStartEvent extends JobEvent {
   public JobStartEvent(JobInfo jobInfo) {
     super(jobInfo);
   }
-
-  @Deprecated
-  public JobStartEvent(com.google.wireless.qa.mobileharness.shared.api.job.JobInfo oldJobInfo) {
-    super(oldJobInfo);
-  }
 }

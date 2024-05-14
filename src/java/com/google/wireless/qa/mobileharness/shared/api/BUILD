@@ -121,7 +121,6 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:composite_device",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/job:job_type_util",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/lister",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/validator",

@@ -126,11 +126,4 @@ public interface Driver {
    *     Thread#interrupt() interrupted} by another thread
    */
   void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException;
-
-  /**
-   * @deprecated Use {@link #run(TestInfo)} instead.
-   */
-  @Deprecated
-  void run(com.google.wireless.qa.mobileharness.shared.api.job.TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException;
 }

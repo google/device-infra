@@ -28,14 +28,6 @@ public class JobEndEvent extends JobEvent {
     this.jobError = jobError;
   }
 
-  @Deprecated
-  public JobEndEvent(
-      com.google.wireless.qa.mobileharness.shared.api.job.JobInfo oldJobInfo,
-      @Nullable Throwable jobError) {
-    super(oldJobInfo);
-    this.jobError = jobError;
-  }
-
   public boolean hasJobError() {
     return jobError != null;
   }

@@ -25,7 +25,6 @@ java_library(
     name = "job",
     srcs = glob(["Job*.java"]),
     deps = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:base",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:injection_event",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",

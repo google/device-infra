@@ -32,16 +32,10 @@ public class CommonSetupModule extends AbstractModule {
     bindScope(RunnerEventScoped.class, EventInjectionScope.instance);
 
     bind(TestInfo.class).toProvider(() -> null).in(RunnerEventScoped.class);
-    bind(com.google.wireless.qa.mobileharness.shared.api.job.TestInfo.class)
-        .toProvider(() -> null)
-        .in(RunnerEventScoped.class);
 
     bind(DeviceInfo.class).toProvider(() -> null).in(RunnerEventScoped.class);
     bind(DeviceLocator.class).toProvider(() -> null).in(RunnerEventScoped.class);
 
     bind(JobInfo.class).toProvider(() -> null).in(RunnerEventScoped.class);
-    bind(com.google.wireless.qa.mobileharness.shared.api.job.JobInfo.class)
-        .toProvider(() -> null)
-        .in(RunnerEventScoped.class);
   }
 }

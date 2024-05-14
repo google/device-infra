@@ -21,27 +21,6 @@ package(
 )
 
 java_library(
-    name = "job",
-    srcs = [
-        "JobInfo.java",
-        "TestInfo.java",
-    ],
-    deps = [
-        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job:builder_adapter",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_java_proto",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_errorprone_error_prone_annotations",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "job_type_util",
     srcs = ["JobTypeUtil.java"],
     deps = [

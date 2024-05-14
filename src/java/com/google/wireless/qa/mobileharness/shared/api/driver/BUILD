@@ -29,9 +29,7 @@ java_library(
     srcs = ["BaseDriver.java"],
     deps = [
         ":driver",
-        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@maven//:com_google_guava_guava",
     ],
@@ -43,7 +41,6 @@ java_library(
     deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
     ],
 )

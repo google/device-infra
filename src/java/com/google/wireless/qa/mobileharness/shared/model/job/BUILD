@@ -52,15 +52,6 @@ java_library(
 )
 
 java_library(
-    name = "builder_adapter",
-    srcs = ["TestBuilderAdapter.java"],
-    visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
-    ],
-    deps = [":job"],
-)
-
-java_library(
     name = "job_helper",
     srcs = ["JobHelper.java"],
     visibility = [

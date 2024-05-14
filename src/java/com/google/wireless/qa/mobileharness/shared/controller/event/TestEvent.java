@@ -45,11 +45,6 @@ public class TestEvent implements ControllerEvent, InjectionEvent {
     return testInfo;
   }
 
-  /** This method is going to be DEPRECATED. Use {@link #getTest()} instead. */
-  public com.google.wireless.qa.mobileharness.shared.api.job.TestInfo getTestInfo() {
-    return new com.google.wireless.qa.mobileharness.shared.api.job.TestInfo(testInfo);
-  }
-
   public Allocation getAllocation() {
     return allocation;
   }
@@ -78,16 +73,11 @@ public class TestEvent implements ControllerEvent, InjectionEvent {
   @Override
   public void enter() {
     injectionScope.put(TestInfo.class, getTest());
-    injectionScope.put(
-        com.google.wireless.qa.mobileharness.shared.api.job.TestInfo.class, getTestInfo());
 
     injectionScope.put(DeviceLocator.class, getDeviceLocator());
     getDeviceInfoIfChecked().ifPresent(di -> injectionScope.put(DeviceInfo.class, di));
 
     injectionScope.put(JobInfo.class, getTest().jobInfo());
-    injectionScope.put(
-        com.google.wireless.qa.mobileharness.shared.api.job.JobInfo.class,
-        getTestInfo().getJobInfo());
 
     injectionScope.enter();
   }

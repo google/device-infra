@@ -18,7 +18,6 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 
@@ -47,12 +46,5 @@ public abstract class BaseDriver implements Driver {
   @Override
   public TestInfo getTest() {
     return testInfo;
-  }
-
-  @Override
-  @Deprecated
-  public void run(com.google.wireless.qa.mobileharness.shared.api.job.TestInfo testInfo)
-      throws MobileHarnessException, InterruptedException {
-    run(testInfo.toNewTestInfo());
   }
 }
