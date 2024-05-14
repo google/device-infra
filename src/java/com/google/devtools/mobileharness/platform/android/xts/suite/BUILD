@@ -30,6 +30,7 @@ java_library(
         ":test_suite_info",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_formatter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",

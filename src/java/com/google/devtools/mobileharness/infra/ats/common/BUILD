@@ -41,6 +41,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",

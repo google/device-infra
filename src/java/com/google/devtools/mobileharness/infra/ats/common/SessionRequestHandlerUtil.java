@@ -22,6 +22,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.primitives.Ints.saturatedCast;
+import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.Importance.OLC_SERVER_IMPORTANT_LOG;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -653,11 +655,13 @@ public class SessionRequestHandlerUtil {
 
   private Optional<DeviceInfo> getDeviceInfo(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    if (Flags.instance().enableAtsMode.getNonNull()) {
-      return getDeviceInfoFromMaster(sessionRequestInfo);
-    } else {
-      return getDeviceInfoFromLocal(sessionRequestInfo);
-    }
+    Optional<DeviceInfo> deviceInfo =
+        Flags.instance().enableAtsMode.getNonNull()
+            ? getDeviceInfoFromMaster(sessionRequestInfo)
+            : getDeviceInfoFromLocal(sessionRequestInfo);
+
+    logger.atInfo().log("Obtained device info: %s", deviceInfo.orElse(null));
+    return deviceInfo;
   }
 
   private Optional<DeviceInfo> getDeviceInfoFromMaster(SessionRequestInfo sessionRequestInfo)
@@ -685,6 +689,10 @@ public class SessionRequestHandlerUtil {
                     })
                 .findFirst();
     if (queryDeviceInfo.isEmpty()) {
+      logger
+          .atInfo()
+          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .log("No match Android devices, return empty device info.");
       return Optional.empty();
     }
 
@@ -728,6 +736,13 @@ public class SessionRequestHandlerUtil {
                 .findFirst();
       }
       if (deviceSerial.isEmpty()) {
+        logger
+            .atInfo()
+            .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+            .log(
+                "No match local Android devices, return empty device info. Detected all local"
+                    + " Android devices: %s",
+                allLocalAndroidDevices);
         return Optional.empty();
       }
 
@@ -742,6 +757,10 @@ public class SessionRequestHandlerUtil {
               .setSupportedAbi(abi)
               .build());
     }
+    logger
+        .atInfo()
+        .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+        .log("Detected no local Android devices, return empty device info.");
     return Optional.empty();
   }
 
