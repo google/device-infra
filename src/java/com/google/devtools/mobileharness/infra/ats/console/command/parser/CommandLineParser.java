@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
+package com.google.devtools.mobileharness.infra.ats.console.command.parser;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.tokenize;
