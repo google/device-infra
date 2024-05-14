@@ -349,6 +349,7 @@ public class SessionRequestHandlerUtil {
         .get()
         .extraJobProperties()
         .forEach((key, value) -> jobInfo.properties().add(key, value));
+    printCreatedJobInfo(jobInfo, /* isTf= */ true);
     return Optional.of(jobInfo);
   }
 
@@ -987,6 +988,7 @@ public class SessionRequestHandlerUtil {
           }
           addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
           extraJobProperties.forEach((key, value) -> jobInfo.properties().add(key, value));
+          printCreatedJobInfo(jobInfo, /* isTf= */ false);
           jobInfos.add(jobInfo);
         }
       }
@@ -1332,5 +1334,15 @@ public class SessionRequestHandlerUtil {
         .sessionClientId()
         .ifPresent(
             sessionClientId -> jobInfo.params().add("olc_session_client_id", sessionClientId));
+  }
+
+  private static void printCreatedJobInfo(JobInfo jobInfo, boolean isTf) {
+    logger.atInfo().log(
+        "%s job info for %s:\n\"params\": %s\n\"subDeviceSpecs\": %s\n\"files\": %s",
+        isTf ? "Tradefed" : "Non-tradefed",
+        jobInfo.locator().getName(),
+        jobInfo.params().getAll(),
+        jobInfo.subDeviceSpecs(),
+        jobInfo.files().getAll());
   }
 }
