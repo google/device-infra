@@ -49,6 +49,7 @@ message TargetPreparer {
 message Device {
   string name = 1;
   repeated TargetPreparer target_preparers = 2;
+  repeated Option options = 3;
 }
 
 message Test {

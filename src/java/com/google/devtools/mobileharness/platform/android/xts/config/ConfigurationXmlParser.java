@@ -196,6 +196,9 @@ public class ConfigurationXmlParser {
         case TARGET_PREPARER:
           device.addTargetPreparers(parseTargetPreparer(node));
           break;
+        case OPTION:
+          device.addOptions(parseOption(node));
+          break;
         default:
           break;
       }

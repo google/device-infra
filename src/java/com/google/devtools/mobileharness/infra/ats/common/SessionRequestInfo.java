@@ -79,6 +79,7 @@ public abstract class SessionRequestInfo {
 
   public abstract ImmutableSet<String> givenMatchedNonTfModules();
 
+  /** Key is config file absolute path. */
   public abstract ImmutableMap<String, Configuration> v2ConfigsMap();
 
   public abstract ImmutableMap<String, Configuration> expandedModules();

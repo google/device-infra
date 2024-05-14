@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.config;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
+
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
@@ -50,6 +52,7 @@ import java.util.Optional;
 /** A Helper class for xTS module configuration. */
 public class ModuleConfigurationHelper {
   private static final String FILE_KEY = "file";
+  private static final String DEVICE_DIMENSION_OPTION_NAME = "dimension";
 
   private static final ImmutableMap<String, String> DRIVER_ALIAS_MAP =
       ImmutableMap.of("MoblyAospPackageTest", "MoblyAospTest");
@@ -130,28 +133,46 @@ public class ModuleConfigurationHelper {
   private void updateDeviceSpecs(
       List<Device> configs, SubDeviceSpecs subDeviceSpecs, Visitor fileResolver)
       throws MobileHarnessException, InterruptedException {
-    ListMultimap<String, Device> configMap = ArrayListMultimap.create();
-    ListMultimap<String, SubDeviceSpec> subDeviceSpecMap = ArrayListMultimap.create();
+    ListMultimap<String, Device> configsByDeviceType = ArrayListMultimap.create();
+    ListMultimap<String, SubDeviceSpec> subDeviceSpecsByDeviceType = ArrayListMultimap.create();
 
     for (Device device : configs) {
-      configMap.put(device.getName(), device);
+      configsByDeviceType.put(device.getName(), device);
     }
     for (SubDeviceSpec subDeviceSpec : subDeviceSpecs.getAllSubDevices()) {
-      subDeviceSpecMap.put(subDeviceSpec.type(), subDeviceSpec);
+      subDeviceSpecsByDeviceType.put(subDeviceSpec.type(), subDeviceSpec);
     }
 
-    for (String key : configMap.keySet()) {
-      List<Device> configList = configMap.get(key);
-      List<SubDeviceSpec> subDeviceSpecList = subDeviceSpecMap.get(key);
-      if (configList.size() != subDeviceSpecList.size()) {
+    for (String deviceType : configsByDeviceType.keySet()) {
+      List<Device> configsOfType = configsByDeviceType.get(deviceType);
+      List<SubDeviceSpec> subDeviceSpecsOfType = subDeviceSpecsByDeviceType.get(deviceType);
+      if (configsOfType.size() != subDeviceSpecsOfType.size()) {
         throw new MobileHarnessException(
             ExtErrorId.MODULE_CONFIG_DEVICE_NUMBER_NOT_MATCH,
             String.format(
                 "The module requires %d %s but %d %s are provided.",
-                configList.size(), key, subDeviceSpecList.size(), key));
+                configsOfType.size(), deviceType, subDeviceSpecsOfType.size(), deviceType));
       }
-      addDecorators(configMap.get(key), subDeviceSpecMap.get(key), fileResolver);
+
+      // Adds decorators.
+      addDecorators(
+          configsByDeviceType.get(deviceType),
+          subDeviceSpecsByDeviceType.get(deviceType),
+          fileResolver);
+
+      // Adds dimensions.
+      for (int i = 0; i < configsOfType.size(); i++) {
+        addDimensions(configsOfType.get(i), subDeviceSpecsOfType.get(i));
+      }
     }
+  }
+
+  private void addDimensions(Device config, SubDeviceSpec subDeviceSpec) {
+    ImmutableMap<String, String> dimensions =
+        config.getOptionsList().stream()
+            .filter(option -> option.getName().equals(DEVICE_DIMENSION_OPTION_NAME))
+            .collect(toImmutableMap(Option::getKey, Option::getValue));
+    subDeviceSpec.deviceRequirement().dimensions().addAll(dimensions);
   }
 
   private String resolveFilePath(String fileName, List<File> dependencies)
