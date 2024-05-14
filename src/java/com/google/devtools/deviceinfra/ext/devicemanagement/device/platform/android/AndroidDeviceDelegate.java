@@ -480,6 +480,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidKillProcessDecorator");
     device.addSupportedDecorator("AndroidLogCatDecorator");
     device.addSupportedDecorator("AndroidMainlineModulesCheckDecorator");
+    device.addSupportedDecorator("AndroidMinSdkVersionCheckDecorator");
     device.addSupportedDecorator("AndroidNuwaDecorator");
     device.addSupportedDecorator("AndroidOrientationDecorator");
     device.addSupportedDecorator("AndroidPackageStatsDecorator");

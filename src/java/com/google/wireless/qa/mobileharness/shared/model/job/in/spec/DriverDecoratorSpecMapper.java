@@ -72,6 +72,7 @@ public final class DriverDecoratorSpecMapper {
     builder.put("AndroidDeviceSettingsDecorator", "AndroidDeviceSettingsDecoratorSpec");
     builder.put("AndroidInstallAppsDecorator", "InstallApkStepSpec");
     builder.put("AndroidMainlineModulesCheckDecorator", "AndroidMainlineModulesCheckDecoratorSpec");
+    builder.put("AndroidMinSdkVersionCheckDecorator", "AndroidMinSdkVersionCheckDecoratorSpec");
     builder.put("AndroidSwitchUserDecorator", "AndroidSwitchUserDecoratorSpec");
     builder.put("NoOpDecorator", "NoOpDecoratorSpec");
     // go/keep-sorted end google3-only(internal)
