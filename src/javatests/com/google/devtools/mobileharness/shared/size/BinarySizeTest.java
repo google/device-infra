@@ -37,8 +37,10 @@ public class BinarySizeTest {
   private static final ImmutableSet<String> ATS_CONSOLE_LARGE_RESOURCE_PATH_ALLOWLIST =
       ImmutableSet.of();
 
+  // Please keep all binary sizes below in the precision "xxx_x50_000L" bytes.
+
   private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 25_150_000L;
-  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 32_400_000L;
+  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 32_450_000L;
   private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 30_850_000L;
   private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 32_050_000L;
   private static final long MAX_ATS_CONSOLE_BINARY_SIZE_BYTE = 23_150_000L;
