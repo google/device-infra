@@ -29,7 +29,8 @@ Extras: null
 Result: FAIL
 Retry Parent: null
 Signature: test_hello_world1_2-1663584280794
-Stacktrace: null
+Stacktrace: "Traceback (most recent call last):\n  File \"mobly/base_test.py\", line\
+    \ 818, in exec_one_test\n"
 Termination Signal Type: null
 Test Class: HelloWorldTest1
 Test Name: test_hello_world1_2

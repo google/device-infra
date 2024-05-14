@@ -20,8 +20,10 @@ import static com.google.common.base.Strings.isNullOrEmpty;
 import static java.lang.Math.max;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
+import com.google.common.collect.Iterables;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -35,9 +37,11 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Reason;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.StackTrace;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.MoblyResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ResultProto.ModuleRunResult;
 import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
@@ -223,6 +227,14 @@ public class MoblyReportParser {
                 .setResult(getTestStatus(testEntry.getResult()));
         if (testEntry.getResult() == MoblyResult.SKIP) {
           testBuilder.setSkipped(true);
+        }
+        if (testEntry.getStacktrace().isPresent()) {
+          String stackTrace = testEntry.getStacktrace().get();
+          testBuilder.setFailure(
+              TestFailure.newBuilder()
+                  // Use the first line of stack trace as error message
+                  .setMsg(Iterables.get(Splitter.on('\n').split(stackTrace), 0))
+                  .setStackTrace(StackTrace.newBuilder().setContent(stackTrace)));
         }
         testListBuilder.add(testBuilder.build());
       }

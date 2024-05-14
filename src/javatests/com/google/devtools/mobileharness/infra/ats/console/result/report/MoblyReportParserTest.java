@@ -18,10 +18,13 @@ package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.StackTrace;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
 import com.google.inject.Guice;
@@ -107,27 +110,32 @@ public final class MoblyReportParserTest {
                     TestCase.newBuilder()
                         .setName("HelloWorldTest1")
                         .addTest(
-                            com.google.devtools.mobileharness.infra.ats.console.result.proto
-                                .ReportProto.Test.newBuilder()
+                            ReportProto.Test.newBuilder()
                                 .setResult("pass")
                                 .setName("test_hello_world1_1"))
                         .addTest(
-                            com.google.devtools.mobileharness.infra.ats.console.result.proto
-                                .ReportProto.Test.newBuilder()
+                            ReportProto.Test.newBuilder()
                                 .setResult("fail")
-                                .setName("test_hello_world1_2")))
+                                .setName("test_hello_world1_2")
+                                .setFailure(
+                                    TestFailure.newBuilder()
+                                        .setMsg("Traceback (most recent call last):")
+                                        .setStackTrace(
+                                            StackTrace.newBuilder()
+                                                .setContent(
+                                                    "Traceback (most recent call last):\n"
+                                                        + "  File \"mobly/base_test.py\", line 818,"
+                                                        + " in exec_one_test\n")))))
                 .addTestCase(
                     TestCase.newBuilder()
                         .setName("HelloWorldTest2")
                         .addTest(
-                            com.google.devtools.mobileharness.infra.ats.console.result.proto
-                                .ReportProto.Test.newBuilder()
+                            ReportProto.Test.newBuilder()
                                 .setResult("SKIPPED")
                                 .setSkipped(true)
                                 .setName("test_hello_world2_1"))
                         .addTest(
-                            com.google.devtools.mobileharness.infra.ats.console.result.proto
-                                .ReportProto.Test.newBuilder()
+                            ReportProto.Test.newBuilder()
                                 .setResult("fail")
                                 .setName("test_hello_world2_2")))
                 .build());
