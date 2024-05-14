@@ -27,7 +27,7 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   @interface ServerChannel {}
 
-  /** OLC server stub for ATS. */
+  /** OLC server stub for ATS console / local runner. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   public @interface ServerStub {
@@ -46,7 +46,7 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   @interface ServerBinary {}
 
-  /** Flags for OLC server. */
+  /** Flags of OLC server and its caller (ATS console / local runner). */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   public @interface DeviceInfraServiceFlags {}

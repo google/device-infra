@@ -150,6 +150,12 @@ public class ServerPreparer {
     serverStartingLogger.log("Starting new OLC server...");
     String serverBinaryPath = requireNonNull(serverBinary.get()).toString();
     localFileUtil.checkFile(serverBinaryPath);
+    ImmutableList<String> serverFlags =
+        ImmutableList.<String>builder()
+            .addAll(BuiltinOlcServerFlags.get())
+            .addAll(deviceInfraServiceFlags)
+            .build();
+    logger.atFine().log("OLC server flags: %s", serverFlags);
 
     CommandProcess serverProcess = null;
     ServerStderrLineCallback serverStderrLineCallback = new ServerStderrLineCallback();
@@ -162,7 +168,7 @@ public class ServerPreparer {
                             .getJavaCommandCreator()
                             .createJavaCommand(
                                 serverBinaryPath,
-                                deviceInfraServiceFlags,
+                                serverFlags,
                                 /* nativeArguments= */ ImmutableList.of()))
                     .onStderr(serverStderrLineCallback)
                     .successfulStartCondition(line -> line.contains(SERVER_STARTED_SIGNAL))

@@ -49,7 +49,17 @@ olc_server_binary(
 java_library(
     name = "annotations",
     srcs = ["Annotations.java"],
-    deps = ["@maven//:javax_inject_jsr330_api"],
+    deps = [
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "builtin_olc_server_flags",
+    srcs = ["BuiltinOlcServerFlags.java"],
+    deps = [
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(
@@ -74,6 +84,7 @@ java_library(
     srcs = ["ServerPreparer.java"],
     deps = [
         ":annotations",
+        ":builtin_olc_server_flags",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:control_service_java_proto",
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",

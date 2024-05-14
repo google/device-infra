@@ -1182,6 +1182,7 @@ public class Flags {
   public static void parse(String[] args) {
     com.beust.jcommander.JCommander commander = new com.beust.jcommander.JCommander(instance());
     commander.setAcceptUnknownOptions(true);
+    commander.setAllowParameterOverwriting(true);
     commander.parse(args);
   }
 
