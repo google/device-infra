@@ -189,11 +189,17 @@ public class SessionRequestHandlerUtil {
           if (allAndroidDevices.contains(serial)) {
             existingPassedInDeviceSerials.add(serial);
           } else {
-            logger.atInfo().log("Passed in device serial [%s] is not detected, skipped.", serial);
+            logger
+                .atInfo()
+                .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+                .log("Passed in device serial [%s] is not detected, skipped.", serial);
           }
         });
     if (existingPassedInDeviceSerials.isEmpty()) {
-      logger.atInfo().log("None of passed in devices exist [%s], skipped.", passedInDeviceSerials);
+      logger
+          .atInfo()
+          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .log("None of passed in devices exist [%s], skipped.", passedInDeviceSerials);
       return ImmutableList.of();
     }
     return existingPassedInDeviceSerials.stream()
@@ -325,9 +331,12 @@ public class SessionRequestHandlerUtil {
     ImmutableList<String> filteredModules = filteredModulesBuilder.build();
 
     if (filteredModules.isEmpty()) {
-      logger.atInfo().log(
-          "Skip creating tradefed jobs as none of given modules is for tradefed module: %s",
-          modules);
+      logger
+          .atInfo()
+          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .log(
+              "Skip creating tradefed jobs as none of given modules is for tradefed module: %s",
+              modules);
       return Optional.empty();
     }
 
@@ -370,7 +379,10 @@ public class SessionRequestHandlerUtil {
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
         getSubDeviceSpecListForTradefed(deviceSerials, max(shardCount, minDeviceCount));
     if (subDeviceSpecList.size() < minDeviceCount) {
-      logger.atInfo().log("Found no enough devices to create the job config.");
+      logger
+          .atInfo()
+          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .log("Found no enough devices to create the job config.");
       return Optional.empty();
     }
 
@@ -554,7 +566,10 @@ public class SessionRequestHandlerUtil {
 
     if (subPlan.getIncludeFiltersMultimap().isEmpty()
         && subPlan.getExcludeFiltersMultimap().isEmpty()) {
-      logger.atInfo().log("No include or exclude filters found for TF modules and tests ");
+      logger
+          .atInfo()
+          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .log("No include or exclude filters found for TF modules and tests ");
       return Optional.empty();
     }
 
@@ -800,9 +815,13 @@ public class SessionRequestHandlerUtil {
       SessionRequestInfo sessionRequestInfo, TestPlanLoader.TestPlanFilter testPlanFilter)
       throws MobileHarnessException, InterruptedException {
     if (!canCreateNonTradefedJobs(sessionRequestInfo)) {
-      logger.atInfo().log(
-          "Skip creating non-tradefed jobs as none of given modules is for non-tradefed module: %s",
-          sessionRequestInfo.moduleNames());
+      logger
+          .atInfo()
+          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .log(
+              "Skip creating non-tradefed jobs as none of given modules is for non-tradefed module:"
+                  + " %s",
+              sessionRequestInfo.moduleNames());
       return ImmutableList.of();
     }
     String testPlan = sessionRequestInfo.testPlan();
@@ -1009,7 +1028,10 @@ public class SessionRequestHandlerUtil {
     if (list.size() == 2) {
       return list.get(1);
     }
-    logger.atWarning().log("Failed to parse test case name from [%s].", testName);
+    logger
+        .atWarning()
+        .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+        .log("Failed to parse test case name from [%s].", testName);
     return "";
   }
 
@@ -1082,17 +1104,23 @@ public class SessionRequestHandlerUtil {
       throws MobileHarnessException, InterruptedException {
     List<Device> moduleDevices = moduleConfig.getDevicesList();
     if (moduleDevices.isEmpty()) {
-      logger.atInfo().log(
-          "Found no devices to create the job config for xts non-tradefed job with module '%s'.",
-          expandedModuleName);
+      logger
+          .atInfo()
+          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .log(
+              "Found no devices to create the job config for xts non-tradefed job with module"
+                  + " '%s'.",
+              expandedModuleName);
       return Optional.empty();
     }
 
     List<SubDeviceSpec> subDeviceSpecList = new ArrayList<>();
     for (Device device : moduleDevices) {
       if (device.getName().isEmpty()) {
-        logger.atWarning().log(
-            "Device name is missing in a <device> in module '%s'", expandedModuleName);
+        logger
+            .atWarning()
+            .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+            .log("Device name is missing in a <device> in module '%s'", expandedModuleName);
         return Optional.empty();
       } else {
         subDeviceSpecList.add(SubDeviceSpec.newBuilder().setType(device.getName()).build());
@@ -1186,7 +1214,10 @@ public class SessionRequestHandlerUtil {
       subPlan.parse(inputStream);
       if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
           && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
-        logger.atInfo().log("No include or exclude filters found for Non-TF modules and tests");
+        logger
+            .atInfo()
+            .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+            .log("No include or exclude filters found for Non-TF modules and tests");
         return Optional.empty();
       }
       return Optional.of(subPlan);
