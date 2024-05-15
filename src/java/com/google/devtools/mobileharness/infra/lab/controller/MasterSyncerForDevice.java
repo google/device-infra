@@ -22,6 +22,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.LinkedListMultimap;
 import com.google.common.collect.Multimap;
 import com.google.common.eventbus.Subscribe;
+import com.google.common.flags.Flag;
+import com.google.common.flags.FlagSpec;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
@@ -32,6 +34,7 @@ import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusPro
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.LabSyncHelper;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
+import com.google.inject.assistedinject.Assisted;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceChangeEvent;
@@ -51,10 +54,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.inject.Inject;
 
 /** For syncing the information of the Mobile Harness lab server with the Mobile Harness master. */
 public class MasterSyncerForDevice implements Runnable, Observer {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  @FlagSpec(help = "Enable Wrangler", name = "enable_wrangler_device_reporting")
+  private static final Flag<Boolean> enableWranglerDeviceReporting = Flag.value(false);
 
   /** Interval of regular synchronization with master server. */
   private static final Duration SYNC_INTERVAL = Duration.ofSeconds(10);
@@ -71,8 +78,17 @@ public class MasterSyncerForDevice implements Runnable, Observer {
   private final AtomicBoolean inDrainingMode = new AtomicBoolean();
   private final AtomicBoolean heartbeatAfterDrain = new AtomicBoolean();
 
+  /** Factory for creating MasterSyncerForDevice instances. */
+  public interface Factory {
+    MasterSyncerForDevice create(
+        DeviceStatusProvider deviceStatusProvider, LabSyncHelper labSyncHelper);
+  }
+
+  @Inject
   public MasterSyncerForDevice(
-      DeviceStatusProvider deviceStatusProvider, LabSyncHelper labSyncHelper) {
+      @Assisted WranglerLabPublisher wranglerLabPublisher,
+      DeviceStatusProvider deviceStatusProvider,
+      LabSyncHelper labSyncHelper) {
     this.deviceStatusProvider = deviceStatusProvider;
     this.labSyncHelper = labSyncHelper;
   }
@@ -332,6 +348,7 @@ public class MasterSyncerForDevice implements Runnable, Observer {
 
   private void signUpLab(Map<Device, DeviceStatusInfo> deviceDeviceStatusInfo)
       throws MobileHarnessException {
+    if (enableWranglerDeviceReporting.get()) {}
     SignUpLabResponse signUpLabResponse = labSyncHelper.signUpLab(deviceDeviceStatusInfo);
     if (signUpLabResponse.getDuplicatedDeviceUuidCount() > 0) {
       logger.atWarning().log(

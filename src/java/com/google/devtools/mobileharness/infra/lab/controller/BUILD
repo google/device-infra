@@ -159,6 +159,8 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:device",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_extensions_guice_assistedinject",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 

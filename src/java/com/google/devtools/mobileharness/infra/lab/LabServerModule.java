@@ -45,6 +45,8 @@ import com.google.devtools.mobileharness.infra.lab.Annotations.RpcPort;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaCloudRpc;
 import com.google.devtools.mobileharness.infra.lab.Annotations.ServViaStubby;
 import com.google.devtools.mobileharness.infra.lab.controller.LabDirectTestRunnerHolder;
+import com.google.devtools.mobileharness.infra.lab.controller.MasterSyncerForDevice;
+import com.google.devtools.mobileharness.infra.lab.controller.WranglerLabPublisherModule;
 import com.google.devtools.mobileharness.infra.lab.rpc.service.ExecTestServiceImpl;
 import com.google.devtools.mobileharness.shared.file.resolver.AbstractFileResolver;
 import com.google.devtools.mobileharness.shared.file.resolver.AtsFileServerFileResolver;
@@ -84,6 +86,8 @@ public class LabServerModule extends AbstractModule {
   protected void configure() {
     // Binds controllers.
     install(new FactoryModuleBuilder().build(ExecTestServiceImpl.ExecTestServiceImplFactory.class));
+    install(new FactoryModuleBuilder().build(MasterSyncerForDevice.Factory.class));
+    install(new WranglerLabPublisherModule());
     bind(LocalDeviceRunnerProvider.class)
         .annotatedWith(DeviceRunner.class)
         .to(LocalDeviceManager.class);

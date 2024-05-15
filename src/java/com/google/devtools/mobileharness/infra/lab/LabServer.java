@@ -115,6 +115,7 @@ public class LabServer {
   private final ListeningScheduledExecutorService debugExecutor;
   private final boolean enableStubbyRpcServer;
   private final int rpcPort;
+  private final MasterSyncerForDevice.Factory masterSyncerForDeviceFactory;
 
   @Inject
   LabServer(
@@ -130,7 +131,8 @@ public class LabServer {
       ListeningExecutorService mainThreadPool,
       @DebugThreadPool ListeningScheduledExecutorService debugExecutor,
       @ServViaStubby boolean enableStubbyRpcServer,
-      @RpcPort int rpcPort) {
+      @RpcPort int rpcPort,
+      MasterSyncerForDevice.Factory masterSyncerForDeviceFactory) {
     this.testManager = testManager;
     this.jobManager = jobManager;
     this.systemUtil = systemUtil;
@@ -144,6 +146,7 @@ public class LabServer {
     this.debugExecutor = debugExecutor;
     this.enableStubbyRpcServer = enableStubbyRpcServer;
     this.rpcPort = rpcPort;
+    this.masterSyncerForDeviceFactory = masterSyncerForDeviceFactory;
   }
 
   /** Initializes and runs lab server, and blocks until shutdown. */
@@ -183,7 +186,7 @@ public class LabServer {
                 rpcPort,
                 Flags.instance().socketPort.getNonNull(),
                 Flags.instance().grpcPort.getNonNull());
-        masterSyncerForDevice = new MasterSyncerForDevice(deviceManager, labSyncHelper);
+        masterSyncerForDevice = masterSyncerForDeviceFactory.create(deviceManager, labSyncHelper);
         globalInternalBus.register(masterSyncerForDevice);
         apiConfig.addObserver(masterSyncerForDevice);
       }
