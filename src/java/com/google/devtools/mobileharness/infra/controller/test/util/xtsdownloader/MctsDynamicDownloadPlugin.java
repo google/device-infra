@@ -47,6 +47,8 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.ArrayList;
@@ -267,25 +269,30 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   @Nullable
   String downloadPublicUrlFiles(String downloadUrl, String subDirName)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     synchronized (lock) {
       // tmp/dynamic_download/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
       String dynamicDownloadDir = DirCommon.getTempDirRoot() + "/mcts_dynamic_download";
       String filePath = PathUtil.join(dynamicDownloadDir, subDirName);
+      URLConnection connection = null;
       try {
-        // TODO: Add a file checker.
+        URI uri = new URI(downloadUrl);
+        URL url = uri.toURL();
+        connection = url.openConnection();
+        long urlLastModified = connection.getLastModified();
         fileUtil.checkFile(filePath);
-        logger.atInfo().log("Resource %s is already downloaded to %s", downloadUrl, filePath);
-        return filePath;
+        long fileLastModified = fileUtil.getFileLastModifiedTime(filePath).toEpochMilli();
+        if (urlLastModified > fileLastModified) {
+          logger.atInfo().log("File %s is out of date, need to download again.", filePath);
+          fileUtil.removeFileOrDir(filePath);
+        } else {
+          logger.atInfo().log("File %s is up to date, skip downloading.", filePath);
+          return filePath;
+        }
       } catch (MobileHarnessException e) {
         logger.atInfo().log(
             "File %s does not exist, needs to download the file %s.", downloadUrl, filePath);
-      }
-      URLConnection connection;
-      try {
-        URL url = new URL(downloadUrl);
-        connection = url.openConnection();
-      } catch (IOException e) {
+      } catch (IOException | URISyntaxException e) {
         throw new MobileHarnessException(
             AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_FILE_DOWNLOAD_ERROR,
             String.format("An I/O error occurred opening the URLConnection to %s", downloadUrl),
