@@ -48,6 +48,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -58,7 +59,7 @@ class RunCommandHandler {
 
   private static final String SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME = "timestamp_dir_name";
   private static final DateTimeFormatter TIMESTAMP_DIR_NAME_FORMATTER =
-      DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss").withZone(ZoneId.systemDefault());
+      DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss.SSS").withZone(ZoneId.systemDefault());
 
   private final SessionRequestHandlerUtil sessionRequestHandlerUtil;
   private final SessionResultHandlerUtil sessionResultHandlerUtil;
@@ -82,8 +83,12 @@ class RunCommandHandler {
   void initialize(RunCommand command) throws MobileHarnessException, InterruptedException {
     sessionInfo.putSessionProperty(
         SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME,
-        TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()));
+        TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits());
     sessionRequestInfo = generateSessionRequestInfo(command);
+  }
+
+  private static int getRandom4Digits() {
+    return ThreadLocalRandom.current().nextInt(1000, 10000);
   }
 
   /**
