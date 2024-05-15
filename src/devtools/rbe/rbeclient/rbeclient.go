@@ -9,8 +9,13 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 )
 
-// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
-const RBECASConcurrency = 500
+const (
+	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
+	RBECASConcurrency = 500
+
+	// DefaultRPCTimeout is the "default" RPC timeout.
+	DefaultRPCTimeout = 20 * time.Second
+)
 
 // Opts contains options for creating a new RBE client.
 type Opts struct {
@@ -25,6 +30,8 @@ type Opts struct {
 	UseApplicationDefault bool
 	// CASConcurrency is the maximum number of concurrent upload and download operations.
 	CASConcurrency int
+	// Timeout is the "default" RPC timeout for per-rpc deadline.
+	Timeout time.Duration
 }
 
 // New creates a new RBE client with given options.
@@ -33,9 +40,16 @@ func New(ctx context.Context, clientOpts Opts) (*client.Client, error) {
 	if casConcurrency <= 0 {
 		casConcurrency = RBECASConcurrency
 	}
+	rpcTimeouts := client.DefaultRPCTimeouts
+	timeout := clientOpts.Timeout
+	if timeout <= 0 {
+		timeout = DefaultRPCTimeout
+	}
+	rpcTimeouts["default"] = timeout
 	opts := []client.Opt{
 		client.CASConcurrency(casConcurrency),
 		client.StartupCapabilities(true),
+		client.RPCTimeouts(rpcTimeouts),
 	}
 
 	start := time.Now()
