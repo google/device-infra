@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.common.metrics.stability.converter.DeserializedException;
 import com.google.devtools.common.metrics.stability.converter.ErrorModelConverter;
-import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Job.DeviceRequirement;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
@@ -34,6 +33,7 @@ import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.CancelSession;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.HeartbeatSession;
+import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.PluginError;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
@@ -170,11 +170,11 @@ public class AtsDdaStub {
         pluginOutput.map(AtsDdaSessionPluginOutput::getAllocatedDevice);
     Optional<DeserializedException> sessionError =
         SessionErrorUtil.getSessionError(sessionDetail, SESSION_PLUGIN_LABEL);
-    List<ExceptionDetail> jobOrTestExceptionalDetails =
+    List<PluginError> pluginErrors =
         pluginOutput.map(AtsDdaSessionPluginOutput::getErrorsList).orElse(ImmutableList.of());
-    ImmutableList<DeserializedException> jobOrTestErrors =
-        jobOrTestExceptionalDetails.stream()
-            .map(exceptionDetail -> ErrorModelConverter.toDeserializedException(exceptionDetail))
+    ImmutableList<DeserializedException> jobOrTestExceptions =
+        pluginErrors.stream()
+            .map(error -> ErrorModelConverter.toDeserializedException(error.getExceptionDetail()))
             .collect(toImmutableList());
 
     return SessionInfo.of(
@@ -182,7 +182,7 @@ public class AtsDdaStub {
         sessionDetail.getSessionStatus(),
         deviceInfo.orElse(null),
         sessionError.orElse(null),
-        jobOrTestErrors);
+        jobOrTestExceptions);
   }
 
   /**

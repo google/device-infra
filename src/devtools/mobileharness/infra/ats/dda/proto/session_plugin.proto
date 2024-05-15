@@ -46,7 +46,7 @@ message AtsDdaSessionPluginOutput {
   mobileharness.api.query.DeviceInfo allocated_device = 1;
 
   // Errors of jobs and tests
-  repeated stability.model.ExceptionDetail errors = 2;
+  repeated PluginError errors = 2;
 }
 
 message AtsDdaSessionNotification {
@@ -54,6 +54,10 @@ message AtsDdaSessionNotification {
     CancelSession cancel_session = 1;
     HeartbeatSession heartbeat_session = 2;
   }
+}
+
+message PluginError {
+  stability.model.ExceptionDetail exception_detail = 1;
 }
 
 message CancelSession {}

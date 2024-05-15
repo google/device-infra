@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionNotification.NotificationCase;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.AtsDdaSessionPluginOutput;
+import com.google.devtools.mobileharness.infra.ats.dda.proto.SessionPluginProto.PluginError;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
@@ -218,7 +219,9 @@ public class AtsDdaSessionPlugin {
           oldOutput -> {
             AtsDdaSessionPluginOutput.Builder builder =
                 oldOutput == null ? AtsDdaSessionPluginOutput.newBuilder() : oldOutput.toBuilder();
-            return builder.addErrors(exceptionDetail).build();
+            return builder
+                .addErrors(PluginError.newBuilder().setExceptionDetail(exceptionDetail))
+                .build();
           },
           AtsDdaSessionPluginOutput.class);
     }
