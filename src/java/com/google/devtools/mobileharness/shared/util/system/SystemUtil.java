@@ -111,6 +111,7 @@ public class SystemUtil {
   private static volatile boolean processIsShuttingDown;
 
   private String osName = System.getProperty("os.name");
+  private String archName = System.getProperty("os.arch");
   private final CommandExecutor executor;
 
   /** Kill signals. */
@@ -264,6 +265,15 @@ public class SystemUtil {
   /** Returns the OS name. */
   public String getOsName() {
     return osName;
+  }
+
+  /** Returns the OS architecture. */
+  public String getArchName() {
+    return archName;
+  }
+
+  public boolean isX8664() {
+    return getArchName().equals("amd64");
   }
 
   /** Overrides the OS name for testing, e.g. to simulate Mac-specific behavior under test. */

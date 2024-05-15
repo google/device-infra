@@ -47,15 +47,22 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
+import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
+import com.google.devtools.mobileharness.shared.util.command.CommandException;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
-import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.regex.Pattern;
 import javax.inject.Inject;
 import picocli.CommandLine.ArgGroup;
 import picocli.CommandLine.Command;
@@ -168,6 +175,18 @@ public final class RunCommand implements Callable<Integer> {
       description = "Run the specified subplan.")
   private String subPlanName;
 
+  @Option(
+      names = {"--help"},
+      paramLabel = "<help>",
+      description = "Show the help message.")
+  private boolean showHelp;
+
+  @Option(
+      names = {"--help-all"},
+      paramLabel = "<help_all>",
+      description = "Show the help all message.")
+  private boolean showHelpAll;
+
   @Parameters(index = "1..*", hidden = true)
   private List<String> extraRunCmdArgs;
 
@@ -190,6 +209,9 @@ public final class RunCommand implements Callable<Integer> {
 
   static final String RUN_COMMAND_SESSION_NAME = "run_command";
 
+  private static final Pattern LINE_DATETIME_START_PATTERN =
+      Pattern.compile("^\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d");
+
   private static final AtomicInteger NEXT_COMMAND_ID = new AtomicInteger(1);
   private static final AtomicInteger RUNNING_COMMAND_COUNT = new AtomicInteger(0);
 
@@ -205,6 +227,7 @@ public final class RunCommand implements Callable<Integer> {
   private final AtsSessionStub atsSessionStub;
   private final Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture;
   private final boolean parseCommandOnly;
+  private final CommandExecutor commandExecutor;
 
   @Inject
   RunCommand(
@@ -217,6 +240,7 @@ public final class RunCommand implements Callable<Integer> {
       ServerLogPrinter serverLogPrinter,
       ListeningExecutorService executorService,
       AtsSessionStub atsSessionStub,
+      CommandExecutor commandExecutor,
       @RunCommandParsingResultFuture
           Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture,
       @ParseCommandOnly boolean parseCommandOnly) {
@@ -229,12 +253,13 @@ public final class RunCommand implements Callable<Integer> {
     this.serverLogPrinter = serverLogPrinter;
     this.executorService = executorService;
     this.atsSessionStub = atsSessionStub;
+    this.commandExecutor = commandExecutor;
     this.resultFuture = resultFuture;
     this.parseCommandOnly = parseCommandOnly;
   }
 
   @Override
-  public Integer call() throws MobileHarnessException, InterruptedException, IOException {
+  public Integer call() throws MobileHarnessException, InterruptedException {
     ImmutableList<String> command = consoleInfo.getLastCommand();
     try {
       if (parseCommandOnly) {
@@ -247,8 +272,13 @@ public final class RunCommand implements Callable<Integer> {
         }
       }
       checkState(Flags.instance().enableAtsConsoleOlcServer.getNonNull());
-      validateCommandParameters();
-      return runInM1(command);
+      if (showHelp || showHelpAll) {
+        return showHelpMessage(
+            commandHelper.getXtsType(), consoleInfo.getXtsRootDirectoryNonEmpty());
+      } else {
+        validateCommandParameters();
+        return runInM1(command);
+      }
     } finally {
       moduleTestOptionsGroups = null; // Resets the group to clear the history
     }
@@ -352,6 +382,61 @@ public final class RunCommand implements Callable<Integer> {
     return moduleTestOptionsGroups != null && moduleTestOptionsGroups.get(0).test != null
         ? moduleTestOptionsGroups.get(0).test
         : "";
+  }
+
+  @VisibleForTesting
+  int showHelpMessage(String xtsType, String xtsRootDir)
+      throws CommandException, InterruptedException {
+    String xtsRoot = PathUtil.join(xtsRootDir, "android-" + xtsType);
+    String result =
+        commandExecutor.run(
+            com.google.devtools.mobileharness.shared.util.command.Command.of(
+                    XtsCommandUtil.getXtsJavaCommand(
+                        xtsType,
+                        xtsRootDir,
+                        ImmutableList.of(),
+                        PathUtil.join(xtsRoot, "tools/tradefed.jar")
+                            + ":"
+                            + PathUtil.join(xtsRoot, "tools/" + xtsType + "-tradefed.jar"),
+                        ImmutableList.of(
+                            "run", "commandAndExit", config, showHelp ? "--help" : "--help-all")))
+                .timeout(Timeout.fixed(Duration.ofSeconds(60))));
+    Iterable<String> lines = Splitters.LINE_SPLITTER.split(result);
+
+    // A successful output of the help should start with the line like "'cts'
+    // configuration:"(include) and stop with the line like "Received shutdown request."(exclude).
+    // So only print the lines between these two lines.
+    // If a line starts with date time like "02-23 11:11:11", it means this line is the
+    // log of tradefed command and not part of the help message. So need to remove it.
+    // A failed output of the help should only include a line starting with "Failed to run
+    // command:".
+    boolean printing = false;
+    StringBuilder output = new StringBuilder();
+    for (String line : lines) {
+      if (LINE_DATETIME_START_PATTERN.matcher(line).find()) {
+        continue;
+      }
+      if (printing) {
+        if (line.endsWith("Received shutdown request.")) {
+          break;
+        }
+        output.append(line).append("\n");
+      } else if (line.startsWith("'" + config + "' configuration:")) {
+        output.append(line).append("\n");
+        printing = true;
+      } else if (line.startsWith("Failed to run command:")) {
+        output.append(line).append("\n");
+        break;
+      }
+    }
+    // Remove the last newline character because printLnStdout will add a new line.
+    consoleUtil.printlnStdout(
+        output.length() > 0 ? output.deleteCharAt(output.length() - 1).toString() : "");
+
+    if (exitAfterRun) {
+      consoleInfo.setShouldExitConsole(true);
+    }
+    return ExitCode.OK;
   }
 
   private int runInM1(ImmutableList<String> command)

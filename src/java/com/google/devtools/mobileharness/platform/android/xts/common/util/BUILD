@@ -66,3 +66,20 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "xts_command_util",
+    srcs = ["XtsCommandUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/path",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "@maven//:com_google_guava_guava",
+    ],
+)

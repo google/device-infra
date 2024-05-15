@@ -18,6 +18,9 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 
 import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
@@ -25,6 +28,9 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLi
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
+import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -42,6 +48,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import picocli.CommandLine;
+import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.ParameterException;
 
 @RunWith(JUnit4.class)
@@ -56,6 +63,8 @@ public final class RunCommandTest {
 
   @Mock @Bind private LocalFileUtil localFileUtil;
   @Mock @Bind @Nullable @ConsoleLineReader private LineReader lineReader;
+  @Mock @Bind private CommandExecutor commandExecutor;
+  @Mock @Bind private ConsoleUtil consoleUtil;
 
   @Inject private ConsoleInfo consoleInfo;
   private CommandLine commandLine;
@@ -100,5 +109,25 @@ public final class RunCommandTest {
     assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
         .hasMessageThat()
         .contains("Don't use '--include-filter' and '--module/-m' options at the same time");
+  }
+
+  @Test
+  public void showHelpMessage_success() throws Exception {
+    commandLine.parseArgs("cts", "--help");
+    when(commandExecutor.run(any(Command.class)))
+        .thenReturn(
+            "'cts' configuration: Setup that allows to point to a remote config and run it.\n"
+                + "\n"
+                + "aaa\n"
+                + "05-13 20:17:37 I/DeviceManager: Detected new device b\n"
+                + "ccc\n"
+                + "05-13 20:17:37 I/CommandScheduler: Received shutdown request.");
+    assertThat(runCommand.showHelpMessage("cts", "/ats")).isEqualTo(ExitCode.OK);
+    verify(consoleUtil)
+        .printlnStdout(
+            "'cts' configuration: Setup that allows to point to a remote config and run it.\n"
+                + "\n"
+                + "aaa\n"
+                + "ccc");
   }
 }

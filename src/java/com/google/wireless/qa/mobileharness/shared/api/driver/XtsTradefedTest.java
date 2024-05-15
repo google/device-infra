@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.Tradefed
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
@@ -111,9 +112,6 @@ import org.apache.commons.text.StringSubstitutor;
 public class XtsTradefedTest extends BaseDriver
     implements SpecConfigable<XtsTradefedTestDriverSpec> {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static final String COMPATIBILITY_CONSOLE_CLASS =
-      "com.android.compatibility.common.tradefed.command.CompatibilityConsole";
 
   private static final ImmutableSet<String> EXCLUDED_JAR_FILES =
       ImmutableSet.of(
@@ -343,7 +341,15 @@ public class XtsTradefedTest extends BaseDriver
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, String> env =
         getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType, spec);
-    String[] cmd = getXtsCommand(spec, tmpXtsRootDir, xtsType, env, testInfo);
+    ImmutableList<String> cmd =
+        XtsCommandUtil.getXtsJavaCommand(
+            xtsType,
+            tmpXtsRootDir.toString(),
+            ImmutableList.of("-Xmx16g", "-XX:+HeapDumpOnOutOfMemoryError"),
+            requireNonNull(
+                env.getOrDefault(
+                    TF_PATH_KEY, getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType))),
+            getXtsRunCommandArgs(spec, env, testInfo));
     // Logs command string for debug purpose
     StringBuilder commandString =
         new StringBuilder(Joiner.on(' ').withKeyValueSeparator("=").join(env));
@@ -494,36 +500,6 @@ public class XtsTradefedTest extends BaseDriver
 
   private static boolean tfFinished(String line) {
     return line.contains("CommandScheduler: All done");
-  }
-
-  private String[] getXtsCommand(
-      XtsTradefedTestDriverSpec spec,
-      Path tmpXtsRootDir,
-      String xtsType,
-      ImmutableMap<String, String> envVars,
-      TestInfo testInfo)
-      throws MobileHarnessException {
-    ImmutableList.Builder<String> xtsCommand =
-        ImmutableList.<String>builder()
-            .add(getJavaBinary(envVars), "-Xmx16g", "-XX:+HeapDumpOnOutOfMemoryError");
-    xtsCommand
-        .add(
-            "-cp",
-            requireNonNull(
-                envVars.getOrDefault(
-                    TF_PATH_KEY, getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType))))
-        .add(String.format("-D%s_ROOT=%s", Ascii.toUpperCase(xtsType), tmpXtsRootDir))
-        .add(COMPATIBILITY_CONSOLE_CLASS)
-        .addAll(getXtsRunCommandArgs(spec, envVars, testInfo));
-
-    return xtsCommand.build().toArray(new String[0]);
-  }
-
-  private String getJavaBinary(ImmutableMap<String, String> envVars) {
-    if (envVars.containsKey("JAVA_HOME")) {
-      return String.format("%s/bin/java", envVars.get("JAVA_HOME"));
-    }
-    return systemUtil.getJavaBin();
   }
 
   private boolean isJarFileIncluded(
