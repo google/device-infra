@@ -75,13 +75,18 @@ message XtsTradefedTestDriverSpec {
   optional string xts_test_plan_file = 10
       [(file_detail) = { help: "The test plan XML file for xTS to run." }];
 
-  optional string xts_tf_output_path = 11 [(field_detail) = {
-    help: "If present, TF stdout/stderr will be written to the given path. "
-          "If empty, it will be written in the test gen file dir."
-  }];
+  optional string xts_tf_output_path = 11 [
+    deprecated = true,
+    (field_detail) = { help: "Deprecated. Use xts_log_root_path instead." }
+  ];
 
   optional string olc_session_client_id = 12 [(field_detail) = {
     help: "ID of the client of the OLC server session to which "
           "the test is associated (if any)."
+  }];
+
+  optional string xts_log_root_path = 13 [(field_detail) = {
+    help: "If present, TF stdout/stderr will be written to the given path. "
+          "If empty, it will be written in the test gen file dir."
   }];
 }

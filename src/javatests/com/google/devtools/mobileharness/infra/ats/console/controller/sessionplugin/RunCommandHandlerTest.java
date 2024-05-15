@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -205,6 +206,11 @@ public final class RunCommandHandlerTest {
             .build();
     tradefedJobInfo.properties().add(Job.IS_XTS_TF_JOB, "true");
     tradefedJobInfo.tests().add("1", "test_name");
+    tradefedJobInfo
+        .tests()
+        .getOnly()
+        .properties()
+        .add(XtsConstants.TRADEFED_INVOCATION_DIR_NAME, "inv_123456");
 
     JobInfo nonTradefedJobInfo =
         JobInfo.newBuilder()
@@ -251,17 +257,26 @@ public final class RunCommandHandlerTest {
     assertThat(newFilesInTradefedResultsDir.stream().map(f -> f.getFileName().toString()))
         .contains("invocation_summary.txt");
 
+    List<Path> newFilesInInvocationDir =
+        realLocalFileUtil.listFilePaths(
+            xtsRootDir
+                .toPath()
+                .resolve(String.format("android-cts/logs/%s/inv_123456", TIMESTAMP_DIR_NAME)),
+            /* recursively= */ false);
+    assertThat(newFilesInInvocationDir.stream().map(f -> f.getFileName().toString()))
+        .containsExactly("host_adb_log.txt");
+
     List<Path> newFilesInTradefedLogsDir =
         realLocalFileUtil.listFilePaths(
             xtsRootDir
                 .toPath()
                 .resolve(
                     String.format(
-                        "android-cts/logs/%s/tradefed_logs/XtsTradefedTest_test_1",
+                        "android-cts/logs/%s/inv_123456/XtsTradefedTest_test_1",
                         TIMESTAMP_DIR_NAME)),
-            /* recursively= */ true);
+            /* recursively= */ false);
     assertThat(newFilesInTradefedLogsDir.stream().map(f -> f.getFileName().toString()))
-        .containsExactly("host_adb_log.txt", "xts_tf_output.log", "command_history.txt");
+        .containsExactly("xts_tf_output.log", "command_history.txt");
 
     // Verifies non-tradefed test
     List<Path> newFilesInNonTradefedResultsDir =
