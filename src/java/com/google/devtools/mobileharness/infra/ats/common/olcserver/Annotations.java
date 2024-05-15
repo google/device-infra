@@ -25,6 +25,10 @@ public class Annotations {
 
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
+  @interface ClientComponentName {}
+
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
   @interface ServerChannel {}
 
   /** OLC server stub for ATS console / local runner. */

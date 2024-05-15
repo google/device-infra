@@ -176,6 +176,6 @@ public final class AtsConsoleTest {
         .printAbove(
             (AttributedString)
                 argThat(
-                    argument -> argument.toString().contains("SessionRunner: Session detail:")));
+                    argument -> argument.toString().contains("Detected no local Android devices")));
   }
 }

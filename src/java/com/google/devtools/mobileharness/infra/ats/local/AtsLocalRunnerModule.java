@@ -42,7 +42,7 @@ public final class AtsLocalRunnerModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    install(new OlcServerModule(olcServerBinary, deviceInfraServiceFlags));
+    install(new OlcServerModule(olcServerBinary, deviceInfraServiceFlags, "ATS local runner"));
   }
 
   @Provides

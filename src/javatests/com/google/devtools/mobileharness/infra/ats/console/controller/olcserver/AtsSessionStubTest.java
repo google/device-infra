@@ -124,7 +124,7 @@ public class AtsSessionStubTest {
                     + "olcserver/ats_olc_server_local_mode_deploy.jar"));
 
     Guice.createInjector(
-            new OlcServerModule(() -> serverBinary, deviceInfraServiceFlags),
+            new OlcServerModule(() -> serverBinary, deviceInfraServiceFlags, "ATS console"),
             BoundFieldModule.of(this))
         .injectMembers(this);
   }

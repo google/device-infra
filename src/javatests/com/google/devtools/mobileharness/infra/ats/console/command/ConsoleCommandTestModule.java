@@ -45,7 +45,7 @@ public class ConsoleCommandTestModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    install(new OlcServerModule(() -> Path.of(""), ImmutableList.of()));
+    install(new OlcServerModule(() -> Path.of(""), ImmutableList.of(), "ATS console"));
     install(new CompatibilityReportModule());
   }
 

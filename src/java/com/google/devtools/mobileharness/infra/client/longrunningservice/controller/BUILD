@@ -212,7 +212,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_detail_holder",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_plugin",
-        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:version_proto_util",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/event:event_bus_backend",

@@ -20,8 +20,7 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceGrpc;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
-import com.google.devtools.mobileharness.shared.version.Version;
-import com.google.devtools.mobileharness.shared.version.VersionUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
 import io.grpc.stub.StreamObserver;
 
 /** Implementation of {@link VersionServiceGrpc}. */
@@ -33,15 +32,8 @@ public class VersionService extends VersionServiceGrpc.VersionServiceImplBase {
     GrpcServiceUtil.invoke(
         request,
         responseObserver,
-        this::getVersion,
+        req -> VersionProtoUtil.createGetVersionResponse(),
         VersionServiceGrpc.getServiceDescriptor(),
         VersionServiceGrpc.getGetVersionMethod());
-  }
-
-  private GetVersionResponse getVersion(GetVersionRequest request) {
-    GetVersionResponse.Builder result =
-        GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString());
-    VersionUtil.getGitHubVersion().ifPresent(result::setGithubVersion);
-    return result.build();
   }
 }

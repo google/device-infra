@@ -19,9 +19,8 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.getUnchecked;
 import static com.google.common.util.concurrent.Futures.whenAllComplete;
-import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
-import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
@@ -35,6 +34,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
 import com.google.inject.assistedinject.Assisted;
@@ -107,7 +107,10 @@ public class SessionRunner implements Callable<Void> {
     // Prepares environment.
     sessionEnvironment = sessionEnvironmentPreparer.prepareEnvironment(sessionDetailHolder);
 
-    logger.atInfo().log("Starting session runner %s", sessionDetailHolder.getSessionId());
+    logger.atInfo().log(
+        "Starting session runner %s, server_version=[%s]",
+        sessionDetailHolder.getSessionId(),
+        shortDebugString(VersionProtoUtil.createGetVersionResponse()));
 
     // Loads session plugins.
     ImmutableList<SessionPlugin> sessionPlugins =
@@ -124,14 +127,11 @@ public class SessionRunner implements Callable<Void> {
                     .collect(toImmutableList()))
             .build());
 
-    logger
-        .atInfo()
-        .with(IMPORTANCE, IMPORTANT)
-        .log(
-            "Session detail:\n%s",
-            sessionDetailHolder
-                .getProtoPrinter()
-                .shortDebugString(sessionDetailHolder.buildSessionDetail(/* fieldMask= */ null)));
+    logger.atInfo().log(
+        "Session detail:\n%s",
+        sessionDetailHolder
+            .getProtoPrinter()
+            .shortDebugString(sessionDetailHolder.buildSessionDetail(/* fieldMask= */ null)));
 
     // Creates OmniLab jobs.
     sessionJobCreator.createAndAddJobs(sessionDetailHolder);

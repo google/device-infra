@@ -30,6 +30,7 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithEr
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientComponentName;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerBinary;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
@@ -39,6 +40,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.VersionStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
 import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -83,6 +85,7 @@ public class ServerPreparer {
     void log(String format, Object... args);
   }
 
+  private final String clientComponentName;
   private final ServerStartingLogger serverStartingLogger;
   private final CommandExecutor commandExecutor;
   private final Sleeper sleeper;
@@ -97,6 +100,7 @@ public class ServerPreparer {
 
   @Inject
   ServerPreparer(
+      @ClientComponentName String clientComponentName,
       ServerStartingLogger serverStartingLogger,
       CommandExecutor commandExecutor,
       Sleeper sleeper,
@@ -106,6 +110,7 @@ public class ServerPreparer {
       @ServerStub(ServerStub.Type.VERSION_SERVICE) Provider<VersionStub> versionStub,
       @ServerBinary Provider<Path> serverBinary,
       @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags) {
+    this.clientComponentName = clientComponentName;
     this.serverStartingLogger = serverStartingLogger;
     this.commandExecutor = commandExecutor;
     this.sleeper = sleeper;
@@ -142,6 +147,7 @@ public class ServerPreparer {
         killExistingServer();
       } else {
         serverStartingLogger.log("Using existing OLC server");
+        checkAndPrintServerVersionWarning(version);
         return;
       }
     }
@@ -317,6 +323,16 @@ public class ServerPreparer {
                                             .getSessionSubmittedTime())
                                     .toString())))
             .collect(toImmutableList()));
+  }
+
+  private void checkAndPrintServerVersionWarning(GetVersionResponse serverVersion) {
+    GetVersionResponse clientVersion = VersionProtoUtil.createGetVersionResponse();
+    if (!clientVersion.equals(serverVersion)) {
+      logger.atWarning().log(
+          "Using existing OLC server in a different version, "
+              + "version of OLC server: [%s], version of %s: [%s]",
+          shortDebugString(serverVersion), clientComponentName, shortDebugString(clientVersion));
+    }
   }
 
   private static class ServerSuccessfulStartCallback implements FutureCallback<Boolean> {

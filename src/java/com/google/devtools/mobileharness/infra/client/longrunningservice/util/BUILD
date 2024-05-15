@@ -30,3 +30,13 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "version_proto_util",
+    srcs = ["VersionProtoUtil.java"],
+    deps = [
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:version_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/version",
+        "//src/java/com/google/devtools/mobileharness/shared/version:version_util",
+    ],
+)

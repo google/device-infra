@@ -92,6 +92,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:version_proto_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",

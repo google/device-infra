@@ -89,7 +89,7 @@ public class AtsConsoleModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    install(new OlcServerModule(olcServerBinary, deviceInfraServiceFlags));
+    install(new OlcServerModule(olcServerBinary, deviceInfraServiceFlags, "ATS console"));
     install(new CompatibilityReportModule());
   }
 
