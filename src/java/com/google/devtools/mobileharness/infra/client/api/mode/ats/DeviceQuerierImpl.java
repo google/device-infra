@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.DeviceInfoFilter;
+import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
@@ -59,6 +60,23 @@ class DeviceQuerierImpl implements DeviceQuerier {
                 .filter(new DeviceInfoFilter(deviceQueryFilter))
                 .collect(toImmutableList()))
         .build();
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note: {@code selectedDeviceInfoFields}, {@code selectedDimensionNames}, {@code
+   * selectedDrivers} and {@code selectedDecorators} are not supported yet for ATS Device Querier.
+   */
+  @Override
+  public DeviceQueryResult queryDevice(
+      DeviceQueryFilter deviceQueryFilter,
+      List<FieldDescriptor> selectedDeviceInfoFields,
+      List<String> selectedDimensionNames,
+      List<String> selectedDrivers,
+      List<String> selectedDecorators)
+      throws InterruptedException {
+    return queryDevice(deviceQueryFilter);
   }
 
   @Override

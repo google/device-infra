@@ -22,6 +22,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceInfo;
@@ -63,7 +64,27 @@ public interface DeviceQuerier {
   DeviceQueryResult queryDevice(DeviceQueryFilter deviceQueryFilter)
       throws MobileHarnessException, InterruptedException;
 
-  /** Queries device information asyncly. */
+  /**
+   * Queries device information.
+   *
+   * <p>It is highly recommended to set the device query filter to reduce the size of the query
+   * result and improve the performance.
+   *
+   * @see DeviceQueryFilter
+   * @param selectedDeviceInfoFields the fields of device info to be returned. If empty, all fields
+   *     will be returned.
+   * @param selectedDimensionNames the names of dimensions to be returned. If empty, all dimensions
+   *     will be returned.
+   */
+  DeviceQueryResult queryDevice(
+      DeviceQueryFilter deviceQueryFilter,
+      List<FieldDescriptor> selectedDeviceInfoFields,
+      List<String> selectedDimensionNames,
+      List<String> selectedDrivers,
+      List<String> selectedDecorators)
+      throws MobileHarnessException, InterruptedException;
+
+  /** Queries device information asynchronously. */
   ListenableFuture<DeviceQueryResult> queryDeviceAsync(DeviceQueryFilter deviceQueryFilter)
       throws MobileHarnessException, InterruptedException;
 

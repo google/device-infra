@@ -20,6 +20,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier.LabQueryResult;
+import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.model.lab.LabInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.DeviceQuery.DeviceFilter;
@@ -62,6 +63,28 @@ public class CompositeDeviceQuerier implements DeviceQuerier {
 
     for (DeviceQuerier deviceQuerier : deviceQuerierList) {
       deviceQueryResults.add(deviceQuerier.queryDevice(deviceQueryFilter));
+    }
+    return mergeDeviceQueryResults(deviceQueryResults);
+  }
+
+  @Override
+  public DeviceQueryResult queryDevice(
+      DeviceQueryFilter deviceQueryFilter,
+      List<FieldDescriptor> selectedDeviceInfoFields,
+      List<String> selectedDimensionNames,
+      List<String> selectedDrivers,
+      List<String> selectedDecorators)
+      throws MobileHarnessException, InterruptedException {
+    List<DeviceQueryResult> deviceQueryResults = new ArrayList<>();
+
+    for (DeviceQuerier deviceQuerier : deviceQuerierList) {
+      deviceQueryResults.add(
+          deviceQuerier.queryDevice(
+              deviceQueryFilter,
+              selectedDeviceInfoFields,
+              selectedDimensionNames,
+              selectedDrivers,
+              selectedDecorators));
     }
     return mergeDeviceQueryResults(deviceQueryResults);
   }

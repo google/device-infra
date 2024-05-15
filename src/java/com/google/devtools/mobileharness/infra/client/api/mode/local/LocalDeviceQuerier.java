@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceMana
 import com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.devtools.mobileharness.shared.util.network.localhost.LocalHost;
+import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
@@ -162,6 +163,23 @@ class LocalDeviceQuerier implements DeviceQuerier {
     // and short-circuit logic to implement "invoke API 1 -> match condition 1 -> invoke API 2 ->
     // match condition 2 -> ... -> conversion device info with previous data", the code will be
     // very ugly. So let's just keep the current code until we meet performance problems.
+  }
+
+  /**
+   * {@inheritDoc}
+   *
+   * <p>Note: {@code selectedDeviceInfoFields}, {@code selectedDimensionNames}, {@code
+   * selectedDrivers} and {@code selectedDecorators} are not supported yet for Local Device Querier.
+   */
+  @Override
+  public DeviceQueryResult queryDevice(
+      DeviceQueryFilter deviceQueryFilter,
+      List<FieldDescriptor> selectedDeviceInfoFields,
+      List<String> selectedDimensionNames,
+      List<String> selectedDrivers,
+      List<String> selectedDecorators)
+      throws MobileHarnessException, InterruptedException {
+    return queryDevice(deviceQueryFilter);
   }
 
   @Override
