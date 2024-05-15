@@ -66,6 +66,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/notice:notice_message_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:version_message_util",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",

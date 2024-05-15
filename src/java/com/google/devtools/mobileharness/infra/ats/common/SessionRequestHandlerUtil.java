@@ -22,8 +22,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.primitives.Ints.saturatedCast;
-import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.IMPORTANCE;
-import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.Importance.OLC_SERVER_IMPORTANT_LOG;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -191,14 +191,14 @@ public class SessionRequestHandlerUtil {
           } else {
             logger
                 .atInfo()
-                .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+                .with(IMPORTANCE, IMPORTANT)
                 .log("Passed in device serial [%s] is not detected, skipped.", serial);
           }
         });
     if (existingPassedInDeviceSerials.isEmpty()) {
       logger
           .atInfo()
-          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .with(IMPORTANCE, IMPORTANT)
           .log("None of passed in devices exist [%s], skipped.", passedInDeviceSerials);
       return ImmutableList.of();
     }
@@ -333,7 +333,7 @@ public class SessionRequestHandlerUtil {
     if (filteredModules.isEmpty()) {
       logger
           .atInfo()
-          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .with(IMPORTANCE, IMPORTANT)
           .log(
               "Skip creating tradefed jobs as none of given modules is for tradefed module: %s",
               modules);
@@ -381,7 +381,7 @@ public class SessionRequestHandlerUtil {
     if (subDeviceSpecList.size() < minDeviceCount) {
       logger
           .atInfo()
-          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .with(IMPORTANCE, IMPORTANT)
           .log("Found no enough devices to create the job config.");
       return Optional.empty();
     }
@@ -568,7 +568,7 @@ public class SessionRequestHandlerUtil {
         && subPlan.getExcludeFiltersMultimap().isEmpty()) {
       logger
           .atInfo()
-          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .with(IMPORTANCE, IMPORTANT)
           .log("No include or exclude filters found for TF modules and tests ");
       return Optional.empty();
     }
@@ -707,7 +707,7 @@ public class SessionRequestHandlerUtil {
     if (queryDeviceInfo.isEmpty()) {
       logger
           .atInfo()
-          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .with(IMPORTANCE, IMPORTANT)
           .log("No match Android devices, return empty device info.");
       return Optional.empty();
     }
@@ -742,7 +742,7 @@ public class SessionRequestHandlerUtil {
       throws MobileHarnessException, InterruptedException {
     ImmutableSet<String> allLocalAndroidDevices = getAllLocalAndroidDevices();
     if (!allLocalAndroidDevices.isEmpty()) {
-      Optional<String> deviceSerial = Optional.empty();
+      Optional<String> deviceSerial;
       if (sessionRequestInfo.deviceSerials().isEmpty()) {
         deviceSerial = allLocalAndroidDevices.stream().findFirst();
       } else {
@@ -754,7 +754,7 @@ public class SessionRequestHandlerUtil {
       if (deviceSerial.isEmpty()) {
         logger
             .atInfo()
-            .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+            .with(IMPORTANCE, IMPORTANT)
             .log(
                 "No match local Android devices, return empty device info. Detected all local"
                     + " Android devices: %s",
@@ -775,7 +775,7 @@ public class SessionRequestHandlerUtil {
     }
     logger
         .atInfo()
-        .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+        .with(IMPORTANCE, IMPORTANT)
         .log("Detected no local Android devices, return empty device info.");
     return Optional.empty();
   }
@@ -817,7 +817,7 @@ public class SessionRequestHandlerUtil {
     if (!canCreateNonTradefedJobs(sessionRequestInfo)) {
       logger
           .atInfo()
-          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .with(IMPORTANCE, IMPORTANT)
           .log(
               "Skip creating non-tradefed jobs as none of given modules is for non-tradefed module:"
                   + " %s",
@@ -1030,7 +1030,7 @@ public class SessionRequestHandlerUtil {
     }
     logger
         .atWarning()
-        .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+        .with(IMPORTANCE, IMPORTANT)
         .log("Failed to parse test case name from [%s].", testName);
     return "";
   }
@@ -1106,7 +1106,7 @@ public class SessionRequestHandlerUtil {
     if (moduleDevices.isEmpty()) {
       logger
           .atInfo()
-          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .with(IMPORTANCE, IMPORTANT)
           .log(
               "Found no devices to create the job config for xts non-tradefed job with module"
                   + " '%s'.",
@@ -1119,7 +1119,7 @@ public class SessionRequestHandlerUtil {
       if (device.getName().isEmpty()) {
         logger
             .atWarning()
-            .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+            .with(IMPORTANCE, IMPORTANT)
             .log("Device name is missing in a <device> in module '%s'", expandedModuleName);
         return Optional.empty();
       } else {
@@ -1216,7 +1216,7 @@ public class SessionRequestHandlerUtil {
           && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
         logger
             .atInfo()
-            .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+            .with(IMPORTANCE, IMPORTANT)
             .log("No include or exclude filters found for Non-TF modules and tests");
         return Optional.empty();
       }

@@ -60,7 +60,7 @@ java_library(
         ":log",
         ":log_collector_backend",
         ":log_data",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:log_record_importance",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",

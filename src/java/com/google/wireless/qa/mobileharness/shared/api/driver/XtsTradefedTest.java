@@ -44,12 +44,12 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
@@ -389,7 +389,7 @@ public class XtsTradefedTest extends BaseDriver
                                 LogRecord.newBuilder()
                                     .setFormattedLogRecord(line + "\n")
                                     .setSourceType(SourceType.TF)
-                                    .setImportance(Importance.TF_LOG.value());
+                                    .setImportance(Importance.TF.value());
                             if (olcSessionClientId != null) {
                               logRecord.setClientId(olcSessionClientId);
                             }

@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite;
 
-import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.IMPORTANCE;
-import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.Importance.OLC_SERVER_IMPORTANT_LOG;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
@@ -134,7 +134,7 @@ public class TestSuiteHelper {
       } else {
         logger
             .atInfo()
-            .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+            .with(IMPORTANCE, IMPORTANT)
             .log(
                 "abi '%s' is supported by device but not by this suite build (%s), tests will not"
                     + " run against it.",
@@ -156,10 +156,7 @@ public class TestSuiteHelper {
   private ImmutableSet<String> getDeviceAbis(@Nullable DeviceInfo deviceInfo)
       throws MobileHarnessException, InterruptedException {
     if (deviceInfo == null) {
-      logger
-          .atInfo()
-          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
-          .log("No device info provided, using host abis.");
+      logger.atInfo().with(IMPORTANCE, IMPORTANT).log("No device info provided, using host abis.");
       return ImmutableSet.copyOf(getHostAbis());
     }
 

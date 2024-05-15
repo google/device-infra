@@ -20,10 +20,10 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.Callables
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
+import com.google.devtools.mobileharness.shared.constant.LogRecordImportance;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import com.google.devtools.mobileharness.shared.util.logging.LogDataExtractor;
 import java.util.HashSet;
@@ -228,7 +228,7 @@ public class LogManager<D> {
       String formattedLogRecord = logHandler.getFormatter().format(record);
       int importance =
           LogDataExtractor.getSingleMetadataValue(record, LogRecordImportance.IMPORTANCE)
-              .orElse(LogRecordImportance.Importance.OLC_SERVER_LOG)
+              .orElse(LogRecordImportance.Importance.NORMAL)
               .value();
       return LogProto.LogRecord.newBuilder()
           .setFormattedLogRecord(formattedLogRecord)

@@ -19,6 +19,8 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.getUnchecked;
 import static com.google.common.util.concurrent.Futures.whenAllComplete;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 
 import com.google.common.collect.ImmutableList;
@@ -26,7 +28,6 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionEnvironmentPreparer.SessionEnvironment;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
@@ -125,8 +126,7 @@ public class SessionRunner implements Callable<Void> {
 
     logger
         .atInfo()
-        .with(
-            LogRecordImportance.IMPORTANCE, LogRecordImportance.Importance.OLC_SERVER_IMPORTANT_LOG)
+        .with(IMPORTANCE, IMPORTANT)
         .log(
             "Session detail:\n%s",
             sessionDetailHolder

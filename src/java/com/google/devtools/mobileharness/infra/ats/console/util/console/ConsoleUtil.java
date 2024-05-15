@@ -18,7 +18,9 @@ package com.google.devtools.mobileharness.infra.ats.console.util.console;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
+import com.google.devtools.mobileharness.shared.constant.LogRecordImportance;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.logging.LogDataExtractor;
 import com.google.errorprone.annotations.FormatMethod;
 import java.io.PrintStream;
 import java.util.Objects;
@@ -150,9 +152,19 @@ public class ConsoleUtil {
 
   private class LogHandler extends Handler {
 
+    private LogHandler() {
+      setFilter(
+          record ->
+              !Objects.equals(record.getLoggerName(), LOGGER_NAME)
+                  && LogDataExtractor.getSingleMetadataValue(record, LogRecordImportance.IMPORTANCE)
+                          .orElse(LogRecordImportance.Importance.NORMAL)
+                          .value()
+                      >= LogRecordImportance.Importance.NORMAL.value());
+    }
+
     @Override
     public void publish(LogRecord logRecord) {
-      if (isLoggable(logRecord) && !Objects.equals(logRecord.getLoggerName(), LOGGER_NAME)) {
+      if (isLoggable(logRecord)) {
         try {
           String text = getFormatter().format(logRecord);
           doPrintlnStderr(text);

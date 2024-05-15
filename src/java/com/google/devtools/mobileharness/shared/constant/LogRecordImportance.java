@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.longrunningservice.constant;
+package com.google.devtools.mobileharness.shared.constant;
 
 import com.google.common.flogger.MetadataKey;
 
@@ -23,10 +23,11 @@ public class LogRecordImportance {
 
   /** Values of importance. */
   public enum Importance {
-    OLC_SERVER_LOG(100),
-    TEST_INFO_LOG(150),
-    OLC_SERVER_IMPORTANT_LOG(200),
-    TF_LOG(300);
+    DEBUG(50),
+    NORMAL(100),
+    TEST_INFO(150),
+    IMPORTANT(200),
+    TF(300);
 
     private final int value;
 

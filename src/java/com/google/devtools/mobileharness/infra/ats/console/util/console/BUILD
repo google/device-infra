@@ -34,8 +34,10 @@ java_library(
     deps = [
         ":console_text_style",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:log_data_extractor",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:javax_inject_jsr330_api",

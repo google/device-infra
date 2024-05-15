@@ -17,8 +17,8 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.IMPORTANCE;
-import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.LogRecordImportance.Importance.OLC_SERVER_IMPORTANT_LOG;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
@@ -248,7 +248,7 @@ public class AtsSessionPlugin {
     if (!resultTypeWithCause.type().equals(TestResult.PASS)) {
       logger
           .atWarning()
-          .with(IMPORTANCE, OLC_SERVER_IMPORTANT_LOG)
+          .with(IMPORTANCE, IMPORTANT)
           .log(
               "Warning of test [%s/%s]:\n%s",
               testInfo.locator().getId(),

@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.infra.ats.console;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.shell.ShellUtils.tokenize;
 import static java.util.Arrays.asList;
@@ -205,9 +207,7 @@ public class AtsConsole {
     if (!mainArgs.isEmpty()) {
       consoleUtil.printlnStderr("Args: %s", mainArgs);
     }
-    if (!deviceInfraServiceFlags.isEmpty()) {
-      consoleUtil.printlnStderr("Flags: %s", deviceInfraServiceFlags);
-    }
+    logger.atInfo().with(IMPORTANCE, DEBUG).log("Flags: %s", deviceInfraServiceFlags);
 
     // Starts listing test plans.
     CommandCompleterHolder.getInstance().initialize(commandCompleter);
