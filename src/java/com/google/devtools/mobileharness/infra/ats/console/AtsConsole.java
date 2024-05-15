@@ -205,9 +205,6 @@ public class AtsConsole {
     if (!mainArgs.isEmpty()) {
       consoleUtil.printlnStderr("Args: %s", mainArgs);
     }
-    if (!deviceInfraServiceFlags.isEmpty()) {
-      consoleUtil.printlnStderr("Flags: %s", deviceInfraServiceFlags);
-    }
 
     // Starts listing test plans.
     CommandCompleterHolder.getInstance().initialize(commandCompleter);
