@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
+import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.concurrent.MobileHarnessCallable;
@@ -314,15 +315,30 @@ public class SessionResultHandlerUtil {
           && !sessionRequestInfo.testName().get().isEmpty()) {
         finalReportBuilder.setTestFilter(sessionRequestInfo.testName().get());
       }
+      ImmutableSet.Builder<String> includeFilters = ImmutableSet.builder();
+      ImmutableSet.Builder<String> excludeFilters = ImmutableSet.builder();
       if (!sessionRequestInfo.includeFilters().isEmpty()) {
-        finalReportBuilder.addAllIncludeFilter(sessionRequestInfo.includeFilters());
+        includeFilters.addAll(sessionRequestInfo.includeFilters());
       }
       if (!sessionRequestInfo.excludeFilters().isEmpty()) {
-        finalReportBuilder.addAllExcludeFilter(sessionRequestInfo.excludeFilters());
+        excludeFilters.addAll(sessionRequestInfo.excludeFilters());
       }
-      finalReport = finalReportBuilder.build();
+      if (sessionRequestInfo.subPlanName().isPresent()) {
+        // Add all filters in the sub-plan so these filters are loaded in retry
+        SubPlan subPlan =
+            SessionHandlerHelper.loadSubPlan(
+                sessionRequestInfo.xtsRootDir(),
+                sessionRequestInfo.xtsType(),
+                sessionRequestInfo.subPlanName().get());
+        includeFilters.addAll(subPlan.getAllIncludeFilters());
+        excludeFilters.addAll(subPlan.getAllExcludeFilters());
+      }
+      finalReport =
+          finalReportBuilder
+              .addAllIncludeFilter(includeFilters.build())
+              .addAllExcludeFilter(excludeFilters.build())
+              .build();
       reportCreator.createReport(finalReport, resultDir, null, sessionRequestInfo.htmlInZip());
-
     } else if (isRunRetry) {
       if (sessionRequestInfo.retrySessionId().isPresent()) {
         finalReport =

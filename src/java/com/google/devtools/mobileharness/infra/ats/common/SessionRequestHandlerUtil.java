@@ -82,10 +82,8 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.file.Path;
@@ -548,21 +546,7 @@ public class SessionRequestHandlerUtil {
       throws MobileHarnessException, InterruptedException {
     Path subPlansDir = XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), xtsType);
     Path subPlanPath = subPlansDir.resolve(subPlanName + ".xml");
-    if (!localFileUtil.isFileExist(subPlanPath)) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_SUBPLAN_XML_NOT_FOUND,
-          String.format("Subplan xml file %s doesn't exist", subPlanPath));
-    }
-
-    SubPlan subPlan = new SubPlan();
-    try (InputStream inputStream = new FileInputStream(subPlanPath.toFile())) {
-      subPlan.parse(inputStream);
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_PARSE_SUBPLAN_XML_ERROR,
-          String.format("Failed to parse the subplan xml file at %s", subPlanPath),
-          e);
-    }
+    SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
 
     if (subPlan.getIncludeFiltersMultimap().isEmpty()
         && subPlan.getExcludeFiltersMultimap().isEmpty()) {
@@ -1201,32 +1185,16 @@ public class SessionRequestHandlerUtil {
 
   private Optional<SubPlan> prepareNonTfSubPlan(
       String xtsRootDir, String xtsType, String subPlanName) throws MobileHarnessException {
-    Path subPlanPath =
-        XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), xtsType).resolve(subPlanName + ".xml");
-    if (!localFileUtil.isFileExist(subPlanPath)) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_SUBPLAN_XML_NOT_FOUND,
-          String.format("Subplan xml file %s doesn't exist", subPlanPath));
+    SubPlan subPlan = SessionHandlerHelper.loadSubPlan(xtsRootDir, xtsType, subPlanName);
+    if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
+        && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("No include or exclude filters found for Non-TF modules and tests");
+      return Optional.empty();
     }
-
-    try (InputStream inputStream = new FileInputStream(subPlanPath.toFile())) {
-      SubPlan subPlan = new SubPlan();
-      subPlan.parse(inputStream);
-      if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
-          && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
-        logger
-            .atInfo()
-            .with(IMPORTANCE, IMPORTANT)
-            .log("No include or exclude filters found for Non-TF modules and tests");
-        return Optional.empty();
-      }
-      return Optional.of(subPlan);
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_PARSE_SUBPLAN_XML_ERROR,
-          String.format("Failed to parse the subplan xml file at %s", subPlanPath),
-          e);
-    }
+    return Optional.of(subPlan);
   }
 
   // For ATS Console

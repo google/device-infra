@@ -17,6 +17,15 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import com.google.common.base.Ascii;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Path;
 
 /** Helper class for session handler utils. */
 public class SessionHandlerHelper {
@@ -30,6 +39,34 @@ public class SessionHandlerHelper {
   /** Checks if the test plan is retry. */
   public static boolean isRunRetry(String testPlan) {
     return Ascii.equalsIgnoreCase(testPlan, "retry");
+  }
+
+  public static SubPlan loadSubPlan(String xtsRootDir, String xtsType, String subPlanName)
+      throws MobileHarnessException {
+    File subPlanFile =
+        XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), xtsType)
+            .resolve(subPlanName + ".xml")
+            .toFile();
+    return loadSubPlan(subPlanFile);
+  }
+
+  public static SubPlan loadSubPlan(File subPlanFile) throws MobileHarnessException {
+    if (!subPlanFile.exists() || !subPlanFile.isFile()) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_SUBPLAN_XML_NOT_FOUND,
+          String.format("Subplan xml file %s doesn't exist", subPlanFile));
+    }
+
+    SubPlan subPlan = new SubPlan();
+    try (InputStream inputStream = new FileInputStream(subPlanFile)) {
+      subPlan.parse(inputStream);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_PARSE_SUBPLAN_XML_ERROR,
+          String.format("Failed to parse the subplan xml file at %s", subPlanFile),
+          e);
+    }
+    return subPlan;
   }
 
   private SessionHandlerHelper() {}

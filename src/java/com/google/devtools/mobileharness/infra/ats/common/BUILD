@@ -142,6 +142,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_report_merger",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
         "//src/java/com/google/devtools/mobileharness/platform/testbed/mobly/util:mobly_test_info_map_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
@@ -161,7 +162,12 @@ java_library(
 java_library(
     name = "session_handler_helper",
     srcs = ["SessionHandlerHelper.java"],
-    deps = ["@maven//:com_google_guava_guava"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
+        "@maven//:com_google_guava_guava",
+    ],
 )
 
 java_library(

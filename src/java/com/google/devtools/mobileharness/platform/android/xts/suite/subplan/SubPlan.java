@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite.subplan;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Multimaps;
 import com.google.common.collect.SetMultimap;
 import com.google.common.collect.TreeMultimap;
@@ -165,6 +166,24 @@ public class SubPlan extends AbstractXmlParser {
     return Optional.ofNullable(prevSessionDeviceBuildFingerprint);
   }
 
+  /** Gets all the include filters. */
+  public ImmutableList<String> getAllIncludeFilters() {
+    ImmutableList.Builder<String> includeFilters = ImmutableList.builder();
+    return includeFilters
+        .addAll(getFiltersFromMap(includeFiltersMultimap))
+        .addAll(getFiltersFromMap(nonTfIncludeFiltersMultimap))
+        .build();
+  }
+
+  /** Gets all the exclude filters. */
+  public ImmutableList<String> getAllExcludeFilters() {
+    ImmutableList.Builder<String> excludeFilters = ImmutableList.builder();
+    return excludeFilters
+        .addAll(getFiltersFromMap(excludeFiltersMultimap))
+        .addAll(getFiltersFromMap(nonTfExcludeFiltersMultimap))
+        .build();
+  }
+
   /**
    * Serializes the existing filters into a stream of XML, and write to an output stream.
    *
@@ -240,6 +259,23 @@ public class SubPlan extends AbstractXmlParser {
         }
       }
     }
+  }
+
+  private static ImmutableList<String> getFiltersFromMap(TreeMultimap<String, String> map) {
+    ImmutableList.Builder<String> filters = ImmutableList.builder();
+    for (Entry<String, SortedSet<String>> entry : Multimaps.asMap(map).entrySet()) {
+      if (entry.getValue().contains(ALL_TESTS_IN_MODULE) && entry.getValue().size() == 1) {
+        filters.add(entry.getKey());
+      } else {
+        for (String testName : entry.getValue()) {
+          if (testName.equals(ALL_TESTS_IN_MODULE)) {
+            continue;
+          }
+          filters.add(entry.getKey() + " " + testName);
+        }
+      }
+    }
+    return filters.build();
   }
 
   /** Creates a {@link DefaultHandler} to process the xml. */
