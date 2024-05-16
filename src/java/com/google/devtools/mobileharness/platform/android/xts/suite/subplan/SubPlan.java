@@ -166,7 +166,7 @@ public class SubPlan extends AbstractXmlParser {
     return Optional.ofNullable(prevSessionDeviceBuildFingerprint);
   }
 
-  /** Gets all the include filters. */
+  /** Gets all include filters. */
   public ImmutableList<String> getAllIncludeFilters() {
     ImmutableList.Builder<String> includeFilters = ImmutableList.builder();
     return includeFilters
@@ -175,7 +175,7 @@ public class SubPlan extends AbstractXmlParser {
         .build();
   }
 
-  /** Gets all the exclude filters. */
+  /** Gets all exclude filters. */
   public ImmutableList<String> getAllExcludeFilters() {
     ImmutableList.Builder<String> excludeFilters = ImmutableList.builder();
     return excludeFilters
