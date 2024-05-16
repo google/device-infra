@@ -934,6 +934,15 @@ public class SessionRequestHandlerUtil {
                     excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))) {
           continue;
         }
+        if (subPlanOpt.isPresent()
+            && subPlanOpt.get().getNonTfExcludeFiltersMultimap().keySet().stream()
+                .map(SuiteTestFilter::create)
+                .anyMatch(
+                    excludeFilter ->
+                        excludeFilter.matchModule(
+                            originalModuleName, moduleAbi, moduleParameter))) {
+          continue;
+        }
         if (sessionRequestInfo.testName().isPresent()) {
           String parsedTestName = parseTestName(sessionRequestInfo.testName().orElse(null));
           if (!parsedTestName.isEmpty()) {

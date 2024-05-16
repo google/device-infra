@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no' ?>
+<SubPlan version="2.0">
+  <Entry include="arm64-v8a CtsAccelerationTestCases" />
+  <Entry include="arm64-v8a CtsAccelerationTestCases[instant]" />
+  <Entry include="armeabi-v7a CtsAccelerationTestCases" />
+  <Entry include="arm64-v8a HelloWorldTest" isNonTf="true" />
+  <Entry include="armeabi-v7a HelloWorldTest" isNonTf="true" />
+  <Entry exclude="HelloWorldTest" isNonTf="true" />
+</SubPlan>

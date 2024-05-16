@@ -91,6 +91,9 @@ public final class SessionRequestHandlerUtilTest {
   private static final String SUBPLAN2_XML =
       RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "subplan2.xml");
 
+  private static final String SUBPLAN3_XML =
+      RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "subplan3.xml");
+
   private static final String XTS_ROOT_DIR_PATH = "/path/to/xts_root_dir";
   private static final String ANDROID_XTS_ZIP_PATH = "ats-file-server::/path/to/android_xts.zip";
 
@@ -1627,6 +1630,66 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobInfos).hasSize(2);
     assertThat(jobInfos.get(0).locator().getName()).endsWith("HelloWorldTest");
     assertThat(jobInfos.get(1).locator().getName()).endsWith("HelloWorldTest[instant]");
+  }
+
+  @Test
+  public void createXtsNonTradefedJobs_subPlanCmdWithExcludeFilter() throws Exception {
+    File xtsRootDir = folder.newFolder("xts_root_dir");
+    Path subPlansDir = xtsRootDir.toPath().resolve("android-cts/subplans");
+    realLocalFileUtil.prepareDir(subPlansDir);
+    realLocalFileUtil.copyFileOrDir(SUBPLAN3_XML, subPlansDir.toAbsolutePath().toString());
+
+    Configuration config1 =
+        Configuration.newBuilder()
+            .setMetadata(
+                ConfigurationMetadata.newBuilder()
+                    .setXtsModule("HelloWorldTest")
+                    .setIsConfigV2(true))
+            .addDevices(Device.newBuilder().setName("AndroidDevice"))
+            .setTest(
+                com.google.devtools.mobileharness.platform.android.xts.config.proto
+                    .ConfigurationProto.Test.newBuilder()
+                    .setClazz("Driver"))
+            .build();
+    when(configurationUtil.getConfigsV2FromDirs(any()))
+        .thenReturn(ImmutableMap.of("/path/to/config1", config1));
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder()
+                        .setId("device_id_1")
+                        .addType("AndroidOnlineDevice")
+                        .addDimension(
+                            Dimension.newBuilder().setName("abilist").setValue("arm64-v8a")))
+                .build());
+    sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
+    doReturn(testSuiteHelper)
+        .when(sessionRequestHandlerUtil)
+        .getTestSuiteHelper(any(), any(), any());
+    when(testSuiteHelper.loadTests(any()))
+        .thenReturn(
+            ImmutableMap.of(
+                "arm64-v8a HelloWorldTest", config1, "arm64-v8a HelloWorldTest[instant]", config1));
+    doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
+    doCallRealMethod().when(localFileUtil).isDirExist(any(String.class));
+
+    SessionRequestInfo sessionRequestInfo =
+        sessionRequestHandlerUtil.addNonTradefedModuleInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts --subplan subplan3")
+                .setXtsType("cts")
+                .setXtsRootDir(xtsRootDir.getAbsolutePath())
+                .setSubPlanName("subplan3")
+                .build());
+    ImmutableList<JobInfo> jobInfos =
+        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
+
+    assertThat(jobInfos).hasSize(1);
+
+    // The exclude filter in subplan excluded "arm64-v8a HelloWorldTest".
+    assertThat(jobInfos.get(0).locator().getName()).endsWith("HelloWorldTest[instant]");
   }
 
   @Test

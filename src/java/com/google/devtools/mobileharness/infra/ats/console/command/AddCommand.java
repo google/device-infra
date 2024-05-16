@@ -121,7 +121,17 @@ class AddCommand implements Callable<Integer> {
               description =
                   "The abi to test, combined with the given module. Only works when module"
                       + " specified.")
-          String abi)
+          String abi,
+      @Option(
+              names = {"--exclude-filter"},
+              paramLabel = "\"[abi] <module-name> [test name]\"",
+              description =
+                  "Exclude the specified modules, or test packages, classes, and cases, from the"
+                      + " subplan. For example, add subplan --session"
+                      + " <session_index> --exclude-filter \"CtsCalendarcommon2Test"
+                      + " android.calendarcommon2.cts.Calendarcommon2Test#testStaticLinking\""
+                      + " excludes the specified test case.")
+          List<String> excludeFilters)
       throws MobileHarnessException {
     String xtsRootDirectory = consoleInfo.getXtsRootDirectoryNonEmpty();
     String xtsType = commandHelper.getXtsType();
@@ -148,6 +158,9 @@ class AddCommand implements Callable<Integer> {
     }
     if (!Strings.isNullOrEmpty(abi)) {
       addSubPlanArgsBuilder.setAbi(abi);
+    }
+    if (excludeFilters != null) {
+      addSubPlanArgsBuilder.setPassedInExcludeFilters(ImmutableSet.copyOf(excludeFilters));
     }
 
     Optional<File> subPlanFile =

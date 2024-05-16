@@ -18,7 +18,6 @@ package com.google.devtools.mobileharness.platform.android.xts.suite.subplan;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableSet;
-import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import java.nio.file.Path;
 import java.util.Optional;
 
@@ -45,10 +44,10 @@ public abstract class AddSubPlanArgs {
   public abstract ImmutableSet<ResultType> resultTypes();
 
   /** Include filters passed in for the session. */
-  public abstract ImmutableSet<SuiteTestFilter> passedInIncludeFilters();
+  public abstract ImmutableSet<String> passedInIncludeFilters();
 
   /** Exclude filters passed in for the session. */
-  public abstract ImmutableSet<SuiteTestFilter> passedInExcludeFilters();
+  public abstract ImmutableSet<String> passedInExcludeFilters();
 
   /** The test module to run. */
   public abstract Optional<String> module();
@@ -83,11 +82,9 @@ public abstract class AddSubPlanArgs {
 
     public abstract Builder setResultTypes(ImmutableSet<ResultType> resultTypes);
 
-    public abstract Builder setPassedInIncludeFilters(
-        ImmutableSet<SuiteTestFilter> passedInIncludeFilters);
+    public abstract Builder setPassedInIncludeFilters(ImmutableSet<String> passedInIncludeFilters);
 
-    public abstract Builder setPassedInExcludeFilters(
-        ImmutableSet<SuiteTestFilter> passedInExcludeFilters);
+    public abstract Builder setPassedInExcludeFilters(ImmutableSet<String> passedInExcludeFilters);
 
     public abstract Builder setModule(String module);
 

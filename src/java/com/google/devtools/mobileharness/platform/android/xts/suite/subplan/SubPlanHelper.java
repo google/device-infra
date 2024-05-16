@@ -16,8 +16,11 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite.subplan;
 
+import com.google.common.base.Ascii;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
@@ -137,6 +140,40 @@ public class SubPlanHelper {
       subPlan.addNonTfExcludeFilter(filter);
     } else {
       subPlan.addExcludeFilter(filter);
+    }
+  }
+
+  public static void addPassedInFiltersToSubPlan(
+      SubPlan subPlan,
+      ImmutableSet<SuiteTestFilter> passedInIncludeFilters,
+      ImmutableSet<SuiteTestFilter> passedInExcludeFilters,
+      ImmutableSet<String> allNonTfModules)
+      throws MobileHarnessException {
+
+    for (SuiteTestFilter filter : passedInIncludeFilters) {
+      if (allNonTfModules.stream()
+          .map(Ascii::toLowerCase)
+          .anyMatch(Ascii.toLowerCase(filter.moduleName())::contains)) {
+        subPlan.addNonTfIncludeFilter(filter.filterString());
+      } else {
+        subPlan.addIncludeFilter(filter.filterString());
+      }
+    }
+
+    for (SuiteTestFilter filter : passedInExcludeFilters) {
+      if (allNonTfModules.stream()
+          .map(Ascii::toLowerCase)
+          .anyMatch(Ascii.toLowerCase(filter.moduleName())::contains)) {
+        if (filter.testName().isPresent()) {
+          throw new MobileHarnessException(
+              InfraErrorId.ATSC_SUBPLAN_INVALID_FILTER_ERROR,
+              "Non tradefed test filter only support module level filter. Filter: "
+                  + filter.filterString());
+        }
+        subPlan.addNonTfExcludeFilter(filter.filterString());
+      } else {
+        subPlan.addExcludeFilter(filter.filterString());
+      }
     }
   }
 

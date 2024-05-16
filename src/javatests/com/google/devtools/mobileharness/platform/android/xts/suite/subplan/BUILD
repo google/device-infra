@@ -31,7 +31,9 @@ java_library(
     ],
     deps = [
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:add_sub_plan_args",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:result_type",

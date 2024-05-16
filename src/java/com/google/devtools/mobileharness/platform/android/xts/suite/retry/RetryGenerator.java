@@ -44,14 +44,17 @@ public class RetryGenerator {
   /** Generates a {@link SubPlan} that contains the retry modules and tests. */
   public SubPlan generateRetrySubPlan(RetryArgs retryArgs) throws MobileHarnessException {
     Path resultsDir = retryArgs.resultsDir();
+    String retryIndexOrId = "";
     Result previousResult;
     if (retryArgs.previousSessionId().isEmpty()) {
       previousResult =
           previousResultLoader.loadPreviousResult(
               resultsDir, retryArgs.previousSessionIndex().orElseThrow());
+      retryIndexOrId = String.valueOf(retryArgs.previousSessionIndex().orElseThrow());
     } else {
       previousResult =
           previousResultLoader.loadPreviousResult(resultsDir, retryArgs.previousSessionId().get());
+      retryIndexOrId = retryArgs.previousSessionId().get();
     }
 
     Optional<RetryType> retryType = retryArgs.retryType();
@@ -78,34 +81,17 @@ public class RetryGenerator {
                 .map(SuiteTestFilter::create)
                 .collect(toImmutableSet()),
             retryArgs.passedInModules());
-    for (SuiteTestFilter filter : retryArgs.passedInIncludeFilters()) {
-      if (retryArgs.allNonTfModules().stream()
-          .map(Ascii::toLowerCase)
-          .anyMatch(Ascii.toLowerCase(filter.moduleName())::contains)) {
-        subPlan.addNonTfIncludeFilter(filter.filterString());
-      } else {
-        subPlan.addIncludeFilter(filter.filterString());
-      }
-    }
-
-    for (SuiteTestFilter filter : retryArgs.passedInExcludeFilters()) {
-      if (retryArgs.allNonTfModules().stream()
-          .map(Ascii::toLowerCase)
-          .anyMatch(Ascii.toLowerCase(filter.moduleName())::contains)) {
-        if (filter.testName().isPresent()) {
-          throw new MobileHarnessException(
-              InfraErrorId.ATSC_RUN_RETRY_INVALID_FILTER_ERROR,
-              "Non tradefed test filter only support module level filter. Filter: "
-                  + filter.filterString()
-                  + ", session being retried : "
-                  + retryArgs
-                      .previousSessionId()
-                      .orElse(String.valueOf(retryArgs.previousSessionIndex())));
-        }
-        subPlan.addNonTfExcludeFilter(filter.filterString());
-      } else {
-        subPlan.addExcludeFilter(filter.filterString());
-      }
+    try {
+      SubPlanHelper.addPassedInFiltersToSubPlan(
+          subPlan,
+          retryArgs.passedInIncludeFilters(),
+          retryArgs.passedInExcludeFilters(),
+          retryArgs.allNonTfModules());
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_SUBPLAN_INVALID_FILTER_ERROR,
+          "Failed to add passed in filters to the subplan of retry session " + retryIndexOrId,
+          e);
     }
     return subPlan;
   }

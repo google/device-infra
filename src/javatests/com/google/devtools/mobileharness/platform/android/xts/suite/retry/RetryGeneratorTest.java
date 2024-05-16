@@ -438,7 +438,7 @@ public final class RetryGeneratorTest {
                         .setAllNonTfModules(ImmutableSet.of("Module3"))
                         .setPreviousSessionId(previousSessionId)
                         .build()));
-    assertThat(exception1.getErrorId()).isEqualTo(InfraErrorId.ATSC_RUN_RETRY_INVALID_FILTER_ERROR);
+    assertThat(exception1.getErrorId()).isEqualTo(InfraErrorId.ATSC_SUBPLAN_INVALID_FILTER_ERROR);
 
     SuiteTestFilter filter2 = SuiteTestFilter.create("arm64-v8a Module3 TestClass1#Test1");
     MobileHarnessException exception2 =
@@ -452,7 +452,7 @@ public final class RetryGeneratorTest {
                         .setAllNonTfModules(ImmutableSet.of("Module3"))
                         .setPreviousSessionId(previousSessionId)
                         .build()));
-    assertThat(exception2.getErrorId()).isEqualTo(InfraErrorId.ATSC_RUN_RETRY_INVALID_FILTER_ERROR);
+    assertThat(exception2.getErrorId()).isEqualTo(InfraErrorId.ATSC_SUBPLAN_INVALID_FILTER_ERROR);
   }
 
   @org.junit.Test

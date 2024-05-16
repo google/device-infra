@@ -22,6 +22,8 @@ import static java.util.Arrays.stream;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.primitives.Longs;
@@ -31,6 +33,8 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -53,12 +57,17 @@ public class SubPlanCreator {
   private static final String XML_EXT = ".xml";
 
   private final PreviousResultLoader previousResultLoader;
+  private final ConfigurationUtil configurationUtil;
   private final LocalFileUtil localFileUtil;
 
   @Inject
-  SubPlanCreator(PreviousResultLoader previousResultLoader, LocalFileUtil localFileUtil) {
+  SubPlanCreator(
+      PreviousResultLoader previousResultLoader,
+      LocalFileUtil localFileUtil,
+      ConfigurationUtil configurationUtil) {
     this.previousResultLoader = previousResultLoader;
     this.localFileUtil = localFileUtil;
+    this.configurationUtil = configurationUtil;
   }
 
   /**
@@ -111,16 +120,28 @@ public class SubPlanCreator {
                 .collect(toImmutableSet()),
             /* passedInModules= */ ImmutableSet.of());
 
-    // TODO: support filters for subplan command. Currently the passed in filters are
-    // empty.
-    subPlan.addAllIncludeFilters(
-        addSubPlanArgs.passedInIncludeFilters().stream()
-            .map(SuiteTestFilter::filterString)
-            .collect(toImmutableSet()));
-    subPlan.addAllExcludeFilters(
-        addSubPlanArgs.passedInExcludeFilters().stream()
-            .map(SuiteTestFilter::filterString)
-            .collect(toImmutableSet()));
+    if (!addSubPlanArgs.passedInIncludeFilters().isEmpty()
+        || !addSubPlanArgs.passedInExcludeFilters().isEmpty()) {
+      // Get exhaustive list of non tf modules in the xts test cases dir.
+      ImmutableMap<String, Configuration> configsMap =
+          configurationUtil.getConfigsV2FromDirs(
+              ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile()));
+      ImmutableSet<String> allNonTfModules =
+          configsMap.values().stream()
+              .map(config -> config.getMetadata().getXtsModule())
+              .collect(toImmutableSet());
+
+      // Append the passed in filters to the subplan.
+      SubPlanHelper.addPassedInFiltersToSubPlan(
+          subPlan,
+          addSubPlanArgs.passedInIncludeFilters().stream()
+              .map(SuiteTestFilter::create)
+              .collect(toImmutableSet()),
+          addSubPlanArgs.passedInExcludeFilters().stream()
+              .map(SuiteTestFilter::create)
+              .collect(toImmutableSet()),
+          allNonTfModules);
+    }
 
     //  The given module (which may combine with abi and test) is added to subplan created based on
     // previous result
