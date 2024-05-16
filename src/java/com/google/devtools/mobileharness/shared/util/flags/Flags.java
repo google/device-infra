@@ -547,8 +547,8 @@ public class Flags {
       names = "--enable_fastboot_in_android_real_device",
       description =
           "Whether to enable fastboot support when initializing AndroidRealDevice."
-              + " Default is true.",
-      converter = Flag.StringConverter.class)
+              + "Default is true.",
+      converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableFastbootInAndroidRealDevice = enableFastbootInAndroidRealDeviceDefault;
 
   private static final Flag<Boolean> enableGrpcLabServerDefault = Flag.value(false);
