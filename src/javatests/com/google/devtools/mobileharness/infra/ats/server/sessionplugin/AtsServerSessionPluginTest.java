@@ -31,9 +31,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
-import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandAttemptDetail;
@@ -117,7 +117,7 @@ public final class AtsServerSessionPluginTest {
   @Bind @Mock private SessionResultHandlerUtil sessionResultHandlerUtil;
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
-  @Bind @Mock private CommandHelper commandHelper;
+  @Bind @Mock private XtsTypeLoader xtsTypeLoader;
   @Bind @Mock private LocalSessionStub localSessionStub;
   @Mock private JobInfo jobInfo;
   @Mock private JobInfo jobInfo2;
@@ -222,7 +222,8 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.result()).thenReturn(result);
     when(clock.instant()).thenReturn(baseTime);
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    when(commandHelper.getXtsType()).thenReturn("cts");
+    when(xtsTypeLoader.getXtsType(any(), any())).thenReturn("cts");
+    when(commandExecutor.run(any())).thenReturn("command output.");
   }
 
   @Test
@@ -311,7 +312,8 @@ public final class AtsServerSessionPluginTest {
 
     // Verify added non tradefed jobs.
     verify(sessionInfo).addJob(moblyJobInfo);
-    // Set 3 times when: session is started, commandDetail is updated, and try create non TF jobs.
+    // Set 3 times when: session is started, commandDetail is updated, and try to create non TF
+    // jobs.
     verify(sessionInfo, times(3))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);

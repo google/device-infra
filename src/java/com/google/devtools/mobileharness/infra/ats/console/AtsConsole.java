@@ -31,7 +31,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
@@ -47,6 +46,7 @@ import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.
 import com.google.devtools.mobileharness.infra.ats.console.command.preprocessor.CommandPreprocessor.PreprocessingResult;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.ServerLogPrinter;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;

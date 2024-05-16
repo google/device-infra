@@ -18,43 +18,36 @@ package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
-import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.nio.file.Path;
-import java.util.Optional;
 import java.util.function.Supplier;
 import javax.inject.Inject;
 
-/** Helper class for commands. */
-public class CommandHelper {
+/** A loader to load XTS type from XTS root directory. */
+public class XtsTypeLoader {
+  public static final String XTS_TYPE_PROPERTY_KEY = "XTS_TYPE";
   private static final String ANDROID_XTS_DIR_NAME_PREFIX = "android-";
-
   private final LocalFileUtil localFileUtil;
-  private final ConsoleInfo consoleInfo;
-
-  private final Supplier<String> xtsTypeSupplier = Suppliers.memoize(this::calculateXtsType);
 
   @Inject
-  CommandHelper(LocalFileUtil localFileUtil, ConsoleInfo consoleInfo) {
+  XtsTypeLoader(LocalFileUtil localFileUtil) {
     this.localFileUtil = localFileUtil;
-    this.consoleInfo = consoleInfo;
   }
 
-  /** Gets the xts type. */
-  public String getXtsType() {
-    return xtsTypeSupplier.get();
-  }
+  /**
+   * Gets XTS type from XTS root directory.
+   *
+   * @param xtsRootDir the XTS root directory
+   * @param helpMessageForMultipleXtsDirs the help message to set in the exception in case there are
+   *     multiple XTS directories in root directory.
+   * @return the XTS type
+   * @throws IllegalStateException if XTS directory cannot be found in the root directory or the
+   *     root directory contains multiple XTS directories.
+   */
+  public String getXtsType(String xtsRootDir, Supplier<String> helpMessageForMultipleXtsDirs) {
 
-  private String calculateXtsType() {
-    Optional<String> xtsTypeFromConsoleInfo = consoleInfo.getXtsType();
-    if (xtsTypeFromConsoleInfo.isPresent()) {
-      return xtsTypeFromConsoleInfo.get();
-    }
-
-    String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     if (xtsRootDir.isEmpty()) {
       throw new IllegalStateException("XTS root directory is empty.");
     }
@@ -82,8 +75,8 @@ public class CommandHelper {
       throw new IllegalStateException(
           String.format(
               "Multiple Android XTS directories whose name are in format [android-<xts>] exist"
-                  + " under directory %s. Please specify XTS type by -D%s. dirs=%s",
-              xtsRootDir, ConsoleInfo.XTS_TYPE_PROPERTY_KEY, xtsDirs));
+                  + " under directory %s. dirs=%s. %s",
+              xtsRootDir, xtsDirs, helpMessageForMultipleXtsDirs.get()));
     } else {
       xtsDir = xtsDirs.get(0);
     }

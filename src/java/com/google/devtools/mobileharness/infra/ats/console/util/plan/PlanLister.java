@@ -18,8 +18,8 @@ package com.google.devtools.mobileharness.infra.ats.console.util.plan;
 
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanConfigUtil.PlanConfigInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import java.nio.file.Path;

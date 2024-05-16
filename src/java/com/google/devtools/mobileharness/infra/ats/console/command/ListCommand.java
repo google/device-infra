@@ -22,7 +22,6 @@ import static java.util.stream.Collectors.joining;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
@@ -33,6 +32,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListModulesCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.AtsSessionPluginConfigOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanConfigUtil.PlanConfigInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanLister;

@@ -80,10 +80,10 @@ public class ConsoleInfo {
    * Gets the xTS type.
    *
    * <p>Please use {@link
-   * com.google.devtools.mobileharness.infra.ats.common.CommandHelper#getXtsType} instead since it
-   * can auto detect xTS type if the environment variable is not set.
+   * com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper#getXtsType}
+   * instead since it can auto detect xTS type if the environment variable is not set.
    */
-  public Optional<String> getXtsType() {
+  public Optional<String> getXtsTypeFromSystemProperty() {
     return Optional.ofNullable(systemProperties.get(XTS_TYPE_PROPERTY_KEY));
   }
 

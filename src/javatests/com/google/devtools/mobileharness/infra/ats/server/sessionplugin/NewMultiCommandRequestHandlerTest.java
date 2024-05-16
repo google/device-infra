@@ -32,10 +32,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -104,7 +104,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Bind @Mock private SessionResultHandlerUtil sessionResultHandlerUtil;
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
-  @Bind @Mock private CommandHelper commandHelper;
+  @Bind @Mock private XtsTypeLoader xtsTypeLoader;
 
   @Mock private SessionInfo sessionInfo;
   @Mock private JobInfo jobInfo;
@@ -135,7 +135,8 @@ public final class NewMultiCommandRequestHandlerTest {
                 .addDeviceInfo(
                     DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
                 .build());
-    when(commandHelper.getXtsType()).thenReturn("cts");
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    when(xtsTypeLoader.getXtsType(eq(xtsRootDir), any())).thenReturn("cts");
     commandInfo =
         CommandInfo.newBuilder()
             .setName("command")

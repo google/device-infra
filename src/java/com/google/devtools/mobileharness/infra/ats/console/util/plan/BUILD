@@ -23,8 +23,8 @@ java_library(
     ],
     deps = [
         ":plan_config_util",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

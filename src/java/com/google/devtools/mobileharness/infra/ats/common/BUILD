@@ -108,23 +108,6 @@ java_library(
 )
 
 java_library(
-    name = "command_helper",
-    srcs = ["CommandHelper.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-    ],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
     name = "session_result_handler_util",
     srcs = ["SessionResultHandlerUtil.java"],
     deps = [
@@ -179,4 +162,15 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
     ],
     deps = ["//src/java/com/google/wireless/qa/mobileharness/shared/constant:property"],
+)
+
+java_library(
+    name = "xts_type_loader",
+    srcs = ["XtsTypeLoader.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
 )

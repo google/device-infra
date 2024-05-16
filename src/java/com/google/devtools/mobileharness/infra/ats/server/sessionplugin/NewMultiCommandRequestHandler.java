@@ -35,10 +35,10 @@ import com.google.devtools.deviceinfra.shared.util.file.remote.constant.RemoteFi
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.console.command.parser.CommandLineParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -99,7 +99,7 @@ final class NewMultiCommandRequestHandler {
   private final LocalFileUtil localFileUtil;
   private final CommandExecutor commandExecutor;
   private final Clock clock;
-  private final CommandHelper commandHelper;
+  private final XtsTypeLoader xtsTypeLoader;
 
   // Command id to its job ids
   private final SetMultimap<String, String> commandToJobsMap = HashMultimap.create();
@@ -122,13 +122,13 @@ final class NewMultiCommandRequestHandler {
       LocalFileUtil localFileUtil,
       CommandExecutor commandExecutor,
       Clock clock,
-      CommandHelper commandHelper) {
+      XtsTypeLoader xtsTypeLoader) {
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.sessionResultHandlerUtil = sessionResultHandlerUtil;
     this.localFileUtil = localFileUtil;
     this.commandExecutor = commandExecutor;
     this.clock = clock;
-    this.commandHelper = commandHelper;
+    this.xtsTypeLoader = xtsTypeLoader;
   }
 
   RequestDetail addTradefedJobs(NewMultiCommandRequest request, SessionInfo sessionInfo)
@@ -399,8 +399,14 @@ final class NewMultiCommandRequestHandler {
       mountZip(androidXtsZipPath, xtsRootDir);
       hasMountedAndroidXtsZip = true;
     }
-    // TODO: Change the logic.
-    String xtsType = commandHelper.getXtsType();
+    final String androidXtsZipPathCopy = androidXtsZipPath;
+    String xtsType =
+        xtsTypeLoader.getXtsType(
+            xtsRootDir,
+            () ->
+                String.format(
+                    "Please make sure your XTS zip file %s only contains one xts type.",
+                    androidXtsZipPathCopy));
 
     // Generate XML test config template for ClusterCommandLauncher.
     Path commandPath = Path.of(xtsRootDir).resolveSibling("command.xml");
