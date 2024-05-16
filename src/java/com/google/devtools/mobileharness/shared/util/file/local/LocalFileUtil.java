@@ -80,6 +80,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import java.util.zip.ZipFile;
 import javax.annotation.Nullable;
 
 /**
@@ -786,6 +787,17 @@ public class LocalFileUtil {
       checkFileOrDir(fileOrDir);
       return true;
     } catch (MobileHarnessException e) {
+      return false;
+    }
+  }
+
+  /** Returns true only if it is a valid zip file. */
+  public boolean isZipFileValid(String filePath) {
+    try {
+      ZipFile zipFile = new ZipFile(filePath);
+      logger.atInfo().log("Zip file %s is valid.", zipFile.getName());
+      return true;
+    } catch (IOException e) {
       return false;
     }
   }

@@ -261,7 +261,7 @@ public final class MctsDynamicDownloadPluginTest {
   }
 
   private void mockDownloadPublicUrlFiles(String zipFile, String regexPatternUrl)
-      throws MobileHarnessException {
+      throws MobileHarnessException, InterruptedException {
     Mockito.doReturn(zipFile)
         .when(spyMctsDynamicDownloadPlugin)
         .downloadPublicUrlFiles(argThat(arg -> Pattern.matches(regexPatternUrl, arg)), any());
