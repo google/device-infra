@@ -372,9 +372,23 @@ public class XtsTradefedTest extends BaseDriver
 
     // Prepares TF output file.
     Path tfOutputPath;
-    if (spec.hasXtsTfOutputPath()) {
-      localFileUtil.prepareParentDir(spec.getXtsTfOutputPath());
-      tfOutputPath = Path.of(spec.getXtsTfOutputPath());
+    if (spec.hasXtsLogRootPath()) {
+      Path logRootPath = Path.of(spec.getXtsLogRootPath());
+      localFileUtil.prepareDir(logRootPath);
+      Path innocationPath =
+          localFileUtil.createTempDir(
+              logRootPath, XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX);
+      tfOutputPath =
+          innocationPath
+              .resolve(
+                  String.format(
+                      "%s_test_%s",
+                      testInfo.jobInfo().type().getDriver(), testInfo.locator().getId()))
+              .resolve(XtsConstants.TRADEFED_OUTPUT_FILE_NAME);
+      localFileUtil.prepareParentDir(tfOutputPath);
+      testInfo
+          .properties()
+          .add(XtsConstants.TRADEFED_INVOCATION_DIR_NAME, innocationPath.getFileName().toString());
     } else {
       tfOutputPath =
           Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_OUTPUT_FILE_NAME);

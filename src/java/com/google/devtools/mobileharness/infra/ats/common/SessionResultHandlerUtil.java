@@ -144,7 +144,6 @@ public class SessionResultHandlerUtil {
                     jobInfo -> jobInfo.tests().getAll().values().stream().findFirst()));
 
     Path nonTradefedTestResultsDir = resultDir.resolve("non-tradefed_results");
-    Path tradefedTestLogsDir = logDir.resolve(XtsConstants.TRADEFED_LOGS_DIR_NAME);
     Path nonTradefedTestLogsDir = logDir.resolve("non-tradefed_logs");
     Path serverSessionLogsDir = logDir.resolve("olc_server_session_logs");
     Path tmpTradefedTestResultsDir = null;
@@ -161,7 +160,7 @@ public class SessionResultHandlerUtil {
           tradefedTests,
           nonTradefedTests,
           resultDir,
-          tradefedTestLogsDir,
+          logDir,
           nonTradefedTestLogsDir,
           tmpTradefedTestResultsDir,
           nonTradefedTestResultsDir);
@@ -216,7 +215,7 @@ public class SessionResultHandlerUtil {
       ImmutableMap<JobInfo, Optional<TestInfo>> tradefedTests,
       ImmutableMap<JobInfo, Optional<TestInfo>> nonTradefedTests,
       Path resultDir,
-      Path tradefedTestLogsDir,
+      Path logsRootDir,
       Path nonTradefedTestLogsDir,
       Path tmpTradefedTestResultsDir,
       Path nonTradefedTestResultsDir)
@@ -232,7 +231,7 @@ public class SessionResultHandlerUtil {
       }
       TestInfo test = testEntry.getValue().get();
 
-      copyTradefedTestLogFiles(test, tradefedTestLogsDir);
+      copyTradefedTestLogFiles(test, logsRootDir);
       Optional<Path> tradefedTestResultXmlFile =
           copyTradefedTestResultFiles(test, tmpTradefedTestResultsDir, resultDir);
       tradefedTestResultXmlFile.ifPresent(tradefedTestResultXmlFiles::add);
@@ -397,9 +396,19 @@ public class SessionResultHandlerUtil {
    *        raw_mobly_logs/
    * </pre>
    */
-  private void copyTradefedTestLogFiles(TestInfo tradefedTestInfo, Path logDir)
+  private void copyTradefedTestLogFiles(TestInfo tradefedTestInfo, Path logRootDir)
       throws MobileHarnessException, InterruptedException {
-    Path testLogDir = prepareLogOrResultDirForTest(tradefedTestInfo, logDir);
+    Path invocationDir;
+    if (tradefedTestInfo.properties().has(XtsConstants.TRADEFED_INVOCATION_DIR_NAME)) {
+      invocationDir =
+          logRootDir.resolve(
+              tradefedTestInfo.properties().get(XtsConstants.TRADEFED_INVOCATION_DIR_NAME));
+    } else {
+      invocationDir =
+          localFileUtil.createTempDir(logRootDir, XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX);
+    }
+    Path testLogDir = prepareLogOrResultDirForTest(tradefedTestInfo, invocationDir);
+
     ImmutableList<Path> genFiles = getGenFilesFromTest(tradefedTestInfo);
     for (Path genFile : genFiles) {
       if (genFile.getFileName().toString().endsWith("gen-files")) {
@@ -414,11 +423,23 @@ public class SessionResultHandlerUtil {
               List<Path> logFilesOrDirs =
                   localFileUtil.listFilesOrDirs(logsSubFileOrDir, path -> true);
               for (Path logFileOrDir : logFilesOrDirs) {
-                logger.atInfo().log(
-                    "Copying tradefed test log relevant file/dir [%s] into dir [%s]",
-                    logFileOrDir, testLogDir);
-                localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-                    logFileOrDir, testLogDir, ImmutableList.of("-rf"));
+                String fileName = logFileOrDir.getFileName().toString();
+                if (logFileOrDir.toFile().isDirectory()
+                    && fileName.startsWith(XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX)) {
+                  // Copy all details under TF invocation dir to the new invocation dir.
+                  List<Path> innovationDetails =
+                      localFileUtil.listFilesOrDirs(logFileOrDir, path -> true);
+                  for (Path fileOrDir : innovationDetails) {
+                    localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                        fileOrDir, invocationDir, ImmutableList.of("-rf"));
+                  }
+                } else {
+                  logger.atInfo().log(
+                      "Copying tradefed test log relevant file/dir [%s] into dir [%s]",
+                      logFileOrDir, invocationDir);
+                  localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                      logFileOrDir, invocationDir, ImmutableList.of("-rf"));
+                }
               }
             }
           }

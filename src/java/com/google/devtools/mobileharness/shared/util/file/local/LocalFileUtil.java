@@ -437,6 +437,19 @@ public class LocalFileUtil {
   }
 
   /** Creates a temp file under the directory. */
+  public Path createTempDir(Path parentDirPath, String fileNamePrefix)
+      throws MobileHarnessException {
+    try {
+      return Files.createTempDirectory(parentDirPath, fileNamePrefix);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_DIR_CREATE_TMP_ERROR,
+          "Failed to create temp dir under " + parentDirPath,
+          e);
+    }
+  }
+
+  /** Creates a temp file under the directory. */
   public Path createTempFile(Path parentDirPath, String fileNamePrefix, String fileNameSuffix)
       throws MobileHarnessException {
     try {

@@ -26,7 +26,8 @@ public class XtsConstants {
   public static final String TRADEFED_JOBS_PASSED = "tradefed_jobs_passed";
 
   public static final String TRADEFED_OUTPUT_FILE_NAME = "xts_tf_output.log";
-  public static final String TRADEFED_LOGS_DIR_NAME = "tradefed_logs";
+  public static final String TRADEFED_INVOCATION_DIR_NAME = "tf_inv_dir_name";
+  public static final String TRADEFED_INVOCATION_DIR_NAME_PREFIX = "inv_";
 
   /** A path relative to the test temp dir. */
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY =

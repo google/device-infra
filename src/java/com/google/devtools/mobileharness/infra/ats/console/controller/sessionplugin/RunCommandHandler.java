@@ -36,7 +36,6 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
-import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -116,14 +115,12 @@ class RunCommandHandler {
         .get()
         .params()
         .add(
-            "xts_tf_output_path",
+            "xts_log_root_path",
             XtsDirUtil.getXtsLogsDir(Path.of(command.getXtsRootDir()), command.getXtsType())
                 .resolve(
                     sessionInfo
                         .getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME)
                         .orElseThrow())
-                .resolve(XtsConstants.TRADEFED_LOGS_DIR_NAME)
-                .resolve(XtsConstants.TRADEFED_OUTPUT_FILE_NAME)
                 .toString());
 
     sessionInfo.addJob(jobInfo.get());
