@@ -201,7 +201,9 @@ public class AtsConsole {
     consoleUtil.printlnStdout(versionMessageUtil.getVersionMessage());
 
     // Prints help information.
-    consoleUtil.printlnStdout("Use \"help\" to get more information on running commands.");
+    consoleUtil.printlnStdout(
+        "Use \"help\" to get more information on running commands. Use \"dump bugreport\" to"
+            + " generate a file of debugging information.");
 
     // Prints arguments.
     if (!mainArgs.isEmpty()) {
