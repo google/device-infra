@@ -99,6 +99,11 @@ public abstract class SuiteTestFilter {
     return abi().get().equals(moduleAbi);
   }
 
+  /** Exactly matches the given {@code moduleName}. */
+  public boolean matchModuleName(String moduleName) {
+    return moduleName().equals(moduleName);
+  }
+
   @Memoized
   @Override
   public String toString() {

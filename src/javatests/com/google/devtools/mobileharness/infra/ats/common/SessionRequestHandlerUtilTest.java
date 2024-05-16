@@ -956,6 +956,32 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(jobInfoOptWithIncludeFilters).isEmpty();
     assertThat(jobInfoOptWithExcludeFilters).isEmpty();
     assertThat(jobInfoOptWithMixedFilters).isPresent();
+
+    SessionRequestInfo sessionRequestInfoWithIncludeFiltersAndAbi =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setIncludeFilters(ImmutableList.of("arm64-v8a module1 TestClass#TestCase"))
+            .build();
+    assertThat(
+            sessionRequestHandlerUtil.createXtsTradefedTestJob(
+                sessionRequestInfoWithIncludeFiltersAndAbi))
+        .isPresent();
+
+    SessionRequestInfo sessionRequestInfoWithExcludeFiltersAndAbi =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setExcludeFilters(ImmutableList.of("module1", "arm64-v8a module2"))
+            .build();
+    assertThat(
+            sessionRequestHandlerUtil.createXtsTradefedTestJob(
+                sessionRequestInfoWithExcludeFiltersAndAbi))
+        .isPresent();
   }
 
   @Test

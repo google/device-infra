@@ -321,7 +321,7 @@ public class SessionRequestHandlerUtil {
         continue;
       }
       if (!includeFilters.isEmpty()
-          && includeFilters.stream().noneMatch(filter -> filter.matchModule(module, null, null))) {
+          && includeFilters.stream().noneMatch(filter -> filter.matchModuleName(module))) {
         continue;
       }
       filteredModulesBuilder.add(module);
