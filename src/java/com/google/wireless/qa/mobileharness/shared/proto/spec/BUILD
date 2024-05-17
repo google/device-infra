@@ -115,6 +115,17 @@ java_proto_library(
 )
 
 proto_library(
+    name = "android_ats_dynamic_config_pusher_decorator_spec_proto",
+    srcs = ["decorator/android_ats_dynamic_config_pusher_decorator_spec.proto"],
+    deps = [":base_spec_proto"],
+)
+
+java_proto_library(
+    name = "android_ats_dynamic_config_pusher_decorator_spec_java_proto",
+    deps = [":android_ats_dynamic_config_pusher_decorator_spec_proto"],
+)
+
+proto_library(
     name = "android_device_features_check_decorator_spec_proto",
     srcs = ["decorator/android_device_features_check_decorator_spec.proto"],
     deps = [

@@ -1,0 +1,98 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+// Specs for AndroidAtsDynamicConfigPusherDecorator.
+message AndroidAtsDynamicConfigPusherDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidAtsDynamicConfigPusherDecoratorSpec ext = 1007;
+  }
+
+  optional string api_key = 1 [
+    default = "AIzaSyAbwX5JRlmsLeygY2WWihpIJPXFLueOQ3U",
+    (field_detail) = { help: "API key for dynamic configuration." }
+  ];
+  optional string config_url = 2 [
+    default =
+        "https://androidpartner.googleapis.com/v1/dynamicconfig/suites/{suite-name}/modules/{module}/version/{version}?key={api-key}",
+    (field_detail) = {
+      help: "The url path of the dynamic config. If set, will override the "
+            "default config location."
+    }
+  ];
+  optional bool has_server_side_config = 3 [
+    default = true,
+    (field_detail) = {
+      help: "Whether there exists a service side dynamic config."
+    }
+  ];
+  optional string config_filename = 4 [(field_detail) = {
+    help: "The module name for module-level configurations, or the suite name "
+          "for suite-level configurations"
+  }];
+  optional TestTarget target = 5 [
+    default = DEVICE,
+    (field_detail) = { help: "The test target, either device or host." }
+  ];
+  optional string version = 6 [(field_detail) = {
+    help: "The version of the configuration to retrieve from the server, "
+          "e.g. \"1.0\". Defaults to suite version string."
+  }];
+  optional bool extract_from_resource = 7 [
+    default = false,
+    (field_detail) = {
+      help: "Whether to look for the local dynamic config inside the jar resources "
+            "or on the local disk."
+    }
+  ];
+  optional string dynamic_resource_name = 8 [(field_detail) = {
+    help: "When using --extract-from-resource, this option allow to specify the "
+          "resource name, instead of the module name for the lookup. File will "
+          "still be logged under the module name."
+  }];
+  optional string dynamic_config_name = 9 [(field_detail) = {
+    help: "The dynamic config name for module-level configurations, or the "
+          "suite name for suite-level configurations."
+  }];
+  optional string xts_suite_info = 10 [(field_detail) = {
+    help: "The xts suite info for the test. This is used to determine the "
+          "suite name for suite-level configurations."
+  }];
+  optional string xts_test_dir = 11 [(field_detail) = {
+    help: "The xts test dir which contains all test configs."
+  }];
+  optional bool cleanup = 12 [
+    default = true,
+    (field_detail) = {
+      help: "Whether to remove config files from the test target after test "
+            "completion."
+    }
+  ];
+
+  enum TestTarget {
+    UNSET = 0;
+    DEVICE = 1;
+    HOST = 2;
+  }
+}

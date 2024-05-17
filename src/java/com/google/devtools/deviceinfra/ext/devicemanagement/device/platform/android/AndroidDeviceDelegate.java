@@ -459,6 +459,7 @@ public abstract class AndroidDeviceDelegate {
     device.addSupportedDecorator("AndroidAccountDecorator");
     device.addSupportedDecorator("AndroidAdbShellDecorator");
     device.addSupportedDecorator("AndroidAppVersionDecorator");
+    device.addSupportedDecorator("AndroidAtsDynamicConfigPusherDecorator");
     device.addSupportedDecorator("AndroidBugreportDecorator");
     device.addSupportedDecorator("AndroidChopinDecorator");
     device.addSupportedDecorator("AndroidChromeWebViewInstallerDecorator");

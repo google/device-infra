@@ -38,6 +38,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_xml_parser",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:dynamic_config",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:dynamic_config_handler",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_lab_plugin",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",

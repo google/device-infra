@@ -1079,6 +1079,16 @@ public class SessionRequestHandlerUtil {
                 xtsRootDir.toAbsolutePath().toString(),
                 xtsType,
                 previousSessionTestPlan != null ? previousSessionTestPlan : testPlan));
+
+    // TODO: Add multi hosts mode support.
+    jobInfo
+        .params()
+        .add(
+            "xts_test_dir",
+            xtsRootDir
+                .resolve(String.format("android-%s/testcases", xtsType))
+                .toAbsolutePath()
+                .toString());
     return Optional.of(jobInfo);
   }
 

@@ -68,6 +68,8 @@ public final class DriverDecoratorSpecMapper {
      */
     // go/keep-sorted start google3-only(internal)
     builder.put("AndroidAdbShellDecorator", "AndroidAdbShellDecoratorSpec");
+    builder.put(
+        "AndroidAtsDynamicConfigPusherDecorator", "AndroidAtsDynamicConfigPusherDecoratorSpec");
     builder.put("AndroidDeviceFeaturesCheckDecorator", "AndroidDeviceFeaturesCheckDecoratorSpec");
     builder.put("AndroidDeviceSettingsDecorator", "AndroidDeviceSettingsDecoratorSpec");
     builder.put("AndroidInstallAppsDecorator", "InstallApkStepSpec");

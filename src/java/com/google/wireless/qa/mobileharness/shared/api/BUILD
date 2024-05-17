@@ -39,6 +39,7 @@ java_library(
     runtime_deps = [
         ":ats_test_client",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_adb_shell_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_ats_dynamic_config_pusher_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_clean_apps_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_features_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_settings_decorator",
@@ -93,6 +94,7 @@ java_library(
     testonly = 1,
     runtime_deps = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_adb_shell_decorator",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_ats_dynamic_config_pusher_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_clean_apps_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_features_check_decorator",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:android_device_settings_decorator",

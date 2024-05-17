@@ -49,6 +49,41 @@ java_library(
 )
 
 java_library(
+    name = "dynamic_config",
+    srcs = ["DynamicConfig.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/config:__subpackages__",
+    ],
+    runtime_deps = [
+        "@maven//:net_sf_kxml_kxml2",
+    ],
+    deps = [
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:xmlpull_xmlpull",
+    ],
+)
+
+java_library(
+    name = "dynamic_config_handler",
+    srcs = ["DynamicConfigHandler.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/decorator:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/config:__subpackages__",
+    ],
+    runtime_deps = [
+        "@maven//:net_sf_kxml_kxml2",
+    ],
+    deps = [
+        ":dynamic_config",
+        "@maven//:com_google_code_gson_gson",
+        "@maven//:com_google_guava_guava",
+        "@maven//:xmlpull_xmlpull",
+    ],
+)
+
+java_library(
     name = "module_configuration_helper",
     srcs = ["ModuleConfigurationHelper.java"],
     deps = [

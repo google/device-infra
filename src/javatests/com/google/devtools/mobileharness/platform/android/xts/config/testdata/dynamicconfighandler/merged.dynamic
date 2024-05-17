@@ -1,0 +1,36 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no' ?>
+<dynamicConfig>
+  <entry key="chre_platform_id_nanoapp_dir_pairs">
+    <value>2051434f4d000001,CHRE_on_SLPIGoogle</value>
+    <value>476f6f676c000000,Google_System_Nanohub_on_DefaultGoogle_StMicro</value>
+    <value>476f6f676c000002,CHRE_on_SLPIGoogle</value>
+    <value>476f6f676c000003,CHRE_on_SLPIGoogle</value>
+    <value>476f6f676c000005,CHRE_on_SLPIGoogle</value>
+    <value>476f6f676c000006,CHRE_on_SLPIGoogle</value>
+    <value>476f6f676c000007,CHRE_on_SLPIGoogle</value>
+    <value>476f6f676c000008,CHRE_on_AOCGoogle</value>
+    <value>476f6f676c00000a,CHRE_on_SLPIGoogle</value>
+    <value>476f6f676c000010,CHRE_on_M33Google</value>
+    <value>476f6f676c001000,CHRE_on_QSHGoogle</value>
+    <value>476f6f676c003000,CHRE_on_TinysysGoogle</value>
+    <value>476f6f676c003001,CHRE_on_TinysysGoogle_riscv55e300</value>
+  </entry>
+  <entry key="remote_config_retrieved">
+    <value>true</value>
+  </entry>
+  <entry key="chre_device_blacklist" />
+  <entry key="chre_hubname_nanoapp_dir_pairs">
+    <value>CHRE on SLPI,CHRE_on_SLPIGoogle</value>
+    <value>Google System Nanohub on Default,Google_System_Nanohub_on_DefaultGoogle_StMicro</value>
+  </entry>
+  <entry key="chre_device_whitelist">
+    <value>angler</value>
+    <value>bullhead</value>
+    <value>marlin</value>
+    <value>sailfish</value>
+    <value>walleye</value>
+    <value>taimen</value>
+    <value>blueline</value>
+    <value>crosshatch</value>
+  </entry>
+</dynamicConfig>
