@@ -462,8 +462,7 @@ public class SessionRequestHandlerUtil {
       if (sessionRequestInfo.retrySessionIndex().isPresent()) {
         runRetryTfSubPlanXmlFile =
             prepareRunRetryTfSubPlanXmlFile(
-                xtsRootDir,
-                sessionRequestInfo.xtsType(),
+                createJobTmpDir(jobConfigBuilder.getName()),
                 sessionRequestInfo.retrySessionIndex().orElseThrow(),
                 runRetryTfSubPlan.get());
       } else {
@@ -582,12 +581,8 @@ public class SessionRequestHandlerUtil {
 
   // For ATS Console
   private Path prepareRunRetryTfSubPlanXmlFile(
-      String xtsRootDir, String xtsType, int previousSessionIndex, SubPlan subPlan)
-      throws MobileHarnessException {
-    Path xtsSubPlansDir = XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), xtsType);
-
-    return serializeRetrySubPlan(
-        xtsSubPlansDir, subPlan, String.format("#%s", previousSessionIndex));
+      Path jobDir, int previousSessionIndex, SubPlan subPlan) throws MobileHarnessException {
+    return serializeRetrySubPlan(jobDir, subPlan, String.format("#%s", previousSessionIndex));
   }
 
   // For ATS Server
