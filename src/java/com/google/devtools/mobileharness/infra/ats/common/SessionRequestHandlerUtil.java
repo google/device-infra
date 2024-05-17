@@ -356,6 +356,8 @@ public class SessionRequestHandlerUtil {
         .get()
         .extraJobProperties()
         .forEach((key, value) -> jobInfo.properties().add(key, value));
+    // Skip clearing gservice flag overrides.
+    jobInfo.params().add("clear_gservices_overrides", "false");
     printCreatedJobInfo(jobInfo, /* isTf= */ true);
     return Optional.of(jobInfo);
   }
@@ -1079,6 +1081,8 @@ public class SessionRequestHandlerUtil {
                 xtsRootDir.toAbsolutePath().toString(),
                 xtsType,
                 previousSessionTestPlan != null ? previousSessionTestPlan : testPlan));
+    // Skip clearing gservice flag overrides.
+    jobInfo.params().add("clear_gservices_overrides", "false");
 
     // TODO: Add multi hosts mode support.
     jobInfo
