@@ -78,15 +78,16 @@ public abstract class AndroidDeviceDelegate {
 
   private final String deviceId;
 
-  private final BaseDevice device;
   private final ActivityManager am;
-  private final Sqlite sqlite;
   private final AndroidAdbUtil androidAdbUtil;
   private final AndroidSystemStateUtil androidSystemStateUtil;
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
   private final AndroidSystemSettingUtil androidSystemSettingUtil;
   private final AndroidProcessUtil androidProcessUtil;
   private final AndroidDeviceHelper androidDeviceHelper;
+
+  protected final BaseDevice device;
+  protected final Sqlite sqlite;
 
   protected AndroidDeviceDelegate(
       BaseDevice device,
@@ -314,26 +315,11 @@ public abstract class AndroidDeviceDelegate {
   /**
    * Updates the dimensions "gservices_android_id".
    *
-   * @return true iff its value has changed
+   * @return true if its value has changed
    */
   @CanIgnoreReturnValue
   public boolean updateGServicesAndroidId(String deviceId) throws InterruptedException {
-    if (device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION).orElse(0)
-        < 18) {
-      logger.atWarning().log("GService Android ID is not available below API level 18.");
-      return false;
-    }
-    boolean isUpdated = false;
-    try {
-      String gservicesAndroidId = sqlite.getGServicesAndroidID(deviceId);
-      logger.atInfo().log("Got device %s GService Android ID: %s", deviceId, gservicesAndroidId);
-      isUpdated = device.updateDimension(Dimension.Name.GSERVICES_ANDROID_ID, gservicesAndroidId);
-    } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-      logger.atWarning().log(
-          "Failed to get device %s GService Android ID: %s",
-          deviceId, MoreThrowables.shortDebugString(e));
-    }
-    return isUpdated;
+    return false;
   }
 
   /**
