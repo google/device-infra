@@ -193,7 +193,9 @@ public final class RetryGeneratorTest {
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
-            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            ImmutableSet.of("ALL", "TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
             "armeabi-v7a Module1",
             ImmutableSet.of("ALL"),
             "armeabi-v7a Module5",
@@ -203,11 +205,8 @@ public final class RetryGeneratorTest {
             "arm64-v8a Module2", ImmutableSet.of("ALL"),
             "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"));
 
-    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
-        subPlan.getNonTfIncludeFiltersMultimap();
-
-    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
-        .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+    assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL", "TestClass1#Test2"));
   }
 
   @org.junit.Test
@@ -230,7 +229,9 @@ public final class RetryGeneratorTest {
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
-            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            ImmutableSet.of("ALL", "TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
             "armeabi-v7a Module1",
             ImmutableSet.of("ALL"),
             "armeabi-v7a Module5",
@@ -240,11 +241,8 @@ public final class RetryGeneratorTest {
             "arm64-v8a Module2", ImmutableSet.of("ALL"),
             "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"));
 
-    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
-        subPlan.getNonTfIncludeFiltersMultimap();
-
-    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
-        .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+    assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL", "TestClass1#Test2"));
   }
 
   @org.junit.Test
@@ -270,7 +268,9 @@ public final class RetryGeneratorTest {
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
-            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            ImmutableSet.of("ALL", "TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
             "armeabi-v7a Module1",
             ImmutableSet.of("ALL"),
             "armeabi-v7a Module5",
@@ -281,11 +281,8 @@ public final class RetryGeneratorTest {
             "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"),
             "Module1", ImmutableSet.of("ALL"));
 
-    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
-        subPlan.getNonTfIncludeFiltersMultimap();
-
-    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
-        .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+    assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL", "TestClass1#Test2"));
   }
 
   @org.junit.Test
@@ -312,7 +309,9 @@ public final class RetryGeneratorTest {
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
-            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            ImmutableSet.of("ALL", "TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
             "armeabi-v7a Module1",
             ImmutableSet.of("ALL"),
             "armeabi-v7a Module5",
@@ -322,16 +321,11 @@ public final class RetryGeneratorTest {
             "arm64-v8a Module2", ImmutableSet.of("ALL"),
             "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"));
 
-    SetMultimap<String, String> subPlanNonTfExcludeFiltersMultimap =
-        subPlan.getNonTfExcludeFiltersMultimap();
-    assertThat(Multimaps.asMap(subPlanNonTfExcludeFiltersMultimap))
+    assertThat(Multimaps.asMap(subPlan.getNonTfExcludeFiltersMultimap()))
         .containsExactly("Module3[Instant]", ImmutableSet.of("ALL"));
 
-    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
-        subPlan.getNonTfIncludeFiltersMultimap();
-
-    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
-        .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+    assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL", "TestClass1#Test2"));
   }
 
   @org.junit.Test
@@ -357,7 +351,9 @@ public final class RetryGeneratorTest {
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
-            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            ImmutableSet.of("ALL", "TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
             "armeabi-v7a Module1",
             ImmutableSet.of("ALL"),
             "armeabi-v7a Module5",
@@ -368,11 +364,8 @@ public final class RetryGeneratorTest {
             "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1"),
             "arm64-v8a Module1", ImmutableSet.of("TestClass1#Test2"));
 
-    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
-        subPlan.getNonTfIncludeFiltersMultimap();
-
-    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
-        .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+    assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL", "TestClass1#Test2"));
   }
 
   @org.junit.Test
@@ -398,7 +391,9 @@ public final class RetryGeneratorTest {
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
-            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            ImmutableSet.of("ALL", "TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
             "armeabi-v7a Module1",
             ImmutableSet.of("ALL"),
             "armeabi-v7a Module5",
@@ -412,11 +407,8 @@ public final class RetryGeneratorTest {
             "armeabi-v7a Module5",
             ImmutableSet.of("TestClass1#Test1"));
 
-    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
-        subPlan.getNonTfIncludeFiltersMultimap();
-
-    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap))
-        .containsExactly("arm64-v8a Module3", ImmutableSet.of("TestClass1#Test2"));
+    assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL", "TestClass1#Test2"));
   }
 
   @org.junit.Test
@@ -476,9 +468,11 @@ public final class RetryGeneratorTest {
     assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
         .containsExactly(
             "arm64-v8a Module1",
-            ImmutableSet.of("TestClass2#Test1", "TestClass2#Test2"),
+            ImmutableSet.of("ALL", "TestClass2#Test1", "TestClass2#Test2"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
             "armeabi-v7a Module1",
-            ImmutableSet.of("TestClass2#Test1", "TestClass2#Test2"),
+            ImmutableSet.of("ALL", "TestClass2#Test1", "TestClass2#Test2"),
             "armeabi-v7a Module5",
             ImmutableSet.of("ALL"));
     assertThat(Multimaps.asMap(subPlanExcludeFiltersMultimap))
@@ -486,10 +480,10 @@ public final class RetryGeneratorTest {
             "arm64-v8a Module2", ImmutableSet.of("ALL"),
             "armeabi-v7a Module5", ImmutableSet.of("TestClass1#Test1", "TestClass1#Test2"));
 
-    SetMultimap<String, String> subPlanNonTfIncludeFiltersMultimap =
-        subPlan.getNonTfIncludeFiltersMultimap();
-
-    assertThat(Multimaps.asMap(subPlanNonTfIncludeFiltersMultimap)).isEmpty();
+    assertThat(Multimaps.asMap(subPlan.getNonTfIncludeFiltersMultimap()))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL"));
+    assertThat(Multimaps.asMap(subPlan.getNonTfExcludeFiltersMultimap()))
+        .containsExactly("arm64-v8a Module3", ImmutableSet.of("ALL"));
   }
 
   @org.junit.Test
@@ -507,13 +501,28 @@ public final class RetryGeneratorTest {
                 .setPassedInModules(ImmutableSet.of("Module4"))
                 .build());
 
-    SetMultimap<String, String> subPlanIncludeFiltersMultimap = subPlan.getIncludeFiltersMultimap();
-
-    assertThat(Multimaps.asMap(subPlanIncludeFiltersMultimap))
+    assertThat(Multimaps.asMap(subPlan.getIncludeFiltersMultimap()))
         .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("ALL"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
             "arm64-v8a Module4",
-            ImmutableSet.of("TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"));
-    assertThat(subPlan.getNonTfIncludeFiltersMultimap()).isEmpty();
+            ImmutableSet.of("ALL", "TestClass1#Test2", "TestClass2#Test1", "TestClass2#Test2"),
+            "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
+            ImmutableSet.of("ALL"));
+    assertThat(Multimaps.asMap(subPlan.getExcludeFiltersMultimap()))
+        .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("ALL"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
+            ImmutableSet.of("ALL"));
   }
 
   @org.junit.Test
@@ -531,7 +540,30 @@ public final class RetryGeneratorTest {
                 .setPassedInModules(ImmutableSet.of("Module2"))
                 .build());
 
-    assertThat(subPlan.getIncludeFiltersMultimap()).isEmpty();
+    assertThat(Multimaps.asMap(subPlan.getIncludeFiltersMultimap()))
+        .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("ALL"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
+            "arm64-v8a Module4",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
+            ImmutableSet.of("ALL"));
+    assertThat(Multimaps.asMap(subPlan.getExcludeFiltersMultimap()))
+        .containsExactly(
+            "arm64-v8a Module1",
+            ImmutableSet.of("ALL"),
+            "arm64-v8a Module2",
+            ImmutableSet.of("ALL"),
+            "arm64-v8a Module4",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module1",
+            ImmutableSet.of("ALL"),
+            "armeabi-v7a Module5",
+            ImmutableSet.of("ALL"));
     assertThat(subPlan.getNonTfIncludeFiltersMultimap()).isEmpty();
   }
 
@@ -562,7 +594,7 @@ public final class RetryGeneratorTest {
                 .build());
 
     assertThat(Multimaps.asMap(subPlan.getIncludeFiltersMultimap()))
-        .containsExactly("Module", ImmutableSet.of("TestClass#Test"));
+        .containsExactly("Module", ImmutableSet.of("ALL", "TestClass#Test"));
   }
 
   @org.junit.Test

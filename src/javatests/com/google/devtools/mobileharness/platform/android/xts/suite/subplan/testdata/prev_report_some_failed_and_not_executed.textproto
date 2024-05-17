@@ -142,7 +142,7 @@ module_info {
       name: "testIsHardwareAccelerated"
     }
   }
-  failed_tests: 1
+  failed_tests: 0
 }
 module_info {
   name: "HelloWorldTest"

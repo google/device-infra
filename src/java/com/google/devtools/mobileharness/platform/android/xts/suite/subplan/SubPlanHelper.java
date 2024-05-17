@@ -53,25 +53,24 @@ public class SubPlanHelper {
     SubPlan subPlan = new SubPlan();
     for (Module module : previousResult.getModuleInfoList()) {
       boolean isNonTfModule = module.getIsNonTfModule();
+      // Always add the include filter for the module, and rely on below to determine whether to
+      // add the exclude filter, or include filter for specific tests.
+      // Note: For include and exclude filters passed to TF via subplan, its handling priority is:
+      // exclude filter > include filter for specific test > include filter for the module
+      addIncludeFilter(
+          subPlan, String.format("%s %s", module.getAbi(), module.getName()), isNonTfModule);
+      // If the previous result has test filter, we can say that the previous run is on a specific
+      // test of a specific module, then add the test include filter and rely on below to determine
+      // whether to add the exclude filter.
+      if (!previousResult.getTestFilter().isEmpty()) {
+        addIncludeFilter(
+            subPlan,
+            String.format(
+                "%s %s %s", module.getAbi(), module.getName(), previousResult.getTestFilter()),
+            isNonTfModule);
+      }
       if (RetryResultHelper.shouldRunModule(module, types, addSubPlanCmd, passedInModules)) {
-        // If the previous result has test filter, should not run the entire module
-        if (previousResult.getTestFilter().isEmpty()
-            && RetryResultHelper.shouldRunEntireModule(
-                module, types, addSubPlanCmd, prevResultIncludeFilters, prevResultExcludeFilters)) {
-          addIncludeFilter(
-              subPlan, String.format("%s %s", module.getAbi(), module.getName()), isNonTfModule);
-        } else if (types.contains("not_executed") && !module.getDone()) {
-          // Include the module since it is not done
-          addIncludeFilter(
-              subPlan, String.format("%s %s", module.getAbi(), module.getName()), isNonTfModule);
-          if (!previousResult.getTestFilter().isEmpty()) {
-            // If the previous result has test filter, include the test
-            addIncludeFilter(
-                subPlan,
-                String.format(
-                    "%s %s %s", module.getAbi(), module.getName(), previousResult.getTestFilter()),
-                isNonTfModule);
-          }
+        if (types.contains("not_executed") && !module.getDone()) {
           // Exclude tests that should not be run
           for (TestCase testCase : module.getTestCaseList()) {
             for (Test test : testCase.getTestList()) {
@@ -85,8 +84,10 @@ public class SubPlanHelper {
               }
             }
           }
-        } else {
-          // Only include test cases that should be run if the module is done in previous run
+        } else if (!RetryResultHelper.shouldRunEntireModule(
+            module, types, addSubPlanCmd, prevResultIncludeFilters, prevResultExcludeFilters)) {
+          // Only include test cases that should be run if the module is done in previous run, and
+          // only some of test cases(not all) in the module should be run.
           for (TestCase testCase : module.getTestCaseList()) {
             for (Test test : testCase.getTestList()) {
               if (RetryResultHelper.shouldRunTest(test, types, addSubPlanCmd)) {

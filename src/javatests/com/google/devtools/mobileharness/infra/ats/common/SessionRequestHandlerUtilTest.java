@@ -121,13 +121,7 @@ public final class SessionRequestHandlerUtilTest {
 
   @Before
   public void setUp() throws Exception {
-    // Sets flags.
-    ImmutableMap<String, String> flagMap = ImmutableMap.of("enable_ats_mode", "true");
-    Flags.parse(
-        flagMap.entrySet().stream()
-            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
-            .collect(toImmutableList())
-            .toArray(new String[0]));
+    setFlags(/* enableAtsMode= */ true);
 
     sessionGenDir = folder.newFolder("session_gen_dir").toPath();
     sessionTempDir = folder.newFolder("session_temp_dir").toPath();
@@ -135,6 +129,16 @@ public final class SessionRequestHandlerUtilTest {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     testPlanFilter = TestPlanLoader.TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
     realLocalFileUtil = new LocalFileUtil();
+  }
+
+  private void setFlags(boolean enableAtsMode) {
+    ImmutableMap<String, String> flagMap =
+        ImmutableMap.of("enable_ats_mode", String.valueOf(enableAtsMode));
+    Flags.parse(
+        flagMap.entrySet().stream()
+            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
+            .collect(toImmutableList())
+            .toArray(new String[0]));
   }
 
   @After
