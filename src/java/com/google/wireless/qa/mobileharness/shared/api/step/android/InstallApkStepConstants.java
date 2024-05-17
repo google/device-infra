@@ -102,4 +102,9 @@ public interface InstallApkStepConstants {
           "Whether to bypass low target sdk check, only works on the device with sdk >= 34."
               + "Default is false.")
   String PARAM_BYPASS_LOW_TARGET_SDK_BLOCK = "bypass_low_target_sdk_block";
+
+  @ParamAnnotation(
+      required = false,
+      help = "Whether to check installed GMS core version before the test (default true)")
+  String PARAM_CHECK_INSTALLED_GMS_CORE_VERSION = "check_installed_gms_core_version";
 }

@@ -279,7 +279,11 @@ public class InstallApkStep implements InstallApkStepConstants {
       if (installSuccessHandler != null) {
         installSuccessHandler.handle(PackageConstants.PACKAGE_NAME_GMS, buildApk);
       }
-    } else {
+    } else if (testInfo
+        .jobInfo()
+        .params()
+        .getBool(
+            InstallApkStepConstants.PARAM_CHECK_INSTALLED_GMS_CORE_VERSION, true /* default */)) {
       // Gets Gms version if it is not in build apks.
       apkInstaller.checkInstalledAppVersion(
           testInfo, deviceId, PackageConstants.PACKAGE_NAME_GMS, null);

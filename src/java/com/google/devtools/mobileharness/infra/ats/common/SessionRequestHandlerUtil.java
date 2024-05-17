@@ -352,6 +352,7 @@ public class SessionRequestHandlerUtil {
             createJobTmpDir(tradefedJobInfo.get().jobConfig().getName()).toString());
     addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
     jobInfo.properties().add(Job.IS_XTS_TF_JOB, "true");
+    injectCommonParams(jobInfo);
     tradefedJobInfo
         .get()
         .extraJobProperties()
@@ -1089,7 +1090,15 @@ public class SessionRequestHandlerUtil {
                 .resolve(String.format("android-%s/testcases", xtsType))
                 .toAbsolutePath()
                 .toString());
+    injectCommonParams(jobInfo);
     return Optional.of(jobInfo);
+  }
+
+  private void injectCommonParams(JobInfo jobInfo) {
+    // Skip to clear gservice flag overrides.
+    jobInfo.params().add("clear_gservices_overrides", "false");
+    // Skip to check installed gms core version.
+    jobInfo.params().add("check_installed_gms_core_version", "false");
   }
 
   private String generateXtsSuiteInfoMap(String xtsRootDir, String xtsType, String testPlan) {
