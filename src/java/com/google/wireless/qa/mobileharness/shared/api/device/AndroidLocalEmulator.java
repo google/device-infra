@@ -79,8 +79,6 @@ public class AndroidLocalEmulator extends AndroidDevice {
     super.setUp();
     addSupportedDeviceType(AndroidLocalEmulator.class.getSimpleName());
     addDimension(DIMENSION_NAME_INTERNET, String.valueOf(true));
-    // enable ACID on AVD
-    addSupportedDriver("AcidRemoteDriver");
     updateDimension(
         Ascii.toLowerCase(Dimension.Name.SUPPORTS_GMSCORE.name()), Dimension.Value.TRUE);
     setCommunication(getDeviceId());

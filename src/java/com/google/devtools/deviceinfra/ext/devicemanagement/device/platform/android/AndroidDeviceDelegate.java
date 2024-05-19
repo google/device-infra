@@ -414,26 +414,8 @@ public abstract class AndroidDeviceDelegate {
     device.addDimension(Dimension.Name.ROOTED, String.valueOf(isRooted));
 
     // Adds general drivers.
-    // go/keep-sorted start
-    device.addSupportedDriver("AndroidChopin");
-    device.addSupportedDriver("AndroidCopycatRemoteControlledMoblySnippetTest");
-    device.addSupportedDriver("AndroidGUnit");
-    device.addSupportedDriver("AndroidHawkeyeBaselineExperiment");
-    device.addSupportedDriver("AndroidInstrumentation");
-    device.addSupportedDriver("AndroidMarmosetDriver");
-    device.addSupportedDriver("AndroidMonkey");
-    device.addSupportedDriver("AndroidNativeBin");
-    device.addSupportedDriver("AndroidNuwa");
-    device.addSupportedDriver("AndroidUIAutomator");
-    device.addSupportedDriver("FlutterDriver");
-    device.addSupportedDriver("ManekiTest");
-    device.addSupportedDriver("MoblyTest");
     device.addSupportedDriver("NoOpDriver");
-    device.addSupportedDriver("VegaTest");
-    device.addSupportedDriver("VinsonDriver");
     device.addSupportedDriver("XtsTradefedTest");
-    device.addSupportedDriver("YtsTest");
-    // go/keep-sorted end
 
     basicAndroidDecoratorConfiguration();
   }
@@ -441,69 +423,19 @@ public abstract class AndroidDeviceDelegate {
   /** List of decorators that should be supported by root/non-root devices. */
   public void basicAndroidDecoratorConfiguration() throws InterruptedException {
     // Adds general decorators.
-    // go/keep-sorted start
-    device.addSupportedDecorator("AndroidAccountDecorator");
     device.addSupportedDecorator("AndroidAdbShellDecorator");
-    device.addSupportedDecorator("AndroidAppVersionDecorator");
     device.addSupportedDecorator("AndroidAtsDynamicConfigPusherDecorator");
-    device.addSupportedDecorator("AndroidBugreportDecorator");
-    device.addSupportedDecorator("AndroidChopinDecorator");
-    device.addSupportedDecorator("AndroidChromeWebViewInstallerDecorator");
     device.addSupportedDecorator("AndroidCleanAppsDecorator");
-    device.addSupportedDecorator("AndroidCrashMonitorDecorator");
     device.addSupportedDecorator("AndroidDeviceFeaturesCheckDecorator");
-    device.addSupportedDecorator("AndroidDisableAppsDecorator");
-    device.addSupportedDecorator("AndroidDiskUsageMonitorDecorator");
-    device.addSupportedDecorator("AndroidDumpSysDecorator");
-    device.addSupportedDecorator("AndroidFeatureFlagDecorator");
-    device.addSupportedDecorator("AndroidFilePullerDecorator");
-    device.addSupportedDecorator("AndroidFilePusherDecorator");
-    device.addSupportedDecorator("AndroidForceInstallGmsCoreDecorator");
-    device.addSupportedDecorator("AndroidFrameRenderDecorator");
-    device.addSupportedDecorator("AndroidGmsCoreConfigDecorator");
-    device.addSupportedDecorator("AndroidGmsCoreNetworkStatsDecorator");
     device.addSupportedDecorator("AndroidInstallAppsDecorator");
-    device.addSupportedDecorator("AndroidInstallMultipleApksDecorator");
-    device.addSupportedDecorator("AndroidKillProcessDecorator");
-    device.addSupportedDecorator("AndroidLogCatDecorator");
     device.addSupportedDecorator("AndroidMainlineModulesCheckDecorator");
     device.addSupportedDecorator("AndroidMinSdkVersionCheckDecorator");
-    device.addSupportedDecorator("AndroidNuwaDecorator");
-    device.addSupportedDecorator("AndroidOrientationDecorator");
-    device.addSupportedDecorator("AndroidPackageStatsDecorator");
-    device.addSupportedDecorator("AndroidPerfettoDecorator");
-    device.addSupportedDecorator("AndroidResMonitorDecorator");
-    device.addSupportedDecorator("AndroidScreenshotDecorator");
-    device.addSupportedDecorator("AndroidSdVideoDecorator");
-    device.addSupportedDecorator("AndroidSetPropDecorator");
-    device.addSupportedDecorator("AndroidStartAppsDecorator");
-    device.addSupportedDecorator("AndroidStatsWakeLocksDecorator");
-    device.addSupportedDecorator("AndroidSwitchLanguageDecorator");
     device.addSupportedDecorator("AndroidSwitchUserDecorator");
-    device.addSupportedDecorator("AndroidSystemHealthMemoryDecorator");
-    device.addSupportedDecorator("AndroidWebviewBridgeDecorator");
-    device.addSupportedDecorator("KimonoAccountSelectorDecorator");
-    device.addSupportedDecorator("ManekiAndroidWebdriverPortForwardDecorator");
-    device.addSupportedDecorator("ManekiYouTubeLauncherDecorator");
-    device.addSupportedDecorator("MaskImageDecorator");
-    // go/keep-sorted end
-
-    // This will replace `AndroidChromeWebViewInstallerDecorator` when it's ready. DO NOT USE YET!
-    device.addSupportedDecorator("AndroidChromeInstallerDecorator");
   }
 
   /** List of additional decorators/drivers that should be supported by root/non-root devices. */
   private void additionalAndroidDeviceConfiguration() throws InterruptedException {
-    // Adds decorators validating sdk version. Not supported by GCE AVD place holders.
-    device.addSupportedDecorator("AndroidLocationDecorator");
     device.addSupportedDecorator("NoOpDecorator");
-    device.addSupportedDecorator("AndroidDeviceActionInstallMainlineDecorator");
-    device.addSupportedDecorator("AndroidDeviceActionResetDecorator");
-    device.addSupportedDecorator("AndroidHermeticServerLauncherDecorator");
-    device.addSupportedDecorator("AndroidHermeticWiredHttpProxyDecorator");
-    device.addSupportedDecorator("AndroidLazyProxyDecorator");
-    device.addSupportedDecorator("AndroidInstallMainlineModulesDecorator");
-
     // *********************************************************************************************
     // The following features are only enabled in full stack labs or Local Mode.
     // *********************************************************************************************
@@ -511,16 +443,8 @@ public abstract class AndroidDeviceDelegate {
     if (!ifEnableFullStackFeatures()) {
       return;
     }
-
-    // More Drivers.
-    device.addSupportedDriver("AndroidChromedriver");
-    device.addSupportedDriver("MoblyAospTest");
-
     // For OSS
     device.addSupportedDriver("MoblyAospPackageTest");
-
-    // More Decorators.
-    device.addSupportedDecorator("AndroidCreateWorkProfileDecorator");
 
     // Gets the current override size of the screen of the device.
     try {
@@ -543,13 +467,6 @@ public abstract class AndroidDeviceDelegate {
     // settings may not be supported for emulators.
     device.addSupportedDecorator("AndroidDeviceSettingsDecorator");
 
-    device.addSupportedDecorator("AndroidDisableAutoUpdatesDecorator");
-    device.addSupportedDecorator("AndroidHermeticServerCertPusherDecorator");
-    device.addSupportedDecorator("AndroidInstallAppBundleDecorator");
-    device.addSupportedDecorator("AndroidInstallSystemAppsDecorator");
-    device.addSupportedDecorator("AndroidPermissionDecorator");
-    device.addSupportedDecorator("AndroidReinstallSystemAppsDecorator");
-
     // *********************************************************************************************
     // The following features are only enabled in full stack labs or Local Mode.
     // *********************************************************************************************
@@ -557,9 +474,6 @@ public abstract class AndroidDeviceDelegate {
     if (!ifEnableFullStackFeatures()) {
       return;
     }
-
-    // More Drivers.
-    device.addSupportedDriver("HostBin");
 
     // Gets GServices Android ID(go/android-id).
     if (device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION).orElse(0)

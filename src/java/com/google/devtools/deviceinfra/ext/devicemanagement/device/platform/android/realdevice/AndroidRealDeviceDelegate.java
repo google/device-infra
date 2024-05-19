@@ -280,12 +280,7 @@ public abstract class AndroidRealDeviceDelegate {
       }
       setUpOnlineModeDevice();
     } else {
-      device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_FASTBOOT_DEVICE);
-      device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_FLASHABLE_DEVICE);
       device.addSupportedDriver(AndroidRealDeviceConstants.NO_OP_DRIVER);
-      device.addSupportedDriver(AndroidRealDeviceConstants.MOBLY_TEST_DRIVER);
-      device.addSupportedDriver(AndroidRealDeviceConstants.MOBLY_AOSP_TEST_DRIVER);
-      device.addSupportedDriver(AndroidRealDeviceConstants.ACID_REMOTE_DRIVER);
       String hardware = fastboot.getVar(deviceId, FastbootProperty.PRODUCT);
       if (!Strings.isNullOrEmpty(hardware)) {
         device.updateDimension(Dimension.Name.HARDWARE, hardware);
@@ -306,22 +301,7 @@ public abstract class AndroidRealDeviceDelegate {
             deviceId, MoreThrowables.shortDebugString(e));
       }
 
-      device.addSupportedDecorator("AndroidFlashDeviceDecorator");
-      device.addSupportedDecorator("AndroidFlashstationDecorator");
-      device.addSupportedDecorator("AndroidAutomotiveFlashDecorator");
       addFastbootCommunication(deviceId);
-
-      // TODO: update this to support any amlogic devices without hardcoding them in
-      if ("atom".equals(hardware)
-          || "Beast".equals(hardware)
-          || "deadpool".equals(hardware)
-          || "sabrina".equals(hardware)
-          || "boreal".equals(hardware)) {
-        // to be flashed by appropriate decorator
-        device.addSupportedDecorator("AndroidAmlogicFlashDecorator");
-        // to be able to just reboot into adb.
-        device.addSupportedDecorator("AndroidFactoryResetDecorator");
-      }
     }
   }
 
@@ -385,9 +365,6 @@ public abstract class AndroidRealDeviceDelegate {
     androidDeviceDelegate.ensureDeviceReady();
     validateDeviceOnceReady(deviceId, device.getClass().getSimpleName());
     androidDeviceDelegate.setUp(isRooted(), extraDimensionsForSetUpDevice());
-
-    // Indicates the device is online.
-    device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_ONLINE_DEVICE);
 
     addRealDeviceBasicDimensionsAndProperties();
     addRealDeviceBasicSupportedDriversDecorators();
@@ -481,84 +458,7 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   private void addRealDeviceBasicSupportedDriversDecorators()
-      throws MobileHarnessException, InterruptedException {
-    // The flash decorators are added before checkOnlineModeDevice() to avoid becoming FailedDevice
-    // without being able to recover with flashing.
-    if (ifEnableDeviceFlashAndResetDecorators()) {
-      Set<String> features = systemSpecUtil.getSystemFeatures(deviceId);
-      // FlashDevice decorator is only meaningful with google device, sw system or watch.
-      List<String> characteristics =
-          device.getDimension(Ascii.toLowerCase(AndroidProperty.CHARACTERISTICS.name()));
-      String allCharacteristics = Joiner.on(' ').join(characteristics);
-      List<String> brandNames =
-          device.getDimension(Ascii.toLowerCase(AndroidProperty.BRAND.name()));
-      List<String> deviceNames =
-          device.getDimension(Ascii.toLowerCase(AndroidProperty.DEVICE.name()));
-      List<String> prodBoards =
-          device.getDimension(Ascii.toLowerCase(AndroidProperty.PRODUCT_BOARD.name()));
-      if (brandNames.contains("google")
-          || brandNames.contains("ape_acme")
-          || brandNames.contains("android")
-          || brandNames.contains("qti")
-          || brandNames.contains("exynos")
-          || brandNames.contains("jio")
-          || deviceNames.contains("moohan")
-          || deviceNames.contains("xrdk1")
-          || deviceNames.contains("xrdk2")
-          || deviceNames.contains("xrvst2")
-          || allCharacteristics.contains("watch")
-          || features.contains(AndroidRealDeviceConstants.FEATURE_IOT)
-          || features.contains(AndroidRealDeviceConstants.FEATURE_EMBEDDED)
-          || features.contains(AndroidRealDeviceConstants.FEATURE_DAYDREAM_STANDALONE)
-          || features.contains(AndroidRealDeviceConstants.FEATURE_LEANBACK)) {
-        device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_FLASHABLE_DEVICE);
-        device.addSupportedDecorator("AndroidOtaUpdateDecorator");
-        device.addSupportedDecorator("AndroidFactoryResetDecorator");
-        if (features.contains(AndroidRealDeviceConstants.FEATURE_EMBEDDED)) {
-          device.addSupportedDecorator("AndroidThingsFlashDeviceDecorator");
-        } else if (prodBoards.contains("atom")
-            || prodBoards.contains("beast")
-            || prodBoards.contains("deadpool")
-            || prodBoards.contains("sabrina")
-            || prodBoards.contains("boreal")) {
-          // TODO: update this to support any amlogic devices without hard-coding them
-          // in
-          device.addSupportedDecorator("AndroidAmlogicFlashDecorator");
-          device.addSupportedDecorator("AndroidFlashstationDecorator");
-        } else {
-          device.addSupportedDecorator("AndroidFlashDeviceDecorator");
-          device.addSupportedDecorator("AndroidFlashstationDecorator");
-          device.addSupportedDecorator("AndroidAutomotiveFlashDecorator");
-        }
-      }
-    }
-    // HD Video decorator is supported by real device only.
-    device.addSupportedDecorator("AndroidHdVideoDecorator");
-
-    // BatteryStats and CpuTime decorators (run "dumpsys battery set usb 0" and then parse "dumpsys
-    // batterystats") are currently meaningful with real device (L & above) only.
-    device.addSupportedDecorator("AndroidBatteryStatsDecorator");
-
-    // Phonesky Self Update specific decorator.
-    device.addSupportedDecorator("AndroidPhoneskySelfUpdateDecorator");
-
-    // Framerate data collection for VR Apps provided from VrCore.
-    device.addSupportedDecorator("AndroidVRFramerateDecorator");
-
-    // Go through popup dialogs while installing apps.
-    device.addSupportedDecorator("AndroidInstallAppPopupHelperDecorator");
-
-    if (isRooted()) {
-      // Runs tcpdump on device.
-      device.addSupportedDecorator("AndroidNetworkDecorator");
-      // Runs performance locking on device.
-      device.addSupportedDecorator("AndroidPerformanceLockDecorator");
-    } else if (AndroidRealDeviceDelegateHelper.isInSupportedAllowlistForPerformanceLockDecorator(
-        device)) {
-      // Runs performance locking on device.
-      device.addSupportedDecorator("AndroidPerformanceLockDecorator");
-    }
-  }
+      throws MobileHarnessException, InterruptedException {}
 
   /** Returns {@code true} if need to enable device flash and reset decorators. */
   protected abstract boolean ifEnableDeviceFlashAndResetDecorators();
@@ -579,35 +479,6 @@ public abstract class AndroidRealDeviceDelegate {
   private void addRealDeviceFullStackSupportedDeviceTypesDriversDecorators()
       throws MobileHarnessException, InterruptedException {
     // *************** More drivers ***************
-
-    // Afw Test Harness is supported by real device only and it requires flash/adb.
-    device.addSupportedDriver("AndroidForWorkTestHarness");
-
-    // Add support for comms testing using Acts.
-    device.addSupportedDriver("AndroidCommsActsTest");
-
-    // Add support for google tradefed wrapper.
-    device.addSupportedDriver("GoogleTradefedDriver");
-
-    // Add support for Platform Tradefed tests execution through the ATE library
-    device.addSupportedDriver("AndroidTradefedTest");
-
-    // *************** More decorators ***************
-
-    // Disable auto-updates in Play Store before running any tests
-    device.addSupportedDecorator("AndroidDisableAutoUpdatesDecorator");
-
-    // Set Wifi ssid on a real device before running a test.
-    device.addSupportedDecorator("AndroidSetWifiDecorator");
-
-    device.addSupportedDecorator("AndroidKibbleDecorator");
-
-    // Mobly Monsoon decorator operates on Mobly sub-devices: AndroidRealDevice.
-    device.addSupportedDecorator("MoblyMonsoonDecorator");
-
-    if (isRooted()) {
-      device.addSupportedDecorator("AndroidMonsoonVideoDecorator");
-    }
   }
 
   /** Adds device extra supported drivers and decorators when the full stack features enabled. */
@@ -770,10 +641,7 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   private void configureRecoveryDevice() throws MobileHarnessException, InterruptedException {
-    device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_RECOVERY_DEVICE);
-    device.addSupportedDeviceType(AndroidRealDeviceConstants.ANDROID_FLASHABLE_DEVICE);
     device.addSupportedDriver(AndroidRealDeviceConstants.NO_OP_DRIVER);
-    device.addSupportedDecorator("AndroidFlashstationDecorator");
     androidDeviceHelper.updateAndroidPropertyDimensions(device);
   }
 
