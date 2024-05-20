@@ -124,7 +124,7 @@ public class TestRetryHandler {
     Retry retrySetting = jobInfo.setting().getRetry();
     Retry.Level retryLevel = retrySetting.getRetryLevel();
     if (retryLevel == Retry.Level.ALL) {
-      currentTestInfo.properties().add(Ascii.toLowerCase(Test.IS_FINAL_ATTEMPT.name()), "true");
+      addFinalAttemptProperty(currentTestInfo);
       // Already handled in JobStartEvent. Ignore.
       return;
     }
@@ -169,8 +169,7 @@ public class TestRetryHandler {
       // 4) Show the INFRA_ISSUE tests that are saved by an extra retry:
       //    PASS_AFTER_RETRY=true && RETRY_REASON=EXTRA_RETRY_FOR_INFRA_ISSUE
       currentTestInfo.properties().add(Test.PASS_AFTER_RETRY, Boolean.TRUE.toString());
-
-      currentTestInfo.properties().add(Ascii.toLowerCase(Test.IS_FINAL_ATTEMPT.name()), "true");
+      addFinalAttemptProperty(currentTestInfo);
       return;
     }
 
@@ -182,150 +181,159 @@ public class TestRetryHandler {
           .atInfo()
           .alsoTo(logger)
           .log("Do not retry test for allocation failure [%s]", currentTestResult);
-
-      currentTestInfo.properties().add(Ascii.toLowerCase(Test.IS_FINAL_ATTEMPT.name()), "true");
+      addFinalAttemptProperty(currentTestInfo);
       return;
     }
 
+    // Do not retry if the job is timeout
+    if (jobInfo.timer().isExpired()) {
+      addFinalAttemptProperty(currentTestInfo);
+      return;
+    }
+    // Do not retry if the current test halts the future retry.
+    if (currentTestInfo.properties().getBoolean(Test.HALT_RETRY).orElse(false)) {
+      addFinalAttemptProperty(currentTestInfo);
+      return;
+    }
+    // Do not retry if already retry enough times
     long validAttemptNum =
         getAllAttempts(jobInfo, currentTestInfo).stream()
             .filter(TestRetryHandler::isValidAttempt)
             .count();
-    String testName = currentTestInfo.locator().getName();
+    if (validAttemptNum > retrySetting.getTestAttempts()) {
+      addFinalAttemptProperty(currentTestInfo);
+      return;
+    }
 
-    // Makes sure the check logic below is the same as the one in {@link
-    // GoogleAnalyticsUploader.isFinalTestResult()}.
-    if (!jobInfo.timer().isExpired() && validAttemptNum <= retrySetting.getTestAttempts()) {
-      TestResult testResult = currentTestInfo.result().get();
-      Optional<ExceptionDetail> cause = currentTestInfo.resultWithCause().get().causeProto();
-      ErrorId criticalErrorId =
-          cause.isPresent() ? ErrorModelConverter.getCriticalErrorId(cause.get()) : null;
-      String retryReason = null;
-      if (validAttemptNum < retrySetting.getTestAttempts()) {
-        if (isPotentialContainerError(currentTestInfo)) {
-          retryReason = "POTENTIAL_CONTAINER_ISSUE";
-        } else if (isPotentialUtpError(currentTestInfo)) {
-          retryReason = "POTENTIAL_" + currentUtpMode.get().name() + "_ISSUE";
-        } else if (isRetryableForDrainTimeout(currentTestInfo)) {
-          retryReason = "DRAIN_TIMEOUT_ERROR";
-        } else if ((retryLevel == Retry.Level.ERROR
-                && testResult != TestResult.PASS
-                && testResult != TestResult.FAIL
-                && testResult != TestResult.SKIP)
-            || (retryLevel == Retry.Level.FAIL
-                && testResult != TestResult.PASS
-                && testResult != TestResult.SKIP)) {
-          retryReason = "TEST_" + testResult;
+    String testName = currentTestInfo.locator().getName();
+    TestResult testResult = currentTestInfo.result().get();
+    Optional<ExceptionDetail> cause = currentTestInfo.resultWithCause().get().causeProto();
+    ErrorId criticalErrorId =
+        cause.isPresent() ? ErrorModelConverter.getCriticalErrorId(cause.get()) : null;
+    String retryReason = null;
+    if (validAttemptNum < retrySetting.getTestAttempts()) {
+      if (isPotentialContainerError(currentTestInfo)) {
+        retryReason = "POTENTIAL_CONTAINER_ISSUE";
+      } else if (isPotentialUtpError(currentTestInfo)) {
+        retryReason = "POTENTIAL_" + currentUtpMode.get().name() + "_ISSUE";
+      } else if (isRetryableForDrainTimeout(currentTestInfo)) {
+        retryReason = "DRAIN_TIMEOUT_ERROR";
+      } else if ((retryLevel == Retry.Level.ERROR
+              && testResult != TestResult.PASS
+              && testResult != TestResult.FAIL
+              && testResult != TestResult.SKIP)
+          || (retryLevel == Retry.Level.FAIL
+              && testResult != TestResult.PASS
+              && testResult != TestResult.SKIP)) {
+        retryReason = "TEST_" + testResult;
+      }
+    } else if (validAttemptNum == retrySetting.getTestAttempts()
+        && !DRIVER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY.contains(jobInfo.type().getDriver())
+        && validAttemptNum
+            == getAllAttempts(jobInfo, currentTestInfo)
+                .size() /* no auto retry for UTP/sandbox */) {
+      // Have another retry for the INFRA_ISSUE even when the max attempt number is reached.
+      if (testResult != TestResult.PASS && testResult != TestResult.SKIP && cause.isPresent()) {
+        if (criticalErrorId.getType() == ErrorType.INFRA_ISSUE) {
+          retryReason = "EXTRA_RETRY_FOR_INFRA_ISSUE_AS_CRITICAL_ERROR";
+        } else if (ErrorModelConverter.hasInfraIssue(cause.get())) {
+          retryReason = "EXTRA_RETRY_FOR_INFRA_ISSUE_AS_CAUSE_OR_SUPPRESSED_ERROR";
         }
-      } else if (validAttemptNum == retrySetting.getTestAttempts()
-          && !DRIVER_BLOCK_LIST_FOR_INFRA_ERROR_EXTRA_RETRY.contains(jobInfo.type().getDriver())
-          && validAttemptNum
-              == getAllAttempts(jobInfo, currentTestInfo)
-                  .size() /* no auto retry for UTP/sandbox */) {
-        // Have another retry for the INFRA_ISSUE even when the max attempt number is reached.
-        if (testResult != TestResult.PASS && testResult != TestResult.SKIP && cause.isPresent()) {
-          if (criticalErrorId.getType() == ErrorType.INFRA_ISSUE) {
-            retryReason = "EXTRA_RETRY_FOR_INFRA_ISSUE_AS_CRITICAL_ERROR";
-          } else if (ErrorModelConverter.hasInfraIssue(cause.get())) {
-            retryReason = "EXTRA_RETRY_FOR_INFRA_ISSUE_AS_CAUSE_OR_SUPPRESSED_ERROR";
-          }
-          if (retryReason != null) {
-            // Double check whether the time is enough for the extra retry. If not, cancel the
-            // retry.
-            String message = null;
-            if (jobInfo
-                    .timer()
-                    .remainingTimeJava()
-                    .compareTo(MIN_JOB_REMAINING_TIME_FOR_INFRA_ERROR_EXTRA_RETRY)
-                < 0) {
+        if (retryReason != null) {
+          // Double check whether the time is enough for the extra retry. If not, cancel the
+          // retry.
+          String message = null;
+          if (jobInfo
+                  .timer()
+                  .remainingTimeJava()
+                  .compareTo(MIN_JOB_REMAINING_TIME_FOR_INFRA_ERROR_EXTRA_RETRY)
+              < 0) {
+            message =
+                String.format(
+                    "Skip the extra retry for INFRA_ISSUE because the job remaining time(%s) <"
+                        + " %s",
+                    jobInfo.timer().remainingTimeJava(),
+                    MIN_JOB_REMAINING_TIME_FOR_INFRA_ERROR_EXTRA_RETRY);
+            retryReason = null; // No retry when job remaining time is less than 5 minutes.
+          } else if (currentTestInfo.timing().getStartTime() != null) {
+            Duration testDuration =
+                Duration.between(
+                    currentTestInfo.timing().getStartTime(), Clock.systemUTC().instant());
+            if (testDuration.compareTo(MAX_TEST_DURATION_FOR_INFRA_ERROR_EXTRA_RETRY) >= 0) {
+              message =
+                  String.format(
+                      "Skip the extra retry for INFRA_ISSUE because the current test"
+                          + " attempt(test_id=%s) duration(%s) >= %s",
+                      currentTestInfo.locator().getId(),
+                      testDuration,
+                      MAX_TEST_DURATION_FOR_INFRA_ERROR_EXTRA_RETRY);
+              retryReason = null; // No retry for tests running longer than 2 hours.
+            }
+            if (testDuration.compareTo(jobInfo.timer().remainingTimeJava()) > 0) {
               message =
                   String.format(
                       "Skip the extra retry for INFRA_ISSUE because the job remaining time(%s) <"
-                          + " %s",
+                          + " current test attempt(test_id=%s) duration(%s)",
                       jobInfo.timer().remainingTimeJava(),
-                      MIN_JOB_REMAINING_TIME_FOR_INFRA_ERROR_EXTRA_RETRY);
-              retryReason = null; // No retry when job remaining time is less than 5 minutes.
-            } else if (currentTestInfo.timing().getStartTime() != null) {
-              Duration testDuration =
-                  Duration.between(
-                      currentTestInfo.timing().getStartTime(), Clock.systemUTC().instant());
-              if (testDuration.compareTo(MAX_TEST_DURATION_FOR_INFRA_ERROR_EXTRA_RETRY) >= 0) {
-                message =
-                    String.format(
-                        "Skip the extra retry for INFRA_ISSUE because the current test"
-                            + " attempt(test_id=%s) duration(%s) >= %s",
-                        currentTestInfo.locator().getId(),
-                        testDuration,
-                        MAX_TEST_DURATION_FOR_INFRA_ERROR_EXTRA_RETRY);
-                retryReason = null; // No retry for tests running longer than 2 hours.
-              }
-              if (testDuration.compareTo(jobInfo.timer().remainingTimeJava()) > 0) {
-                message =
-                    String.format(
-                        "Skip the extra retry for INFRA_ISSUE because the job remaining time(%s) <"
-                            + " current test attempt(test_id=%s) duration(%s)",
-                        jobInfo.timer().remainingTimeJava(),
-                        currentTestInfo.locator().getId(),
-                        testDuration);
-                retryReason =
-                    null; // No retry for tests running longer than the remaining job time.
-              }
+                      currentTestInfo.locator().getId(),
+                      testDuration);
+              retryReason = null; // No retry for tests running longer than the remaining job time.
             }
-            if (message != null) {
-              jobInfo.log().atInfo().alsoTo(logger).log("%s", message);
-              currentTestInfo.log().atInfo().log("%s", message);
-            }
+          }
+          if (message != null) {
+            jobInfo.log().atInfo().alsoTo(logger).log("%s", message);
+            currentTestInfo.log().atInfo().log("%s", message);
           }
         }
       }
-      if (retryReason != null) {
-        TestInfo newTest = addNewTest(jobInfo, currentTestInfo, validAttemptNum);
-        newTest.properties().add(Test.RETRY_REASON, retryReason);
+    }
+    if (retryReason != null) {
+      TestInfo newTest = addNewTest(jobInfo, currentTestInfo, validAttemptNum);
+      newTest.properties().add(Test.RETRY_REASON, retryReason);
 
-        if (criticalErrorId != null
-            && Ascii.equalsIgnoreCase(
-                criticalErrorId.getName(),
-                AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_NO_VALID_UID_ASSIGNED
-                    .name())) {
-          newTest.properties().add(Test.RETRY_AFTER_NO_VALID_UID_ASSIGNED, "true");
-        }
-
-        // Update left retry times for drain timeout.
-        if (isRetryableForDrainTimeout(currentTestInfo)) {
-          long unused = newTest.properties().plusLong(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS, 1L);
-        }
-
-        String message =
-            String.format(
-                "Retry MH test [%s], reason=%s, old_id=%s, new_id=%s, job_remaining_time=%s",
-                testName,
-                retryReason,
-                currentTestInfo.locator().getId(),
-                newTest.locator().getId(),
-                jobInfo.timer().remainingTimeJava());
-        jobInfo.log().atInfo().alsoTo(logger).log("%s", message);
-        currentTestInfo.log().atInfo().log("%s", message);
-        newTest.log().atInfo().log("%s", message);
-
-        try {
-          deviceAllocator.extraAllocation(newTest);
-        } catch (MobileHarnessException e) {
-          // Does nothing here. Even if it failed to add the new test to master here, it has
-          // been added to job. So the MasterDeviceAllocator will check and reopen it to master
-          // again.
-          currentTestInfo
-              .log()
-              .atWarning()
-              .alsoTo(logger)
-              .withCause(e)
-              .log("Failed to add allocation for retry test [%s]", newTest.locator().getId());
-        }
-        currentTestInfo.properties().add(Ascii.toLowerCase(Test.IS_FINAL_ATTEMPT.name()), "false");
-        return;
+      if (criticalErrorId != null
+          && Ascii.equalsIgnoreCase(
+              criticalErrorId.getName(),
+              AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_FAILED_NO_VALID_UID_ASSIGNED
+                  .name())) {
+        newTest.properties().add(Test.RETRY_AFTER_NO_VALID_UID_ASSIGNED, "true");
       }
+
+      // Update left retry times for drain timeout.
+      if (isRetryableForDrainTimeout(currentTestInfo)) {
+        long unused = newTest.properties().plusLong(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS, 1L);
+      }
+
+      String message =
+          String.format(
+              "Retry MH test [%s], reason=%s, old_id=%s, new_id=%s, job_remaining_time=%s",
+              testName,
+              retryReason,
+              currentTestInfo.locator().getId(),
+              newTest.locator().getId(),
+              jobInfo.timer().remainingTimeJava());
+      jobInfo.log().atInfo().alsoTo(logger).log("%s", message);
+      currentTestInfo.log().atInfo().log("%s", message);
+      newTest.log().atInfo().log("%s", message);
+
+      try {
+        deviceAllocator.extraAllocation(newTest);
+      } catch (MobileHarnessException e) {
+        // Does nothing here. Even if it failed to add the new test to master here, it has
+        // been added to job. So the MasterDeviceAllocator will check and reopen it to master
+        // again.
+        currentTestInfo
+            .log()
+            .atWarning()
+            .alsoTo(logger)
+            .withCause(e)
+            .log("Failed to add allocation for retry test [%s]", newTest.locator().getId());
+      }
+      currentTestInfo.properties().add(Ascii.toLowerCase(Test.IS_FINAL_ATTEMPT.name()), "false");
+      return;
     }
 
-    currentTestInfo.properties().add(Ascii.toLowerCase(Test.IS_FINAL_ATTEMPT.name()), "true");
+    addFinalAttemptProperty(currentTestInfo);
   }
 
   private ImmutableList<TestInfo> getAllAttempts(JobInfo jobInfo, TestInfo currentTestInfo) {
@@ -476,6 +484,10 @@ public class TestRetryHandler {
             .orElse(false)
         && testInfo.properties().getLong(Test._DRAIN_TIMEOUT_RETRY_ATTEMPTS).orElse(0L)
             < MAX_RETRY_ATTEMPTS_FOR_DRAIN_TIMEOUT;
+  }
+
+  private static void addFinalAttemptProperty(TestInfo currentTestInfo) {
+    currentTestInfo.properties().add(Test.IS_FINAL_ATTEMPT, "true");
   }
 
   /** Retrieves the UtpMode type from the test property if the given test is running in UTP Mode. */

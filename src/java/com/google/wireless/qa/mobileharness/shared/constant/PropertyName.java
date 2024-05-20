@@ -141,6 +141,9 @@ public interface PropertyName {
     /** The result (name()) of the test who initiates this retry test. */
     FOREGOING_TEST_RESULT,
 
+    /** Boolean. True to indicate that any retries after this test will be halted. */
+    HALT_RETRY,
+
     /** Boolean. True to indicate that the test has user specified UTP configs (e.g., plugins). */
     HAS_USER_UTP_CONFIG,
 
