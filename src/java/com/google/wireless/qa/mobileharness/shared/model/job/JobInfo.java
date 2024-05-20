@@ -622,10 +622,6 @@ public class JobInfo extends JobScheduleUnit {
       }
     }
     buf.append(String.format("\nGEN_FILE DIR:\n- %s\n", genFileDir));
-    buf.append(
-        String.format(
-            "JOB_LINK_IN_MHFE:\n- %s\n",
-            String.format("http://mhfe/jobdetailview/%s", locator().getId())));
     buf.append(params());
     buf.append(files());
     return buf.toString();

@@ -23,9 +23,6 @@ import "src/devtools/common/metrics/stability/model/proto/error_type.proto";
 option java_package = "com.google.devtools.mobileharness.api.model.proto";
 option java_outer_classname = "Error";
 
-// See java.lang.StackTraceElement.
-// DEPRECATED. Use http://google3/src/\
-// devtools/common/metrics/stability/model/proto/exception.proto instead.
 message StackTraceElement {
   option deprecated = true;
 
@@ -36,9 +33,6 @@ message StackTraceElement {
   int32 line_number = 4;
 }
 
-// Summary of the exception, without the cause/suppressed exception recursion.
-// DEPRECATED. Use http://google3/src/\
-// devtools/common/metrics/stability/model/proto/exception.proto instead.
 message ExceptionSummary {
   option deprecated = true;
 
@@ -61,9 +55,6 @@ message ExceptionSummary {
   repeated StackTraceElement stack_trace = 6;
 }
 
-// Full exception information. DEPRECATED. Use http://google3/third_party/\
-// deviceinfra/src/devtools/common/metrics/stability/model/proto/exception.proto
-// instead.
 message ExceptionDetail {
   option deprecated = true;
 

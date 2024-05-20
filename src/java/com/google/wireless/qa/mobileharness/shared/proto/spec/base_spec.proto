@@ -109,9 +109,6 @@ message DecoratorSpec {
 //     }];
 //   }
 //
-// Once a field is annotated with FieldDetails, Mobile Harness will parse and
-// load it automatically and show it on frontend. such as http://go/moha-wizard
-// and http://go/moha-moscar.
 message FieldDetail {
   // Whether the spec is required.
   optional bool is_required = 1;

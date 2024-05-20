@@ -26,11 +26,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import java.util.Map;
 
-/**
- * Event that signals a message sent to a test.
- *
- * @see <a href="http://go/mh-messaging">MH Messaging</a>
- */
+/** Event that signals a message sent to a test. */
 public class TestMessageEvent extends TestEvent implements DeviceCheckedTestEvent {
 
   private final TestMessageInfo testMessageInfo;

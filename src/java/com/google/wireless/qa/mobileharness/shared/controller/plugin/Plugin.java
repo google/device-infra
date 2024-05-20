@@ -40,18 +40,10 @@ public @interface Plugin {
     /** Client plugin. */
     CLIENT,
 
-    /**
-     * Gateway plugin.
-     *
-     * @see <a href="http://go/mh-gateway">Mobile Harness Stubby API</a>
-     */
+    /** Gateway plugin. */
     GATEWAY,
 
-    /**
-     * Forge-on-Mac plugin.
-     *
-     * @see <a href="http://go/fom-plugin-v2">Forge-on-Mac Plugin</a>
-     */
+    /** Forge-on-Mac plugin. */
     FOM,
   }
 

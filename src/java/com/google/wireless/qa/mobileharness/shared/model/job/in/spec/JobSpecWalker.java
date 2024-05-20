@@ -99,9 +99,8 @@ public class JobSpecWalker {
     if (options.hasExtension(BaseSpec.fileDetail)) {
       visitor.visitPrimitiveFileField(builder, field);
     } else {
-      // If a field is not marked by any detail(See Detail in
-      // http://cs?q=mobileharness+file:base_spec.proto), it is treated as a field with empty
-      // {@link #FieldDetail}.
+      // If a field is not marked by any detail
+      // , it is treated as a field with empty{@link #FieldDetail}.
       visitor.visitParamField(builder, field);
     }
   }

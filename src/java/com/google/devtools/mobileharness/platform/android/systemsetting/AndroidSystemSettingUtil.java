@@ -123,10 +123,6 @@ public class AndroidSystemSettingUtil {
   /** ADB shell svc power command arg for keeping the device stay awake. */
   @VisibleForTesting static final String ADB_SHELL_SVC_KEEP_AWAKE_ARGS = "stayon true";
 
-  /*
-   * See http://cs/android/frameworks/base/cmds/locksettings/src/com/android/commands/locksettings/LockSettingsCmd.java
-   * for more information.
-   */
   @VisibleForTesting
   static final String ADB_SHELL_LOCKSETTINGS_CLEAR_TEMPLATE = "locksettings set-disabled %s true";
 

@@ -56,17 +56,14 @@ public final class DriverDecoratorSpecMapper {
      * Initialize the map with driver-spec pairs.
      * =============================================================================================
      */
-    // go/keep-sorted start google3-only(internal)
     builder.put("NoOpDriver", "NoOpDriverSpec");
     builder.put("XtsTradefedTest", "XtsTradefedTestDriverSpec");
-    // go/keep-sorted end google3-only(internal)
 
     /*
      * =============================================================================================
      * Initialize the map with decorator-spec pairs.
      * =============================================================================================
      */
-    // go/keep-sorted start google3-only(internal)
     builder.put("AndroidAdbShellDecorator", "AndroidAdbShellDecoratorSpec");
     builder.put(
         "AndroidAtsDynamicConfigPusherDecorator", "AndroidAtsDynamicConfigPusherDecoratorSpec");
@@ -77,7 +74,6 @@ public final class DriverDecoratorSpecMapper {
     builder.put("AndroidMinSdkVersionCheckDecorator", "AndroidMinSdkVersionCheckDecoratorSpec");
     builder.put("AndroidSwitchUserDecorator", "AndroidSwitchUserDecoratorSpec");
     builder.put("NoOpDecorator", "NoOpDecoratorSpec");
-    // go/keep-sorted end google3-only(internal)
 
     DRIVER_DECORATOR_SPEC_MAP = builder.buildOrThrow();
   }

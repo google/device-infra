@@ -935,8 +935,7 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
       if (DeviceUtil.inSharedLab()) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_SETTING_NOT_SUPPORT_IN_SHARED_LAB,
-            "stop_interfering_services is not supported in shared lab. See "
-                + "go/m&m-performance-testing.");
+            "stop_interfering_services is not supported in shared lab.");
       }
       List<String> serviceToStop = ImmutableList.copyOf(PERFORMANCE_INTERFERING_SERVICES);
       if (!spec.getInterferingServiceToStopAfterSettingsList().isEmpty()) {
@@ -953,7 +952,7 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
       if (DeviceUtil.inSharedLab()) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_SETTING_NOT_SUPPORT_IN_SHARED_LAB,
-            "enforce_cpu_status is not supported in shared lab. See go/m&m-performance-testing.");
+            "enforce_cpu_status is not supported in shared lab.");
       }
       int numCpus = getNumberOfCpus();
       Map<Long, Long> freqs = getAllCpuRuntimeFreqsSpecified(spec);
@@ -1069,9 +1068,6 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
       commandsAfterSettings.add("echo", maxFrequency, ">", GPU_CLOCK_CONFIG_FILE_ON_DEVICE);
       commandsAfterSettings.add("echo", maxFrequency, ">", GPU_MAX_FREQ_CONFIG_FILE_ON_DEVICE);
       commandsAfterSettings.add("echo", maxFrequency, ">", GPU_MIN_FREQ_CONFIG_FILE_ON_DEVICE);
-      // Commands below are from http://cs/android/platform_testing/scripts/perf-setup/ as for
-      // different device models, commands will be different.
-      // PwrLevel "0" means run at maximum power level.
       String minPwrLevel = "0";
       String maxPwrLevel = "0";
       String deviceType = getProperty(deviceId, AndroidProperty.TYPE.getPropertyKeys());

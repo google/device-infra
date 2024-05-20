@@ -36,8 +36,7 @@ import javax.inject.Inject;
 @DecoratorAnnotation(
     help =
         "For installing apks. "
-            + "Use this decorator \"outside\" of the other decorators that rely on the apks. "
-            + "See the http://go/mh-tr")
+            + "Use this decorator \"outside\" of the other decorators that rely on the apks.")
 public class AndroidInstallAppsDecorator extends BaseDecorator
     implements SpecConfigable<InstallApkStepSpec> {
 

@@ -29,9 +29,6 @@ import java.util.Optional;
 /**
  * Proxy test runner for proxying a test to a direct test runner in a container or the current lab
  * server process in a MH lab.
- *
- * @see <a href="http://go/mh-container-design">Mobile Harness Container Design</a>
- * @see <a href="http://go/mhv5-tr-design">Mobile Harness V5 Test Runner Design</a>
  */
 public interface ProxyTestRunner extends TestRunner, TestRunnerTiming {
 

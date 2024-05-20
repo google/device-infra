@@ -150,10 +150,7 @@ public final class MoblyConstant {
      */
     public static final String TESTS_PARAM_MH_JOB_PROPERTIES = "mh_job_properties";
 
-    /**
-     * Config key within TestParams that contains a url string for the sponge invocation (e.g.,
-     * http://sponge/1a2b3c4d5e6f7g8h9i0).
-     */
+    /** Config key within TestParams that contains a url string for the sponge invocation. */
     public static final String TEST_PARAM_MH_SPONGE_LINK = "mh_sponge_link";
 
     /**

@@ -475,7 +475,6 @@ public abstract class AndroidDeviceDelegate {
       return;
     }
 
-    // Gets GServices Android ID(go/android-id).
     if (device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION).orElse(0)
         >= 18) {
       updateGServicesAndroidId(deviceId);

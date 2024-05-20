@@ -278,15 +278,6 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
               "Start pre-running test %s on device(s) %s",
               testInfo.locator().getName(), allocation.getAllDeviceLocators());
 
-      // Adds the link of MHFE.
-      String testLinkInMhfe =
-          String.format(
-              "http://mobileharness-fe/testdetailview/%s/%s",
-              testInfo.jobInfo().locator().getId(), testInfo.locator().getId());
-      logger.atInfo().log(
-          "Test link in MHFE for test %s: %s", testInfo.locator().getName(), testLinkInMhfe);
-      testInfo.properties().add(PropertyName.Test.TEST_LINK_IN_MHFE, testLinkInMhfe);
-
       // Pre-runs the test.
       boolean skipRunTest = false;
       if (shouldRunDoPreRunTest(testInfo)) {
@@ -1010,7 +1001,8 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
                       + " TestStartingEvent/TestStartedEvent/LocalDriverStartingEvent/"
                       + "LocalDecoratorPreForwardEvent. If you just want to change test result"
                       + ", please call testInfo.resultWithCause().set() directly in your"
-                      + " plugin. See go/mh-plugin-skip-test. Detail: %s",
+                      + " plugin. "
+                      + "Detail: %s",
                   skipResultWithCause.report()),
               logger);
       return false;

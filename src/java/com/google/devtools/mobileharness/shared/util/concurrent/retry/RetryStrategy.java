@@ -135,10 +135,7 @@ public abstract class RetryStrategy implements Serializable {
   // Provided strategies
 
   /**
-   * A strategy that has a constant delay between retries. <a
-   * href="http://go/cascading-failures-retries">In general, use the more sophisticated strategy</a>
-   * of {@linkplain #randomized randomized} {@linkplain #exponentialBackoff exponential backoff} --
-   * for example, {@code exponentialBackoff(Duration.ofSeconds(5), 5, 3).withRandomization(0.5)}.
+   * A strategy that has a constant delay between retries.
    *
    * @param delay the delay between attempts. (>= {@code Duration.ZERO})
    * @param numAttempts the maximum total number of attempts to make. (> 0)
@@ -159,10 +156,7 @@ public abstract class RetryStrategy implements Serializable {
   }
 
   /**
-   * A strategy that retries immediately. <a href="http://go/cascading-failures-retries">In general,
-   * use the more sophisticated strategy</a> of {@linkplain #randomized randomized} {@linkplain
-   * #exponentialBackoff exponential backoff} -- for example, {@code exponentialBackoff(5000, 5,
-   * 3).withRandomization(0.5)}.
+   * A strategy that retries immediately.
    *
    * @param numAttempts the maximum total number of attempts to make. (> 0)
    */
@@ -181,17 +175,11 @@ public abstract class RetryStrategy implements Serializable {
   }
 
   /**
-   * A strategy that retries for a fixed amount of time. <a
-   * href="http://go/cascading-failures-retries">In general, use the more sophisticated strategy</a>
-   * of {@linkplain #randomized randomized} {@linkplain #exponentialBackoff exponential backoff} --
-   * for example, {@code exponentialBackoff(Duration.ofSeconds(5), 5, 3).withRandomization(0.5)}.
+   * A strategy that retries for a fixed amount of time.
    *
    * @param delay the delay between attempts.
    * @param totalRetryTime the total amount of time to retry for. (> {@code Duration.ZERO})
-   * @deprecated this strategy can result in dangerous <a
-   *     href="http://go/cascading-failures-retries">thundering herds</a>. Furthermore, this
-   *     strategy is also fundamentally broken when combined with {@link #then} (see b/26549059).
-   *     Please use an alternative strategy (e.g., {@link #exponentialBackoff}) instead.
+   * @deprecated
    */
   @Deprecated
   public static RetryStrategy timed(Duration delay, Duration totalRetryTime) {
@@ -201,10 +189,6 @@ public abstract class RetryStrategy implements Serializable {
   /**
    * A general exponential backoff. The delay after the Nth attempt is {@code firstDelay *
    * (multiplier ^ (N-1))}, where N is from 1 to {@code numAttempts - 1} (inclusive).
-   *
-   * <p><a href="http://go/cascading-failures-retries">In general, supplement this strategy</a> with
-   * {@linkplain #randomized randomization} -- for example, {@code
-   * exponentialBackoff(Duration.ofSeconds(5), 5, 3).withRandomization(0.5)}.
    *
    * @param firstDelay the base delay (> {@code Duration.ZERO})
    * @param multiplier what the previous delay is multiplied by (> 0)

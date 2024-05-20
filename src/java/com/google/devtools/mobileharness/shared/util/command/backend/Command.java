@@ -660,7 +660,6 @@ public abstract class Command {
   abstract static class ExitCodeSuccessCondition implements SuccessCondition {
     // Hypothetically swapping to ImmutableIntArray and doing an O(n) search may be faster than
     // hashing and autoboxing, but without evidence this is cleaner and safer.
-    // http://yaqs/4599585578287104
     abstract ImmutableSet<Integer> exitCodes();
 
     private static ExitCodeSuccessCondition create(int first, int... rest) {

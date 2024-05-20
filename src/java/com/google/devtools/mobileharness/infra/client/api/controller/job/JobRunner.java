@@ -172,14 +172,6 @@ public class JobRunner implements Runnable {
   /** Interval for checking the tests which are waiting for allocating devices. */
   private static final Duration CHECK_NEW_TESTS_INTERVAL = Duration.ofSeconds(30);
 
-  /** Link to the helper page for the information about why a test failed to allocate any device. */
-  private static final String TEST_NOT_ASSIGNED_HELPER_LINK =
-      "http://go/omnilab-why-test-not-assigned";
-
-  /** Error message to point users to the help page. */
-  private static final String TEST_NOT_ASSIGNED_ERROR_MSG =
-      "See " + TEST_NOT_ASSIGNED_HELPER_LINK + " for more details.";
-
   /** Logger for this job. */
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -1210,8 +1202,6 @@ public class JobRunner implements Runnable {
                 errMsg += String.format("Diagnostic result: %s:\n%s\n", errorId, diagnosticResult);
                 cause = diagnosticReport.get().getResult().cause();
               }
-
-              errMsg += TEST_NOT_ASSIGNED_ERROR_MSG;
               testInfo
                   .errors()
                   .toWarnings()
@@ -1249,7 +1239,7 @@ public class JobRunner implements Runnable {
           break;
         case SUSPENDED:
           ErrorId errorId = InfraErrorId.CLIENT_JR_MNM_ALLOC_DEVICE_EXCEEDS_CEILING;
-          String errMsg = "Test is suspended for quota issues. " + TEST_NOT_ASSIGNED_ERROR_MSG;
+          String errMsg = "Test is suspended for quota issues. ";
           testInfo
               .errors()
               .toWarnings()
@@ -1572,7 +1562,7 @@ public class JobRunner implements Runnable {
                         + "the desired job result in the exceptions. SkipJobException only "
                         + "works in JobStartEvent. If you just want to change job result"
                         + ", please call jobInfo.result().set() directly in your plugin. "
-                        + "See go/mh-plugin-skip-job. Detail: %s",
+                        + " Detail: %s",
                     skipResultWithCause.report()),
                 logger);
       } else {

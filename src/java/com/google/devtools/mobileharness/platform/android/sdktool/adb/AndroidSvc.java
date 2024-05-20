@@ -19,12 +19,7 @@ package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 import com.google.auto.value.AutoValue;
 import java.util.Optional;
 
-/**
- * Wrapper class for "adb shell svc".
- *
- * <p>See http://cs/android/frameworks/base/cmds/svc/src/com/android/commands/svc/Svc.java for more
- * information.
- */
+/** Wrapper class for "adb shell svc". */
 @AutoValue
 public abstract class AndroidSvc {
 

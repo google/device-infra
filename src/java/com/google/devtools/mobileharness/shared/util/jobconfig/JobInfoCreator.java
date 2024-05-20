@@ -95,10 +95,7 @@ public final class JobInfoCreator {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  /**
-   * Prefix of a file in scoped spec. It should be the same as in
-   * http://cs/com/google/wireless/qa/mobileharness/client/builddefs/to_json.bzl.
-   */
+  /** Prefix of a file in scoped spec. */
   private static final String SCOPED_SPEC_FILE_PREFIX = "file::";
 
   private static final String PARAM_SESSION_ID = "session_id";
@@ -578,8 +575,7 @@ public final class JobInfoCreator {
                       + "    driver = \"%s\"\n"
                       + "    decorators = [\n"
                       + "        %s,\n"
-                      + "    ]\n"
-                      + "http://go/mh-job-config-drivers for more details.",
+                      + "    ]\n",
                   jobConfig.getType(),
                   type.getDevice(),
                   type.getDriver(),
