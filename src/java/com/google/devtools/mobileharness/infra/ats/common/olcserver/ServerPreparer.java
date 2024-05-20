@@ -68,7 +68,6 @@ import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 import javax.annotation.concurrent.GuardedBy;
@@ -109,7 +108,10 @@ public class ServerPreparer {
   private final ImmutableList<String> deviceInfraServiceFlags;
   private final ListeningScheduledExecutorService scheduledThreadPool;
 
-  private final AtomicBoolean serverPrepared = new AtomicBoolean();
+  private final Object prepareServerLock = new Object();
+
+  @GuardedBy("prepareServerLock")
+  private boolean hasPrepared;
 
   @Inject
   ServerPreparer(
@@ -161,108 +163,113 @@ public class ServerPreparer {
   }
 
   public void prepareOlcServer() throws MobileHarnessException, InterruptedException {
-    if (!serverPrepared.compareAndSet(false, true)) {
-      return;
-    }
+    synchronized (prepareServerLock) {
+      boolean firstPreparation = !hasPrepared;
+      hasPrepared = true;
 
-    // Tries to get server version.
-    GetVersionResponse version = null;
-    try {
-      version = requireNonNull(versionStub.get()).getVersion();
-    } catch (GrpcExceptionWithErrorId e) {
-      if (!e.getUnderlyingRpcException().getStatus().getCode().equals(Code.UNAVAILABLE)) {
-        throw new MobileHarnessException(
-            InfraErrorId.ATSC_SERVER_PREPARER_CONNECT_EXISTING_OLC_SERVER_ERROR,
-            "Failed to connect to existing OLC server",
-            e);
-      }
-    }
-    if (version != null) {
-      serverStartingLogger.log(
-          "Connected to existing OLC server, version=[%s]", shortDebugString(version));
-
-      if (needKillExistingServer()) {
-        killExistingServer();
-      } else {
-        serverStartingLogger.log("Using existing OLC server");
-        checkAndPrintServerVersionWarning(version);
-        return;
-      }
-    }
-
-    // Starts a new server if not exists.
-    serverStartingLogger.log("Starting new OLC server...");
-    String serverBinaryPath = requireNonNull(serverBinary.get()).toString();
-    localFileUtil.checkFile(serverBinaryPath);
-    ImmutableList<String> serverFlags =
-        ImmutableList.<String>builder()
-            .addAll(BuiltinOlcServerFlags.get())
-            .addAll(deviceInfraServiceFlags)
-            .build();
-    logger.atFine().log("OLC server flags: %s", serverFlags);
-
-    CommandProcess serverProcess = null;
-    ServerStderrLineCallback serverStderrLineCallback = new ServerStderrLineCallback();
-    try {
+      // Tries to get server version.
+      GetVersionResponse version = null;
       try {
-        serverProcess =
-            commandExecutor.start(
-                Command.of(
-                        systemUtil
-                            .getJavaCommandCreator()
-                            .createJavaCommand(
-                                serverBinaryPath,
-                                serverFlags,
-                                /* nativeArguments= */ ImmutableList.of()))
-                    .onStderr(serverStderrLineCallback)
-                    .successfulStartCondition(line -> line.contains(SERVER_STARTED_SIGNAL))
-                    .timeout(ChronoUnit.YEARS.getDuration())
-                    .redirectStderr(false)
-                    .needStdoutInResult(false)
-                    .needStderrInResult(false));
-        addCallback(
-            serverProcess.successfulStartFuture(),
-            new ServerSuccessfulStartCallback(serverProcess),
-            directExecutor());
-      } catch (CommandStartException e) {
-        throw new MobileHarnessException(
-            InfraErrorId.ATSC_SERVER_PREPARER_START_OLC_SERVER_ERROR,
-            "Failed to start OLC server",
-            e);
-      }
-
-      // Waits until the server starts.
-      logger.atFine().log("Wait until OLC server starts, command=[%s]", serverProcess.command());
-      try {
-        if (!serverProcess.successfulStartFuture().get(40L, SECONDS)) {
+        version = requireNonNull(versionStub.get()).getVersion();
+      } catch (GrpcExceptionWithErrorId e) {
+        if (!e.getUnderlyingRpcException().getStatus().getCode().equals(Code.UNAVAILABLE)) {
           throw new MobileHarnessException(
-              InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_ABNORMAL_EXIT_WHILE_INITIALIZATION,
-              "OLC server exited abnormally while initialization");
+              InfraErrorId.ATSC_SERVER_PREPARER_CONNECT_EXISTING_OLC_SERVER_ERROR,
+              "Failed to connect to existing OLC server",
+              e);
         }
-      } catch (ExecutionException e) {
-        throw new AssertionError(e);
-      } catch (TimeoutException unused) {
-        throw new MobileHarnessException(
-            InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_INITIALIZE_ERROR,
-            "OLC server didn't start in 40 seconds");
       }
-      connectWithRetry();
-      serverStartingLogger.log(
-          "OLC server started, port=%s, pid=%s",
-          Flags.instance().olcServerPort.getNonNull(), serverProcess.getUnixPidIfAny().orElse(0));
-    } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
-      // Kills the server.
-      if (serverProcess != null && serverProcess.isAlive()) {
-        serverStartingLogger.log("Killing OLC server");
-        serverProcess.kill();
+      if (version != null) {
+        if (firstPreparation) {
+          serverStartingLogger.log(
+              "Connected to existing OLC server, version=[%s]", shortDebugString(version));
+        }
+
+        if (needKillExistingServer(firstPreparation)) {
+          killExistingServer();
+        } else {
+          if (firstPreparation) {
+            serverStartingLogger.log("Using existing OLC server");
+            checkAndPrintServerVersionWarning(version);
+          }
+          return;
+        }
       }
 
-      // Prints stderr of the server.
-      String serverStartingLog = serverStderrLineCallback.getServerStartingLog();
-      if (!serverStartingLog.isEmpty()) {
-        serverStartingLogger.log("olc_server_stderr=[%s]", serverStartingLog);
+      // Starts a new server if not exists.
+      serverStartingLogger.log("Starting new OLC server...");
+      String serverBinaryPath = requireNonNull(serverBinary.get()).toString();
+      localFileUtil.checkFile(serverBinaryPath);
+      ImmutableList<String> serverFlags =
+          ImmutableList.<String>builder()
+              .addAll(BuiltinOlcServerFlags.get())
+              .addAll(deviceInfraServiceFlags)
+              .build();
+      logger.atFine().log("OLC server flags: %s", serverFlags);
+
+      CommandProcess serverProcess = null;
+      ServerStderrLineCallback serverStderrLineCallback = new ServerStderrLineCallback();
+      try {
+        try {
+          serverProcess =
+              commandExecutor.start(
+                  Command.of(
+                          systemUtil
+                              .getJavaCommandCreator()
+                              .createJavaCommand(
+                                  serverBinaryPath,
+                                  serverFlags,
+                                  /* nativeArguments= */ ImmutableList.of()))
+                      .onStderr(serverStderrLineCallback)
+                      .successfulStartCondition(line -> line.contains(SERVER_STARTED_SIGNAL))
+                      .timeout(ChronoUnit.YEARS.getDuration())
+                      .redirectStderr(false)
+                      .needStdoutInResult(false)
+                      .needStderrInResult(false));
+          addCallback(
+              serverProcess.successfulStartFuture(),
+              new ServerSuccessfulStartCallback(serverProcess),
+              directExecutor());
+        } catch (CommandStartException e) {
+          throw new MobileHarnessException(
+              InfraErrorId.ATSC_SERVER_PREPARER_START_OLC_SERVER_ERROR,
+              "Failed to start OLC server",
+              e);
+        }
+
+        // Waits until the server starts.
+        logger.atFine().log("Wait until OLC server starts, command=[%s]", serverProcess.command());
+        try {
+          if (!serverProcess.successfulStartFuture().get(40L, SECONDS)) {
+            throw new MobileHarnessException(
+                InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_ABNORMAL_EXIT_WHILE_INITIALIZATION,
+                "OLC server exited abnormally while initialization");
+          }
+        } catch (ExecutionException e) {
+          throw new AssertionError(e);
+        } catch (TimeoutException unused) {
+          throw new MobileHarnessException(
+              InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_INITIALIZE_ERROR,
+              "OLC server didn't start in 40 seconds");
+        }
+        connectWithRetry();
+        serverStartingLogger.log(
+            "OLC server started, port=%s, pid=%s",
+            Flags.instance().olcServerPort.getNonNull(), serverProcess.getUnixPidIfAny().orElse(0));
+      } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+        // Kills the server.
+        if (serverProcess != null && serverProcess.isAlive()) {
+          serverStartingLogger.log("Killing OLC server");
+          serverProcess.kill();
+        }
+
+        // Prints stderr of the server.
+        String serverStartingLog = serverStderrLineCallback.getServerStartingLog();
+        if (!serverStartingLog.isEmpty()) {
+          serverStartingLogger.log("olc_server_stderr=[%s]", serverStartingLog);
+        }
+        throw e;
       }
-      throw e;
     }
   }
 
@@ -332,9 +339,9 @@ public class ServerPreparer {
    * Whether the preparer needs to "kill an existing OLC server (if any) and restart a new one" when
    * preparing server, or just reuse the existing server (if any).
    */
-  private boolean needKillExistingServer() {
+  private static boolean needKillExistingServer(boolean firstPreparation) {
     // Checks flag.
-    if (Flags.instance().atsConsoleAlwaysRestartOlcServer.getNonNull()) {
+    if (firstPreparation && Flags.instance().atsConsoleAlwaysRestartOlcServer.getNonNull()) {
       logger.atInfo().log(
           "Need to kill existing OLC server because --ats_console_always_restart_olc_server=true");
       return true;
