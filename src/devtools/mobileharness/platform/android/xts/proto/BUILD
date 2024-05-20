@@ -24,12 +24,20 @@ package(
 
 proto_library(
     name = "configuration_proto",
-    srcs = [
-        "configuration.proto",
-    ],
+    srcs = ["configuration.proto"],
 )
 
 java_proto_library(
     name = "configuration_java_proto",
     deps = [":configuration_proto"],
+)
+
+proto_library(
+    name = "device_configuration_proto",
+    srcs = ["device_configuration.proto"],
+)
+
+java_proto_library(
+    name = "device_configuration_java_proto",
+    deps = [":device_configuration_proto"],
 )

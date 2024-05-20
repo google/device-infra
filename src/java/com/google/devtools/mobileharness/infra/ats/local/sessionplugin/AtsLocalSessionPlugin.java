@@ -114,7 +114,8 @@ public class AtsLocalSessionPlugin {
     JobInfo jobInfo = JobInfoCreator.createJobInfo(jobConfig.build(), ImmutableList.of(), "");
     ImmutableList<File> dependencies =
         config.getArtifactList().stream().map(File::new).collect(toImmutableList());
-    moduleConfigurationHelper.updateJobInfo(jobInfo, moduleConfig, dependencies);
+    moduleConfigurationHelper.updateJobInfo(
+        jobInfo, moduleConfig, /* moduleDeviceConfig= */ null, dependencies);
     sessionInfo.addJob(jobInfo);
   }
 

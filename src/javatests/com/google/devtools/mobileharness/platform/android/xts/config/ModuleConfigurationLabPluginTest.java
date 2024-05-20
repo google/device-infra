@@ -86,7 +86,7 @@ public class ModuleConfigurationLabPluginTest {
 
     moduleConfigurationLabPlugin.onTestStarting(testStartingEvent);
 
-    verify(moduleConfigurationHelper).updateJobInfo(any(), eq(targetConfig), any());
+    verify(moduleConfigurationHelper).updateJobInfo(any(), eq(targetConfig), any(), any());
   }
 
   @Test
@@ -105,7 +105,7 @@ public class ModuleConfigurationLabPluginTest {
 
     moduleConfigurationLabPlugin.onTestStarting(testStartingEvent);
 
-    verify(moduleConfigurationHelper).updateJobInfo(any(), eq(targetConfig), any());
+    verify(moduleConfigurationHelper).updateJobInfo(any(), eq(targetConfig), any(), any());
   }
 
   @Test

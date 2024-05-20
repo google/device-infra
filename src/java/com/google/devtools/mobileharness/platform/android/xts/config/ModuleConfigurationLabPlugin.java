@@ -88,6 +88,7 @@ public class ModuleConfigurationLabPlugin {
     moduleConfigurationHelper.updateJobInfo(
         testInfo.jobInfo(),
         targetConfig,
+        /* moduleDeviceConfig= */ null,
         ImmutableList.of(testPackage, new File(testInfo.jobInfo().setting().getTmpFileDir())));
   }
 }

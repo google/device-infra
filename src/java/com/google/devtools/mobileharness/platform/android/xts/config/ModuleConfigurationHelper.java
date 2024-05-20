@@ -17,23 +17,30 @@
 package com.google.devtools.mobileharness.platform.android.xts.config;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ListMultimap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.api.model.job.in.Dimensions;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Option;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.TargetPreparer;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Test;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.DeviceGroup;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.ModuleDeviceConfiguration;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Message;
+import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
@@ -48,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import javax.annotation.Nullable;
 
 /** A Helper class for xTS module configuration. */
 public class ModuleConfigurationHelper {
@@ -56,6 +64,7 @@ public class ModuleConfigurationHelper {
 
   private static final ImmutableMap<String, String> DRIVER_ALIAS_MAP =
       ImmutableMap.of("MoblyAospPackageTest", "MoblyAospTest");
+  private static final String ANY_DEVICE_ID = "*";
 
   private final ConfigurationUtil configurationUtil;
 
@@ -66,12 +75,17 @@ public class ModuleConfigurationHelper {
   /**
    * Updates JobInfo based on the given module configuration.
    *
-   * @param jobInfo the {@link JobInfo} to update. The type of driver and device need to be correct.
-   * @param moduleConfig the {@link Configuration} for the module.
+   * @param jobInfo the {@link JobInfo} to update. The type of driver and device need to be correct
+   * @param moduleConfig the {@link Configuration} for the module
+   * @param moduleDeviceConfig unvalidated device config for the module if any
    * @param dependencies the list of {@link File} for files and directories that contain dependency
-   *     files. Search files in directories in order.
+   *     files. Search files in directories in order
    */
-  public void updateJobInfo(JobInfo jobInfo, Configuration moduleConfig, List<File> dependencies)
+  public void updateJobInfo(
+      JobInfo jobInfo,
+      Configuration moduleConfig,
+      @Nullable ModuleDeviceConfiguration moduleDeviceConfig,
+      List<File> dependencies)
       throws MobileHarnessException, InterruptedException {
     for (Option option : moduleConfig.getOptionsList()) {
       if (option.getKey().equals(FILE_KEY)) {
@@ -83,7 +97,8 @@ public class ModuleConfigurationHelper {
 
     Visitor fileResolver = getFileResolver(dependencies);
     updateDriverSpecs(moduleConfig.getTest(), jobInfo, fileResolver);
-    updateDeviceSpecs(moduleConfig.getDevicesList(), jobInfo.subDeviceSpecs(), fileResolver);
+    updateDeviceSpecs(
+        moduleConfig.getDevicesList(), moduleDeviceConfig, jobInfo.subDeviceSpecs(), fileResolver);
   }
 
   private Visitor getFileResolver(List<File> dependencies) {
@@ -131,8 +146,14 @@ public class ModuleConfigurationHelper {
   }
 
   private void updateDeviceSpecs(
-      List<Device> configs, SubDeviceSpecs subDeviceSpecs, Visitor fileResolver)
+      List<Device> configs,
+      @Nullable ModuleDeviceConfiguration moduleDeviceConfig,
+      SubDeviceSpecs subDeviceSpecs,
+      Visitor fileResolver)
       throws MobileHarnessException, InterruptedException {
+    Optional<DeviceGroup> validDeviceGroup =
+        getValidDeviceGroup(moduleDeviceConfig, configs.size());
+
     ListMultimap<String, Device> configsByDeviceType = ArrayListMultimap.create();
     ListMultimap<String, SubDeviceSpec> subDeviceSpecsByDeviceType = ArrayListMultimap.create();
 
@@ -159,20 +180,29 @@ public class ModuleConfigurationHelper {
           configsByDeviceType.get(deviceType),
           subDeviceSpecsByDeviceType.get(deviceType),
           fileResolver);
+    }
 
-      // Adds dimensions.
-      for (int i = 0; i < configsOfType.size(); i++) {
-        addDimensions(configsOfType.get(i), subDeviceSpecsOfType.get(i));
-      }
+    // Adds dimensions.
+    for (int i = 0; i < configs.size(); i++) {
+      final int index = i;
+      addDimensions(
+          configs.get(i),
+          subDeviceSpecs.getSubDevice(i),
+          validDeviceGroup.map(group -> group.getDeviceId(index)).orElse(null));
     }
   }
 
-  private void addDimensions(Device config, SubDeviceSpec subDeviceSpec) {
+  private void addDimensions(
+      Device config, SubDeviceSpec subDeviceSpec, @Nullable String deviceId) {
     ImmutableMap<String, String> dimensions =
         config.getOptionsList().stream()
             .filter(option -> option.getName().equals(DEVICE_DIMENSION_OPTION_NAME))
             .collect(toImmutableMap(Option::getKey, Option::getValue));
-    subDeviceSpec.deviceRequirement().dimensions().addAll(dimensions);
+    Dimensions deviceDimensions = subDeviceSpec.deviceRequirement().dimensions();
+    deviceDimensions.addAll(dimensions);
+    if (deviceId != null && !anyDeviceId(deviceId)) {
+      deviceDimensions.add(Name.ID, deviceId);
+    }
   }
 
   private String resolveFilePath(String fileName, List<File> dependencies)
@@ -254,5 +284,41 @@ public class ModuleConfigurationHelper {
               deviceScopedSpecs.toJobSpec(JobSpecHelper.getDefaultHelper()), fileResolver));
       subDeviceSpec.decorators().addAll(decorators);
     }
+  }
+
+  private static Optional<DeviceGroup> getValidDeviceGroup(
+      @Nullable ModuleDeviceConfiguration moduleDeviceConfig, int requiredDeviceCount)
+      throws MobileHarnessException {
+    if (moduleDeviceConfig == null) {
+      return Optional.empty();
+    }
+    if (moduleDeviceConfig.getDeviceGroupCount() == 0) {
+      throw MobileHarnessExceptionFactory.create(
+          InfraErrorId.XTS_DEVICE_CONFIG_FILE_VALIDATE_ERROR,
+          String.format(
+              "Zero device group in module device config [%s]",
+              shortDebugString(moduleDeviceConfig)),
+          /* cause= */ null,
+          /* addErrorIdToMessage= */ false,
+          /* clearStackTrace= */ true);
+    }
+    // Always gets the first group for now.
+    DeviceGroup deviceGroup = moduleDeviceConfig.getDeviceGroup(0);
+    List<String> deviceIds = deviceGroup.getDeviceIdList();
+    if (deviceIds.size() != requiredDeviceCount) {
+      throw MobileHarnessExceptionFactory.create(
+          InfraErrorId.XTS_DEVICE_CONFIG_FILE_VALIDATE_ERROR,
+          String.format(
+              "Require %s devices but found %s in module device config [%s]",
+              requiredDeviceCount, deviceIds.size(), shortDebugString(moduleDeviceConfig)),
+          /* cause= */ null,
+          /* addErrorIdToMessage= */ false,
+          /* clearStackTrace= */ true);
+    }
+    return Optional.of(deviceGroup);
+  }
+
+  private static boolean anyDeviceId(String deviceId) {
+    return deviceId.equals(ANY_DEVICE_ID);
   }
 }

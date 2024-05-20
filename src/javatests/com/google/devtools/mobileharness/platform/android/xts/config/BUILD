@@ -34,6 +34,7 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
+        "//src/devtools/mobileharness/platform/android/xts/proto:device_configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/plugin:exception",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",

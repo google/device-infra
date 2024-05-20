@@ -43,7 +43,9 @@ java_library(
     name = "exception_factory",
     srcs = ["MobileHarnessExceptionFactory.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [

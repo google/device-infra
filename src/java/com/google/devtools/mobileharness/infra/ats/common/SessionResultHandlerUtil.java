@@ -326,7 +326,7 @@ public class SessionResultHandlerUtil {
         // Add all filters in the sub-plan so these filters are loaded in retry
         SubPlan subPlan =
             SessionHandlerHelper.loadSubPlan(
-                sessionRequestInfo.xtsRootDir(),
+                Path.of(sessionRequestInfo.xtsRootDir()),
                 sessionRequestInfo.xtsType(),
                 sessionRequestInfo.subPlanName().get());
         includeFilters.addAll(subPlan.getAllIncludeFilters());

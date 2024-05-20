@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static org.junit.Assert.assertThrows;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -28,6 +29,8 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Option;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.TargetPreparer;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.DeviceGroup;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.ModuleDeviceConfiguration;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
@@ -57,7 +60,7 @@ public class ModuleConfigurationHelperTest {
   }
 
   @Before
-  public void prepareTempDir() throws Exception {
+  public void prepareTempDir() {
     tempDirPath = tempFolder.getRoot().toPath();
   }
 
@@ -78,7 +81,7 @@ public class ModuleConfigurationHelperTest {
             .build();
 
     moduleConfigurationHelper.updateJobInfo(
-        jobInfo, config, ImmutableList.of(tempDirPath.toFile()));
+        jobInfo, config, /* moduleDeviceConfig= */ null, ImmutableList.of(tempDirPath.toFile()));
 
     assertThat(jobInfo.params().getAll()).containsExactly("param1", "value1", "param2", "value2");
     assertThat(jobInfo.files().getAll())
@@ -100,7 +103,10 @@ public class ModuleConfigurationHelperTest {
                     MobileHarnessException.class,
                     () ->
                         moduleConfigurationHelper.updateJobInfo(
-                            jobInfo, config, ImmutableList.of(tempDirPath.toFile())))
+                            jobInfo,
+                            config,
+                            /* moduleDeviceConfig= */ null,
+                            ImmutableList.of(tempDirPath.toFile())))
                 .getErrorId())
         .isEqualTo(BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND);
   }
@@ -131,9 +137,12 @@ public class ModuleConfigurationHelperTest {
                             .addOptions(
                                 Option.newBuilder().setName("dummy_string_group").setValue("str1"))
                             .addOptions(
-                                Option.newBuilder()
-                                    .setName("dummy_string_group")
-                                    .setValue("str2"))))
+                                Option.newBuilder().setName("dummy_string_group").setValue("str2")))
+                    .addOptions(
+                        Option.newBuilder()
+                            .setName("dimension")
+                            .setKey("fake_dimension_1_name")
+                            .setValue("fake_dimension_1_value")))
             .addDevices(
                 Device.newBuilder()
                     .setName("AndroidRealDevice")
@@ -142,7 +151,12 @@ public class ModuleConfigurationHelperTest {
                             .setClazz("NoOpDecorator")
                             // File option
                             .addOptions(
-                                Option.newBuilder().setName("dummy_file").setValue("file1"))))
+                                Option.newBuilder().setName("dummy_file").setValue("file1")))
+                    .addOptions(
+                        Option.newBuilder()
+                            .setName("dimension")
+                            .setKey("fake_dimension_2_name")
+                            .setValue("fake_dimension_2_value")))
             .addDevices(
                 Device.newBuilder()
                     .setName("NoOpDevice")
@@ -155,9 +169,17 @@ public class ModuleConfigurationHelperTest {
                             .addOptions(
                                 Option.newBuilder().setName("dummy_file_group").setValue("file3"))))
             .build();
+    ModuleDeviceConfiguration moduleDeviceConfig =
+        ModuleDeviceConfiguration.newBuilder()
+            .addDeviceGroup(
+                DeviceGroup.newBuilder()
+                    .addDeviceId("device_123")
+                    .addDeviceId("*")
+                    .addDeviceId("device_789"))
+            .build();
 
     moduleConfigurationHelper.updateJobInfo(
-        jobInfo, config, ImmutableList.of(file1.toFile(), dir.toFile()));
+        jobInfo, config, moduleDeviceConfig, ImmutableList.of(file1.toFile(), dir.toFile()));
 
     checkSubDeviceSpec(
         jobInfo.subDeviceSpecs().getSubDevice(0),
@@ -170,7 +192,8 @@ public class ModuleConfigurationHelperTest {
             + "      \"str2\"\n"
             + "    ]\n"
             + "  }\n"
-            + "}");
+            + "}",
+        ImmutableMap.of("id", "device_123", "fake_dimension_1_name", "fake_dimension_1_value"));
     checkSubDeviceSpec(
         jobInfo.subDeviceSpecs().getSubDevice(1),
         "NoOpDevice",
@@ -182,7 +205,8 @@ public class ModuleConfigurationHelperTest {
             + String.format("      \"%s\"\n", file3.toAbsolutePath())
             + "    ]\n"
             + "  }\n"
-            + "}");
+            + "}",
+        ImmutableMap.of("fake_dimension_2_name", "fake_dimension_2_value"));
     checkSubDeviceSpec(
         jobInfo.subDeviceSpecs().getSubDevice(2),
         "AndroidRealDevice",
@@ -191,7 +215,8 @@ public class ModuleConfigurationHelperTest {
             + "  \"NoOpDecoratorSpec\": {\n"
             + String.format("    \"dummy_file\": \"%s\"\n", file1.toAbsolutePath())
             + "  }\n"
-            + "}");
+            + "}",
+        ImmutableMap.of("id", "device_789"));
   }
 
   @Test
@@ -210,7 +235,7 @@ public class ModuleConfigurationHelperTest {
                     MobileHarnessException.class,
                     () ->
                         moduleConfigurationHelper.updateJobInfo(
-                            jobInfo, config, ImmutableList.of()))
+                            jobInfo, config, /* moduleDeviceConfig= */ null, ImmutableList.of()))
                 .getErrorId())
         .isEqualTo(ExtErrorId.MODULE_CONFIG_DEVICE_NUMBER_NOT_MATCH);
   }
@@ -227,7 +252,8 @@ public class ModuleConfigurationHelperTest {
             .addDevices(Device.newBuilder().setName("AndroidRealDevice"))
             .build();
 
-    moduleConfigurationHelper.updateJobInfo(jobInfo, config, ImmutableList.of());
+    moduleConfigurationHelper.updateJobInfo(
+        jobInfo, config, /* moduleDeviceConfig= */ null, ImmutableList.of());
 
     assertThat(jobInfo.scopedSpecs().toJsonString())
         .isEqualTo("{\n  \"NoOpDriverSpec\": {\n    \"sleep_time_sec\": 100\n  }\n}");
@@ -250,7 +276,7 @@ public class ModuleConfigurationHelperTest {
                     MobileHarnessException.class,
                     () ->
                         moduleConfigurationHelper.updateJobInfo(
-                            jobInfo, config, ImmutableList.of()))
+                            jobInfo, config, /* moduleDeviceConfig= */ null, ImmutableList.of()))
                 .getErrorId())
         .isEqualTo(ExtErrorId.MODULE_CONFIG_DRIVER_NOT_MATCH);
   }
@@ -272,7 +298,7 @@ public class ModuleConfigurationHelperTest {
                     MobileHarnessException.class,
                     () ->
                         moduleConfigurationHelper.updateJobInfo(
-                            jobInfo, config, ImmutableList.of()))
+                            jobInfo, config, /* moduleDeviceConfig= */ null, ImmutableList.of()))
                 .getErrorId())
         .isEqualTo(ExtErrorId.MODULE_CONFIG_UNRECOGNIZED_OPTION_ERROR);
   }
@@ -286,9 +312,15 @@ public class ModuleConfigurationHelperTest {
   }
 
   private void checkSubDeviceSpec(
-      SubDeviceSpec subDeviceSpec, String type, List<String> decorators, String scopedSpecJson) {
+      SubDeviceSpec subDeviceSpec,
+      String type,
+      List<String> decorators,
+      String scopedSpecJson,
+      ImmutableMap<String, String> dimensions) {
     assertThat(subDeviceSpec.type()).isEqualTo(type);
     assertThat(subDeviceSpec.decorators().getAll()).containsExactlyElementsIn(decorators);
     assertThat(subDeviceSpec.scopedSpecs().toString()).isEqualTo(scopedSpecJson);
+    assertThat(subDeviceSpec.deviceRequirement().dimensions().getAll())
+        .containsExactlyEntriesIn(dimensions);
   }
 }

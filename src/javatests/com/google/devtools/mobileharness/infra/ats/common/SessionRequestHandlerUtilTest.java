@@ -913,7 +913,7 @@ public final class SessionRequestHandlerUtilTest {
                 .addDeviceInfo(
                     DeviceInfo.newBuilder().setId("device_id_3").addType("AndroidOnlineDevice"))
                 .build());
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsFromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
     sessionRequestHandlerUtil = spy(sessionRequestHandlerUtil);
@@ -1054,7 +1054,7 @@ public final class SessionRequestHandlerUtilTest {
                     .ConfigurationProto.Test.newBuilder()
                     .setClazz("Driver"))
             .build();
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
     when(deviceQuerier.queryDevice(any()))
@@ -1086,7 +1086,7 @@ public final class SessionRequestHandlerUtilTest {
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo, testPlanFilter);
 
     assertThat(jobInfos).hasSize(2);
-    verify(moduleConfigurationHelper, times(2)).updateJobInfo(any(), any(), any());
+    verify(moduleConfigurationHelper, times(2)).updateJobInfo(any(), any(), any(), any());
   }
 
   @Test
@@ -1111,7 +1111,7 @@ public final class SessionRequestHandlerUtilTest {
                     .ConfigurationProto.Test.newBuilder()
                     .setClazz("Driver"))
             .build();
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
     when(deviceQuerier.queryDevice(any()))
@@ -1168,7 +1168,7 @@ public final class SessionRequestHandlerUtilTest {
                     .ConfigurationProto.Test.newBuilder()
                     .setClazz("Driver"))
             .build();
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
     when(deviceQuerier.queryDevice(any()))
@@ -1235,7 +1235,7 @@ public final class SessionRequestHandlerUtilTest {
                     .ConfigurationProto.Test.newBuilder()
                     .setClazz("Driver"))
             .build();
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(
             ImmutableMap.of(
@@ -1298,7 +1298,7 @@ public final class SessionRequestHandlerUtilTest {
                     .ConfigurationProto.Test.newBuilder()
                     .setClazz("Driver"))
             .build();
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1));
     when(deviceQuerier.queryDevice(any()))
@@ -1371,7 +1371,7 @@ public final class SessionRequestHandlerUtilTest {
                     .ConfigurationProto.Test.newBuilder()
                     .setClazz("Driver"))
             .build();
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(ImmutableMap.of("/path/to/config1", config1, "/path/to/config2", config2));
     when(deviceQuerier.queryDevice(any()))
@@ -1439,7 +1439,7 @@ public final class SessionRequestHandlerUtilTest {
                     .ConfigurationProto.Test.newBuilder()
                     .setClazz("Driver"))
             .build();
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(
             ImmutableMap.of(
@@ -1541,7 +1541,7 @@ public final class SessionRequestHandlerUtilTest {
                     .ConfigurationProto.Test.newBuilder()
                     .setClazz("Driver"))
             .build();
-    when(localFileUtil.isDirExist(XTS_ROOT_DIR_PATH)).thenReturn(true);
+    when(localFileUtil.isDirExist(Path.of(XTS_ROOT_DIR_PATH))).thenReturn(true);
     when(configurationUtil.getConfigsV2FromDirs(any()))
         .thenReturn(
             ImmutableMap.of(
@@ -1643,7 +1643,8 @@ public final class SessionRequestHandlerUtilTest {
             ImmutableMap.of(
                 "arm64-v8a HelloWorldTest", config1, "arm64-v8a HelloWorldTest[instant]", config1));
     doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
-    doCallRealMethod().when(localFileUtil).isDirExist(any(String.class));
+    doCallRealMethod().when(localFileUtil).isDirExist(any(Path.class));
+    when(localFileUtil.readFile(any(Path.class))).thenReturn("");
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
@@ -1702,7 +1703,8 @@ public final class SessionRequestHandlerUtilTest {
             ImmutableMap.of(
                 "arm64-v8a HelloWorldTest", config1, "arm64-v8a HelloWorldTest[instant]", config1));
     doCallRealMethod().when(localFileUtil).isFileExist(any(Path.class));
-    doCallRealMethod().when(localFileUtil).isDirExist(any(String.class));
+    doCallRealMethod().when(localFileUtil).isDirExist(any(Path.class));
+    when(localFileUtil.readFile(any(Path.class))).thenReturn("");
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(

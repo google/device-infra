@@ -41,12 +41,10 @@ public class SessionHandlerHelper {
     return Ascii.equalsIgnoreCase(testPlan, "retry");
   }
 
-  public static SubPlan loadSubPlan(String xtsRootDir, String xtsType, String subPlanName)
+  public static SubPlan loadSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
       throws MobileHarnessException {
     File subPlanFile =
-        XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), xtsType)
-            .resolve(subPlanName + ".xml")
-            .toFile();
+        XtsDirUtil.getXtsSubPlansDir(xtsRootDir, xtsType).resolve(subPlanName + ".xml").toFile();
     return loadSubPlan(subPlanFile);
   }
 

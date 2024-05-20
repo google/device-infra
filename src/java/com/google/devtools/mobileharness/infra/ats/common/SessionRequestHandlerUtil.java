@@ -42,6 +42,7 @@ import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
@@ -57,6 +58,8 @@ import com.google.devtools.mobileharness.platform.android.xts.config.Configurati
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.DeviceConfigurations;
+import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.ModuleDeviceConfiguration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
@@ -70,6 +73,9 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
+import com.google.protobuf.TextFormat;
+import com.google.protobuf.TextFormat.ParseException;
+import com.google.protobuf.TextFormat.Parser;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -112,6 +118,8 @@ public class SessionRequestHandlerUtil {
   private static final String ANDROID_DEVICE_TYPE = "AndroidDevice";
   private static final Pattern MODULE_PARAMETER_PATTERN =
       Pattern.compile(".*\\[(?<moduleParam>.*)]$");
+  private static final TextFormat.Parser DEVICE_CONFIG_FILE_PARSER =
+      Parser.newBuilder().setAllowUnknownFields(true).setAllowUnknownExtensions(true).build();
 
   private final DeviceQuerier deviceQuerier;
   private final LocalFileUtil localFileUtil;
@@ -272,7 +280,7 @@ public class SessionRequestHandlerUtil {
 
   public Optional<JobInfo> createXtsTradefedTestJob(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
-    String xtsRootDir = sessionRequestInfo.xtsRootDir();
+    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
       logger.atInfo().log(
           "xTS root dir [%s] doesn't exist, skip creating tradefed jobs.", xtsRootDir);
@@ -282,7 +290,7 @@ public class SessionRequestHandlerUtil {
     String xtsType = sessionRequestInfo.xtsType();
     ImmutableMap<String, Configuration> configsMap =
         configurationUtil.getConfigsFromDirs(
-            ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
+            ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile()));
 
     ImmutableList<String> modules = sessionRequestInfo.moduleNames();
     String ctsListPath =
@@ -366,7 +374,7 @@ public class SessionRequestHandlerUtil {
       SessionRequestInfo sessionRequestInfo, ImmutableList<String> tfModules)
       throws MobileHarnessException, InterruptedException {
     String testPlan = sessionRequestInfo.testPlan();
-    String xtsRootDir = sessionRequestInfo.xtsRootDir();
+    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     String xtsType = sessionRequestInfo.xtsType();
     ImmutableList<String> deviceSerials = sessionRequestInfo.deviceSerials();
     int shardCount = sessionRequestInfo.shardCount().orElse(0);
@@ -418,7 +426,7 @@ public class SessionRequestHandlerUtil {
     if (sessionRequestInfo.androidXtsZip().isPresent()) {
       driverParams.put("android_xts_zip", sessionRequestInfo.androidXtsZip().get());
     } else {
-      driverParams.put("xts_root_dir", xtsRootDir);
+      driverParams.put("xts_root_dir", xtsRootDir.toString());
     }
     driverParams.put("xts_test_plan", testPlan);
     if (isRunRetry(testPlan)) {
@@ -543,9 +551,9 @@ public class SessionRequestHandlerUtil {
     return Optional.of(TradefedJobInfo.of(jobConfig, extraJobProperties.buildOrThrow()));
   }
 
-  private Optional<Path> prepareTfSubPlan(String xtsRootDir, String xtsType, String subPlanName)
+  private Optional<Path> prepareTfSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
       throws MobileHarnessException, InterruptedException {
-    Path subPlansDir = XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), xtsType);
+    Path subPlansDir = XtsDirUtil.getXtsSubPlansDir(xtsRootDir, xtsType);
     Path subPlanPath = subPlansDir.resolve(subPlanName + ".xml");
     SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
 
@@ -582,9 +590,9 @@ public class SessionRequestHandlerUtil {
 
   // For ATS Console
   private Path prepareRunRetryTfSubPlanXmlFile(
-      String xtsRootDir, String xtsType, int previousSessionIndex, SubPlan subPlan)
+      Path xtsRootDir, String xtsType, int previousSessionIndex, SubPlan subPlan)
       throws MobileHarnessException {
-    Path xtsSubPlansDir = XtsDirUtil.getXtsSubPlansDir(Path.of(xtsRootDir), xtsType);
+    Path xtsSubPlansDir = XtsDirUtil.getXtsSubPlansDir(xtsRootDir, xtsType);
 
     return serializeRetrySubPlan(
         xtsSubPlansDir, subPlan, String.format("#%s", previousSessionIndex));
@@ -592,8 +600,8 @@ public class SessionRequestHandlerUtil {
 
   // For ATS Server
   private Path prepareRunRetryTfSubPlanXmlFile(
-      String xtsRootDir, String previousSessionId, SubPlan subPlan) throws MobileHarnessException {
-    Path xtsSubPlansDir = Path.of(xtsRootDir).getParent();
+      Path xtsRootDir, String previousSessionId, SubPlan subPlan) throws MobileHarnessException {
+    Path xtsSubPlansDir = xtsRootDir.getParent();
     return serializeRetrySubPlan(xtsSubPlansDir, subPlan, previousSessionId);
   }
 
@@ -629,7 +637,7 @@ public class SessionRequestHandlerUtil {
       throws MobileHarnessException, InterruptedException {
     SessionRequestInfo.Builder updatedSessionRequestInfo = sessionRequestInfo.toBuilder();
 
-    String xtsRootDir = sessionRequestInfo.xtsRootDir();
+    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
       logger.atInfo().log(
           "xTS root dir [%s] doesn't exist, skip creating non-tradefed jobs.", xtsRootDir);
@@ -639,11 +647,12 @@ public class SessionRequestHandlerUtil {
     String xtsType = sessionRequestInfo.xtsType();
     ImmutableMap<String, Configuration> configsMap =
         configurationUtil.getConfigsV2FromDirs(
-            ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(Path.of(xtsRootDir), xtsType).toFile()));
+            ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile()));
     updatedSessionRequestInfo.setV2ConfigsMap(configsMap);
 
     // Gets expanded modules with abi and module parameters (if any).
-    TestSuiteHelper testSuiteHelper = getTestSuiteHelper(xtsRootDir, xtsType, sessionRequestInfo);
+    TestSuiteHelper testSuiteHelper =
+        getTestSuiteHelper(xtsRootDir.toString(), xtsType, sessionRequestInfo);
     updatedSessionRequestInfo.setExpandedModules(
         ImmutableMap.copyOf(
             testSuiteHelper.loadTests(getDeviceInfo(sessionRequestInfo).orElse(null))));
@@ -810,7 +819,7 @@ public class SessionRequestHandlerUtil {
       return ImmutableList.of();
     }
     String testPlan = sessionRequestInfo.testPlan();
-    String xtsRootDir = sessionRequestInfo.xtsRootDir();
+    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
       logger.atInfo().log(
           "xTS root dir [%s] doesn't exist, skip creating non-tradefed jobs.", xtsRootDir);
@@ -908,6 +917,12 @@ public class SessionRequestHandlerUtil {
             ? Duration.ofHours(1L)
             : sessionRequestInfo.startTimeout();
 
+    // Reads DeviceConfigurations text proto.
+    Path xtsDeviceConfigFile = getXtsDeviceConfigFilePath(xtsRootDir, xtsType);
+    DeviceConfigurations xtsDeviceConfig = readXtsDeviceConfigFile(xtsDeviceConfigFile);
+    ImmutableMap<String, ModuleDeviceConfiguration> moduleDeviceConfigurations =
+        groupXtsDeviceConfig(xtsDeviceConfig);
+
     for (Entry<String, Configuration> entry :
         sessionRequestInfo.expandedModules().entrySet().stream()
             .filter(e -> e.getValue().getMetadata().getIsConfigV2())
@@ -969,7 +984,7 @@ public class SessionRequestHandlerUtil {
 
         Optional<JobInfo> jobInfoOpt =
             createXtsNonTradefedJob(
-                Path.of(xtsRootDir),
+                xtsRootDir,
                 xtsType,
                 testPlan,
                 subPlanOpt
@@ -977,6 +992,8 @@ public class SessionRequestHandlerUtil {
                     .orElse(null),
                 Path.of(requireNonNull(moduleNameToConfigFilePathMap.get(originalModuleName))),
                 entry.getValue(),
+                moduleDeviceConfigurations.getOrDefault(
+                    originalModuleName, /* defaultValue= */ null),
                 expandedModuleName,
                 moduleAbi,
                 moduleParameter,
@@ -1010,6 +1027,54 @@ public class SessionRequestHandlerUtil {
     return jobInfos.build();
   }
 
+  private DeviceConfigurations readXtsDeviceConfigFile(Path xtsDeviceConfigFile)
+      throws MobileHarnessException {
+    if (!localFileUtil.isFileExist(xtsDeviceConfigFile)) {
+      logger.atWarning()
+          // TODO: Enables with(IMPORTANCE, IMPORTANT) after the feature is ready
+          .log("Device config file [%s] not found", xtsDeviceConfigFile);
+      return DeviceConfigurations.getDefaultInstance();
+    }
+    try {
+      String fileContent = localFileUtil.readFile(xtsDeviceConfigFile);
+      DeviceConfigurations.Builder result = DeviceConfigurations.newBuilder();
+      DEVICE_CONFIG_FILE_PARSER.merge(fileContent, result);
+      return result.build();
+    } catch (MobileHarnessException | ParseException e) {
+      throw MobileHarnessExceptionFactory.create(
+          InfraErrorId.XTS_DEVICE_CONFIG_FILE_PARSE_ERROR,
+          String.format("Failed to read device config file [%s]", xtsDeviceConfigFile),
+          e,
+          /* addErrorIdToMessage= */ false,
+          /* clearStackTrace= */ true);
+    }
+  }
+
+  /** Key is original module name. Value is configured but unvalidated module device config. */
+  private static ImmutableMap<String, ModuleDeviceConfiguration> groupXtsDeviceConfig(
+      DeviceConfigurations xtsDeviceConfig) throws MobileHarnessException {
+    ImmutableMap.Builder<String, ModuleDeviceConfiguration> result = ImmutableMap.builder();
+    for (ModuleDeviceConfiguration moduleDeviceConfiguration : xtsDeviceConfig.getModuleList()) {
+      result.put(moduleDeviceConfiguration.getName(), moduleDeviceConfiguration);
+    }
+    try {
+      return result.buildOrThrow();
+    } catch (IllegalArgumentException e) {
+      throw MobileHarnessExceptionFactory.create(
+          InfraErrorId.XTS_DEVICE_CONFIG_FILE_VALIDATE_ERROR,
+          "Invalid device config",
+          e,
+          /* addErrorIdToMessage= */ false,
+          /* clearStackTrace= */ true);
+    }
+  }
+
+  private static Path getXtsDeviceConfigFilePath(Path xtsRootDir, String xtsType) {
+    // TODO: Support specifying path from ATS console.
+    return XtsDirUtil.getXtsToolsDir(xtsRootDir, xtsType)
+        .resolve("device_configurations.textproto");
+  }
+
   /**
    * TestName is set with pattern TestClassName#TestCaseName while Mobly needs the test case name
    * without the test class name.
@@ -1036,6 +1101,7 @@ public class SessionRequestHandlerUtil {
       @Nullable String previousSessionTestPlan,
       Path moduleConfigPath,
       Configuration moduleConfig,
+      @Nullable ModuleDeviceConfiguration moduleDeviceConfig,
       String expandedModuleName,
       @Nullable String moduleAbi,
       @Nullable String moduleParameter,
@@ -1057,7 +1123,7 @@ public class SessionRequestHandlerUtil {
             XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile());
 
     JobInfo jobInfo = jobInfoOpt.get();
-    moduleConfigurationHelper.updateJobInfo(jobInfo, moduleConfig, fileDepDirs);
+    moduleConfigurationHelper.updateJobInfo(jobInfo, moduleConfig, moduleDeviceConfig, fileDepDirs);
     jobInfo.properties().add(Job.IS_XTS_NON_TF_JOB, "true");
     jobInfo
         .properties()
@@ -1211,8 +1277,8 @@ public class SessionRequestHandlerUtil {
     return Ascii.equalsIgnoreCase(testPlan, "retry");
   }
 
-  private Optional<SubPlan> prepareNonTfSubPlan(
-      String xtsRootDir, String xtsType, String subPlanName) throws MobileHarnessException {
+  private Optional<SubPlan> prepareNonTfSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
+      throws MobileHarnessException {
     SubPlan subPlan = SessionHandlerHelper.loadSubPlan(xtsRootDir, xtsType, subPlanName);
     if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
         && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
@@ -1227,7 +1293,7 @@ public class SessionRequestHandlerUtil {
 
   // For ATS Console
   private Optional<SubPlan> prepareRunRetrySubPlan(
-      String xtsRootDir,
+      Path xtsRootDir,
       String xtsType,
       int previousSessionIndex,
       @Nullable RetryType retryType,
@@ -1237,10 +1303,9 @@ public class SessionRequestHandlerUtil {
       boolean forTf,
       ImmutableList<String> passedInModules)
       throws MobileHarnessException {
-    Path xtsRootDirPath = Path.of(xtsRootDir);
     RetryArgs.Builder retryArgs =
         RetryArgs.builder()
-            .setResultsDir(XtsDirUtil.getXtsResultsDir(xtsRootDirPath, xtsType))
+            .setResultsDir(XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType))
             .setPreviousSessionIndex(previousSessionIndex)
             .setPassedInExcludeFilters(
                 passedInExcludeFilters.stream()
