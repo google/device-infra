@@ -18,11 +18,12 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.olcserver
 
 import static java.util.Objects.requireNonNull;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleTextStyle;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
@@ -31,6 +32,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import io.grpc.Status.Code;
+import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
@@ -43,10 +46,13 @@ public class ServerLogPrinter {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final ImmutableSet<Code> NORMAL_CODES =
+      ImmutableSet.of(Code.UNAVAILABLE, Code.CANCELLED);
+
   private final ConsoleUtil consoleUtil;
   private final Provider<ControlStub> controlStubProvider;
   private final ServerPreparer serverPreparer;
-  private final String consoleId;
+  private final String clientId;
 
   private final GetLogResponseObserver responseObserver = new GetLogResponseObserver();
   private final int minLogRecordImportance =
@@ -65,11 +71,11 @@ public class ServerLogPrinter {
       ConsoleUtil consoleUtil,
       @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlStub> controlStubProvider,
       ServerPreparer serverPreparer,
-      @ConsoleId String consoleId) {
+      @ClientId String clientId) {
     this.consoleUtil = consoleUtil;
     this.controlStubProvider = controlStubProvider;
     this.serverPreparer = serverPreparer;
-    this.consoleId = consoleId;
+    this.clientId = clientId;
   }
 
   /** Enables/disables the printer. */
@@ -91,7 +97,7 @@ public class ServerLogPrinter {
           requestObserver = requireNonNull(controlStubProvider.get()).getLog(responseObserver);
         }
         requestObserver.onNext(
-            GetLogRequest.newBuilder().setEnable(true).setClientId(consoleId).build());
+            GetLogRequest.newBuilder().setEnable(true).setClientId(clientId).build());
       } else {
         if (requestObserver != null) {
           requestObserver.onCompleted();
@@ -115,7 +121,12 @@ public class ServerLogPrinter {
 
     @Override
     public void onError(Throwable e) {
-      logger.atWarning().withCause(e).log("Failed to get log from server");
+      if (e instanceof StatusRuntimeException
+          && NORMAL_CODES.contains(((StatusRuntimeException) e).getStatus().getCode())) {
+        logger.atInfo().log("Stop getting from server since it stops");
+      } else {
+        logger.atWarning().withCause(e).log("Failed to get log from server");
+      }
       doOnCompleted();
     }
 

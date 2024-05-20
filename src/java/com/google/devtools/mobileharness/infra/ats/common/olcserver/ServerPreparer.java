@@ -19,23 +19,31 @@ package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.util.Objects.requireNonNull;
+import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientComponentName;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerBinary;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.HeartbeatRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.Failure;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.ResultCase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
@@ -61,6 +69,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
 import java.util.stream.Stream;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
@@ -72,6 +81,8 @@ import javax.inject.Singleton;
 public class ServerPreparer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(10L);
 
   private static final ImmutableList<String> UNFINISHED_SESSIONS_TABLE_HEADER =
       ImmutableList.of("Session ID", "Name", "Status", "Submitted Time");
@@ -86,6 +97,7 @@ public class ServerPreparer {
   }
 
   private final String clientComponentName;
+  private final String clientId;
   private final ServerStartingLogger serverStartingLogger;
   private final CommandExecutor commandExecutor;
   private final Sleeper sleeper;
@@ -95,12 +107,14 @@ public class ServerPreparer {
   private final Provider<VersionStub> versionStub;
   private final Provider<Path> serverBinary;
   private final ImmutableList<String> deviceInfraServiceFlags;
+  private final ListeningScheduledExecutorService scheduledThreadPool;
 
   private final AtomicBoolean serverPrepared = new AtomicBoolean();
 
   @Inject
   ServerPreparer(
       @ClientComponentName String clientComponentName,
+      @ClientId String clientId,
       ServerStartingLogger serverStartingLogger,
       CommandExecutor commandExecutor,
       Sleeper sleeper,
@@ -109,8 +123,10 @@ public class ServerPreparer {
       @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlStub> controlStub,
       @ServerStub(ServerStub.Type.VERSION_SERVICE) Provider<VersionStub> versionStub,
       @ServerBinary Provider<Path> serverBinary,
-      @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags) {
+      @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags,
+      ListeningScheduledExecutorService scheduledThreadPool) {
     this.clientComponentName = clientComponentName;
+    this.clientId = clientId;
     this.serverStartingLogger = serverStartingLogger;
     this.commandExecutor = commandExecutor;
     this.sleeper = sleeper;
@@ -120,6 +136,28 @@ public class ServerPreparer {
     this.versionStub = versionStub;
     this.serverBinary = serverBinary;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
+    this.scheduledThreadPool = scheduledThreadPool;
+  }
+
+  public void startSendingHeartbeats() {
+    HeartbeatRequest request = HeartbeatRequest.newBuilder().setClientId(clientId).build();
+    logFailure(
+        scheduledThreadPool.scheduleWithFixedDelay(
+            () -> {
+              try {
+                requireNonNull(controlStub.get()).heartbeat(request);
+              } catch (GrpcExceptionWithErrorId e) {
+                logger
+                    .atInfo()
+                    .atMostEvery(5, MINUTES)
+                    .with(IMPORTANCE, DEBUG)
+                    .log("Error when sending heartbeat to OLC server");
+              }
+            },
+            Duration.ZERO,
+            HEARTBEAT_INTERVAL),
+        Level.SEVERE,
+        "Fatal error when sending heartbeat to OLC server");
   }
 
   public void prepareOlcServer() throws MobileHarnessException, InterruptedException {
@@ -233,7 +271,8 @@ public class ServerPreparer {
     KillServerResponse killServerResponse;
     try {
       killServerResponse =
-          requireNonNull(controlStub.get()).killServer(KillServerRequest.getDefaultInstance());
+          requireNonNull(controlStub.get())
+              .killServer(KillServerRequest.newBuilder().setClientId(clientId).build());
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SERVER_PREPARER_KILL_EXISTING_OLC_SERVER_RPC_ERROR,
@@ -245,8 +284,8 @@ public class ServerPreparer {
       throw MobileHarnessExceptionFactory.create(
           InfraErrorId.ATSC_SERVER_PREPARER_CANNOT_KILL_EXISTING_OLC_SERVER_ERROR,
           String.format(
-              "Existing OLC server (pid=%s) cannot be killed since it has running sessions:\n%s",
-              serverPid, createUnfinishedSessionsTable(killServerResponse)),
+              "Existing OLC server (pid=%s) cannot be killed because: \n%s",
+              serverPid, createKillServerFailureReasons(killServerResponse.getFailure())),
           /* cause= */ null,
           /* addErrorIdToMessage= */ false,
           /* clearStackTrace= */ true);
@@ -305,24 +344,34 @@ public class ServerPreparer {
     return false;
   }
 
-  private static String createUnfinishedSessionsTable(KillServerResponse killServerResponse) {
-    return TableFormatter.displayTable(
-        Stream.concat(
-                Stream.of(UNFINISHED_SESSIONS_TABLE_HEADER),
-                killServerResponse.getFailure().getUnfinishedSessionsList().stream()
-                    .map(
-                        sessionDetail ->
-                            ImmutableList.of(
-                                sessionDetail.getSessionId().getId(),
-                                sessionDetail.getSessionConfig().getSessionName(),
-                                sessionDetail.getSessionStatus().name(),
-                                TimeUtils.toJavaInstant(
-                                        sessionDetail
-                                            .getSessionOutput()
-                                            .getSessionTimingInfo()
-                                            .getSessionSubmittedTime())
-                                    .toString())))
-            .collect(toImmutableList()));
+  private static String createKillServerFailureReasons(Failure killServerFailure) {
+    StringBuilder result = new StringBuilder();
+    if (killServerFailure.getUnfinishedSessionsCount() > 0) {
+      result.append("it has running sessions:\n");
+      result.append(
+          TableFormatter.displayTable(
+              Stream.concat(
+                      Stream.of(UNFINISHED_SESSIONS_TABLE_HEADER),
+                      killServerFailure.getUnfinishedSessionsList().stream()
+                          .map(
+                              sessionDetail ->
+                                  ImmutableList.of(
+                                      sessionDetail.getSessionId().getId(),
+                                      sessionDetail.getSessionConfig().getSessionName(),
+                                      sessionDetail.getSessionStatus().name(),
+                                      TimeUtils.toJavaInstant(
+                                              sessionDetail
+                                                  .getSessionOutput()
+                                                  .getSessionTimingInfo()
+                                                  .getSessionSubmittedTime())
+                                          .toString())))
+                  .collect(toImmutableList())));
+    }
+    if (killServerFailure.getAliveClientsCount() > 0) {
+      result.append("it has alive clients:\n");
+      result.append(String.join("\n", killServerFailure.getAliveClientsList()));
+    }
+    return result.toString();
   }
 
   private void checkAndPrintServerVersionWarning(GetVersionResponse serverVersion) {

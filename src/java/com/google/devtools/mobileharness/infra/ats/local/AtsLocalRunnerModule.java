@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.ats.local;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
@@ -33,22 +34,33 @@ import java.util.List;
 public final class AtsLocalRunnerModule extends AbstractModule {
   private final Provider<Path> olcServerBinary;
   private final ImmutableList<String> deviceInfraServiceFlags;
+  private final String runnerId;
 
   public AtsLocalRunnerModule(
-      Provider<Path> olcServerBinary, List<String> deviceInfraServiceFlags) {
+      Provider<Path> olcServerBinary, List<String> deviceInfraServiceFlags, String runnerId) {
     this.olcServerBinary = olcServerBinary;
     this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
+    this.runnerId = runnerId;
   }
 
   @Override
   protected void configure() {
-    install(new OlcServerModule(olcServerBinary, deviceInfraServiceFlags, "ATS local runner"));
+    install(
+        new OlcServerModule(
+            olcServerBinary, deviceInfraServiceFlags, "ATS local runner", runnerId));
   }
 
   @Provides
   @Singleton
   ListeningExecutorService provideThreadPool() {
     return ThreadPools.createStandardThreadPool("ats-local-runner-thread-pool");
+  }
+
+  @Provides
+  @Singleton
+  ListeningScheduledExecutorService provideScheduledThreadPool() {
+    return ThreadPools.createStandardScheduledThreadPool(
+        "ats-local-runner-scheduled-thread-pool", /* corePoolSize= */ 10);
   }
 
   @Provides

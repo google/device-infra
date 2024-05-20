@@ -32,10 +32,10 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
@@ -52,7 +52,6 @@ import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
 import com.google.devtools.mobileharness.infra.ats.console.util.notice.NoticeMessageUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.version.VersionMessageUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest.AbortAllSessionsFromClient;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -143,7 +142,7 @@ public class AtsConsole {
   private final PrintWriter outWriter;
   private final PrintWriter errWriter;
   private final ControlStub controlStub;
-  private final String consoleId;
+  private final String clientId;
   private final Sleeper sleeper;
   private final ConsoleUtil consoleUtil;
   private final ConsoleInfo consoleInfo;
@@ -165,7 +164,7 @@ public class AtsConsole {
       @ConsoleOutput(ConsoleOutput.Type.OUT_WRITER) PrintWriter outWriter,
       @ConsoleOutput(ConsoleOutput.Type.ERR_WRITER) PrintWriter errWriter,
       @ServerStub(ServerStub.Type.CONTROL_SERVICE) ControlStub controlStub,
-      @ConsoleId String consoleId,
+      @ClientId String clientId,
       Sleeper sleeper,
       ConsoleUtil consoleUtil,
       ConsoleInfo consoleInfo,
@@ -181,7 +180,7 @@ public class AtsConsole {
     this.outWriter = outWriter;
     this.errWriter = errWriter;
     this.controlStub = controlStub;
-    this.consoleId = consoleId;
+    this.clientId = clientId;
     this.sleeper = sleeper;
     this.consoleUtil = consoleUtil;
     this.consoleInfo = consoleInfo;
@@ -209,6 +208,7 @@ public class AtsConsole {
     if (!mainArgs.isEmpty()) {
       consoleUtil.printlnStderr("Args: %s", mainArgs);
     }
+    logger.atInfo().with(IMPORTANCE, DEBUG).log("ATS console ID: %s", clientId);
     logger.atInfo().with(IMPORTANCE, DEBUG).log("Flags: %s", deviceInfraServiceFlags);
 
     // Starts listing test plans.
@@ -218,6 +218,7 @@ public class AtsConsole {
     // Prepares OLC server.
     if (Flags.instance().enableAtsConsoleOlcServer.getNonNull()) {
       serverPreparer.prepareOlcServer();
+      serverPreparer.startSendingHeartbeats();
     }
 
     // Prints OLC server streaming log.
@@ -330,11 +331,7 @@ public class AtsConsole {
 
     // Aborts all sessions of the console and kills the OLC server.
     try {
-      controlStub.killServer(
-          KillServerRequest.newBuilder()
-              .setAbortAllSessionsFromClient(
-                  AbortAllSessionsFromClient.newBuilder().setClientId(consoleId))
-              .build());
+      controlStub.killServer(KillServerRequest.newBuilder().setClientId(clientId).build());
     } catch (GrpcExceptionWithErrorId e) {
       // Does nothing.
     }

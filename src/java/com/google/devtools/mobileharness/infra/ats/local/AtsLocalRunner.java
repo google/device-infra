@@ -50,6 +50,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.stub.StreamObserver;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.UUID;
 import javax.inject.Inject;
 
 /** ATS local runner. */
@@ -73,7 +74,10 @@ public class AtsLocalRunner {
 
     Injector injector =
         Guice.createInjector(
-            new AtsLocalRunnerModule(AtsLocalRunner::getOlcServerBinary, deviceInfraServiceFlags));
+            new AtsLocalRunnerModule(
+                AtsLocalRunner::getOlcServerBinary,
+                deviceInfraServiceFlags,
+                "ats-local-runner-" + UUID.randomUUID()));
     AtsLocalRunner atsLocalRunner = injector.getInstance(AtsLocalRunner.class);
     atsLocalRunner.run();
   }

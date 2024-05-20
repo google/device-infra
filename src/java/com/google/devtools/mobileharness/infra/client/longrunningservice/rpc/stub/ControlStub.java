@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceGrpc.ControlServiceStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.HeartbeatRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelRequest;
@@ -61,5 +62,13 @@ public class ControlStub {
         request,
         InfraErrorId.OLCS_STUB_SET_LOG_LEVEL_ERROR,
         "Failed to set log level");
+  }
+
+  public void heartbeat(HeartbeatRequest request) throws GrpcExceptionWithErrorId {
+    GrpcStubUtil.invoke(
+        controlServiceBlockingStub::heartbeat,
+        request,
+        InfraErrorId.OLCS_STUB_HEARTBEAT_ERROR,
+        "Failed to send heartbeat");
   }
 }

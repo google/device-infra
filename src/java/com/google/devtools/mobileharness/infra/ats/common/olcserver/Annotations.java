@@ -27,6 +27,11 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   @interface ClientComponentName {}
 
+  /** ID of the ATS console / local runner. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface ClientId {}
+
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)
   @interface ServerChannel {}

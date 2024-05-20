@@ -26,13 +26,13 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
@@ -63,9 +63,8 @@ public class AtsSessionStubTest {
 
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
 
-  @Bind @ConsoleId private static final String CONSOLE_ID = "fake_console_id";
-
   @Bind private ListeningExecutorService threadPool;
+  @Bind private ListeningScheduledExecutorService scheduledThreadPool;
   @Bind private Sleeper sleeper;
   @Bind private ImmutableList<String> deviceInfraServiceFlags;
 
@@ -111,6 +110,8 @@ public class AtsSessionStubTest {
 
     sleeper = Sleeper.defaultSleeper();
     threadPool = ThreadPools.createStandardThreadPool("main-thread");
+    scheduledThreadPool =
+        ThreadPools.createStandardScheduledThreadPool("main-scheduled-thread", 10);
 
     outPrintStream = System.out;
     errPrintStream = System.err;
@@ -124,7 +125,8 @@ public class AtsSessionStubTest {
                     + "olcserver/ats_olc_server_local_mode_deploy.jar"));
 
     Guice.createInjector(
-            new OlcServerModule(() -> serverBinary, deviceInfraServiceFlags, "ATS console"),
+            new OlcServerModule(
+                () -> serverBinary, deviceInfraServiceFlags, "ATS console", "fake_client_id"),
             BoundFieldModule.of(this))
         .injectMembers(this);
   }

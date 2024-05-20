@@ -23,11 +23,6 @@ import javax.inject.Qualifier;
 /** Annotations for ATS console. */
 public class Annotations {
 
-  /** ID of the console. */
-  @Qualifier
-  @Retention(RetentionPolicy.RUNTIME)
-  public @interface ConsoleId {}
-
   /** Line reader for the console. */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)

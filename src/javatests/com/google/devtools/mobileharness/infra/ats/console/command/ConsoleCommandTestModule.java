@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
@@ -45,7 +46,9 @@ public class ConsoleCommandTestModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    install(new OlcServerModule(() -> Path.of(""), ImmutableList.of(), "ATS console"));
+    install(
+        new OlcServerModule(
+            () -> Path.of(""), ImmutableList.of(), "ATS console", "fake_client_id"));
     install(new CompatibilityReportModule());
   }
 
@@ -57,6 +60,11 @@ public class ConsoleCommandTestModule extends AbstractModule {
   @Provides
   ListeningExecutorService provideThreadPool() {
     return ThreadPools.createStandardThreadPool("main-thread");
+  }
+
+  @Provides
+  ListeningScheduledExecutorService provideScheduledThreadPool() {
+    return ThreadPools.createStandardScheduledThreadPool("main-scheduled-thread", 10);
   }
 
   @Provides

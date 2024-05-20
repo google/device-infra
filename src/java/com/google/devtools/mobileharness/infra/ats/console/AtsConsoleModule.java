@@ -22,10 +22,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
@@ -89,14 +89,9 @@ public class AtsConsoleModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    install(new OlcServerModule(olcServerBinary, deviceInfraServiceFlags, "ATS console"));
+    install(
+        new OlcServerModule(olcServerBinary, deviceInfraServiceFlags, "ATS console", consoleId));
     install(new CompatibilityReportModule());
-  }
-
-  @Provides
-  @ConsoleId
-  String provideConsoleId() {
-    return consoleId;
   }
 
   @Provides
@@ -148,6 +143,13 @@ public class AtsConsoleModule extends AbstractModule {
   @Singleton
   ListeningExecutorService provideThreadPool() {
     return ThreadPools.createStandardThreadPool("ats-console-thread-pool");
+  }
+
+  @Provides
+  @Singleton
+  ListeningScheduledExecutorService provideScheduledThreadPool() {
+    return ThreadPools.createStandardScheduledThreadPool(
+        "ats-console-scheduled-thread-pool", /* corePoolSize= */ 10);
   }
 
   @Provides

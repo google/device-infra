@@ -24,6 +24,9 @@ import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.base.Ascii;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalListener;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
@@ -35,6 +38,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.control
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceGrpc;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.GetLogResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.HeartbeatRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.HeartbeatResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse.Failure;
@@ -57,6 +62,7 @@ import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -117,6 +123,19 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
   private final SessionManager sessionManager;
   private final ListeningScheduledExecutorService threadPool;
 
+  /** Value is unused. */
+  private final Cache<String, Boolean> aliveClientIds =
+      CacheBuilder.newBuilder()
+          .expireAfterWrite(Duration.ofMinutes(1L))
+          .removalListener(
+              (RemovalListener<String, Boolean>)
+                  notification -> {
+                    if (notification.wasEvicted()) {
+                      logger.atInfo().log("Client [%s] becomes not alive", notification.getKey());
+                    }
+                  })
+          .build();
+
   /** Set in {@link #setServer}. */
   private volatile Server server;
 
@@ -161,29 +180,42 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
         ControlServiceGrpc.getSetLogLevelMethod());
   }
 
+  @Override
+  public void heartbeat(
+      HeartbeatRequest request, StreamObserver<HeartbeatResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        this::doHeartbeat,
+        ControlServiceGrpc.getServiceDescriptor(),
+        ControlServiceGrpc.getHeartbeatMethod());
+  }
+
   private KillServerResponse doKillServer(KillServerRequest request) {
     KillServerResponse.Builder responseBuilder =
         KillServerResponse.newBuilder().setServerPid(ProcessHandle.current().pid());
 
-    if (request.hasAbortAllSessionsFromClient()) {
-      String clientId = request.getAbortAllSessionsFromClient().getClientId();
-      ImmutableList<String> unfinishedSessionIdsFromClient =
-          sessionManager
-              .getAllSessions(SESSION_ID_FIELD_MASK, getUnfinishedSessionFromClientFilter(clientId))
-              .stream()
-              .map(SessionDetail::getSessionId)
-              .map(SessionId::getId)
-              .collect(toImmutableList());
-      logger.atInfo().log(
-          "Unfinished sessions from client [%s]: %s", clientId, unfinishedSessionIdsFromClient);
-      sessionManager.abortSessions(unfinishedSessionIdsFromClient);
-    }
+    String clientId = request.getClientId();
+    ImmutableList<String> unfinishedSessionIdsFromClient =
+        sessionManager
+            .getAllSessions(SESSION_ID_FIELD_MASK, getUnfinishedSessionFromClientFilter(clientId))
+            .stream()
+            .map(SessionDetail::getSessionId)
+            .map(SessionId::getId)
+            .collect(toImmutableList());
+    logger.atInfo().log(
+        "Unfinished sessions from client [%s]: %s", clientId, unfinishedSessionIdsFromClient);
+    sessionManager.abortSessions(unfinishedSessionIdsFromClient);
 
     ImmutableList<SessionDetail> unfinishedNotAbortedSessions =
         sessionManager.getAllSessions(
             SESSION_SUMMARY_FIELD_MASK, UNFINISHED_NOT_ABORTED_SESSION_FILTER);
 
-    if (unfinishedNotAbortedSessions.isEmpty()) {
+    // Gets all clients that are still alive.
+    aliveClientIds.invalidate(clientId);
+    Set<String> currentAliveClientIds = aliveClientIds.asMap().keySet();
+
+    if (unfinishedNotAbortedSessions.isEmpty() && currentAliveClientIds.isEmpty()) {
       logger.atInfo().log("Exiting by KillServerRequest");
       server.shutdown();
       logFailure(
@@ -196,11 +228,13 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
       KillServerResponse response =
           responseBuilder
               .setFailure(
-                  Failure.newBuilder().addAllUnfinishedSessions(unfinishedNotAbortedSessions))
+                  Failure.newBuilder()
+                      .addAllUnfinishedSessions(unfinishedNotAbortedSessions)
+                      .addAllAliveClients(currentAliveClientIds))
               .build();
       logger.atInfo().log(
-          "KillServerRequest is rejected due to unfinished (and not aborted) sessions,"
-              + " response=[%s]",
+          "KillServerRequest is rejected due to unfinished (and not aborted) sessions or alive"
+              + " clients, response=[%s]",
           shortDebugString(response));
       return response;
     }
@@ -217,6 +251,11 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
   private SetLogLevelResponse doSetLogLevel(SetLogLevelRequest request) {
     logManager.getLogHandler().setLevel(Level.parse(Ascii.toUpperCase(request.getLevel())));
     return SetLogLevelResponse.getDefaultInstance();
+  }
+
+  private HeartbeatResponse doHeartbeat(HeartbeatRequest request) {
+    aliveClientIds.put(request.getClientId(), false);
+    return HeartbeatResponse.getDefaultInstance();
   }
 
   private class GetLogRequestStreamObserver implements StreamObserver<GetLogRequest> {

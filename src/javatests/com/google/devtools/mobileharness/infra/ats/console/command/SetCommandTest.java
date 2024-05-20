@@ -21,7 +21,6 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleId;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
@@ -48,8 +47,6 @@ import picocli.CommandLine;
 public final class SetCommandTest {
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-
-  @Bind @ConsoleId private static final String CONSOLE_ID = "fake_console_id";
 
   @Bind @SystemProperties
   private static final ImmutableMap<String, String> SYSTEM_PROPERTIES = ImmutableMap.of();
