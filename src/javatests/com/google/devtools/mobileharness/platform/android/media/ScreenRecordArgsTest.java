@@ -26,7 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.testing.junit.testparameterinjector.TestParameterInjector;
 import com.google.testing.junit.testparameterinjector.TestParameters;
 import com.google.testing.junit.testparameterinjector.TestParameters.TestParametersValues;
-import com.google.testing.junit.testparameterinjector.TestParameters.TestParametersValuesProvider;
+import com.google.testing.junit.testparameterinjector.TestParametersValuesProvider;
 import java.util.ArrayList;
 import java.util.stream.IntStream;
 import org.junit.Test;
@@ -35,9 +35,9 @@ import org.junit.runner.RunWith;
 @RunWith(TestParameterInjector.class)
 public final class ScreenRecordArgsTest {
 
-  static final class BuildArgsTestParametersProvider implements TestParametersValuesProvider {
+  static final class BuildArgsTestParametersProvider extends TestParametersValuesProvider {
     @Override
-    public ImmutableList<TestParametersValues> provideValues() {
+    public ImmutableList<TestParametersValues> provideValues(Context context) {
 
       String[] parameterNames =
           new String[] {"bitRate", "size", "verbose", "bugreport", "argsExpected"};
