@@ -710,10 +710,10 @@ public class SystemUtil {
     logger.atInfo().log("Processes:\n%s", output);
     logger.atInfo().log("Parent Process for this iteration: %s", parentProcessInfo);
 
-    // Calculates all ancestors of given parent process, until init process (pid = 1). They won't be
-    // considered "zombie".
+    // Calculates all ancestors of given parent process, until init process (whose parent pid is 0).
+    // They won't be considered "zombie".
     int ancestorProcessId = pidToPpid.get(parentProcessId);
-    while (ancestorProcessId != 1) {
+    while (pidToPpid.get(ancestorProcessId) != null && pidToPpid.get(ancestorProcessId) != 0) {
       ancestorsOfParentProcess.add(ancestorProcessId);
       ancestorProcessId = pidToPpid.get(ancestorProcessId);
     }
