@@ -72,6 +72,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
 
   private static final String MAINLINE_TVP_PKG = "com.google.android.modulemetadata";
 
+  private static final String ANDROID_V_CODENAME = "VanillaIceCream";
+
   private static final ImmutableMap<String, Integer> SDK_LEVEL_TO_YEAR =
       ImmutableMap.of(
           "30", 2020,
@@ -119,7 +121,11 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           String.format(
               "The ABI of device %s is not compatible with the xts dynamic downloader.", deviceId));
     }
-    String aospVersion = adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION);
+    // Before V release, the SDK level is 34, it will be increased to 35 only after V final release.
+    String aospVersion =
+        adbUtil.getProperty(deviceId, AndroidProperty.CODENAME).equals(ANDROID_V_CODENAME)
+            ? "35"
+            : adbUtil.getProperty(deviceId, AndroidProperty.SDK_VERSION);
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip

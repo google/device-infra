@@ -81,6 +81,7 @@ public final class MctsDynamicDownloadPluginTest {
         .thenReturn(341050004);
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.ABI))).thenReturn("arm64-v8a");
     when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.SDK_VERSION))).thenReturn("30");
+    when(mockAdbUtil.getProperty(any(), eq(AndroidProperty.CODENAME))).thenReturn("fake_codename");
     when(mockAndroidPackageManagerUtil.listModuleInfos(any()))
         .thenReturn(
             ImmutableSortedSet.of(
