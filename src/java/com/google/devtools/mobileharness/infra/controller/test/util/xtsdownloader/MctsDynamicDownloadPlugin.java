@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ArrayListMultimap;
@@ -169,22 +171,28 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         .properties()
         .add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY, TMP_MCTS_TESTCASES_PATH);
     // Print out all the downloaded MCTS test modules
-    logger.atInfo().log("Downloaded MCTS test modules:");
+    logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Downloaded MCTS test modules:");
     for (String testModule : allTestModules) {
-      logger.atInfo().log("%s", testModule);
+      logger.atInfo().with(IMPORTANCE, IMPORTANT).log("%s", testModule);
     }
   }
 
   @Subscribe
   void onTestStarting(LocalTestStartingEvent event) throws InterruptedException, SkipTestException {
     try {
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log("Start to download MCTS test modules, this might take 20+ minutes, please wait...");
       XtsDynamicDownloadInfo xtsDynamicDownloadInfo =
           parse(event.getTest(), event.getDeviceLocator().getSerial());
       downloadXtsFiles(xtsDynamicDownloadInfo, event.getTest());
     } catch (MobileHarnessException e) {
       throw SkipTestException.create(
-          "Failed to get Mainline CTS (MCTS). MCTS is part of full CTS, which is required to be"
-              + " downloaded for testing",
+          "Failed to download Mainline CTS (MCTS). Either the files are broken, or the disk is"
+              + " full, please reboot your PC or remove the outdated tmp files under"
+              + " /tmp/mcts_dynamic_download/android/xts/mcts/ and check your network connection"
+              + " then restart the CTS to retry.",
           DesiredTestResult.ERROR,
           AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_FILE_NOT_FOUND,
           e);
