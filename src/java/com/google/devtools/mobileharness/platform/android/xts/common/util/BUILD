@@ -84,3 +84,11 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "time_util",
+    srcs = ["TimeUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
+    ],
+)
