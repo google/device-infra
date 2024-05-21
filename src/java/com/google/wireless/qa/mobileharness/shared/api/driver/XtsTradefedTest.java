@@ -35,7 +35,6 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
-import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -132,7 +131,6 @@ public class XtsTradefedTest extends BaseDriver
   private final CompatibilityReportParser compatibilityReportParser;
   private final SystemUtil systemUtil;
   private final Adb adb;
-  private final Fastboot fastboot;
   private final Aapt aapt;
   private final LogRecorder logRecorder;
   private final ListeningExecutorService threadPool;
@@ -147,7 +145,6 @@ public class XtsTradefedTest extends BaseDriver
       CompatibilityReportParser compatibilityReportParser,
       SystemUtil systemUtil,
       Adb adb,
-      Fastboot fastboot,
       Aapt aapt,
       ListeningExecutorService threadPool,
       Sleeper sleeper) {
@@ -159,7 +156,6 @@ public class XtsTradefedTest extends BaseDriver
         compatibilityReportParser,
         systemUtil,
         adb,
-        fastboot,
         aapt,
         threadPool,
         sleeper,
@@ -175,7 +171,6 @@ public class XtsTradefedTest extends BaseDriver
       CompatibilityReportParser compatibilityReportParser,
       SystemUtil systemUtil,
       Adb adb,
-      Fastboot fastboot,
       Aapt aapt,
       ListeningExecutorService threadPool,
       Sleeper sleeper,
@@ -186,7 +181,6 @@ public class XtsTradefedTest extends BaseDriver
     this.compatibilityReportParser = compatibilityReportParser;
     this.systemUtil = systemUtil;
     this.adb = adb;
-    this.fastboot = fastboot;
     this.aapt = aapt;
     this.threadPool = threadPool;
     this.sleeper = sleeper;
@@ -695,9 +689,6 @@ public class XtsTradefedTest extends BaseDriver
 
     // Adds adb path.
     envPathSegments.add(getSdkToolDirPath(adb.getAdbPath(), "adb"));
-
-    // Adds fastboot path.
-    envPathSegments.add(getSdkToolDirPath(fastboot.getFastbootPath(), "fastboot"));
 
     // Adds aapt path.
     envPathSegments.add(getSdkToolDirPath(aapt.getAaptPath(), "aapt"));
