@@ -22,6 +22,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -70,10 +71,10 @@ public class ConsoleInfo {
   }
 
   /** Gets the xTS root directory. */
-  public String getXtsRootDirectoryNonEmpty() {
+  public Path getXtsRootDirectoryNonEmpty() {
     String result = systemProperties.get(XTS_ROOT_DIR_PROPERTY_KEY);
     checkState(result != null, "XTS root dir is not specified by -D%s", XTS_ROOT_DIR_PROPERTY_KEY);
-    return result;
+    return Path.of(result).normalize();
   }
 
   /**

@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultLis
 import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters;
+import java.nio.file.Path;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
@@ -167,11 +168,11 @@ class ListCommand implements Callable<Integer> {
           ModuleParameters moduleParameter)
       throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
-    String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
+    Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
 
     ListModulesCommand.Builder listModulesCommandBuilder =
         ListModulesCommand.newBuilder()
-            .setXtsRootDir(xtsRootDir)
+            .setXtsRootDir(xtsRootDir.toString())
             .setXtsType(commandHelper.getXtsType());
     if (moduleParameter != null) {
       listModulesCommandBuilder.setModuleParameter(moduleParameter.name());
@@ -211,9 +212,9 @@ class ListCommand implements Callable<Integer> {
       aliases = {"s"},
       description = "List all available subplans")
   public int subplans() throws MobileHarnessException {
-    String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
+    Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     ImmutableList<String> subPlanFileNames =
-        subPlanLister.listSubPlans(xtsRootDir, commandHelper.getXtsType());
+        subPlanLister.listSubPlans(xtsRootDir.toString(), commandHelper.getXtsType());
 
     if (subPlanFileNames.isEmpty()) {
       consoleUtil.printlnStdout("No subplans found");

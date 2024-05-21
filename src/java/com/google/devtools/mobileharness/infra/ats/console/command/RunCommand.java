@@ -56,6 +56,7 @@ import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
@@ -274,7 +275,7 @@ public final class RunCommand implements Callable<Integer> {
       checkState(Flags.instance().enableAtsConsoleOlcServer.getNonNull());
       if (showHelp || showHelpAll) {
         return showHelpMessage(
-            commandHelper.getXtsType(), consoleInfo.getXtsRootDirectoryNonEmpty());
+            commandHelper.getXtsType(), consoleInfo.getXtsRootDirectoryNonEmpty().toString());
       } else {
         validateCommandParameters();
         return runInM1(command);
@@ -368,8 +369,10 @@ public final class RunCommand implements Callable<Integer> {
   }
 
   private boolean isSubPlanExist(String subPlanName) throws MobileHarnessException {
-    String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
-    return subPlanLister.listSubPlans(xtsRootDir, commandHelper.getXtsType()).contains(subPlanName);
+    Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
+    return subPlanLister
+        .listSubPlans(xtsRootDir.toString(), commandHelper.getXtsType())
+        .contains(subPlanName);
   }
 
   private ImmutableList<String> getModules() {
@@ -461,12 +464,12 @@ public final class RunCommand implements Callable<Integer> {
     ImmutableList<String> extraArgs =
         extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
 
-    String xtsRootDirectory = consoleInfo.getXtsRootDirectoryNonEmpty();
+    Path xtsRootDirectory = consoleInfo.getXtsRootDirectoryNonEmpty();
     String xtsType = commandHelper.getXtsType();
     // Asynchronously runs the session.
     SessionPluginProto.RunCommand.Builder runCommand =
         SessionPluginProto.RunCommand.newBuilder()
-            .setXtsRootDir(xtsRootDirectory)
+            .setXtsRootDir(xtsRootDirectory.toString())
             .setXtsType(xtsType)
             .addAllDeviceSerial(deviceSerials)
             .addAllIncludeFilter(includeFilters)

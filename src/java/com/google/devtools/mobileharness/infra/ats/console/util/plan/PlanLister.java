@@ -48,8 +48,8 @@ public class PlanLister {
   }
 
   private ImmutableMap<String, PlanConfigInfo> doListPlans() {
-    String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
-    Path toolsDir = XtsDirUtil.getXtsToolsDir(Path.of(xtsRootDir), commandHelper.getXtsType());
+    Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
+    Path toolsDir = XtsDirUtil.getXtsToolsDir(xtsRootDir, commandHelper.getXtsType());
     return planConfigUtil.loadAllConfigs(toolsDir);
   }
 }

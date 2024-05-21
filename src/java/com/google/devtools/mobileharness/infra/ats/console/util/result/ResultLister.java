@@ -51,8 +51,8 @@ public class ResultLister {
 
   public String listResults(String xtsType) throws MobileHarnessException {
     // Lists all result dirs.
-    String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
-    String resultsDir = XtsDirUtil.getXtsResultsDir(Path.of(xtsRootDir), xtsType).toString();
+    Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
+    String resultsDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).toString();
     Map<Result, File> results = resultListerHelper.listResults(resultsDir);
 
     if (results.isEmpty()) {

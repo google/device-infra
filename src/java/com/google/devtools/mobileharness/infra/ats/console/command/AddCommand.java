@@ -133,12 +133,12 @@ class AddCommand implements Callable<Integer> {
                       + " excludes the specified test case.")
           List<String> excludeFilters)
       throws MobileHarnessException {
-    String xtsRootDirectory = consoleInfo.getXtsRootDirectoryNonEmpty();
+    Path xtsRootDirectory = consoleInfo.getXtsRootDirectoryNonEmpty();
     String xtsType = commandHelper.getXtsType();
 
     AddSubPlanArgs.Builder addSubPlanArgsBuilder =
         AddSubPlanArgs.builder()
-            .setXtsRootDir(Path.of(xtsRootDirectory))
+            .setXtsRootDir(xtsRootDirectory)
             .setXtsType(xtsType)
             .setSessionIndex(sessionIndex);
     if (!Strings.isNullOrEmpty(name)) {

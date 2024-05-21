@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.util.command;
 import com.google.common.base.Suppliers;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
+import java.nio.file.Path;
 import java.util.Optional;
 import java.util.function.Supplier;
 import javax.inject.Inject;
@@ -55,9 +56,9 @@ public class CommandHelper {
       return xtsTypeFromSystemProperty.get();
     }
 
-    String xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
+    Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     Supplier<String> multiDirHelpMessage =
         () -> String.format("Please specify XTS type by -D%s.", ConsoleInfo.XTS_TYPE_PROPERTY_KEY);
-    return xtsTypeLoader.getXtsType(xtsRootDir, multiDirHelpMessage);
+    return xtsTypeLoader.getXtsType(xtsRootDir.toString(), multiDirHelpMessage);
   }
 }
