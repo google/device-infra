@@ -128,3 +128,19 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "suite_result_reporter",
+    srcs = ["SuiteResultReporter.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:time_util",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)

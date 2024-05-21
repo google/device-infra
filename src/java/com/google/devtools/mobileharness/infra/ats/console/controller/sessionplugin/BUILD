@@ -147,6 +147,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_result_reporter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

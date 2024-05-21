@@ -30,13 +30,11 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteResultReporter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -64,6 +62,7 @@ class RunCommandHandler {
   private final SessionResultHandlerUtil sessionResultHandlerUtil;
   private final LocalFileUtil localFileUtil;
   private final SessionInfo sessionInfo;
+  private final SuiteResultReporter suiteResultReporter;
 
   private volatile SessionRequestInfo sessionRequestInfo;
 
@@ -72,11 +71,13 @@ class RunCommandHandler {
       LocalFileUtil localFileUtil,
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
       SessionResultHandlerUtil sessionResultHandlerUtil,
-      SessionInfo sessionInfo) {
+      SessionInfo sessionInfo,
+      SuiteResultReporter suiteResultReporter) {
     this.localFileUtil = localFileUtil;
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.sessionResultHandlerUtil = sessionResultHandlerUtil;
     this.sessionInfo = sessionInfo;
+    this.suiteResultReporter = suiteResultReporter;
   }
 
   void initialize(RunCommand command) throws MobileHarnessException, InterruptedException {
@@ -197,7 +198,7 @@ class RunCommandHandler {
     } finally {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);
 
-      String xtsTestResultSummary = createXtsTestResultSummary(result, command, resultDir, logDir);
+      String xtsTestResultSummary = createXtsTestResultSummary(result, resultDir, logDir);
       boolean isSessionPassed = sessionResultHandlerUtil.isSessionPassed(allJobs);
       String sessionSummary =
           String.format(
@@ -266,60 +267,16 @@ class RunCommandHandler {
   }
 
   private String createXtsTestResultSummary(
-      @Nullable Result result,
-      RunCommand runCommand,
-      @Nullable Path resultDir,
-      @Nullable Path logDir) {
-    int doneModuleNumber = 0;
-    int totalModuleNumber = 0;
-    long totalPassedTestNumber = 0L;
-    long totalFailedTestNumber = 0L;
-    long totalSkippedTestNumber = 0L;
-    long totalAssumeFailureTestNumber = 0L;
-    if (result != null) {
-      doneModuleNumber = result.getSummary().getModulesDone();
-      totalModuleNumber = result.getSummary().getModulesTotal();
-      totalPassedTestNumber = result.getSummary().getPassed();
-      totalFailedTestNumber = result.getSummary().getFailed();
-      for (Module module : result.getModuleInfoList()) {
-        for (TestCase testCase : module.getTestCaseList()) {
-          for (Test test : testCase.getTestList()) {
-            if (test.getResult().equals("ASSUMPTION_FAILURE")) {
-              totalAssumeFailureTestNumber += 1;
-            } else if (test.getSkipped() || test.getResult().equals("IGNORED")) {
-              totalSkippedTestNumber += 1;
-            }
-          }
-        }
-      }
-    }
-
-    // Print out the xts test result summary.
+      @Nullable Result result, @Nullable Path resultDir, @Nullable Path logDir) {
     return String.format(
-            "\n================= %s test result summary ================\n",
-            toUpperCase(runCommand.getXtsType()))
-        + String.format("%s/%s modules completed\n", doneModuleNumber, totalModuleNumber)
-        + String.format(
-            "TOTAL TESTCASES             : %s\n",
-            totalPassedTestNumber
-                + totalFailedTestNumber
-                + totalSkippedTestNumber
-                + totalAssumeFailureTestNumber)
-        + String.format("PASSED TESTCASES            : %s\n", totalPassedTestNumber)
-        + String.format("FAILED TESTCASES            : %s\n", totalFailedTestNumber)
-        + (totalSkippedTestNumber > 0
-            ? String.format("SKIPPED TESTCASES           : %s\n", totalSkippedTestNumber)
-            : "")
-        + (totalAssumeFailureTestNumber > 0
-            ? String.format("ASSUMPTION_FAILURE TESTCASES: %s\n", totalAssumeFailureTestNumber)
-            : "")
+            "%s=========== Result/Log Location ============\n",
+            suiteResultReporter.getSummary(result))
         + (logDir != null && localFileUtil.isDirExist(logDir)
             ? String.format("LOG DIRECTORY               : %s\n", logDir)
             : "")
         + (resultDir != null && localFileUtil.isDirExist(resultDir)
             ? String.format("RESULT DIRECTORY            : %s\n", resultDir)
             : "")
-        + "=================== End of Results =============================\n"
-        + "================================================================\n";
+        + "============================================\n";
   }
 }
