@@ -262,7 +262,7 @@ maven_install(
         "com.google.inject.extensions:guice-testlib:5.1.0",
         "com.google.inject.extensions:guice-throwingproviders:5.1.0",
         "com.google.inject:guice:5.1.0",
-        "com.google.testparameterinjector:test-parameter-injector:1.15",
+        "com.google.testparameterinjector:test-parameter-injector:1.16",
         "com.google.truth.extensions:truth-proto-extension:1.4.0",
         "com.google.truth.extensions:truth-java8-extension:1.4.0",
         "com.google.truth:truth:1.4.0",
