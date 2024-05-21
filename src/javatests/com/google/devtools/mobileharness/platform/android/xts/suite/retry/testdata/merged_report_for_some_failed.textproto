@@ -51,6 +51,8 @@ summary {
   failed: 0
   modules_done: 2
   modules_total: 2
+  retry_success_test_count: 3
+  retry_failed_test_count: 0
 }
 module_info {
   name: "CtsAccelerationTestCases"
@@ -107,6 +109,8 @@ module_info {
     }
   }
   failed_tests: 0
+  retry_success_test_count: 3
+  retry_failed_test_count: 0
 }
 module_info {
   name: "CtsAccelerationTestCases[instant]"

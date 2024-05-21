@@ -74,6 +74,8 @@ message Summary {
   optional int64 failed = 2;
   optional int32 modules_done = 3;
   optional int32 modules_total = 4;
+  optional int64 retry_success_test_count = 5;
+  optional int64 retry_failed_test_count = 6;
 }
 
 // Stores info for the <Module> element in the <Result> element.
@@ -102,6 +104,12 @@ message Module {
   optional int64 prep_time_millis = 11;
   // Optional. Teardown time of this module. Epoch milliseconds.
   optional int64 teardown_time_millis = 12;
+  // Optional. Number of retry Success tests (FAILED test became Pass). Not
+  // showing in xml report. Showing in invocation summary.
+  optional int32 retry_success_test_count = 13;
+  // Optional. Number of retry Failure tests (FAILED test stayed Failed). Not
+  // showing in xml report. Showing in invocation summary.
+  optional int32 retry_failed_test_count = 14;
 }
 
 // Stores the info for the module not done reason

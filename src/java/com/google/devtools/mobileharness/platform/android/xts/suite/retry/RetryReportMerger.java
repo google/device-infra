@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.SetMultimap;
+import com.google.common.collect.Sets;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.primitives.Longs;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -54,6 +55,7 @@ import javax.inject.Inject;
 public class RetryReportMerger {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final String RETRY_TYPE_FAILED = "RETRY_TYPE_FAILED";
 
   private final PreviousResultLoader previousResultLoader;
   private final RetryGenerator retryGenerator;
@@ -131,7 +133,7 @@ public class RetryReportMerger {
   private Result mergeReports(
       Result previousResult, SubPlan retrySubPlan, @Nullable Result retryResult) {
     Result.Builder mergedResult = Result.newBuilder();
-    // If the previous result was ran with some filters given by the user command, reflect them in
+    // If the previous result was run with some filters given by the user command, reflect them in
     // the merged report too.
     //
     if (!previousResult.getModuleFilterList().isEmpty()) {
@@ -210,12 +212,16 @@ public class RetryReportMerger {
     // Prepare the Summary
     long passedInSummary = 0;
     long failedInSummary = 0;
+    long retrySuccessInSummary = 0;
+    long retryFailedInSummary = 0;
     int modulesDoneInSummary = 0;
     int modulesTotalInSummary = mergedResult.getModuleInfoCount();
     for (Module module : mergedResult.getModuleInfoList()) {
       if (module.getDone()) {
         modulesDoneInSummary++;
       }
+      retrySuccessInSummary += module.getRetrySuccessTestCount();
+      retryFailedInSummary += module.getRetryFailedTestCount();
       passedInSummary += module.getPassed();
       failedInSummary += module.getFailedTests();
     }
@@ -223,6 +229,8 @@ public class RetryReportMerger {
     return mergedResult
         .setSummary(
             Summary.newBuilder()
+                .setRetrySuccessTestCount(retrySuccessInSummary)
+                .setRetryFailedTestCount(retryFailedInSummary)
                 .setPassed(passedInSummary)
                 .setFailed(failedInSummary)
                 .setModulesDone(modulesDoneInSummary)
@@ -291,14 +299,45 @@ public class RetryReportMerger {
                         }));
   }
 
+  private ImmutableSet<String> getModuleTestsOfCertainResult(
+      Module module, TestStatus expectedResult) {
+    ImmutableSet.Builder<String> moduleAllTests = ImmutableSet.builder();
+    for (TestCase testCase : module.getTestCaseList()) {
+      for (Test test : testCase.getTestList()) {
+        if (test.getResult()
+            .equals(TestStatus.convertToTestStatusCompatibilityString(expectedResult))) {
+          moduleAllTests.add(String.format("#%s#%s", testCase.getName(), test.getName()));
+        }
+      }
+    }
+    return moduleAllTests.build();
+  }
+
   private Module doMergeModule(
       String moduleId,
       Module moduleFromPrevSession,
       Module moduleFromRetry,
       Set<String> matchedRetryTestFilters) {
+
+    // The entire module was retried.
     if (matchedRetryTestFilters.contains(SubPlan.ALL_TESTS_IN_MODULE)) {
-      // The entire module was retried.
-      return moduleFromRetry;
+
+      // Calculate the number of previously failed tests that were retried and passed/failed.
+      Set<String> prevSessionModuleFailedTests =
+          getModuleTestsOfCertainResult(moduleFromPrevSession, TestStatus.FAILURE);
+      Set<String> retryModuleFailedTests =
+          getModuleTestsOfCertainResult(moduleFromRetry, TestStatus.FAILURE);
+      Set<String> retryModulePassedTests =
+          getModuleTestsOfCertainResult(moduleFromRetry, TestStatus.PASSED);
+      int failedTestRetryPassedTests =
+          Sets.intersection(prevSessionModuleFailedTests, retryModulePassedTests).size();
+      int failedTestRetryFailedTests =
+          Sets.intersection(prevSessionModuleFailedTests, retryModuleFailedTests).size();
+
+      return moduleFromRetry.toBuilder()
+          .setRetryFailedTestCount(failedTestRetryFailedTests)
+          .setRetrySuccessTestCount(failedTestRetryPassedTests)
+          .build();
     }
     Module.Builder mergedModuleBuilder =
         Module.newBuilder()
@@ -334,14 +373,26 @@ public class RetryReportMerger {
     int passedTests = 0;
     int failedTests = 0;
     int totalTests = 0;
-    for (TestCase testCase : mergedModuleBuilder.getTestCaseList()) {
-      for (Test test : testCase.getTestList()) {
+    int failedTestRetryPassedTests = 0;
+    int failedTestRetryFailedTests = 0;
+    for (TestCase.Builder testCase : mergedModuleBuilder.getTestCaseBuilderList()) {
+      for (Test.Builder test : testCase.getTestBuilderList()) {
         if (test.getResult()
             .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.PASSED))) {
           passedTests++;
+          if (test.getMetricList().stream()
+              .anyMatch(metric -> metric.getKey().equals(RETRY_TYPE_FAILED))) {
+            failedTestRetryPassedTests++;
+            test.clearMetric();
+          }
         } else if (test.getResult()
             .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE))) {
           failedTests++;
+          if (test.getMetricList().stream()
+              .anyMatch(metric -> metric.getKey().equals(RETRY_TYPE_FAILED))) {
+            failedTestRetryFailedTests++;
+            test.clearMetric();
+          }
         }
         totalTests++;
       }
@@ -350,6 +401,8 @@ public class RetryReportMerger {
         .setPassed(passedTests)
         .setFailedTests(failedTests)
         .setTotalTests(totalTests)
+        .setRetrySuccessTestCount(failedTestRetryPassedTests)
+        .setRetryFailedTestCount(failedTestRetryFailedTests)
         .build();
   }
 
@@ -454,7 +507,13 @@ public class RetryReportMerger {
       return testBuilder.build();
     }
 
-    return testsFromRetry.get(testName);
+    Test.Builder retryTestBuilder = testsFromRetry.get(testName).toBuilder();
+    if (testFromPrevSession
+        .getResult()
+        .equals(TestStatus.convertToTestStatusCompatibilityString(TestStatus.FAILURE))) {
+      retryTestBuilder.addMetric(Metric.newBuilder().setKey(RETRY_TYPE_FAILED).setContent("true"));
+    }
+    return retryTestBuilder.build();
   }
 
   private Run createOneRunHistory(Result result) {
