@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.Tradefed
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
@@ -75,7 +76,6 @@ import com.google.gson.reflect.TypeToken;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
-import com.google.wireless.qa.mobileharness.shared.api.device.AndroidLocalEmulator;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -799,23 +799,24 @@ public class XtsTradefedTest extends BaseDriver
   private ImmutableList<String> getDeviceIds() {
     Device device = getDevice();
     if (!(device instanceof CompositeDevice)) {
-      return ImmutableList.of(getDeviceSerial(device));
+      String id = getDeviceId(device);
+      return ImmutableList.of(id);
     }
     CompositeDevice compositeDevice = (CompositeDevice) device;
     return compositeDevice.getManagedDevices().stream()
-        .map(this::getDeviceSerial)
+        .map(this::getDeviceId)
         .collect(toImmutableList());
   }
 
-  private String getDeviceSerial(Device device) {
-    if (device instanceof AndroidLocalEmulator) {
-      return device.getDeviceId();
+  private String getDeviceId(Device device) {
+    String id = device.getDeviceId();
+    if (id.startsWith(AndroidAdbInternalUtil.OUTPUT_USB_ID_TOKEN)) {
+      List<String> serials = device.getDimension("serial");
+      if (!serials.isEmpty()) {
+        id = serials.get(0);
+      }
     }
-    List<String> serials = device.getDimension("serial");
-    if (!serials.isEmpty()) {
-      return serials.get(0);
-    }
-    return device.getDeviceId();
+    return id;
   }
 
   private static Duration getXtsTimeout(TestInfo testInfo) throws MobileHarnessException {
