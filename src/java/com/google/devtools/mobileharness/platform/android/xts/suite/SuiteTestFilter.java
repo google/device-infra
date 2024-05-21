@@ -22,6 +22,8 @@ import com.google.common.base.Splitter;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import javax.annotation.Nullable;
 
 /** Represents a filter for including and excluding tests. */
@@ -41,6 +43,8 @@ public abstract class SuiteTestFilter {
   public abstract Optional<String> testName();
 
   private static final Splitter FILTER_STRING_SPLITTER = Splitter.on(' ').omitEmptyStrings();
+
+  private static final Pattern PARAMETERIZED_MODULE_REGEX = Pattern.compile("(.*)\\[(.*)\\]$");
 
   public static SuiteTestFilter create(String filterString) {
     List<String> tokens = FILTER_STRING_SPLITTER.splitToList(filterString);
@@ -99,14 +103,24 @@ public abstract class SuiteTestFilter {
     return abi().get().equals(moduleAbi);
   }
 
-  /** Exactly matches the given {@code moduleName}. */
+  /** Matches the given {@code moduleName} and ignoring the module parameter if any. */
   public boolean matchModuleName(String moduleName) {
-    return moduleName().equals(moduleName);
+    return getBaseModuleName().equals(moduleName);
   }
 
   @Memoized
   @Override
   public String toString() {
     return filterString();
+  }
+
+  /** Returns the base module name without the module parameter. */
+  private String getBaseModuleName() {
+    Matcher matcher = PARAMETERIZED_MODULE_REGEX.matcher(moduleName());
+    if (matcher.matches()) {
+      return matcher.group(1);
+    }
+    // No module parameter, return the original module name.
+    return moduleName();
   }
 }

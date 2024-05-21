@@ -986,6 +986,19 @@ public final class SessionRequestHandlerUtilTest {
             sessionRequestHandlerUtil.createXtsTradefedTestJob(
                 sessionRequestInfoWithExcludeFiltersAndAbi))
         .isPresent();
+
+    SessionRequestInfo sessionRequestInfoWithIncludeFiltersAndAbiAndParam =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setIncludeFilters(ImmutableList.of("arm64-v8a module1[instant] TestClass#TestCase"))
+            .build();
+    assertThat(
+            sessionRequestHandlerUtil.createXtsTradefedTestJob(
+                sessionRequestInfoWithIncludeFiltersAndAbiAndParam))
+        .isPresent();
   }
 
   @Test
