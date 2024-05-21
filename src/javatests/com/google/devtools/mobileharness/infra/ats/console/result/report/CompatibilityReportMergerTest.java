@@ -18,6 +18,9 @@ package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.android.tradefed.metrics.proto.MetricMeasurement.Measurements;
+import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
+import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo;
@@ -25,11 +28,16 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger.ParseResult;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger.TradefedResultBundle;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
 import com.google.inject.Guice;
+import com.google.protobuf.TextFormat;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
 import org.junit.Before;
@@ -45,6 +53,9 @@ public final class CompatibilityReportMergerTest {
 
   private static final String CTS_TEST_RESULT_XML_2 =
       TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_result_2.xml");
+
+  private static final String CTS_TEST_RECORD_PB_FILE =
+      TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_record.pb");
 
   private static final String MOBLY_TEST_SUMMARY_FILE_1 =
       TestRunfilesUtil.getRunfilesLocation("result/report/testdata/mobly/pass/test_summary.yaml");
@@ -87,10 +98,47 @@ public final class CompatibilityReportMergerTest {
   }
 
   @Test
+  public void generateTestRecordMetricsMap_success() throws Exception {
+    Map<String, Map<String, Metric>> metricsMap = new LinkedHashMap<>();
+    TestRecord testRecord =
+        TextFormat.parse(Files.readString(Path.of(CTS_TEST_RECORD_PB_FILE)), TestRecord.class);
+    CompatibilityReportMerger.generateTestRecordMetricsMap(testRecord, metricsMap);
+
+    assertThat(metricsMap).hasSize(2);
+    assertThat(metricsMap.get("arm64-v8a Module1"))
+        .containsExactly(
+            "PREP_TIME", createBasicMetric(123456), "TEARDOWN_TIME", createBasicMetric(654321));
+    assertThat(metricsMap.get("arm64-v8a Module2"))
+        .containsExactly(
+            "PREP_TIME", createBasicMetric(321), "TEARDOWN_TIME", createBasicMetric(123));
+  }
+
+  @Test
+  public void insertMetadataFromTestRecord_success() throws Exception {
+    List<ParseResult> res =
+        reportMerger.parseResultBundles(
+            ImmutableList.of(
+                TradefedResultBundle.of(Path.of(CTS_TEST_RESULT_XML), Optional.empty())));
+    Result report = res.get(0).report().get();
+    TestRecord testRecord =
+        TextFormat.parse(Files.readString(Path.of(CTS_TEST_RECORD_PB_FILE)), TestRecord.class);
+
+    Result updatedReport =
+        CompatibilityReportMerger.insertMetadataFromTestRecord(report, testRecord);
+
+    assertThat(updatedReport.getModuleInfoList().get(0).getPrepTimeMillis()).isEqualTo(123456);
+    assertThat(updatedReport.getModuleInfoList().get(0).getTeardownTimeMillis()).isEqualTo(654321);
+    assertThat(updatedReport.getModuleInfoList().get(1).getPrepTimeMillis()).isEqualTo(321);
+    assertThat(updatedReport.getModuleInfoList().get(1).getTeardownTimeMillis()).isEqualTo(123);
+  }
+
+  @Test
   public void parseXmlReports() throws Exception {
     List<ParseResult> res =
-        reportMerger.parseXmlReports(
-            ImmutableList.of(Path.of(CTS_TEST_RESULT_XML), Path.of(CTS_TEST_RESULT_XML_2)));
+        reportMerger.parseResultBundles(
+            ImmutableList.of(
+                TradefedResultBundle.of(Path.of(CTS_TEST_RESULT_XML), Optional.empty()),
+                TradefedResultBundle.of(Path.of(CTS_TEST_RESULT_XML_2), Optional.empty())));
 
     assertThat(res).hasSize(2);
     assertThat(res.get(0).report().get().getModuleInfoList()).hasSize(2);
@@ -247,5 +295,11 @@ public final class CompatibilityReportMergerTest {
                 .setModulesTotal(2)
                 .build());
     assertThat(result.getModuleInfoCount()).isEqualTo(2);
+  }
+
+  private Metric createBasicMetric(long value) {
+    return Metric.newBuilder()
+        .setMeasurements(Measurements.newBuilder().setSingleInt(value))
+        .build();
   }
 }

@@ -35,6 +35,7 @@ public class SessionHandlerHelper {
   public static final String XTS_MODULE_PARAMETER_PROP = "xts-module-parameter";
 
   public static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
+  public static final String TEST_RECORD_PROTOBUFFER_FILE_NAME = "test-record.pb";
 
   /** Checks if the test plan is retry. */
   public static boolean isRunRetry(String testPlan) {

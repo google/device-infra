@@ -98,6 +98,10 @@ message Module {
   optional bool is_non_tf_module = 9;
   // Optional. Number of failed tests in the module. Not showing in xml report.
   optional int32 failed_tests = 10;
+  // Optional. Preparation time of this module. Epoch milliseconds.
+  optional int64 prep_time_millis = 11;
+  // Optional. Teardown time of this module. Epoch milliseconds.
+  optional int64 teardown_time_millis = 12;
 }
 
 // Stores the info for the module not done reason

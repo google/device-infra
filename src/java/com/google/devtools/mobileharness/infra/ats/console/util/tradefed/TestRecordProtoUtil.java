@@ -26,6 +26,9 @@ import java.io.InputStream;
 /** Utility to read the {@link TestRecord} proto from a file. */
 public class TestRecordProtoUtil {
 
+  public static final String METRIC_KEY_PREP_TIME = "PREP_TIME";
+  public static final String METRIC_KEY_TEARDOWN_TIME = "TEARDOWN_TIME";
+
   /**
    * Picks a 4MB default size to allow the buffer to grow for big protobuf. The default value could
    * fail in some cases.

@@ -21,6 +21,9 @@ import static java.util.concurrent.TimeUnit.HOURS;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 
+import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
+import com.android.tradefed.result.proto.TestRecordProto.ChildReference;
+import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
@@ -45,11 +48,15 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
+import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordProtoUtil;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
@@ -93,7 +100,22 @@ public class CompatibilityReportMerger {
    */
   public Optional<Result> mergeXmlReports(List<Path> reportXmlFiles)
       throws MobileHarnessException, InterruptedException {
-    return mergeParsedReports(parseXmlReports(reportXmlFiles));
+    return mergeResultBundles(
+        reportXmlFiles.stream()
+            .map(file -> TradefedResultBundle.of(file, Optional.empty()))
+            .collect(toImmutableList()));
+  }
+
+  /**
+   * Parses a map of XML report files with corresponding test record files and merges them to a
+   * single report.
+   *
+   * <p>Note: the XML report files must have the same device build fingerprint info, otherwise the
+   * merge won't proceed.
+   */
+  public Optional<Result> mergeResultBundles(List<TradefedResultBundle> resultBundles)
+      throws MobileHarnessException, InterruptedException {
+    return mergeParsedReports(parseResultBundles(resultBundles));
   }
 
   /**
@@ -441,10 +463,10 @@ public class CompatibilityReportMerger {
 
   /** Parses multiple XML reports syncly. */
   @VisibleForTesting
-  List<ParseResult> parseXmlReports(List<Path> reportXmlFiles)
+  List<ParseResult> parseResultBundles(List<TradefedResultBundle> resultBundles)
       throws MobileHarnessException, InterruptedException {
     try {
-      return parseXmlReportsAsync(reportXmlFiles).get(PARSE_TIMEOUT_IN_HOUR, HOURS);
+      return parseResultBundlesAsync(resultBundles).get(PARSE_TIMEOUT_IN_HOUR, HOURS);
     } catch (TimeoutException e) {
       throw new MobileHarnessException(
           ExtErrorId.REPORT_MERGER_PARSE_REPORTS_TIMEOUT_ERROR,
@@ -463,24 +485,98 @@ public class CompatibilityReportMerger {
   }
 
   /** Parses multiple XML reports asyncly. */
-  private ListenableFuture<List<ParseResult>> parseXmlReportsAsync(List<Path> reportXmlFiles) {
+  private ListenableFuture<List<ParseResult>> parseResultBundlesAsync(
+      List<TradefedResultBundle> resultBundles) {
     List<ListenableFuture<ParseResult>> parseReportFutures = new ArrayList<>();
     logger.atInfo().log(
-        "Start to parse report xml files:\n - %s",
-        reportXmlFiles.stream().map(Path::toString).collect(joining(",\n - ")));
-    for (Path reportXmlFile : reportXmlFiles) {
-      parseReportFutures.add(parseXmlReportAsync(reportXmlFile));
-    }
+        "Start to parse result bundle files:\n - %s",
+        resultBundles.stream()
+            .map(
+                bundle ->
+                    String.format(
+                        "Test result XML: %s, Test record file: %s",
+                        bundle.xmlReportFile(), bundle.testRecordFile()))
+            .collect(joining(",\n - ")));
+    resultBundles.forEach(bundle -> parseReportFutures.add(parseResultBundleAsync(bundle)));
     return Futures.allAsList(parseReportFutures);
   }
 
   /** Parses one XML report asyncly. */
-  private ListenableFuture<ParseResult> parseXmlReportAsync(Path reportXmlFile) {
-    return threadPool.submit(() -> parseXmlReport(reportXmlFile));
+  private ListenableFuture<ParseResult> parseResultBundleAsync(TradefedResultBundle resultBundle) {
+    return threadPool.submit(() -> parseResultBundle(resultBundle));
   }
 
-  private ParseResult parseXmlReport(Path reportXmlFile) throws MobileHarnessException {
-    return ParseResult.of(Optional.of(reportXmlFile), reportParser.parse(reportXmlFile));
+  private ParseResult parseResultBundle(TradefedResultBundle resultBundle)
+      throws MobileHarnessException {
+    Path xmlReportFile = resultBundle.xmlReportFile();
+    Optional<Result> report = reportParser.parse(xmlReportFile);
+    if (resultBundle.testRecordFile().isPresent() && report.isPresent()) {
+      report =
+          Optional.of(
+              insertMetadataFromTestRecord(report.get(), resultBundle.testRecordFile().get()));
+    }
+
+    return ParseResult.of(Optional.of(xmlReportFile), report);
+  }
+
+  private Result insertMetadataFromTestRecord(Result report, Path testRecordPath) {
+    TestRecord testRecord = null;
+    try {
+      testRecord = TestRecordProtoUtil.readFromFile(new File(testRecordPath.toString()));
+    } catch (IOException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to read test record file from path: %s.", testRecordPath);
+      return report;
+    }
+
+    return insertMetadataFromTestRecord(report, testRecord);
+  }
+
+  @VisibleForTesting
+  static Result insertMetadataFromTestRecord(Result report, TestRecord testRecord) {
+    // The metrics map - Map<TestRecord ID, Map<Metric Key, Metric Value>> from the test
+    // record.
+    Map<String, Map<String, Metric>> metricsMap = new LinkedHashMap<>();
+    generateTestRecordMetricsMap(testRecord, metricsMap);
+
+    Result.Builder reportBuilder = report.toBuilder();
+    List<Module> modules = reportBuilder.getModuleInfoList();
+    reportBuilder.clearModuleInfo();
+    for (Module module : modules) {
+      String moduleName = String.format("%s %s", module.getAbi(), module.getName());
+      Module.Builder builder = module.toBuilder();
+      Map<String, Metric> metrics = metricsMap.get(moduleName);
+      if (metrics != null) {
+        Metric prepTimeMetric = metrics.get(TestRecordProtoUtil.METRIC_KEY_PREP_TIME);
+        if (prepTimeMetric != null) {
+          builder.setPrepTimeMillis(prepTimeMetric.getMeasurements().getSingleInt());
+        }
+        Metric tearDownTimeMetric = metrics.get(TestRecordProtoUtil.METRIC_KEY_TEARDOWN_TIME);
+        if (tearDownTimeMetric != null) {
+          builder.setTeardownTimeMillis(tearDownTimeMetric.getMeasurements().getSingleInt());
+        }
+      }
+      reportBuilder.addModuleInfo(builder.build());
+    }
+    return reportBuilder.build();
+  }
+
+  /**
+   * Goes though all TestRecord instances including children TestRecord and maps the test record id
+   * to its metrics.
+   */
+  @VisibleForTesting
+  static void generateTestRecordMetricsMap(
+      TestRecord testRecord, Map<String, Map<String, Metric>> metricsMap) {
+    if (!testRecord.getTestRecordId().isEmpty()) {
+      Map<String, Metric> metrics = testRecord.getMetricsMap();
+      if (!metrics.isEmpty()) {
+        metricsMap.put(testRecord.getTestRecordId(), metrics);
+      }
+    }
+    for (ChildReference child : testRecord.getChildrenList()) {
+      generateTestRecordMetricsMap(child.getInlineTestRecord(), metricsMap);
+    }
   }
 
   /** Parses multiple Mobly reports syncly. */
@@ -539,8 +635,7 @@ public class CompatibilityReportMerger {
 
     /** Creates a {@link ParseResult}. */
     public static ParseResult of(Optional<Path> originalReportFile, Optional<Result> report) {
-      return new com.google.devtools.mobileharness.infra.ats.console.result.report
-          .AutoValue_CompatibilityReportMerger_ParseResult(originalReportFile, report);
+      return new AutoValue_CompatibilityReportMerger_ParseResult(originalReportFile, report);
     }
 
     /** The original report file being parsed. */
@@ -548,5 +643,22 @@ public class CompatibilityReportMerger {
 
     /** The parsed report. */
     public abstract Optional<Result> report();
+  }
+
+  /** A bundle of a Tradefed result including the XML file and the test record file. */
+  @AutoValue
+  public abstract static class TradefedResultBundle {
+
+    /** Creates a {@link ParseResult}. */
+    public static TradefedResultBundle of(Path xmlReportFile, Optional<Path> testRecordFile) {
+      return new AutoValue_CompatibilityReportMerger_TradefedResultBundle(
+          xmlReportFile, testRecordFile);
+    }
+
+    /** Path of the XML report file. */
+    public abstract Path xmlReportFile();
+
+    /** Path of the test_record.pb which is optional. */
+    public abstract Optional<Path> testRecordFile();
   }
 }

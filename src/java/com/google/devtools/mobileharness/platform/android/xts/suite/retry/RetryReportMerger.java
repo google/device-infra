@@ -305,7 +305,9 @@ public class RetryReportMerger {
             .setAbi(moduleFromRetry.getAbi())
             .setName(moduleFromRetry.getName())
             .setDone(moduleFromRetry.getDone())
-            .setRuntimeMillis(moduleFromRetry.getRuntimeMillis());
+            .setRuntimeMillis(moduleFromRetry.getRuntimeMillis())
+            .setPrepTimeMillis(moduleFromRetry.getPrepTimeMillis())
+            .setTeardownTimeMillis(moduleFromRetry.getTeardownTimeMillis());
     if (moduleFromRetry.hasReason()) {
       mergedModuleBuilder.setReason(moduleFromRetry.getReason());
     }

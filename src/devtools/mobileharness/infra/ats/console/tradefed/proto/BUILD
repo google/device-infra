@@ -18,6 +18,7 @@ package(
     default_visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/tradefed:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util/tradefed:__subpackages__",
     ],
 )

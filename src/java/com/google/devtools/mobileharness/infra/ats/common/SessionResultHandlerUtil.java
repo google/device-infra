@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
+import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger.TradefedResultBundle;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
@@ -221,7 +222,8 @@ public class SessionResultHandlerUtil {
       Path nonTradefedTestResultsDir)
       throws MobileHarnessException, InterruptedException {
     Result finalReport = null;
-    List<Path> tradefedTestResultXmlFiles = new ArrayList<>();
+    ImmutableList.Builder<TradefedResultBundle> tradefedResultBundlesBuilder =
+        ImmutableList.builder();
     // Copies tradefed test relevant log and result files to dedicated locations
     for (Entry<JobInfo, Optional<TestInfo>> testEntry : tradefedTests.entrySet()) {
       if (testEntry.getValue().isEmpty()) {
@@ -232,10 +234,12 @@ public class SessionResultHandlerUtil {
       TestInfo test = testEntry.getValue().get();
 
       copyTradefedTestLogFiles(test, logsRootDir);
-      Optional<Path> tradefedTestResultXmlFile =
+      Optional<TradefedResultBundle> bundle =
           copyTradefedTestResultFiles(test, tmpTradefedTestResultsDir, resultDir);
-      tradefedTestResultXmlFile.ifPresent(tradefedTestResultXmlFiles::add);
+      bundle.ifPresent(tradefedResultBundlesBuilder::add);
     }
+    ImmutableList<TradefedResultBundle> tradefedResultBundles =
+        tradefedResultBundlesBuilder.build();
 
     List<MoblyReportInfo> moblyReportInfos = new ArrayList<>();
     // Copies non-tradefed test relevant log and result files to dedicated locations
@@ -279,8 +283,8 @@ public class SessionResultHandlerUtil {
     }
 
     Optional<Result> mergedTradefedReport = Optional.empty();
-    if (!tradefedTestResultXmlFiles.isEmpty()) {
-      mergedTradefedReport = compatibilityReportMerger.mergeXmlReports(tradefedTestResultXmlFiles);
+    if (!tradefedResultBundles.isEmpty()) {
+      mergedTradefedReport = compatibilityReportMerger.mergeResultBundles(tradefedResultBundles);
     }
 
     Optional<Result> mergedNonTradefedReport = Optional.empty();
@@ -455,7 +459,8 @@ public class SessionResultHandlerUtil {
 
   /**
    * Copies tradefed test relevant result files to directory {@code tmpResultDir} for the given
-   * tradefed test.
+   * tradefed test. Returns a pair of test result xml file and test record proto file where the test
+   * record proto file is optional.
    *
    * <p>Contents in the directory {@code resultDirInZip} will be put in the result zip file.
    *
@@ -480,7 +485,7 @@ public class SessionResultHandlerUtil {
    * @return the path to the tradefed test result xml file if any
    */
   @CanIgnoreReturnValue
-  private Optional<Path> copyTradefedTestResultFiles(
+  private Optional<TradefedResultBundle> copyTradefedTestResultFiles(
       TestInfo tradefedTestInfo, Path tmpResultDir, Path resultDirInZip)
       throws MobileHarnessException, InterruptedException {
     Path tmpTestResultDir = prepareLogOrResultDirForTest(tradefedTestInfo, tmpResultDir);
@@ -533,15 +538,26 @@ public class SessionResultHandlerUtil {
     }
 
     List<Path> testResultXmlFiles =
-        localFileUtil.listFilePaths(
-            tmpTestResultDir,
-            /* recursively= */ false,
-            path ->
-                path.getFileName()
-                    .toString()
-                    .equals(SessionHandlerHelper.TEST_RESULT_XML_FILE_NAME));
-
-    return testResultXmlFiles.stream().findFirst();
+        localFileUtil.listFilePaths(tmpTestResultDir, /* recursively= */ true);
+    Path testResultXmlFile =
+        testResultXmlFiles.stream()
+            .filter(
+                file ->
+                    file.getFileName()
+                        .toString()
+                        .equals(SessionHandlerHelper.TEST_RESULT_XML_FILE_NAME))
+            .findFirst()
+            .orElse(null);
+    Optional<Path> testRecordFile =
+        testResultXmlFiles.stream()
+            .filter(
+                file ->
+                    file.getFileName()
+                        .toString()
+                        .equals(SessionHandlerHelper.TEST_RECORD_PROTOBUFFER_FILE_NAME))
+            .findFirst();
+    return Optional.ofNullable(testResultXmlFile)
+        .map(value -> TradefedResultBundle.of(value, testRecordFile));
   }
 
   /**

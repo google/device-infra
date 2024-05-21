@@ -41,6 +41,8 @@ module_info {
   done: true
   passed: 3
   total_tests: 3
+  prep_time_millis: 8000
+  teardown_time_millis: 9000
   test_case {
     name: "android.acceleration.cts.HardwareAccelerationTest"
     test {

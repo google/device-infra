@@ -58,6 +58,9 @@ java_library(
 java_library(
     name = "test_record_proto_util",
     srcs = ["TestRecordProtoUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
+    ],
     deps = [
         ":byte_array_list",
         "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
