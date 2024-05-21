@@ -164,14 +164,14 @@ public final class SessionRequestHandlerUtilTest {
                 .setCommandLineArgs("cts")
                 .setXtsType("cts")
                 .setXtsRootDir(XTS_ROOT_DIR_PATH)
-                .setJobTimeout(Duration.ofSeconds(3000))
-                .setStartTimeout(Duration.ofSeconds(1000))
+                .setJobTimeout(Duration.ofSeconds(3000L))
+                .setStartTimeout(Duration.ofSeconds(1000L))
                 .build(),
             ImmutableList.of());
 
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getJobTimeoutSec()).isEqualTo(3000L);
-    assertThat(tradefedJobInfoOpt.get().jobConfig().getTestTimeoutSec()).isEqualTo(3000L);
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getTestTimeoutSec()).isEqualTo(2940L);
     assertThat(tradefedJobInfoOpt.get().jobConfig().getStartTimeoutSec()).isEqualTo(1000L);
   }
 

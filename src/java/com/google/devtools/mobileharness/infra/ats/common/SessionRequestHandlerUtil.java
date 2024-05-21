@@ -121,6 +121,12 @@ public class SessionRequestHandlerUtil {
   private static final TextFormat.Parser DEVICE_CONFIG_FILE_PARSER =
       Parser.newBuilder().setAllowUnknownFields(true).setAllowUnknownExtensions(true).build();
 
+  private static final Duration JOB_TEST_TIMEOUT_DIFF = Duration.ofMinutes(1L);
+  private static final Duration DEFAULT_TRADEFED_JOB_TIMEOUT = Duration.ofDays(15L);
+  private static final Duration DEFAULT_TRADEFED_START_TIMEOUT = Duration.ofDays(14L);
+  private static final Duration DEFAULT_NON_TRADEFED_JOB_TIMEOUT = Duration.ofDays(5L);
+  private static final Duration DEFAULT_NON_TRADEFED_START_TIMEOUT = Duration.ofDays(4L);
+
   private final DeviceQuerier deviceQuerier;
   private final LocalFileUtil localFileUtil;
   private final ConfigurationUtil configurationUtil;
@@ -395,14 +401,12 @@ public class SessionRequestHandlerUtil {
 
     Duration jobTimeout =
         sessionRequestInfo.jobTimeout().isZero()
-            ? Duration.ofDays(15L)
+            ? DEFAULT_TRADEFED_JOB_TIMEOUT
             : sessionRequestInfo.jobTimeout();
-    // Temporarily reuse job timeout to be test timeout.
-    @SuppressWarnings("UnnecessaryLocalVariable")
-    Duration testTimeout = jobTimeout;
+    Duration testTimeout = calculateTestTimeout(jobTimeout);
     Duration startTimeout =
         sessionRequestInfo.startTimeout().isZero()
-            ? Duration.ofMinutes(5L)
+            ? DEFAULT_TRADEFED_START_TIMEOUT
             : sessionRequestInfo.startTimeout();
 
     JobConfig.Builder jobConfigBuilder =
@@ -907,14 +911,12 @@ public class SessionRequestHandlerUtil {
 
     Duration jobTimeout =
         sessionRequestInfo.jobTimeout().isZero()
-            ? Duration.ofDays(5L)
+            ? DEFAULT_NON_TRADEFED_JOB_TIMEOUT
             : sessionRequestInfo.jobTimeout();
-    // Temporarily reuse job timeout to be test timeout.
-    @SuppressWarnings("UnnecessaryLocalVariable")
-    Duration testTimeout = jobTimeout;
+    Duration testTimeout = calculateTestTimeout(jobTimeout);
     Duration startTimeout =
         sessionRequestInfo.startTimeout().isZero()
-            ? Duration.ofHours(1L)
+            ? DEFAULT_NON_TRADEFED_START_TIMEOUT
             : sessionRequestInfo.startTimeout();
 
     // Reads DeviceConfigurations text proto.
@@ -1436,5 +1438,11 @@ public class SessionRequestHandlerUtil {
         jobInfo.params().getAll(),
         jobInfo.subDeviceSpecs(),
         jobInfo.files().getAll());
+  }
+
+  private static Duration calculateTestTimeout(Duration jobTimeout) {
+    return jobTimeout.compareTo(JOB_TEST_TIMEOUT_DIFF.multipliedBy(2L)) < 0
+        ? jobTimeout.dividedBy(2L)
+        : jobTimeout.minus(JOB_TEST_TIMEOUT_DIFF);
   }
 }
