@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.infra.ats.common;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static java.util.stream.Collectors.toCollection;
 
 import com.google.auto.value.AutoValue;
@@ -233,10 +235,25 @@ public class SessionResultHandlerUtil {
       }
       TestInfo test = testEntry.getValue().get();
 
-      copyTradefedTestLogFiles(test, logsRootDir);
-      Optional<TradefedResultBundle> bundle =
-          copyTradefedTestResultFiles(test, tmpTradefedTestResultsDir, resultDir);
-      bundle.ifPresent(tradefedResultBundlesBuilder::add);
+      callAndLogException(
+          () -> {
+            copyTradefedTestLogFiles(test, logsRootDir);
+            return null;
+          },
+          String.format(
+              "Failed to copy tradefed test [%s]'s log files to log dir [%s].",
+              test.locator().getId(), logsRootDir));
+      callAndLogException(
+          () -> {
+            Optional<TradefedResultBundle> bundle =
+                copyTradefedTestResultFiles(test, tmpTradefedTestResultsDir, resultDir);
+            bundle.ifPresent(tradefedResultBundlesBuilder::add);
+            return null;
+          },
+          String.format(
+              "Failed to copy tradefed test [%s]'s result files to tmp result dir [%s], result dir"
+                  + " [%s].",
+              test.locator().getId(), tmpTradefedTestResultsDir, resultDir));
     }
     ImmutableList<TradefedResultBundle> tradefedResultBundles =
         tradefedResultBundlesBuilder.build();
@@ -252,33 +269,50 @@ public class SessionResultHandlerUtil {
       }
       TestInfo test = testEntry.getValue().get();
 
-      copyNonTradefedTestLogFiles(test, nonTradefedTestLogsDir);
+      callAndLogException(
+          () -> {
+            copyNonTradefedTestLogFiles(test, nonTradefedTestLogsDir);
+            return null;
+          },
+          String.format(
+              "Failed to copy non-tradefed test [%s]'s log files to log dir [%s].",
+              test.locator().getId(), nonTradefedTestLogsDir));
       if (!test.jobInfo()
           .properties()
           .getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS)
           .orElse(false)) {
-        Optional<NonTradefedTestResult> nonTradefedTestResult =
-            copyNonTradefedTestResultFiles(
-                test,
-                nonTradefedTestResultsDir,
-                testEntry.getKey().properties().get(SessionHandlerHelper.XTS_MODULE_NAME_PROP),
-                testEntry.getKey().properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
-                testEntry
-                    .getKey()
-                    .properties()
-                    .get(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP));
-        nonTradefedTestResult.ifPresent(
-            res ->
-                moblyReportInfos.add(
-                    MoblyReportInfo.of(
-                        res.moduleName(),
-                        res.moduleAbi().orElse(null),
-                        res.moduleParameter().orElse(null),
-                        res.testSummaryFile().orElse(null),
-                        res.resultAttributesFile(),
-                        res.deviceBuildFingerprint(),
-                        res.buildAttributesFile(),
-                        res.moduleResultFile())));
+        callAndLogException(
+            () -> {
+              Optional<NonTradefedTestResult> nonTradefedTestResult =
+                  copyNonTradefedTestResultFiles(
+                      test,
+                      nonTradefedTestResultsDir,
+                      testEntry
+                          .getKey()
+                          .properties()
+                          .get(SessionHandlerHelper.XTS_MODULE_NAME_PROP),
+                      testEntry.getKey().properties().get(SessionHandlerHelper.XTS_MODULE_ABI_PROP),
+                      testEntry
+                          .getKey()
+                          .properties()
+                          .get(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP));
+              nonTradefedTestResult.ifPresent(
+                  res ->
+                      moblyReportInfos.add(
+                          MoblyReportInfo.of(
+                              res.moduleName(),
+                              res.moduleAbi().orElse(null),
+                              res.moduleParameter().orElse(null),
+                              res.testSummaryFile().orElse(null),
+                              res.resultAttributesFile(),
+                              res.deviceBuildFingerprint(),
+                              res.buildAttributesFile(),
+                              res.moduleResultFile())));
+              return null;
+            },
+            String.format(
+                "Failed to copy non-tradefed test [%s]'s result files to result dir [%s].",
+                test.locator().getId(), nonTradefedTestResultsDir));
       }
     }
 
@@ -729,6 +763,16 @@ public class SessionResultHandlerUtil {
         break;
       default:
         break;
+    }
+  }
+
+  private static void callAndLogException(MobileHarnessCallable<?> callable, String errorMessage)
+      throws InterruptedException {
+    try {
+      @SuppressWarnings("unused")
+      var unused = callable.call();
+    } catch (MobileHarnessException | RuntimeException | Error e) {
+      logger.atWarning().with(IMPORTANCE, IMPORTANT).withCause(e).log("%s", errorMessage);
     }
   }
 
