@@ -21,6 +21,7 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -40,6 +41,10 @@ public class SessionHandlerHelper {
   /** Checks if the test plan is retry. */
   public static boolean isRunRetry(String testPlan) {
     return Ascii.equalsIgnoreCase(testPlan, "retry");
+  }
+
+  public static boolean useTfRetry() {
+    return Flags.instance().useTfRetry.getNonNull();
   }
 
   public static SubPlan loadSubPlan(Path xtsRootDir, String xtsType, String subPlanName)

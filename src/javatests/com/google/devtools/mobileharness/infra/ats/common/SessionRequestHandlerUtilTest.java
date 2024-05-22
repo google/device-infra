@@ -121,7 +121,7 @@ public final class SessionRequestHandlerUtilTest {
 
   @Before
   public void setUp() throws Exception {
-    setFlags(/* enableAtsMode= */ true);
+    setFlags(/* enableAtsMode= */ true, /* useTfRetry= */ false);
 
     sessionGenDir = folder.newFolder("session_gen_dir").toPath();
     sessionTempDir = folder.newFolder("session_temp_dir").toPath();
@@ -131,9 +131,13 @@ public final class SessionRequestHandlerUtilTest {
     realLocalFileUtil = new LocalFileUtil();
   }
 
-  private void setFlags(boolean enableAtsMode) {
+  private void setFlags(boolean enableAtsMode, boolean useTfRetry) {
     ImmutableMap<String, String> flagMap =
-        ImmutableMap.of("enable_ats_mode", String.valueOf(enableAtsMode));
+        ImmutableMap.of(
+            "enable_ats_mode",
+            String.valueOf(enableAtsMode),
+            "use_tf_retry",
+            String.valueOf(useTfRetry));
     Flags.parse(
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))

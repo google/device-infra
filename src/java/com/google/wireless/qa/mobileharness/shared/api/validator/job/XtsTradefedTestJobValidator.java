@@ -52,9 +52,14 @@ public class XtsTradefedTestJobValidator
       errors.add("An xTS test plan must be specified.");
     }
 
-    if (spec.getXtsTestPlan().equals("retry") && spec.getPrevSessionXtsTestPlan().isEmpty()) {
+    if (spec.getXtsTestPlan().equals("retry")
+        && spec.getPrevSessionXtsTestPlan().isEmpty()
+        && (spec.getPrevSessionTestResultXml().isEmpty()
+            || spec.getPrevSessionTestRecordFiles().isEmpty())) {
       errors.add(
-          "The 'prev_session_xts_test_plan' must be specified when the test plan is 'retry'.");
+          "The 'prev_session_xts_test_plan' must be specified when the test plan is 'retry', or"
+              + " must provide 'prev_session_test_result_xml' AND"
+              + " 'prev_session_test_record_files'.");
     }
 
     if (spec.getXtsRootDir().isEmpty() && spec.getAndroidXtsZip().isEmpty()) {

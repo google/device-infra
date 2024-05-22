@@ -33,5 +33,7 @@ public final class SuiteCommon {
 
   public static final String TEST_RESULT_PB_FILE_NAME = "test_result.pb";
 
+  public static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
+
   private SuiteCommon() {}
 }

@@ -63,6 +63,8 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Devic
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
@@ -138,6 +140,7 @@ public class SessionRequestHandlerUtil {
   private final Path sessionGenDir;
   private final Path sessionTempDir;
   private final Provider<ResUtil> resUtilProvider;
+  private final PreviousResultLoader previousResultLoader;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -151,7 +154,8 @@ public class SessionRequestHandlerUtil {
       Provider<AndroidAdbUtil> androidAdbUtilProvider,
       @SessionGenDir Path sessionGenDir,
       @SessionTempDir Path sessionTempDir,
-      Provider<ResUtil> resUtilProvider) {
+      Provider<ResUtil> resUtilProvider,
+      PreviousResultLoader previousResultLoader) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
@@ -163,6 +167,7 @@ public class SessionRequestHandlerUtil {
     this.sessionGenDir = sessionGenDir;
     this.sessionTempDir = sessionTempDir;
     this.resUtilProvider = resUtilProvider;
+    this.previousResultLoader = previousResultLoader;
   }
 
   /** Information used to create the Tradefed job. */
@@ -435,57 +440,77 @@ public class SessionRequestHandlerUtil {
     driverParams.put("xts_test_plan", testPlan);
     if (isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
-      Optional<SubPlan> runRetryTfSubPlan;
-      final ImmutableSet<String> allNonTfModules =
-          getNonTfModules(sessionRequestInfo.v2ConfigsMap());
-      if (sessionRequestInfo.retrySessionIndex().isPresent()) {
-        runRetryTfSubPlan =
-            prepareRunRetrySubPlan(
-                xtsRootDir,
-                sessionRequestInfo.xtsType(),
-                sessionRequestInfo.retrySessionIndex().orElseThrow(),
-                sessionRequestInfo.retryType().orElse(null),
-                sessionRequestInfo.includeFilters(),
-                sessionRequestInfo.excludeFilters(),
-                allNonTfModules,
-                /* forTf= */ true,
-                sessionRequestInfo.moduleNames());
+      if (SessionHandlerHelper.useTfRetry()) {
+        TradefedResultFilesBundle tfRunRetryFilesBundle =
+            findTfRunRetryFilesBundle(
+                xtsRootDir, xtsType, sessionRequestInfo.retrySessionIndex().orElseThrow());
+        driverParams.put(
+            "prev_session_test_result_xml",
+            tfRunRetryFilesBundle.testResultXml().toAbsolutePath().toString());
+        driverParams.put(
+            "prev_session_test_record_files",
+            new Gson()
+                .toJson(
+                    tfRunRetryFilesBundle.testRecordProtoFiles().stream()
+                        .map(Path::toAbsolutePath)
+                        .map(Path::toString)
+                        .collect(toImmutableList())));
+        if (sessionRequestInfo.retryType().isPresent()) {
+          driverParams.put("retry_type", sessionRequestInfo.retryType().get().toString());
+        }
       } else {
-        runRetryTfSubPlan =
-            prepareRunRetrySubPlan(
-                sessionRequestInfo.retryResultDir().orElseThrow(),
-                sessionRequestInfo.retrySessionId().orElseThrow(),
-                sessionRequestInfo.retryType().orElse(null),
-                sessionRequestInfo.includeFilters(),
-                sessionRequestInfo.excludeFilters(),
-                allNonTfModules,
-                /* forTf= */ true,
-                sessionRequestInfo.moduleNames());
+        Optional<SubPlan> runRetryTfSubPlan;
+        final ImmutableSet<String> allNonTfModules =
+            getNonTfModules(sessionRequestInfo.v2ConfigsMap());
+        if (sessionRequestInfo.retrySessionIndex().isPresent()) {
+          runRetryTfSubPlan =
+              prepareRunRetrySubPlan(
+                  xtsRootDir,
+                  sessionRequestInfo.xtsType(),
+                  sessionRequestInfo.retrySessionIndex().orElseThrow(),
+                  sessionRequestInfo.retryType().orElse(null),
+                  sessionRequestInfo.includeFilters(),
+                  sessionRequestInfo.excludeFilters(),
+                  allNonTfModules,
+                  /* forTf= */ true,
+                  sessionRequestInfo.moduleNames());
+        } else {
+          runRetryTfSubPlan =
+              prepareRunRetrySubPlan(
+                  sessionRequestInfo.retryResultDir().orElseThrow(),
+                  sessionRequestInfo.retrySessionId().orElseThrow(),
+                  sessionRequestInfo.retryType().orElse(null),
+                  sessionRequestInfo.includeFilters(),
+                  sessionRequestInfo.excludeFilters(),
+                  allNonTfModules,
+                  /* forTf= */ true,
+                  sessionRequestInfo.moduleNames());
+        }
+        if (runRetryTfSubPlan.isEmpty()) {
+          return Optional.empty();
+        }
+        driverParams.put(
+            "prev_session_xts_test_plan", runRetryTfSubPlan.get().getPreviousSessionXtsTestPlan());
+        extraJobProperties.put(
+            Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT,
+            runRetryTfSubPlan.get().getPreviousSessionDeviceBuildFingerprint().orElse(""));
+        Path runRetryTfSubPlanXmlFile;
+        if (sessionRequestInfo.retrySessionIndex().isPresent()) {
+          runRetryTfSubPlanXmlFile =
+              prepareRunRetryTfSubPlanXmlFile(
+                  xtsRootDir,
+                  sessionRequestInfo.xtsType(),
+                  sessionRequestInfo.retrySessionIndex().orElseThrow(),
+                  runRetryTfSubPlan.get());
+        } else {
+          runRetryTfSubPlanXmlFile =
+              prepareRunRetryTfSubPlanXmlFile(
+                  xtsRootDir,
+                  sessionRequestInfo.retrySessionId().orElseThrow(),
+                  runRetryTfSubPlan.get());
+        }
+        driverParams.put("subplan_xml", runRetryTfSubPlanXmlFile.toAbsolutePath().toString());
       }
-      if (runRetryTfSubPlan.isEmpty()) {
-        return Optional.empty();
-      }
-      driverParams.put(
-          "prev_session_xts_test_plan", runRetryTfSubPlan.get().getPreviousSessionXtsTestPlan());
-      extraJobProperties.put(
-          Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT,
-          runRetryTfSubPlan.get().getPreviousSessionDeviceBuildFingerprint().orElse(""));
-      Path runRetryTfSubPlanXmlFile;
-      if (sessionRequestInfo.retrySessionIndex().isPresent()) {
-        runRetryTfSubPlanXmlFile =
-            prepareRunRetryTfSubPlanXmlFile(
-                xtsRootDir,
-                sessionRequestInfo.xtsType(),
-                sessionRequestInfo.retrySessionIndex().orElseThrow(),
-                runRetryTfSubPlan.get());
-      } else {
-        runRetryTfSubPlanXmlFile =
-            prepareRunRetryTfSubPlanXmlFile(
-                xtsRootDir,
-                sessionRequestInfo.retrySessionId().orElseThrow(),
-                runRetryTfSubPlan.get());
-      }
-      driverParams.put("subplan_xml", runRetryTfSubPlanXmlFile.toAbsolutePath().toString());
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
       Optional<Path> tfSubPlan =
           prepareTfSubPlan(
@@ -517,20 +542,20 @@ public class SessionRequestHandlerUtil {
                         // For "run retry" command, the given modules have been processed when
                         // generating the subplan above, no need to pass these again to underneath
                         // TF
-                        (isRunRetry(testPlan)
+                        (!SessionHandlerHelper.useTfRetry() && isRunRetry(testPlan)
                             ? Stream.empty()
                             : tfModules.stream().map(module -> String.format("-m %s", module))),
                         testNameArg.stream(),
                         shardCountArg.stream(),
                         // For "run retry" command, the passed in include filters and exclude
                         // filters are set in generated subplan, no need to set in TF command again.
-                        isRunRetry(testPlan)
+                        !SessionHandlerHelper.useTfRetry() && isRunRetry(testPlan)
                             ? Stream.empty()
                             : sessionRequestInfo.includeFilters().stream()
                                 .map(
                                     includeFilter ->
                                         String.format("--include-filter \"%s\"", includeFilter)),
-                        isRunRetry(testPlan)
+                        !SessionHandlerHelper.useTfRetry() && isRunRetry(testPlan)
                             ? Stream.empty()
                             : sessionRequestInfo.excludeFilters().stream()
                                 .map(
@@ -1291,6 +1316,21 @@ public class SessionRequestHandlerUtil {
       return Optional.empty();
     }
     return Optional.of(subPlan);
+  }
+
+  private TradefedResultFilesBundle findTfRunRetryFilesBundle(
+      Path xtsRootDir, String xtsType, int previousSessionIndex) throws MobileHarnessException {
+    return previousResultLoader
+        .getPrevSessionResultFilesBundle(
+            XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType), previousSessionIndex)
+        .orElseThrow(
+            () ->
+                new MobileHarnessException(
+                    InfraErrorId.ATSC_RUN_RETRY_COMMAND_PREV_SESSION_MISS_RESULT_FILES,
+                    String.format(
+                        "Session %s misses test-record proto files and the test_result.xml file,"
+                            + " not able to retry it",
+                        previousSessionIndex)));
   }
 
   // For ATS Console

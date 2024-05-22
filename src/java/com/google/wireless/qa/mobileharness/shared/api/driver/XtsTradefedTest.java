@@ -18,7 +18,6 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.lang.Math.min;
@@ -191,14 +190,12 @@ public class XtsTradefedTest extends BaseDriver
   public void run(TestInfo testInfo) throws MobileHarnessException, InterruptedException {
     XtsTradefedTestDriverSpec spec = testInfo.jobInfo().combinedSpec(this);
     String xtsType = spec.getXtsType();
-    boolean isRunRetry = Ascii.equalsIgnoreCase("retry", spec.getXtsTestPlan());
 
     CompositeDeviceUtil.cacheTestbed(testInfo, getDevice());
     Path tmpXtsRootDir = null;
     try {
       tmpXtsRootDir = prepareXtsWorkDir(xtsType);
-      setUpXtsWorkDir(
-          spec, getXtsRootDir(spec, testInfo), tmpXtsRootDir, xtsType, isRunRetry, testInfo);
+      setUpXtsWorkDir(spec, getXtsRootDir(spec, testInfo), tmpXtsRootDir, xtsType, testInfo);
       logger.atInfo().log("xTS Tradefed temp working root directory is %s", tmpXtsRootDir);
 
       boolean xtsRunCommandSuccess = runXtsCommand(testInfo, spec, tmpXtsRootDir, xtsType);
@@ -738,6 +735,14 @@ public class XtsTradefedTest extends BaseDriver
       xtsCommandBuilder.add(
           "--subplan", com.google.common.io.Files.getNameWithoutExtension(spec.getSubplanXml()));
     }
+    if (useTfRunRetry(spec)) {
+      // In setUpXtsWorkDir, it copies the previous session's test-record proto files and
+      // test_result.xml file under a result dir, which always has session index 0
+      xtsCommandBuilder.add("--retry", "0");
+      if (!spec.getRetryType().isEmpty()) {
+        xtsCommandBuilder.add("--retry-type", spec.getRetryType());
+      }
+    }
     ImmutableList<String> xtsCommand =
         xtsCommandBuilder.addAll(getExtraRunCommandArgs(spec)).build();
 
@@ -839,14 +844,12 @@ public class XtsTradefedTest extends BaseDriver
       Path sourceXtsRootDir,
       Path tmpXtsWorkDir,
       String xtsType,
-      boolean isRunRetry,
       TestInfo testInfo)
       throws MobileHarnessException, InterruptedException {
     Path sourceXtsBundledJdkDir = XtsDirUtil.getXtsJdkDir(sourceXtsRootDir, xtsType);
     Path sourceXtsBundledTestcasesDir = XtsDirUtil.getXtsTestCasesDir(sourceXtsRootDir, xtsType);
     Path sourceXtsBundledToolsDir = XtsDirUtil.getXtsToolsDir(sourceXtsRootDir, xtsType);
     Path sourceXtsBundledLibDir = XtsDirUtil.getXtsLibDir(sourceXtsRootDir, xtsType);
-    Path sourceXtsBundledResultsDir = XtsDirUtil.getXtsResultsDir(sourceXtsRootDir, xtsType);
 
     Path linkJdkDir = XtsDirUtil.getXtsJdkDir(tmpXtsWorkDir, xtsType);
     Path linkTestcasesDir = XtsDirUtil.getXtsTestCasesDir(tmpXtsWorkDir, xtsType);
@@ -870,32 +873,31 @@ public class XtsTradefedTest extends BaseDriver
                       .get(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)));
     }
 
-    if (isRunRetry
-        && localFileUtil.isDirExist(sourceXtsBundledResultsDir)
-        && !isRunRetryWithSubPlan(spec)) {
-      // For "run retry", TF looks for the corresponding previous result dir per given session
-      // index. So it needs to "copy" previous result dirs and their content so TF can locate the
-      // needed files to start the retry.
+    if (useTfRunRetry(spec)) {
+      // When using TF "run retry", TF looks for the corresponding previous result dir per given
+      // session index. So it needs to "copy" previous session's test-record proto files and
+      // test_result.xml file so TF can locate them to start the retry.
       Path resultsDirInTmpXtsWorkDir = XtsDirUtil.getXtsResultsDir(tmpXtsWorkDir, xtsType);
-      localFileUtil.prepareDir(resultsDirInTmpXtsWorkDir);
-      localFileUtil.grantFileOrDirFullAccess(resultsDirInTmpXtsWorkDir);
 
-      List<Path> existingResultDirs = localFileUtil.listDirs(sourceXtsBundledResultsDir);
-      previousResultDirNames =
-          existingResultDirs.stream()
-              .map(existingResultDir -> existingResultDir.getFileName().toString())
-              .collect(toImmutableSet());
-      for (Path existingResultDir : existingResultDirs) {
-        Path resultDirInTmpXtsWorkDir =
-            resultsDirInTmpXtsWorkDir.resolve(existingResultDir.getFileName().toString());
-        localFileUtil.prepareDir(resultDirInTmpXtsWorkDir);
-        List<Path> filesOrDirsInOneResultDir =
-            localFileUtil.listFilesOrDirs(existingResultDir, p -> true);
-        for (Path fileOrDir : filesOrDirsInOneResultDir) {
-          createSymlink(
-              resultDirInTmpXtsWorkDir.resolve(fileOrDir.getFileName().toString()), fileOrDir);
-        }
+      String prevSessionResultDirName = "0";
+      Path prevSessionResultDir = resultsDirInTmpXtsWorkDir.resolve(prevSessionResultDirName);
+      previousResultDirNames = ImmutableSet.of(prevSessionResultDirName);
+
+      // Prepares the proto dir within the previous session result dir
+      Path prevSessionResultProtoDir = prevSessionResultDir.resolve("proto");
+
+      // When prepares the previous session's result proto dir, its ancestor directories are
+      // prepared too
+      localFileUtil.prepareDir(prevSessionResultProtoDir);
+
+      localFileUtil.copyFileOrDir(
+          spec.getPrevSessionTestResultXml(), prevSessionResultDir.toString());
+      for (String prevSessionTestRecordFile : getPrevSessionTestRecordFiles(spec)) {
+        localFileUtil.copyFileOrDir(
+            prevSessionTestRecordFile, prevSessionResultProtoDir.toString());
       }
+
+      localFileUtil.grantFileOrDirFullAccessRecursively(resultsDirInTmpXtsWorkDir);
     }
 
     if (isRunWithSubPlan(spec)) {
@@ -954,6 +956,12 @@ public class XtsTradefedTest extends BaseDriver
     return spec.getXtsTestPlan().equals("retry") && !spec.getSubplanXml().isEmpty();
   }
 
+  private static boolean useTfRunRetry(XtsTradefedTestDriverSpec spec) {
+    return spec.getXtsTestPlan().equals("retry")
+        && !spec.getPrevSessionTestRecordFiles().isEmpty()
+        && !spec.getPrevSessionTestResultXml().isEmpty();
+  }
+
   /**
    * Checks if it's passed with a subplan xml file to run the tradefed.
    *
@@ -964,5 +972,14 @@ public class XtsTradefedTest extends BaseDriver
    */
   private static boolean isRunWithSubPlan(XtsTradefedTestDriverSpec spec) {
     return !spec.getSubplanXml().isEmpty();
+  }
+
+  private static List<String> getPrevSessionTestRecordFiles(XtsTradefedTestDriverSpec spec) {
+    String prevSessionTestRecordFilesJsonList = spec.getPrevSessionTestRecordFiles();
+    if (prevSessionTestRecordFilesJsonList.isEmpty()) {
+      return ImmutableList.of();
+    }
+    return new Gson()
+        .fromJson(prevSessionTestRecordFilesJsonList, new TypeToken<List<String>>() {}.getType());
   }
 }

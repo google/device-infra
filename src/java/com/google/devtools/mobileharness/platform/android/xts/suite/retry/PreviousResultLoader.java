@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
@@ -106,20 +107,7 @@ public class PreviousResultLoader {
 
   private Path getPrevSessionTestResultProtoFile(Path resultsDir, int previousSessionIndex)
       throws MobileHarnessException {
-    List<File> allResultDirs =
-        resultListerHelper.listResultDirsInOrder(resultsDir.toAbsolutePath().toString());
-    if (allResultDirs.isEmpty()) {
-      throw new MobileHarnessException(
-          ExtErrorId.PREV_RESULT_LOADER_NO_PREVIOUS_SESSION_FOUND, "No previous session found.");
-    }
-    if (previousSessionIndex < 0 || previousSessionIndex >= allResultDirs.size()) {
-      throw new MobileHarnessException(
-          ExtErrorId.PREV_RESULT_LOADER_SESSION_INDEX_OUT_OF_RANGE,
-          String.format(
-              "The given previous session index %s is out of index. The session index range is [%d,"
-                  + " %d]",
-              previousSessionIndex, 0, allResultDirs.size() - 1));
-    }
+    List<File> allResultDirs = getAllResultDirs(resultsDir, previousSessionIndex);
     Path testResultProtoFile =
         allResultDirs
             .get(previousSessionIndex)
@@ -173,5 +161,70 @@ public class PreviousResultLoader {
       resultBuilder.addAllExcludeFilter(info.excludeFilters());
     }
     return resultBuilder.build();
+  }
+
+  public Optional<TradefedResultFilesBundle> getPrevSessionResultFilesBundle(
+      Path resultsDir, int previousSessionIndex) throws MobileHarnessException {
+    List<File> allResultDirs = getAllResultDirs(resultsDir, previousSessionIndex);
+    Path testResultXmlFile =
+        allResultDirs
+            .get(previousSessionIndex)
+            .toPath()
+            .resolve(SuiteCommon.TEST_RESULT_XML_FILE_NAME);
+    if (!localFileUtil.isFileExist(testResultXmlFile)) {
+      return Optional.empty();
+    }
+    Path testRecordProtoDir = allResultDirs.get(previousSessionIndex).toPath().resolve("proto");
+    if (!localFileUtil.isDirExist(testRecordProtoDir)) {
+      return Optional.empty();
+    }
+    List<Path> testRecordProtoFiles =
+        localFileUtil.listFilesOrDirs(testRecordProtoDir, p -> p.toFile().isFile());
+    if (testRecordProtoFiles.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        TradefedResultFilesBundle.of(
+            testResultXmlFile, ImmutableList.copyOf(testRecordProtoFiles)));
+  }
+
+  private List<File> getAllResultDirs(Path resultsDir, int previousSessionIndex)
+      throws MobileHarnessException {
+    List<File> allResultDirs =
+        resultListerHelper.listResultDirsInOrder(resultsDir.toAbsolutePath().toString());
+    if (allResultDirs.isEmpty()) {
+      throw new MobileHarnessException(
+          ExtErrorId.PREV_RESULT_LOADER_NO_PREVIOUS_SESSION_FOUND, "No previous session found.");
+    }
+    if (previousSessionIndex < 0 || previousSessionIndex >= allResultDirs.size()) {
+      throw new MobileHarnessException(
+          ExtErrorId.PREV_RESULT_LOADER_SESSION_INDEX_OUT_OF_RANGE,
+          String.format(
+              "The given previous session index %s is out of index. The session index range is [%d,"
+                  + " %d]",
+              previousSessionIndex, 0, allResultDirs.size() - 1));
+    }
+    return allResultDirs;
+  }
+
+  /**
+   * A bundle of a Tradefed result including the test_result.xml file and the test-record proto
+   * files.
+   */
+  @AutoValue
+  public abstract static class TradefedResultFilesBundle {
+
+    /** Creates a {@link TradefedResultFilesBundle}. */
+    public static TradefedResultFilesBundle of(
+        Path testResultXml, ImmutableList<Path> testRecordProtoFiles) {
+      return new AutoValue_PreviousResultLoader_TradefedResultFilesBundle(
+          testResultXml, testRecordProtoFiles);
+    }
+
+    /** Path of the test_result.xml file. */
+    public abstract Path testResultXml();
+
+    /** Paths of the test-record proto files. */
+    public abstract ImmutableList<Path> testRecordProtoFiles();
   }
 }

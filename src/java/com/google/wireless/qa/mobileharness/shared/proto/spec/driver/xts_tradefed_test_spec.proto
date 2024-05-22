@@ -89,4 +89,16 @@ message XtsTradefedTestDriverSpec {
     help: "If present, TF stdout/stderr will be written to the given path. "
           "If empty, it will be written in the test gen file dir."
   }];
+
+  optional string prev_session_test_record_files = 14 [(file_detail) = {
+    help: "The test record proto files for the previous session. This is a "
+          "List<String> encoded as a JSON string."
+  }];
+
+  optional string prev_session_test_result_xml = 15 [(file_detail) = {
+    help: "The test result xml file for the previous session."
+  }];
+
+  optional string retry_type = 16
+      [(field_detail) = { help: "The type of the tests that can be retried." }];
 }

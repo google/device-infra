@@ -19,6 +19,7 @@ java_library(
     name = "previous_result_loader",
     srcs = ["PreviousResultLoader.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
@@ -30,6 +31,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:test_result_proto_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/result:result_lister_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",

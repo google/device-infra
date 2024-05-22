@@ -81,7 +81,7 @@ public class SessionResultHandlerUtil {
           "test_result.xml",
           "test_result_failures_suite.html");
   private static final ImmutableSet<String> EXCLUDED_TF_GEN_RESULT_DIRS =
-      ImmutableSet.of("proto", "module_reports");
+      ImmutableSet.of("module_reports");
 
   private final LocalFileUtil localFileUtil;
   private final CompatibilityReportMerger compatibilityReportMerger;
@@ -343,33 +343,39 @@ public class SessionResultHandlerUtil {
               .build();
       reportCreator.createReport(finalReport, resultDir, null, sessionRequestInfo.htmlInZip());
     } else if (isRunRetry) {
-      if (sessionRequestInfo.retrySessionId().isPresent()) {
-        finalReport =
-            retryReportMerger.mergeReports(
-                Path.of(sessionRequestInfo.retryResultDir().orElseThrow()),
-                sessionRequestInfo.retrySessionId().get(),
-                sessionRequestInfo.retryType().orElse(null),
-                mergedReport.orElse(null),
-                sessionRequestInfo.moduleNames());
+      if (!SessionHandlerHelper.useTfRetry()) {
+        if (sessionRequestInfo.retrySessionId().isPresent()) {
+          finalReport =
+              retryReportMerger.mergeReports(
+                  Path.of(sessionRequestInfo.retryResultDir().orElseThrow()),
+                  sessionRequestInfo.retrySessionId().get(),
+                  sessionRequestInfo.retryType().orElse(null),
+                  mergedReport.orElse(null),
+                  sessionRequestInfo.moduleNames());
+        } else {
+          int previousSessionIndex =
+              sessionRequestInfo
+                  .retrySessionIndex()
+                  .orElseThrow(
+                      () ->
+                          new MobileHarnessException(
+                              InfraErrorId.ATSC_RUN_RETRY_COMMAND_MISSING_SESSION_INDEX_ERROR,
+                              "Missing session index for retry"));
+          finalReport =
+              retryReportMerger.mergeReports(
+                  XtsDirUtil.getXtsResultsDir(
+                      Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
+                  previousSessionIndex,
+                  sessionRequestInfo.retryType().orElse(null),
+                  mergedReport.orElse(null),
+                  sessionRequestInfo.moduleNames());
+        }
       } else {
-        int previousSessionIndex =
-            sessionRequestInfo
-                .retrySessionIndex()
-                .orElseThrow(
-                    () ->
-                        new MobileHarnessException(
-                            InfraErrorId.ATSC_RUN_RETRY_COMMAND_MISSING_SESSION_INDEX_ERROR,
-                            "Missing session index for retry"));
-        finalReport =
-            retryReportMerger.mergeReports(
-                XtsDirUtil.getXtsResultsDir(
-                    Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
-                previousSessionIndex,
-                sessionRequestInfo.retryType().orElse(null),
-                mergedReport.orElse(null),
-                sessionRequestInfo.moduleNames());
+        finalReport = mergedReport.orElse(null);
       }
-      reportCreator.createReport(finalReport, resultDir, null, sessionRequestInfo.htmlInZip());
+      if (finalReport != null) {
+        reportCreator.createReport(finalReport, resultDir, null, sessionRequestInfo.htmlInZip());
+      }
     } else {
       logger.atWarning().log("Failed to merge reports.");
     }
