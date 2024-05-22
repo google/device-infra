@@ -19,20 +19,13 @@ package com.google.devtools.mobileharness.infra.ats.console.command;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.HelpCommand;
 
-/** Empty root command. Business logic are delegated to the subcommands. */
+/** Command for "remove" commands. */
 @Command(
-    name = "", // Set it as empty, so it won't show on the "--help" usage
+    name = "remove",
+    sortOptions = false,
+    description = "Remove commands.",
+    synopsisSubcommandLabel = "",
     subcommands = {
-      AddCommand.class,
-      DumpCommand.class,
-      ExitCommand.class,
       HelpCommand.class,
-      InvocationCommand.class,
-      ListCommand.class,
-      LogCommand.class,
-      RemoveCommand.class,
-      RunCommand.class,
-      SetCommand.class,
-      VersionCommand.class,
     })
-public final class RootCommand {}
+class RemoveCommand {}

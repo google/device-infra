@@ -20,8 +20,10 @@ java_library(
     srcs = [
         "DumpCommand.java",
         "ExitCommand.java",
+        "InvocationCommand.java",
         "ListCommand.java",
         "LogCommand.java",
+        "RemoveCommand.java",
         "RootCommand.java",
         "SetCommand.java",
         "VersionCommand.java",
