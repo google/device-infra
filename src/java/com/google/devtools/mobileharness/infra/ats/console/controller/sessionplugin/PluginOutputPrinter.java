@@ -74,18 +74,20 @@ public class PluginOutputPrinter {
 
   /** Prints output of "list invocations" command. */
   public static String listInvocations(List<AtsSessionPluginConfigOutput> configOutputs) {
+    ImmutableList<ImmutableList<String>> invocations =
+        configOutputs.stream()
+            .map(PluginOutputPrinter::getRunCommandState)
+            .flatMap(runCommandState -> runCommandState.getRunningInvocationMap().values().stream())
+            .sorted(
+                comparing(Invocation::getCommandId)
+                    .thenComparing(invocation -> toJavaInstant(invocation.getStartTime())))
+            .map(PluginOutputPrinter::formatInvocation)
+            .collect(toImmutableList());
+    if (invocations.isEmpty()) {
+      return "";
+    }
     ImmutableList<ImmutableList<String>> table =
-        Stream.concat(
-                Stream.of(LIST_INVOCATIONS_HEADER),
-                configOutputs.stream()
-                    .map(PluginOutputPrinter::getRunCommandState)
-                    .flatMap(
-                        runCommandState ->
-                            runCommandState.getRunningInvocationMap().values().stream())
-                    .sorted(
-                        comparing(Invocation::getCommandId)
-                            .thenComparing(invocation -> toJavaInstant(invocation.getStartTime())))
-                    .map(PluginOutputPrinter::formatInvocation))
+        Stream.concat(Stream.of(LIST_INVOCATIONS_HEADER), invocations.stream())
             .collect(toImmutableList());
     return TableFormatter.displayTable(table);
   }
