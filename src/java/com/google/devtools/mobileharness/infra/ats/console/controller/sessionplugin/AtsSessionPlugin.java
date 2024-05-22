@@ -188,6 +188,13 @@ public class AtsSessionPlugin {
     }
 
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Command [%s] is done and start to handle result which may take several minutes"
+                  + " based on the session scale.",
+              config.getRunCommand().getInitialState().getCommandId());
       runCommandHandler.handleResultProcessing(config.getRunCommand());
     }
   }
