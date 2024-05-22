@@ -202,7 +202,8 @@ public class AtsConsole {
     // Prints help information.
     consoleUtil.printlnStdout(
         "Use \"help\" to get more information on running commands. Use \"dump bugreport\" to"
-            + " generate a file of debugging information.");
+            + " generate a debug info file. Log dirs: %s",
+        LogDumper.getLogDirs());
 
     // Prints arguments.
     if (!mainArgs.isEmpty()) {

@@ -16,17 +16,25 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.log;
 
+import static java.util.stream.Collectors.joining;
+
+import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.infra.ats.console.constant.AtsConsoleDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 
 /** Utility for dumping logs. */
 public class LogDumper {
 
+  /** Gets log dirs of ATS console and OLC server. */
+  public static ImmutableList<String> getLogDirs() {
+    return ImmutableList.of(OlcServerDirs.getLogDir(), AtsConsoleDirs.getLogDir());
+  }
+
   /** Prints information about log dirs of ATS console and OLC server. */
   public static String dumpLog() {
-    return String.format(
-        "Saved log to %s/\nSaved log to %s/",
-        OlcServerDirs.getLogDir(), AtsConsoleDirs.getLogDir());
+    return getLogDirs().stream()
+        .map(logDir -> String.format("Saved log to %s/", logDir))
+        .collect(joining("\n"));
   }
 
   private LogDumper() {}
