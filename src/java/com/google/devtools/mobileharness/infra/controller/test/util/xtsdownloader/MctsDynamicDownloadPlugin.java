@@ -177,9 +177,9 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         .properties()
         .add(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY, TMP_MCTS_TESTCASES_PATH);
     // Print out all the downloaded MCTS test modules
-    logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Downloaded MCTS test modules:");
+    logger.atInfo().log("Downloaded MCTS test modules:");
     for (String testModule : allTestModules) {
-      logger.atInfo().with(IMPORTANCE, IMPORTANT).log("%s", testModule);
+      logger.atInfo().log("%s", testModule);
     }
   }
 
@@ -189,10 +189,11 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       logger
           .atInfo()
           .with(IMPORTANCE, IMPORTANT)
-          .log("Start to download MCTS test modules, this might take 20+ minutes, please wait...");
+          .log("Start to download MCTS test modules, this might take 10+ minutes, please wait...");
       XtsDynamicDownloadInfo xtsDynamicDownloadInfo =
           parse(event.getTest(), event.getDeviceLocator().getSerial());
       downloadXtsFiles(xtsDynamicDownloadInfo, event.getTest());
+      logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Downloaded MCTS test modules.");
     } catch (MobileHarnessException e) {
       throw SkipTestException.create(
           "Failed to download Mainline CTS (MCTS). Either the files are broken, or the disk is"
