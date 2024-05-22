@@ -29,7 +29,7 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.io.File;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import javax.inject.Inject;
 import org.junit.Before;
 import org.junit.Rule;
@@ -68,7 +68,7 @@ public final class CompatibilityReportCreatorTest {
 
   @Test
   public void writeReportToXml() throws Exception {
-    Result report = reportParser.parse(Paths.get(CTS_TEST_RESULT_XML)).get();
+    Result report = reportParser.parse(Path.of(CTS_TEST_RESULT_XML), /* shallow= */ false).get();
 
     File xmlResultDir = temporaryFolder.newFolder("xml_result");
 
@@ -83,12 +83,12 @@ public final class CompatibilityReportCreatorTest {
                             .resolve(CompatibilityReportCreator.TEST_RESULT_FILE_NAME))
                     .trim()))
         .isEqualTo(
-            replaceLineBreak(realLocalFileUtil.readFile(Paths.get(CTS_TEST_RESULT_XML)).trim()));
+            replaceLineBreak(realLocalFileUtil.readFile(Path.of(CTS_TEST_RESULT_XML)).trim()));
   }
 
   @Test
   public void createReport() throws Exception {
-    Result report = reportParser.parse(Paths.get(CTS_TEST_RESULT_XML)).get();
+    Result report = reportParser.parse(Path.of(CTS_TEST_RESULT_XML), /* shallow= */ false).get();
 
     File xmlResultDir = temporaryFolder.newFolder("xml_result");
 

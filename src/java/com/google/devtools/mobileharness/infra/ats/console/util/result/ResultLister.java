@@ -53,7 +53,7 @@ public class ResultLister {
     // Lists all result dirs.
     Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     String resultsDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).toString();
-    Map<Result, File> results = resultListerHelper.listResults(resultsDir);
+    Map<Result, File> results = resultListerHelper.listResults(resultsDir, /* shallow= */ true);
 
     if (results.isEmpty()) {
       return "No results found";

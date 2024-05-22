@@ -509,7 +509,7 @@ public class CompatibilityReportMerger {
   private ParseResult parseResultBundle(TradefedResultBundle resultBundle)
       throws MobileHarnessException {
     Path xmlReportFile = resultBundle.xmlReportFile();
-    Optional<Result> report = reportParser.parse(xmlReportFile);
+    Optional<Result> report = reportParser.parse(xmlReportFile, /* shallow= */ false);
     if (resultBundle.testRecordFile().isPresent() && report.isPresent()) {
       report =
           Optional.of(

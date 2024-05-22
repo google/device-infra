@@ -50,8 +50,12 @@ public class ResultListerHelper {
 
   /**
    * Lists all the results and their directories directly in the "results" dir, ordered by dir name.
+   *
+   * @param resultsDir the directory to list results from.
+   * @param shallow whether to parse the full result or just the summary.
    */
-  public Map<Result, File> listResults(String resultsDir) throws MobileHarnessException {
+  public Map<Result, File> listResults(String resultsDir, boolean shallow)
+      throws MobileHarnessException {
     LinkedHashMap<Result, File> results = new LinkedHashMap<>();
     // Lists all dirs under XTS_ROOT_DIR/android-cts/results and sorts by dir name.
     ImmutableList<File> resultDirs =
@@ -66,13 +70,13 @@ public class ResultListerHelper {
       }
       File resultFile = new File(resultDir, "test_result.xml");
       try {
-        Optional<Result> result = compatibilityReportParser.parse(resultFile.toPath());
+        Optional<Result> result = compatibilityReportParser.parse(resultFile.toPath(), shallow);
         if (result.isEmpty()) {
           // TODO: Remove the legacy result support.
           // Legacy result xml file locates at resultsDir/sessionId/sessionId/test_result.xml.
           File legacyResultFile =
               new File(resultDir, String.format("%s/test_result.xml", resultDir.getName()));
-          result = compatibilityReportParser.parse(legacyResultFile.toPath());
+          result = compatibilityReportParser.parse(legacyResultFile.toPath(), shallow);
         }
 
         result.ifPresent(value -> results.put(value, resultDir));
@@ -86,6 +90,6 @@ public class ResultListerHelper {
 
   /** Lists all the result directories directly in the "results" dir, ordered by dir name. */
   public List<File> listResultDirsInOrder(String resultsDir) throws MobileHarnessException {
-    return ImmutableList.copyOf(listResults(resultsDir).values());
+    return ImmutableList.copyOf(listResults(resultsDir, /* shallow= */ false).values());
   }
 }

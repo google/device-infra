@@ -108,19 +108,18 @@ public class PreviousResultLoader {
   private Path getPrevSessionTestResultProtoFile(Path resultsDir, int previousSessionIndex)
       throws MobileHarnessException {
     List<File> allResultDirs = getAllResultDirs(resultsDir, previousSessionIndex);
-    Path testResultProtoFile =
-        allResultDirs
-            .get(previousSessionIndex)
-            .toPath()
-            .resolve(SuiteCommon.TEST_RESULT_PB_FILE_NAME);
-    return testResultProtoFile;
+    return allResultDirs
+        .get(previousSessionIndex)
+        .toPath()
+        .resolve(SuiteCommon.TEST_RESULT_PB_FILE_NAME);
   }
 
   /** Try to find the result with the legacy path. */
   private Optional<Result> getPrevLegacySessionTestResult(Path resultsDir, int previousSessionIndex)
       throws MobileHarnessException {
     Map<Result, File> results =
-        resultListerHelper.listResults(resultsDir.toAbsolutePath().toString());
+        resultListerHelper.listResults(
+            resultsDir.toAbsolutePath().toString(), /* shallow= */ false);
     ImmutableList<Result> resultsList = ImmutableList.copyOf(results.keySet());
     Result result = resultsList.get(previousSessionIndex);
     return Optional.of(injectArgsFromCommandLine(result));

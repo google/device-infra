@@ -87,11 +87,13 @@ public class CompatibilityReportParser {
   }
 
   /**
-   * Parses the compatibility report XML file and returns {@link Optional}<{@link Result}>.
+   * Parses the compatibility report XML file and returns {@link Optional}<{@link Result}>. If the
+   * given file doesn't exist, returns an empty {@link Optional}.
    *
-   * <p>If the given file doesn't exist, returns an empty {@link Optional}.
+   * @param reportXmlFile the path of the report XML file.
+   * @param shallow if true, only parses the XML file until the Summary section.
    */
-  public Optional<Result> parse(Path reportXmlFile) throws MobileHarnessException {
+  public Optional<Result> parse(Path reportXmlFile, boolean shallow) throws MobileHarnessException {
     if (!localFileUtil.isFileExist(reportXmlFile)) {
       return Optional.empty();
     }
@@ -117,6 +119,11 @@ public class CompatibilityReportParser {
             break;
           default: // do nothing
         }
+
+        // For a shallow parse, stop when the Summary section is parsed.
+        if (shallow && isSummaryEvent(event)) {
+          break;
+        }
       }
     } catch (IOException ioe) {
       throw new MobileHarnessException(ExtErrorId.REPORT_PARSER_READ_XML_FILE_ERROR, "", ioe);
@@ -126,6 +133,13 @@ public class CompatibilityReportParser {
     }
 
     return Optional.of(resultBuilder.build());
+  }
+
+  private static boolean isSummaryEvent(XMLEvent event) {
+    if (event.getEventType() != XMLStreamConstants.START_ELEMENT) {
+      return false;
+    }
+    return event.asStartElement().getName().getLocalPart().equals(XmlConstants.SUMMARY_TAG);
   }
 
   private static void enteringTag(StartElement element, Context context) {
