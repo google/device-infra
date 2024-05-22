@@ -61,8 +61,11 @@ public final class XtsDeviceCompatibilityChecker {
 
   /** Returns true if the job is enabled for the xTS device compatibility checker. */
   public static boolean isEnabled(JobInfo jobInfo) {
-    return jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false)
-        || jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false);
+    return
+    // TODO: Enables for TF after retry is not handled by TF.
+    // jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false)
+    // ||
+    jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false);
   }
 
   @Subscribe
