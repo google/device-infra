@@ -23,6 +23,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceLogType;
 import com.google.devtools.mobileharness.api.model.proto.Device.PostTestDeviceOp;
 import com.google.devtools.mobileharness.infra.container.sandbox.device.DeviceSandboxController;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -99,7 +100,7 @@ public class AndroidRealDevice extends AndroidDevice {
 
   @Override
   public boolean canReboot() {
-    return true;
+    return !Flags.instance().disableDeviceReboot.getNonNull();
   }
 
   @Override

@@ -321,6 +321,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
                   Duration.between(clock.instant(), expireTime))) {
         device.tearDown();
         if (needReboot
+            && !disableDeviceReboot()
             && (!externalDeviceManager.isManagingDeviceLifeCycle()
                 || (!initialized && !externalDeviceManager.isManagingDeviceRecovery()))) {
           // TODO: Leaves the device in an unusable state instead of put it in the reboot
@@ -688,7 +689,7 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
                 getDevice(), deviceStat, apiConfig, testExecutionResult);
         postTestExecutionEndedEvent(
             test.getTestRunner().getAllocation(), testExecutionResult.testResult(), needReboot);
-        if (needReboot) {
+        if (needReboot && !disableDeviceReboot()) {
           // If the device needs to reboot based on the test results, the runner needs to be
           // cancelled.  This will only set a flag that marks this runner as cancelled.  Calling
           // code that checks isAlive() and isCancelled() would then interrupt our thread.
@@ -800,5 +801,9 @@ public class LocalDeviceLifecycleAndTestRunner extends LocalDeviceRunner {
         .setProperty(
             DeviceProperty.Name.BECOME_IDLE_EPOCH_MS.name().toLowerCase(Locale.ROOT),
             String.valueOf(now.toEpochMilli()));
+  }
+
+  private static boolean disableDeviceReboot() {
+    return Flags.instance().disableDeviceReboot.getNonNull();
   }
 }

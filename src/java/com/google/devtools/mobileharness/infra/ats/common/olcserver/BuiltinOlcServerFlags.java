@@ -31,8 +31,13 @@ class BuiltinOlcServerFlags {
           "--adb_max_no_device_detection_rounds=1200",
           "--android_device_daemon=false",
           "--check_device_interval=1h",
+          "--clear_android_device_multi_users=false",
+          "--disable_calling=false",
+          "--disable_device_reboot=true",
           "--enable_android_device_ready_check=false",
           "--enable_device_state_change_recover=false",
+          "--mute_android=false",
+          "--set_test_harness_property=false",
           "--simplified_log_format=true");
 
   static ImmutableList<String> get() {

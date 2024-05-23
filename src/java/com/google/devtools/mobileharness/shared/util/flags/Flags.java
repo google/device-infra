@@ -384,6 +384,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> disableCellBroadcastReceiver = disableCellBroadcastReceiverDefault;
 
+  private static final Flag<Boolean> disableDeviceRebootDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--disable_device_reboot",
+      description = "Whether to disable device reboot.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> disableDeviceReboot = disableDeviceRebootDefault;
+
   private static final Flag<Boolean> enableAndroidDeviceReadyCheckDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

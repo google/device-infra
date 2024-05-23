@@ -1069,6 +1069,10 @@ public abstract class AndroidRealDeviceDelegate {
   public void reboot()
       throws com.google.devtools.mobileharness.api.model.error.MobileHarnessException,
           InterruptedException {
+    if (Flags.instance().disableDeviceReboot.getNonNull()) {
+      logger.atInfo().log("Device reboot is disabled, skip rebooting device %s.", deviceId);
+      return;
+    }
     // Only invokes the reboot command when the device is detected, otherwise will fail.
     if (androidAdbInternalUtil.getRealDeviceSerials(/* online= */ true).contains(deviceId)
         || androidAdbInternalUtil
@@ -1305,15 +1309,17 @@ public abstract class AndroidRealDeviceDelegate {
     if (!ifTrySetDevicePropertiesAndDisablePackages()) {
       return;
     }
-    try {
-      if (needRebootToClearReadOnlyTestProperties()) {
-        logger.atInfo().log("Reboot device %s to clear ro properties", serial);
-        systemStateManager.reboot(device, /* log= */ null, /* deviceReadyTimeout= */ null);
+    if (!Flags.instance().disableDeviceReboot.getNonNull()) {
+      try {
+        if (needRebootToClearReadOnlyTestProperties()) {
+          logger.atInfo().log("Reboot device %s to clear ro properties", serial);
+          systemStateManager.reboot(device, /* log= */ null, /* deviceReadyTimeout= */ null);
+        }
+      } catch (MobileHarnessException e) {
+        logger.atWarning().log(
+            "Failed to check device %s read only properties: %s",
+            serial, MoreThrowables.shortDebugString(e));
       }
-    } catch (MobileHarnessException e) {
-      logger.atWarning().log(
-          "Failed to check device %s read only properties: %s",
-          serial, MoreThrowables.shortDebugString(e));
     }
     if (Flags.instance().disableCalling.getNonNull()) {
       logger.atInfo().log("Disable calling on device %s", serial);
@@ -1926,7 +1932,7 @@ public abstract class AndroidRealDeviceDelegate {
         break;
       }
     }
-    if (!serviceAvailable) {
+    if (!serviceAvailable && !Flags.instance().disableDeviceReboot.getNonNull()) {
       AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_REAL_DEVICE_ONLINE_DEVICE_NOT_READY,
