@@ -27,15 +27,13 @@ class BuiltinOlcServerFlags {
 
   private static final ImmutableList<String> VALUE =
       ImmutableList.of(
-          // go/keep-sorted start
           "--adb_dont_kill_server=true",
           "--adb_max_no_device_detection_rounds=1200",
           "--android_device_daemon=false",
           "--check_device_interval=1h",
           "--enable_android_device_ready_check=false",
-          "--simplified_log_format=true"
-          // go/keep-sorted end
-          );
+          "--enable_device_state_change_recover=false",
+          "--simplified_log_format=true");
 
   static ImmutableList<String> get() {
     return VALUE;

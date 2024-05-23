@@ -360,6 +360,7 @@ public class AtsDdaIntegrationTest {
                             "--detect_adb_device=false",
                             "--enable_android_device_ready_check=false",
                             "--enable_cloud_logging=false",
+                            "--enable_device_state_change_recover=false",
                             "--enable_external_master_server=true",
                             "--enable_file_cleaner=false",
                             "--enable_stubby_rpc_server=false",
