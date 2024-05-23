@@ -54,6 +54,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.UnaryOperator;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
@@ -63,6 +64,8 @@ import javax.inject.Inject;
 public class AtsSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final AtomicInteger NEXT_RUN_COMMAND_ID = new AtomicInteger(1);
 
   private final Object tradefedJobsLock = new Object();
 
@@ -115,7 +118,11 @@ public class AtsSessionPlugin {
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
       RunCommand runCommand = config.getRunCommand();
 
-      setRunCommandState(oldState -> runCommand.getInitialState());
+      setRunCommandState(
+          oldState ->
+              runCommand.getInitialState().toBuilder()
+                  .setCommandId(Integer.toString(NEXT_RUN_COMMAND_ID.getAndIncrement()))
+                  .build());
 
       runCommandHandler.initialize(runCommand);
       ImmutableList<String> tradefedJobIds = runCommandHandler.addTradefedJobs(runCommand);
@@ -188,14 +195,15 @@ public class AtsSessionPlugin {
     }
 
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
+      RunCommandState runCommandState = getRunCommandState();
       logger
           .atInfo()
           .with(IMPORTANCE, IMPORTANT)
           .log(
               "Command [%s] is done and start to handle result which may take several minutes"
                   + " based on the session scale.",
-              config.getRunCommand().getInitialState().getCommandId());
-      runCommandHandler.handleResultProcessing(config.getRunCommand());
+              runCommandState.getCommandId());
+      runCommandHandler.handleResultProcessing(config.getRunCommand(), runCommandState);
     }
   }
 
@@ -279,5 +287,12 @@ public class AtsSessionPlugin {
           return newOutput.setRunCommandState(newState).build();
         },
         AtsSessionPluginOutput.class);
+  }
+
+  private RunCommandState getRunCommandState() {
+    return sessionInfo
+        .getSessionPluginOutput(AtsSessionPluginOutput.class)
+        .orElse(AtsSessionPluginOutput.getDefaultInstance())
+        .getRunCommandState();
   }
 }

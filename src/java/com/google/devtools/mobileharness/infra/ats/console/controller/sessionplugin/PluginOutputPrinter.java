@@ -107,7 +107,7 @@ public class PluginOutputPrinter {
   private static String formatCommand(RunCommandState runCommandState) {
     return String.format(
         "Command %s: [%s] %s",
-        runCommandState.getCommandId(),
+        runCommandState.getCommandId().isEmpty() ? "n/a" : runCommandState.getCommandId(),
         toReadableDurationString(toJavaDuration(runCommandState.getTotalExecutionTime())),
         runCommandState.getCommandLineArgs());
   }

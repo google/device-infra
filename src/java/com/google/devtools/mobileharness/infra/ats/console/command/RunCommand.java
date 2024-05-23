@@ -213,7 +213,6 @@ public final class RunCommand implements Callable<Integer> {
   private static final Pattern LINE_DATETIME_START_PATTERN =
       Pattern.compile("^\\d\\d-\\d\\d \\d\\d:\\d\\d:\\d\\d");
 
-  private static final AtomicInteger NEXT_COMMAND_ID = new AtomicInteger(1);
   private static final AtomicInteger RUNNING_COMMAND_COUNT = new AtomicInteger(0);
 
   private final ConsoleInfo consoleInfo;
@@ -498,7 +497,6 @@ public final class RunCommand implements Callable<Integer> {
 
     runCommand.setInitialState(
         RunCommandState.newBuilder()
-            .setCommandId(Integer.toString(NEXT_COMMAND_ID.getAndIncrement()))
             .setCommandLineArgs(command.stream().skip(1L).collect(joining(" "))));
 
     serverLogPrinter.enable(true);

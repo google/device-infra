@@ -49,7 +49,9 @@ message AtsSessionPluginOutput {
     string error_message = 1;
   }
 
-  // Optional.
+  // Conditionally required.
+  //
+  // Required for RunCommand and after the session starts.
   RunCommandState run_command_state = 3;
 }
 
@@ -103,7 +105,12 @@ message RunCommand {
 }
 
 message RunCommandState {
-  // Required.
+  // Conditionally required.
+  //
+  // Required in AtsSessionPluginOutput.run_command_statue. Empty in
+  // RunCommand.initial_state.
+  //
+  // The ID is an integer that is incremental in server.
   string command_id = 1;
 
   // Required.

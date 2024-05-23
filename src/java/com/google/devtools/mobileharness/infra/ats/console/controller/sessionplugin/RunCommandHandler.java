@@ -30,6 +30,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test;
@@ -164,7 +165,7 @@ class RunCommandHandler {
    * Copies xTS tradefed and non-tradefed generated logs/results into proper locations within the
    * given xts root dir.
    */
-  void handleResultProcessing(RunCommand command)
+  void handleResultProcessing(RunCommand command, RunCommandState runCommandState)
       throws MobileHarnessException, InterruptedException {
     List<JobInfo> allJobs = sessionInfo.getAllJobs();
     Path resultDir = null;
@@ -204,7 +205,7 @@ class RunCommandHandler {
               "run_command session_id: [%s], command_id: [%s], result: %s.\n"
                   + "command_line_args: %s\n%s",
               sessionInfo.getSessionId(),
-              command.getInitialState().getCommandId(),
+              runCommandState.getCommandId(),
               isSessionPassed ? "SUCCESS" : "FAILURE",
               command.getInitialState().getCommandLineArgs(),
               xtsTestResultSummary);

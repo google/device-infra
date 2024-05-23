@@ -131,8 +131,7 @@ public final class RunCommandHandlerTest {
             .setTestPlan("test")
             .setXtsRootDir("xts_root_dir")
             .setXtsType("cts")
-            .setInitialState(
-                RunCommandState.newBuilder().setCommandId("123").setCommandLineArgs("run cts xxx"))
+            .setInitialState(RunCommandState.newBuilder().setCommandLineArgs("run cts xxx"))
             .addAllDeviceSerial(ImmutableList.of("device_1", "device_2"))
             .addAllModuleName(ImmutableList.of("module_1", "module_2"))
             .setHtmlInZip(true)
@@ -237,7 +236,7 @@ public final class RunCommandHandlerTest {
     when(sessionResultHandlerUtil.isSessionPassed(anyList())).thenReturn(true);
 
     runCommandHandler.initialize(command);
-    runCommandHandler.handleResultProcessing(command);
+    runCommandHandler.handleResultProcessing(command, RunCommandState.getDefaultInstance());
 
     assertThat(
             xtsRootDir
