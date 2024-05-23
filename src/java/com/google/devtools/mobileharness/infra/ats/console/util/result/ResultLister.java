@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
+import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper.ResultBundle;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
 import java.io.File;
@@ -33,7 +34,6 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import javax.inject.Inject;
 
 /** Lister for listing results. */
@@ -53,7 +53,8 @@ public class ResultLister {
     // Lists all result dirs.
     Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     String resultsDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).toString();
-    Map<Result, File> results = resultListerHelper.listResults(resultsDir, /* shallow= */ true);
+    ImmutableList<ResultBundle> results =
+        resultListerHelper.listResults(resultsDir, /* shallow= */ true);
 
     if (results.isEmpty()) {
       return "No results found";
@@ -74,9 +75,9 @@ public class ResultLister {
             "Product"));
 
     int i = 0;
-    for (Entry<Result, File> entry : results.entrySet()) {
-      Result result = entry.getKey();
-      File resultDir = entry.getValue();
+    for (ResultBundle resultBundle : results) {
+      File resultDir = resultBundle.resultDir();
+      Result result = resultBundle.result();
 
       Map<String, ImmutableList<String>> attributes =
           result.getAttributeList().stream()

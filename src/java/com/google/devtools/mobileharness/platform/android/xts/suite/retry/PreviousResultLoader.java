@@ -27,13 +27,13 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.TestResultProtoUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper;
+import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultListerHelper.ResultBundle;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import javax.inject.Inject;
 
@@ -117,11 +117,10 @@ public class PreviousResultLoader {
   /** Try to find the result with the legacy path. */
   private Optional<Result> getPrevLegacySessionTestResult(Path resultsDir, int previousSessionIndex)
       throws MobileHarnessException {
-    Map<Result, File> results =
+    ImmutableList<ResultBundle> results =
         resultListerHelper.listResults(
             resultsDir.toAbsolutePath().toString(), /* shallow= */ false);
-    ImmutableList<Result> resultsList = ImmutableList.copyOf(results.keySet());
-    Result result = resultsList.get(previousSessionIndex);
+    Result result = results.get(previousSessionIndex).result();
     return Optional.of(injectArgsFromCommandLine(result));
   }
 
@@ -164,7 +163,7 @@ public class PreviousResultLoader {
 
   public Optional<TradefedResultFilesBundle> getPrevSessionResultFilesBundle(
       Path resultsDir, int previousSessionIndex) throws MobileHarnessException {
-    List<File> allResultDirs = getAllResultDirs(resultsDir, previousSessionIndex);
+    ImmutableList<File> allResultDirs = getAllResultDirs(resultsDir, previousSessionIndex);
     Path testResultXmlFile =
         allResultDirs
             .get(previousSessionIndex)
@@ -187,9 +186,9 @@ public class PreviousResultLoader {
             testResultXmlFile, ImmutableList.copyOf(testRecordProtoFiles)));
   }
 
-  private List<File> getAllResultDirs(Path resultsDir, int previousSessionIndex)
+  private ImmutableList<File> getAllResultDirs(Path resultsDir, int previousSessionIndex)
       throws MobileHarnessException {
-    List<File> allResultDirs =
+    ImmutableList<File> allResultDirs =
         resultListerHelper.listResultDirsInOrder(resultsDir.toAbsolutePath().toString());
     if (allResultDirs.isEmpty()) {
       throw new MobileHarnessException(
