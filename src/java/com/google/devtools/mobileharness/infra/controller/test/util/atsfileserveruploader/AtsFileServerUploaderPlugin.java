@@ -36,6 +36,7 @@ import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Duration;
 import java.util.List;
 
 /** Lab plugin to upload test gen files to ATS file server. */
@@ -88,14 +89,15 @@ public class AtsFileServerUploaderPlugin {
           createCommandExecutor()
               .run(
                   Command.of(
-                      "curl",
-                      "--request",
-                      "POST",
-                      "--form",
-                      "file=@" + genFile,
-                      "--fail",
-                      "--location",
-                      destination));
+                          "curl",
+                          "--request",
+                          "POST",
+                          "--form",
+                          "file=@" + genFile,
+                          "--fail",
+                          "--location",
+                          destination)
+                      .timeout(Duration.ofMinutes(30)));
       logger.atInfo().log("Output for uploading file %s to %s: %s", genFile, destination, output);
     } catch (URISyntaxException e) {
       logger.atWarning().withCause(e).log("Invalid url address %s in file server.", destination);

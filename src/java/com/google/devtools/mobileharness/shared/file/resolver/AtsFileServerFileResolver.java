@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.time.Duration;
 import javax.annotation.Nullable;
 
 /** The resolver for files in ats file server. */
@@ -83,7 +84,9 @@ public class AtsFileServerFileResolver extends AbstractFileResolver {
         localFileUtil.prepareParentDir(destination);
         String output =
             createCommandExecutor()
-                .run(Command.of("curl", "-o", destination, "-fL", httpSourcePath));
+                .run(
+                    Command.of("curl", "-o", destination, "-fL", httpSourcePath)
+                        .timeout(Duration.ofMinutes(60)));
         logger.atInfo().log(
             "Output of ats file server downloader for downloading file %s: %s",
             httpSourcePath, output);
