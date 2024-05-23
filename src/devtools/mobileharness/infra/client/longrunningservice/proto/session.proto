@@ -72,8 +72,12 @@ message SessionPluginConfigs {
 // Configuration of a session plugin.
 //
 // A session plugin is a Java class, which contains @Subscribe methods receiving
-// session events like SessionStartingEvent and SessionEndedEvent, and OmniLab
-// job / test events.
+// session events and OmniLab job / test events.
+//
+// Session events include:
+//
+// 1. SessionStartingEvent.
+// 2. SessionEndedEvent. (These two events will be called both or neither)
 //
 // A session plugin can have an @Inject constructor. These types will be bound
 // automatically:

@@ -18,6 +18,8 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.olcserver
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils.createFieldMaskPath;
 import static com.google.protobuf.TextFormat.shortDebugString;
@@ -64,6 +66,8 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.protobuf.Any;
 import com.google.protobuf.FieldMask;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.TextFormat;
+import com.google.protobuf.TypeRegistry;
 import java.time.Duration;
 import java.util.List;
 import java.util.Map;
@@ -98,6 +102,16 @@ public class AtsSessionStub {
   private static final Duration GET_SESSION_STATUS_MEDIUM_INTERVAL = Duration.ofSeconds(5L);
   private static final Duration GET_SESSION_STATUS_LONG_INTERVAL = Duration.ofSeconds(30L);
 
+  private static final TextFormat.Printer PRINTER =
+      TextFormat.printer()
+          .usingTypeRegistry(
+              TypeRegistry.newBuilder()
+                  .add(
+                      ImmutableList.of(
+                          AtsSessionPluginConfig.getDescriptor(),
+                          AtsSessionPluginOutput.getDescriptor()))
+                  .build());
+
   private final Provider<SessionStub> sessionStubProvider;
   private final String clientId;
   private final ListeningExecutorService threadPool;
@@ -123,9 +137,12 @@ public class AtsSessionStub {
         CreateSessionRequest.newBuilder()
             .setSessionConfig(createSessionConfig(sessionName, config))
             .build();
-    logger.atFine().log(
-        "Creating session, plugin_config=[%s], request=[%s]",
-        shortDebugString(config), shortDebugString(createSessionRequest));
+    logger
+        .atInfo()
+        .with(IMPORTANCE, DEBUG)
+        .log(
+            "Creating session, plugin_config=[%s], request=[%s]",
+            shortDebugString(config), PRINTER.shortDebugString(createSessionRequest));
     CreateSessionResponse createSessionResponse;
     try {
       createSessionResponse =
@@ -135,10 +152,14 @@ public class AtsSessionStub {
           new MobileHarnessException(
               InfraErrorId.ATSC_SESSION_STUB_CREATE_SESSION_ERROR,
               String.format(
-                  "Failed to create session, request=[%s]", shortDebugString(createSessionRequest)),
+                  "Failed to create session, request=[%s]",
+                  PRINTER.shortDebugString(createSessionRequest)),
               e));
     }
-    logger.atFine().log("Session created, response=[%s]", shortDebugString(createSessionResponse));
+    logger
+        .atInfo()
+        .with(IMPORTANCE, DEBUG)
+        .log("Session created, response=[%s]", PRINTER.shortDebugString(createSessionResponse));
     SessionId sessionId = createSessionResponse.getSessionId();
 
     // Asynchronously gets the session result.
@@ -154,19 +175,26 @@ public class AtsSessionStub {
         RunSessionRequest.newBuilder()
             .setSessionConfig(createSessionConfig(sessionName, config))
             .build();
-    logger.atFine().log(
-        "Running session, plugin_config=[%s], request=[%s]",
-        shortDebugString(config), shortDebugString(runSessionRequest));
+    logger
+        .atInfo()
+        .with(IMPORTANCE, DEBUG)
+        .log(
+            "Running session, plugin_config=[%s], request=[%s]",
+            shortDebugString(config), PRINTER.shortDebugString(runSessionRequest));
     RunSessionResponse runSessionResponse;
     try {
       runSessionResponse = requireNonNull(sessionStubProvider.get()).runSession(runSessionRequest);
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_RUN_SESSION_ERROR,
-          String.format("Failed to run session, request=[%s]", shortDebugString(runSessionRequest)),
+          String.format(
+              "Failed to run session, request=[%s]", PRINTER.shortDebugString(runSessionRequest)),
           e);
     }
-    logger.atFine().log("Session finished, response=[%s]", shortDebugString(runSessionResponse));
+    logger
+        .atInfo()
+        .with(IMPORTANCE, DEBUG)
+        .log("Session finished, response=[%s]", PRINTER.shortDebugString(runSessionResponse));
     return getSessionPluginOutput(runSessionResponse.getSessionDetail());
   }
 
@@ -204,7 +232,7 @@ public class AtsSessionStub {
               } catch (MobileHarnessException | RuntimeException e) {
                 logger.atWarning().withCause(e).log(
                     "Failed to get session plugin config/output, session=[%s]",
-                    shortDebugString(sessionDetail));
+                    PRINTER.shortDebugString(sessionDetail));
                 return Stream.empty();
               }
             })
@@ -265,7 +293,10 @@ public class AtsSessionStub {
                 "Failed to get session result, session_id=[%s]", shortDebugString(sessionId)),
             e);
       }
-      logger.atFine().log("Session result: [%s]", shortDebugString(sessionDetail));
+      logger
+          .atInfo()
+          .with(IMPORTANCE, DEBUG)
+          .log("Session result: [%s]", PRINTER.shortDebugString(sessionDetail));
 
       // Gets session plugin output.
       return getSessionPluginOutput(sessionDetail);
