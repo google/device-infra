@@ -27,7 +27,7 @@ import picocli.CommandLine.ExitCode;
 @Command(
     name = "log",
     sortOptions = false,
-    description = "Enable/disable showing server streaming log in console")
+    description = "Enable/disable showing server streaming log in console.")
 class LogCommand implements Callable<Integer> {
 
   private final ServerLogPrinter serverLogPrinter;

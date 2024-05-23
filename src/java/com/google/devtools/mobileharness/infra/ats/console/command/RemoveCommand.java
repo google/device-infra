@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.HelpCommand;
 
 /** Command for "remove" commands. */
@@ -28,4 +29,12 @@ import picocli.CommandLine.HelpCommand;
     subcommands = {
       HelpCommand.class,
     })
-class RemoveCommand {}
+class RemoveCommand {
+
+  @Command(
+      name = "allCommands",
+      description = "Remove all commands currently waiting to be executed")
+  int allCommands() {
+    return ExitCode.OK;
+  }
+}
