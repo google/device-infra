@@ -604,6 +604,11 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   private void setUpRecoveryModeDevice() throws MobileHarnessException, InterruptedException {
+    if (!Flags.instance().enableDeviceStateChangeRecover.getNonNull()) {
+      configureRecoveryDevice();
+      return;
+    }
+
     try {
       logger.atInfo().log("Try to reboot the recovery device %s", deviceId);
       // Cache for reboot the device.
@@ -646,7 +651,8 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   public boolean checkDevice() throws MobileHarnessException, InterruptedException {
-    if (!ifSkipCheckAbnormalDevice()) {
+    if (!ifSkipCheckAbnormalDevice()
+        && Flags.instance().enableDeviceStateChangeRecover.getNonNull()) {
       Optional<Boolean> abnormalDeviceCheckResult = checkAbnormalDevice();
       if (abnormalDeviceCheckResult.isPresent()) {
         return abnormalDeviceCheckResult.get();

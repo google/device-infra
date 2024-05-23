@@ -138,6 +138,7 @@ class ListDevicesCommandHandler {
     boolean androidFlashableDevice = false;
     boolean androidOfflineDevice = false;
     boolean androidUnauthorizedDevice = false;
+    boolean androidRecoveryDevice = false;
     for (String deviceType : deviceTypes) {
       switch (deviceType) {
         case "AndroidLocalEmulator":
@@ -156,6 +157,9 @@ class ListDevicesCommandHandler {
         case "AndroidUnauthorizedDevice":
           androidUnauthorizedDevice = true;
           break;
+        case AndroidRealDeviceConstants.ANDROID_RECOVERY_DEVICE:
+          androidRecoveryDevice = true;
+          break;
         default:
           break;
       }
@@ -168,6 +172,9 @@ class ListDevicesCommandHandler {
     }
     if (androidUnauthorizedDevice) {
       return "UNAUTHORIZED";
+    }
+    if (androidRecoveryDevice) {
+      return "RECOVERY";
     }
     if (!androidFastbootDevice && androidFlashableDevice) {
       return "FASTBOOTD";

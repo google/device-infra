@@ -494,6 +494,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDeviceResourceService = enableDeviceResourceServiceDefault;
 
+  private static final Flag<Boolean> enableDeviceStateChangeRecoverDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_device_state_change_recover",
+      description =
+          "Whether to change device state, like from recovery mode to normal mode, to recover the"
+              + " device. Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableDeviceStateChangeRecover = enableDeviceStateChangeRecoverDefault;
+
   private static final Flag<Boolean> enableEmulatorDetectionDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
