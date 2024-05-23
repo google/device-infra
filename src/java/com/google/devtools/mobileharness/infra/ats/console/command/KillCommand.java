@@ -16,24 +16,27 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
+import java.util.concurrent.Callable;
+import javax.inject.Inject;
 import picocli.CommandLine.Command;
-import picocli.CommandLine.HelpCommand;
+import picocli.CommandLine.ExitCode;
 
-/** Empty root command. Business logic are delegated to the subcommands. */
-@Command(
-    name = "", // Set it as empty, so it won't show on the "--help" usage
-    subcommands = {
-      AddCommand.class,
-      DumpCommand.class,
-      ExitCommand.class,
-      HelpCommand.class,
-      InvocationCommand.class,
-      KillCommand.class,
-      ListCommand.class,
-      LogCommand.class,
-      RemoveCommand.class,
-      RunCommand.class,
-      SetCommand.class,
-      VersionCommand.class,
-    })
-public final class RootCommand {}
+/** Command to exit the ATS console. */
+@Command(name = "kill", description = "Kills the console forcibly.")
+final class KillCommand implements Callable<Integer> {
+
+  private final ConsoleInfo consoleInfo;
+
+  @Inject
+  KillCommand(ConsoleInfo consoleInfo) {
+    this.consoleInfo = consoleInfo;
+  }
+
+  @Override
+  public Integer call() {
+    // Exits the console directly. Its shutdown hook will kill olc server.
+    consoleInfo.setShouldExitConsole(true);
+    return ExitCode.OK;
+  }
+}

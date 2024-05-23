@@ -21,7 +21,6 @@ import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
-import static com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils.createFieldMaskPath;
 import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.partitioningBy;
@@ -57,14 +56,13 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.protobuf.Any;
-import com.google.protobuf.FieldMask;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TypeRegistry;
@@ -89,15 +87,6 @@ public class AtsSessionStub {
   private static final String SESSION_PLUGIN_MODULE_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.ats.console."
           + "controller.sessionplugin.AtsSessionPluginModule";
-  private static final FieldMask GET_SESSION_STATUS_FIELD_MASK =
-      FieldMask.newBuilder()
-          .addPaths(
-              createFieldMaskPath(
-                  GetSessionResponse.getDescriptor()
-                      .findFieldByNumber(GetSessionResponse.SESSION_DETAIL_FIELD_NUMBER),
-                  SessionDetail.getDescriptor()
-                      .findFieldByNumber(SessionDetail.SESSION_STATUS_FIELD_NUMBER)))
-          .build();
   private static final Duration GET_SESSION_STATUS_SHORT_INTERVAL = Duration.ofMillis(400L);
   private static final Duration GET_SESSION_STATUS_MEDIUM_INTERVAL = Duration.ofSeconds(5L);
   private static final Duration GET_SESSION_STATUS_LONG_INTERVAL = Duration.ofSeconds(30L);
@@ -198,6 +187,26 @@ public class AtsSessionStub {
     return getSessionPluginOutput(runSessionResponse.getSessionDetail());
   }
 
+  /** Returns all sessions which are not finished and not aborted. */
+  public ImmutableList<String> getAllUnfinishedNotAbortedSessions(boolean fromCurrentClient)
+      throws MobileHarnessException {
+    SessionFilter sessionFilter =
+        fromCurrentClient
+            ? SessionQueryUtil.getUnfinishedAndNotAbortedSessionFromClientFilter(clientId)
+            : SessionQueryUtil.UNFINISHED_NOT_ABORTED_SESSION_FILTER;
+    GetAllSessionsRequest getAllSessionsRequest =
+        GetAllSessionsRequest.newBuilder()
+            .setSessionDetailFieldMask(SessionQueryUtil.SESSION_ID_FIELD_MASK)
+            .setSessionFilter(sessionFilter)
+            .build();
+
+    GetAllSessionsResponse getAllSessionsResponse = getAllSessionsByRequest(getAllSessionsRequest);
+    return getAllSessionsResponse.getSessionDetailList().stream()
+        .map(SessionDetail::getSessionId)
+        .map(SessionId::getId)
+        .collect(toImmutableList());
+  }
+
   /** Returns all sessions. */
   public ImmutableList<AtsSessionPluginConfigOutput> getAllSessions(
       String sessionNameRegex, String sessionStatusNameRegex) throws MobileHarnessException {
@@ -208,17 +217,7 @@ public class AtsSessionStub {
                     .setSessionNameRegex(sessionNameRegex)
                     .setSessionStatusNameRegex(sessionStatusNameRegex))
             .build();
-    GetAllSessionsResponse getAllSessionsResponse;
-    try {
-      getAllSessionsResponse =
-          requireNonNull(sessionStubProvider.get()).getAllSessions(getAllSessionsRequest);
-    } catch (GrpcExceptionWithErrorId e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_SESSION_STUB_GET_ALL_SESSIONS_ERROR,
-          String.format(
-              "Failed to get all sessions, request=[%s]", shortDebugString(getAllSessionsRequest)),
-          e);
-    }
+    GetAllSessionsResponse getAllSessionsResponse = getAllSessionsByRequest(getAllSessionsRequest);
     return getAllSessionsResponse.getSessionDetailList().stream()
         .flatMap(
             sessionDetail -> {
@@ -237,6 +236,19 @@ public class AtsSessionStub {
               }
             })
         .collect(toImmutableList());
+  }
+
+  private GetAllSessionsResponse getAllSessionsByRequest(
+      GetAllSessionsRequest getAllSessionsRequest) throws MobileHarnessException {
+    try {
+      return requireNonNull(sessionStubProvider.get()).getAllSessions(getAllSessionsRequest);
+    } catch (GrpcExceptionWithErrorId e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_SESSION_STUB_GET_ALL_SESSIONS_ERROR,
+          String.format(
+              "Failed to get all sessions, request=[%s]", shortDebugString(getAllSessionsRequest)),
+          e);
+    }
   }
 
   private class GetAtsSessionTask implements Callable<AtsSessionPluginOutput> {
@@ -260,7 +272,7 @@ public class AtsSessionStub {
                   .getSession(
                       GetSessionRequest.newBuilder()
                           .setSessionId(sessionId)
-                          .setFieldMask(GET_SESSION_STATUS_FIELD_MASK)
+                          .setFieldMask(SessionQueryUtil.GET_SESSION_STATUS_FIELD_MASK)
                           .build())
                   .getSessionDetail()
                   .getSessionStatus();

@@ -19,9 +19,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.se
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
-import static com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils.createFieldMaskPath;
 import static com.google.protobuf.TextFormat.shortDebugString;
-import static java.util.stream.Collectors.joining;
 
 import com.google.common.base.Ascii;
 import com.google.common.cache.Cache;
@@ -31,7 +29,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsConsumer;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionManager;
@@ -48,13 +45,9 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.SetLogLevelResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
-import com.google.protobuf.FieldMask;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
 import io.grpc.Server;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
@@ -71,53 +64,6 @@ import javax.inject.Inject;
 public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static final FieldMask SESSION_ID_FIELD_MASK =
-      FieldMask.newBuilder()
-          .addPaths(
-              createFieldMaskPath(
-                  SessionDetail.getDescriptor()
-                      .findFieldByNumber(SessionDetail.SESSION_ID_FIELD_NUMBER)))
-          .build();
-  private static final FieldMask SESSION_SUMMARY_FIELD_MASK =
-      FieldMask.newBuilder()
-          .addPaths(
-              createFieldMaskPath(
-                  SessionDetail.getDescriptor()
-                      .findFieldByNumber(SessionDetail.SESSION_ID_FIELD_NUMBER)))
-          .addPaths(
-              createFieldMaskPath(
-                  SessionDetail.getDescriptor()
-                      .findFieldByNumber(SessionDetail.SESSION_STATUS_FIELD_NUMBER)))
-          .addPaths(
-              createFieldMaskPath(
-                  SessionDetail.getDescriptor()
-                      .findFieldByNumber(SessionDetail.SESSION_CONFIG_FIELD_NUMBER),
-                  SessionConfig.getDescriptor()
-                      .findFieldByNumber(SessionConfig.SESSION_NAME_FIELD_NUMBER)))
-          .addPaths(
-              createFieldMaskPath(
-                  SessionDetail.getDescriptor()
-                      .findFieldByNumber(SessionDetail.SESSION_OUTPUT_FIELD_NUMBER),
-                  SessionOutput.getDescriptor()
-                      .findFieldByNumber(SessionOutput.SESSION_PROPERTY_FIELD_NUMBER)))
-          .addPaths(
-              createFieldMaskPath(
-                  SessionDetail.getDescriptor()
-                      .findFieldByNumber(SessionDetail.SESSION_OUTPUT_FIELD_NUMBER),
-                  SessionOutput.getDescriptor()
-                      .findFieldByNumber(SessionOutput.SESSION_TIMING_INFO_FIELD_NUMBER)))
-          .build();
-  private static final String UNFINISHED_SESSION_STATUS_NAME_REGEX =
-      ImmutableList.of(SessionStatus.SESSION_SUBMITTED, SessionStatus.SESSION_RUNNING).stream()
-          .map(SessionStatus::name)
-          .collect(joining("|"));
-  private static final SessionFilter UNFINISHED_NOT_ABORTED_SESSION_FILTER =
-      SessionFilter.newBuilder()
-          .setSessionStatusNameRegex(UNFINISHED_SESSION_STATUS_NAME_REGEX)
-          .addExcludedSessionPropertyKey(
-              SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING)
-          .build();
 
   private final LogManager<LogRecords> logManager;
   private final SessionManager sessionManager;
@@ -198,7 +144,9 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
     String clientId = request.getClientId();
     ImmutableList<String> unfinishedSessionIdsFromClient =
         sessionManager
-            .getAllSessions(SESSION_ID_FIELD_MASK, getUnfinishedSessionFromClientFilter(clientId))
+            .getAllSessions(
+                SessionQueryUtil.SESSION_ID_FIELD_MASK,
+                SessionQueryUtil.getUnfinishedAndNotAbortedSessionFromClientFilter(clientId))
             .stream()
             .map(SessionDetail::getSessionId)
             .map(SessionId::getId)
@@ -209,7 +157,8 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
 
     ImmutableList<SessionDetail> unfinishedNotAbortedSessions =
         sessionManager.getAllSessions(
-            SESSION_SUMMARY_FIELD_MASK, UNFINISHED_NOT_ABORTED_SESSION_FILTER);
+            SessionQueryUtil.SESSION_SUMMARY_FIELD_MASK,
+            SessionQueryUtil.UNFINISHED_NOT_ABORTED_SESSION_FILTER);
 
     // Gets all clients that are still alive.
     aliveClientIds.invalidate(clientId);
@@ -238,14 +187,6 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
           shortDebugString(response));
       return response;
     }
-  }
-
-  private static SessionFilter getUnfinishedSessionFromClientFilter(String clientId) {
-    return SessionFilter.newBuilder()
-        .setSessionStatusNameRegex(UNFINISHED_SESSION_STATUS_NAME_REGEX)
-        .putIncludedSessionConfigProperty(
-            SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID, clientId)
-        .build();
   }
 
   private SetLogLevelResponse doSetLogLevel(SetLogLevelRequest request) {

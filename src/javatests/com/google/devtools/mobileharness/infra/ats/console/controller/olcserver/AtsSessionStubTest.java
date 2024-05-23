@@ -137,7 +137,7 @@ public class AtsSessionStubTest {
   }
 
   @Test
-  public void prepareOlcServer() throws Exception {
+  public void getSession() throws Exception {
     serverPreparer.prepareOlcServer();
 
     assertThat(

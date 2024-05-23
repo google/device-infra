@@ -40,3 +40,23 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/version:version_util",
     ],
 )
+
+java_library(
+    name = "session_query_util",
+    srcs = ["SessionQueryUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
+        "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_service_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:session_properties",
+        "//src/java/com/google/devtools/mobileharness/shared/util/message:field_mask_utils",
+        "@com_google_protobuf_protobuf_java",
+        "@maven//:com_google_guava_guava",
+    ],
+)
