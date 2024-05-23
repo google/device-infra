@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -67,9 +68,28 @@ public class PluginOutputPrinter {
   public static String listCommands(List<AtsSessionPluginConfigOutput> configOutputs) {
     return configOutputs.stream()
         .map(PluginOutputPrinter::getRunCommandState)
-        .sorted(comparing(RunCommandState::getCommandId))
+        .sorted(comparing(RunCommandState::getCommandId, new CommandIdComparator()))
         .map(PluginOutputPrinter::formatCommand)
         .collect(joining("\n"));
+  }
+
+  /** Prints output of "invocation <command_id>" command. */
+  public static int showCommandInvocations(
+      List<AtsSessionPluginConfigOutput> configOutputs, String commandId, ConsoleUtil consoleUtil) {
+    String invocations =
+        configOutputs.stream()
+            .map(PluginOutputPrinter::getRunCommandState)
+            .filter(runCommandState -> runCommandState.getCommandId().equals(commandId))
+            .map(PluginOutputPrinter::formatInvocationCommand)
+            .collect(joining("\n"));
+    if (invocations.isEmpty()) {
+      consoleUtil.printlnStdout(
+          String.format("No information found for invocation %s.", commandId));
+      return ExitCode.USAGE;
+    } else {
+      consoleUtil.printlnStdout(invocations);
+      return ExitCode.OK;
+    }
   }
 
   /** Prints output of "list invocations" command. */
@@ -79,7 +99,7 @@ public class PluginOutputPrinter {
             .map(PluginOutputPrinter::getRunCommandState)
             .flatMap(runCommandState -> runCommandState.getRunningInvocationMap().values().stream())
             .sorted(
-                comparing(Invocation::getCommandId)
+                comparing(Invocation::getCommandId, new CommandIdComparator())
                     .thenComparing(invocation -> toJavaInstant(invocation.getStartTime())))
             .map(PluginOutputPrinter::formatInvocation)
             .collect(toImmutableList());
@@ -112,6 +132,17 @@ public class PluginOutputPrinter {
         runCommandState.getCommandLineArgs());
   }
 
+  private static String formatInvocationCommand(RunCommandState runCommandState) {
+    return runCommandState.getRunningInvocationMap().values().stream()
+        .map(
+            invocation ->
+                String.format(
+                    "invocation %s: [%s]",
+                    invocation.getCommandId(),
+                    String.join(", ", runCommandState.getSeparatedCommandLineArgsList())))
+        .collect(joining("\n"));
+  }
+
   private static ImmutableList<String> formatInvocation(Invocation invocation) {
     return ImmutableList.of(
         invocation.getCommandId(),
@@ -119,6 +150,47 @@ public class PluginOutputPrinter {
             Duration.between(toJavaInstant(invocation.getStartTime()), Instant.now())),
         invocation.getDeviceIdList().stream().collect(joining(", ", "[", "]")),
         invocation.getStateSummary());
+  }
+
+  /** Command id comparator. */
+  private static class CommandIdComparator implements Comparator<String> {
+
+    @Override
+    public int compare(String left, String right) {
+      int leftInteger;
+      int rightInteger;
+      boolean isLeftInteger;
+      boolean isRightInteger;
+      try {
+        leftInteger = Integer.parseInt(left);
+        isLeftInteger = true;
+      } catch (NumberFormatException e) {
+        leftInteger = Integer.MAX_VALUE;
+        isLeftInteger = false;
+      }
+
+      try {
+        rightInteger = Integer.parseInt(right);
+        isRightInteger = true;
+      } catch (NumberFormatException e) {
+        rightInteger = Integer.MAX_VALUE;
+        isRightInteger = false;
+      }
+
+      if (isLeftInteger) {
+        if (isRightInteger) {
+          return Integer.compare(leftInteger, rightInteger);
+        } else {
+          return -1;
+        }
+      } else {
+        if (isRightInteger) {
+          return 1;
+        } else {
+          return left.compareTo(right);
+        }
+      }
+    }
   }
 
   private PluginOutputPrinter() {}

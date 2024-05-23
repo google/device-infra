@@ -16,8 +16,19 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
+import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
+import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.AtsSessionPluginConfigOutput;
+import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
+import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
+import java.util.concurrent.Callable;
+import javax.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.HelpCommand;
+import picocli.CommandLine.Parameters;
 
 /** Command for "invocation" commands. */
 @Command(
@@ -29,4 +40,38 @@ import picocli.CommandLine.HelpCommand;
     subcommands = {
       HelpCommand.class,
     })
-class InvocationCommand {}
+class InvocationCommand implements Callable<Integer> {
+
+  private static final String UNFINISHED_SESSION_STATUS_NAME_REGEX =
+      String.format(
+          "%s|%s", SessionStatus.SESSION_SUBMITTED.name(), SessionStatus.SESSION_RUNNING.name());
+
+  @Parameters(
+      index = "0",
+      paramLabel = "<command_id>",
+      hideParamSyntax = true,
+      description = "Command ID.")
+  private String commandId;
+
+  private final ConsoleUtil consoleUtil;
+  private final ServerPreparer serverPreparer;
+  private final AtsSessionStub atsSessionStub;
+
+  @Inject
+  InvocationCommand(
+      ConsoleUtil consoleUtil, ServerPreparer serverPreparer, AtsSessionStub atsSessionStub) {
+    this.consoleUtil = consoleUtil;
+    this.serverPreparer = serverPreparer;
+    this.atsSessionStub = atsSessionStub;
+  }
+
+  @Override
+  public Integer call() throws MobileHarnessException, InterruptedException {
+    serverPreparer.prepareOlcServer();
+    ImmutableList<AtsSessionPluginConfigOutput> sessionPluginConfigOutputs =
+        atsSessionStub.getAllSessions(
+            RunCommand.RUN_COMMAND_SESSION_NAME, UNFINISHED_SESSION_STATUS_NAME_REGEX);
+    return PluginOutputPrinter.showCommandInvocations(
+        sessionPluginConfigOutputs, commandId, consoleUtil);
+  }
+}

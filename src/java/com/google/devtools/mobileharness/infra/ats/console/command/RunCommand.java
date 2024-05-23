@@ -22,7 +22,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.Futures.immediateFailedFuture;
 import static com.google.common.util.concurrent.Futures.immediateFuture;
-import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -495,9 +494,11 @@ public final class RunCommand implements Callable<Integer> {
       runCommand.setRetryType(Ascii.toUpperCase(retryType.name()));
     }
 
+    ImmutableList<String> commandLineArgs = command.stream().skip(1L).collect(toImmutableList());
     runCommand.setInitialState(
         RunCommandState.newBuilder()
-            .setCommandLineArgs(command.stream().skip(1L).collect(joining(" "))));
+            .setCommandLineArgs(String.join(" ", commandLineArgs))
+            .addAllSeparatedCommandLineArgs(commandLineArgs));
 
     serverLogPrinter.enable(true);
     ListenableFuture<AtsSessionPluginOutput> atsRunSessionFuture =

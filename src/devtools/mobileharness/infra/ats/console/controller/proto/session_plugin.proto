@@ -138,6 +138,10 @@ message RunCommandState {
     // serial=12345}'"
     string state_summary = 4;
   }
+
+  // Required.
+  // The command line args that are separated by space.
+  repeated string separated_command_line_args = 5;
 }
 
 message ListCommand {
