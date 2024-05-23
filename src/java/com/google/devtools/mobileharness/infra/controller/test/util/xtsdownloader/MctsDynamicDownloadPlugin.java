@@ -189,17 +189,22 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       logger
           .atInfo()
           .with(IMPORTANCE, IMPORTANT)
-          .log("Start to download MCTS test modules, this might take 10+ minutes, please wait...");
+          .log(
+              "Start to download MCTS (this will only happen at the first run, might take 10+"
+                  + " minutes) and prepare the test modules (this will take <1 minute), please"
+                  + " wait... (You can also go to"
+                  + " https://android.googlesource.com/platform/cts/+/main/tools/mcts/download_mcts.sh"
+                  + " to use the script to manually download the files in advance to skip the"
+                  + " downloading step)");
       XtsDynamicDownloadInfo xtsDynamicDownloadInfo =
           parse(event.getTest(), event.getDeviceLocator().getSerial());
       downloadXtsFiles(xtsDynamicDownloadInfo, event.getTest());
-      logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Downloaded MCTS test modules.");
+      logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Finished MCTS test modules preparation.");
     } catch (MobileHarnessException e) {
       throw SkipTestException.create(
           "Failed to download Mainline CTS (MCTS). Either the files are broken, or the disk is"
-              + " full, please reboot your PC or remove the outdated tmp files under"
-              + " /tmp/mcts_dynamic_download/android/xts/mcts/ and check your network connection"
-              + " then restart the CTS to retry.",
+              + " full, please reboot your PC to remove the outdated tmp files and check your"
+              + " network connection then restart the CTS to retry.",
           DesiredTestResult.ERROR,
           AndroidErrorId.XTS_DYNAMIC_DOWNLOADER_FILE_NOT_FOUND,
           e);
