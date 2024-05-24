@@ -499,7 +499,7 @@ public class XtsTradefedTest extends BaseDriver
     } finally {
       CommandProcess process = xtsProcess.get();
       if (process != null && process.isAlive()) {
-        process.killWithSignal(/* signal= */ 2);
+        process.killAndThenKillForcibly(/* timeout= */ Duration.ofMinutes(1L));
       }
     }
   }
