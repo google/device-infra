@@ -44,6 +44,8 @@ public class PluginOutputPrinter {
   private static final ImmutableList<String> LIST_INVOCATIONS_HEADER =
       ImmutableList.of("Command Id", "Exec Time", "Device", "State");
 
+  private static final Comparator<String> COMMAND_ID_COMPARATOR = new CommandIdComparator();
+
   /**
    * Prints {@code AtsSessionPluginOutput} to ATS console.
    *
@@ -68,7 +70,7 @@ public class PluginOutputPrinter {
   public static String listCommands(List<AtsSessionPluginConfigOutput> configOutputs) {
     return configOutputs.stream()
         .map(PluginOutputPrinter::getRunCommandState)
-        .sorted(comparing(RunCommandState::getCommandId, new CommandIdComparator()))
+        .sorted(comparing(RunCommandState::getCommandId, COMMAND_ID_COMPARATOR))
         .map(PluginOutputPrinter::formatCommand)
         .collect(joining("\n"));
   }
@@ -99,7 +101,7 @@ public class PluginOutputPrinter {
             .map(PluginOutputPrinter::getRunCommandState)
             .flatMap(runCommandState -> runCommandState.getRunningInvocationMap().values().stream())
             .sorted(
-                comparing(Invocation::getCommandId, new CommandIdComparator())
+                comparing(Invocation::getCommandId, COMMAND_ID_COMPARATOR)
                     .thenComparing(invocation -> toJavaInstant(invocation.getStartTime())))
             .map(PluginOutputPrinter::formatInvocation)
             .collect(toImmutableList());
@@ -163,7 +165,7 @@ public class PluginOutputPrinter {
         invocation.getStateSummary());
   }
 
-  /** Command id comparator. */
+  /** Command ID comparator. */
   private static class CommandIdComparator implements Comparator<String> {
 
     @Override

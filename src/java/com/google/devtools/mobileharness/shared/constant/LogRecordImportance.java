@@ -24,9 +24,23 @@ public class LogRecordImportance {
   /** Values of importance. */
   public enum Importance {
     DEBUG(50),
+
+    /**
+     * Logs from flogger have this importance by default.
+     *
+     * <p>ATS console logs whose importance is not less than it will be shown in ATS console.
+     */
     NORMAL(100),
+
+    /**
+     * Logs from TestInfo/JobInfo log() have this importance by default.
+     *
+     * <p>OLC server logs whose importance is not less than it will be shown in ATS console.
+     */
     TEST_INFO(150),
     IMPORTANT(200),
+
+    /** Logs from TF process have this importance. */
     TF(300);
 
     private final int value;
