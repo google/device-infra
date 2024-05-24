@@ -128,7 +128,7 @@ public class PluginOutputPrinter {
     return String.format(
         "Command %s: [%s] %s",
         runCommandState.getCommandId().isEmpty() ? "n/a" : runCommandState.getCommandId(),
-        toReadableDurationString(toJavaDuration(runCommandState.getTotalExecutionTime())),
+        getTimeString(toJavaDuration(runCommandState.getTotalExecutionTime())),
         runCommandState.getCommandLineArgs());
   }
 
@@ -141,6 +141,17 @@ public class PluginOutputPrinter {
                     invocation.getCommandId(),
                     String.join(", ", runCommandState.getSeparatedCommandLineArgsList())))
         .collect(joining("\n"));
+  }
+
+  private static String getTimeString(Duration duration) {
+    long hours = duration.toHours();
+    long minutes = duration.toMinutesPart();
+    long seconds = duration.toSecondsPart();
+    if (hours > 0) {
+      return String.format("%dh:%02d:%02d", hours, minutes, seconds);
+    } else {
+      return String.format("%dm:%02d", minutes, seconds);
+    }
   }
 
   private static ImmutableList<String> formatInvocation(Invocation invocation) {
