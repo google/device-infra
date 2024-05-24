@@ -152,6 +152,13 @@ public class AtsSessionStubTest {
   }
 
   @Test
+  public void abortUnstartedSessions() throws Exception {
+    serverPreparer.prepareOlcServer();
+
+    atsSessionStub.abortUnstartedSessions();
+  }
+
+  @Test
   public void runSession() throws Exception {
     serverPreparer.prepareOlcServer();
 

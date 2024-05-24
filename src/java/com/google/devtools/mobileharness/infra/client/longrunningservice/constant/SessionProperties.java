@@ -38,5 +38,12 @@ public class SessionProperties {
   public static final String PROPERTY_KEY_SERVER_SESSION_LOG_PATH =
       "olc_server_session_log_file_path";
 
+  /**
+   * A property to indicate that at least one test in the session has started (received
+   * TestStartingEvent). It is used to detect whether a running session is safe to remove.
+   */
+  public static final String PROPERTY_KEY_SESSION_CONTAIN_STARTED_TEST =
+      "olc_server_session_contain_started_test";
+
   private SessionProperties() {}
 }

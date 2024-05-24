@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginLoadingConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
@@ -247,6 +248,24 @@ public class AtsSessionStub {
           InfraErrorId.ATSC_SESSION_STUB_GET_ALL_SESSIONS_ERROR,
           String.format(
               "Failed to get all sessions, request=[%s]", shortDebugString(getAllSessionsRequest)),
+          e);
+    }
+  }
+
+  /** Aborts all unstarted sessions triggered by the current client. */
+  public void abortUnstartedSessions() throws MobileHarnessException {
+    SessionFilter sessionFilter =
+        SessionQueryUtil.getUnfinishedSessionWithoutStartedTestFromClientFilter(clientId);
+    abortSessions(AbortSessionsRequest.newBuilder().setSessionFilter(sessionFilter).build());
+  }
+
+  private void abortSessions(AbortSessionsRequest request) throws MobileHarnessException {
+    try {
+      sessionStubProvider.get().abortSessions(request);
+    } catch (GrpcExceptionWithErrorId e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_SESSION_STUB_ABORT_SESSION_ERROR,
+          String.format("Failed to abort sessions, request=[%s]", shortDebugString(request)),
           e);
     }
   }

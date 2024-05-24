@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.transform;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
@@ -42,9 +43,11 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
 import com.google.protobuf.FieldMask;
 import com.google.protobuf.util.FieldMaskUtil;
 import io.grpc.stub.StreamObserver;
+import java.util.ArrayList;
 import javax.inject.Inject;
 
 /** Implementation of {@link SessionServiceGrpc}. */
@@ -187,9 +190,36 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
     return NotifySessionResponse.newBuilder().setSuccessful(successful).build();
   }
 
-  private AbortSessionsResponse doAbortSessions(AbortSessionsRequest request) {
-    sessionManager.abortSessions(
-        request.getSessionIdList().stream().map(SessionId::getId).collect(toImmutableList()));
+  @VisibleForTesting
+  AbortSessionsResponse doAbortSessions(AbortSessionsRequest request) {
+    if (request.getSessionIdList().isEmpty() && !request.hasSessionFilter()) {
+      // Doing nothing for an empty request.
+      return AbortSessionsResponse.getDefaultInstance();
+    }
+
+    ArrayList<String> allSessionIds = new ArrayList<>();
+    allSessionIds.addAll(
+        sessionManager.getAllSessions(SessionQueryUtil.SESSION_ID_FIELD_MASK, null).stream()
+            .map(sessionDetail -> sessionDetail.getSessionId().getId())
+            .collect(toImmutableList()));
+    ImmutableList<String> givenSessionIds =
+        request.getSessionIdList().stream().map(SessionId::getId).collect(toImmutableList());
+    if (!givenSessionIds.isEmpty()) {
+      allSessionIds.retainAll(givenSessionIds);
+    }
+    ImmutableList<String> filteredSessionIds = ImmutableList.of();
+    if (request.hasSessionFilter()) {
+      filteredSessionIds =
+          sessionManager
+              .getAllSessions(SessionQueryUtil.SESSION_ID_FIELD_MASK, request.getSessionFilter())
+              .stream()
+              .map(sessionDetail -> sessionDetail.getSessionId().getId())
+              .collect(toImmutableList());
+    }
+    if (!filteredSessionIds.isEmpty()) {
+      allSessionIds.retainAll(filteredSessionIds);
+    }
+    sessionManager.abortSessions(allSessionIds);
     return AbortSessionsResponse.getDefaultInstance();
   }
 

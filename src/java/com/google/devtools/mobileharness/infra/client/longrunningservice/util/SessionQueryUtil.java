@@ -93,10 +93,24 @@ public final class SessionQueryUtil {
           .addExcludedSessionPropertyKey(
               SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING)
           .build();
+  public static final SessionFilter UNFINISHED_SESSION_WITHOUT_STARTED_TEST_FILTER =
+      SessionFilter.newBuilder()
+          .setSessionStatusNameRegex(UNFINISHED_SESSION_STATUS_NAME_REGEX)
+          .addExcludedSessionPropertyKey(
+              SessionProperties.PROPERTY_KEY_SESSION_CONTAIN_STARTED_TEST)
+          .build();
 
   public static SessionFilter getUnfinishedAndNotAbortedSessionFromClientFilter(String clientId) {
-    return SessionFilter.newBuilder()
-        .setSessionStatusNameRegex(UNFINISHED_SESSION_STATUS_NAME_REGEX)
+    return injectClientId(UNFINISHED_NOT_ABORTED_SESSION_FILTER, clientId);
+  }
+
+  public static SessionFilter getUnfinishedSessionWithoutStartedTestFromClientFilter(
+      String clientId) {
+    return injectClientId(UNFINISHED_SESSION_WITHOUT_STARTED_TEST_FILTER, clientId);
+  }
+
+  public static SessionFilter injectClientId(SessionFilter sessionFilter, String clientId) {
+    return sessionFilter.toBuilder()
         .putIncludedSessionConfigProperty(
             SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID, clientId)
         .build();

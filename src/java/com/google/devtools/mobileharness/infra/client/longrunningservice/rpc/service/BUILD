@@ -82,6 +82,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:service_util",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:session_manager",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_query_util",
         "@com_google_protobuf//:protobuf_java_util",
         "@com_google_protobuf_protobuf_java",
         "@io_grpc_grpc_java//stub",

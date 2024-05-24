@@ -16,6 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
+import javax.inject.Inject;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.HelpCommand;
@@ -31,10 +34,18 @@ import picocli.CommandLine.HelpCommand;
     })
 class RemoveCommand {
 
+  private final AtsSessionStub atsSessionStub;
+
+  @Inject
+  RemoveCommand(AtsSessionStub atsSessionStub) {
+    this.atsSessionStub = atsSessionStub;
+  }
+
   @Command(
       name = "allCommands",
       description = "Remove all commands currently waiting to be executed")
-  int allCommands() {
+  int allCommands() throws MobileHarnessException {
+    atsSessionStub.abortUnstartedSessions();
     return ExitCode.OK;
   }
 }

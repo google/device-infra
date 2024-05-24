@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState.Invocation;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
@@ -242,6 +243,8 @@ public class AtsSessionPlugin {
                         .setStateSummary(config.getRunCommand().getTestPlan())
                         .build())
                 .build());
+    sessionInfo.putSessionProperty(
+        SessionProperties.PROPERTY_KEY_SESSION_CONTAIN_STARTED_TEST, "true");
   }
 
   @Subscribe
