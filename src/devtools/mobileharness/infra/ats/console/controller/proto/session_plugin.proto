@@ -137,6 +137,11 @@ message RunCommandState {
     // Example: "running cts on build(s) 'DeviceBuildInfo{bid=123,
     // serial=12345}'"
     string state_summary = 4;
+
+    // Required.
+    //
+    // Invocation ID is OmniLab test ID.
+    string invocation_id = 5;
   }
 
   // Required.

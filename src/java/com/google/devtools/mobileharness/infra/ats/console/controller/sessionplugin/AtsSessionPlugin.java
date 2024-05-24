@@ -47,6 +47,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
+import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -226,23 +227,47 @@ public class AtsSessionPlugin {
   }
 
   @Subscribe
+  public void onJobStart(JobStartEvent jobStartEvent)
+      throws MobileHarnessException, InterruptedException {
+    ImmutableList<String> testIds =
+        jobStartEvent.getJob().tests().getAll().values().stream()
+            .map(testInfo -> testInfo.locator().getId())
+            .collect(toImmutableList());
+    RunCommandState runCommandState = getRunCommandState();
+    logger
+        .atInfo()
+        .with(IMPORTANCE, IMPORTANT)
+        .log(
+            "Command [%s]'s invocations [%s] are waiting for devices.",
+            runCommandState.getCommandId(), String.join(", ", testIds));
+  }
+
+  @Subscribe
   public void onTestStarting(TestStartingEvent event) {
-    ImmutableList<DeviceLocator> devices = event.getAllocation().getAllDeviceLocators();
+    ImmutableList<String> deviceSerials =
+        event.getAllocation().getAllDeviceLocators().stream()
+            .map(DeviceLocator::getSerial)
+            .collect(toImmutableList());
     setRunCommandState(
-        oldState ->
-            oldState.toBuilder()
-                .putRunningInvocation(
-                    event.getTest().locator().getId(),
-                    Invocation.newBuilder()
-                        .setCommandId(oldState.getCommandId())
-                        .setStartTime(toProtoTimestamp(Instant.now()))
-                        .addAllDeviceId(
-                            devices.stream()
-                                .map(DeviceLocator::getSerial)
-                                .collect(toImmutableList()))
-                        .setStateSummary(config.getRunCommand().getTestPlan())
-                        .build())
-                .build());
+        oldState -> {
+          String testId = event.getTest().locator().getId();
+          logger
+              .atInfo()
+              .with(IMPORTANCE, IMPORTANT)
+              .log(
+                  "Command [%s]'s invocation [%s] allocated devices [%s].",
+                  oldState.getCommandId(), testId, String.join(", ", deviceSerials));
+          return oldState.toBuilder()
+              .putRunningInvocation(
+                  testId,
+                  Invocation.newBuilder()
+                      .setCommandId(oldState.getCommandId())
+                      .setStartTime(toProtoTimestamp(Instant.now()))
+                      .addAllDeviceId(deviceSerials)
+                      .setStateSummary(config.getRunCommand().getTestPlan())
+                      .build())
+              .build();
+        });
     sessionInfo.putSessionProperty(
         SessionProperties.PROPERTY_KEY_SESSION_CONTAIN_STARTED_TEST, "true");
   }
@@ -250,16 +275,22 @@ public class AtsSessionPlugin {
   @Subscribe
   public void onTestEnded(TestEndedEvent event) {
     setRunCommandState(
-        oldState ->
-            oldState.toBuilder()
-                .setTotalExecutionTime(
-                    toProtoDuration(
-                        toJavaDuration(oldState.getTotalExecutionTime())
-                            .plus(
-                                Duration.between(
-                                    event.getTest().timing().getStartTime(), Instant.now()))))
-                .removeRunningInvocation(event.getTest().locator().getId())
-                .build());
+        oldState -> {
+          String testId = event.getTest().locator().getId();
+          logger
+              .atInfo()
+              .with(IMPORTANCE, IMPORTANT)
+              .log("Command [%s]'s invocation [%s] completed.", oldState.getCommandId(), testId);
+          return oldState.toBuilder()
+              .setTotalExecutionTime(
+                  toProtoDuration(
+                      toJavaDuration(oldState.getTotalExecutionTime())
+                          .plus(
+                              Duration.between(
+                                  event.getTest().timing().getStartTime(), Instant.now()))))
+              .removeRunningInvocation(testId)
+              .build();
+        });
 
     TestInfo testInfo = event.getTest();
     ResultTypeWithCause resultTypeWithCause = testInfo.resultWithCause().get();
