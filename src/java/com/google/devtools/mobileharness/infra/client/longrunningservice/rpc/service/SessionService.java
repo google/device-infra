@@ -207,16 +207,15 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
     if (!givenSessionIds.isEmpty()) {
       allSessionIds.retainAll(givenSessionIds);
     }
-    ImmutableList<String> filteredSessionIds = ImmutableList.of();
     if (request.hasSessionFilter()) {
-      filteredSessionIds =
-          sessionManager
-              .getAllSessions(SessionQueryUtil.SESSION_ID_FIELD_MASK, request.getSessionFilter())
-              .stream()
-              .map(sessionDetail -> sessionDetail.getSessionId().getId())
-              .collect(toImmutableList());
-    }
-    if (!filteredSessionIds.isEmpty()) {
+      ImmutableList<String> filteredSessionIds =
+          filteredSessionIds =
+              sessionManager
+                  .getAllSessions(
+                      SessionQueryUtil.SESSION_ID_FIELD_MASK, request.getSessionFilter())
+                  .stream()
+                  .map(sessionDetail -> sessionDetail.getSessionId().getId())
+                  .collect(toImmutableList());
       allSessionIds.retainAll(filteredSessionIds);
     }
     sessionManager.abortSessions(allSessionIds);
