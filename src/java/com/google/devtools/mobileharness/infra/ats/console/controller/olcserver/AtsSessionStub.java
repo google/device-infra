@@ -52,6 +52,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
@@ -261,7 +262,11 @@ public class AtsSessionStub {
 
   private void abortSessions(AbortSessionsRequest request) throws MobileHarnessException {
     try {
-      sessionStubProvider.get().abortSessions(request);
+      AbortSessionsResponse response = sessionStubProvider.get().abortSessions(request);
+      logger
+          .atInfo()
+          .with(IMPORTANCE, DEBUG)
+          .log("Successfully aborted sessions, response=[%s]", shortDebugString(response));
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_ABORT_SESSION_ERROR,

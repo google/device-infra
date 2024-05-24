@@ -17,8 +17,10 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,6 +33,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
+import java.util.Arrays;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -63,22 +66,26 @@ public final class SessionServiceTest {
     when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(filter)))
         .thenReturn(createSessionDetails("b", "c", "e"));
 
-    AbortSessionsResponse unused =
+    AbortSessionsResponse response =
         sessionService.doAbortSessions(
             AbortSessionsRequest.newBuilder()
                 .addAllSessionId(createSessionIds("a", "b", "c"))
                 .setSessionFilter(filter)
                 .build());
 
+    verify(sessionManager, times(2))
+        .getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), any());
     verify(sessionManager).abortSessions(eq(ImmutableList.of("b", "c")));
+    assertThat(response.getSessionIdList()).isEqualTo(createSessionIds("b", "c"));
   }
 
   @Test
   public void doAbortSessions_emptyRequest_success() {
-    AbortSessionsResponse unused =
+    AbortSessionsResponse response =
         sessionService.doAbortSessions(AbortSessionsRequest.getDefaultInstance());
 
-    verify(sessionManager, times(0)).abortSessions(any());
+    verify(sessionManager, never()).abortSessions(any());
+    assertThat(response.getSessionIdList()).isEmpty();
   }
 
   @Test
@@ -90,11 +97,14 @@ public final class SessionServiceTest {
     when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(filter)))
         .thenReturn(createSessionDetails("a", "b", "c"));
 
-    AbortSessionsResponse unused =
+    AbortSessionsResponse response =
         sessionService.doAbortSessions(
             AbortSessionsRequest.newBuilder().setSessionFilter(filter).build());
 
+    verify(sessionManager, times(2))
+        .getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), any());
     verify(sessionManager).abortSessions(eq(ImmutableList.of("a", "b", "c")));
+    assertThat(response.getSessionIdList()).isEqualTo(createSessionIds("a", "b", "c"));
   }
 
   @Test
@@ -102,22 +112,23 @@ public final class SessionServiceTest {
     when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(null)))
         .thenReturn(createSessionDetails("a", "b", "c", "d", "e"));
 
-    AbortSessionsResponse unused =
+    AbortSessionsResponse response =
         sessionService.doAbortSessions(
             AbortSessionsRequest.newBuilder().addAllSessionId(createSessionIds("c")).build());
 
     verify(sessionManager).getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), any());
     verify(sessionManager).abortSessions(eq(ImmutableList.of("c")));
+    assertThat(response.getSessionIdList()).isEqualTo(createSessionIds("c"));
   }
 
   private ImmutableList<SessionId> createSessionIds(String... sessionIds) {
-    return ImmutableList.copyOf(sessionIds).stream()
+    return Arrays.stream(sessionIds)
         .map(id -> SessionId.newBuilder().setId(id).build())
         .collect(toImmutableList());
   }
 
   private ImmutableList<SessionDetail> createSessionDetails(String... sessionIds) {
-    return ImmutableList.copyOf(sessionIds).stream()
+    return Arrays.stream(sessionIds)
         .map(
             id -> SessionDetail.newBuilder().setSessionId(SessionId.newBuilder().setId(id)).build())
         .collect(toImmutableList());

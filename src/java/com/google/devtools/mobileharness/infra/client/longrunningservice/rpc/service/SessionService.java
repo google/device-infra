@@ -220,7 +220,12 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
       allSessionIds.retainAll(filteredSessionIds);
     }
     sessionManager.abortSessions(allSessionIds);
-    return AbortSessionsResponse.getDefaultInstance();
+    return AbortSessionsResponse.newBuilder()
+        .addAllSessionId(
+            allSessionIds.stream()
+                .map(sessionId -> SessionId.newBuilder().setId(sessionId).build())
+                .collect(toImmutableList()))
+        .build();
   }
 
   private static RunSessionResponse createRunSessionResponse(SessionDetail finalResult) {

@@ -30,6 +30,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:session_service",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_query_util",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_truth_extensions_truth_proto_extension",
         "@maven//:junit_junit",
         "@maven//:org_mockito_mockito_core",
     ],

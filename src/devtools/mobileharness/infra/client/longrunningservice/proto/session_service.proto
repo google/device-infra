@@ -161,14 +161,14 @@ message NotifySessionResponse {
   bool successful = 1;
 }
 
-// A request to abort sessions. If both session_id and session_filter are empty,
-// no sessions will be aborted.
+// A request to abort sessions. If all fields are empty, no sessions will be
+// aborted.
 message AbortSessionsRequest {
   // Optional.
   //
   // A list of session ids to be aborted.
   //
-  // If empty, session_filter will filter all sessions instead of no sessions.
+  // If empty, other fields will filter all sessions instead of no sessions.
   repeated SessionId session_id = 1;
 
   // Optional.
@@ -177,7 +177,17 @@ message AbortSessionsRequest {
   SessionFilter session_filter = 2;
 }
 
-message AbortSessionsResponse {}
+message AbortSessionsResponse {
+  // Required.
+  //
+  // A list of session ids that are aborted.
+  repeated SessionId session_id = 1;
+
+  // Optional.
+  //
+  // Filters to filter sessions and abort.
+  SessionFilter session_filter = 2;
+}
 
 message SessionFilter {
   // Optional.
