@@ -20,6 +20,7 @@ package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
         "//:deviceinfra_all_pkg",
+        "//java/com/google/chrome/dongle/client/testing/mobileharness/virtualhome:__subpackages__",
     ],
 )
 
