@@ -597,13 +597,38 @@ public class SessionManager {
   private static Optional<Predicate<SessionOutput>> getSessionOutputFilter(
       @Nullable SessionFilter sessionFilter) {
     if (sessionFilter != null) {
+      Predicate<SessionOutput> excludedPropertyFilter = null;
       ImmutableSet<String> excludedSessionPropertyKeys =
           ImmutableSet.copyOf(sessionFilter.getExcludedSessionPropertyKeyList());
       if (!excludedSessionPropertyKeys.isEmpty()) {
-        return Optional.of(
+        excludedPropertyFilter =
             sessionOutput ->
                 sessionOutput.getSessionPropertyMap().keySet().stream()
-                    .noneMatch(excludedSessionPropertyKeys::contains));
+                    .noneMatch(excludedSessionPropertyKeys::contains);
+      }
+
+      Predicate<SessionOutput> includedPropertyFilter = null;
+      Map<String, String> includedSessionProperties = sessionFilter.getIncludedSessionPropertyMap();
+      if (!includedSessionProperties.isEmpty()) {
+        includedPropertyFilter =
+            sessionOutput -> {
+              Map<String, String> sessionOutputProperties = sessionOutput.getSessionPropertyMap();
+              return includedSessionProperties.entrySet().stream()
+                  .allMatch(
+                      property ->
+                          Objects.equals(
+                              sessionOutputProperties.get(property.getKey()), property.getValue()));
+            };
+      }
+
+      if (excludedPropertyFilter != null) {
+        if (includedPropertyFilter != null) {
+          return Optional.of(excludedPropertyFilter.and(includedPropertyFilter));
+        } else {
+          return Optional.of(excludedPropertyFilter);
+        }
+      } else if (includedPropertyFilter != null) {
+        return Optional.of(includedPropertyFilter);
       }
     }
     return Optional.empty();

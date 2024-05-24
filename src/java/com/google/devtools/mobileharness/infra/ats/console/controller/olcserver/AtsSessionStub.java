@@ -64,6 +64,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.SessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.TextFormat;
@@ -194,7 +195,7 @@ public class AtsSessionStub {
       throws MobileHarnessException {
     SessionFilter sessionFilter =
         fromCurrentClient
-            ? SessionQueryUtil.getUnfinishedAndNotAbortedSessionFromClientFilter(clientId)
+            ? SessionQueryUtil.getAllAbortableSessionFromClientFilter(clientId)
             : SessionQueryUtil.UNFINISHED_NOT_ABORTED_SESSION_FILTER;
     GetAllSessionsRequest getAllSessionsRequest =
         GetAllSessionsRequest.newBuilder()
@@ -209,6 +210,21 @@ public class AtsSessionStub {
         .collect(toImmutableList());
   }
 
+  public ImmutableList<AtsSessionPluginConfigOutput> getAllUnfinishedSessions(
+      String sessionNameRegex, boolean fromCurrentClient) throws MobileHarnessException {
+    SessionFilter filter =
+        SessionFilter.newBuilder()
+            .setSessionNameRegex(sessionNameRegex)
+            .setSessionStatusNameRegex(SessionQueryUtil.UNFINISHED_SESSION_STATUS_NAME_REGEX)
+            .build();
+    GetAllSessionsRequest getAllSessionsRequest =
+        GetAllSessionsRequest.newBuilder()
+            .setSessionFilter(
+                fromCurrentClient ? SessionQueryUtil.injectClientId(filter, clientId) : filter)
+            .build();
+    return getAllSessionOutputByRequest(getAllSessionsRequest);
+  }
+
   /** Returns all sessions. */
   public ImmutableList<AtsSessionPluginConfigOutput> getAllSessions(
       String sessionNameRegex, String sessionStatusNameRegex) throws MobileHarnessException {
@@ -219,6 +235,11 @@ public class AtsSessionStub {
                     .setSessionNameRegex(sessionNameRegex)
                     .setSessionStatusNameRegex(sessionStatusNameRegex))
             .build();
+    return getAllSessionOutputByRequest(getAllSessionsRequest);
+  }
+
+  private ImmutableList<AtsSessionPluginConfigOutput> getAllSessionOutputByRequest(
+      GetAllSessionsRequest getAllSessionsRequest) throws MobileHarnessException {
     GetAllSessionsResponse getAllSessionsResponse = getAllSessionsByRequest(getAllSessionsRequest);
     return getAllSessionsResponse.getSessionDetailList().stream()
         .flatMap(
@@ -260,13 +281,28 @@ public class AtsSessionStub {
     abortSessions(AbortSessionsRequest.newBuilder().setSessionFilter(sessionFilter).build());
   }
 
-  private void abortSessions(AbortSessionsRequest request) throws MobileHarnessException {
+  public AbortSessionsResponse abortSessionByCommandId(String commandId)
+      throws MobileHarnessException {
+    SessionFilter sessionFilter =
+        SessionQueryUtil.getAbortableSessionFromClientFilter(commandId, clientId);
+    logger
+        .atInfo()
+        .with(IMPORTANCE, DEBUG)
+        .log("Aborting sessions, sessionFilter=[%s]", shortDebugString(sessionFilter));
+    return abortSessions(AbortSessionsRequest.newBuilder().setSessionFilter(sessionFilter).build());
+  }
+
+  @CanIgnoreReturnValue
+  private AbortSessionsResponse abortSessions(AbortSessionsRequest request)
+      throws MobileHarnessException {
     try {
+
       AbortSessionsResponse response = sessionStubProvider.get().abortSessions(request);
       logger
           .atInfo()
           .with(IMPORTANCE, DEBUG)
           .log("Successfully aborted sessions, response=[%s]", shortDebugString(response));
+      return response;
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_ABORT_SESSION_ERROR,

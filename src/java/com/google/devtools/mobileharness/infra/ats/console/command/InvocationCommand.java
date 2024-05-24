@@ -23,10 +23,11 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.AtsSessionPluginConfigOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsResponse;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.Parameters;
 
@@ -41,10 +42,6 @@ import picocli.CommandLine.Parameters;
       HelpCommand.class,
     })
 class InvocationCommand implements Callable<Integer> {
-
-  private static final String UNFINISHED_SESSION_STATUS_NAME_REGEX =
-      String.format(
-          "%s|%s", SessionStatus.SESSION_SUBMITTED.name(), SessionStatus.SESSION_RUNNING.name());
 
   @Parameters(
       index = "0",
@@ -69,9 +66,27 @@ class InvocationCommand implements Callable<Integer> {
   public Integer call() throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
     ImmutableList<AtsSessionPluginConfigOutput> sessionPluginConfigOutputs =
-        atsSessionStub.getAllSessions(
-            RunCommand.RUN_COMMAND_SESSION_NAME, UNFINISHED_SESSION_STATUS_NAME_REGEX);
+        atsSessionStub.getAllUnfinishedSessions(
+            RunCommand.RUN_COMMAND_SESSION_NAME, /* fromCurrentClient= */ true);
     return PluginOutputPrinter.showCommandInvocations(
         sessionPluginConfigOutputs, commandId, consoleUtil);
+  }
+
+  @Command(name = "stop", description = "Stop the given invocation.")
+  public Integer stop() throws MobileHarnessException, InterruptedException {
+    serverPreparer.prepareOlcServer();
+    AbortSessionsResponse response = atsSessionStub.abortSessionByCommandId(commandId);
+    if (response.getSessionIdList().isEmpty()) {
+      consoleUtil.printlnStdout(
+          String.format(
+              "Could not stop invocation %s, try 'list invocation'"
+                  + " or 'invocation %s' for more information.",
+              commandId, commandId));
+    } else {
+      consoleUtil.printlnStdout(
+          String.format(
+              "Invocation %s has been requested to stop. It may take some times.", commandId));
+    }
+    return ExitCode.OK;
   }
 }

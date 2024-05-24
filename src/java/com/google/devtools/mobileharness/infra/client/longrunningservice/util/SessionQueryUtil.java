@@ -100,13 +100,22 @@ public final class SessionQueryUtil {
               SessionProperties.PROPERTY_KEY_SESSION_CONTAIN_STARTED_TEST)
           .build();
 
-  public static SessionFilter getUnfinishedAndNotAbortedSessionFromClientFilter(String clientId) {
+  public static SessionFilter getAllAbortableSessionFromClientFilter(String clientId) {
     return injectClientId(UNFINISHED_NOT_ABORTED_SESSION_FILTER, clientId);
   }
 
   public static SessionFilter getUnfinishedSessionWithoutStartedTestFromClientFilter(
       String clientId) {
     return injectClientId(UNFINISHED_SESSION_WITHOUT_STARTED_TEST_FILTER, clientId);
+  }
+
+  public static SessionFilter getAbortableSessionFromClientFilter(
+      String commandId, String clientId) {
+    SessionFilter filter =
+        UNFINISHED_NOT_ABORTED_SESSION_FILTER.toBuilder()
+            .putIncludedSessionProperty(SessionProperties.PROPERTY_KEY_COMMAND_ID, commandId)
+            .build();
+    return injectClientId(filter, clientId);
   }
 
   public static SessionFilter injectClientId(SessionFilter sessionFilter, String clientId) {

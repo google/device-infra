@@ -121,6 +121,25 @@ public final class SessionServiceTest {
     assertThat(response.getSessionIdList()).isEqualTo(createSessionIds("c"));
   }
 
+  @Test
+  public void doAbortSessions_noSessionMatched() {
+    SessionFilter filter =
+        SessionFilter.newBuilder().setSessionNameRegex("session_name_regex").build();
+    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(null)))
+        .thenReturn(createSessionDetails("a", "b", "c", "d", "e"));
+    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(filter)))
+        .thenReturn(ImmutableList.of());
+
+    AbortSessionsResponse response =
+        sessionService.doAbortSessions(
+            AbortSessionsRequest.newBuilder().setSessionFilter(filter).build());
+
+    verify(sessionManager, times(2))
+        .getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), any());
+    verify(sessionManager).abortSessions(eq(ImmutableList.of()));
+    assertThat(response.getSessionIdList()).isEmpty();
+  }
+
   private ImmutableList<SessionId> createSessionIds(String... sessionIds) {
     return Arrays.stream(sessionIds)
         .map(id -> SessionId.newBuilder().setId(id).build())

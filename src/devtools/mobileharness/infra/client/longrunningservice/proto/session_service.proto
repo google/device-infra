@@ -210,9 +210,16 @@ message SessionFilter {
   // contain a key that is in the list.
   repeated string excluded_session_property_key = 3;
 
+  // TODO: Remove this field and clean up its usage.
   // Optional.
   //
   // Matches a SessionDetail if the map is a sub map of
   // session_config.session_property.
   map<string, string> included_session_config_property = 4;
+
+  // Optional.
+  //
+  // Matches a SessionDetail if the map is a sub map of
+  // session_output.session_property.
+  map<string, string> included_session_property = 5;
 }

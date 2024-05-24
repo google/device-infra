@@ -146,7 +146,7 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
         sessionManager
             .getAllSessions(
                 SessionQueryUtil.SESSION_ID_FIELD_MASK,
-                SessionQueryUtil.getUnfinishedAndNotAbortedSessionFromClientFilter(clientId))
+                SessionQueryUtil.getAllAbortableSessionFromClientFilter(clientId))
             .stream()
             .map(SessionDetail::getSessionId)
             .map(SessionId::getId)

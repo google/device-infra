@@ -120,11 +120,10 @@ public class AtsSessionPlugin {
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
       RunCommand runCommand = config.getRunCommand();
 
+      String commandId = Integer.toString(NEXT_RUN_COMMAND_ID.getAndIncrement());
       setRunCommandState(
-          oldState ->
-              runCommand.getInitialState().toBuilder()
-                  .setCommandId(Integer.toString(NEXT_RUN_COMMAND_ID.getAndIncrement()))
-                  .build());
+          oldState -> runCommand.getInitialState().toBuilder().setCommandId(commandId).build());
+      sessionInfo.putSessionProperty(SessionProperties.PROPERTY_KEY_COMMAND_ID, commandId);
 
       runCommandHandler.initialize(runCommand);
       ImmutableList<String> tradefedJobIds = runCommandHandler.addTradefedJobs(runCommand);

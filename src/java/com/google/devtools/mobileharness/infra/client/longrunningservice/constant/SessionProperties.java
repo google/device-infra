@@ -45,5 +45,8 @@ public class SessionProperties {
   public static final String PROPERTY_KEY_SESSION_CONTAIN_STARTED_TEST =
       "olc_server_session_contain_started_test";
 
+  /** A property to indicate the ID of the corresponding command. */
+  public static final String PROPERTY_KEY_COMMAND_ID = "olc_server_session_command_id";
+
   private SessionProperties() {}
 }
