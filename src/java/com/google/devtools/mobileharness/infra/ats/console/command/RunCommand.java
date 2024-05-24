@@ -75,12 +75,12 @@ import picocli.CommandLine.ParameterException;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
-/** Command to run CTS tests. */
+/** Command to run xTS tests. */
 @Command(
     name = "run",
     aliases = {"r"},
     sortOptions = false,
-    description = "Run CTS tests.",
+    description = "Run xTS tests.",
     footer = {
       "%nAlternatively you can enter @|fg(yellow) <config>|@ right after \"run\" command which"
           + " will achieve same result.%n",
@@ -98,7 +98,7 @@ public final class RunCommand implements Callable<Integer> {
       arity = "0..1",
       paramLabel = "<config>",
       hideParamSyntax = true,
-      description = "CTS test config/plan.")
+      description = "xTS test config/plan.")
   private String config;
 
   @ArgGroup(exclusive = false, multiplicity = "0..*")
@@ -131,13 +131,13 @@ public final class RunCommand implements Callable<Integer> {
       names = {"--shard-count"},
       paramLabel = "<number_of_shards>",
       description =
-          "Shard a CTS run into given number of independent chunks, to run on multiple devices in"
+          "Shard a run into given number of independent chunks, to run on multiple devices in"
               + " parallel.")
   private int shardCount;
 
   @Option(
       names = {"--include-filter", "--compatibility:include-filter"},
-      paramLabel = "\"<test_module_name> <test_name>\"",
+      paramLabel = "\"[abi] <module_name> <test_name>\"",
       description =
           "Run with the specified modules, or test packages, classes, and cases. For example, run"
               + " cts --include-filter \"CtsCalendarcommon2TestCases"
@@ -148,7 +148,7 @@ public final class RunCommand implements Callable<Integer> {
 
   @Option(
       names = {"--exclude-filter", "--compatibility:exclude-filter"},
-      paramLabel = "\"<test_module_name> <test_name>\"",
+      paramLabel = "\"[abi] <module_name> <test_name>\"",
       description =
           "Exclude the specified modules, or test packages, classes, and cases, from the run. For"
               + " example, run cts --exclude-filter \"CtsCalendarcommon2Test"

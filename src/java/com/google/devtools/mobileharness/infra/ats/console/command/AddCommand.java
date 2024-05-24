@@ -124,7 +124,7 @@ class AddCommand implements Callable<Integer> {
           String abi,
       @Option(
               names = {"--exclude-filter"},
-              paramLabel = "\"[abi] <module-name> [test name]\"",
+              paramLabel = "\"[abi] <module_name> <test_name>\"",
               description =
                   "Exclude the specified modules, or test packages, classes, and cases, from the"
                       + " subplan. For example, add subplan --session"
