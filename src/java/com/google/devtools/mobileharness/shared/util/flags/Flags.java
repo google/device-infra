@@ -1190,6 +1190,18 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> useAlts = useAltsDefault;
 
+  private static final Flag<String> xtsResDirRootDefault = Flag.value(getXtsResDirRootDefaultOss());
+
+  @com.beust.jcommander.Parameter(
+      names = "--xts_res_dir_root",
+      description = "The xts resources Dir Root.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> xtsResDirRoot = xtsResDirRootDefault;
+
+  private static String getXtsResDirRootDefaultOss() {
+    return Strings.nullToEmpty(System.getenv("HOME")) + "/xts";
+  }
+
   private static final Flag<Boolean> useTfRetryDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

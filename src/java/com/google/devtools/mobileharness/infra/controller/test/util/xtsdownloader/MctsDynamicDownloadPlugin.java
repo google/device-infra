@@ -39,9 +39,9 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidPro
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.protobuf.TextFormat;
-import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalTestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import java.io.BufferedInputStream;
@@ -292,7 +292,8 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
       throws MobileHarnessException, InterruptedException {
     synchronized (lock) {
       // tmp/dynamic_download/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
-      String dynamicDownloadDir = DirCommon.getTempDirRoot() + "/mcts_dynamic_download";
+      String dynamicDownloadDir =
+          Flags.instance().xtsResDirRoot.getNonNull() + "/mcts_dynamic_download";
       String filePath = PathUtil.join(dynamicDownloadDir, subDirName);
       URLConnection connection = null;
       try {
