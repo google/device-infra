@@ -16,7 +16,12 @@
 
 package com.google.devtools.mobileharness.shared.constant;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import com.google.common.flogger.MetadataKey;
+import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.devtools.mobileharness.shared.util.base.StackSet;
+import javax.annotation.Nullable;
 
 /** Constants of importance of log records. */
 public class LogRecordImportance {
@@ -56,6 +61,42 @@ public class LogRecordImportance {
 
   public static final MetadataKey<Importance> IMPORTANCE =
       MetadataKey.single("importance", Importance.class);
+
+  /**
+   * Set the default log record importance of logs generated between this scope is created and
+   * closed in the same thread (including logs generated from invoked methods).
+   *
+   * <p>Example:
+   *
+   * <pre>{@code
+   * try (var ignored = new LogImportanceScope(IMPORTANT)) {
+   *   ... // All log statements in this scope will have importance IMPORTANT.
+   * }
+   * }</pre>
+   */
+  public static class LogImportanceScope implements NonThrowingAutoCloseable {
+
+    private static final ThreadLocal<StackSet<LogImportanceScope>> SCOPES =
+        ThreadLocal.withInitial(StackSet::new);
+
+    @Nullable
+    public static Importance getCurrentImportance() {
+      LogImportanceScope scope = SCOPES.get().getLast();
+      return scope == null ? null : scope.importance;
+    }
+
+    private final Importance importance;
+
+    public LogImportanceScope(Importance importance) {
+      this.importance = checkNotNull(importance);
+      SCOPES.get().add(this);
+    }
+
+    @Override
+    public void close() {
+      SCOPES.get().removeUntilLast(this);
+    }
+  }
 
   private LogRecordImportance() {}
 }

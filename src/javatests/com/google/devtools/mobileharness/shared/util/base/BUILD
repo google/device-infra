@@ -24,6 +24,7 @@ java_library(
     name = "base",
     srcs = glob(["*.java"]),
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:stack_set",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "@maven//:com_google_guava_guava",
