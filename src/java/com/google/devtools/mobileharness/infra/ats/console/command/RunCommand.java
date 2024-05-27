@@ -493,6 +493,9 @@ public final class RunCommand implements Callable<Integer> {
     if (retryType != null) {
       runCommand.setRetryType(Ascii.toUpperCase(retryType.name()));
     }
+    if (Flags.instance().enableXtsDynamicDownloader.getNonNull()) {
+      runCommand.setEnableXtsDynamicDownload(true);
+    }
 
     ImmutableList<String> commandLineArgs = command.stream().skip(1L).collect(toImmutableList());
     runCommand.setInitialState(

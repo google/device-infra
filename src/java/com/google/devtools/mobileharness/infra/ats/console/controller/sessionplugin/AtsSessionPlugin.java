@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
@@ -138,6 +139,13 @@ public class AtsSessionPlugin {
                 + " needed.",
             sessionInfo.getSessionId());
         runCommandHandler.addNonTradefedJobs(runCommand);
+      }
+      if (runCommand.getEnableXtsDynamicDownload()) {
+        sessionInfo
+            .getAllJobs()
+            .forEach(
+                jobInfo ->
+                    jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true"));
       }
       return;
     } else if (config.getCommandCase().equals(CommandCase.LIST_COMMAND)) {

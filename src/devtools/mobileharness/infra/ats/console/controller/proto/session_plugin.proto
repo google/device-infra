@@ -102,6 +102,9 @@ message RunCommand {
 
   // Optional. Whether to include html reports in the result zip file.
   optional bool html_in_zip = 16;
+
+  // Optional. Whether to enable xts dynamic download.
+  optional bool enable_xts_dynamic_download = 17;
 }
 
 message RunCommandState {

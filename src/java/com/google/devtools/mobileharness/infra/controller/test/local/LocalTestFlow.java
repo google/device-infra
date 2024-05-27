@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.control
 import com.google.devtools.mobileharness.infra.controller.test.util.TestCommandHistorySaver;
 import com.google.devtools.mobileharness.infra.controller.test.util.atsfileserveruploader.AtsFileServerUploaderPlugin;
 import com.google.devtools.mobileharness.infra.controller.test.util.xtsdownloader.MctsDynamicDownloadPlugin;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.plugin.XtsDeviceCompatibilityChecker;
 import com.google.devtools.mobileharness.platform.testbed.adhoc.controller.AdhocTestbedDriverFactory;
@@ -138,7 +139,7 @@ public class LocalTestFlow {
   ImmutableList<PluginItem<?>> loadBuiltInPlugin(TestInfo testInfo, DirectTestRunner testRunner) {
     // Loads built-in plugins.
     ImmutableList.Builder<PluginItem<?>> builtinPluginsBuilder = ImmutableList.builder();
-    if (isXtsDynamicDownloaderEnabled()) {
+    if (isXtsDynamicDownloaderEnabled(testInfo)) {
       builtinPluginsBuilder.add(
           PluginItem.create(new MctsDynamicDownloadPlugin(), EventScope.INTERNAL_PLUGIN));
     }
@@ -729,8 +730,12 @@ public class LocalTestFlow {
   }
 
   /** Returns {@code true} if xts dynamic downloader is enabled. */
-  private static boolean isXtsDynamicDownloaderEnabled() {
-    return Flags.instance().enableXtsDynamicDownloader.getNonNull();
+  private static boolean isXtsDynamicDownloaderEnabled(TestInfo testInfo) {
+    return testInfo
+        .jobInfo()
+        .properties()
+        .getBoolean(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED)
+        .orElse(false);
   }
 
   private static boolean isAtsFileServerUploaderEnabled() {
