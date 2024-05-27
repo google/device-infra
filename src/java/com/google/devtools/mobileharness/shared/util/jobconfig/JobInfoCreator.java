@@ -76,6 +76,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.UUID;
 import javax.annotation.Nullable;
 
@@ -114,6 +115,7 @@ public final class JobInfoCreator {
   /** Creates JobInfo from Gateway JobConfig. */
   public static JobInfo createJobInfo(
       String jobId,
+      String actualUser,
       com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
       String sessionTmpDir,
       String sessionGenDir)
@@ -160,10 +162,7 @@ public final class JobInfoCreator {
               mhJobConfig,
               jobConfigFromTarget.getNonstandardFlagList(),
               jobSetting,
-              JobUser.newBuilder()
-                  .setRunAs(jobConfig.getUser())
-                  .setActualUser("mobileharness-gateway")
-                  .build(),
+              JobUser.newBuilder().setRunAs(jobConfig.getUser()).setActualUser(actualUser).build(),
               sessionTmpDir,
               jobConfigFromTarget.getGenDirPath(),
               false);
@@ -176,7 +175,8 @@ public final class JobInfoCreator {
         }
       }
     } else {
-      jobInfo = createJobInfo(jobId, jobConfig, jobSetting, localFileUtil, sessionTmpDir);
+      jobInfo =
+          createJobInfo(jobId, actualUser, jobConfig, jobSetting, localFileUtil, sessionTmpDir);
     }
     return jobInfo;
   }
@@ -335,6 +335,7 @@ public final class JobInfoCreator {
   /** Creates JobInfo from Gateway JobConfig which does not contain MH JobConfig. */
   private static JobInfo createJobInfo(
       String jobId,
+      String actualUser,
       com.google.devtools.mobileharness.api.gateway.proto.Setting.JobConfig jobConfig,
       JobSetting jobSetting,
       LocalFileUtil localFileUtil,
@@ -346,7 +347,7 @@ public final class JobInfoCreator {
             .setJobUser(
                 JobUser.newBuilder()
                     .setRunAs(jobConfig.getUser())
-                    .setActualUser("mobileharness-gateway")
+                    .setActualUser(actualUser)
                     .build())
             .setType(mayAppendDecorator(jobConfig.getType(), jobConfig))
             .setSetting(jobSetting)
@@ -496,7 +497,7 @@ public final class JobInfoCreator {
     for (Entry<String, List<String>> entry : overridingFiles.entrySet()) {
       String tag = entry.getKey();
       List<String> files = new ArrayList<>(entry.getValue());
-      if (TAG_BUILD_APK.equals(tag)) {
+      if (Objects.equals(tag, TAG_BUILD_APK)) {
         apksUnderTest = putApksUnderTestInFront(files);
       }
 
@@ -670,7 +671,7 @@ public final class JobInfoCreator {
    */
   private static JobType mayAppendPerformanceLockDecorator(JobType type) {
     List<String> originalDecorators = type.getDecoratorList();
-    if (!ANDROID_REAL_DEVICE.equals(type.getDevice())
+    if (!type.getDevice().equals(ANDROID_REAL_DEVICE)
         || originalDecorators.contains(PERFORMANCE_LOCK_DECORATOR)) {
       return type;
     }
