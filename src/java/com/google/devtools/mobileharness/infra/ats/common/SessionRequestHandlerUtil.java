@@ -192,12 +192,24 @@ public class SessionRequestHandlerUtil {
    * running the job as the job may need multiple devices to run the test.
    */
   private ImmutableList<SubDeviceSpec> getSubDeviceSpecListForTradefed(
-      List<String> passedInDeviceSerials, int shardCount)
+      SessionRequestInfo sessionRequestInfo, int shardCount)
       throws MobileHarnessException, InterruptedException {
     ImmutableSet<String> allAndroidDevices = getAllAndroidDevices();
     logger.atInfo().log("All android devices: %s", allAndroidDevices);
+    ImmutableList<String> passedInDeviceSerials = sessionRequestInfo.deviceSerials();
+
     if (passedInDeviceSerials.isEmpty()) {
-      return pickAndroidOnlineDevices(allAndroidDevices, shardCount);
+      return pickAndroidOnlineDevices(
+          allAndroidDevices.stream()
+              .filter(
+                  deviceId ->
+                      DeviceSelection.matches(
+                          deviceId,
+                          DeviceSelectionOptions.builder()
+                              .setSerials(passedInDeviceSerials)
+                              .build()))
+              .collect(toImmutableSet()),
+          shardCount);
     }
 
     ArrayList<String> existingPassedInDeviceSerials = new ArrayList<>();
@@ -220,6 +232,11 @@ public class SessionRequestHandlerUtil {
       return ImmutableList.of();
     }
     return existingPassedInDeviceSerials.stream()
+        .filter(
+            deviceId ->
+                DeviceSelection.matches(
+                    deviceId,
+                    DeviceSelectionOptions.builder().setSerials(passedInDeviceSerials).build()))
         .map(
             serial ->
                 SubDeviceSpec.newBuilder()
@@ -230,12 +247,12 @@ public class SessionRequestHandlerUtil {
   }
 
   private ImmutableList<SubDeviceSpec> pickAndroidOnlineDevices(
-      Set<String> allAndroidOnlineDevices, int shardCount) {
-    if (shardCount <= 1 && !allAndroidOnlineDevices.isEmpty()) {
+      Set<String> allMatchAndroidOnlineDevices, int shardCount) {
+    if (shardCount <= 1 && !allMatchAndroidOnlineDevices.isEmpty()) {
       return ImmutableList.of(
           SubDeviceSpec.newBuilder().setType(getTradefedRequiredDeviceType()).build());
     }
-    int numOfNeededDevices = min(allAndroidOnlineDevices.size(), shardCount);
+    int numOfNeededDevices = min(allMatchAndroidOnlineDevices.size(), shardCount);
     ImmutableList.Builder<SubDeviceSpec> deviceSpecList = ImmutableList.builder();
     for (int i = 0; i < numOfNeededDevices; i++) {
       deviceSpecList.add(
@@ -387,7 +404,6 @@ public class SessionRequestHandlerUtil {
     String testPlan = sessionRequestInfo.testPlan();
     Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     String xtsType = sessionRequestInfo.xtsType();
-    ImmutableList<String> deviceSerials = sessionRequestInfo.deviceSerials();
     int shardCount = sessionRequestInfo.shardCount().orElse(0);
     ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
     ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
@@ -395,7 +411,7 @@ public class SessionRequestHandlerUtil {
     // TODO: migrate multi-device tests to non-TF
     int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
     ImmutableList<SubDeviceSpec> subDeviceSpecList =
-        getSubDeviceSpecListForTradefed(deviceSerials, max(shardCount, minDeviceCount));
+        getSubDeviceSpecListForTradefed(sessionRequestInfo, max(shardCount, minDeviceCount));
     if (subDeviceSpecList.size() < minDeviceCount) {
       logger
           .atInfo()

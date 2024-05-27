@@ -31,6 +31,8 @@ java_library(
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:cts_list",
     ],
     deps = [
+        ":device_selection",
+        ":device_selection_options",
         ":session_handler_helper",
         ":session_request_info",
         ":test_plan_loader",
@@ -177,5 +179,23 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "device_selection_options",
+    srcs = ["DeviceSelectionOptions.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "device_selection",
+    srcs = ["DeviceSelection.java"],
+    deps = [
+        ":device_selection_options",
+        "@maven//:com_google_guava_guava",
     ],
 )
