@@ -190,7 +190,9 @@ public class AtsSessionStub {
     return getSessionPluginOutput(runSessionResponse.getSessionDetail());
   }
 
-  /** Returns all sessions which are not finished and not aborted. */
+  /**
+   * Returns all sessions including non RunCommand sessions which are not finished and not aborted.
+   */
   public ImmutableList<String> getAllUnfinishedNotAbortedSessions(boolean fromCurrentClient)
       throws MobileHarnessException {
     SessionFilter sessionFilter =
