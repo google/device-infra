@@ -899,6 +899,13 @@ public class XtsTradefedTest extends BaseDriver
       }
 
       localFileUtil.grantFileOrDirFullAccessRecursively(resultsDirInTmpXtsWorkDir);
+
+      // Link subplan dir so TF can use the subplan for retry
+      Path sourceXtsSubPlansDir = XtsDirUtil.getXtsSubPlansDir(sourceXtsRootDir, xtsType);
+      if (localFileUtil.isDirExist(sourceXtsSubPlansDir)) {
+        Path linkSubPlansDir = XtsDirUtil.getXtsSubPlansDir(tmpXtsWorkDir, xtsType);
+        createSymlink(linkSubPlansDir, sourceXtsSubPlansDir);
+      }
     }
 
     if (isRunWithSubPlan(spec)) {
