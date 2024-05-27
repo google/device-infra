@@ -225,19 +225,6 @@ public class AtsSessionStub {
     return getAllSessionOutputByRequest(getAllSessionsRequest);
   }
 
-  /** Returns all sessions. */
-  public ImmutableList<AtsSessionPluginConfigOutput> getAllSessions(
-      String sessionNameRegex, String sessionStatusNameRegex) throws MobileHarnessException {
-    GetAllSessionsRequest getAllSessionsRequest =
-        GetAllSessionsRequest.newBuilder()
-            .setSessionFilter(
-                SessionFilter.newBuilder()
-                    .setSessionNameRegex(sessionNameRegex)
-                    .setSessionStatusNameRegex(sessionStatusNameRegex))
-            .build();
-    return getAllSessionOutputByRequest(getAllSessionsRequest);
-  }
-
   private ImmutableList<AtsSessionPluginConfigOutput> getAllSessionOutputByRequest(
       GetAllSessionsRequest getAllSessionsRequest) throws MobileHarnessException {
     GetAllSessionsResponse getAllSessionsResponse = getAllSessionsByRequest(getAllSessionsRequest);
@@ -297,7 +284,8 @@ public class AtsSessionStub {
       throws MobileHarnessException {
     try {
 
-      AbortSessionsResponse response = sessionStubProvider.get().abortSessions(request);
+      AbortSessionsResponse response =
+          requireNonNull(sessionStubProvider.get()).abortSessions(request);
       logger
           .atInfo()
           .with(IMPORTANCE, DEBUG)

@@ -38,7 +38,6 @@ import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanConfigU
 import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanLister;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultLister;
 import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionStatus;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters;
 import java.nio.file.Path;
 import java.util.Map.Entry;
@@ -66,10 +65,6 @@ import picocli.CommandLine.Spec;
 class ListCommand implements Callable<Integer> {
 
   @Spec private CommandSpec spec;
-
-  private static final String UNFINISHED_SESSION_STATUS_NAME_REGEX =
-      String.format(
-          "%s|%s", SessionStatus.SESSION_SUBMITTED.name(), SessionStatus.SESSION_RUNNING.name());
 
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
@@ -112,8 +107,8 @@ class ListCommand implements Callable<Integer> {
   public int commands() throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
     ImmutableList<AtsSessionPluginConfigOutput> sessionPluginConfigOutputs =
-        atsSessionStub.getAllSessions(
-            RunCommand.RUN_COMMAND_SESSION_NAME, UNFINISHED_SESSION_STATUS_NAME_REGEX);
+        atsSessionStub.getAllUnfinishedSessions(
+            RunCommand.RUN_COMMAND_SESSION_NAME, /* fromCurrentClient= */ true);
     String result = PluginOutputPrinter.listCommands(sessionPluginConfigOutputs);
     consoleUtil.printlnStdout(result);
     return ExitCode.OK;
@@ -147,8 +142,8 @@ class ListCommand implements Callable<Integer> {
   public int invocations() throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
     ImmutableList<AtsSessionPluginConfigOutput> sessionPluginConfigOutputs =
-        atsSessionStub.getAllSessions(
-            RunCommand.RUN_COMMAND_SESSION_NAME, UNFINISHED_SESSION_STATUS_NAME_REGEX);
+        atsSessionStub.getAllUnfinishedSessions(
+            RunCommand.RUN_COMMAND_SESSION_NAME, /* fromCurrentClient= */ true);
     String result = PluginOutputPrinter.listInvocations(sessionPluginConfigOutputs);
     consoleUtil.printlnStdout(result);
     return ExitCode.OK;
