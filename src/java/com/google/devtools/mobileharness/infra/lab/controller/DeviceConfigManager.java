@@ -118,13 +118,13 @@ public abstract class DeviceConfigManager implements Runnable {
 
   @VisibleForTesting
   void refreshDeviceConfigs() throws MobileHarnessException, InterruptedException {
-    logger.atInfo().log("Start to load device configs from config service.");
+    logger.atFine().log("Start to load device configs from config service.");
     // Get the active device UUID.
     ImmutableSet<String> activeDeviceUuids =
         localDeviceManager.getAllDeviceStatus(false).keySet().stream()
             .map(Device::getDeviceUuid)
             .collect(toImmutableSet());
-    logger.atInfo().log("There are %s devices in device id map", activeDeviceUuids.size());
+    logger.atFine().log("There are %s devices in device id map", activeDeviceUuids.size());
 
     // Map from UUID to Control ID for all local devices with UUID.
     Map<String, String> deviceUuidToControlDeviceIdMap =
@@ -134,7 +134,7 @@ public abstract class DeviceConfigManager implements Runnable {
     apiConfig.getTestbedUuidList().stream()
         .filter(uuid -> !deviceUuidToControlDeviceIdMap.containsKey(uuid))
         .forEach(uuid -> deviceUuidToControlDeviceIdMap.put(uuid, uuid));
-    logger.atInfo().log(
+    logger.atFine().log(
         "Try to load %d devices config after filtering", deviceUuidToControlDeviceIdMap.size());
 
     ImmutableList<DeviceLocator> deviceLocators =
@@ -210,7 +210,7 @@ public abstract class DeviceConfigManager implements Runnable {
       storeLabConfig(localLabConfig);
       return;
     }
-    logger.atInfo().log("Update local lab config to %s.", remoteLabConfig);
+    logger.atFine().log("Update local lab config to %s.", remoteLabConfig);
     apiConfig.setLabConfig(remoteLabConfig.get());
   }
 
