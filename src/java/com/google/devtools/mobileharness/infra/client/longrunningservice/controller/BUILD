@@ -41,7 +41,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/command/linecallback:command_output_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:log_data_extractor",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",

@@ -20,7 +20,6 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.logging.LogDataExtractor;
 import com.google.errorprone.annotations.FormatMethod;
 import java.io.PrintStream;
 import java.util.Objects;
@@ -40,6 +39,8 @@ public class ConsoleUtil {
 
   private static final String LOGGER_NAME = ConsoleUtil.class.getName();
 
+  private final int minLogRecordImportance =
+      Flags.instance().atsConsoleMinLogRecordImportance.getNonNull();
   private final LogHandler logHandler = new LogHandler();
   @Nullable private final LineReader lineReader;
   private final boolean printAbove;
@@ -156,10 +157,8 @@ public class ConsoleUtil {
       setFilter(
           record ->
               !Objects.equals(record.getLoggerName(), LOGGER_NAME)
-                  && LogDataExtractor.getSingleMetadataValue(record, LogRecordImportance.IMPORTANCE)
-                          .orElse(LogRecordImportance.Importance.NORMAL)
-                          .value()
-                      >= LogRecordImportance.Importance.NORMAL.value());
+                  && LogRecordImportance.getLogRecordImportance(record).value()
+                      >= minLogRecordImportance);
     }
 
     @Override

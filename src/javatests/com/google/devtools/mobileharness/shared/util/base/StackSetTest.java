@@ -30,34 +30,34 @@ public class StackSetTest {
 
   @Test
   public void getLast() {
-    assertThat(stackSet.getLast()).isNull();
+    assertThat(stackSet.getLast()).isEmpty();
 
     assertThrows(NullPointerException.class, () -> stackSet.add(null));
 
     stackSet.add("e1");
-    assertThat(stackSet.getLast()).isEqualTo("e1");
+    assertThat(stackSet.getLast()).hasValue("e1");
 
     assertThrows(IllegalStateException.class, () -> stackSet.add("e1"));
 
     stackSet.add("e2");
-    assertThat(stackSet.getLast()).isEqualTo("e2");
+    assertThat(stackSet.getLast()).hasValue("e2");
 
     stackSet.add("e3");
-    assertThat(stackSet.getLast()).isEqualTo("e3");
+    assertThat(stackSet.getLast()).hasValue("e3");
 
     stackSet.add("e4");
-    assertThat(stackSet.getLast()).isEqualTo("e4");
+    assertThat(stackSet.getLast()).hasValue("e4");
 
     stackSet.removeUntilLast("e5");
-    assertThat(stackSet.getLast()).isEqualTo("e4");
+    assertThat(stackSet.getLast()).hasValue("e4");
 
     stackSet.removeUntilLast("e4");
-    assertThat(stackSet.getLast()).isEqualTo("e3");
+    assertThat(stackSet.getLast()).hasValue("e3");
 
     stackSet.removeUntilLast("e2");
-    assertThat(stackSet.getLast()).isEqualTo("e1");
+    assertThat(stackSet.getLast()).hasValue("e1");
 
     stackSet.removeUntilLast("e1");
-    assertThat(stackSet.getLast()).isNull();
+    assertThat(stackSet.getLast()).isEmpty();
   }
 }

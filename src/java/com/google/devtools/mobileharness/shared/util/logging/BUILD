@@ -45,6 +45,7 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/logging/util:__pkg__",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger"],

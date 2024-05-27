@@ -29,28 +29,28 @@ public class LogRecordImportanceTest {
 
   @Test
   public void logImportanceScope() {
-    assertThat(LogImportanceScope.getCurrentImportance()).isNull();
+    assertThat(LogImportanceScope.getCurrentImportance()).isEmpty();
 
     try (var ignored1 = new LogImportanceScope(Importance.DEBUG)) {
-      assertThat(LogImportanceScope.getCurrentImportance()).isEqualTo(Importance.DEBUG);
+      assertThat(LogImportanceScope.getCurrentImportance()).hasValue(Importance.DEBUG);
 
       try (var ignored2 = new LogImportanceScope(Importance.IMPORTANT)) {
-        assertThat(LogImportanceScope.getCurrentImportance()).isEqualTo(Importance.IMPORTANT);
+        assertThat(LogImportanceScope.getCurrentImportance()).hasValue(Importance.IMPORTANT);
       }
 
-      assertThat(LogImportanceScope.getCurrentImportance()).isEqualTo(Importance.DEBUG);
+      assertThat(LogImportanceScope.getCurrentImportance()).hasValue(Importance.DEBUG);
     }
 
-    assertThat(LogImportanceScope.getCurrentImportance()).isNull();
+    assertThat(LogImportanceScope.getCurrentImportance()).isEmpty();
 
     LogImportanceScope scope1 = new LogImportanceScope(Importance.DEBUG);
     LogImportanceScope scope2 = new LogImportanceScope(Importance.IMPORTANT);
-    assertThat(LogImportanceScope.getCurrentImportance()).isEqualTo(Importance.IMPORTANT);
+    assertThat(LogImportanceScope.getCurrentImportance()).hasValue(Importance.IMPORTANT);
 
     scope1.close();
-    assertThat(LogImportanceScope.getCurrentImportance()).isNull();
+    assertThat(LogImportanceScope.getCurrentImportance()).isEmpty();
 
     scope2.close();
-    assertThat(LogImportanceScope.getCurrentImportance()).isNull();
+    assertThat(LogImportanceScope.getCurrentImportance()).isEmpty();
   }
 }

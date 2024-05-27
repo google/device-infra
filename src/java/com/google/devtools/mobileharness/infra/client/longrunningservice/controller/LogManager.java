@@ -25,7 +25,6 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
-import com.google.devtools.mobileharness.shared.util.logging.LogDataExtractor;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
@@ -226,10 +225,7 @@ public class LogManager<D> {
     if (logRecord instanceof LogRecord) {
       LogRecord record = (LogRecord) logRecord;
       String formattedLogRecord = logHandler.getFormatter().format(record);
-      int importance =
-          LogDataExtractor.getSingleMetadataValue(record, LogRecordImportance.IMPORTANCE)
-              .orElse(LogRecordImportance.Importance.NORMAL)
-              .value();
+      int importance = LogRecordImportance.getLogRecordImportance(record).value();
       return LogProto.LogRecord.newBuilder()
           .setFormattedLogRecord(formattedLogRecord)
           .setSourceType(SourceType.SELF)

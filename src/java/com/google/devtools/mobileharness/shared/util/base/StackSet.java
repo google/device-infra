@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
@@ -57,10 +58,9 @@ public class StackSet<E> {
     lastElement = e;
   }
 
-  /** Gets the last added element, or {@code null} if the set is empty. */
-  @Nullable
-  public E getLast() {
-    return lastElement;
+  /** Gets the last added element, or empty if the set is empty. */
+  public Optional<E> getLast() {
+    return Optional.ofNullable(lastElement);
   }
 
   /**

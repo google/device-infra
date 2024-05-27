@@ -27,7 +27,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:stack_set",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@maven//:com_google_code_findbugs_jsr305",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:log_data_extractor",
         "@maven//:com_google_guava_guava",
     ],
 )

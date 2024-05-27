@@ -18,10 +18,13 @@ package com.google.devtools.mobileharness.shared.constant;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.MetadataKey;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.base.StackSet;
-import javax.annotation.Nullable;
+import com.google.devtools.mobileharness.shared.util.logging.LogDataExtractor;
+import java.util.Optional;
+import java.util.logging.LogRecord;
 
 /** Constants of importance of log records. */
 public class LogRecordImportance {
@@ -30,19 +33,18 @@ public class LogRecordImportance {
   public enum Importance {
     DEBUG(50),
 
-    /**
-     * Logs from flogger have this importance by default.
-     *
-     * <p>ATS console logs whose importance is not less than it will be shown in ATS console.
-     */
+    // Importance >= 100
+    // ATS console logs whose importance is not less than it will be shown in ATS console.
+
+    /** Logs from flogger have this importance by default. */
     NORMAL(100),
 
-    /**
-     * Logs from TestInfo/JobInfo log() have this importance by default.
-     *
-     * <p>OLC server logs whose importance is not less than it will be shown in ATS console.
-     */
+    // Importance >= 150
+    // OLC server logs whose importance is not less than it will be shown in ATS console.
+
+    /** Logs from TestInfo/JobInfo log() have this importance by default. */
     TEST_INFO(150),
+
     IMPORTANT(200),
 
     /** Logs from TF process have this importance. */
@@ -79,10 +81,9 @@ public class LogRecordImportance {
     private static final ThreadLocal<StackSet<LogImportanceScope>> SCOPES =
         ThreadLocal.withInitial(StackSet::new);
 
-    @Nullable
-    public static Importance getCurrentImportance() {
-      LogImportanceScope scope = SCOPES.get().getLast();
-      return scope == null ? null : scope.importance;
+    @VisibleForTesting
+    static Optional<Importance> getCurrentImportance() {
+      return SCOPES.get().getLast().map(LogImportanceScope::importance);
     }
 
     private final Importance importance;
@@ -96,6 +97,16 @@ public class LogRecordImportance {
     public void close() {
       SCOPES.get().removeUntilLast(this);
     }
+
+    private Importance importance() {
+      return importance;
+    }
+  }
+
+  public static Importance getLogRecordImportance(LogRecord logRecord) {
+    return LogDataExtractor.getSingleMetadataValue(logRecord, LogRecordImportance.IMPORTANCE)
+        .or(LogImportanceScope::getCurrentImportance)
+        .orElse(Importance.NORMAL);
   }
 
   private LogRecordImportance() {}
