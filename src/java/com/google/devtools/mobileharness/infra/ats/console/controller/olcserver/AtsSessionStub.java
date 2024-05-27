@@ -210,6 +210,12 @@ public class AtsSessionStub {
         .collect(toImmutableList());
   }
 
+  /**
+   * Returns all sessions which are not finished.
+   *
+   * @param sessionNameRegex the regex to match the session name
+   * @param fromCurrentClient whether to return sessions from current client only
+   */
   public ImmutableList<AtsSessionPluginConfigOutput> getAllUnfinishedSessions(
       String sessionNameRegex, boolean fromCurrentClient) throws MobileHarnessException {
     SessionFilter filter =
@@ -268,6 +274,7 @@ public class AtsSessionStub {
     abortSessions(AbortSessionsRequest.newBuilder().setSessionFilter(sessionFilter).build());
   }
 
+  /** Aborts the session from this client by the command id. */
   public AbortSessionsResponse abortSessionByCommandId(String commandId)
       throws MobileHarnessException {
     SessionFilter sessionFilter =
