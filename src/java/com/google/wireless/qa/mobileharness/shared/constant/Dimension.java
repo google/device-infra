@@ -176,7 +176,7 @@ public final class Dimension {
     FREE_INTERNAL_STORAGE,
     /** The version of gms core on the device. */
     GMS_VERSION,
-    /** GServices Android ID(go/android-id). */
+    /** GServices Android ID. */
     GSERVICES_ANDROID_ID,
     /** The hardware name of the device. */
     HARDWARE,
@@ -280,9 +280,12 @@ public final class Dimension {
     /** The ATE cluster name */
     CLUSTER,
 
-    // Riemann's custom dimensions, go/portable-lab-device-dimension.
+    // Riemann's custom dimensions.
     /** A comma-separated string containing the carrier ID of each SIM on the device. */
-    CARRIER_IDS;
+    CARRIER_IDS,
+
+    /** The radio version (i.e., the baseband version) of the device. */
+    RADIO_VERSION;
 
     public String lowerCaseName() {
       return Ascii.toLowerCase(name());
