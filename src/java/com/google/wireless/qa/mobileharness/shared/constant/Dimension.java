@@ -285,7 +285,10 @@ public final class Dimension {
     CARRIER_IDS,
 
     /** The radio version (i.e., the baseband version) of the device. */
-    RADIO_VERSION;
+    RADIO_VERSION,
+
+    /** A comma-separated string containing information of all available SIM cards on the device. */
+    SIM_INFOS;
 
     public String lowerCaseName() {
       return Ascii.toLowerCase(name());
