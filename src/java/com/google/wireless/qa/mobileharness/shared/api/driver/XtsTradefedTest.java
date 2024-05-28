@@ -62,7 +62,6 @@ import com.google.devtools.mobileharness.shared.util.command.LineCallbackExcepti
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
@@ -862,8 +861,7 @@ public class XtsTradefedTest extends BaseDriver
     createSymlink(linkToolsDir, sourceXtsBundledToolsDir);
     createSymlink(linkLibDir, sourceXtsBundledLibDir);
 
-    if (Flags.instance().enableXtsDynamicDownloader.getNonNull()
-        && testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)) {
+    if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)) {
       // Integrates the dynamic downloaded test cases with the temp XTS workspace.
       createSymlinksForTestCases(
           linkTestcasesDir,
