@@ -125,7 +125,7 @@ public class JobRunner implements Runnable {
   }
 
   /** The base interval. */
-  private static final Duration BASE_INTERVAL = Duration.ofMillis(500L);
+  private static final Duration BASE_INTERVAL = Duration.ofSeconds(1L);
 
   /** The normal first device query after job starts. */
   private static final Duration NORMAL_START_QUERY_DEVICE_LATENCY = Duration.ofMinutes(10L);
@@ -149,16 +149,16 @@ public class JobRunner implements Runnable {
   private static final int MAX_ALLOCATION_DIAGNOSE_TIMES_BEFORE_JOB_TIMEOUT = 3;
 
   /** The large base interval multiplier for polling the device manager to allocate devices. */
-  private static final int LARGE_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 20;
+  private static final int LARGE_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 40;
 
   /** The medium base interval multiplier for polling the device manager to allocate devices. */
-  private static final int MEDIUM_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 8;
+  private static final int MEDIUM_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 16;
 
   /** The small base interval multiplier for polling the device manager to allocate devices. */
-  private static final int SMALL_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 1;
+  private static final int SMALL_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 2;
 
   /** The real-time base interval multiplier for polling the device manager to allocate devices. */
-  private static final int REAL_TIME_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 2;
+  private static final int REAL_TIME_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 4;
 
   /** The number of using the small polling allocation interval multiplier when the job starts. */
   private static final int NUM_USE_SMALL_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 4;
