@@ -105,6 +105,9 @@ message RunCommand {
 
   // Optional. Whether to enable xts dynamic download.
   optional bool enable_xts_dynamic_download = 17;
+
+  // Optional. Exclude devices with the given serial numbers.
+  repeated string exclude_device_serial = 18;
 }
 
 message RunCommandState {

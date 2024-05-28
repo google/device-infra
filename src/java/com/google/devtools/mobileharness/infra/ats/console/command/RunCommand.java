@@ -128,6 +128,12 @@ public final class RunCommand implements Callable<Integer> {
   private List<String> serialOpt;
 
   @Option(
+      names = {"--exclude-serial"},
+      paramLabel = "<exclude_device_id>",
+      description = "Run test on any device except those with this serial number(s).")
+  private List<String> excludeSerialOpt;
+
+  @Option(
       names = {"--shard-count"},
       paramLabel = "<number_of_shards>",
       description =
@@ -446,6 +452,8 @@ public final class RunCommand implements Callable<Integer> {
 
     ImmutableList<String> deviceSerials =
         serialOpt != null ? ImmutableList.copyOf(serialOpt) : ImmutableList.of();
+    ImmutableList<String> excludeSerials =
+        excludeSerialOpt != null ? ImmutableList.copyOf(excludeSerialOpt) : ImmutableList.of();
 
     ImmutableList<String> modules = getModules();
 
@@ -470,6 +478,7 @@ public final class RunCommand implements Callable<Integer> {
             .setXtsRootDir(xtsRootDirectory.toString())
             .setXtsType(xtsType)
             .addAllDeviceSerial(deviceSerials)
+            .addAllExcludeDeviceSerial(excludeSerials)
             .addAllIncludeFilter(includeFilters)
             .addAllExcludeFilter(excludeFilters)
             .setHtmlInZip(htmlInZip);

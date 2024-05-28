@@ -27,6 +27,9 @@ public abstract class DeviceSelectionOptions {
   /** Run test on specific devices with given serial number(s). */
   public abstract ImmutableList<String> serials();
 
+  /** Run test on any device except those with given serial number(s). */
+  public abstract ImmutableList<String> excludeSerials();
+
   /**
    * Run test on devices with this product type(s). May also filter by variant using
    * product:variant.
@@ -39,6 +42,7 @@ public abstract class DeviceSelectionOptions {
   public static Builder builder() {
     return new AutoValue_DeviceSelectionOptions.Builder()
         .setSerials(ImmutableList.of())
+        .setExcludeSerials(ImmutableList.of())
         .setProductTypes(ImmutableList.of())
         .setDeviceProperties(ImmutableMap.of());
   }
@@ -47,6 +51,8 @@ public abstract class DeviceSelectionOptions {
   @AutoValue.Builder
   public abstract static class Builder {
     public abstract Builder setSerials(ImmutableList<String> serials);
+
+    public abstract Builder setExcludeSerials(ImmutableList<String> excludeSerials);
 
     public abstract Builder setProductTypes(ImmutableList<String> productTypes);
 

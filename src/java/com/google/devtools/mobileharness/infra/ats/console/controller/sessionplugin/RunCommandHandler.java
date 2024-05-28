@@ -237,6 +237,7 @@ class RunCommandHandler {
             .setEnableModuleOptionalParameter(false)
             .setCommandLineArgs(runCommand.getInitialState().getCommandLineArgs())
             .setDeviceSerials(runCommand.getDeviceSerialList())
+            .setExcludeDeviceSerials(runCommand.getExcludeDeviceSerialList())
             .setModuleNames(runCommand.getModuleNameList())
             .setHtmlInZip(runCommand.getHtmlInZip())
             .setIncludeFilters(runCommand.getIncludeFilterList())

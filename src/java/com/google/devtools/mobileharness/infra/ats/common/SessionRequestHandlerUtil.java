@@ -197,46 +197,28 @@ public class SessionRequestHandlerUtil {
     ImmutableSet<String> allAndroidDevices = getAllAndroidDevices();
     logger.atInfo().log("All android devices: %s", allAndroidDevices);
     ImmutableList<String> passedInDeviceSerials = sessionRequestInfo.deviceSerials();
+    ImmutableSet<String> availableDevices =
+        allAndroidDevices.stream()
+            .filter(
+                deviceId ->
+                    DeviceSelection.matches(
+                        deviceId,
+                        DeviceSelectionOptions.builder()
+                            .setSerials(passedInDeviceSerials)
+                            .setExcludeSerials(sessionRequestInfo.excludeDeviceSerials())
+                            .build()))
+            .collect(toImmutableSet());
 
-    if (passedInDeviceSerials.isEmpty()) {
-      return pickAndroidOnlineDevices(
-          allAndroidDevices.stream()
-              .filter(
-                  deviceId ->
-                      DeviceSelection.matches(
-                          deviceId,
-                          DeviceSelectionOptions.builder()
-                              .setSerials(passedInDeviceSerials)
-                              .build()))
-              .collect(toImmutableSet()),
-          shardCount);
-    }
-
-    ArrayList<String> existingPassedInDeviceSerials = new ArrayList<>();
-    passedInDeviceSerials.forEach(
-        serial -> {
-          if (allAndroidDevices.contains(serial)) {
-            existingPassedInDeviceSerials.add(serial);
-          } else {
-            logger
-                .atInfo()
-                .with(IMPORTANCE, IMPORTANT)
-                .log("Passed in device serial [%s] is not detected, skipped.", serial);
-          }
-        });
-    if (existingPassedInDeviceSerials.isEmpty()) {
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log("None of passed in devices exist [%s], skipped.", passedInDeviceSerials);
+    if (availableDevices.isEmpty()) {
+      logger.atInfo().with(IMPORTANCE, IMPORTANT).log("None of devices matches given options.");
       return ImmutableList.of();
     }
-    return existingPassedInDeviceSerials.stream()
-        .filter(
-            deviceId ->
-                DeviceSelection.matches(
-                    deviceId,
-                    DeviceSelectionOptions.builder().setSerials(passedInDeviceSerials).build()))
+
+    if (passedInDeviceSerials.isEmpty()) {
+      return pickAndroidOnlineDevices(availableDevices, shardCount);
+    }
+
+    return availableDevices.stream()
         .map(
             serial ->
                 SubDeviceSpec.newBuilder()
@@ -248,15 +230,27 @@ public class SessionRequestHandlerUtil {
 
   private ImmutableList<SubDeviceSpec> pickAndroidOnlineDevices(
       Set<String> allMatchAndroidOnlineDevices, int shardCount) {
+    StringMap dimensions =
+        StringMap.newBuilder()
+            .putContent(
+                "id",
+                String.format("regex:(%s)", Joiner.on('|').join(allMatchAndroidOnlineDevices)))
+            .build();
     if (shardCount <= 1 && !allMatchAndroidOnlineDevices.isEmpty()) {
       return ImmutableList.of(
-          SubDeviceSpec.newBuilder().setType(getTradefedRequiredDeviceType()).build());
+          SubDeviceSpec.newBuilder()
+              .setType(getTradefedRequiredDeviceType())
+              .setDimensions(dimensions)
+              .build());
     }
     int numOfNeededDevices = min(allMatchAndroidOnlineDevices.size(), shardCount);
     ImmutableList.Builder<SubDeviceSpec> deviceSpecList = ImmutableList.builder();
     for (int i = 0; i < numOfNeededDevices; i++) {
       deviceSpecList.add(
-          SubDeviceSpec.newBuilder().setType(getTradefedRequiredDeviceType()).build());
+          SubDeviceSpec.newBuilder()
+              .setType(getTradefedRequiredDeviceType())
+              .setDimensions(dimensions)
+              .build());
     }
     return deviceSpecList.build();
   }
@@ -1044,6 +1038,7 @@ public class SessionRequestHandlerUtil {
                 jobTimeout,
                 testTimeout,
                 startTimeout);
+        // TODO: correct the device serial dimension.
         if (jobInfoOpt.isPresent()) {
           JobInfo jobInfo = jobInfoOpt.get();
           if (!androidDeviceSerials.isEmpty()) {

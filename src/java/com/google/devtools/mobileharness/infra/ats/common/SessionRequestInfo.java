@@ -45,6 +45,8 @@ public abstract class SessionRequestInfo {
 
   public abstract ImmutableList<String> deviceSerials();
 
+  public abstract ImmutableList<String> excludeDeviceSerials();
+
   public abstract ImmutableList<String> moduleNames();
 
   public abstract Optional<String> testName();
@@ -106,6 +108,7 @@ public abstract class SessionRequestInfo {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
         .setDeviceSerials(ImmutableList.of())
+        .setExcludeDeviceSerials(ImmutableList.of())
         .setIncludeFilters(ImmutableList.of())
         .setExcludeFilters(ImmutableList.of())
         .setExtraArgs(ImmutableList.of())
@@ -133,6 +136,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setXtsRootDir(String xtsRootDir);
 
     public abstract Builder setDeviceSerials(List<String> deviceSerials);
+
+    public abstract Builder setExcludeDeviceSerials(List<String> excludeDeviceSerials);
 
     public abstract Builder setModuleNames(List<String> moduleNames);
 

@@ -29,6 +29,10 @@ public class DeviceSelection {
     if (!serials.isEmpty() && !serials.contains(deviceId)) {
       return false;
     }
+    ImmutableSet<String> excludeSerials = ImmutableSet.copyOf(options.excludeSerials());
+    if (excludeSerials.contains(deviceId)) {
+      return false;
+    }
     // TODO: Enable to check options "product types" and "device properties".
     return true;
   }

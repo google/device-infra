@@ -202,7 +202,12 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build());
 
     // Asserts the driver
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
@@ -213,6 +218,37 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(driverParamsMap)
         .containsExactly(
             "xts_type", "cts", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
+  }
+
+  @Test
+  public void createXtsTradefedTestJobInfo_excludeDevice() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
+
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setExcludeDeviceSerials(ImmutableList.of("device_id_1"))
+                .build(),
+            ImmutableList.of());
+
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(StringMap.newBuilder().putContent("id", "regex:(device_id_2)"))
+                .build());
   }
 
   @Test
@@ -239,8 +275,16 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(
-            SubDeviceSpec.newBuilder().setType("AndroidDevice").build(),
-            SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build(),
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build());
   }
 
   @Test
@@ -287,7 +331,11 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(StringMap.newBuilder().putContent("id", "regex:(device_id_1)"))
+                .build());
 
     // Asserts the driver
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
@@ -329,7 +377,11 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(StringMap.newBuilder().putContent("id", "regex:(device_id_1)"))
+                .build());
 
     // Asserts the driver
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
@@ -383,7 +435,11 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(StringMap.newBuilder().putContent("id", "regex:(device_id_1)"))
+                .build());
 
     // Verify generator got correct input.
     ArgumentCaptor<RetryArgs> retryArgsCaptor = ArgumentCaptor.forClass(RetryArgs.class);
@@ -448,7 +504,11 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(StringMap.newBuilder().putContent("id", "regex:(device_id_1)"))
+                .build());
 
     // Verify generator got correct input.
     ArgumentCaptor<RetryArgs> retryArgsCaptor = ArgumentCaptor.forClass(RetryArgs.class);
@@ -510,7 +570,11 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(StringMap.newBuilder().putContent("id", "regex:(device_id_1)"))
+                .build());
 
     // Asserts the driver
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
@@ -567,7 +631,11 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(StringMap.newBuilder().putContent("id", "regex:(device_id_1)"))
+                .build());
 
     // Asserts the driver
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
@@ -619,7 +687,11 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(StringMap.newBuilder().putContent("id", "regex:(device_id_1)"))
+                .build());
 
     // Asserts the driver
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
@@ -665,8 +737,16 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(
-            SubDeviceSpec.newBuilder().setType("AndroidDevice").build(),
-            SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build(),
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build());
   }
 
   @Test
@@ -695,8 +775,16 @@ public final class SessionRequestHandlerUtilTest {
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
         .containsExactly(
-            SubDeviceSpec.newBuilder().setType("AndroidDevice").build(),
-            SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build(),
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build());
   }
 
   @Test
@@ -1029,7 +1117,12 @@ public final class SessionRequestHandlerUtilTest {
 
     assertThat(tradefedJobInfoOpt).isPresent();
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
-        .containsExactly(SubDeviceSpec.newBuilder().setType("AndroidDevice").build());
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build());
 
     // Asserts the driver
     assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
