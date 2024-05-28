@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.controller.device.config;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static java.util.concurrent.TimeUnit.MINUTES;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
@@ -77,7 +78,8 @@ public class ApiConfigFileProcessor {
   public Optional<LabConfigAndDeviceConfigs> readApiConfigFile() throws MobileHarnessException {
     String localConfigPath = Flags.instance().apiConfigFile.getNonNull();
     if (localConfigPath.isEmpty()) {
-      logger.atInfo().log("Not load api config file because api_config flag is empty.");
+      logger.atInfo().atMostEvery(10, MINUTES).log(
+          "Not load api config file because api_config flag is empty.");
       return Optional.empty();
     }
     return readApiConfigFile(localConfigPath);
