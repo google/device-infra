@@ -17,14 +17,22 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.base.Ascii.toUpperCase;
+import static com.google.common.collect.Comparators.max;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableListMultimap.toImmutableListMultimap;
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Enums;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceConstants;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -34,20 +42,39 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListDevicesCommand;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeoutException;
+import java.util.logging.Level;
 import java.util.stream.Stream;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** Handler for "list devices" commands. */
 class ListDevicesCommandHandler {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final ImmutableList<String> HEADERS =
       ImmutableList.of("Serial", "State", "Allocation", "Product", "Variant", "Build", "Battery");
@@ -56,12 +83,31 @@ class ListDevicesCommandHandler {
   private static final Comparator<DeviceDescriptor> DEVICE_DESCRIPTOR_COMPARATOR =
       Comparator.comparing(DeviceDescriptor::getAllocationState)
           .thenComparing(DeviceDescriptor::getSerial);
+  private static final String NOT_APPLICABLE = "n/a";
+
+  private static final Duration QUERY_DEVICE_TIMEOUT = Duration.ofSeconds(1);
 
   private final DeviceQuerier deviceQuerier;
+  private final AndroidAdbUtil androidAdbUtil;
+  private final AndroidAdbInternalUtil androidAdbInternalUtil;
+  private final AndroidSystemSettingUtil androidSystemSettingUtil;
+  private final ListeningExecutorService threadPool;
+  private final Clock clock;
 
   @Inject
-  ListDevicesCommandHandler(DeviceQuerier deviceQuerier) {
+  ListDevicesCommandHandler(
+      DeviceQuerier deviceQuerier,
+      AndroidAdbUtil androidAdbUtil,
+      AndroidAdbInternalUtil androidAdbInternalUtil,
+      AndroidSystemSettingUtil androidSystemSettingUtil,
+      ListeningExecutorService threadPool,
+      Clock clock) {
     this.deviceQuerier = deviceQuerier;
+    this.androidAdbUtil = androidAdbUtil;
+    this.androidAdbInternalUtil = androidAdbInternalUtil;
+    this.androidSystemSettingUtil = androidSystemSettingUtil;
+    this.threadPool = threadPool;
+    this.clock = clock;
   }
 
   /**
@@ -93,10 +139,94 @@ class ListDevicesCommandHandler {
 
   private ImmutableList<DeviceDescriptor> listDevices()
       throws MobileHarnessException, InterruptedException {
-    DeviceQueryResult deviceQueryResult = queryDevice();
-    return deviceQueryResult.getDeviceInfoList().stream()
-        .map(ListDevicesCommandHandler::convertDeviceInfo)
-        .collect(toImmutableList());
+    if (!Flags.instance().detectAdbDevice.getNonNull()) {
+      // Can't use status from ADB to accelerate the process.
+      DeviceQueryResult deviceQueryResult = queryDevice();
+      return deviceQueryResult.getDeviceInfoList().stream()
+          .map(deviceInfo -> convertDeviceInfo(deviceInfo, null))
+          .collect(toImmutableList());
+    }
+    Instant listDevicesQueryInstant = clock.instant();
+    Future<DeviceQueryResult> deviceQueryResultFuture =
+        logFailure(
+            threadPool.submit(threadRenaming(this::queryDevice, () -> "device-querier")),
+            Level.WARNING,
+            "Error occurred in job manager");
+    ImmutableMap<String, DeviceDescriptor> deviceInfoFromAdb = queryDeviceInfoFromAdb();
+
+    Duration remainingQueryDuration =
+        QUERY_DEVICE_TIMEOUT.minus(Duration.between(listDevicesQueryInstant, clock.instant()));
+    remainingQueryDuration = max(remainingQueryDuration, Duration.ZERO);
+    DeviceQueryResult deviceQueryResult = null;
+    try {
+      deviceQueryResult = deviceQueryResultFuture.get(remainingQueryDuration.getSeconds(), SECONDS);
+    } catch (ExecutionException | TimeoutException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to query device within %s. Going to use status from ADB directly.",
+          QUERY_DEVICE_TIMEOUT);
+    }
+
+    HashMap<String, DeviceDescriptor> deviceDescriptorMap = new HashMap<>();
+    deviceDescriptorMap.putAll(deviceInfoFromAdb);
+    if (deviceQueryResult != null) {
+      for (DeviceInfo deviceInfo : deviceQueryResult.getDeviceInfoList()) {
+        String serial = deviceInfo.getId();
+        deviceDescriptorMap.put(
+            deviceInfo.getId(), convertDeviceInfo(deviceInfo, deviceInfoFromAdb.get(serial)));
+      }
+    }
+
+    return ImmutableList.copyOf(deviceDescriptorMap.values());
+  }
+
+  /** Queries device info from ADB to be the backup info for devices. */
+  private ImmutableMap<String, DeviceDescriptor> queryDeviceInfoFromAdb()
+      throws MobileHarnessException, InterruptedException {
+    ImmutableMap.Builder<String, DeviceDescriptor> deviceDescriptorMap = ImmutableMap.builder();
+
+    Map<String, DeviceState> deviceState =
+        androidAdbInternalUtil.getDeviceSerialsAsMap(QUERY_DEVICE_TIMEOUT);
+
+    for (Entry<String, DeviceState> entry : deviceState.entrySet()) {
+      String serial = entry.getKey();
+      DeviceState state = entry.getValue();
+      DeviceDescriptor.Builder builder =
+          DeviceDescriptor.newBuilder()
+              .setSerial(serial)
+              .setDeviceState(convertDeviceStateFromAdb(state));
+      builder.setProduct(androidAdbUtil.getProperty(serial, AndroidProperty.PRODUCT_BOARD));
+      builder.setProductVariant(androidAdbUtil.getProperty(serial, AndroidProperty.DEVICE));
+      builder.setBuildId(androidAdbUtil.getProperty(serial, AndroidProperty.BUILD_ALIAS));
+      builder.setBatteryLevel(Integer.toString(androidSystemSettingUtil.getBatteryLevel(serial)));
+
+      // Unsupported fields.
+      builder.setAllocationState(NOT_APPLICABLE);
+      builder.setDeviceClass(NOT_APPLICABLE);
+      builder.setTestDeviceState(NOT_APPLICABLE);
+      builder.setIsStubDevice(false);
+      deviceDescriptorMap.put(serial, builder.build());
+    }
+    return deviceDescriptorMap.buildOrThrow();
+  }
+
+  // Converts device state from ADB to the one in DeviceDescriptor.
+  private static String convertDeviceStateFromAdb(DeviceState state) {
+    switch (state) {
+      case BOOTLOADER:
+        return "BOOTLOADER";
+      case DEVICE:
+        return "ONLINE";
+      case OFFLINE:
+        return "OFFLINE";
+      case UNAUTHORIZED:
+        return "UNAUTHORIZED";
+      case RECOVERY:
+        return "RECOVERY";
+      case SIDELOAD:
+        return "SIDELOAD";
+      default:
+        return NOT_APPLICABLE;
+    }
   }
 
   private DeviceQueryResult queryDevice() throws MobileHarnessException, InterruptedException {
@@ -108,23 +238,53 @@ class ListDevicesCommandHandler {
     }
   }
 
-  private static DeviceDescriptor convertDeviceInfo(DeviceInfo deviceInfo) {
+  /** Combines {@link DeviceInfo} from DeviceManager and {@link DeviceDescriptor} from ADB. */
+  @VisibleForTesting
+  static DeviceDescriptor convertDeviceInfo(
+      DeviceInfo deviceInfo, @Nullable DeviceDescriptor deviceInfoFromAdb) {
+    // Builder with default values from ADB.
+    DeviceDescriptor.Builder builder =
+        deviceInfoFromAdb == null ? DeviceDescriptor.newBuilder() : deviceInfoFromAdb.toBuilder();
     ImmutableListMultimap<String, String> dimensions =
         deviceInfo.getDimensionList().stream()
             .collect(
                 toImmutableListMultimap(
                     DeviceQuery.Dimension::getName, DeviceQuery.Dimension::getValue));
-    return DeviceDescriptor.newBuilder()
+
+    builder
         .setSerial(deviceInfo.getId())
-        .setDeviceState(getDeviceState(deviceInfo.getTypeList()))
-        .setAllocationState(getAllocationState(deviceInfo.getStatus()))
-        .setProduct(getDimension(dimensions, Name.PRODUCT_BOARD.lowerCaseName()).orElse("n/a"))
-        .setProductVariant(getDimension(dimensions, Name.DEVICE.lowerCaseName()).orElse("n/a"))
-        .setBuildId(
-            getDimension(dimensions, Name.BUILD_ALIAS.lowerCaseName())
-                .map(Ascii::toUpperCase)
-                .orElse("n/a"))
-        .setBatteryLevel(getDimension(dimensions, Name.BATTERY_LEVEL.lowerCaseName()).orElse("n/a"))
+        .setAllocationState(getAllocationState(deviceInfo.getStatus()));
+
+    String deviceState = getDeviceState(deviceInfo.getTypeList());
+    if (!deviceState.equals(NOT_APPLICABLE) || builder.getDeviceState().isEmpty()) {
+      builder.setDeviceState(deviceState);
+    }
+
+    String product = getDimension(dimensions, Name.PRODUCT_BOARD.lowerCaseName()).orElse("n/a");
+    if (!product.equals(NOT_APPLICABLE) || builder.getProduct().isEmpty()) {
+      builder.setProduct(product);
+    }
+
+    String productVariant = getDimension(dimensions, Name.DEVICE.lowerCaseName()).orElse("n/a");
+    if (!productVariant.equals(NOT_APPLICABLE) || builder.getProductVariant().isEmpty()) {
+      builder.setProductVariant(productVariant);
+    }
+
+    String buildId =
+        getDimension(dimensions, Name.BUILD_ALIAS.lowerCaseName())
+            .map(Ascii::toUpperCase)
+            .orElse(NOT_APPLICABLE);
+    if (!buildId.equals(NOT_APPLICABLE) || builder.getBuildId().isEmpty()) {
+      builder.setBuildId(buildId);
+    }
+
+    String batteryLevel =
+        getDimension(dimensions, Name.BATTERY_LEVEL.lowerCaseName()).orElse("n/a");
+    if (!batteryLevel.equals(NOT_APPLICABLE) || builder.getBatteryLevel().isEmpty()) {
+      builder.setBatteryLevel(batteryLevel);
+    }
+
+    return builder
         .setDeviceClass(
             getDimension(dimensions, Name.DEVICE_CLASS_NAME.lowerCaseName()).orElse("n/a"))
         .setTestDeviceState(getTestDeviceState(deviceInfo.getTypeList()))
