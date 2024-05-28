@@ -610,6 +610,11 @@ public class AndroidSystemSpecUtil {
         .collect(toImmutableList());
   }
 
+  /** Returns the radio version (i.e., the baseband version) of the device. */
+  public String getRadioVersion(String serial) throws MobileHarnessException, InterruptedException {
+    return adbUtil.getProperty(serial, AndroidProperty.BASEBAND_VERSION);
+  }
+
   private Stream<String> getAvailableSimInfoStream(String serial)
       throws MobileHarnessException, InterruptedException {
     String adbOutput = "";

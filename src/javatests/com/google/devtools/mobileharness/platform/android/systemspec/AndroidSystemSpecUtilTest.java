@@ -913,4 +913,19 @@ public class AndroidSystemSpecUtilTest {
 
     assertThat(systemSpecUtil.getCarrierIds(SERIAL)).isEmpty();
   }
+
+  @Test
+  public void getRadioVersion_hasValue_success() throws Exception {
+    String baseband = "g5123b-130914-240205-B-11405587";
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.BASEBAND_VERSION)).thenReturn(baseband);
+
+    assertThat(systemSpecUtil.getRadioVersion(SERIAL)).isEqualTo(baseband);
+  }
+
+  @Test
+  public void getRadioVersion_noValue_success() throws Exception {
+    when(adbUtil.getProperty(SERIAL, AndroidProperty.BASEBAND_VERSION)).thenReturn("");
+
+    assertThat(systemSpecUtil.getRadioVersion(SERIAL)).isEmpty();
+  }
 }
