@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.shared.util.system;
 
 import static com.google.common.base.StandardSystemProperty.JAVA_HOME;
+import static com.google.common.base.StandardSystemProperty.JAVA_VERSION;
 import static com.google.common.base.StandardSystemProperty.OS_VERSION;
 import static com.google.common.base.StandardSystemProperty.USER_NAME;
 import static com.google.common.collect.ImmutableList.toImmutableList;
@@ -338,6 +339,11 @@ public class SystemUtil {
     } catch (CommandException e) {
       return false;
     }
+  }
+
+  /** Returns the java version. */
+  public String getJavaVersion() {
+    return JAVA_VERSION.value();
   }
 
   /** Returns the java binary path. */
