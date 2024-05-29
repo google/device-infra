@@ -29,28 +29,28 @@ public class LogRecordImportanceTest {
 
   @Test
   public void logImportanceScope() {
-    assertThat(LogImportanceScope.getCurrentImportance()).isEmpty();
+    assertThat(LogImportanceScope.getCurrentImportance(null)).isEmpty();
 
-    try (var ignored1 = new LogImportanceScope(Importance.DEBUG)) {
-      assertThat(LogImportanceScope.getCurrentImportance()).hasValue(Importance.DEBUG);
+    try (var ignored1 = new LogImportanceScope(Importance.DEBUG, logRecord -> true)) {
+      assertThat(LogImportanceScope.getCurrentImportance(null)).hasValue(Importance.DEBUG);
 
-      try (var ignored2 = new LogImportanceScope(Importance.IMPORTANT)) {
-        assertThat(LogImportanceScope.getCurrentImportance()).hasValue(Importance.IMPORTANT);
+      try (var ignored2 = new LogImportanceScope(Importance.IMPORTANT, logRecord -> true)) {
+        assertThat(LogImportanceScope.getCurrentImportance(null)).hasValue(Importance.IMPORTANT);
       }
 
-      assertThat(LogImportanceScope.getCurrentImportance()).hasValue(Importance.DEBUG);
+      assertThat(LogImportanceScope.getCurrentImportance(null)).hasValue(Importance.DEBUG);
     }
 
-    assertThat(LogImportanceScope.getCurrentImportance()).isEmpty();
+    assertThat(LogImportanceScope.getCurrentImportance(null)).isEmpty();
 
-    LogImportanceScope scope1 = new LogImportanceScope(Importance.DEBUG);
-    LogImportanceScope scope2 = new LogImportanceScope(Importance.IMPORTANT);
-    assertThat(LogImportanceScope.getCurrentImportance()).hasValue(Importance.IMPORTANT);
+    LogImportanceScope scope1 = new LogImportanceScope(Importance.DEBUG, logRecord -> true);
+    LogImportanceScope scope2 = new LogImportanceScope(Importance.IMPORTANT, logRecord -> true);
+    assertThat(LogImportanceScope.getCurrentImportance(null)).hasValue(Importance.IMPORTANT);
 
     scope1.close();
-    assertThat(LogImportanceScope.getCurrentImportance()).isEmpty();
+    assertThat(LogImportanceScope.getCurrentImportance(null)).isEmpty();
 
     scope2.close();
-    assertThat(LogImportanceScope.getCurrentImportance()).isEmpty();
+    assertThat(LogImportanceScope.getCurrentImportance(null)).isEmpty();
   }
 }

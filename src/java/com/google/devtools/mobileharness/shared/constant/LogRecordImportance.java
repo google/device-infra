@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAu
 import com.google.devtools.mobileharness.shared.util.base.StackSet;
 import com.google.devtools.mobileharness.shared.util.logging.LogDataExtractor;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.logging.LogRecord;
 
 /** Constants of importance of log records. */
@@ -71,7 +72,7 @@ public class LogRecordImportance {
    * <p>Example:
    *
    * <pre>{@code
-   * try (var ignored = new LogImportanceScope(IMPORTANT)) {
+   * try (var ignored = new LogImportanceScope(IMPORTANT, logRecord -> true)) {
    *   ... // All log statements in this scope will have importance IMPORTANT.
    * }
    * }</pre>
@@ -82,14 +83,16 @@ public class LogRecordImportance {
         ThreadLocal.withInitial(StackSet::new);
 
     @VisibleForTesting
-    static Optional<Importance> getCurrentImportance() {
-      return SCOPES.get().getLast().map(LogImportanceScope::importance);
+    static Optional<Importance> getCurrentImportance(LogRecord logRecord) {
+      return SCOPES.get().getLast().flatMap(scope -> scope.importanceForLogRecord(logRecord));
     }
 
     private final Importance importance;
+    private final Predicate<LogRecord> logRecordFilter;
 
-    public LogImportanceScope(Importance importance) {
+    public LogImportanceScope(Importance importance, Predicate<LogRecord> logRecordFilter) {
       this.importance = checkNotNull(importance);
+      this.logRecordFilter = checkNotNull(logRecordFilter);
       SCOPES.get().add(this);
     }
 
@@ -98,14 +101,18 @@ public class LogRecordImportance {
       SCOPES.get().removeUntilLast(this);
     }
 
-    private Importance importance() {
-      return importance;
+    private Optional<Importance> importanceForLogRecord(LogRecord logRecord) {
+      if (logRecordFilter.test(logRecord)) {
+        return Optional.of(importance);
+      } else {
+        return Optional.empty();
+      }
     }
   }
 
   public static Importance getLogRecordImportance(LogRecord logRecord) {
     return LogDataExtractor.getSingleMetadataValue(logRecord, LogRecordImportance.IMPORTANCE)
-        .or(LogImportanceScope::getCurrentImportance)
+        .or(() -> LogImportanceScope.getCurrentImportance(logRecord))
         .orElse(Importance.NORMAL);
   }
 
