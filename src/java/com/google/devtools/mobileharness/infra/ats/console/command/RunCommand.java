@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DeviceType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
@@ -210,6 +211,27 @@ public final class RunCommand implements Callable<Integer> {
       description =
           "Test retry type for 'run retry' command. Supported values: ${COMPLETION-CANDIDATES}")
   private RetryType retryType;
+
+  @ArgGroup(exclusive = true, multiplicity = "0..1")
+  private DeviceTypeOptionsGroup deviceTypeOptionsGroup;
+
+  static class DeviceTypeOptionsGroup {
+    @Option(
+        names = {"-e", "--emulator"},
+        required = false,
+        paramLabel = "<run_test_on_emulator>",
+        description = "If true, force this test to run on emulator. Default is false.")
+    boolean runTestOnEmulator;
+
+    @Option(
+        names = {"-d", "--device"},
+        required = false,
+        paramLabel = "<run_test_on_real_device>",
+        description =
+            "If true, force this test to run on a physical device, not an emulator. Default is"
+                + " false.")
+    boolean runTestOnRealDevice;
+  }
 
   @Spec private CommandSpec spec;
 
@@ -504,6 +526,14 @@ public final class RunCommand implements Callable<Integer> {
     }
     if (Flags.instance().enableXtsDynamicDownloader.getNonNull()) {
       runCommand.setEnableXtsDynamicDownload(true);
+    }
+    if (deviceTypeOptionsGroup != null) {
+      if (deviceTypeOptionsGroup.runTestOnEmulator) {
+        runCommand.setDeviceType(DeviceType.EMULATOR);
+      }
+      if (deviceTypeOptionsGroup.runTestOnRealDevice) {
+        runCommand.setDeviceType(DeviceType.REAL_DEVICE);
+      }
     }
 
     ImmutableList<String> commandLineArgs = command.stream().skip(1L).collect(toImmutableList());

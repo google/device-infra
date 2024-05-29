@@ -116,8 +116,9 @@ public class SessionRequestHandlerUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  private static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
-  private static final String ANDROID_DEVICE_TYPE = "AndroidDevice";
+  public static final String ANDROID_REAL_DEVICE_TYPE = "AndroidRealDevice";
+  public static final String ANDROID_LOCAL_EMULATOR_TYPE = "AndroidLocalEmulator";
+  public static final String ANDROID_DEVICE_TYPE = "AndroidDevice";
   private static final Pattern MODULE_PARAMETER_PATTERN =
       Pattern.compile(".*\\[(?<moduleParam>.*)]$");
   private static final TextFormat.Parser DEVICE_CONFIG_FILE_PARSER =
@@ -215,21 +216,23 @@ public class SessionRequestHandlerUtil {
     }
 
     if (passedInDeviceSerials.isEmpty()) {
-      return pickAndroidOnlineDevices(availableDevices, shardCount);
+      return pickAndroidOnlineDevices(sessionRequestInfo, availableDevices, shardCount);
     }
 
     return availableDevices.stream()
         .map(
             serial ->
                 SubDeviceSpec.newBuilder()
-                    .setType(getTradefedRequiredDeviceType())
+                    .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
                     .setDimensions(StringMap.newBuilder().putContent("id", serial))
                     .build())
         .collect(toImmutableList());
   }
 
   private ImmutableList<SubDeviceSpec> pickAndroidOnlineDevices(
-      Set<String> allMatchAndroidOnlineDevices, int shardCount) {
+      SessionRequestInfo sessionRequestInfo,
+      Set<String> allMatchAndroidOnlineDevices,
+      int shardCount) {
     StringMap dimensions =
         StringMap.newBuilder()
             .putContent(
@@ -239,7 +242,7 @@ public class SessionRequestHandlerUtil {
     if (shardCount <= 1 && !allMatchAndroidOnlineDevices.isEmpty()) {
       return ImmutableList.of(
           SubDeviceSpec.newBuilder()
-              .setType(getTradefedRequiredDeviceType())
+              .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
               .setDimensions(dimensions)
               .build());
     }
@@ -248,17 +251,18 @@ public class SessionRequestHandlerUtil {
     for (int i = 0; i < numOfNeededDevices; i++) {
       deviceSpecList.add(
           SubDeviceSpec.newBuilder()
-              .setType(getTradefedRequiredDeviceType())
+              .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
               .setDimensions(dimensions)
               .build());
     }
     return deviceSpecList.build();
   }
 
-  private static String getTradefedRequiredDeviceType() {
-    return Flags.instance().atsRunTfOnAndroidRealDevice.getNonNull()
-        ? ANDROID_REAL_DEVICE_TYPE
-        : ANDROID_DEVICE_TYPE;
+  private static String getTradefedRequiredDeviceType(SessionRequestInfo info) {
+    if (Flags.instance().atsRunTfOnAndroidRealDevice.getNonNull()) {
+      return ANDROID_REAL_DEVICE_TYPE;
+    }
+    return info.deviceType().orElse(ANDROID_DEVICE_TYPE);
   }
 
   private ImmutableSet<String> getAllAndroidDevices()

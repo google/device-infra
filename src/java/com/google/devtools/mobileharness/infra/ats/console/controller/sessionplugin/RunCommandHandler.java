@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUt
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DeviceType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
@@ -260,6 +261,12 @@ class RunCommandHandler {
     }
     if (runCommand.hasSubPlanName()) {
       builder.setSubPlanName(runCommand.getSubPlanName());
+    }
+    if (runCommand.getDeviceType() != DeviceType.DEVICE_TYPE_UNSPECIFIED) {
+      builder.setDeviceType(
+          runCommand.getDeviceType() == DeviceType.EMULATOR
+              ? SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE
+              : SessionRequestHandlerUtil.ANDROID_REAL_DEVICE_TYPE);
     }
     sessionInfo
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)

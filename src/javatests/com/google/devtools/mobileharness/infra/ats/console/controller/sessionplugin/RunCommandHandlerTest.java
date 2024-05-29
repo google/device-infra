@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DeviceType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
@@ -144,6 +145,7 @@ public final class RunCommandHandlerTest {
             .setRetrySessionIndex(1)
             .setRetryType("FAILED")
             .setSubPlanName("sub_plan_name")
+            .setDeviceType(DeviceType.EMULATOR)
             .build();
 
     SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
@@ -167,6 +169,8 @@ public final class RunCommandHandlerTest {
     assertThat(sessionRequestInfo.retrySessionIndex()).hasValue(1);
     assertThat(sessionRequestInfo.retryType()).hasValue(RetryType.FAILED);
     assertThat(sessionRequestInfo.subPlanName()).hasValue("sub_plan_name");
+    assertThat(sessionRequestInfo.deviceType())
+        .hasValue(SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE);
   }
 
   @Test

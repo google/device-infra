@@ -104,6 +104,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<String> sessionClientId();
 
+  public abstract Optional<String> deviceType();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -198,6 +200,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setTestPlanFile(String testPlanFile);
 
     public abstract Builder setSessionClientId(String sessionClientId);
+
+    public abstract Builder setDeviceType(String deviceType);
 
     protected abstract SessionRequestInfo autoBuild();
 

@@ -55,6 +55,12 @@ message AtsSessionPluginOutput {
   RunCommandState run_command_state = 3;
 }
 
+enum DeviceType {
+  DEVICE_TYPE_UNSPECIFIED = 0;
+  EMULATOR = 1;
+  REAL_DEVICE = 2;
+}
+
 message RunCommand {
   // Required.
   //
@@ -108,6 +114,9 @@ message RunCommand {
 
   // Optional. Exclude devices with the given serial numbers.
   repeated string exclude_device_serial = 18;
+
+  // Optional. Device type to force the test to run on.
+  optional DeviceType device_type = 19;
 }
 
 message RunCommandState {

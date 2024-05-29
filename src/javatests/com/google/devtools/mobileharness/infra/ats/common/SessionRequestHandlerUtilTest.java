@@ -221,6 +221,48 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void createXtsTradefedTestJobInfo_pickOneRealDevice() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
+
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setDeviceType(SessionRequestHandlerUtil.ANDROID_REAL_DEVICE_TYPE)
+                .build(),
+            ImmutableList.of());
+
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidRealDevice")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build());
+
+    // Asserts the driver
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDriver().getName())
+        .isEqualTo("XtsTradefedTest");
+    String driverParams = tradefedJobInfoOpt.get().jobConfig().getDriver().getParam();
+    Map<String, String> driverParamsMap =
+        new Gson().fromJson(driverParams, new TypeToken<Map<String, String>>() {});
+    assertThat(driverParamsMap)
+        .containsExactly(
+            "xts_type", "cts", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
+  }
+
+  @Test
   public void createXtsTradefedTestJobInfo_excludeDevice() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
@@ -282,6 +324,43 @@ public final class SessionRequestHandlerUtilTest {
                 .build(),
             SubDeviceSpec.newBuilder()
                 .setType("AndroidDevice")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build());
+  }
+
+  @Test
+  public void createXtsTradefedTestJobInfo_multiDevice_pick2Emulators() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
+
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts-multidevice")
+                .setCommandLineArgs("cts")
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setDeviceType(SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE)
+                .build(),
+            ImmutableList.of());
+
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidLocalEmulator")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build(),
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidLocalEmulator")
                 .setDimensions(
                     StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
                 .build());
