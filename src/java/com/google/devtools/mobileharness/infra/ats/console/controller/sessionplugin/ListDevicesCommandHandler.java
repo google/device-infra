@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceConstants;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -64,7 +65,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.stream.Stream;
@@ -147,11 +147,12 @@ class ListDevicesCommandHandler {
           .collect(toImmutableList());
     }
     Instant listDevicesQueryInstant = clock.instant();
-    Future<DeviceQueryResult> deviceQueryResultFuture =
+    ListenableFuture<DeviceQueryResult> deviceQueryResultFuture =
         logFailure(
-            threadPool.submit(threadRenaming(this::queryDevice, () -> "device-querier")),
+            threadPool.submit(
+                threadRenaming(this::queryDevice, () -> "list-device-device-querier")),
             Level.WARNING,
-            "Error occurred in job manager");
+            "Error occurred in device querier of device lister");
     ImmutableMap<String, DeviceDescriptor> deviceInfoFromAdb = queryDeviceInfoFromAdb();
 
     Duration remainingQueryDuration =
@@ -166,8 +167,7 @@ class ListDevicesCommandHandler {
           QUERY_DEVICE_TIMEOUT);
     }
 
-    HashMap<String, DeviceDescriptor> deviceDescriptorMap = new HashMap<>();
-    deviceDescriptorMap.putAll(deviceInfoFromAdb);
+    HashMap<String, DeviceDescriptor> deviceDescriptorMap = new HashMap<>(deviceInfoFromAdb);
     if (deviceQueryResult != null) {
       for (DeviceInfo deviceInfo : deviceQueryResult.getDeviceInfoList()) {
         String serial = deviceInfo.getId();
