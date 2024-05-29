@@ -47,6 +47,10 @@ public abstract class SessionRequestInfo {
 
   public abstract ImmutableList<String> excludeDeviceSerials();
 
+  public abstract ImmutableList<String> productTypes();
+
+  public abstract ImmutableMap<String, String> deviceProperties();
+
   public abstract ImmutableList<String> moduleNames();
 
   public abstract Optional<String> testName();
@@ -111,6 +115,8 @@ public abstract class SessionRequestInfo {
         .setModuleNames(ImmutableList.of())
         .setDeviceSerials(ImmutableList.of())
         .setExcludeDeviceSerials(ImmutableList.of())
+        .setProductTypes(ImmutableList.of())
+        .setDeviceProperties(ImmutableMap.of())
         .setIncludeFilters(ImmutableList.of())
         .setExcludeFilters(ImmutableList.of())
         .setExtraArgs(ImmutableList.of())
@@ -140,6 +146,10 @@ public abstract class SessionRequestInfo {
     public abstract Builder setDeviceSerials(List<String> deviceSerials);
 
     public abstract Builder setExcludeDeviceSerials(List<String> excludeDeviceSerials);
+
+    public abstract Builder setProductTypes(List<String> productTypes);
+
+    public abstract Builder setDeviceProperties(ImmutableMap<String, String> deviceProperties);
 
     public abstract Builder setModuleNames(List<String> moduleNames);
 

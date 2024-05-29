@@ -77,7 +77,10 @@ public final class RunCommandTest {
                 Guice.createInjector(
                     BoundFieldModule.of(this), new ConsoleCommandTestModule(consoleInfo)))
             .create(RunCommand.class);
-    commandLine = new CommandLine(runCommand);
+    commandLine =
+        new CommandLine(runCommand)
+            .setCaseInsensitiveEnumValuesAllowed(true)
+            .setUnmatchedOptionsArePositionalParams(true);
   }
 
   @Test
@@ -106,6 +109,57 @@ public final class RunCommandTest {
     assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
         .hasMessageThat()
         .contains("Don't use '--include-filter' and '--module/-m' options at the same time");
+  }
+
+  @Test
+  public void parseArgs_propertyIsNotKeyValuePair() throws Exception {
+    assertThat(
+            assertThrows(
+                ParameterException.class,
+                () -> commandLine.parseArgs("cts", "--property", "name1")))
+        .hasMessageThat()
+        .contains("Must provide key value pair");
+
+    assertThat(
+            assertThrows(
+                ParameterException.class, () -> commandLine.parseArgs("cts", "--property")))
+        .hasMessageThat()
+        .contains("Must provide key value pair");
+  }
+
+  @Test
+  public void parseArgs_propertyOption() throws Exception {
+    commandLine.parseArgs(
+        "cts",
+        "-s",
+        "device1",
+        "tf-arg0",
+        "--property",
+        "name1",
+        "value1",
+        "tf-arg1",
+        "-opt0",
+        "--product-type",
+        "product1",
+        "--property",
+        "name2",
+        "value2",
+        "-opt1",
+        "opt1-value",
+        "-opt2",
+        "-s",
+        "device2");
+
+    assertThat(runCommand.getSerials()).containsExactly("device1", "device2");
+    assertThat(runCommand.getProductTypes()).containsExactly("product1");
+    assertThat(runCommand.getDevicePropertiesMap())
+        .containsExactly("name1", "value1", "name2", "value2");
+    assertThat(runCommand.getExtraRunCmdArgs())
+        .containsExactly("tf-arg0", "tf-arg1", "-opt0", "-opt1", "opt1-value", "-opt2");
+
+    commandLine.parseArgs("cts", "--property", "name1", "value1");
+
+    assertThat(runCommand.getDevicePropertiesMap()).containsExactly("name1", "value1");
   }
 
   @Test

@@ -26,6 +26,8 @@ import static com.google.common.util.concurrent.Futures.immediateFuture;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -58,8 +60,12 @@ import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Stack;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
@@ -70,6 +76,8 @@ import picocli.CommandLine.Command;
 import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.Help.Ansi;
 import picocli.CommandLine.HelpCommand;
+import picocli.CommandLine.IParameterPreprocessor;
+import picocli.CommandLine.Model.ArgSpec;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParameterException;
@@ -133,6 +141,23 @@ public final class RunCommand implements Callable<Integer> {
       paramLabel = "<exclude_device_id>",
       description = "Run test on any device except those with this serial number(s).")
   private List<String> excludeSerialOpt;
+
+  @Option(
+      names = {"--product-type"},
+      paramLabel = "<device_product_type>",
+      description =
+          "Run test on device with this product type(s). May also filter by variant using"
+              + " product:variant.")
+  private List<String> productTypes;
+
+  @Option(
+      names = {"--property"},
+      paramLabel = "<device_property>",
+      preprocessor = DevicePropertyMapParameterPreprocessor.class,
+      description =
+          "Run test on device with this property value. Expected format --property <propertyname>"
+              + " <propertyvalue>.")
+  private Map<String, String> devicePropertiesMap;
 
   @Option(
       names = {"--shard-count"},
@@ -283,6 +308,54 @@ public final class RunCommand implements Callable<Integer> {
     this.commandExecutor = commandExecutor;
     this.resultFuture = resultFuture;
     this.parseCommandOnly = parseCommandOnly;
+  }
+
+  static class DevicePropertyMapParameterPreprocessor implements IParameterPreprocessor {
+    @Override
+    public boolean preprocess(
+        Stack<String> args, CommandSpec commandSpec, ArgSpec argSpec, Map<String, Object> info) {
+      ArrayList<String> tmpLeftArgs = new ArrayList<>();
+      Map<String, String> map = argSpec.getValue();
+      map = map == null ? new HashMap<>() : map;
+      argSpec.setValue(map);
+
+      ArrayList<String> propEntry = new ArrayList<>();
+
+      if (!args.isEmpty()) {
+        while (!args.isEmpty() && !args.peek().startsWith("-")) {
+          propEntry.add(args.pop());
+        }
+
+        if (propEntry.size() < 2) {
+          throw generateMissingPropertyParameterException(commandSpec);
+        } else {
+          map.put(propEntry.get(0), propEntry.get(1));
+          // For rest of them, push them back to the stack later so picocli can process them later
+          for (int i = 2; i < propEntry.size(); i++) {
+            tmpLeftArgs.add(propEntry.get(i));
+          }
+        }
+        while (!args.isEmpty()) {
+          tmpLeftArgs.add(args.pop());
+        }
+      } else {
+        throw generateMissingPropertyParameterException(commandSpec);
+      }
+
+      // Push not processed args back to the stack so picocli can process them later
+      for (String item : Lists.reverse(tmpLeftArgs)) {
+        args.push(item);
+      }
+      return true;
+    }
+
+    ParameterException generateMissingPropertyParameterException(CommandSpec commandSpec) {
+      return new ParameterException(
+          commandSpec.commandLine(),
+          Ansi.AUTO.string(
+              "Must provide key value pair in format '--property <propertyname>"
+                  + " <propertyvalue>'"));
+    }
   }
 
   @Override
@@ -476,6 +549,12 @@ public final class RunCommand implements Callable<Integer> {
         serialOpt != null ? ImmutableList.copyOf(serialOpt) : ImmutableList.of();
     ImmutableList<String> excludeSerials =
         excludeSerialOpt != null ? ImmutableList.copyOf(excludeSerialOpt) : ImmutableList.of();
+    ImmutableList<String> productTypes =
+        this.productTypes == null ? ImmutableList.of() : ImmutableList.copyOf(this.productTypes);
+    ImmutableMap<String, String> devicePropertiesMap =
+        this.devicePropertiesMap == null
+            ? ImmutableMap.of()
+            : ImmutableMap.copyOf(this.devicePropertiesMap);
 
     ImmutableList<String> modules = getModules();
 
@@ -501,6 +580,8 @@ public final class RunCommand implements Callable<Integer> {
             .setXtsType(xtsType)
             .addAllDeviceSerial(deviceSerials)
             .addAllExcludeDeviceSerial(excludeSerials)
+            .addAllProductType(productTypes)
+            .putAllDeviceProperty(devicePropertiesMap)
             .addAllIncludeFilter(includeFilters)
             .addAllExcludeFilter(excludeFilters)
             .setHtmlInZip(htmlInZip);
@@ -606,5 +687,25 @@ public final class RunCommand implements Callable<Integer> {
         }
       }
     }
+  }
+
+  @VisibleForTesting
+  List<String> getProductTypes() {
+    return this.productTypes;
+  }
+
+  @VisibleForTesting
+  Map<String, String> getDevicePropertiesMap() {
+    return this.devicePropertiesMap;
+  }
+
+  @VisibleForTesting
+  List<String> getSerials() {
+    return this.serialOpt;
+  }
+
+  @VisibleForTesting
+  List<String> getExtraRunCmdArgs() {
+    return this.extraRunCmdArgs;
   }
 }

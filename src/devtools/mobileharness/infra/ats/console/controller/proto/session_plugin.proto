@@ -117,6 +117,12 @@ message RunCommand {
 
   // Optional. Device type to force the test to run on.
   optional DeviceType device_type = 19;
+
+  // Optional. Run test on device with this product type(s).
+  repeated string product_type = 20;
+
+  // Optional. Run test on device with this property value.
+  map<string, string> device_property = 21;
 }
 
 message RunCommandState {

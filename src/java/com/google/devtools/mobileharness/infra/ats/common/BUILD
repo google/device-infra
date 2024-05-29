@@ -25,12 +25,88 @@ package(
 )
 
 java_library(
+    name = "device_details",
+    srcs = ["DeviceDetails.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "device_details_retriever",
+    srcs = ["DeviceDetailsRetriever.java"],
+    deps = [
+        ":device_details",
+        ":session_request_info",
+        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared:exception",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "device_infra_service_util",
+    srcs = ["DeviceInfraServiceUtil.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/shell",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "device_selection",
+    srcs = ["DeviceSelection.java"],
+    deps = [
+        ":device_details",
+        ":device_selection_options",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "device_selection_options",
+    srcs = ["DeviceSelectionOptions.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "session_handler_helper",
+    srcs = ["SessionHandlerHelper.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "session_request_handler_util",
     srcs = ["SessionRequestHandlerUtil.java"],
     resources = [
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:cts_list",
     ],
     deps = [
+        ":device_details",
+        ":device_details_retriever",
         ":device_selection",
         ":device_selection_options",
         ":session_handler_helper",
@@ -45,7 +121,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
-        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_internal_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
@@ -80,34 +155,12 @@ java_library(
 )
 
 java_library(
-    name = "device_infra_service_util",
-    srcs = ["DeviceInfraServiceUtil.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
-        "//src/java/com/google/devtools/mobileharness/shared/util/shell",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "session_request_info",
     srcs = ["SessionRequestInfo.java"],
     deps = [
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "test_plan_loader",
-    srcs = ["TestPlanLoader.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -149,13 +202,13 @@ java_library(
 )
 
 java_library(
-    name = "session_handler_helper",
-    srcs = ["SessionHandlerHelper.java"],
+    name = "test_plan_loader",
+    srcs = ["TestPlanLoader.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
-        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
     ],
 )
@@ -179,23 +232,5 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
-    name = "device_selection_options",
-    srcs = ["DeviceSelectionOptions.java"],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "device_selection",
-    srcs = ["DeviceSelection.java"],
-    deps = [
-        ":device_selection_options",
-        "@maven//:com_google_guava_guava",
     ],
 )
