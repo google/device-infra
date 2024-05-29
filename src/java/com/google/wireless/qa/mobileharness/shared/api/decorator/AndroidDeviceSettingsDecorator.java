@@ -834,6 +834,12 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
     if (spec.hasEnableInstantApp()) {
       commandsAfterSettings.gservice.add(
           "gms:wh:enable_westinghouse_support", spec.getEnableInstantApp());
+      // For Phonesky 41.2+
+      commandsAfterSettings.add(
+          "am broadcast -a com.google.android.finsky.shellservice.COMMAND"
+              + " -p com.android.vending --es command override_phenotype_flags"
+              + " --es flag_type regular_unauth -e InstantApps__enable_sync_instant_app_status "
+              + spec.getEnableInstantApp());
     }
 
     // wtf_is_fatal
