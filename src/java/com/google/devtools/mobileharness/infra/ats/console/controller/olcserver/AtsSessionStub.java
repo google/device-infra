@@ -34,6 +34,7 @@ import com.google.devtools.common.metrics.stability.converter.ErrorModelConverte
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
@@ -495,13 +496,15 @@ public class AtsSessionStub {
         sessionPluginErrorsPartitionedByLabel.get(true).stream()
             .map(
                 atsSessionPluginError ->
-                    new MobileHarnessException(
+                    MobileHarnessExceptionFactory.create(
                         InfraErrorId.ATSC_SESSION_STUB_ATS_SESSION_PLUGIN_ERROR,
                         String.format(
                             "ATS session plugin error, method=[%s]",
                             atsSessionPluginError.getMethodName()),
                         ErrorModelConverter.toDeserializedException(
-                            atsSessionPluginError.getError())))
+                            atsSessionPluginError.getError()),
+                        /* addErrorIdToMessage= */ false,
+                        /* clearStackTrace= */ true))
             .collect(toImmutableList());
     ImmutableList<MobileHarnessException> otherSessionPluginErrors =
         sessionPluginErrorsPartitionedByLabel.get(false).stream()

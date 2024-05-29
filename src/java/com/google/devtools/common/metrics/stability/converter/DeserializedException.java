@@ -32,6 +32,7 @@ import javax.annotation.Nullable;
  *
  * <p>Its stack trace is equal to the stack trace of the serialized original exception.
  */
+@SuppressWarnings("OverrideThrowableToString")
 public class DeserializedException extends Exception implements ErrorIdProvider<ErrorId> {
 
   private final DeserializedErrorId errorId;
@@ -48,6 +49,13 @@ public class DeserializedException extends Exception implements ErrorIdProvider<
   /** Returns the class name of the serialized original exception. */
   public String getOriginalExceptionClassName() {
     return originalExceptionClassName;
+  }
+
+  @Override
+  public String toString() {
+    String originalClassName = getOriginalExceptionClassName();
+    String message = getLocalizedMessage();
+    return message == null ? originalClassName : originalClassName + ": " + message;
   }
 
   /** {@inheritDoc} */

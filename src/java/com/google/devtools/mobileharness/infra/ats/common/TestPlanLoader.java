@@ -85,7 +85,9 @@ public class TestPlanLoader {
     if (jarEntry == null) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_XTS_TEST_PLAN_LOADER_TEST_PLAN_NOT_FOUND,
-          String.format("Root test plan %s not found in xts-tradefed.jar file", rootTestPlan));
+          String.format(
+              "Root test plan [%s] not found in %s file",
+              rootTestPlan, xtsTradefedJarFile.getName()));
     }
 
     HashSet<String> includeFilters = new HashSet<>();

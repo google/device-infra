@@ -114,15 +114,14 @@ public class ErrorModelConverterTest {
           .build();
 
   public static final String DEVICE_INFRA_EXCEPTION_STRING =
-      "com.google.devtools.common.metrics.stability.converter.DeserializedException: Failed to load"
+      "com.google.devtools.deviceinfra.api.error.DeviceInfraException: Failed to load"
           + " class [MH|UNDETERMINED|REFLECTION_LOAD_CLASS_ERROR|4000001] [DeviceInfraException]\n"
           + "\tat foo.goo.Class1.method1(Class1.java:123)\n"
           + "\tSuppressed:"
-          + " com.google.devtools.common.metrics.stability.converter.DeserializedException: Message"
-          + " of suppressed [InterruptedException]\n"
+          + " java.lang.InterruptedException: Message of suppressed [InterruptedException]\n"
           + "\t\tat foo.goo.Class3.method3(Class3.java:789)\n"
           + "Caused by:"
-          + " com.google.devtools.common.metrics.stability.converter.DeserializedException: Message"
+          + " com.google.devtools.deviceinfra.api.error.DeviceInfraException: Message"
           + " of cause [MH|UNDETERMINED|REFLECTION_LOAD_CLASS_TYPE_MISMATCH|4000002]"
           + " [DeviceInfraException]\n"
           + "\tat foo.goo.Class2.method2(Class2.java:456)\n";
