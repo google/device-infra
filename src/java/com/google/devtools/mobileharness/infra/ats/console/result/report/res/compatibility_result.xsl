@@ -149,7 +149,7 @@
                                         <xsl:when test="count(TestCase/Test) &gt; 0">
                                             <xsl:variable name="href">
                                                 <xsl:value-of select="@abi"/>_<xsl:value-of
-                                                select="@name"/>
+                                                select="translate(@name, ':', '_')"/>
                                             </xsl:variable>
                                             <a href="module_reports/{$href}.html">
                                                 <xsl:value-of select="$moduleName"/>
@@ -240,7 +240,7 @@
 
     <xsl:template name="detailedTestReportPage">
         <xsl:variable name="href">
-            <xsl:value-of select="@abi"/>_<xsl:value-of select="@name"/>
+            <xsl:value-of select="@abi"/>_<xsl:value-of select="translate(@name, ':', '_')"/>
         </xsl:variable>
         <redirect:write file="{$reportDir}/module_reports/{$href}.html">
             <html>
