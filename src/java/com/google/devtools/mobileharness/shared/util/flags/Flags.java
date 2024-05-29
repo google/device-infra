@@ -520,6 +520,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableDeviceStateChangeRecover = enableDeviceStateChangeRecoverDefault;
 
+  private static final Flag<Boolean> enableDeviceSystemSettingsChangeDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_device_system_settings_change",
+      description =
+          "Whether to change device system settings, like enable/disable airplane mode, etc."
+              + " Default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableDeviceSystemSettingsChange = enableDeviceSystemSettingsChangeDefault;
+
   private static final Flag<Boolean> enableEmulatorDetectionDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

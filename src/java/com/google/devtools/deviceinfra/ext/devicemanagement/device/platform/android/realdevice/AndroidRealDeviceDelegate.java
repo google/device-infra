@@ -544,7 +544,9 @@ public abstract class AndroidRealDeviceDelegate {
       throws MobileHarnessException, InterruptedException {
     // Disables airplane mode, enables unknown source. Only works with SDK version >= 17.
     Integer sdkVersion = device.getSdkVersion();
-    if (sdkVersion != null && sdkVersion >= 17) {
+    if (Flags.instance().enableDeviceSystemSettingsChange.getNonNull()
+        && sdkVersion != null
+        && sdkVersion >= 17) {
       logger.atInfo().log("Checking device %s airplane mode...", deviceId);
       try {
         boolean currentAirplaneMode = systemSettingUtil.getAirplaneMode(deviceId);
@@ -900,7 +902,8 @@ public abstract class AndroidRealDeviceDelegate {
         startActivityController();
       }
       // Disables the NFC if feasible.
-      if (device.getBooleanProperty(AndroidRealDeviceConstants.PROPERTY_NAME_ROOTED)) {
+      if (Flags.instance().enableDeviceSystemSettingsChange.getNonNull()
+          && device.getBooleanProperty(AndroidRealDeviceConstants.PROPERTY_NAME_ROOTED)) {
         try {
           Integer sdkVersion = device.getSdkVersion();
           connectivityUtil.setNFC(

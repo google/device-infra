@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.platform.android.shared.constant.Packag
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSystemStateUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.android.AndroidPackages;
 import com.google.wireless.qa.mobileharness.shared.android.Sqlite;
@@ -259,10 +260,9 @@ public abstract class AndroidDeviceDelegate {
   public void preRunTest(TestInfo testInfo, boolean isRooted)
       throws MobileHarnessException, InterruptedException {
     try {
-      boolean enableDexPreVerification =
-          testInfo.jobInfo().params().isTrue(PARAM_DEX_PRE_VERIFICATION);
-
-      if (isRooted) {
+      if (Flags.instance().enableDeviceSystemSettingsChange.getNonNull() && isRooted) {
+        boolean enableDexPreVerification =
+            testInfo.jobInfo().params().isTrue(PARAM_DEX_PRE_VERIFICATION);
         // Set dex pre-verification only for rooted device.
         androidSystemSettingUtil.setDexPreVerification(deviceId, enableDexPreVerification);
         testInfo
