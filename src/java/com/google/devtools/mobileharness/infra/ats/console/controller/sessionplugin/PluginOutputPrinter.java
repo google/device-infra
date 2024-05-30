@@ -29,10 +29,10 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState.Invocation;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.shared.util.base.TableFormatter;
+import com.google.devtools.mobileharness.shared.util.comparator.NaturalSortOrderComparator;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
@@ -43,8 +43,6 @@ public class PluginOutputPrinter {
 
   private static final ImmutableList<String> LIST_INVOCATIONS_HEADER =
       ImmutableList.of("Command Id", "Exec Time", "Device", "State");
-
-  private static final Comparator<String> COMMAND_ID_COMPARATOR = new CommandIdComparator();
 
   /**
    * Prints {@code AtsSessionPluginOutput} to ATS console.
@@ -70,7 +68,7 @@ public class PluginOutputPrinter {
   public static String listCommands(List<AtsSessionPluginConfigOutput> configOutputs) {
     return configOutputs.stream()
         .map(PluginOutputPrinter::getRunCommandState)
-        .sorted(comparing(RunCommandState::getCommandId, COMMAND_ID_COMPARATOR))
+        .sorted(comparing(RunCommandState::getCommandId, new NaturalSortOrderComparator()))
         .map(PluginOutputPrinter::formatCommand)
         .collect(joining("\n"));
   }
@@ -101,7 +99,7 @@ public class PluginOutputPrinter {
             .map(PluginOutputPrinter::getRunCommandState)
             .flatMap(runCommandState -> runCommandState.getRunningInvocationMap().values().stream())
             .sorted(
-                comparing(Invocation::getCommandId, COMMAND_ID_COMPARATOR)
+                comparing(Invocation::getCommandId, new NaturalSortOrderComparator())
                     .thenComparing(invocation -> toJavaInstant(invocation.getStartTime())))
             .map(PluginOutputPrinter::formatInvocation)
             .collect(toImmutableList());
@@ -163,47 +161,6 @@ public class PluginOutputPrinter {
             Duration.between(toJavaInstant(invocation.getStartTime()), Instant.now())),
         invocation.getDeviceIdList().stream().collect(joining(", ", "[", "]")),
         invocation.getStateSummary());
-  }
-
-  /** Command ID comparator. */
-  private static class CommandIdComparator implements Comparator<String> {
-
-    @Override
-    public int compare(String left, String right) {
-      int leftInteger;
-      int rightInteger;
-      boolean isLeftInteger;
-      boolean isRightInteger;
-      try {
-        leftInteger = Integer.parseInt(left);
-        isLeftInteger = true;
-      } catch (NumberFormatException e) {
-        leftInteger = Integer.MAX_VALUE;
-        isLeftInteger = false;
-      }
-
-      try {
-        rightInteger = Integer.parseInt(right);
-        isRightInteger = true;
-      } catch (NumberFormatException e) {
-        rightInteger = Integer.MAX_VALUE;
-        isRightInteger = false;
-      }
-
-      if (isLeftInteger) {
-        if (isRightInteger) {
-          return Integer.compare(leftInteger, rightInteger);
-        } else {
-          return -1;
-        }
-      } else {
-        if (isRightInteger) {
-          return 1;
-        } else {
-          return left.compareTo(right);
-        }
-      }
-    }
   }
 
   private PluginOutputPrinter() {}

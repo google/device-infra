@@ -32,3 +32,14 @@ java_library(
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
     ],
 )
+
+java_library(
+    name = "natural_sort_order_comparator",
+    srcs = ["NaturalSortOrderComparator.java"],
+    visibility = ["//:deviceinfra_all_pkg"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)

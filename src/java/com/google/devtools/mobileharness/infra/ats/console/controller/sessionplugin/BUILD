@@ -179,6 +179,7 @@ java_library(
         "//src/devtools/mobileharness/infra/ats/console/controller/proto:session_plugin_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
+        "//src/java/com/google/devtools/mobileharness/shared/util/comparator:natural_sort_order_comparator",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
