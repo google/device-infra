@@ -194,11 +194,16 @@ public class AtsLocalRunner {
   }
 
   private static class ServerLogObserver implements StreamObserver<GetLogResponse> {
+    private static final int MIN_LOG_RECORD_IMPORTANCE =
+        Flags.instance().alrOlcServerMinLogRecordImportance.getNonNull();
+
     @Override
     public void onNext(GetLogResponse response) {
       for (LogRecord logRecord : response.getLogRecords().getLogRecordList()) {
-        // Print server log without format
-        System.out.print(logRecord.getFormattedLogRecord());
+        if (logRecord.getImportance() >= MIN_LOG_RECORD_IMPORTANCE) {
+          // Print server log without format
+          System.out.print(logRecord.getFormattedLogRecord());
+        }
       }
     }
 

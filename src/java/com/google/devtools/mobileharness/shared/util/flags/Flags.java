@@ -119,6 +119,16 @@ public class Flags {
       converter = Flag.StringListConverter.class)
   public Flag<List<String>> alrArtifacts = alrArtifactsDefault;
 
+  private static final Flag<Integer> alrOlcServerMinLogRecordImportanceDefault = Flag.value(150);
+
+  @com.beust.jcommander.Parameter(
+      names = "--alr_olc_server_min_log_record_importance",
+      description =
+          "Minimum OLC server log record importance shown in ATS local runner. Default is 150.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> alrOlcServerMinLogRecordImportance =
+      alrOlcServerMinLogRecordImportanceDefault;
+
   private static final Flag<String> alrOlcServerPathDefault = Flag.value(null);
 
   @com.beust.jcommander.Parameter(
