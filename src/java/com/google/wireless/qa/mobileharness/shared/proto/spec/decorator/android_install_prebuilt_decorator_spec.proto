@@ -1,0 +1,54 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.shared.spec;
+
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/base_spec.proto";
+
+option java_package = "com.google.wireless.qa.mobileharness.shared.proto.spec.decorator";
+option java_multiple_files = true;
+
+// Specs for {@link AndroidInstallPrebuiltDecorator}
+// Next tag: 6
+message AndroidInstallPrebuiltDecoratorSpec {
+  extend DecoratorSpec {
+    optional AndroidInstallPrebuiltDecoratorSpec ext = 1008;
+  }
+
+  optional string type = 1
+      [(field_detail) = { help: "Specifies the type of Prebuilt to install." }];
+
+  optional string branch = 2 [(field_detail) = {
+    help: "Specifies the branch to get the build from. The build used will be "
+          "the latest build from the specified branch. If the 'build_id' param "
+          "is also specified, this param is ignored."
+  }];
+
+  optional string build_id = 3 [(field_detail) = {
+    help: "Specifies the ID of the Prebuilt build to install."
+  }];
+
+  optional string build_target = 4 [(field_detail) = {
+    help: "Specifies the build target of the Prebuilt build to install."
+  }];
+
+  optional bool disabled = 5 [
+    default = false,
+    (field_detail) = { help: "If the decorator is disabled. Default is false." }
+  ];
+}
