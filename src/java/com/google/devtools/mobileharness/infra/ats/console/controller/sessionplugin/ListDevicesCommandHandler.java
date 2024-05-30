@@ -339,7 +339,7 @@ class ListDevicesCommandHandler {
     if (!androidFastbootDevice && androidFlashableDevice) {
       return "FASTBOOTD";
     }
-    return "n/a";
+    return NOT_APPLICABLE;
   }
 
   private static String getTestDeviceState(List<String> deviceTypes) {
