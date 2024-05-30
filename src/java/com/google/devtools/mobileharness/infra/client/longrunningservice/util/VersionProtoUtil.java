@@ -23,11 +23,12 @@ import com.google.devtools.mobileharness.shared.version.VersionUtil;
 /** Util for generating {@link GetVersionResponse}. */
 public class VersionProtoUtil {
 
+  /** Creates a {@link GetVersionResponse} based on the current environment. */
   public static GetVersionResponse createGetVersionResponse() {
     GetVersionResponse.Builder result =
         GetVersionResponse.newBuilder().setLabVersion(Version.LAB_VERSION.toString());
     VersionUtil.getGitHubVersion().ifPresent(result::setGithubVersion);
-    return result.build();
+    return result.setProcessId(ProcessHandle.current().pid()).build();
   }
 
   private VersionProtoUtil() {}
