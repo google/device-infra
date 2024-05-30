@@ -85,6 +85,65 @@ public class DeviceSelection {
       }
     }
 
+    if (options.maxBatteryLevel().isPresent() || options.minBatteryLevel().isPresent()) {
+      Optional<Integer> deviceBatteryLevel = deviceDetails.batteryLevel();
+      if (deviceBatteryLevel.isEmpty()) {
+        logger.atInfo().log("Found no battery level for device %s.", deviceDetails.id());
+        return false;
+      }
+      if (options.maxBatteryLevel().isPresent()
+          && deviceBatteryLevel.get() > options.maxBatteryLevel().get()) {
+        logger.atInfo().log(
+            "Device %s battery level (%s) is higher than requested max battery level(%s)",
+            deviceDetails.id(), deviceBatteryLevel.get(), options.maxBatteryLevel().get());
+        return false;
+      }
+      if (options.minBatteryLevel().isPresent()
+          && deviceBatteryLevel.get() < options.minBatteryLevel().get()) {
+        logger.atInfo().log(
+            "Device %s battery level (%s) is lower than requested min battery level(%s)",
+            deviceDetails.id(), deviceBatteryLevel.get(), options.minBatteryLevel().get());
+        return false;
+      }
+    }
+
+    if (options.maxBatteryTemperature().isPresent()) {
+      Optional<Integer> deviceBatteryTemperature = deviceDetails.batteryTemperature();
+      if (deviceBatteryTemperature.isEmpty()) {
+        logger.atInfo().log("Found no battery temperature for device %s.", deviceDetails.id());
+        return false;
+      }
+      if (deviceBatteryTemperature.get() > options.maxBatteryTemperature().get()) {
+        logger.atInfo().log(
+            "Device %s battery temperature (%s) is higher than requested max battery"
+                + " temperature(%s)",
+            deviceDetails.id(),
+            deviceBatteryTemperature.get(),
+            options.maxBatteryTemperature().get());
+        return false;
+      }
+    }
+
+    if (options.minSdkLevel().isPresent() || options.maxSdkLevel().isPresent()) {
+      Optional<Integer> deviceSdkLevel = deviceDetails.sdkVersion();
+      if (deviceSdkLevel.isEmpty()) {
+        logger.atInfo().log("Found no sdk level for device %s.", deviceDetails.id());
+        return false;
+      }
+      if (options.minSdkLevel().isPresent() && deviceSdkLevel.get() < options.minSdkLevel().get()) {
+        logger.atInfo().log(
+            "Device %s sdk level (%s) is lower than requested min sdk level(%s)",
+            deviceDetails.id(), deviceSdkLevel.get(), options.minSdkLevel().get());
+        return false;
+      }
+      if (options.maxSdkLevel().isPresent() && deviceSdkLevel.get() > options.maxSdkLevel().get()) {
+        logger.atInfo().log(
+            "Device %s sdk level (%s) is higher than requested max sdk level(%s)",
+            deviceDetails.id(), deviceSdkLevel.get(), options.maxSdkLevel().get());
+        return false;
+      }
+    }
+
     ImmutableMap<String, String> deviceProperties = deviceDetails.deviceProperties();
     for (Entry<String, String> propEntry : options.deviceProperties().entrySet()) {
       @Nullable String deviceProperty = deviceProperties.getOrDefault(propEntry.getKey(), null);

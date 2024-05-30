@@ -49,6 +49,88 @@ public final class DeviceSelectionTest {
   }
 
   @Test
+  public void matches_batteryLevel() {
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).setBatteryLevel(90).build(),
+                DeviceSelectionOptions.builder().setMaxBatteryLevel(100).build()))
+        .isTrue();
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).setBatteryLevel(90).build(),
+                DeviceSelectionOptions.builder().setMinBatteryLevel(80).build()))
+        .isTrue();
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).setBatteryLevel(90).build(),
+                DeviceSelectionOptions.builder().setMaxBatteryLevel(80).build()))
+        .isFalse();
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).setBatteryLevel(90).build(),
+                DeviceSelectionOptions.builder().setMinBatteryLevel(95).build()))
+        .isFalse();
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).build(),
+                DeviceSelectionOptions.builder().setMinBatteryLevel(95).build()))
+        .isFalse();
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).build(),
+                DeviceSelectionOptions.builder().setMaxBatteryLevel(95).build()))
+        .isFalse();
+  }
+
+  @Test
+  public void matches_batteryTemperature() {
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).setBatteryTemperature(30).build(),
+                DeviceSelectionOptions.builder().setMaxBatteryTemperature(40).build()))
+        .isTrue();
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).setBatteryTemperature(30).build(),
+                DeviceSelectionOptions.builder().setMaxBatteryTemperature(20).build()))
+        .isFalse();
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).build(),
+                DeviceSelectionOptions.builder().setMaxBatteryTemperature(30).build()))
+        .isFalse();
+  }
+
+  @Test
+  public void matches_sdkLevel() {
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).setSdkVersion(30).build(),
+                DeviceSelectionOptions.builder().setMinSdkLevel(20).build()))
+        .isTrue();
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).setSdkVersion(30).build(),
+                DeviceSelectionOptions.builder().setMinSdkLevel(40).build()))
+        .isFalse();
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).setSdkVersion(30).build(),
+                DeviceSelectionOptions.builder().setMaxSdkLevel(40).build()))
+        .isTrue();
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).setSdkVersion(30).build(),
+                DeviceSelectionOptions.builder().setMaxSdkLevel(20).build()))
+        .isFalse();
+    assertThat(
+            DeviceSelection.matches(
+                DeviceDetails.builder().setId(DEVICE_ID).build(),
+                DeviceSelectionOptions.builder().setMaxSdkLevel(30).build()))
+        .isFalse();
+  }
+
+  @Test
   public void matches_productTypeWithVariant() {
     assertThat(
             DeviceSelection.matches(

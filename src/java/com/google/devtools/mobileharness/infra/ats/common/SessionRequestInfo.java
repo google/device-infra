@@ -110,6 +110,16 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<String> deviceType();
 
+  public abstract Optional<Integer> maxBatteryLevel();
+
+  public abstract Optional<Integer> minBatteryLevel();
+
+  public abstract Optional<Integer> maxBatteryTemperature();
+
+  public abstract Optional<Integer> minSdkLevel();
+
+  public abstract Optional<Integer> maxSdkLevel();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -212,6 +222,16 @@ public abstract class SessionRequestInfo {
     public abstract Builder setSessionClientId(String sessionClientId);
 
     public abstract Builder setDeviceType(String deviceType);
+
+    public abstract Builder setMaxBatteryLevel(int maxBatteryLevel);
+
+    public abstract Builder setMinBatteryLevel(int minBatteryLevel);
+
+    public abstract Builder setMaxBatteryTemperature(int maxBatteryTemperature);
+
+    public abstract Builder setMinSdkLevel(int minSdkLevel);
+
+    public abstract Builder setMaxSdkLevel(int maxSdkLevel);
 
     protected abstract SessionRequestInfo autoBuild();
 

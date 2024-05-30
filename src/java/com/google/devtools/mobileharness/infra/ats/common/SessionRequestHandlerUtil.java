@@ -194,21 +194,36 @@ public class SessionRequestHandlerUtil {
       SessionRequestInfo sessionRequestInfo, int shardCount)
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, DeviceDetails> allAndroidDevices =
-        deviceDetailsRetriever.getAllAndroidDevices(sessionRequestInfo);
+        deviceDetailsRetriever.getAllAndroidDevicesWithNeededDetails(sessionRequestInfo);
     logger.atInfo().log("All android devices: %s", allAndroidDevices.keySet());
     ImmutableList<String> passedInDeviceSerials = sessionRequestInfo.deviceSerials();
+    DeviceSelectionOptions.Builder deviceSelectionOptionsBuilder =
+        DeviceSelectionOptions.builder()
+            .setSerials(passedInDeviceSerials)
+            .setExcludeSerials(sessionRequestInfo.excludeDeviceSerials())
+            .setProductTypes(sessionRequestInfo.productTypes())
+            .setDeviceProperties(sessionRequestInfo.deviceProperties());
+    if (sessionRequestInfo.maxBatteryLevel().isPresent()) {
+      deviceSelectionOptionsBuilder.setMaxBatteryLevel(sessionRequestInfo.maxBatteryLevel().get());
+    }
+    if (sessionRequestInfo.minBatteryLevel().isPresent()) {
+      deviceSelectionOptionsBuilder.setMinBatteryLevel(sessionRequestInfo.minBatteryLevel().get());
+    }
+    if (sessionRequestInfo.maxBatteryTemperature().isPresent()) {
+      deviceSelectionOptionsBuilder.setMaxBatteryTemperature(
+          sessionRequestInfo.maxBatteryTemperature().get());
+    }
+    if (sessionRequestInfo.minSdkLevel().isPresent()) {
+      deviceSelectionOptionsBuilder.setMinSdkLevel(sessionRequestInfo.minSdkLevel().get());
+    }
+    if (sessionRequestInfo.maxSdkLevel().isPresent()) {
+      deviceSelectionOptionsBuilder.setMaxSdkLevel(sessionRequestInfo.maxSdkLevel().get());
+    }
+    DeviceSelectionOptions deviceSelectionOptions = deviceSelectionOptionsBuilder.build();
+
     ImmutableSet<DeviceDetails> availableDevices =
         allAndroidDevices.values().stream()
-            .filter(
-                deviceDetails ->
-                    DeviceSelection.matches(
-                        deviceDetails,
-                        DeviceSelectionOptions.builder()
-                            .setSerials(passedInDeviceSerials)
-                            .setExcludeSerials(sessionRequestInfo.excludeDeviceSerials())
-                            .setProductTypes(sessionRequestInfo.productTypes())
-                            .setDeviceProperties(sessionRequestInfo.deviceProperties())
-                            .build()))
+            .filter(deviceDetails -> DeviceSelection.matches(deviceDetails, deviceSelectionOptions))
             .collect(toImmutableSet());
 
     if (availableDevices.isEmpty()) {
@@ -743,7 +758,7 @@ public class SessionRequestHandlerUtil {
   private Optional<DeviceInfo> getDeviceInfoFromLocal(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     ImmutableSet<String> allLocalAndroidDevices =
-        deviceDetailsRetriever.getAllLocalAndroidDevices(sessionRequestInfo).keySet();
+        deviceDetailsRetriever.getAllAndroidDevicesWithNeededDetails(sessionRequestInfo).keySet();
     if (!allLocalAndroidDevices.isEmpty()) {
       Optional<String> deviceSerial;
       if (sessionRequestInfo.deviceSerials().isEmpty()) {

@@ -123,6 +123,17 @@ message RunCommand {
 
   // Optional. Run test on device with this property value.
   map<string, string> device_property = 21;
+
+  // Optional. Set battery requirement for test device.
+  optional int32 max_battery_level = 22;
+  optional int32 min_battery_level = 23;
+  optional int32 max_battery_temperature = 24;
+
+  // Optional. Set min sdk level requirement for test device.
+  optional int32 min_sdk_level = 25;
+
+  // Optional. Set max sdk level requirement for test device.
+  optional int32 max_sdk_level = 26;
 }
 
 message RunCommandState {

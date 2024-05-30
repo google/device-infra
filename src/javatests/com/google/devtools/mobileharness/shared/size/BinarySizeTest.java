@@ -40,7 +40,7 @@ public class BinarySizeTest {
   // Please keep all binary sizes below in the precision "xxx_x50_000L" bytes.
 
   private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 25_150_000L;
-  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 32_550_000L;
+  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 32_650_000L;
   private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 31_050_000L;
   private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 32_050_000L;
   private static final long MAX_ATS_CONSOLE_BINARY_SIZE_BYTE = 23_250_000L;

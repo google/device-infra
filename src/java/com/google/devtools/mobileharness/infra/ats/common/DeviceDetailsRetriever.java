@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
+import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Provider;
@@ -45,29 +46,38 @@ public class DeviceDetailsRetriever {
   private final DeviceQuerier deviceQuerier;
   private final Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider;
   private final Provider<AndroidAdbUtil> androidAdbUtilProvider;
+  private final Provider<AndroidSystemSettingUtil> androidSystemSettingUtilProvider;
 
   @Inject
   DeviceDetailsRetriever(
       DeviceQuerier deviceQuerier,
       Provider<AndroidAdbInternalUtil> androidAdbInternalUtilProvider,
-      Provider<AndroidAdbUtil> androidAdbUtilProvider) {
+      Provider<AndroidAdbUtil> androidAdbUtilProvider,
+      Provider<AndroidSystemSettingUtil> androidSystemSettingUtilProvider) {
     this.deviceQuerier = deviceQuerier;
     this.androidAdbInternalUtilProvider = androidAdbInternalUtilProvider;
     this.androidAdbUtilProvider = androidAdbUtilProvider;
+    this.androidSystemSettingUtilProvider = androidSystemSettingUtilProvider;
   }
 
-  /** Gets details of all Android devices. */
-  public ImmutableMap<String, DeviceDetails> getAllAndroidDevices(
+  /**
+   * Gets details of all Android devices. The detail only contain needed field as specified in the
+   * sessionRequestInfo.
+   */
+  public ImmutableMap<String, DeviceDetails> getAllAndroidDevicesWithNeededDetails(
       SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
     if (Flags.instance().enableAtsMode.getNonNull()) {
       return getAllAndroidDevicesFromMaster();
     } else {
-      return getAllLocalAndroidDevices(sessionRequestInfo);
+      return getAllLocalAndroidDevicesWithNeededDetails(sessionRequestInfo);
     }
   }
 
-  /** Gets details of all local Android devices. */
-  public ImmutableMap<String, DeviceDetails> getAllLocalAndroidDevices(
+  /**
+   * Gets details of all local Android devices. The detail only contain needed field as specified in
+   * the sessionRequestInfo.
+   */
+  public ImmutableMap<String, DeviceDetails> getAllLocalAndroidDevicesWithNeededDetails(
       SessionRequestInfo sessionRequestInfo) throws MobileHarnessException, InterruptedException {
     if (Flags.instance().detectAdbDevice.getNonNull()) {
       return androidAdbInternalUtilProvider
@@ -79,13 +89,23 @@ public class DeviceDetailsRetriever {
                 DeviceDetails.Builder deviceDetails = DeviceDetails.builder().setId(deviceId);
                 if (!sessionRequestInfo.productTypes().isEmpty()) {
                   Optional<String> productType = getDeviceProductType(deviceId);
-                  if (productType.isPresent()) {
-                    deviceDetails.setProductType(productType.get());
-                  }
+                  productType.ifPresent(deviceDetails::setProductType);
                   Optional<String> productVariant = getDeviceProductVariant(deviceId);
-                  if (productVariant.isPresent()) {
-                    deviceDetails.setProductVariant(productVariant.get());
-                  }
+                  productVariant.ifPresent(deviceDetails::setProductVariant);
+                }
+                if (sessionRequestInfo.maxSdkLevel().isPresent()
+                    || sessionRequestInfo.minSdkLevel().isPresent()) {
+                  Optional<Integer> sdkVersion = getDeviceSdkVersion(deviceId);
+                  sdkVersion.ifPresent(deviceDetails::setSdkVersion);
+                }
+                if (sessionRequestInfo.maxBatteryLevel().isPresent()
+                    || sessionRequestInfo.minBatteryLevel().isPresent()) {
+                  Optional<Integer> batteryLevel = getDeviceBatteryLevel(deviceId);
+                  batteryLevel.ifPresent(deviceDetails::setBatteryLevel);
+                }
+                if (sessionRequestInfo.maxBatteryTemperature().isPresent()) {
+                  Optional<Integer> batteryTemperature = getDeviceBatteryTemperature(deviceId);
+                  batteryTemperature.ifPresent(deviceDetails::setBatteryTemperature);
                 }
                 ImmutableMap.Builder<String, String> collectedDeviceProperties =
                     ImmutableMap.builder();
@@ -95,9 +115,7 @@ public class DeviceDetailsRetriever {
                     .forEach(
                         propName -> {
                           Optional<String> propertyValue = getDeviceProperty(deviceId, propName);
-                          if (propertyValue.isPresent()) {
-                            collectedDeviceProperties.put(propName, propertyValue.get());
-                          }
+                          propertyValue.ifPresent(s -> collectedDeviceProperties.put(propName, s));
                         });
                 return deviceDetails
                     .setDeviceProperties(collectedDeviceProperties.buildOrThrow())
@@ -143,6 +161,22 @@ public class DeviceDetailsRetriever {
     return Optional.empty();
   }
 
+  private Optional<Integer> getDeviceSdkVersion(String deviceId) {
+    try {
+      return Optional.of(androidSystemSettingUtilProvider.get().getDeviceSdkVersion(deviceId));
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log(
+          "Failed to get SDK version for device %s: %s",
+          deviceId, MoreThrowables.shortDebugString(e));
+    } catch (InterruptedException e) {
+      logger.atWarning().log(
+          "Interrupted when getting SDK version for device %s: %s",
+          deviceId, MoreThrowables.shortDebugString(e));
+      Thread.currentThread().interrupt();
+    }
+    return Optional.empty();
+  }
+
   private Optional<String> getDeviceProperty(String deviceId, String propertyName) {
     try {
       return Optional.of(
@@ -155,6 +189,38 @@ public class DeviceDetailsRetriever {
       logger.atWarning().log(
           "Interrupted when getting value of property %s for device %s: %s",
           propertyName, deviceId, MoreThrowables.shortDebugString(e));
+      Thread.currentThread().interrupt();
+    }
+    return Optional.empty();
+  }
+
+  private Optional<Integer> getDeviceBatteryLevel(String deviceId) {
+    try {
+      return Optional.of(androidSystemSettingUtilProvider.get().getBatteryLevel(deviceId));
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log(
+          "Failed to get battery level for device %s: %s",
+          deviceId, MoreThrowables.shortDebugString(e));
+    } catch (InterruptedException e) {
+      logger.atWarning().log(
+          "Interrupted when getting battery level for device %s: %s",
+          deviceId, MoreThrowables.shortDebugString(e));
+      Thread.currentThread().interrupt();
+    }
+    return Optional.empty();
+  }
+
+  private Optional<Integer> getDeviceBatteryTemperature(String deviceId) {
+    try {
+      return androidSystemSettingUtilProvider.get().getBatteryTemperature(deviceId);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log(
+          "Failed to get battery temperature for device %s: %s",
+          deviceId, MoreThrowables.shortDebugString(e));
+    } catch (InterruptedException e) {
+      logger.atWarning().log(
+          "Interrupted when getting battery temperature for device %s: %s",
+          deviceId, MoreThrowables.shortDebugString(e));
       Thread.currentThread().interrupt();
     }
     return Optional.empty();

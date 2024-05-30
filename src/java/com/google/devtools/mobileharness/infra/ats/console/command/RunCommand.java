@@ -160,6 +160,62 @@ public final class RunCommand implements Callable<Integer> {
   private Map<String, String> devicePropertiesMap;
 
   @Option(
+      names = {"--min-battery"},
+      paramLabel = "<min_battery_level>",
+      description =
+          "only run this test on a device whose battery level is at least the given"
+              + " amount. Scale: 0-100")
+  private Integer minBattery = null;
+
+  @Option(
+      names = {"--max-battery"},
+      paramLabel = "<max_battery_level>",
+      description =
+          "only run this test on a device whose battery level is strictly less than the "
+              + "given amount. Scale: 0-100")
+  private Integer maxBattery = null;
+
+  @Option(
+      names = {"--require-battery-check"},
+      arity = "1",
+      paramLabel = "<require_battery_check>",
+      description =
+          "If --min-battery and/or --max-battery is specified, enforce the check. If"
+              + " require-battery-check=false, then no battery check will occur. This is TRUE by"
+              + " default.")
+  private boolean requireBatteryCheck = true;
+
+  @Option(
+      names = {"--max-battery-temperature"},
+      paramLabel = "<max_battery_temperature>",
+      description =
+          "only run this test on a device whose battery temperature is strictly "
+              + "less than the given amount. Scale: Degrees celsius")
+  private Integer maxBatteryTemperature = null;
+
+  @Option(
+      names = {"--require-battery-temp-check"},
+      arity = "1",
+      paramLabel = "<require_battery_temp_check>",
+      description =
+          "If --max-battery-temperature is specified, enforce the battery checking. If"
+              + " require-battery-temp-check=false, then no temperature check will occur. This is"
+              + " TRUE by default.")
+  private boolean requireBatteryTemperatureCheck = true;
+
+  @Option(
+      names = {"--min-sdk-level"},
+      paramLabel = "<min_sdk_level>",
+      description = "Only run this test on devices that support this Android SDK/API level")
+  private Integer minSdk = null;
+
+  @Option(
+      names = {"--max-sdk-level"},
+      paramLabel = "<max_sdk_level>",
+      description = "Only run this test on devices that support this Android SDK/API level")
+  private Integer maxSdk = null;
+
+  @Option(
       names = {"--shard-count"},
       paramLabel = "<number_of_shards>",
       description =
@@ -364,6 +420,7 @@ public final class RunCommand implements Callable<Integer> {
     try {
       if (parseCommandOnly) {
         try {
+          // TODO: Add additional command line options from ats console.
           resultFuture.accept(immediateFuture(createParseResult()));
           return ExitCode.OK;
         } catch (RuntimeException | Error e) {
@@ -615,6 +672,25 @@ public final class RunCommand implements Callable<Integer> {
       if (deviceTypeOptionsGroup.runTestOnRealDevice) {
         runCommand.setDeviceType(DeviceType.REAL_DEVICE);
       }
+    }
+    if (requireBatteryCheck) {
+      if (maxBattery != null) {
+        runCommand.setMaxBatteryLevel(maxBattery);
+      }
+      if (minBattery != null) {
+        runCommand.setMinBatteryLevel(minBattery);
+      }
+    }
+    if (requireBatteryTemperatureCheck) {
+      if (maxBatteryTemperature != null) {
+        runCommand.setMaxBatteryTemperature(maxBatteryTemperature);
+      }
+    }
+    if (minSdk != null) {
+      runCommand.setMinSdkLevel(minSdk);
+    }
+    if (maxSdk != null) {
+      runCommand.setMaxSdkLevel(maxSdk);
     }
 
     ImmutableList<String> commandLineArgs = command.stream().skip(1L).collect(toImmutableList());

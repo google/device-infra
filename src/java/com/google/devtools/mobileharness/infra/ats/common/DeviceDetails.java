@@ -30,6 +30,12 @@ public abstract class DeviceDetails {
 
   public abstract Optional<String> productVariant();
 
+  public abstract Optional<Integer> batteryLevel();
+
+  public abstract Optional<Integer> batteryTemperature();
+
+  public abstract Optional<Integer> sdkVersion();
+
   /** Device properties. Key is the device property name, value is its property value. */
   public abstract ImmutableMap<String, String> deviceProperties();
 
@@ -47,6 +53,12 @@ public abstract class DeviceDetails {
     public abstract Builder setProductVariant(String productVariant);
 
     public abstract Builder setDeviceProperties(ImmutableMap<String, String> deviceProperties);
+
+    public abstract Builder setBatteryLevel(int batteryLevel);
+
+    public abstract Builder setBatteryTemperature(int batteryTemperature);
+
+    public abstract Builder setSdkVersion(int sdkVersion);
 
     public abstract DeviceDetails build();
   }

@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -98,6 +99,7 @@ public final class RunCommandHandlerTest {
   @Bind @SessionGenDir private Path sessionGenDir;
   @Bind @SessionTempDir private Path sessionTempDir;
   @Bind @Mock private SessionInfo sessionInfo;
+  @Bind @Mock private AndroidAdbInternalUtil androidAdbInternalUtil;
 
   @Inject private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -146,6 +148,11 @@ public final class RunCommandHandlerTest {
             .setRetryType("FAILED")
             .setSubPlanName("sub_plan_name")
             .setDeviceType(DeviceType.EMULATOR)
+            .setMaxBatteryLevel(99)
+            .setMinBatteryLevel(1)
+            .setMaxBatteryTemperature(30)
+            .setMinSdkLevel(32)
+            .setMaxSdkLevel(35)
             .build();
 
     SessionRequestInfo sessionRequestInfo = runCommandHandler.generateSessionRequestInfo(command);
@@ -171,6 +178,11 @@ public final class RunCommandHandlerTest {
     assertThat(sessionRequestInfo.subPlanName()).hasValue("sub_plan_name");
     assertThat(sessionRequestInfo.deviceType())
         .hasValue(SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE);
+    assertThat(sessionRequestInfo.maxBatteryLevel()).hasValue(99);
+    assertThat(sessionRequestInfo.minBatteryLevel()).hasValue(1);
+    assertThat(sessionRequestInfo.maxBatteryTemperature()).hasValue(30);
+    assertThat(sessionRequestInfo.minSdkLevel()).hasValue(32);
+    assertThat(sessionRequestInfo.maxSdkLevel()).hasValue(35);
   }
 
   @Test

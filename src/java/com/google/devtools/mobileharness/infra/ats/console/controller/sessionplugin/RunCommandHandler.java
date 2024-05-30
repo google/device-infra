@@ -271,6 +271,22 @@ class RunCommandHandler {
               ? SessionRequestHandlerUtil.ANDROID_LOCAL_EMULATOR_TYPE
               : SessionRequestHandlerUtil.ANDROID_REAL_DEVICE_TYPE);
     }
+    if (runCommand.hasMaxBatteryLevel()) {
+      builder.setMaxBatteryLevel(runCommand.getMaxBatteryLevel());
+    }
+    if (runCommand.hasMinBatteryLevel()) {
+      builder.setMinBatteryLevel(runCommand.getMinBatteryLevel());
+    }
+    if (runCommand.hasMaxBatteryTemperature()) {
+      builder.setMaxBatteryTemperature(runCommand.getMaxBatteryTemperature());
+    }
+    if (runCommand.hasMinSdkLevel()) {
+      builder.setMinSdkLevel(runCommand.getMinSdkLevel());
+    }
+    if (runCommand.hasMaxSdkLevel()) {
+      builder.setMaxSdkLevel(runCommand.getMaxSdkLevel());
+    }
+
     sessionInfo
         .getSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)
         .ifPresent(builder::setSessionClientId);

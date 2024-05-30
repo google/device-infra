@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.common;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import java.util.Optional;
 
 /** Device selection options. */
 @AutoValue
@@ -39,6 +40,21 @@ public abstract class DeviceSelectionOptions {
   /** Run test on devices with given property values. */
   public abstract ImmutableMap<String, String> deviceProperties();
 
+  /** Run test on devices with battery level no more than this value. */
+  public abstract Optional<Integer> maxBatteryLevel();
+
+  /** Run test on devices with battery level no less than this value. */
+  public abstract Optional<Integer> minBatteryLevel();
+
+  /** Run test on devices with battery temperature no more than this value. */
+  public abstract Optional<Integer> maxBatteryTemperature();
+
+  /** Run test on devices with SDK version no more than this value. */
+  public abstract Optional<Integer> maxSdkLevel();
+
+  /** Run test on devices with SDK version no less than this value. */
+  public abstract Optional<Integer> minSdkLevel();
+
   public static Builder builder() {
     return new AutoValue_DeviceSelectionOptions.Builder()
         .setSerials(ImmutableList.of())
@@ -57,6 +73,16 @@ public abstract class DeviceSelectionOptions {
     public abstract Builder setProductTypes(ImmutableList<String> productTypes);
 
     public abstract Builder setDeviceProperties(ImmutableMap<String, String> deviceProperties);
+
+    public abstract Builder setMaxBatteryLevel(int maxBatteryLevel);
+
+    public abstract Builder setMinBatteryLevel(int minBatteryLevel);
+
+    public abstract Builder setMaxBatteryTemperature(int maxBatteryTemperature);
+
+    public abstract Builder setMaxSdkLevel(int maxSdkLevel);
+
+    public abstract Builder setMinSdkLevel(int minSdkLevel);
 
     public abstract DeviceSelectionOptions build();
   }
