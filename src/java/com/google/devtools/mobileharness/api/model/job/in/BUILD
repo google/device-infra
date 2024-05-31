@@ -22,6 +22,7 @@ java_library(
     name = "in",
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//javatests/com/google/pixel/quality/userjourney/plugin:__subpackages__",
     ],
     exports = [
         ":decorators",
