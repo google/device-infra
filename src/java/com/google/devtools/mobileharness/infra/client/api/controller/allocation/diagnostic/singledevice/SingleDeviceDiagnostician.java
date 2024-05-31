@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
@@ -28,6 +29,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.client.api.controller.allocation.diagnostic.Report;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.shared.util.sharedpool.SharedPoolJobUtil;
+import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension.Name;
@@ -45,6 +47,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.annotation.Nullable;
 
 /** For diagnostic the reasons about why a job can not allocate devices. */
@@ -57,6 +60,18 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
    * instead of all the devices.
    */
   private static final int MAX_QUERY_DEVICE_COUNT = 20;
+
+  private static final ImmutableList<FieldDescriptor> DEFAULT_DEVICE_INFO_FIELDS_TO_QUERY =
+      ImmutableList.of(
+              DeviceQuery.DeviceInfo.ID_FIELD_NUMBER,
+              DeviceQuery.DeviceInfo.STATUS_FIELD_NUMBER,
+              DeviceQuery.DeviceInfo.OWNER_FIELD_NUMBER,
+              DeviceQuery.DeviceInfo.TYPE_FIELD_NUMBER,
+              DeviceQuery.DeviceInfo.DRIVER_FIELD_NUMBER,
+              DeviceQuery.DeviceInfo.DIMENSION_FIELD_NUMBER)
+          .stream()
+          .map(fieldNumber -> DeviceQuery.DeviceInfo.getDescriptor().findFieldByNumber(fieldNumber))
+          .collect(toImmutableList());
 
   /** The job to diagnostic with. */
   private final JobInfo job;
@@ -156,7 +171,15 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
   private List<DeviceInfo> queryDevices() throws MobileHarnessException, InterruptedException {
     DeviceQueryFilter candidateFilter = getDeviceQueryFilter();
     List<DeviceInfo> candidates =
-        querier.queryDevice(candidateFilter).getDeviceInfoList().stream()
+        querier
+            .queryDevice(
+                candidateFilter,
+                getDeviceInfoFieldsToQuery(),
+                getDimensionNamesToQuery(),
+                ImmutableList.of(getJobDriver()),
+                getJobDecorators())
+            .getDeviceInfoList()
+            .stream()
             .map(this::convertDeviceInfo)
             .collect(Collectors.toList());
     candidates =
@@ -265,7 +288,8 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
     LabLocator labLocator = new LabLocator(labIp, hostName);
     DeviceLocator deviceLocator = new DeviceLocator(deviceProto.getId(), labLocator);
     DeviceInfo deviceInfo =
-        new DeviceInfo(deviceLocator, DeviceStatus.valueOf(deviceProto.getStatus().toUpperCase()));
+        new DeviceInfo(
+            deviceLocator, DeviceStatus.valueOf(Ascii.toUpperCase(deviceProto.getStatus())));
     deviceInfo.owners().addAll(deviceProto.getOwnerList());
     deviceInfo.types().addAll(deviceProto.getTypeList());
     deviceInfo.drivers().addAll(deviceProto.getDriverList());
@@ -278,6 +302,37 @@ public class SingleDeviceDiagnostician implements AllocationDiagnostician {
       }
     }
     return deviceInfo;
+  }
+
+  private ImmutableList<String> getDimensionNamesToQuery() {
+    return Stream.concat(
+            job.dimensions().getAll().keySet().stream(),
+            Stream.of(
+                Ascii.toLowerCase(Dimension.Name.HOST_IP.name()),
+                Ascii.toLowerCase(Dimension.Name.HOST_NAME.name())))
+        .distinct()
+        .collect(toImmutableList());
+  }
+
+  private String getJobDriver() {
+    return job.type().getDriver();
+  }
+
+  private ImmutableList<String> getJobDecorators() {
+    return ImmutableList.copyOf(job.type().getDecoratorList());
+  }
+
+  private ImmutableList<FieldDescriptor> getDeviceInfoFieldsToQuery() {
+    ImmutableList.Builder<FieldDescriptor> deviceInfoFields = ImmutableList.builder();
+    deviceInfoFields.addAll(DEFAULT_DEVICE_INFO_FIELDS_TO_QUERY);
+
+    if (!job.type().getDecoratorList().isEmpty()) {
+      deviceInfoFields.add(
+          DeviceQuery.DeviceInfo.getDescriptor()
+              .findFieldByNumber(DeviceQuery.DeviceInfo.DECORATOR_FIELD_NUMBER));
+    }
+
+    return deviceInfoFields.build();
   }
 
   private static boolean isUsingProdMaster(JobInfo job) {
