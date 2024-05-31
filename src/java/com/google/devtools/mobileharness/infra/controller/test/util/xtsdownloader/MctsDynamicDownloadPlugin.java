@@ -56,6 +56,7 @@ import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import javax.annotation.Nullable;
 
@@ -73,6 +74,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
   private static final String MAINLINE_TVP_PKG = "com.google.android.modulemetadata";
 
   private static final String ANDROID_V_CODENAME = "VanillaIceCream";
+
+  private static final String PRELOADED_KEY = "preloaded";
+
+  private static final String NON_PRELOADED_KEY = "non-preloaded";
 
   private static final ImmutableMap<String, Integer> SDK_LEVEL_TO_YEAR =
       ImmutableMap.of(
@@ -129,7 +134,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
-    if (!preloadedMainlineModules.isEmpty()) {
+    if (mctsNamesOfPreloadedMainlineModules.containsKey(PRELOADED_KEY)) {
       String versioncode =
           Integer.toString(androidPackageManagerUtil.getAppVersionCode(deviceId, MAINLINE_TVP_PKG));
       // if the TVP version is 310000000, that means all the mainline modules were built
@@ -139,7 +144,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           versioncode.equals("310000000")
               ? aospVersion
               : getPreloadedMainlineVersion(versioncode, aospVersion);
-      for (String mctsName : mctsNamesOfPreloadedMainlineModules.get("preloaded")) {
+      for (String mctsName : mctsNamesOfPreloadedMainlineModules.get(PRELOADED_KEY)) {
         String downloadUrl =
             String.format(
                 "https://dl.google.com/dl/android/xts/mcts/%s/%s/%s.zip",
@@ -149,7 +154,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     }
     // Add the Lorry download link url of MCTS file for non-preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/{SDK_VERSION}/arm64/android-mcts-<module_name>.zip
-    for (String mctsName : mctsNamesOfPreloadedMainlineModules.get("non-preloaded")) {
+    for (String mctsName : mctsNamesOfPreloadedMainlineModules.get(NON_PRELOADED_KEY)) {
       String downloadUrl =
           String.format(
               "https://dl.google.com/dl/android/xts/mcts/%s/%s/%s.zip",
@@ -245,23 +250,23 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     // To save two lists, one contains all the mcts names of preloaded modules, the other contain
     // the ones of non-preloaded modules.
     ListMultimap<String, String> mctsNamesOfAllModules = ArrayListMultimap.create();
-    Set<String> preloadedModules = new HashSet<>(); // Track modules added to 'preloaded'
-    moduleInfoMap
-        .getModulePackageToModuleInfoMap()
-        .forEach(
-            (moduleName, mctsName) -> {
-              if (moduleList.contains(moduleName)) {
-                mctsNamesOfAllModules.put("preloaded", mctsName);
-                preloadedModules.add(mctsName);
-              } else {
-                mctsNamesOfAllModules.put("non-preloaded", mctsName);
-              }
-
-              // If a module is later found in 'preloaded', remove it from 'non-preloaded'
-              if (preloadedModules.contains(mctsName)) {
-                mctsNamesOfAllModules.remove("non-preloaded", mctsName);
-              }
-            });
+    Set<String> preloadedModulesMcts = new HashSet<>(); // Track modules added to 'preloaded'
+    Map<String, String> modulePackageToModuleInfoMap =
+        moduleInfoMap.getModulePackageToModuleInfoMap();
+    moduleList.forEach(
+        moduleName -> {
+          if (modulePackageToModuleInfoMap.containsKey(moduleName)) {
+            preloadedModulesMcts.add(modulePackageToModuleInfoMap.get(moduleName));
+          }
+          ;
+        });
+    // Put the preloaded modules on the preloaded list.
+    mctsNamesOfAllModules.putAll(PRELOADED_KEY, preloadedModulesMcts);
+    // Put the non-preloaded modules on the non-preloaded list.
+    Set<String> nonPreloadMctsList = new HashSet<>();
+    nonPreloadMctsList.addAll(modulePackageToModuleInfoMap.values());
+    nonPreloadMctsList.removeAll(preloadedModulesMcts);
+    mctsNamesOfAllModules.putAll(NON_PRELOADED_KEY, nonPreloadMctsList);
     return mctsNamesOfAllModules;
   }
 

@@ -448,9 +448,8 @@ public class AndroidPackageManagerUtil {
   }
 
   /**
-   * Gets the version code of the APEX modules for a rooted device. APEX module is a new Android
-   * module introduced by go/mainline-play on Android Q. The method throws MobileHarness Exception
-   * if used for builds below "Q".
+   * Gets the version code of the APEX modules for a rooted device. The method throws MobileHarness
+   * Exception if used for builds below "Q".
    *
    * <p>By default it searches all packages across user USER_SYSTEM and find the match package, if
    * not given --user.
@@ -466,9 +465,8 @@ public class AndroidPackageManagerUtil {
   }
 
   /**
-   * Gets the version code of the APEX modules for a rooted device. APEX module is a new Android
-   * module introduced by go/mainline-play on Android Q. The method throws MobileHarness Exception
-   * if used for builds below "Q".
+   * Gets the version code of the APEX modules for a rooted device. The method throws MobileHarness
+   * Exception if used for builds below "Q". *
    *
    * <p>By default it searches all packages across user USER_SYSTEM and find the match package, if
    * not given --user.
@@ -812,8 +810,6 @@ public class AndroidPackageManagerUtil {
    * Installs the given apk to a specific device for user USER_ALL using default timeout value. If
    * the installation fails, will try to uninstall and re-install again.
    *
-   * <p>See go/adb-install for installation regarding to multi-user.
-   *
    * @param serial serial number of the device
    * @param sdkVersion SDK version of device
    * @param apkPath path of the apk package
@@ -830,8 +826,6 @@ public class AndroidPackageManagerUtil {
    * Installs the given apk to a specific device for user USER_ALL. If the installation fails (both
    * installation on internal storage and external storage), will try to uninstall and re-install
    * again.
-   *
-   * <p>See go/adb-install for installation regarding to multi-user.
    *
    * @param serial serial number of the device
    * @param sdkVersion SDK version of device
@@ -874,8 +868,6 @@ public class AndroidPackageManagerUtil {
   /**
    * Installs the given apk to a specific device. If the installation fails (both installation on
    * internal storage and external storage), will try to uninstall and re-install again.
-   *
-   * <p>See go/adb-install for installation regarding to multi-user.
    *
    * @param utilArgs args with serial, sdkVersion and userId
    * @param apkPath path of the apk package
@@ -1016,7 +1008,7 @@ public class AndroidPackageManagerUtil {
               + " due to no matching abis: "
               + output
               + "\n"
-              + " See go/omnilab-faqs#how-to-fix-android-pkg-mngr-util-installation-abi-incompatible-error");
+              + " for more details.");
     }
 
     // Will be marked as FAIL (instead of ERROR) for this ErrorCode
@@ -1306,11 +1298,7 @@ public class AndroidPackageManagerUtil {
       if (output.contains(OUTPUT_INSTALL_FAILED_INVALID_APK_SPLIT_NULL)) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_PKG_MNGR_UTIL_INSTALLATION_INVALID_APK_SPLIT_NULL,
-            String.format(
-                "install-multi-package error: %s. See"
-                    + " go/omnilab-faqs#how-to-fix-android-pkg-mngr-util-installation-invalid-apk-split-null"
-                    + " for more details.",
-                output));
+            String.format("install-multi-package error: %s. See" + " for more details.", output));
       }
       throwInstallationError(
           "Failed to install packages:\n" + packageMap + '\n' + output, /* cause= */ null);
@@ -1626,7 +1614,7 @@ public class AndroidPackageManagerUtil {
             }
           }
         };
-    String[] adbCommand = new String[] {"-s", serial, "shell", ADB_SHELL_GET_MODULEINFO, "--all"};
+    String[] adbCommand = new String[] {"-s", serial, "shell", ADB_SHELL_GET_MODULEINFO};
     Optional<MobileHarnessException> exceptionOp = processAdbResult(adbCommand, processor);
 
     if (processor.success()) {
