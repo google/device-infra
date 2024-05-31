@@ -167,9 +167,7 @@ public class LabServerModule extends AbstractModule {
           .exit(
               ExitCode.Lab.NO_DETECTOR,
               String.format(
-                  "Your lab server is not properly configured: %n%s%n"
-                      + "Please follow%n - go/mh-codelab-android or"
-                      + "%n - go/mh-codelab-ios %nto set up lab server.",
+                  "Your lab server is not properly configured: %n%s%n",
                   "All detectors are not supported by the current system."));
     }
 

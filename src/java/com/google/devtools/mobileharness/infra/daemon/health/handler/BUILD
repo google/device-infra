@@ -22,5 +22,6 @@ java_library(
     ],
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//java/com/google/devtools/mobileharness/infra/lab/controller/wrangler:__pkg__",
     ],
 )
