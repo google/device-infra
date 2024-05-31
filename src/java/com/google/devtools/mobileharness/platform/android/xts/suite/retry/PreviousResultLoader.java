@@ -42,6 +42,8 @@ public class PreviousResultLoader {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final String TEST_RECORD_PROTO_DIR_NAME = "proto";
+
   private final LocalFileUtil localFileUtil;
   private final ResultListerHelper resultListerHelper;
 
@@ -184,6 +186,74 @@ public class PreviousResultLoader {
     return Optional.of(
         TradefedResultFilesBundle.of(
             testResultXmlFile, ImmutableList.copyOf(testRecordProtoFiles)));
+  }
+
+  /**
+   * Loads the test report properties for the given session from ATS Console.
+   *
+   * @param resultsDir path to the "results" directory
+   * @param previousSessionIndex index of the previous session being loaded
+   */
+  public Optional<Path> getPrevSessionTestReportProperties(
+      Path resultsDir, int previousSessionIndex) throws MobileHarnessException {
+    ImmutableList<File> allResultDirs = getAllResultDirs(resultsDir, previousSessionIndex);
+    Optional<Path> testReportPropertiesFile =
+        Optional.of(
+            allResultDirs
+                .get(previousSessionIndex)
+                .toPath()
+                .resolve(SuiteCommon.TEST_REPORT_PROPERTIES_FILE_NAME));
+    if (!localFileUtil.isFileExist(testReportPropertiesFile.get())) {
+      testReportPropertiesFile = Optional.empty();
+    }
+    return testReportPropertiesFile;
+  }
+
+  /**
+   * Loads the test report properties for the given session from ATS Server.
+   *
+   * @param resultDir parent dir path to the session's test report properties file
+   */
+  public Optional<Path> getPrevSessionTestReportProperties(Path resultDir)
+      throws MobileHarnessException {
+    Path testReportPropertiesFile = resultDir.resolve(SuiteCommon.TEST_REPORT_PROPERTIES_FILE_NAME);
+    if (!localFileUtil.isFileExist(testReportPropertiesFile)) {
+      return Optional.empty();
+    }
+    return Optional.of(testReportPropertiesFile);
+  }
+
+  /**
+   * Loads the test record proto files for the given session from ATS Console.
+   *
+   * @param resultsDir path to the "results" directory
+   * @param previousSessionIndex index of the previous session being loaded
+   */
+  public ImmutableList<Path> getPrevSessionTestRecordProtoFiles(
+      Path resultsDir, int previousSessionIndex) throws MobileHarnessException {
+    ImmutableList<File> allResultDirs = getAllResultDirs(resultsDir, previousSessionIndex);
+    Path testRecordProtoDir =
+        allResultDirs.get(previousSessionIndex).toPath().resolve(TEST_RECORD_PROTO_DIR_NAME);
+    if (!localFileUtil.isDirExist(testRecordProtoDir)) {
+      return ImmutableList.of();
+    }
+    return ImmutableList.copyOf(
+        localFileUtil.listFilesOrDirs(testRecordProtoDir, p -> p.toFile().isFile()));
+  }
+
+  /**
+   * Loads the test record proto files for the given session from ATS Server.
+   *
+   * @param resultDir parent dir path to the session's test record proto directory
+   */
+  public ImmutableList<Path> getPrevSessionTestRecordProtoFiles(Path resultDir)
+      throws MobileHarnessException {
+    Path testRecordProtoDir = resultDir.resolve(TEST_RECORD_PROTO_DIR_NAME);
+    if (!localFileUtil.isDirExist(testRecordProtoDir)) {
+      return ImmutableList.of();
+    }
+    return ImmutableList.copyOf(
+        localFileUtil.listFilesOrDirs(testRecordProtoDir, p -> p.toFile().isFile()));
   }
 
   private ImmutableList<File> getAllResultDirs(Path resultsDir, int previousSessionIndex)

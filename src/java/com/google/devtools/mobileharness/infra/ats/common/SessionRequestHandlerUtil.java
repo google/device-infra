@@ -58,6 +58,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.DeviceConfigurations;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.ModuleDeviceConfiguration;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
@@ -88,8 +89,10 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.file.Path;
@@ -101,6 +104,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -435,6 +439,36 @@ public class SessionRequestHandlerUtil {
     if (isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
       if (SessionHandlerHelper.useTfRetry()) {
+        Optional<Path> testReportPropertiesFile =
+            getPrevSessionTestReportProperties(sessionRequestInfo);
+        if (testReportPropertiesFile.isPresent()) {
+          Properties testReportProperties =
+              loadTestReportProperties(testReportPropertiesFile.get());
+          // If previous session doesn't have TF module, skip running TF retry.
+          if (!Boolean.parseBoolean(
+              testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))) {
+            logger
+                .atInfo()
+                .with(IMPORTANCE, IMPORTANT)
+                .log(
+                    "Previous session doesn't have tradefed module, skip creating tradefed jobs for"
+                        + " the retry.");
+            return Optional.empty();
+          }
+          extraJobProperties
+              .put(
+                  Job.PREV_SESSION_HAS_TF_MODULE,
+                  String.valueOf(
+                      Boolean.parseBoolean(
+                          testReportProperties.getProperty(
+                              SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))))
+              .put(
+                  Job.PREV_SESSION_HAS_NON_TF_MODULE,
+                  String.valueOf(
+                      Boolean.parseBoolean(
+                          testReportProperties.getProperty(
+                              SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))));
+        }
         TradefedResultFilesBundle tfRunRetryFilesBundle =
             findTfRunRetryFilesBundle(
                 xtsRootDir, xtsType, sessionRequestInfo.retrySessionIndex().orElseThrow());
@@ -855,6 +889,34 @@ public class SessionRequestHandlerUtil {
     Optional<SubPlan> subPlanOpt = Optional.empty();
     if (isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
+      Optional<Path> testReportPropertiesFile =
+          getPrevSessionTestReportProperties(sessionRequestInfo);
+      if (testReportPropertiesFile.isPresent()) {
+        Properties testReportProperties = loadTestReportProperties(testReportPropertiesFile.get());
+        // If previous session doesn't have Non-TF module, skip the retry.
+        if (!Boolean.parseBoolean(
+            testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))) {
+          logger
+              .atInfo()
+              .with(IMPORTANCE, IMPORTANT)
+              .log(
+                  "Previous session doesn't have non-tradefed module, skip creating non-tradefed"
+                      + " jobs for the retry.");
+          return ImmutableList.of();
+        }
+        extraJobProperties.put(
+            Job.PREV_SESSION_HAS_TF_MODULE,
+            String.valueOf(
+                Boolean.parseBoolean(
+                    testReportProperties.getProperty(
+                        SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))));
+        extraJobProperties.put(
+            Job.PREV_SESSION_HAS_NON_TF_MODULE,
+            String.valueOf(
+                Boolean.parseBoolean(
+                    testReportProperties.getProperty(
+                        SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))));
+      }
       if (sessionRequestInfo.retrySessionIndex().isPresent()) {
         subPlanOpt =
             prepareRunRetrySubPlan(
@@ -1480,5 +1542,30 @@ public class SessionRequestHandlerUtil {
     return jobTimeout.compareTo(JOB_TEST_TIMEOUT_DIFF.multipliedBy(2L)) < 0
         ? jobTimeout.dividedBy(2L)
         : jobTimeout.minus(JOB_TEST_TIMEOUT_DIFF);
+  }
+
+  private Optional<Path> getPrevSessionTestReportProperties(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException {
+    return sessionRequestInfo.retrySessionIndex().isPresent()
+        ? previousResultLoader.getPrevSessionTestReportProperties(
+            XtsDirUtil.getXtsResultsDir(
+                Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
+            sessionRequestInfo.retrySessionIndex().orElseThrow())
+        : previousResultLoader.getPrevSessionTestReportProperties(
+            Path.of(sessionRequestInfo.retryResultDir().orElseThrow()));
+  }
+
+  private static Properties loadTestReportProperties(Path testReportPropertiesFile)
+      throws MobileHarnessException {
+    Properties properties = new Properties();
+    try (InputStream inputStream = new FileInputStream(testReportPropertiesFile.toFile())) {
+      properties.load(inputStream);
+    } catch (IOException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_RUN_RETRY_COMMAND_TEST_REPORT_PROPERTIES_FILE_READ_ERROR,
+          String.format("Failed to read test report properties file %s", testReportPropertiesFile),
+          e);
+    }
+    return properties;
   }
 }

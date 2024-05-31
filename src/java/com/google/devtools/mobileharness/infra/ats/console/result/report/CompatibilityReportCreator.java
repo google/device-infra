@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordWriter;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import java.io.File;
@@ -45,7 +46,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import javax.xml.transform.Transformer;
@@ -107,10 +110,15 @@ public class CompatibilityReportCreator {
    * @param resultDir the directory where to store the generated report files
    * @param testRecord test record proto packed into the report if specified
    * @param includeHtmlInZip whether to include html reports in the zip file
+   * @param testReportProperties the properties to be written to the test report properties file
    * @throws MobileHarnessException if failed to write the report to a XML file
    */
   public void createReport(
-      Result report, Path resultDir, @Nullable TestRecord testRecord, boolean includeHtmlInZip)
+      Result report,
+      Path resultDir,
+      @Nullable TestRecord testRecord,
+      boolean includeHtmlInZip,
+      Map<String, String> testReportProperties)
       throws MobileHarnessException, InterruptedException {
     localFileUtil.prepareDir(resultDir);
     try {
@@ -121,6 +129,7 @@ public class CompatibilityReportCreator {
           String.format("Failed to write report to dir %s", resultDir),
           e);
     }
+    writeTestReportProperties(testReportProperties, resultDir.toFile());
     copyFormattingFiles(resultDir.toFile());
     if (!report.getBuild().getBuildFingerprint().isEmpty()
         && !CompatibilityReportChecksumHelper.tryCreateChecksum(
@@ -467,5 +476,21 @@ public class CompatibilityReportCreator {
       return Optional.empty();
     }
     return Optional.of(failureReport);
+  }
+
+  private void writeTestReportProperties(Map<String, String> testReportProperties, File parentDir) {
+    File file = new File(parentDir, SuiteCommon.TEST_REPORT_PROPERTIES_FILE_NAME);
+    try {
+      file.createNewFile();
+      Properties properties = new Properties();
+      testReportProperties.forEach(properties::setProperty);
+      try (FileOutputStream outputStream = new FileOutputStream(file)) {
+        properties.store(
+            outputStream, /* comments= */ "Auto generated test report properties. Do NOT modify.");
+      }
+    } catch (IOException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to write test report properties to %s: %s", file, testReportProperties);
+    }
   }
 }

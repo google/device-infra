@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.common;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
@@ -44,6 +45,7 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.ConfigurationMetadata;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
@@ -113,6 +115,7 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @SessionGenDir private Path sessionGenDir;
   @Bind @SessionTempDir private Path sessionTempDir;
   @Bind @Mock private SessionInfo sessionInfo;
+  @Bind @Mock private PreviousResultLoader previousResultLoader;
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
@@ -1580,6 +1583,8 @@ public final class SessionRequestHandlerUtilTest {
     when(testSuiteHelper.loadTests(any()))
         .thenReturn(ImmutableMap.of("arm64-v8a module1", config1, "arm64-v8a module2", config2));
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(new SubPlan());
+    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt()))
+        .thenReturn(Optional.empty());
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
@@ -1772,6 +1777,8 @@ public final class SessionRequestHandlerUtilTest {
     doCallRealMethod()
         .when(certificationSuiteInfoFactory)
         .generateSuiteInfoMap(any(), any(), any());
+    when(previousResultLoader.getPrevSessionTestReportProperties(any(Path.class), anyInt()))
+        .thenReturn(Optional.empty());
 
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(

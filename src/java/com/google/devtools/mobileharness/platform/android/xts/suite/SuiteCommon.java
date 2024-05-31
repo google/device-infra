@@ -35,5 +35,11 @@ public final class SuiteCommon {
 
   public static final String TEST_RESULT_XML_FILE_NAME = "test_result.xml";
 
+  public static final String TEST_REPORT_PROPERTIES_FILE_NAME = "test-report.properties";
+
+  public static final String TEST_REPORT_PROPERTY_HAS_TF_MODULE = "has_tf_module";
+
+  public static final String TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE = "has_non_tf_module";
+
   private SuiteCommon() {}
 }

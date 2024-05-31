@@ -21,9 +21,11 @@ import static com.google.common.truth.Truth.assertThat;
 import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordWriter;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -93,7 +95,11 @@ public final class CompatibilityReportCreatorTest {
     File xmlResultDir = temporaryFolder.newFolder("xml_result");
 
     reportCreator.createReport(
-        report, xmlResultDir.toPath(), /* testRecord= */ null, /* includeHtmlInZip= */ false);
+        report,
+        xmlResultDir.toPath(),
+        /* testRecord= */ null,
+        /* includeHtmlInZip= */ false,
+        /* testReportProperties= */ ImmutableMap.of());
 
     assertThat(
             realLocalFileUtil.listFilePaths(xmlResultDir.toPath(), false).stream()
@@ -106,6 +112,7 @@ public final class CompatibilityReportCreatorTest {
                 .add("checksum-suite.data")
                 .add(CompatibilityReportCreator.TEST_RESULT_PB_FILE_NAME)
                 .add(CompatibilityReportCreator.FAILURE_REPORT_NAME)
+                .add(SuiteCommon.TEST_REPORT_PROPERTIES_FILE_NAME)
                 .build());
 
     assertThat(

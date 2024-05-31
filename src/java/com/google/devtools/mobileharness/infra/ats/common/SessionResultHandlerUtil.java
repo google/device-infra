@@ -40,6 +40,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.constan
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
+import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
@@ -89,6 +91,7 @@ public class SessionResultHandlerUtil {
   private final CompatibilityReportMerger compatibilityReportMerger;
   private final CompatibilityReportCreator reportCreator;
   private final RetryReportMerger retryReportMerger;
+  private final PreviousResultLoader previousResultLoader;
   private final SessionInfo sessionInfo;
 
   @Inject
@@ -97,11 +100,13 @@ public class SessionResultHandlerUtil {
       CompatibilityReportMerger compatibilityReportMerger,
       CompatibilityReportCreator reportCreator,
       RetryReportMerger retryReportMerger,
+      PreviousResultLoader previousResultLoader,
       SessionInfo sessionInfo) {
     this.localFileUtil = localFileUtil;
     this.compatibilityReportMerger = compatibilityReportMerger;
     this.reportCreator = reportCreator;
     this.retryReportMerger = retryReportMerger;
+    this.previousResultLoader = previousResultLoader;
     this.sessionInfo = sessionInfo;
   }
 
@@ -224,8 +229,14 @@ public class SessionResultHandlerUtil {
       Path nonTradefedTestResultsDir)
       throws MobileHarnessException, InterruptedException {
     Result finalReport = null;
+    ImmutableMap.Builder<String, String> testReportProperties = ImmutableMap.builder();
     ImmutableList.Builder<TradefedResultBundle> tradefedResultBundlesBuilder =
         ImmutableList.builder();
+    boolean curSessionHasNonTfJob = false;
+    boolean curSessionHasTfJob = false;
+    boolean previousSessionHasNonTfModule = false;
+    boolean previousSessionHasTfModule = false;
+
     // Copies tradefed test relevant log and result files to dedicated locations
     for (Entry<JobInfo, Optional<TestInfo>> testEntry : tradefedTests.entrySet()) {
       if (testEntry.getValue().isEmpty()) {
@@ -233,7 +244,14 @@ public class SessionResultHandlerUtil {
             "Found no test in tradefed job [%s], skip it.", testEntry.getKey().locator().getId());
         continue;
       }
+      curSessionHasTfJob = true;
       TestInfo test = testEntry.getValue().get();
+
+      if (!previousSessionHasNonTfModule) {
+        previousSessionHasNonTfModule =
+            Boolean.parseBoolean(
+                test.jobInfo().properties().get(Job.PREV_SESSION_HAS_NON_TF_MODULE));
+      }
 
       callAndLogException(
           () -> {
@@ -267,7 +285,13 @@ public class SessionResultHandlerUtil {
             testEntry.getKey().locator().getId());
         continue;
       }
+      curSessionHasNonTfJob = true;
       TestInfo test = testEntry.getValue().get();
+
+      if (!previousSessionHasTfModule) {
+        previousSessionHasTfModule =
+            Boolean.parseBoolean(test.jobInfo().properties().get(Job.PREV_SESSION_HAS_TF_MODULE));
+      }
 
       callAndLogException(
           () -> {
@@ -332,6 +356,15 @@ public class SessionResultHandlerUtil {
 
     Optional<Result> mergedReport =
         compatibilityReportMerger.mergeReports(reportList, /* validateReports= */ true);
+
+    boolean testReportHasNonTfModule = curSessionHasNonTfJob || previousSessionHasNonTfModule;
+    boolean testReportHasTfModule = curSessionHasTfJob || previousSessionHasTfModule;
+    testReportProperties
+        .put(
+            SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE,
+            String.valueOf(testReportHasNonTfModule))
+        .put(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE, String.valueOf(testReportHasTfModule));
+
     boolean isRunRetry = SessionHandlerHelper.isRunRetry(sessionRequestInfo.testPlan());
     if (!isRunRetry && mergedReport.isPresent()) {
       Result.Builder finalReportBuilder = mergedReport.get().toBuilder();
@@ -375,9 +408,39 @@ public class SessionResultHandlerUtil {
               .addAllIncludeFilter(includeFilters.build())
               .addAllExcludeFilter(excludeFilters.build())
               .build();
-      reportCreator.createReport(finalReport, resultDir, null, sessionRequestInfo.htmlInZip());
+      reportCreator.createReport(
+          finalReport,
+          resultDir,
+          /* testRecord= */ null,
+          sessionRequestInfo.htmlInZip(),
+          testReportProperties.buildOrThrow());
     } else if (isRunRetry) {
-      if (!SessionHandlerHelper.useTfRetry()) {
+      if (testReportHasTfModule && !curSessionHasTfJob) {
+        // If the test report will have TF module but the current session doesn't retry any TF
+        // module, need to copy test-record.pb from previous session to the current session.
+        ImmutableList<Path> testRecordProtoFiles = ImmutableList.of();
+        if (sessionRequestInfo.retrySessionIndex().isPresent()) {
+          testRecordProtoFiles =
+              previousResultLoader.getPrevSessionTestRecordProtoFiles(
+                  XtsDirUtil.getXtsResultsDir(
+                      Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
+                  sessionRequestInfo.retrySessionIndex().orElseThrow());
+        } else {
+          testRecordProtoFiles =
+              previousResultLoader.getPrevSessionTestRecordProtoFiles(
+                  Path.of(sessionRequestInfo.retryResultDir().orElseThrow()));
+        }
+        if (!testRecordProtoFiles.isEmpty()) {
+          Path testRecordProtoDir = resultDir.resolve("proto");
+          localFileUtil.prepareDir(testRecordProtoDir);
+          for (Path testRecordProtoFile : testRecordProtoFiles) {
+            localFileUtil.copyFileOrDirWithOverridingCopyOptions(
+                testRecordProtoFile, testRecordProtoDir, ImmutableList.of("-rf"));
+          }
+        }
+      }
+
+      if (testReportHasNonTfModule || !SessionHandlerHelper.useTfRetry()) {
         if (sessionRequestInfo.retrySessionId().isPresent()) {
           finalReport =
               retryReportMerger.mergeReports(
@@ -408,7 +471,12 @@ public class SessionResultHandlerUtil {
         finalReport = mergedReport.orElse(null);
       }
       if (finalReport != null) {
-        reportCreator.createReport(finalReport, resultDir, null, sessionRequestInfo.htmlInZip());
+        reportCreator.createReport(
+            finalReport,
+            resultDir,
+            /* testRecord= */ null,
+            sessionRequestInfo.htmlInZip(),
+            testReportProperties.buildOrThrow());
       }
     } else {
       logger.atWarning().log("Failed to merge reports.");
@@ -577,10 +645,10 @@ public class SessionResultHandlerUtil {
       }
     }
 
-    List<Path> testResultXmlFiles =
+    List<Path> testResultFiles =
         localFileUtil.listFilePaths(tmpTestResultDir, /* recursively= */ true);
     Path testResultXmlFile =
-        testResultXmlFiles.stream()
+        testResultFiles.stream()
             .filter(
                 file ->
                     file.getFileName()
@@ -589,7 +657,7 @@ public class SessionResultHandlerUtil {
             .findFirst()
             .orElse(null);
     Optional<Path> testRecordFile =
-        testResultXmlFiles.stream()
+        testResultFiles.stream()
             .filter(
                 file ->
                     file.getFileName()
