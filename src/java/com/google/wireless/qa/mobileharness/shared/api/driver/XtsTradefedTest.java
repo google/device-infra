@@ -62,6 +62,7 @@ import com.google.devtools.mobileharness.shared.util.command.LineCallbackExcepti
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
@@ -336,7 +337,8 @@ public class XtsTradefedTest extends BaseDriver
         XtsCommandUtil.getXtsJavaCommand(
             xtsType,
             tmpXtsRootDir.toString(),
-            ImmutableList.of("-Xmx16g", "-XX:+HeapDumpOnOutOfMemoryError"),
+            ImmutableList.of(
+                "-Xmx" + Flags.instance().xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError"),
             requireNonNull(
                 env.getOrDefault(
                     TF_PATH_KEY, getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType))),

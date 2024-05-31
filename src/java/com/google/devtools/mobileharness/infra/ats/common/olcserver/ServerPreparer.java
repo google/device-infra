@@ -205,7 +205,12 @@ public class ServerPreparer {
               .addAll(BuiltinOlcServerFlags.get())
               .addAll(deviceInfraServiceFlags)
               .build();
-      logger.atFine().log("OLC server flags: %s", serverFlags);
+      ImmutableList<String> serverNativeArguments =
+          ImmutableList.of("-Xmx" + Flags.instance().atsConsoleOlcServerXmx.getNonNull());
+      logger
+          .atInfo()
+          .with(IMPORTANCE, DEBUG)
+          .log("OLC server flags: %s, native arguments: %s", serverFlags, serverNativeArguments);
 
       CommandProcess serverProcess = null;
       ServerStderrLineCallback serverStderrLineCallback = new ServerStderrLineCallback();
@@ -217,9 +222,7 @@ public class ServerPreparer {
                           systemUtil
                               .getJavaCommandCreator()
                               .createJavaCommand(
-                                  serverBinaryPath,
-                                  serverFlags,
-                                  /* nativeArguments= */ ImmutableList.of()))
+                                  serverBinaryPath, serverFlags, serverNativeArguments))
                       .onStderr(serverStderrLineCallback)
                       .successfulStartCondition(line -> line.contains(SERVER_STARTED_SIGNAL))
                       .timeout(ChronoUnit.YEARS.getDuration())
@@ -238,7 +241,10 @@ public class ServerPreparer {
         }
 
         // Waits until the server starts.
-        logger.atFine().log("Wait until OLC server starts, command=[%s]", serverProcess.command());
+        logger
+            .atInfo()
+            .with(IMPORTANCE, DEBUG)
+            .log("Wait until OLC server starts, command=[%s]", serverProcess.command());
         try {
           if (!serverProcess.successfulStartFuture().get(40L, SECONDS)) {
             throw new MobileHarnessException(

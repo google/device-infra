@@ -222,6 +222,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> atsConsoleOlcServerPath = atsConsoleOlcServerPathDefault;
 
+  private static final Flag<String> atsConsoleOlcServerXmxDefault = Flag.value("16g");
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_console_olc_server_xmx",
+      description = "-Xmx of OLC server of ATS console. Default is \"16g\".",
+      converter = Flag.StringConverter.class)
+  public Flag<String> atsConsoleOlcServerXmx = atsConsoleOlcServerXmxDefault;
+
   private static final Flag<Boolean> atsConsolePrintAboveInputDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
@@ -1218,6 +1226,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> useAlts = useAltsDefault;
 
+  private static final Flag<Boolean> useTfRetryDefault = Flag.value(true);
+
+  @com.beust.jcommander.Parameter(
+      names = "--use_tf_retry",
+      description = "Delegate retry to TF. The default is true.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> useTfRetry = useTfRetryDefault;
+
   private static final Flag<String> xtsResDirRootDefault = Flag.value(getXtsResDirRootDefaultOss());
 
   @com.beust.jcommander.Parameter(
@@ -1230,13 +1246,13 @@ public class Flags {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/xts";
   }
 
-  private static final Flag<Boolean> useTfRetryDefault = Flag.value(true);
+  private static final Flag<String> xtsTfXmxDefault = Flag.value("16g");
 
   @com.beust.jcommander.Parameter(
-      names = "--use_tf_retry",
-      description = "Delegate retry to TF. The default is true.",
-      converter = Flag.BooleanConverter.class)
-  public Flag<Boolean> useTfRetry = useTfRetryDefault;
+      names = "--xts_tf_xmx",
+      description = "-Xmx of TF of XtsTradeTest. Default is \"16g\".",
+      converter = Flag.StringConverter.class)
+  public Flag<String> xtsTfXmx = xtsTfXmxDefault;
 
   private static final Flags INSTANCE = new Flags();
 
