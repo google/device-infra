@@ -208,6 +208,7 @@ public class OlcServerIntegrationTest {
   private String localHostName;
 
   private int olcServerPort;
+  private int workerGrpcPort;
   private ManagedChannel olcServerChannel;
   private CommandProcess olcServerProcess;
 
@@ -225,6 +226,7 @@ public class OlcServerIntegrationTest {
     localHostName = networkUtil.getLocalHostName();
 
     olcServerPort = PortProber.pickUnusedPort();
+    workerGrpcPort = PortProber.pickUnusedPort();
     olcServerChannel = ChannelFactory.createLocalChannel(olcServerPort, directExecutor());
     masterGrpcStubHelper = new MasterGrpcStubHelper(olcServerChannel);
 
@@ -432,6 +434,18 @@ public class OlcServerIntegrationTest {
     String sessionLog = localFileUtil.readFile(sessionLogFile);
     assertThat(sessionLog).contains("Starting session runner " + sessionId.getId());
     assertThat(sessionLog).contains("Session finished, session_id=" + sessionId.getId());
+
+    // Verifies the server is killed.
+    ControlStub controlStub = new ControlStub(olcServerChannel);
+    assertThat(olcServerProcess.isAlive()).isTrue();
+    KillServerResponse killServerResponse =
+        controlStub.killServer(KillServerRequest.getDefaultInstance());
+    assertThat(killServerResponse)
+        .comparingExpectedFieldsOnly()
+        .isEqualTo(
+            KillServerResponse.newBuilder().setSuccess(Success.getDefaultInstance()).build());
+    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(6L));
+    assertThat(olcServerProcess.isAlive()).isFalse();
   }
 
   private void startServers(boolean enableAtsMode, Path apiConfigFile)
@@ -467,6 +481,7 @@ public class OlcServerIntegrationTest {
                             "--mute_android=false",
                             "--no_op_device_num=" + noOpDeviceNum,
                             "--olc_server_port=" + olcServerPort,
+                            "--worker_grpc_port=" + workerGrpcPort,
                             "--public_dir=" + tmpFolder.newFolder("olc_server_public_dir"),
                             "--resource_dir_name=olc_server_res_files",
                             "--set_test_harness_property=false",
@@ -538,7 +553,7 @@ public class OlcServerIntegrationTest {
                               "--enable_trace_span_processor=false",
                               "--external_adb_initializer_template=true",
                               "--grpc_port=" + labServerGrpcPort,
-                              "--master_grpc_target=localhost:" + olcServerPort,
+                              "--master_grpc_target=localhost:" + workerGrpcPort,
                               "--mute_android=false",
                               "--no_op_device_num=" + noOpDeviceNum,
                               "--public_dir=" + tmpFolder.newFolder("lab_server_public_dir"),

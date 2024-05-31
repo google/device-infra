@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.allocation.
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub;
+import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStubModule;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabSyncGrpcStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
@@ -124,7 +125,6 @@ public class AtsModeTest {
                   .setServiceVersion(Version.MASTER_V5_VERSION.toString()))
           .build();
 
-  @Bind private MasterGrpcStubHelper masterGrpcStubHelper;
   @Bind private Sleeper sleeper;
   @Bind private ListeningScheduledExecutorService listeningScheduledExecutorService;
   @Bind private ExecutorService executorService;
@@ -132,14 +132,12 @@ public class AtsModeTest {
   @Bind private Clock clock;
 
   @Inject private AtsMode atsMode;
-  @Inject private LabSyncGrpcStub labSyncGrpcStub;
+  private LabSyncGrpcStub labSyncGrpcStub;
   @Inject private LabInfoGrpcStub labInfoGrpcStub;
 
   @Before
   public void setUp() throws Exception {
     int serverPort = PortProber.pickUnusedPort();
-    masterGrpcStubHelper =
-        new MasterGrpcStubHelper(ChannelFactory.createLocalChannel(serverPort, directExecutor()));
     sleeper = Sleeper.defaultSleeper();
     clock = Clock.systemUTC();
     listeningExecutorService = ThreadPools.createStandardThreadPool("ats-mode-thread-pool");
@@ -148,7 +146,18 @@ public class AtsModeTest {
         ThreadPools.createStandardScheduledThreadPool(
             "ats-mode-scheduled-thread-pool", /* corePoolSize= */ 5);
 
-    Guice.createInjector(BoundFieldModule.of(this), new AtsModeModule()).injectMembers(this);
+    Guice.createInjector(
+            BoundFieldModule.of(this),
+            new AtsModeModule(),
+            new LabInfoGrpcStubModule(
+                ChannelFactory.createLocalChannel(serverPort, directExecutor())))
+        .injectMembers(this);
+
+    int workerServerPort = PortProber.pickUnusedPort();
+    MasterGrpcStubHelper masterGrpcStubHelper =
+        new MasterGrpcStubHelper(
+            ChannelFactory.createLocalChannel(workerServerPort, directExecutor()));
+    labSyncGrpcStub = new LabSyncGrpcStub(masterGrpcStubHelper);
 
     atsMode.initialize(null);
     ImmutableList<BindableService> bindableServices = atsMode.provideServices();
@@ -156,6 +165,10 @@ public class AtsModeTest {
         NettyServerBuilder.forPort(serverPort).executor(listeningExecutorService);
     bindableServices.forEach(nettyServerBuilder::addService);
     nettyServerBuilder.build().start();
+    NettyServerBuilder workerServerBuilder =
+        NettyServerBuilder.forPort(workerServerPort).executor(listeningExecutorService);
+    atsMode.provideServicesForWorkers().forEach(workerServerBuilder::addService);
+    workerServerBuilder.build().start();
   }
 
   @Test

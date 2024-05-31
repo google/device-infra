@@ -328,7 +328,7 @@ public class LabServerIntegrationTest {
       throws MobileHarnessException, InterruptedException, IOException, ExecutionException {
     logger.atInfo().log("Starting AtsMode, port=%s", masterPort);
     atsMode.initialize(null);
-    ImmutableList<BindableService> bindableServices = atsMode.provideServices();
+    ImmutableList<BindableService> bindableServices = atsMode.provideServicesForWorkers();
     NettyServerBuilder nettyServerBuilder =
         NettyServerBuilder.forPort(masterPort).executor(listeningExecutorService);
     bindableServices.forEach(nettyServerBuilder::addService);

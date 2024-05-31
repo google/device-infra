@@ -1243,6 +1243,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> useTfRetry = useTfRetryDefault;
 
+  private static final Flag<Integer> workerGrpcPortDefault = Flag.value(7031);
+
+  @com.beust.jcommander.Parameter(
+      names = "--worker_grpc_port",
+      description = "Grpc port for worker connections. By default, it is 7031.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> workerGrpcPort = workerGrpcPortDefault;
+
   private static final Flag<String> xtsResDirRootDefault = Flag.value(getXtsResDirRootDefaultOss());
 
   @com.beust.jcommander.Parameter(

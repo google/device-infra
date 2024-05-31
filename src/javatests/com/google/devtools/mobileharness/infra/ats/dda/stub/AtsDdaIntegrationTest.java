@@ -143,6 +143,7 @@ public class AtsDdaIntegrationTest {
   private SessionInfo sessionInfo;
 
   private int olcServerPort;
+  private int workerGrpcPort;
   private ManagedChannel olcServerChannel;
   private AtsDdaStub atsDdaStub;
 
@@ -151,6 +152,7 @@ public class AtsDdaIntegrationTest {
 
   @Before
   public void setUp() throws Exception {
+    workerGrpcPort = PortProber.pickUnusedPort();
     olcServerPort = PortProber.pickUnusedPort();
     olcServerChannel = ChannelFactory.createLocalChannel(olcServerPort, directExecutor());
     atsDdaStub = new AtsDdaStub(olcServerChannel);
@@ -306,6 +308,7 @@ public class AtsDdaIntegrationTest {
                             "--enable_client_file_transfer=false",
                             "--enable_grpc_lab_server=true",
                             "--olc_server_port=" + olcServerPort,
+                            "--worker_grpc_port=" + workerGrpcPort,
                             "--public_dir=" + tmpFolder.newFolder("olc_server_public_dir"),
                             "--tmp_dir_root=" + tmpFolder.newFolder("olc_server_tmp_dir")),
                         ImmutableList.of()))
@@ -371,7 +374,7 @@ public class AtsDdaIntegrationTest {
                             "--enable_trace_span_processor=false",
                             "--external_adb_initializer_template=true",
                             "--grpc_port=" + labServerGrpcPort,
-                            "--master_grpc_target=localhost:" + olcServerPort,
+                            "--master_grpc_target=localhost:" + workerGrpcPort,
                             "--mute_android=false",
                             "--no_op_device_num=" + deviceNum,
                             "--no_op_device_type=AndroidRealDevice",

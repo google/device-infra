@@ -14,17 +14,15 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.longrunningservice.controller;
+package com.google.devtools.mobileharness.shared.util.comm.server;
 
-import com.google.common.collect.ImmutableList;
-import io.grpc.BindableService;
+/** Listens to the state change of servers. */
+public abstract class LifeCycleListener {
 
-/** Service provider for providing {@link BindableService}s. */
-public interface ServiceProvider {
-
-  /** Provides services for non-worker clients. */
-  ImmutableList<BindableService> provideServices();
-
-  /** Provides services for worker clients. */
-  ImmutableList<BindableService> provideServicesForWorkers();
+  /**
+   * Actions to perform when servers are killed.
+   *
+   * <p>The method should be non-blocking.
+   */
+  public void onKillServer() {}
 }

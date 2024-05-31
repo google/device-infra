@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInte
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.GrpcServer;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.WorkerGrpcServer;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
@@ -37,6 +38,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
 import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressServerInterceptor;
+import com.google.devtools.mobileharness.shared.util.comm.server.LifeCycleManager;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -51,6 +53,7 @@ import java.io.IOException;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import javax.inject.Inject;
@@ -73,6 +76,7 @@ public class OlcServer {
                     Flags.instance().enableAtsMode.getNonNull(),
                     serverStartTime,
                     Flags.instance().olcServerPort.getNonNull(),
+                    Flags.instance().workerGrpcPort.getNonNull(),
                     Flags.instance().useAlts.getNonNull(),
                     Flags.instance().restrictOlcServiceToUsers.getNonNull()))
             .getInstance(OlcServer.class);
@@ -88,6 +92,7 @@ public class OlcServer {
   private final LogManager<LogRecords> logManager;
   private final ClientApi clientApi;
   private final ServerBuilder<?> serverBuilder;
+  private final ServerBuilder<?> workerServerBuilder;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
 
@@ -102,6 +107,7 @@ public class OlcServer {
       LogManager<LogRecords> logManager,
       ClientApi clientApi,
       @GrpcServer ServerBuilder<?> serverBuilder,
+      @WorkerGrpcServer ServerBuilder<?> workerServerBuilder,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil) {
     this.sessionService = sessionService;
@@ -113,6 +119,7 @@ public class OlcServer {
     this.logManager = logManager;
     this.clientApi = clientApi;
     this.serverBuilder = serverBuilder;
+    this.workerServerBuilder = workerServerBuilder;
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
   }
@@ -143,7 +150,8 @@ public class OlcServer {
     logManager.start();
     LogRecorder.getInstance().initialize(logManager);
 
-    // Starts RPC server.
+    // Starts RPC servers.
+    LifeCycleManager.Builder managerBuilder = LifeCycleManager.newBuilder();
     ImmutableList<BindableService> extraServices =
         execMode instanceof ServiceProvider
             ? ((ServiceProvider) execMode).provideServices()
@@ -156,8 +164,17 @@ public class OlcServer {
         .addService(versionService);
     extraServices.forEach(serverBuilder::addService);
     Server server = serverBuilder.build();
-    controlService.setServer(server);
-    server.start();
+    managerBuilder.add(server, "OLC");
+    if (execMode instanceof ServiceProvider) {
+      workerServerBuilder.executor(threadPool).intercept(new ClientAddressServerInterceptor());
+      ((ServiceProvider) execMode)
+          .provideServicesForWorkers()
+          .forEach(workerServerBuilder::addService);
+      managerBuilder.add(workerServerBuilder.build(), "Worker");
+    }
+    LifeCycleManager manager = managerBuilder.build();
+    controlService.addListener(manager.createListener());
+    manager.start();
 
     logger.atInfo().log("Starting %s exec mode", execMode.getClass().getSimpleName());
     logFailure(
@@ -166,11 +183,16 @@ public class OlcServer {
         "Fatal error while initializing %s exec mode",
         execMode.getClass().getSimpleName());
 
-    logger.atInfo().log(
-        "OLC server started, port=%s, pid=%s, memory_info=[%s]",
-        server.getPort(), ProcessHandle.current().pid(), systemUtil.getMemoryInfo());
+    for (Map.Entry<Server, String> entry : manager.getServersWithLabels().entrySet()) {
+      logger.atInfo().log(
+          "%s server started, port=%s, pid=%s, memory_info=[%s]",
+          entry.getValue(),
+          entry.getKey().getPort(),
+          ProcessHandle.current().pid(),
+          systemUtil.getMemoryInfo());
+    }
 
-    server.awaitTermination();
+    manager.awaitTermination();
     logger.atInfo().log("Exiting...");
     System.exit(0);
   }

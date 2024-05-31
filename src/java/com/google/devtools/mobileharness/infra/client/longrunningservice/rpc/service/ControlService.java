@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.comm.server.LifeCycleManager.ALLOW_PROCESS_AFTER_SHUTDOWN;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
@@ -48,14 +48,17 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
-import io.grpc.Server;
+import com.google.devtools.mobileharness.shared.util.comm.server.LifeCycleListener;
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
@@ -82,8 +85,23 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
                   })
           .build();
 
-  /** Set in {@link #setServer}. */
-  private volatile Server server;
+  private final Queue<LifeCycleListener> listeners = new ConcurrentLinkedQueue<>();
+
+  private final class StreamObserverListener<V> extends LifeCycleListener {
+    private final StreamObserver<V> streamObserver;
+
+    StreamObserverListener(StreamObserver<V> streamObserver) {
+      this.streamObserver = streamObserver;
+    }
+
+    @Override
+    public void onKillServer() {
+      logFailure(
+          threadPool.schedule(() -> streamObserver.onCompleted(), ALLOW_PROCESS_AFTER_SHUTDOWN),
+          Level.SEVERE,
+          "Error while complete the stream observer.");
+    }
+  }
 
   @Inject
   ControlService(
@@ -95,8 +113,10 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
     this.threadPool = threadPool;
   }
 
-  public void setServer(Server server) {
-    this.server = server;
+  @CanIgnoreReturnValue
+  public ControlService addListener(LifeCycleListener listener) {
+    listeners.add(listener);
+    return this;
   }
 
   @Override
@@ -112,7 +132,10 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
 
   @Override
   public StreamObserver<GetLogRequest> getLog(StreamObserver<GetLogResponse> responseObserver) {
-    return new GetLogRequestStreamObserver(responseObserver);
+    StreamObserver<GetLogRequest> streamObserver =
+        new GetLogRequestStreamObserver(responseObserver);
+    addListener(new StreamObserverListener<>(streamObserver));
+    return streamObserver;
   }
 
   @Override
@@ -166,12 +189,9 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
 
     if (unfinishedNotAbortedSessions.isEmpty() && currentAliveClientIds.isEmpty()) {
       logger.atInfo().log("Exiting by KillServerRequest");
-      server.shutdown();
-      logFailure(
-          threadPool.schedule(
-              threadRenaming(server::shutdownNow, () -> "server-shutdown"), Duration.ofSeconds(3L)),
-          Level.SEVERE,
-          "Fatal error while shutting down server");
+      for (LifeCycleListener listener : listeners) {
+        listener.onKillServer();
+      }
       return responseBuilder.setSuccess(Success.getDefaultInstance()).build();
     } else {
       KillServerResponse response =

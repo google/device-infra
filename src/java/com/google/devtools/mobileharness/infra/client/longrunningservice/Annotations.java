@@ -43,5 +43,10 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   public @interface SessionTempDir {}
 
+  /** Annotates grRPC server or gRPC server builder for worker services. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface WorkerGrpcServer {}
+
   private Annotations() {}
 }

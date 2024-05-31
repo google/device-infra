@@ -28,6 +28,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.GrpcServer;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.ServerStartTime;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.WorkerGrpcServer;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.ControllerModule;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
@@ -64,6 +65,7 @@ class ServerModule extends AbstractModule {
   private final Instant serverStartTime;
   private final boolean isAtsMode;
   private final int grpcPort;
+  private final int workerGrpcPort;
   private final boolean useAlts;
   private final ImmutableSet<String> restrictToAuthUsers;
 
@@ -71,11 +73,13 @@ class ServerModule extends AbstractModule {
       boolean isAtsMode,
       Instant serverStartTime,
       int grpcPort,
+      int workerGrpcPort,
       boolean useAlts,
       List<String> restrictToAuthUsers) {
     this.serverStartTime = serverStartTime;
     this.isAtsMode = isAtsMode;
     this.grpcPort = grpcPort;
+    this.workerGrpcPort = workerGrpcPort;
     this.useAlts = useAlts;
     this.restrictToAuthUsers = ImmutableSet.copyOf(restrictToAuthUsers);
   }
@@ -150,6 +154,13 @@ class ServerModule extends AbstractModule {
     return useAlts
         ? ServerBuilderFactory.createAltsServerBuilder(grpcPort, restrictToAuthUsers)
         : ServerBuilderFactory.createNettyServerBuilder(grpcPort, /* localhost= */ false);
+  }
+
+  @Provides
+  @Singleton
+  @WorkerGrpcServer
+  ServerBuilder<?> provideLabSyncServerBuilder() {
+    return ServerBuilderFactory.createNettyServerBuilder(workerGrpcPort, /* localhost= */ false);
   }
 
   private static class DirectlyBuildLogRecordsCollector implements LogRecordsCollector<LogRecords> {
