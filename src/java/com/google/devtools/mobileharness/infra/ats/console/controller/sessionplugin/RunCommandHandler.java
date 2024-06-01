@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -68,6 +69,7 @@ class RunCommandHandler {
   private final LocalFileUtil localFileUtil;
   private final SessionInfo sessionInfo;
 
+  /** Set in {@link #initialize}. */
   private volatile SessionRequestInfo sessionRequestInfo;
 
   @Inject
@@ -126,6 +128,8 @@ class RunCommandHandler {
                         .orElseThrow())
                 .toString());
 
+    addEnableXtsDynamicDownloadToJob(jobInfo.get(), command);
+
     sessionInfo.addJob(jobInfo.get());
     String jobId = jobInfo.get().locator().getId();
     logger.atInfo().log(
@@ -154,6 +158,8 @@ class RunCommandHandler {
     ImmutableList.Builder<String> nonTradefedJobIds = ImmutableList.builder();
     jobInfos.forEach(
         jobInfo -> {
+          addEnableXtsDynamicDownloadToJob(jobInfo, runCommand);
+
           sessionInfo.addJob(jobInfo);
           nonTradefedJobIds.add(jobInfo.locator().getId());
           logger.atInfo().log(
@@ -349,5 +355,11 @@ class RunCommandHandler {
             : "")
         + "=================== End of Results =============================\n"
         + "================================================================\n";
+  }
+
+  private static void addEnableXtsDynamicDownloadToJob(JobInfo jobInfo, RunCommand runCommand) {
+    if (runCommand.getEnableXtsDynamicDownload()) {
+      jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
+    }
   }
 }
