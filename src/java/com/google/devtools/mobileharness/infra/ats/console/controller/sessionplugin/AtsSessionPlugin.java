@@ -34,7 +34,6 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig.CommandCase;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
-import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.ResultCase;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DumpCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.ListCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
@@ -124,6 +123,12 @@ public class AtsSessionPlugin {
       setRunCommandState(
           oldState -> runCommand.getInitialState().toBuilder().setCommandId(commandId).build());
       sessionInfo.putSessionProperty(SessionProperties.PROPERTY_KEY_COMMAND_ID, commandId);
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Command [%s] scheduled, args=[%s]",
+              commandId, runCommand.getInitialState().getCommandLineArgs());
 
       runCommandHandler.initialize(runCommand);
       ImmutableList<String> tradefedJobIds = runCommandHandler.addTradefedJobs(runCommand);
@@ -145,14 +150,14 @@ public class AtsSessionPlugin {
       if (listCommand.getCommandCase().equals(ListCommand.CommandCase.LIST_DEVICES_COMMAND)) {
         AtsSessionPluginOutput output =
             listDevicesCommandHandler.handle(listCommand.getListDevicesCommand());
-        setOutput(output);
+        setFinalOutputForNonRunCommand(output);
         return;
       } else if (listCommand
           .getCommandCase()
           .equals(ListCommand.CommandCase.LIST_MODULES_COMMAND)) {
         AtsSessionPluginOutput output =
             listModulesCommandHandler.handle(listCommand.getListModulesCommand());
-        setOutput(output);
+        setFinalOutputForNonRunCommand(output);
         return;
       }
     } else if (config.getCommandCase().equals(CommandCase.DUMP_COMMAND)) {
@@ -160,23 +165,23 @@ public class AtsSessionPlugin {
       if (dumpCommand.getCommandCase().equals(DumpCommand.CommandCase.DUMP_STACK_TRACE_COMMAND)) {
         AtsSessionPluginOutput output =
             dumpStackCommandHandler.handle(dumpCommand.getDumpStackTraceCommand());
-        setOutput(output);
+        setFinalOutputForNonRunCommand(output);
         return;
       } else if (dumpCommand
           .getCommandCase()
           .equals(DumpCommand.CommandCase.DUMP_ENV_VAR_COMMAND)) {
         AtsSessionPluginOutput output =
             dumpEnvVarCommandHandler.handle(dumpCommand.getDumpEnvVarCommand());
-        setOutput(output);
+        setFinalOutputForNonRunCommand(output);
         return;
       } else if (dumpCommand.getCommandCase().equals(DumpCommand.CommandCase.DUMP_UPTIME_COMMAND)) {
         AtsSessionPluginOutput output =
             dumpUptimeCommandHandler.handle(dumpCommand.getDumpUptimeCommand());
-        setOutput(output);
+        setFinalOutputForNonRunCommand(output);
         return;
       }
     }
-    setOutput(
+    setFinalOutputForNonRunCommand(
         AtsSessionPluginOutput.newBuilder()
             .setFailure(
                 Failure.newBuilder()
@@ -187,24 +192,8 @@ public class AtsSessionPlugin {
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event)
       throws MobileHarnessException, InterruptedException {
-    // If the result has been set, returns immediately.
-    if (sessionInfo
-        .getSessionPluginOutput(AtsSessionPluginOutput.class)
-        .map(output -> !output.getResultCase().equals(ResultCase.RESULT_NOT_SET))
-        .orElse(false)) {
-      return;
-    }
-
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
-      RunCommandState runCommandState = getRunCommandState();
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log(
-              "Command [%s] is done and start to handle result which may take several minutes"
-                  + " based on the session scale.",
-              runCommandState.getCommandId());
-      runCommandHandler.handleResultProcessing(config.getRunCommand(), runCommandState);
+      runCommandHandler.handleResultProcessing(config.getRunCommand(), getRunCommandState());
     }
   }
 
@@ -305,9 +294,10 @@ public class AtsSessionPlugin {
     }
   }
 
-  private void setOutput(AtsSessionPluginOutput output) {
-    sessionInfo.setSessionPluginOutput(oldOutput -> output, AtsSessionPluginOutput.class);
-    logger.atInfo().log("Output: %s", shortDebugString(output));
+  /** Notes that this method will override the whole previous output if any. */
+  private void setFinalOutputForNonRunCommand(AtsSessionPluginOutput finalOutput) {
+    sessionInfo.setSessionPluginOutput(oldOutput -> finalOutput, AtsSessionPluginOutput.class);
+    logger.atInfo().log("Output: %s", shortDebugString(finalOutput));
   }
 
   private void setRunCommandState(UnaryOperator<RunCommandState> runCommandStateUpdater) {

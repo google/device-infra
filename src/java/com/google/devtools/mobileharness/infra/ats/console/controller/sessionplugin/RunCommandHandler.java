@@ -17,6 +17,8 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.base.Ascii.toUpperCase;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -175,6 +177,14 @@ class RunCommandHandler {
    */
   void handleResultProcessing(RunCommand command, RunCommandState runCommandState)
       throws MobileHarnessException, InterruptedException {
+    logger
+        .atInfo()
+        .with(IMPORTANCE, IMPORTANT)
+        .log(
+            "Command [%s] is done and start to handle result which may take several minutes"
+                + " based on the session scale.",
+            runCommandState.getCommandId());
+
     List<JobInfo> allJobs = sessionInfo.getAllJobs();
     Path resultDir = null;
     Path logDir = null;
