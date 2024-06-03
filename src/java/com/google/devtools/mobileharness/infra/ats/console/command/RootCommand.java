@@ -33,6 +33,7 @@ import picocli.CommandLine.HelpCommand;
       LogCommand.class,
       RemoveCommand.class,
       RunCommand.class,
+      ServerCommand.class,
       SetCommand.class,
       VersionCommand.class,
     })

@@ -767,7 +767,7 @@ public class SystemUtil {
     }
   }
 
-  /** Kills the process according to the given ID. */
+  /** Kills the process according to the given ID by SigKill. */
   public void killProcess(int processId) throws MobileHarnessException, InterruptedException {
     killProcess(processId, KillSignal.SIGKILL);
   }

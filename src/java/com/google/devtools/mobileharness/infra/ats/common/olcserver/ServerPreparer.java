@@ -66,6 +66,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
@@ -162,23 +163,28 @@ public class ServerPreparer {
         "Fatal error when sending heartbeat to OLC server");
   }
 
+  public Optional<GetVersionResponse> tryConnectToOlcServer()
+      throws MobileHarnessException, InterruptedException {
+    try {
+      return Optional.of(requireNonNull(versionStub.get()).getVersion());
+    } catch (GrpcExceptionWithErrorId e) {
+      if (!e.getUnderlyingRpcException().getStatus().getCode().equals(Code.UNAVAILABLE)) {
+        throw new MobileHarnessException(
+            InfraErrorId.ATSC_SERVER_PREPARER_CONNECT_EXISTING_OLC_SERVER_ERROR,
+            "Failed to connect to existing OLC server",
+            e);
+      }
+      return Optional.empty();
+    }
+  }
+
   public void prepareOlcServer() throws MobileHarnessException, InterruptedException {
     synchronized (prepareServerLock) {
       boolean firstPreparation = !hasPrepared;
       hasPrepared = true;
 
       // Tries to get server version.
-      GetVersionResponse version = null;
-      try {
-        version = requireNonNull(versionStub.get()).getVersion();
-      } catch (GrpcExceptionWithErrorId e) {
-        if (!e.getUnderlyingRpcException().getStatus().getCode().equals(Code.UNAVAILABLE)) {
-          throw new MobileHarnessException(
-              InfraErrorId.ATSC_SERVER_PREPARER_CONNECT_EXISTING_OLC_SERVER_ERROR,
-              "Failed to connect to existing OLC server",
-              e);
-        }
-      }
+      GetVersionResponse version = tryConnectToOlcServer().orElse(null);
       if (version != null) {
         if (firstPreparation) {
           serverStartingLogger.log(
@@ -186,7 +192,7 @@ public class ServerPreparer {
         }
 
         if (needKillExistingServer(firstPreparation)) {
-          killExistingServer();
+          killExistingServer(/* forcibly= */ false);
         } else {
           if (firstPreparation) {
             serverStartingLogger.log("Using existing OLC server");
@@ -279,7 +285,13 @@ public class ServerPreparer {
     }
   }
 
-  public void killExistingServer() throws MobileHarnessException, InterruptedException {
+  /**
+   * Kills the existing OLC server.
+   *
+   * @param forcibly whether to kill the server forcibly if it cannot be killed normally.
+   */
+  public void killExistingServer(boolean forcibly)
+      throws MobileHarnessException, InterruptedException {
     serverStartingLogger.log("Killing existing OLC server...");
     KillServerResponse killServerResponse;
     try {
@@ -293,32 +305,48 @@ public class ServerPreparer {
           e);
     }
     long serverPid = killServerResponse.getServerPid();
-    if (killServerResponse.getResultCase() == ResultCase.FAILURE) {
-      throw MobileHarnessExceptionFactory.create(
-          InfraErrorId.ATSC_SERVER_PREPARER_CANNOT_KILL_EXISTING_OLC_SERVER_ERROR,
-          String.format(
-              "Existing OLC server (pid=%s) cannot be killed because: \n%s",
-              serverPid, createKillServerFailureReasons(killServerResponse.getFailure())),
-          /* cause= */ null,
-          /* addErrorIdToMessage= */ false,
-          /* clearStackTrace= */ true);
-    }
 
-    // Waits until the existing server is killed.
-    for (int i = 0; i < 10; i++) {
-      sleeper.sleep(Duration.ofSeconds(1L));
-      try {
-        requireNonNull(versionStub.get()).getVersion();
-      } catch (GrpcExceptionWithErrorId e) {
-        serverStartingLogger.log("Existing OLC server (pid=%s) killed", serverPid);
-        return;
+    if (killServerResponse.getResultCase() == ResultCase.SUCCESS) {
+      // Waits until the existing server is killed.
+      for (int i = 0; i < 10; i++) {
+        sleeper.sleep(Duration.ofSeconds(1L));
+        try {
+          requireNonNull(versionStub.get()).getVersion();
+        } catch (GrpcExceptionWithErrorId e) {
+          serverStartingLogger.log("Existing OLC server (pid=%s) killed", serverPid);
+          return;
+        }
       }
     }
-    throw new MobileHarnessException(
-        InfraErrorId.ATSC_SERVER_PREPARER_EXISTING_OLC_SERVER_STILL_RUNNING_ERROR,
-        String.format(
-            "Existing OLC server (pid=%s) is still running for 10s after it was killed",
-            serverPid));
+
+    if (forcibly) {
+      serverStartingLogger.log("Existing OLC server (pid=%s) forcibly killed", serverPid);
+      killServerProcess(serverPid);
+    } else {
+      if (killServerResponse.getResultCase() == ResultCase.FAILURE) {
+        throw MobileHarnessExceptionFactory.create(
+            InfraErrorId.ATSC_SERVER_PREPARER_CANNOT_KILL_EXISTING_OLC_SERVER_ERROR,
+            String.format(
+                "Existing OLC server (pid=%s) cannot be killed because: \n%s",
+                serverPid, createKillServerFailureReasons(killServerResponse.getFailure())),
+            /* cause= */ null,
+            /* addErrorIdToMessage= */ false,
+            /* clearStackTrace= */ true);
+      } else {
+        throw new MobileHarnessException(
+            InfraErrorId.ATSC_SERVER_PREPARER_EXISTING_OLC_SERVER_STILL_RUNNING_ERROR,
+            String.format(
+                "Existing OLC server (pid=%s) is still running for 10s after it was killed",
+                serverPid));
+      }
+    }
+  }
+
+  private void killServerProcess(long serverPid)
+      throws MobileHarnessException, InterruptedException {
+    logger.atInfo().log("Killing OLC server process (pid=%s)", serverPid);
+    // Send SigKILL to kill the OCLf server.
+    systemUtil.killProcess((int) serverPid);
   }
 
   private void connectWithRetry() throws MobileHarnessException, InterruptedException {

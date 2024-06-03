@@ -104,7 +104,7 @@ public class AtsLocalRunner {
       runSession();
     } finally {
       try {
-        serverPreparer.killExistingServer();
+        serverPreparer.killExistingServer(/* forcibly= */ false);
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Failed to kill OLC server, reason=[%s]", MoreThrowables.shortDebugString(e));

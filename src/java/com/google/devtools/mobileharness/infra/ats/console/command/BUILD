@@ -26,6 +26,7 @@ java_library(
         "LogCommand.java",
         "RemoveCommand.java",
         "RootCommand.java",
+        "ServerCommand.java",
         "SetCommand.java",
         "VersionCommand.java",
     ],
