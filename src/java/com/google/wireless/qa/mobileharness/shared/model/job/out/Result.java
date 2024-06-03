@@ -66,7 +66,6 @@ public class Result {
     } else if (result == TestResult.PASS) {
       newResult.setPass();
     } else {
-      // See go/mh-test-result for mapping.
       Test.TestResult newType = upgradeTestResult(result);
       ErrorId errorId;
       String errorMsg = "";
@@ -88,7 +87,7 @@ public class Result {
           break;
         case TIMEOUT:
           errorId = BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_TIMEOUT;
-          errorMsg = "Please try to increase job/test timeout (go/mh-timing) to fix timeout issues";
+          errorMsg = "Please try to increase job/test timeout " + "to fix timeout issues";
           break;
         case SKIP:
           errorId = BasicErrorId.JOB_OR_TEST_RESULT_LEGACY_SKIP;
@@ -115,7 +114,7 @@ public class Result {
     return newResult.toString();
   }
 
-  /** Converts to the new TestResult type according to the mapping in go/mh-test-result. */
+  /** Converts to the new TestResult type */
   public static Test.TestResult upgradeTestResult(Job.TestResult oldType) {
     switch (oldType) {
       case UNKNOWN:
@@ -131,8 +130,6 @@ public class Result {
         return Test.TestResult.TIMEOUT;
       case SKIP:
         return Test.TestResult.SKIP;
-
-        // The following types will be merged into ERROR according to go/mh-test-result.
       case ALLOC_FAIL:
         return Test.TestResult.ALLOC_FAIL;
       case INFRA_ERROR:

@@ -13,7 +13,7 @@
 # limitations under the License.
 #
 
-# Auto value classes used by Mobile Harness Lightning API (go/mh-lightning-api)
+# Auto value classes used by Mobile Harness Lightning API
 
 package(default_applicable_licenses = ["//:license"])
 

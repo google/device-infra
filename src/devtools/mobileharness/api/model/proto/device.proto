@@ -56,7 +56,6 @@ message DeviceDimension {
 
 message DeviceCompositeDimension {
   repeated DeviceDimension supported_dimension = 1;
-  // See go/mh-required-dimensions.
   repeated DeviceDimension required_dimension = 2;
 }
 
@@ -67,8 +66,7 @@ message DeviceFeature {
   repeated string driver = 4;
   repeated string decorator = 5;
   DeviceCompositeDimension composite_dimension = 6;
-  // Executors of the device. See more detail about the
-  // executor(go/mh-executor).
+  // Executors of the device.
   repeated string executor = 7;
 }
 

@@ -121,7 +121,6 @@ public class Result {
    * Sets to non-PASSing result and records the cause.
    *
    * @param result can't be PASS/UNKNOWN
-   * @see <a href="go/mh-test-result">MH Test Result Classification</a>
    */
   @CanIgnoreReturnValue
   public Result setNonPassing(TestResult result, MobileHarnessException cause) {
@@ -135,7 +134,6 @@ public class Result {
    * Sets to non-PASSing result and records the cause.
    *
    * @param result can't be PASS/UNKNOWN
-   * @see <a href="go/mh-test-result">MH Test Result Classification</a>
    */
   @CanIgnoreReturnValue
   public Result setNonPassing(TestResult result, ExceptionProto.ExceptionDetail cause) {
@@ -224,7 +222,6 @@ public class Result {
     /**
      * The cause of the result. Not empty if and only if the result is not PASS and not UNKNOWN.
      *
-     * @see <a href="go/mh-test-result">MH Test Result Classification</a>
      * @deprecated Please use {@link #causeProto()}
      */
     @Memoized
@@ -237,7 +234,6 @@ public class Result {
      * The cause of the result.
      *
      * @throws NullPointerException if the result is PASS or UNKNOWN
-     * @see <a href="go/mh-test-result">MH Test Result Classification</a>
      * @deprecated Please use {@link #causeProtoNonEmpty()}
      */
     @Memoized
@@ -246,11 +242,7 @@ public class Result {
       return cause().orElseThrow(NullPointerException::new);
     }
 
-    /**
-     * The cause of the result. Not empty if and only if the result is not PASS and not UNKNOWN.
-     *
-     * @see <a href="go/mh-test-result">MH Test Result Classification</a>
-     */
+    /** The cause of the result. Not empty if and only if the result is not PASS and not UNKNOWN. */
     @Memoized
     public Optional<ExceptionProto.ExceptionDetail> causeProto() {
       return useProtoBackend()
@@ -265,7 +257,6 @@ public class Result {
      * The cause of the result.
      *
      * @throws NullPointerException if the result is PASS or UNKNOWN
-     * @see <a href="go/mh-test-result">MH Test Result Classification</a>
      */
     @Memoized
     public ExceptionProto.ExceptionDetail causeProtoNonEmpty() {
@@ -275,8 +266,6 @@ public class Result {
     /**
      * The exception representation of the cause of the result. Not empty if and only if the result
      * is not PASS and not UNKNOWN.
-     *
-     * @see <a href="go/mh-test-result">MH Test Result Classification</a>
      */
     @Memoized
     public Optional<MobileHarnessException> causeException() {
@@ -291,7 +280,6 @@ public class Result {
      * The exception representation of the cause of the result.
      *
      * @throws NullPointerException if the result is PASS or UNKNOWN
-     * @see <a href="go/mh-test-result">MH Test Result Classification</a>
      */
     @Memoized
     public MobileHarnessException causeExceptionNonEmpty() {

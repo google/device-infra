@@ -67,7 +67,7 @@ message ApiConfig {
   optional WifiConfig default_wifi = 9;
 
   // Additional supported/required dimensions to be added to all devices in this
-  // lab server. See go/mh-required-dimensions.
+  // lab server.
   optional mobileharness.api.model.DeviceCompositeDimension
       composite_dimension = 10;
 
@@ -113,12 +113,11 @@ message DeviceConfig {
   // Default WIFI that the device will connect to preferentially.
   optional WifiConfig default_wifi = 7;
 
-  // Additional supported/required dimensions to be added to this device. See
-  // go/mh-required-dimensions.
+  // Additional supported/required dimensions to be added to this device.
   optional mobileharness.api.model.DeviceCompositeDimension
       composite_dimension = 8;
 
-  // Device class name for non-discoverable devices. See go/mh-nd-devices.
+  // Device class name for non-discoverable devices.
   optional string device_type = 9;
 
   // The max consecutive tests allowed between two reboots, for a device, no
@@ -135,7 +134,7 @@ message DeviceConfig {
   optional int32 max_consecutive_fail = 11 [default = 5];
 }
 
-// Configuration of a specific testbed (see go/mh-testbeds-static).
+// Configuration of a specific testbed
 message TestbedConfig {
   // Id of the testbed. Should be unique, required.
   optional string name = 1;
@@ -148,7 +147,7 @@ message TestbedConfig {
   repeated mobileharness.shared.StrPair property = 4;
 }
 
-// Configuration of a specific testbed subdevice (see go/mh-testbeds-static).
+// Configuration of a specific testbed subdevice
 message TestbedSubdeviceConfig {
   // Id of the device. Should be unique, required except for
   // MiscTestbedSubdevice subdevices.
@@ -189,54 +188,10 @@ message WifiConfig {
 // Local file, or the RemoteFileTypes supported by MH.
 message FilePath {
   optional string path = 1;  // required
-  // For google3 file, it can include the build_flags, build_cl, etc.
   // For Android build file, it can include the android build id.
   oneof parameter {
-    Google3FileParameter google3_file_param = 2;
     AndroidBuildFileParameter android_build_file_param = 3;
   }
-}
-
-// The parameter for google3 file.
-message Google3FileParameter {
-  optional string build_flags = 1;  // flags are separated by space
-  optional Google3ClientParameter build_client_param = 6;
-}
-
-// The parameter for google3 client used in rabbit build.
-// More info about google3 branch types: go/hdm/branches
-message Google3ClientParameter {
-  oneof build_client_param {
-    CitcClientParameter citc_client_param = 1;
-    ComponentsClientParameter components_client_param = 2;
-    S4BranchClientParameter s4_branch_client_param = 3;
-    SourceUriClientParameter source_uri_client_param = 4;
-  }
-}
-
-// The parameter for citc client used in rabbit build.
-message CitcClientParameter {
-  optional string citc_workspace_id = 1;
-  optional int32 citc_snapshot_version = 2;
-}
-
-// The parameter for components client used in rabbit build.
-message ComponentsClientParameter {
-  oneof changelist {
-    int32 build_cl = 1;
-    string tap_projects = 2;  // projects are separated by comma
-  }
-}
-
-// The parameter for s4 branch client used in rabbit build.
-message S4BranchClientParameter {
-  optional string s4_branch_name = 1;
-  optional string s4_branch_version = 2;
-  optional int32 s4_cl = 3;
-}
-
-message SourceUriClientParameter {
-  optional string source_uri = 1;
 }
 
 // The parameter for android file.

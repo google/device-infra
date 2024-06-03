@@ -35,8 +35,6 @@ import org.yaml.snakeyaml.representer.Representer;
 /**
  * A {@link Representer} that allows for snakeyaml serialization of any {@link TestbedConfig} to a
  * YAML v1.1 representation.
- *
- * <p>The specific schema for serialization is described at go/mh-testbeds-static.
  */
 final class TestbedConfigYamlRepresenter extends Representer {
 

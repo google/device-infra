@@ -91,7 +91,6 @@ message FlattenedExceptionDetail {
   // Otherwise it is the same as the summary's Error ID.
   optional stability.model.ErrorId critical_error_id = 6;
 
-  // User facing critical Error Id. Check go/critical_error_id_calc for detail
-  // algorithm.
+  // User facing critical Error Id.
   optional stability.model.ErrorId user_facing_critical_error_id = 7;
 }

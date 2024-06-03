@@ -972,8 +972,7 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
       if (DeviceUtil.inSharedLab()) {
         throw new MobileHarnessException(
             AndroidErrorId.ANDROID_DEVICE_SETTINGS_DECORATOR_SETTING_NOT_SUPPORT_IN_SHARED_LAB,
-            "lock_gpu_speed_to_max is not supported in shared lab. See "
-                + "go/m&m-performance-testing.");
+            "lock_gpu_speed_to_max is not supported in shared lab. ");
       }
       addCommandsForGpuSettings(testInfo);
       setNeedRebootForSetting(testInfo, "Device needs reboot before locking GPU frequencies.");

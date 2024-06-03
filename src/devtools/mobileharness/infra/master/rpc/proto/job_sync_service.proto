@@ -58,8 +58,6 @@ message OpenJobResponse {
   // Whether the job should be failed fast.
   // When it is fulfilled, the job is not aranged for scheduling,
   // |JobSyncService.GetAllocations| will return bad_test_id.
-  //
-  // See more details in go/mh-test-fail-fast.
   .mobileharness.api.model.ExceptionDetail fail_fast = 2;
 }
 
@@ -145,8 +143,7 @@ message CloseTestRequest {
   string test_id = 2;
   // Required: test result.
   .mobileharness.api.model.TestResult test_result = 3;
-  // Optional: cause exception when test result is not UNKNOWN/PASS. See
-  // go/mh-test-result.
+  // Optional: cause exception when test result is not UNKNOWN/PASS.
   .mobileharness.api.model.ExceptionDetail test_result_cause = 8;
   // Optional: Lab IP of the devices to release. If not specified,
   // Master will auto detect the IP of the RPC client and use it as the lab IP.

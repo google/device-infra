@@ -51,7 +51,7 @@ public class TimeoutUtil {
       logger.atWarning().log(
           "Mobile Harness job timeout %s is greater than or too close to Blaze timeout %s, \n"
               + "Job may be killed by Blaze before finish. \n"
-              + "Decrease job timeout to %s. Check go/mh-timing for more detail.",
+              + "Decrease job timeout to %s.",
           jobTimeoutFromConfig, blazeTimeout, jobTimeoutUpperLimit);
       return jobTimeoutUpperLimit;
     } else {
@@ -75,7 +75,7 @@ public class TimeoutUtil {
       logger.atWarning().log(
           "Mobile Harness test timeout %s is greater than or too close to Blaze timeout %s, \n"
               + "test may be killed by Blaze before finish. \n"
-              + "Decrease test timeout to %s. Check go/mh-timing for more detail.",
+              + "Decrease test timeout to %s.  ",
           testTimeoutFromConfig, blazeTimeout, testTimeoutUpperLimit);
       return testTimeoutUpperLimit;
     } else {
@@ -99,7 +99,7 @@ public class TimeoutUtil {
       logger.atWarning().log(
           "Mobile Harness start timeout %s is greater than or too close to Blaze timeout %s, \n"
               + "test may be killed by Blaze before finish. \n"
-              + "Decrease start timeout to %s. Check go/mh-timing for more detail.",
+              + "Decrease start timeout to %s.  ",
           startTimeoutFromConfig, blazeTimeout, startTimeoutUpperLimit);
       return startTimeoutUpperLimit;
     } else {

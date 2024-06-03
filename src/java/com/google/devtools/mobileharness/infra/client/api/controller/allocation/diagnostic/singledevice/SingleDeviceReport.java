@@ -128,12 +128,7 @@ public class SingleDeviceReport implements Report {
       if (jobType.getDevice().equals("AndroidLocalEmulator")) {
         return Result.create(
             InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR,
-            "No "
-                + jobType.getDevice()
-                + " found"
-                + getDiagnosticCandidateFilterSuffix()
-                + " Please see go/omnilab-why-test-not-assigned#no-androidlocalemulator-found for"
-                + " solution.",
+            "No " + jobType.getDevice() + " found" + getDiagnosticCandidateFilterSuffix(),
             null);
       }
       return Result.create(
@@ -243,10 +238,7 @@ public class SingleDeviceReport implements Report {
         report
             .append("Your job should be able to allocate the following ")
             .append(goodIds.size())
-            .append(
-                " devices but MH somehow failed to allocate them. Please try again."
-                    + " If you still see this error after retrying,"
-                    + " please file a bug against the Mobile Harness team via go/mh-bug:\n - ")
+            .append(" devices but MH somehow failed to allocate them. Please try again.")
             .append(Joiner.on("\n - ").join(goodIds.stream().limit(maxCandidateType).iterator()));
         if (goodIds.size() > maxCandidateType) {
           report

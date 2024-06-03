@@ -64,7 +64,7 @@ public final class SkipExceptionFactory {
    * Creates a {@link SkipTestException} which can have any {@link TestResult} for MH internal use.
    *
    * @param testResult the desired test result which should not be {@link TestResult#UNKNOWN}.
-   * @param errorId the plugin defined errorId, used for tracing the errors in go/mh-data
+   * @param errorId the plugin defined errorId
    */
   public static SkipTestException createSkipTestException(
       String reason, TestResult testResult, ErrorId errorId, @Nullable Throwable cause) {

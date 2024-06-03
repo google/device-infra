@@ -156,7 +156,6 @@ public class InstallSystemApkStep {
 
       // Push the files.
       for (String systemApk : systemApks) {
-        // See cl/465328918 for emulator /system partition limit workaround.
         if (systemSpecUtil.isEmulator(deviceId) && !systemSpecUtil.isCuttlefishEmulator(deviceId)) {
           String systemApkFile = systemApk.substring(systemApk.lastIndexOf("/") + 1);
           String srcPath = String.format("%s/%s", DATA_PATH, systemApkFile);

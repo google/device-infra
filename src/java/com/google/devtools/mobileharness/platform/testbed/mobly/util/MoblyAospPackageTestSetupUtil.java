@@ -62,8 +62,7 @@ public class MoblyAospPackageTestSetupUtil {
   /**
    * Sets up the host for Mobly and generates an executable test command.
    *
-   * @param moblyPkg The {@link Path} to the Mobly test package. See go/mobly-mh-aosp-codelab for
-   *     details regarding its format.
+   * @param moblyPkg The {@link Path} to the Mobly test package.
    * @param moblyUnzipDir The destination {@link Path} to unzip the Mobly package to.
    * @param venvPath The {@link Path} at which a venv should be generated.
    * @param configFile The {@link Path} to the Mobly test config.

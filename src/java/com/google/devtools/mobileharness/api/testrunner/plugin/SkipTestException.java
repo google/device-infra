@@ -77,7 +77,6 @@ public class SkipTestException extends Exception {
    * @param errorId When plugin throws a SkipTestException, please define an ErrorId in {@linkplain
    *     com.google.devtools.mobileharness.api.model.error.UserErrorId UserErrorId}, and pass it to
    *     {@code SkipTestException}. This ErrorId helps MH to better track the test error/failures
-   *     (More details in go/mh-exception)
    * @since MH lab server 4.133.0
    */
   public static SkipTestException create(
@@ -95,7 +94,6 @@ public class SkipTestException extends Exception {
    * @param errorId When plugin throws a SkipTestException, please define an ErrorId in {@linkplain
    *     com.google.devtools.mobileharness.api.model.error.UserErrorId UserErrorId}, and pass it to
    *     {@code SkipTestException}. This ErrorId helps MH to better track the test error/failures
-   *     (More details in go/mh-exception)
    * @since MH lab server 4.133.0
    */
   public static SkipTestException create(

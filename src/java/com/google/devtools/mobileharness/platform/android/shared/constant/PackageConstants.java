@@ -20,7 +20,6 @@ import com.google.common.collect.ImmutableSet;
 
 /**
  * Holds package related constants that are shared in Mobile Harness Lightning API
- * (go/mh-lightning-api).
  *
  * <p>Please keep all constants in this class sorted in alphabetical order by name.
  */

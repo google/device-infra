@@ -102,15 +102,14 @@ public final class LabReport implements Report {
             InfraErrorId.CLIENT_JR_ALLOC_USER_CONFIG_ERROR,
             String.format(
                 "MH failed to allocate any devices within %d ms. "
-                    + "Please increase your start_timeout setting (refer to go/mh-timing) "
+                    + "Please increase your start_timeout setting "
                     + "to >60 seconds and try again.\n",
                 job.setting().getTimeout().getStartTimeoutMs()),
             null);
       }
       readableReport.append(
           "Your job should be able to allocate devices on any of the following lab hosts but MH "
-              + "failed to allocate them. Please try again. If you still see this error after "
-              + "retrying, please file a bug via go/mh-bug.\n\n");
+              + "failed to allocate them. Please try again. ");
       writeLabs(readableReport, specs, perfectLabs);
       return Report.Result.create(
           InfraErrorId.CLIENT_JR_ALLOC_INFRA_ERROR, readableReport.toString(), null);
@@ -246,7 +245,7 @@ public final class LabReport implements Report {
       }
       readableReport.append(
           String.format(
-              "%s- %s: %s (see go/mh-required-dimensions)\n",
+              "%s- %s: %s ",
               indent, Report.DIMENSIONS_NOT_SATISFIED, sortedMap(unsatisfiedDimensions)));
     }
     if (deviceAssessment.isMissing()) {

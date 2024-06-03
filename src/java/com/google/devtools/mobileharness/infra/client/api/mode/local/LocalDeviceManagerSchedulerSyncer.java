@@ -106,7 +106,6 @@ class LocalDeviceManagerSchedulerSyncer implements Observer {
     deviceUnit.types().addAll(device.getDeviceTypes());
     deviceUnit.drivers().addAll(device.getDriverTypes());
     deviceUnit.decorators().addAll(device.getDecoratorTypes());
-    // TODO: Also copy the device required dimensions(go/mh-required-dimensions).
     deviceUnit.dimensions().supported().addAll(device.getDimensions());
     deviceUnit.owners().addAll(apiConfig.getOwners(deviceId));
     return deviceUnit;

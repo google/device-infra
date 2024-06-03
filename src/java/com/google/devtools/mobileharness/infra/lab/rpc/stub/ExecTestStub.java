@@ -53,7 +53,7 @@ public interface ExecTestStub extends NonThrowingAutoCloseable {
    * Gets the current status of a test.
    *
    * <p>It should only be invoked by MH client RemoteTestRunner because MH test messaging system
-   * depends on this assumption. See go/mh-messaging-design.
+   * depends on this assumption.
    */
   GetTestStatusResponse getTestStatus(GetTestStatusRequest request) throws RpcExceptionWithErrorId;
 
