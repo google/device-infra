@@ -990,11 +990,13 @@ public class JobRunner implements Runnable {
                     InfraErrorId.CLIENT_JR_JOB_FINALIZE_RESULT_FATAL_ERROR, errorMessage, e));
       }
       jobInfo.status().set(TestStatus.DONE);
+      // LINT.IfChange(JOB_LINK_IN_MHFE)
       jobInfo
           .properties()
           .add(
               Job.JOB_LINK_IN_MHFE,
               String.format("http://mobileharness-fe/jobdetailview/%s", jobInfo.locator().getId()));
+      // LINT.ThenChange(//depot/google3/cloud/devops/console/devfuse/features/sponge/app/config/fusion/external_corp_tools.ts:job_link_in_mhfe)
 
       logger.atFine().log("Post JobEndEvent");
       try {
