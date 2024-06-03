@@ -222,11 +222,11 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> atsConsoleOlcServerPath = atsConsoleOlcServerPathDefault;
 
-  private static final Flag<String> atsConsoleOlcServerXmxDefault = Flag.value("16g");
+  private static final Flag<String> atsConsoleOlcServerXmxDefault = Flag.value("24g");
 
   @com.beust.jcommander.Parameter(
       names = "--ats_console_olc_server_xmx",
-      description = "-Xmx of OLC server of ATS console. Default is \"16g\".",
+      description = "-Xmx of OLC server of ATS console. Default is \"24g\".",
       converter = Flag.StringConverter.class)
   public Flag<String> atsConsoleOlcServerXmx = atsConsoleOlcServerXmxDefault;
 
@@ -1246,11 +1246,11 @@ public class Flags {
     return Strings.nullToEmpty(System.getenv("HOME")) + "/xts";
   }
 
-  private static final Flag<String> xtsTfXmxDefault = Flag.value("16g");
+  private static final Flag<String> xtsTfXmxDefault = Flag.value("24g");
 
   @com.beust.jcommander.Parameter(
       names = "--xts_tf_xmx",
-      description = "-Xmx of TF of XtsTradeTest. Default is \"16g\".",
+      description = "-Xmx of TF of XtsTradeTest. Default is \"24g\".",
       converter = Flag.StringConverter.class)
   public Flag<String> xtsTfXmx = xtsTfXmxDefault;
 
