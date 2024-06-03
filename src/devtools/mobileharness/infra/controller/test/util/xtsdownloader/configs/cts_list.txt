@@ -27,6 +27,7 @@ AppWithDuplicateAttribution
 AppWithLongAttributionTag
 AppWithTooManyAttributions
 art_libnativebridge_cts_tests
+art_libnativeloader_cts_test
 art-run-test-018-stack-overflow
 art-run-test-048-reflect-v8
 art_standalone_dex2oat_cts_tests
@@ -100,6 +101,7 @@ CtsAdminTestCases
 CtsAdoptableHostTestCases
 CtsADPFHostTestCases
 CtsAdServicesCobaltTest
+CtsAdServicesCustomAudienceTests
 CtsAdServicesDebuggableDeviceTestCases
 CtsAdServicesDeviceTestCases
 CtsAdServicesEndToEndTestMeasurement
@@ -110,6 +112,7 @@ CtsAdServicesHostTests
 CtsAdServicesMddTests
 CtsAdServicesNotInAllowListEndToEndTests
 CtsAdServicesPermissionsAppOptOutEndToEndTests
+CtsAdExtServicesCustomAudienceTests
 CtsAdServicesPermissionsNoPermEndToEndTests
 CtsAdServicesPermissionsValidEndToEndTests
 CtsAdServicesTopicsAppUpdateTests
@@ -356,9 +359,11 @@ CtsCameraTestCases
 CtsCarBuiltinApiHostTestCases
 CtsCarBuiltinApiTestCases
 CtsCarBuiltinSimpleApp
+CtsCarDeprecatedSdkApp
 CtsCarDisplayCompatApp
 CtsCarHostNonRecoverableTestCases
 CtsCarHostTestCases
+CtsCarOverlayWindowTestAppSdk22
 CtsCarrierApiTargetPrep
 CtsCarrierApiTargetPrepApp
 CtsCarrierApiTestCases
@@ -436,6 +441,7 @@ CtsCrossProfileEnabledApp
 CtsCrossProfileEnabledNoPermsApp
 CtsCrossProfileNotEnabledApp
 CtsCrossProfileUserEnabledApp
+CtsCujInstallerTestApp
 CtsCurrentApiSignatureTestCases
 cts-dalvik-host-test-runner
 CtsDatabaseTestCases
@@ -545,6 +551,7 @@ CtsEmptyDeviceOwner
 CtsEmptyInstallerApp
 CtsEmptyTestApp
 CtsEmptyTestApp_AppMetadataInApk
+CtsEmptyTestApp_AppMetadataInApk_ExceedSizeLimit
 CtsEmptyTestApp_FullScreenIntent
 CtsEmptyTestApp_MissingAppMetadataInApk
 CtsEmptyTestAppV2
@@ -572,8 +579,6 @@ CtsExtractNativeLibsAppTrue32
 CtsExtractNativeLibsAppTrue64
 CtsExtractNativeLibsAppTrueBoth
 CtsExtractNativeLibsHostTestCases
-CtsFgsBootCompletedTestCases
-CtsFgsBootCompletedTestCasesApi35
 CtsFgsStartTestHelperApi34
 CtsFgsStartTestHelperCurrent
 CtsFgsTimeoutTestCases
@@ -635,6 +640,8 @@ CtsHostsideHiddenapiTests
 CtsHostsideNetworkCapTestsAppSdk33
 CtsHostsideNetworkCapTestsAppWithoutProperty
 CtsHostsideNetworkCapTestsAppWithProperty
+CtsHostsideNetworkPolicyTests
+CtsHostsideNetworkPolicyTestsApp2
 CtsHostsideNetworkTests
 CtsHostsideNetworkTestsApp2
 CtsHostsideNumberBlockingAppTest
@@ -938,6 +945,7 @@ CtsMediaPreparerApp
 CtsMediaProjectionSDK33TestCases
 CtsMediaProjectionSDK34TestCases
 CtsMediaProjectionTestCases
+CtsMediaProviderTestCases
 CtsMediaProviderTranscodeTests
 CtsMediaRecorderTestCases
 CtsMediaRouterHostSideTestBluetoothPermissionsApp
@@ -1073,6 +1081,7 @@ CtsOverlayTargetNoOverlayable
 CtsPackageInstallAppOpDefaultTestCases
 CtsPackageInstallAppOpDeniedTestCases
 CtsPackageInstallerApp
+CtsPackageInstallerCUJTestCases
 CtsPackageInstallerTapjackingTestCases
 CtsPackageInstallTestCases
 CtsPackageManagerHostTestCases
@@ -1216,9 +1225,11 @@ CtsScopedStorageRedactUriTest
 CtsScopedStorageTestAppE
 CtsScopedStorageTestAppE30
 CtsScopedStorageTestAppE30FileManager
+CtsScopedStorageTestAppELegacy
 CtsScopedStorageTestAppFileManagerBypassDB
 CtsScopedStorageTestAppSystemGallery30BypassDB
 CtsScopedStorageTestAppSystemGalleryBypassDB
+CtsScopedStorageTestAppVUSelected
 CtsSdkExtensionsTestCases
 CtsSdkSandboxHostSideTests
 CtsSdkSandboxInprocessTests
@@ -1385,6 +1396,7 @@ CtsStaticSharedNativeLibConsumer
 CtsStaticSharedNativeLibProvider
 CtsStaticSharedNativeLibProvider1
 CtsStatsdAtomHostTestCases
+CtsStatsdAtomTestComponentStateApp
 CtsStatsdHostTestCases
 CtsStatsSecurityApp
 CtsStorageAccessTestCases
@@ -1497,6 +1509,7 @@ CtsUseProcessFailProvider
 CtsUseProcessFailReceiver
 CtsUseProcessFailService
 CtsUseProcessSuccess
+CtsUserRestrictionTestCases
 CtsUsesLibraryHostTestCases
 CtsUsesNativeLibraryTest
 CtsUtilTestCases
@@ -1618,14 +1631,21 @@ LocationAccessingApp
 LocationAccessingAppSdk28
 MainlineModuleDetector
 MctsAppSecurityHostTestCases
+MctsMediaBetterTogetherTestCases
 MctsMediaCodecTestCases
 MctsMediaDecoderTestCases
+MctsMediaDrmFrameworkTestCases
 MctsMediaEncoderTestCases
 MctsMediaExtractorTestCases
 MctsMediaMiscTestCases
+MctsMediaMuxerTestCases
+MctsMediaParserTestCases
 MctsMediaPlayerTestCases
 MctsMediaV2TestCases
 MctsMediaStressTestCases
+MctsMediaDrmFrameworkTestCases
+MctsMediaTranscodingTestCases
+MctsMediaV2TestCases
 MctsTextClassifierTestCases
 MicrodroidHostTestCases
 MicrodroidTestApp
