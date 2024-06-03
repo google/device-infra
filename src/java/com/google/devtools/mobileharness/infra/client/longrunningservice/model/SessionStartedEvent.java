@@ -17,18 +17,17 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice.model;
 
 /**
- * An event that indicates that the session is starting.
+ * An event that indicates that the session has started.
  *
  * <p>In a subscriber method of this event, the job list of the session can be modified.
  *
- * <p>After this event, the session will enter a queue, to wait to become "started and running". The
- * number of "started and running" sessions is controlled by the server.
+ * <p>After the event, the session runner will start all jobs of the session.
  *
- * <p>If this event happens, {@link SessionEndedEvent} will always happen.
+ * <p>This event will not happen if the session is aborted when waiting to become started.
  */
-public class SessionStartingEvent extends SessionEvent {
+public class SessionStartedEvent extends SessionEvent {
 
-  public SessionStartingEvent(SessionInfo sessionInfo) {
+  public SessionStartedEvent(SessionInfo sessionInfo) {
     super(sessionInfo);
   }
 }

@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionPlugin;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginError;
@@ -54,6 +55,11 @@ public class SessionPluginRunner {
   /** Posts {@link SessionStartingEvent} to session plugins. */
   public void onSessionStarting() {
     postEvent(SessionStartingEvent::new, SessionStartingEvent.class, sessionPlugin -> true);
+  }
+
+  /** Posts {@link SessionStartedEvent} to session plugins. */
+  public void onSessionStarted() {
+    postEvent(SessionStartedEvent::new, SessionStartedEvent.class, sessionPlugin -> true);
   }
 
   /** Posts {@link SessionEndedEvent} to session plugins. */

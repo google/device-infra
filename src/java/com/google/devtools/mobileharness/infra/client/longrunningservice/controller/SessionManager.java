@@ -90,11 +90,17 @@ public class SessionManager {
   /** Queue capacity for submitted and non-started sessions. */
   private static final int SESSION_QUEUE_CAPACITY = 50_000;
 
-  /** Capacity for concurrently running sessions. */
-  private static final int RUNNING_SESSION_CAPACITY = 50;
+  /**
+   * Capacity for concurrently running sessions.
+   *
+   * <p>Note that there is another capacity for {@link
+   * com.google.devtools.mobileharness.shared.util.flags.Flags#olcServerMaxStartedRunningSessionNum
+   * "started and running"} sessions.
+   */
+  private static final int RUNNING_SESSION_CAPACITY = 1000;
 
   /** Capacity for archived sessions. */
-  private static final int ARCHIVED_SESSION_CAPACITY = 1000;
+  private static final int ARCHIVED_SESSION_CAPACITY = 2000;
 
   private final SessionDetailCreator sessionDetailCreator;
   private final SessionRunner.Factory sessionRunnerFactory;

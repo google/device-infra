@@ -19,7 +19,11 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.model;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
-/** An event that indicates the session has ended and all jobs of it have ended. */
+/**
+ * An event that indicates the session has ended and all jobs of it have ended.
+ *
+ * <p>If this event happens, {@link SessionStartingEvent} must have happened.
+ */
 public class SessionEndedEvent extends SessionEvent {
 
   private final Throwable sessionError;
