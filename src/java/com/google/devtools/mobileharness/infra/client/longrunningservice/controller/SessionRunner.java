@@ -36,6 +36,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
 import com.google.inject.assistedinject.Assisted;
 import com.google.protobuf.FieldMask;
@@ -108,9 +109,10 @@ public class SessionRunner implements Callable<Void> {
     sessionEnvironment = sessionEnvironmentPreparer.prepareEnvironment(sessionDetailHolder);
 
     logger.atInfo().log(
-        "Starting session runner %s, server_version=[%s]",
+        "Starting session runner %s, server_version=[%s], memory_info=[%s]",
         sessionDetailHolder.getSessionId(),
-        shortDebugString(VersionProtoUtil.createGetVersionResponse()));
+        shortDebugString(VersionProtoUtil.createGetVersionResponse()),
+        getMemoryInfo());
 
     // Loads session plugins.
     ImmutableList<SessionPlugin> sessionPlugins =
@@ -225,5 +227,17 @@ public class SessionRunner implements Callable<Void> {
       receiveSessionNotification = false;
     }
     getUnchecked(whenAllComplete(sessionNotifyingFutures).run(() -> {}, threadPool));
+  }
+
+  private static String getMemoryInfo() {
+    Runtime runtime = Runtime.getRuntime();
+    long freeMemory = runtime.freeMemory();
+    long totalMemory = runtime.totalMemory();
+    long maxMemory = runtime.maxMemory();
+    return String.format(
+        "used=%s, total=%s, max=%s",
+        StrUtil.getHumanReadableSize(totalMemory - freeMemory),
+        StrUtil.getHumanReadableSize(totalMemory),
+        StrUtil.getHumanReadableSize(maxMemory));
   }
 }
