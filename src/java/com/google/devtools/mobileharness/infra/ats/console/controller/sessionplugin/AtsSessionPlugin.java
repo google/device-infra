@@ -42,6 +42,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -129,21 +130,6 @@ public class AtsSessionPlugin {
           .log(
               "Command [%s] scheduled, args=[%s]",
               commandId, runCommand.getInitialState().getCommandLineArgs());
-
-      runCommandHandler.initialize(runCommand);
-      ImmutableList<String> tradefedJobIds = runCommandHandler.addTradefedJobs(runCommand);
-      synchronized (tradefedJobsLock) {
-        for (String tradefedJobId : tradefedJobIds) {
-          runningTradefedJobs.putIfAbsent(tradefedJobId, true);
-        }
-      }
-      if (tradefedJobIds.isEmpty()) {
-        logger.atInfo().log(
-            "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
-                + " needed.",
-            sessionInfo.getSessionId());
-        runCommandHandler.addNonTradefedJobs(runCommand);
-      }
       return;
     } else if (config.getCommandCase().equals(CommandCase.LIST_COMMAND)) {
       ListCommand listCommand = config.getListCommand();
@@ -187,6 +173,36 @@ public class AtsSessionPlugin {
                 Failure.newBuilder()
                     .setErrorMessage(String.format("Unimplemented [%s]", shortDebugString(config))))
             .build());
+  }
+
+  @Subscribe
+  public void onSessionStarted(SessionStartedEvent event)
+      throws MobileHarnessException, InterruptedException {
+    if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
+      RunCommand runCommand = config.getRunCommand();
+      RunCommandState runCommandState = getRunCommandState();
+
+      logger
+          .atInfo()
+          .with(IMPORTANCE, IMPORTANT)
+          .log(
+              "Command [%s] started, args=[%s]",
+              runCommandState.getCommandId(), runCommand.getInitialState().getCommandLineArgs());
+      runCommandHandler.initialize(runCommand);
+      ImmutableList<String> tradefedJobIds = runCommandHandler.addTradefedJobs(runCommand);
+      synchronized (tradefedJobsLock) {
+        for (String tradefedJobId : tradefedJobIds) {
+          runningTradefedJobs.putIfAbsent(tradefedJobId, true);
+        }
+      }
+      if (tradefedJobIds.isEmpty()) {
+        logger.atInfo().log(
+            "On session [%s] starting, no tradefed job was added, try add non-tradefed jobs if"
+                + " needed.",
+            sessionInfo.getSessionId());
+        runCommandHandler.addNonTradefedJobs(runCommand);
+      }
+    }
   }
 
   @Subscribe

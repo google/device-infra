@@ -72,6 +72,9 @@ class RunCommandHandler {
   private final SessionInfo sessionInfo;
 
   /** Set in {@link #initialize}. */
+  private volatile boolean initialized;
+
+  /** Set in {@link #initialize}. Present if {@link #initialized} is true. */
   private volatile SessionRequestInfo sessionRequestInfo;
 
   @Inject
@@ -91,6 +94,7 @@ class RunCommandHandler {
         SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME,
         TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits());
     sessionRequestInfo = generateSessionRequestInfo(command);
+    initialized = true;
   }
 
   private static int getRandom4Digits() {
@@ -177,6 +181,9 @@ class RunCommandHandler {
    */
   void handleResultProcessing(RunCommand command, RunCommandState runCommandState)
       throws MobileHarnessException, InterruptedException {
+    if (!initialized) {
+      return;
+    }
     logger
         .atInfo()
         .with(IMPORTANCE, IMPORTANT)

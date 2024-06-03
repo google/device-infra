@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.shared.util.concurrent;
 import static com.google.common.base.Preconditions.checkNotNull;
 
 import com.google.common.base.Throwables;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
@@ -33,6 +34,8 @@ import java.util.function.Supplier;
  * have some methods.
  */
 public final class Callables {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   /**
    * Executes all {@link MobileHarnessCallable}s in the given list sequentially. All callables will
@@ -100,8 +103,10 @@ public final class Callables {
     for (MobileHarnessCallable<?> callable : callables) {
       interrupted |= Thread.interrupted();
       try {
-        @SuppressWarnings("unused")
-        var unused = callable.call();
+        Object result = callable.call();
+        if (result != null) {
+          logger.atInfo().log("Callable [%s] returned [%s]", callable, result);
+        }
       } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
         errors.add(e);
         if (isInterruptedException(e)) {

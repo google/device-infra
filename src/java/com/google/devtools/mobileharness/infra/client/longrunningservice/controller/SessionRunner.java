@@ -26,7 +26,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.SessionEnvironmentPreparer.SessionEnvironment;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionDetailHolder;
@@ -37,15 +39,19 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.assistedinject.Assisted;
 import com.google.protobuf.FieldMask;
 import com.google.protobuf.TextFormat.Printer;
 import com.google.protobuf.TypeRegistry;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -55,6 +61,13 @@ import javax.inject.Inject;
 public class SessionRunner implements Callable<Void> {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  /**
+   * IDs of sessions which have posted {@code SessionStartingEvent} but have not posted {@code
+   * SessionStartedEvent}.
+   */
+  @GuardedBy("itself")
+  private static final Set<String> startedRunningSessionIds = new HashSet<>();
 
   /** Factory for creating {@link SessionRunner}. */
   public interface Factory {
@@ -79,6 +92,9 @@ public class SessionRunner implements Callable<Void> {
 
   @GuardedBy("sessionNotifyingFutures")
   private boolean receiveSessionNotification = true;
+
+  @GuardedBy("startedRunningSessionIds")
+  private boolean sessionAborted;
 
   private volatile SessionEnvironment sessionEnvironment;
 
@@ -108,11 +124,10 @@ public class SessionRunner implements Callable<Void> {
     // Prepares environment.
     sessionEnvironment = sessionEnvironmentPreparer.prepareEnvironment(sessionDetailHolder);
 
+    String sessionId = sessionDetailHolder.getSessionId();
     logger.atInfo().log(
         "Starting session runner %s, server_version=[%s], memory_info=[%s]",
-        sessionDetailHolder.getSessionId(),
-        shortDebugString(VersionProtoUtil.createGetVersionResponse()),
-        getMemoryInfo());
+        sessionId, shortDebugString(VersionProtoUtil.createGetVersionResponse()), getMemoryInfo());
 
     // Loads session plugins.
     ImmutableList<SessionPlugin> sessionPlugins =
@@ -146,6 +161,30 @@ public class SessionRunner implements Callable<Void> {
 
     Throwable sessionError = null;
     try {
+      // Checks started and running session number.
+      int maxStartedRunningSessionNum =
+          Flags.instance().olcServerMaxStartedRunningSessionNum.getNonNull();
+      synchronized (startedRunningSessionIds) {
+        while (true) {
+          if (sessionAborted) {
+            throw MobileHarnessExceptionFactory.create(
+                InfraErrorId.OLCS_SESSION_ABORTED_WHEN_QUEUEING,
+                "Session aborted when waiting to become started",
+                /* cause= */ null,
+                /* addErrorIdToMessage= */ false,
+                /* clearStackTrace= */ true);
+          }
+          if (startedRunningSessionIds.size() < maxStartedRunningSessionNum) {
+            startedRunningSessionIds.add(sessionId);
+            break;
+          }
+          startedRunningSessionIds.wait();
+        }
+      }
+
+      // Calls sessionPlugin.onStarted().
+      sessionPluginRunner.onSessionStarted();
+
       // Starts all jobs and wait until they finish.
       sessionJobRunner.runJobs(
           sessionDetailHolder,
@@ -157,16 +196,32 @@ public class SessionRunner implements Callable<Void> {
       sessionError = e;
       throw e;
     } finally {
-      // Calls sessionPlugin.onEnded().
-      sessionPluginRunner.onSessionEnded(sessionError);
-
-      // Waits until all session notifications have been sent.
-      waitSessionNotifying();
-
-      // Closes session plugin resources.
-      sessionPlugins.stream()
-          .map(SessionPlugin::closeableResource)
-          .forEach(NonThrowingAutoCloseable::close);
+      Throwable finalSessionError = sessionError;
+      Callables.callAll(
+          () -> {
+            // Calls sessionPlugin.onEnded().
+            sessionPluginRunner.onSessionEnded(finalSessionError);
+            return null;
+          },
+          () -> {
+            // Waits until all session notifications have been sent.
+            waitSessionNotifying();
+            return null;
+          },
+          () -> {
+            // Closes session plugin resources.
+            sessionPlugins.stream()
+                .map(SessionPlugin::closeableResource)
+                .forEach(NonThrowingAutoCloseable::close);
+            return null;
+          },
+          () -> {
+            synchronized (startedRunningSessionIds) {
+              startedRunningSessionIds.remove(sessionId);
+              startedRunningSessionIds.notifyAll();
+            }
+            return null;
+          });
     }
     return null;
   }
@@ -210,6 +265,11 @@ public class SessionRunner implements Callable<Void> {
   }
 
   void abortSession() {
+    synchronized (startedRunningSessionIds) {
+      sessionAborted = true;
+      startedRunningSessionIds.notifyAll();
+    }
+
     sessionDetailHolder.putSessionProperty(
         SessionProperties.PROPERTY_KEY_SESSION_ABORTED_WHEN_RUNNING, "true");
 
