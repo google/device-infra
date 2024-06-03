@@ -17,11 +17,14 @@
 package com.google.devtools.mobileharness.infra.ats.console.result.report;
 
 import static com.google.common.truth.Truth.assertThat;
+import static org.junit.Assert.assertThrows;
 
 import com.android.tradefed.metrics.proto.MetricMeasurement.Measurements;
 import com.android.tradefed.metrics.proto.MetricMeasurement.Metric;
 import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
 import com.google.common.collect.ImmutableList;
+import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.BuildInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
@@ -53,6 +56,9 @@ public final class CompatibilityReportMergerTest {
 
   private static final String CTS_TEST_RESULT_XML_2 =
       TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_result_2.xml");
+
+  private static final String CTS_TEST_RESULT_XML_3 =
+      TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_result_3.xml");
 
   private static final String CTS_TEST_RECORD_PB_FILE =
       TestRunfilesUtil.getRunfilesLocation("result/report/testdata/xml/cts_test_record.pb");
@@ -204,6 +210,19 @@ public final class CompatibilityReportMergerTest {
     assertThat(module1.getTestCaseCount()).isEqualTo(2);
     assertThat(module1.getTestCase(0).getTestCount()).isEqualTo(4);
     assertThat(module1.getTestCase(1).getTestCount()).isEqualTo(4);
+  }
+
+  @Test
+  public void mergeXmlReports_differentBuildFingerprintFound_throwException() throws Exception {
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class,
+                    () ->
+                        reportMerger.mergeXmlReports(
+                            ImmutableList.of(
+                                Path.of(CTS_TEST_RESULT_XML_2), Path.of(CTS_TEST_RESULT_XML_3))))
+                .getErrorId())
+        .isEqualTo(ExtErrorId.REPORT_MERGER_DIFF_DEVICE_BUILD_FINGERPRINT_FOUND);
   }
 
   @Test

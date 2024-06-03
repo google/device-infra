@@ -37,6 +37,7 @@ java_library(
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
