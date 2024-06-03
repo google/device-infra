@@ -661,12 +661,7 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
             JobSpecHelper.getFiles(jobInfo.protoSpec().getProto()).entrySet().stream(),
             jobInfo.scopedSpecs().getFiles(jobSpecHelper).entrySet().stream())
         .filter(entry -> !isResolvedInClient(entry.getValue()))
-        .map(
-            entry ->
-                ResolveFileItem.newBuilder()
-                    .setTag(entry.getKey())
-                    .setFile(entry.getValue())
-                    .build())
+        .map(entry -> createResolveFileItem(entry.getKey(), entry.getValue(), jobInfo))
         .collect(toImmutableList());
   }
 
@@ -681,6 +676,12 @@ public class RemoteTestRunner extends BaseTestRunner<RemoteTestRunner> {
     } else {
       return false;
     }
+  }
+
+  private static ResolveFileItem createResolveFileItem(
+      String tag, String filePath, JobInfo jobInfo) {
+    ResolveFileItem.Builder builder = ResolveFileItem.newBuilder().setTag(tag).setFile(filePath);
+    return builder.build();
   }
 
   private TestEngineLocator waitUntilTestEngineReady(
