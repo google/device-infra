@@ -41,8 +41,7 @@ enum TestResult {
   // Test is marked as skipped.
   SKIP = 7;
 
-  // The following types are deprecated and shouldn't be used. See
-  // go/mh-test-result for more detail.
+  // The following types are deprecated and shouldn't be used.
   ABORT = 5 [deprecated = true];
   INFRA_ERROR = 6 [deprecated = true];
   ALLOC_FAIL = 8 [deprecated = true];

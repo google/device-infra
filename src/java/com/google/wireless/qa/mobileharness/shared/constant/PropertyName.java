@@ -70,13 +70,10 @@ public interface PropertyName {
     /** The job allocation fails after start_timeout is reached. */
     ALLOCATION_FAIL_AFTER_START_TIMEOUT,
 
-    /**
-     * Whether it is a resumed job from a previous interrupted one
-     * (http://go/mh-longevity-short-term-desi
-     */
+    /** Whether it is a resumed job from a previous interrupted one // */
     _IS_RESUMED_JOB,
 
-    /** Whether the job is resumable. (http://go/mh-longevity-short-term-design). */
+    /** Whether the job is resumable. */
     IS_RESUMABLE,
 
     /** The parameters to be recorded from mobile_test macro to the job creation. */

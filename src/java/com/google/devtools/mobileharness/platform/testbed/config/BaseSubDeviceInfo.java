@@ -47,7 +47,6 @@ public abstract class BaseSubDeviceInfo implements SubDeviceInfo {
       Multimap<String, String> dimensions,
       Map<String, Object> properties)
       throws MobileHarnessException {
-    // From go/mh-testbeds-static, a subdevice id cannot be null or empty.
     if (Strings.isNullOrEmpty(id)) {
       throw new MobileHarnessException(
           ExtErrorId.TESTBED_CONFIG_SUBDEVICE_ID_EMPTY_ERROR,

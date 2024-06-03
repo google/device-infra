@@ -291,9 +291,8 @@ message AndroidDeviceSettingsDecoratorSpec {
           "hosts time. If the difference is any bigger, the test will fail."
   }];
 
-  optional bool enable_instant_app = 59 [(field_detail) = {
-    help: "Whether or not enable instant app (go/instantapps)."
-  }];
+  optional bool enable_instant_app = 59
+      [(field_detail) = { help: "Whether or not enable instant app " }];
 
   optional string chimera_denylist = 60 [(field_detail) = {
     help: "Comma-delineated list of GMSCore chimera modules to denylist. "
@@ -328,7 +327,7 @@ message AndroidDeviceSettingsDecoratorSpec {
   optional bool enable_location_compact_logging = 67 [(field_detail) = {
     help: "Whether or not enable location compact logging. Compact logging "
           "help to understand the internal state of the location process. "
-          "It can be visaulized through Location historian (go/locpowerbug)"
+          "It can be visaulized through Location historian"
   }];
 
   optional bool enable_camera_hdr = 68

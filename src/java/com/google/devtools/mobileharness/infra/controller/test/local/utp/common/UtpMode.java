@@ -18,6 +18,6 @@ package com.google.devtools.mobileharness.infra.controller.test.local.utp.common
 
 /** Modes for running tests with UTP. */
 public enum UtpMode {
-  /** Hybrid UTP Mode: go/mh-utp-detail. */
+  /** Hybrid UTP Mode: */
   MH_HYBRID_UTP,
 }

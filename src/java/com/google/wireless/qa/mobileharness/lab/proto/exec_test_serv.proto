@@ -254,7 +254,7 @@ service ExecTestService {
   rpc KickOffTest(KickOffTestRequest) returns (KickOffTestResponse) {}
   // Gets the current status of a test.
   // This method should only be invoked by MH client RemoteTestRunner because
-  // test messaging system depends on this assumption. go/mh-messaging-design.
+  // test messaging system depends on this assumption.
   rpc GetTestStatus(GetTestStatusRequest) returns (GetTestStatusResponse) {}
   // Gets the detail information of a running test.
   // This method will be used by MOSS.

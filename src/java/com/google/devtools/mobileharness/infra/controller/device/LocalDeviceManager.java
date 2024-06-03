@@ -86,7 +86,6 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
    * Creates a LocalDeviceManager to detect and manage devices.
    *
    * @param detectors detectors for generating the {@link DetectionResults} for {@link Dispatcher}
-   *     (go/mhv5-dm-detector-dispatcher)
    * @param dispatchers dispatchers for dispatching different kinds of devices.
    * @param keepGoing whether to keep this thread running when runtime exceptions occur
    * @param threadPool thread pool for all device runner threads

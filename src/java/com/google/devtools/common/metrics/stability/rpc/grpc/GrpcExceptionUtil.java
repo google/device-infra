@@ -42,7 +42,7 @@ public class GrpcExceptionUtil {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  /** GFE has HTTP header size limit, so we need this limit here. go/gfe-headers */
+  /** GFE has HTTP header size limit, so we need this limit here. */
   @VisibleForTesting static final int EXCEPTION_DETAIL_SIZE_LIMIT_BYTES = 3_072;
 
   /**

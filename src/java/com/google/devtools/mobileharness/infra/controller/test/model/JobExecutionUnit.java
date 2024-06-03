@@ -43,7 +43,7 @@ public abstract class JobExecutionUnit {
   /** Gets the driver type. */
   public abstract String driver();
 
-  /** Job timeout setting. See go/mh-timing for more detail. */
+  /** Job timeout setting. */
   public abstract Timeout timeout();
 
   /** Time records of the job. */

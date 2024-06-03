@@ -123,7 +123,7 @@ public class MoblyGenericTest extends BaseDriver {
    * used only by MobileHarness or MobileHarness plugins and must not be passed to Mobly. It can be
    * used to pass some sensitive information, which is not required by Mobly, to MobileHarness
    * decorators or plugins. For example, this is used to pass account passwords to MH plugins
-   * designed to securely handle them (see go/google-ota-mh for more details).
+   * designed to securely handle them
    */
   @VisibleForTesting static final String PARAM_PRIVATE_PARAMS = "mobly_mh_only_params";
 

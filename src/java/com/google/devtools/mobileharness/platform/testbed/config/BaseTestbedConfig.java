@@ -124,10 +124,8 @@ public abstract class BaseTestbedConfig implements TestbedConfig {
   }
 
   /**
-   * Validates required fields of TestbedConfig (see go/mh-testbeds-static).
-   *
-   * <p>In particular, this means that the id is not an empty string, that the config defines at
-   * least one subdevice, and that no subdevice has the same id as the testbed. Subclasses of
+   * In particular, this means that the id is not an empty string, that the config defines at least
+   * one subdevice, and that no subdevice has the same id as the testbed. Subclasses of
    * BaseTestbedConfig should call {@code validate()} at the end of or after construction.
    */
   protected final void validate() throws MobileHarnessException {

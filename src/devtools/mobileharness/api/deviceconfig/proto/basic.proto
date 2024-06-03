@@ -51,6 +51,6 @@ message BasicDeviceConfig {
   google.protobuf.Int32Value max_consecutive_fail = 5;
 
   // Executors of the device. See more detail about the
-  // executor(go/mh-executor).
+  // executor
   repeated string executor = 6;
 }

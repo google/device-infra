@@ -47,9 +47,7 @@ public class Sqlite {
     this.adb = adb;
   }
 
-  /**
-   * Run GServices Android ID(go/android-id). Only works with rooted devices with API level >= 18.
-   */
+  /** Run GServices Android ID Only works with rooted devices with API level >= 18. */
   public String getGServicesAndroidID(String serial)
       throws MobileHarnessException, InterruptedException {
     return runGservicesSql(serial, "SELECT value FROM main WHERE name = \"android_id\"");

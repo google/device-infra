@@ -91,7 +91,6 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
 
   @Override
   public void start() {
-    @SuppressWarnings("unused") // go/futurereturn-lsc
     Future<?> possiblyIgnoredError = threadPool.submit(this);
   }
 

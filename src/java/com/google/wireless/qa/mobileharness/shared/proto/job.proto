@@ -64,7 +64,8 @@ enum TestResult {
   //    in test log will "guess" the closest match of your job and devices and
   //    show the detail reason why they are not exactly matched.
   // 2) All suitable devices are busy. Users may need to extend the timeout
-  //    setting(go/mh-timing) or request more devices.
+  //    setting
+  //    or request more devices.
   ALLOC_FAIL = 8;
   // Test failed to allocate any device and the reason is unclassified.
   ALLOC_ERROR = 9;

@@ -55,7 +55,7 @@ public abstract class JobScheduleUnit {
   /** Job priority. */
   public abstract Priority priority();
 
-  /** Job timeout setting. See go/mh-timing for more detail. */
+  /** Job timeout setting. */
   public abstract Timeout timeout();
 
   /** Time records of the job. */

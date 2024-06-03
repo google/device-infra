@@ -57,7 +57,7 @@ public class TestMessageUtil {
   }
 
   /**
-   * Sends a message to a test. See go/mh-messaging.
+   * Sends a message to a test.
    *
    * <p>The following tests can be accessed:
    *
@@ -105,9 +105,7 @@ public class TestMessageUtil {
    * @param test a running MH test
    * @param message the message to send
    * @throws MobileHarnessException if fails to send the message
-   * @see <a href="go/mh-messaging">Mobile Harness Messaging</a>
    * @see com.google.common.eventbus.EventBus
-   * @see <a href="go/mhv4-plugin">Mobile Harness Plugin</a>
    */
   public void sendMessageToTest(TestInfo test, Map<String, String> message)
       throws MobileHarnessException {

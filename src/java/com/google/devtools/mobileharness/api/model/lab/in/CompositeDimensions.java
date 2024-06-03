@@ -47,7 +47,7 @@ public class CompositeDimensions {
     return supported;
   }
 
-  /** Required dimensions of the device. See go/mh-required-dimensions for more detail. */
+  /** Required dimensions of the device. */
   public Dimensions required() {
     return required;
   }

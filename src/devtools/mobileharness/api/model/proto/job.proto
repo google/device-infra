@@ -56,7 +56,7 @@ message Retry {
   Level retry_level = 2;
 }
 
-// Job repeat_runs setting. Refer to go/mh-rerun for more details.
+// Job repeat_runs setting.
 message Repeat {
   optional int32 repeat_runs = 1;
 }

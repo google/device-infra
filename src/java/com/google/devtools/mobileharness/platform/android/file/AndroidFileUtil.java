@@ -170,7 +170,7 @@ public class AndroidFileUtil {
   /** The string of "Filesystem". */
   private static final String STRING_FILESYSTEM = "Filesystem";
 
-  /** system_user of the device. See go/adb-mu for more details. */
+  /** system_user of the device. */
   private static final int SYSTEM_USER = 0;
 
   /** For operations with local files only. */

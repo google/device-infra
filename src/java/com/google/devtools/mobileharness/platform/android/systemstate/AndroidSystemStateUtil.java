@@ -377,8 +377,7 @@ public class AndroidSystemStateUtil {
    * factory reset and apply some pre-defined settings to device.
    *
    * <p>Settings in Test Harness Mode include skipping setup wizard, staying device awake when
-   * charging, etc. This mode works on user/userdebug builds on Q+, see go/adb-test-harness for more
-   * details.
+   * charging, etc. This mode works on user/userdebug builds on Q+.
    *
    * @param serial device serial number
    * @param waitTime wait time (seconds) for device to be disconnected after calling factory reset

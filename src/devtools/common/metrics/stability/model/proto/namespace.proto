@@ -25,7 +25,6 @@ enum Namespace {
   UNKNOWN = 0;
   MH = 1;  // Mobile Harness, Device Infra.
   DA = 6;  // Device Action.
-  MA = 7;  // Maneki Framework (go/maneki).
 
   // For external usage, use the enum value starting from 100,000.
   reserved 100000 to max;

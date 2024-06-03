@@ -182,8 +182,7 @@ public final class SharedPoolJobUtil {
 
     if (finalizedStartTimeoutMs != startTimeoutMs) {
       logger.atInfo().log(
-          "Changing start timeout from %s ms to %s ms according to go/mnm-start-timeout",
-          startTimeoutMs, finalizedStartTimeoutMs);
+          "Changing start timeout from %s ms to %s ms", startTimeoutMs, finalizedStartTimeoutMs);
       return timeout.toBuilder().setStartTimeoutMs(finalizedStartTimeoutMs).build();
     }
     return timeout;
