@@ -46,6 +46,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/olcserver:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],

@@ -45,6 +45,7 @@ java_library(
         "SessionEndedEvent.java",
         "SessionEvent.java",
         "SessionNotificationEvent.java",
+        "SessionStartedEvent.java",
         "SessionStartingEvent.java",
     ],
     deps = [

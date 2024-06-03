@@ -77,7 +77,9 @@ message SessionPluginConfigs {
 // Session events include:
 //
 // 1. SessionStartingEvent.
-// 2. SessionEndedEvent. (These two events will be called both or neither)
+// 2. SessionStartedEvent.
+// 3. SessionEndedEvent. (SessionStartingEvent and SessionEndedEvent will be
+// called both or neither)
 //
 // A session plugin can have an @Inject constructor. These types will be bound
 // automatically:

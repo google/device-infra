@@ -951,6 +951,15 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> noOpLabServer = noOpLabServerDefault;
 
+  private static final Flag<Integer> olcServerMaxStartedRunningSessionNumDefault = Flag.value(200);
+
+  @com.beust.jcommander.Parameter(
+      names = "--olc_server_max_started_running_session_num",
+      description = "OLC server max started and running session number. Default is 200.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> olcServerMaxStartedRunningSessionNum =
+      olcServerMaxStartedRunningSessionNumDefault;
+
   private static final Flag<Integer> olcServerPortDefault = Flag.value(7030);
 
   @com.beust.jcommander.Parameter(
