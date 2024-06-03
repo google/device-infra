@@ -152,7 +152,6 @@ public class SessionResultHandlerUtil {
     Path tmpTradefedTestResultsDir = null;
     try {
       localFileUtil.prepareDir(logDir);
-      localFileUtil.prepareDir(resultDir);
       tmpTradefedTestResultsDir =
           Path.of(localFileUtil.createTempDir(Flags.instance().tmpDirRoot.getNonNull()));
       if (sessionRequestInfo == null) {
@@ -529,7 +528,7 @@ public class SessionResultHandlerUtil {
       TestInfo tradefedTestInfo, Path tmpResultDir, Path resultDirInZip)
       throws MobileHarnessException, InterruptedException {
     Path tmpTestResultDir = prepareLogOrResultDirForTest(tradefedTestInfo, tmpResultDir);
-    localFileUtil.prepareDir(resultDirInZip);
+    boolean isResultDirInZipPrepared = false;
     ImmutableList<Path> genFiles = getGenFilesFromTest(tradefedTestInfo);
     for (Path genFile : genFiles) {
       if (genFile.getFileName().toString().endsWith("gen-files")) {
@@ -567,6 +566,10 @@ public class SessionResultHandlerUtil {
               continue;
             }
 
+            if (!isResultDirInZipPrepared) {
+              localFileUtil.prepareDir(resultDirInZip);
+              isResultDirInZipPrepared = true;
+            }
             logger.atInfo().log(
                 "Copying tradefed test result relevant file/dir [%s] into dir [%s]",
                 resultFileOrDir, resultDirInZip);
@@ -669,8 +672,6 @@ public class SessionResultHandlerUtil {
       @Nullable String moduleAbi,
       @Nullable String moduleParameter)
       throws MobileHarnessException, InterruptedException {
-    Path testResultDir = prepareLogOrResultDirForTest(nonTradefedTestInfo, resultDir);
-
     NonTradefedTestResult.Builder nonTradefedTestResultBuilder =
         NonTradefedTestResult.builder().setModuleName(moduleName);
     if (moduleAbi != null) {
@@ -696,7 +697,11 @@ public class SessionResultHandlerUtil {
               path -> MOBLY_TEST_RESULT_FILE_NAMES.contains(path.getFileName().toString())));
     }
 
+    Path testResultDir = null;
     for (Path moblyTestResultFile : moblyTestResultFiles) {
+      if (testResultDir == null) {
+        testResultDir = prepareLogOrResultDirForTest(nonTradefedTestInfo, resultDir);
+      }
       logger.atInfo().log(
           "Copying non-tradefed test result relevant file [%s] into dir [%s]",
           moblyTestResultFile, testResultDir);
