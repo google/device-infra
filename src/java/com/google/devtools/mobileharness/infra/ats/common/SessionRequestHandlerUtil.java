@@ -1235,12 +1235,7 @@ public class SessionRequestHandlerUtil {
     // TODO: Add multi hosts mode support.
     jobInfo
         .params()
-        .add(
-            "xts_test_dir",
-            xtsRootDir
-                .resolve(String.format("android-%s/testcases", xtsType))
-                .toAbsolutePath()
-                .toString());
+        .add("xts_test_dir", XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toString());
     injectCommonParams(jobInfo);
     return Optional.of(jobInfo);
   }
