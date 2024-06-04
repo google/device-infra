@@ -47,6 +47,8 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
+import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckRequest;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -134,7 +136,9 @@ public class LabSyncHelper {
         labSocketPort,
         labGrpcPort,
         ApiConfig.getInstance(),
-        new NetUtil());
+        new NetUtil(),
+        new LocalFileUtil(),
+        new CommandExecutor());
   }
 
   @VisibleForTesting
@@ -144,7 +148,9 @@ public class LabSyncHelper {
       int labSocketPort,
       int labGrpcPort,
       ApiConfig config,
-      NetUtil netUtil) {
+      NetUtil netUtil,
+      LocalFileUtil localFileUtil,
+      CommandExecutor commandExecutor) {
     this.labSyncStub = labSyncStub;
     this.labRpcPort = labRpcPort;
     this.labSocketPort = labSocketPort;
