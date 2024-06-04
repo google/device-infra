@@ -841,11 +841,11 @@ public class SessionResultHandlerUtil {
     }
   }
 
-  private static void callAndLogException(MobileHarnessCallable<?> callable, String errorMessage)
+  private static void callAndLogException(MobileHarnessCallable<Void> callable, String errorMessage)
       throws InterruptedException {
     try {
       @SuppressWarnings("unused")
-      var unused = callable.call();
+      Void unused = callable.call();
     } catch (MobileHarnessException | RuntimeException | Error e) {
       logger.atWarning().with(IMPORTANCE, IMPORTANT).withCause(e).log("%s", errorMessage);
     }
