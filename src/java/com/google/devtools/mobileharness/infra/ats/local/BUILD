@@ -66,9 +66,11 @@ java_library(
     name = "ats_local_runner_module",
     srcs = ["AtsLocalRunnerModule.java"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",

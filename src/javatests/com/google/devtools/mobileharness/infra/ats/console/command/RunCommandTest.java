@@ -23,6 +23,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
@@ -35,6 +36,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import java.nio.file.Path;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.jline.reader.LineReader;
@@ -57,6 +59,8 @@ public final class RunCommandTest {
 
   @Bind @SystemProperties
   private static final ImmutableMap<String, String> SYSTEM_PROPERTIES = ImmutableMap.of();
+
+  @Bind @OlcServerJavaPath private static final Path JAVA_PATH = Path.of("/fake_java_path");
 
   @Mock @Bind private LocalFileUtil localFileUtil;
   @Mock @Bind @Nullable @ConsoleLineReader private LineReader lineReader;
@@ -84,7 +88,7 @@ public final class RunCommandTest {
   }
 
   @Test
-  public void validateCommandParameters_retryCommandNotSupportSubplanOption() throws Exception {
+  public void validateCommandParameters_retryCommandNotSupportSubplanOption() {
     commandLine.parseArgs("retry", "--retry", "0", "--subplan", "subplan1");
 
     assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
@@ -93,7 +97,7 @@ public final class RunCommandTest {
   }
 
   @Test
-  public void validateCommandParameters_retryCommandRequiresSessionId() throws Exception {
+  public void validateCommandParameters_retryCommandRequiresSessionId() {
     commandLine.parseArgs("retry", "--shard-count", "2");
 
     assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
@@ -102,8 +106,7 @@ public final class RunCommandTest {
   }
 
   @Test
-  public void validateCommandParameters_cannotSpecifyIncludeFilterAndModuleAtTheSameTime()
-      throws Exception {
+  public void validateCommandParameters_cannotSpecifyIncludeFilterAndModuleAtTheSameTime() {
     commandLine.parseArgs("cts", "--module", "module_a", "--include-filter", "module_b");
 
     assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
@@ -112,7 +115,7 @@ public final class RunCommandTest {
   }
 
   @Test
-  public void parseArgs_propertyIsNotKeyValuePair() throws Exception {
+  public void parseArgs_propertyIsNotKeyValuePair() {
     assertThat(
             assertThrows(
                 ParameterException.class,
@@ -128,7 +131,7 @@ public final class RunCommandTest {
   }
 
   @Test
-  public void parseArgs_propertyOption() throws Exception {
+  public void parseArgs_propertyOption() {
     commandLine.parseArgs(
         "cts",
         "-s",
@@ -173,7 +176,7 @@ public final class RunCommandTest {
                 + "05-13 20:17:37 I/DeviceManager: Detected new device b\n"
                 + "ccc\n"
                 + "05-13 20:17:37 I/CommandScheduler: Received shutdown request.");
-    assertThat(runCommand.showHelpMessage("cts", "/ats")).isEqualTo(ExitCode.OK);
+    assertThat(runCommand.showHelpMessage("cts", Path.of("/ats"))).isEqualTo(ExitCode.OK);
     verify(consoleUtil)
         .printlnStdout(
             "'cts' configuration: Setup that allows to point to a remote config and run it.\n"

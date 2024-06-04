@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
@@ -43,6 +44,7 @@ import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -63,10 +65,13 @@ public class AtsSessionStubTest {
 
   @Rule public TemporaryFolder tmpFolder = new TemporaryFolder();
 
+  private final SystemUtil systemUtil = new SystemUtil();
+
   @Bind private ListeningExecutorService threadPool;
   @Bind private ListeningScheduledExecutorService scheduledThreadPool;
   @Bind private Sleeper sleeper;
   @Bind private ImmutableList<String> deviceInfraServiceFlags;
+  @Bind @OlcServerJavaPath private Path javaPath;
 
   @Bind
   @ConsoleOutput(ConsoleOutput.Type.OUT_STREAM)
@@ -107,6 +112,8 @@ public class AtsSessionStubTest {
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
             .collect(toImmutableList());
     Flags.parse(deviceInfraServiceFlags.toArray(new String[0]));
+
+    javaPath = Path.of(systemUtil.getJavaBin());
 
     sleeper = Sleeper.defaultSleeper();
     threadPool = ThreadPools.createStandardThreadPool("main-thread");

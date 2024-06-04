@@ -19,8 +19,8 @@ package com.google.devtools.mobileharness.platform.android.xts.common.util;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import java.nio.file.Path;
 
 /** The util to get xts command. */
 public final class XtsCommandUtil {
@@ -33,13 +33,13 @@ public final class XtsCommandUtil {
   /** Gets xts command. */
   public static ImmutableList<String> getXtsJavaCommand(
       String xtsType,
-      String xtsRootDir,
+      Path xtsRootDir,
       ImmutableList<String> jvmFlags,
       String concatenatedJarPath,
       ImmutableList<String> xtsRunCommandArgs) {
-    String javaBinary = getJavaBinary(xtsType, xtsRootDir);
+    Path javaBinary = getJavaBinary(xtsType, xtsRootDir);
     return ImmutableList.<String>builder()
-        .add(javaBinary)
+        .add(javaBinary.toString())
         .addAll(jvmFlags)
         .add("-cp")
         .add(concatenatedJarPath)
@@ -50,14 +50,14 @@ public final class XtsCommandUtil {
   }
 
   /** The logic should be consistent with cts-tradefed shell. */
-  private static String getJavaBinary(String xtsType, String xtsRootDir) {
-    String xtsJavaBinary = PathUtil.join(xtsRootDir, "android-" + xtsType, "jdk/bin/java");
+  public static Path getJavaBinary(String xtsType, Path xtsRootDir) {
+    Path xtsJavaBinary = XtsDirUtil.getXtsJdkDir(xtsRootDir, xtsType).resolve("bin/java");
     if (SYSTEM_UTIL.isOnLinux()
         && SYSTEM_UTIL.isX8664()
         && LOCAL_FILE_UTIL.isFileExist(xtsJavaBinary)) {
       return xtsJavaBinary;
     } else {
-      return SYSTEM_UTIL.getJavaBin();
+      return Path.of(SYSTEM_UTIL.getJavaBin());
     }
   }
 

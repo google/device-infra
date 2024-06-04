@@ -78,8 +78,8 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
     deps = [
+        ":xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "@maven//:com_google_guava_guava",
     ],

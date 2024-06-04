@@ -51,12 +51,12 @@ import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleU
 import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -431,7 +431,7 @@ public final class RunCommand implements Callable<Integer> {
       checkState(Flags.instance().enableAtsConsoleOlcServer.getNonNull());
       if (showHelp || showHelpAll) {
         return showHelpMessage(
-            commandHelper.getXtsType(), consoleInfo.getXtsRootDirectoryNonEmpty().toString());
+            commandHelper.getXtsType(), consoleInfo.getXtsRootDirectoryNonEmpty());
       } else {
         validateCommandParameters();
         return runInM1(command);
@@ -544,9 +544,9 @@ public final class RunCommand implements Callable<Integer> {
   }
 
   @VisibleForTesting
-  int showHelpMessage(String xtsType, String xtsRootDir)
+  int showHelpMessage(String xtsType, Path xtsRootDir)
       throws CommandException, InterruptedException {
-    String xtsRoot = PathUtil.join(xtsRootDir, "android-" + xtsType);
+    Path xtsToolsDir = XtsDirUtil.getXtsToolsDir(xtsRootDir, xtsType);
     String result =
         commandExecutor.run(
             com.google.devtools.mobileharness.shared.util.command.Command.of(
@@ -554,9 +554,9 @@ public final class RunCommand implements Callable<Integer> {
                         xtsType,
                         xtsRootDir,
                         ImmutableList.of(),
-                        PathUtil.join(xtsRoot, "tools/tradefed.jar")
+                        xtsToolsDir.resolve("tradefed.jar")
                             + ":"
-                            + PathUtil.join(xtsRoot, "tools/" + xtsType + "-tradefed.jar"),
+                            + xtsToolsDir.resolve(xtsType + "-tradefed.jar"),
                         ImmutableList.of(
                             "run", "commandAndExit", config, showHelp ? "--help" : "--help-all")))
                 .timeout(Timeout.fixed(Duration.ofSeconds(60))));
