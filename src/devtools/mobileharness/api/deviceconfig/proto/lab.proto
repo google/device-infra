@@ -54,7 +54,8 @@ message LabConfig {
   // The host properties of this lab.
   mobileharness.api.model.HostProperties host_properties = 9;
 
-  // The SSH groups of this lab.
+  // Additional SSH groups of this lab. The login user and the owners in the
+  // host properties is the default SSH group.
   repeated SshGroup ssh_groups = 10;
 }
 
