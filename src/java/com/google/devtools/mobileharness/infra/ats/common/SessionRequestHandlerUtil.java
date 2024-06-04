@@ -197,6 +197,17 @@ public class SessionRequestHandlerUtil {
   private ImmutableList<SubDeviceSpec> getSubDeviceSpecListForTradefed(
       SessionRequestInfo sessionRequestInfo, int shardCount)
       throws MobileHarnessException, InterruptedException {
+    if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
+      return sessionRequestInfo.deviceSerials().stream()
+          .map(
+              deviceSerial ->
+                  SubDeviceSpec.newBuilder()
+                      .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
+                      .setDimensions(StringMap.newBuilder().putContent("id", deviceSerial))
+                      .build())
+          .collect(toImmutableList());
+    }
+
     ImmutableMap<String, DeviceDetails> allAndroidDevices =
         deviceDetailsRetriever.getAllAndroidDevicesWithNeededDetails(sessionRequestInfo);
     logger.atInfo().log("All android devices: %s", allAndroidDevices.keySet());

@@ -224,6 +224,97 @@ public final class SessionRequestHandlerUtilTest {
   }
 
   @Test
+  public void createTradefedJobInfo_atsServerNoDeviceRequirement_pickOneDevice() throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
+
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setIsAtsServerRequest(true)
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .build(),
+            ImmutableList.of());
+
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(
+                    StringMap.newBuilder().putContent("id", "regex:(device_id_1|device_id_2)"))
+                .build());
+  }
+
+  @Test
+  public void createTradefedJobInfo_atsServerSpecifyOneDevice_createJobWithThatDevice()
+      throws Exception {
+    when(deviceQuerier.queryDevice(any()))
+        .thenReturn(
+            DeviceQueryResult.newBuilder()
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_1").addType("AndroidOnlineDevice"))
+                .addDeviceInfo(
+                    DeviceInfo.newBuilder().setId("device_id_2").addType("AndroidOnlineDevice"))
+                .build());
+
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setIsAtsServerRequest(true)
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setDeviceSerials(ImmutableList.of("device_id_1"))
+                .build(),
+            ImmutableList.of());
+
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(StringMap.newBuilder().putContent("id", "device_id_1"))
+                .build());
+  }
+
+  @Test
+  public void createTradefedJobInfo_atsServerSpecifyNotAvailableDevice_createJobWithThatDevice()
+      throws Exception {
+    when(deviceQuerier.queryDevice(any())).thenReturn(DeviceQueryResult.getDefaultInstance());
+
+    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+        sessionRequestHandlerUtil.createXtsTradefedTestJobInfo(
+            SessionRequestInfo.builder()
+                .setTestPlan("cts")
+                .setCommandLineArgs("cts")
+                .setIsAtsServerRequest(true)
+                .setXtsType("cts")
+                .setXtsRootDir(XTS_ROOT_DIR_PATH)
+                .setDeviceSerials(ImmutableList.of("device_id_1"))
+                .build(),
+            ImmutableList.of());
+
+    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoOpt.get().jobConfig().getDevice().getSubDeviceSpecList())
+        .containsExactly(
+            SubDeviceSpec.newBuilder()
+                .setType("AndroidDevice")
+                .setDimensions(StringMap.newBuilder().putContent("id", "device_id_1"))
+                .build());
+  }
+
+  @Test
   public void createXtsTradefedTestJobInfo_pickOneRealDevice() throws Exception {
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
