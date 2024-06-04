@@ -31,6 +31,10 @@ public interface XtsPropertyName extends PropertyName {
 
     PREV_SESSION_DEVICE_BUILD_FINGERPRINT,
 
+    PREV_SESSION_HAS_TF_MODULE,
+
+    PREV_SESSION_HAS_NON_TF_MODULE,
+
     SKIP_COLLECTING_NON_TF_REPORTS,
   }
 }

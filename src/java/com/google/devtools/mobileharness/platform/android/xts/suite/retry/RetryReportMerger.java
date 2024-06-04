@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstan
 import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -204,7 +205,10 @@ public class RetryReportMerger {
               modulesFromRetry,
               moduleFromPrevSession.getIsNonTfModule()
                   ? retrySubPlan.getNonTfIncludeFiltersMultimap()
-                  : retrySubPlan.getIncludeFiltersMultimap()));
+                  : retrySubPlan.getIncludeFiltersMultimap(),
+              moduleFromPrevSession.getIsNonTfModule()
+                  ? retrySubPlan.getNonTfExcludeFiltersMultimap()
+                  : retrySubPlan.getExcludeFiltersMultimap()));
     }
 
     // Prepare the Summary
@@ -243,16 +247,25 @@ public class RetryReportMerger {
   private Module createMergedModule(
       Module moduleFromPrevSession,
       Map<String, Module> modulesFromRetry,
-      SetMultimap<String, String> subPlanIncludeFilters) {
+      SetMultimap<String, String> subPlanIncludeFilters,
+      SetMultimap<String, String> subPlanExcludeFilters) {
     String moduleId =
         AbiUtil.createId(moduleFromPrevSession.getAbi(), moduleFromPrevSession.getName());
     boolean moduleFoundInRetry = modulesFromRetry.containsKey(moduleId);
+    if (!moduleFromPrevSession.getIsNonTfModule()
+        && Flags.instance().useTfRetry.getNonNull()
+        && moduleFoundInRetry) {
+      // If the module is a TF module, and the retry used TF retry, and the module was retried, use
+      // the module from the retry result.
+      return modulesFromRetry.get(moduleId);
+    }
+
     boolean moduleNotRetried = false;
-    if (subPlanIncludeFilters.containsKey(moduleId) && !moduleFoundInRetry) {
-      logger.atWarning().log(
-          "Module %s should've been retried but not found in retry result", moduleId);
+    if (subPlanExcludeFilters.containsEntry(moduleId, SubPlan.ALL_TESTS_IN_MODULE)
+        || !subPlanIncludeFilters.containsKey(moduleId)) {
       moduleNotRetried = true;
-    } else if (!subPlanIncludeFilters.containsKey(moduleId)) {
+    } else if (!moduleFoundInRetry) {
+      logger.atInfo().log("Module %s was not retried", moduleId);
       moduleNotRetried = true;
     }
 
@@ -265,7 +278,11 @@ public class RetryReportMerger {
 
     Module moduleFromRetry = modulesFromRetry.get(moduleId);
     return doMergeModule(
-        moduleId, moduleFromPrevSession, moduleFromRetry, subPlanIncludeFilters.get(moduleId));
+        moduleId,
+        moduleFromPrevSession,
+        moduleFromRetry,
+        subPlanIncludeFilters.get(moduleId),
+        subPlanExcludeFilters.get(moduleId));
   }
 
   private void markTestsInModuleCached(Module.Builder moduleBuilder) {
@@ -295,9 +312,12 @@ public class RetryReportMerger {
       String moduleId,
       Module moduleFromPrevSession,
       Module moduleFromRetry,
-      Set<String> matchedRetryTestFilters) {
-    if (matchedRetryTestFilters.contains(SubPlan.ALL_TESTS_IN_MODULE)) {
-      // The entire module was retried.
+      Set<String> matchedRetryIncludeTestFilters,
+      Set<String> matchedRetryExcludeTestFilters) {
+    if (matchedRetryIncludeTestFilters.contains(SubPlan.ALL_TESTS_IN_MODULE)
+        && matchedRetryIncludeTestFilters.size() == 1
+        && !matchedRetryExcludeTestFilters.contains(SubPlan.ALL_TESTS_IN_MODULE)) {
+      // Try best to determine if the entire module was retried.
       return moduleFromRetry;
     }
     Module.Builder mergedModuleBuilder =
@@ -326,7 +346,7 @@ public class RetryReportMerger {
               moduleId,
               testCaseFromPrevSession,
               testCasesFromRetry,
-              matchedRetryTestFilters.stream()
+              matchedRetryExcludeTestFilters.stream()
                   .filter(filter -> filter.contains(testCaseFromPrevSession.getName()))
                   .collect(toImmutableSet())));
     }
@@ -357,16 +377,15 @@ public class RetryReportMerger {
       String moduleId,
       TestCase testCaseFromPrevSession,
       Map<String, TestCase> testCasesFromRetry,
-      Set<String> matchedRetryTestFilters) {
+      Set<String> matchedRetryExcludeTestFilters) {
     String testCaseName = testCaseFromPrevSession.getName();
     boolean testCaseFoundInRetry = testCasesFromRetry.containsKey(testCaseName);
     boolean testCaseNotRetried = false;
-    if (!matchedRetryTestFilters.isEmpty() && !testCaseFoundInRetry) {
-      logger.atWarning().log(
-          "TestCase %s %s should've been retried but not found in retry result",
-          moduleId, testCaseFromPrevSession.getName());
+    if (matchedRetryExcludeTestFilters.contains(testCaseName)) {
       testCaseNotRetried = true;
-    } else if (matchedRetryTestFilters.isEmpty()) {
+    } else if (!testCaseFoundInRetry) {
+      logger.atInfo().log(
+          "TestCase %s %s was not retried", moduleId, testCaseFromPrevSession.getName());
       testCaseNotRetried = true;
     }
     if (testCaseNotRetried) {
@@ -393,14 +412,14 @@ public class RetryReportMerger {
         moduleId,
         testCaseFromPrevSession,
         testCasesFromRetry.get(testCaseName),
-        matchedRetryTestFilters);
+        matchedRetryExcludeTestFilters);
   }
 
   private TestCase doMergeTestCase(
       String moduleId,
       TestCase testCaseFromPrevSession,
       TestCase testCaseFromRetry,
-      Set<String> matchedRetryTestFilters) {
+      Set<String> matchedRetryExcludeTestFilters) {
     String testCaseName = testCaseFromRetry.getName();
     TestCase.Builder mergedTestCaseBuilder = TestCase.newBuilder().setName(testCaseName);
 
@@ -416,7 +435,7 @@ public class RetryReportMerger {
               testCaseName,
               testFromPrevSession,
               testsFromRetry,
-              matchedRetryTestFilters.stream()
+              matchedRetryExcludeTestFilters.stream()
                   .filter(filter -> filter.contains(testFromPrevSession.getName()))
                   .collect(toImmutableSet())));
     }
@@ -429,16 +448,14 @@ public class RetryReportMerger {
       String testCaseName,
       Test testFromPrevSession,
       Map<String, Test> testsFromRetry,
-      Set<String> matchedRetryTestFilters) {
+      Set<String> matchedRetryExcludeTestFilters) {
     String testName = testFromPrevSession.getName();
     boolean testFoundInRetry = testsFromRetry.containsKey(testName);
     boolean testNotRetried = false;
-    if (!matchedRetryTestFilters.isEmpty() && !testFoundInRetry) {
-      logger.atWarning().log(
-          "Test %s %s#%s should've been retried but not found in retry result",
-          moduleId, testCaseName, testName);
+    if (matchedRetryExcludeTestFilters.contains(testName)) {
       testNotRetried = true;
-    } else if (matchedRetryTestFilters.isEmpty()) {
+    } else if (!testFoundInRetry) {
+      logger.atInfo().log("Test %s %s#%s was not retried ", moduleId, testCaseName, testName);
       testNotRetried = true;
     }
     if (testNotRetried) {

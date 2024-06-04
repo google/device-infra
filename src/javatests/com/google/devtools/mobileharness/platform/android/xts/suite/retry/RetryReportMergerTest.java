@@ -16,14 +16,17 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.suite.retry;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -78,8 +81,19 @@ public final class RetryReportMergerTest {
 
   @Before
   public void setUp() {
+    setFlags(/* useTfRetry= */ false);
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
     this.localFileUtil = new LocalFileUtil();
+  }
+
+  private void setFlags(boolean useTfRetry) {
+    ImmutableMap<String, String> flagMap =
+        ImmutableMap.of("use_tf_retry", String.valueOf(useTfRetry));
+    Flags.parse(
+        flagMap.entrySet().stream()
+            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
+            .collect(toImmutableList())
+            .toArray(new String[0]));
   }
 
   @Test

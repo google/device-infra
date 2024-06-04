@@ -75,6 +75,7 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<RetryType> retryType();
 
+  /** Must be set if retrySessionId is set. This is for ATS Server retry. */
   public abstract Optional<String> retryResultDir();
 
   public abstract ImmutableList<String> extraArgs();
@@ -171,21 +172,12 @@ public abstract class SessionRequestInfo {
 
     public abstract Builder setExcludeFilters(List<String> excludeFilters);
 
-    /**
-     * When testPlan is "retry", at least one of retrySessionId or retrySessionIndex should be set
-     * before calling build().
-     */
     public abstract Builder setRetrySessionIndex(int retrySessionIndex);
 
-    /**
-     * When testPlan is "retry", at least one of retrySessionId or retrySessionIndex should be set
-     * before calling build().
-     */
     public abstract Builder setRetrySessionId(String retrySessionId);
 
     public abstract Builder setRetryType(RetryType retryType);
 
-    /** Must be set if retrySessionId is set. This is for ATS Server retry. */
     public abstract Builder setRetryResultDir(String retryResultDir);
 
     public abstract Builder setExtraArgs(List<String> extraArgs);
