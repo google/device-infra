@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientComponentName;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerBinary;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.HeartbeatRequest;
@@ -55,6 +56,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
+import com.google.devtools.mobileharness.shared.util.command.java.JavaCommandCreator;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -106,6 +108,7 @@ public class ServerPreparer {
   private final Provider<ControlStub> controlStub;
   private final Provider<VersionStub> versionStub;
   private final Provider<Path> serverBinary;
+  private final Provider<Path> javaPath;
   private final ImmutableList<String> deviceInfraServiceFlags;
   private final ListeningScheduledExecutorService scheduledThreadPool;
 
@@ -126,6 +129,7 @@ public class ServerPreparer {
       @ServerStub(ServerStub.Type.CONTROL_SERVICE) Provider<ControlStub> controlStub,
       @ServerStub(ServerStub.Type.VERSION_SERVICE) Provider<VersionStub> versionStub,
       @ServerBinary Provider<Path> serverBinary,
+      @OlcServerJavaPath Provider<Path> javaPath,
       @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags,
       ListeningScheduledExecutorService scheduledThreadPool) {
     this.clientComponentName = clientComponentName;
@@ -138,6 +142,7 @@ public class ServerPreparer {
     this.controlStub = controlStub;
     this.versionStub = versionStub;
     this.serverBinary = serverBinary;
+    this.javaPath = javaPath;
     this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.scheduledThreadPool = scheduledThreadPool;
   }
@@ -163,8 +168,7 @@ public class ServerPreparer {
         "Fatal error when sending heartbeat to OLC server");
   }
 
-  public Optional<GetVersionResponse> tryConnectToOlcServer()
-      throws MobileHarnessException, InterruptedException {
+  public Optional<GetVersionResponse> tryConnectToOlcServer() throws MobileHarnessException {
     try {
       return Optional.of(requireNonNull(versionStub.get()).getVersion());
     } catch (GrpcExceptionWithErrorId e) {
@@ -225,8 +229,9 @@ public class ServerPreparer {
           serverProcess =
               commandExecutor.start(
                   Command.of(
-                          systemUtil
-                              .getJavaCommandCreator()
+                          JavaCommandCreator.of(
+                                  /* useStandardInvocationForm= */ true,
+                                  requireNonNull(javaPath.get()).toString())
                               .createJavaCommand(
                                   serverBinaryPath, serverFlags, serverNativeArguments))
                       .onStderr(serverStderrLineCallback)
@@ -345,7 +350,7 @@ public class ServerPreparer {
   private void killServerProcess(long serverPid)
       throws MobileHarnessException, InterruptedException {
     logger.atInfo().log("Killing OLC server process (pid=%s)", serverPid);
-    // Send SigKILL to kill the OCLf server.
+    // Send SIGKILL to kill the OLC server.
     systemUtil.killProcess((int) serverPid);
   }
 

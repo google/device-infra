@@ -90,11 +90,15 @@ java_library(
     ],
     deps = [
         ":annotations",
+        ":console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:server_preparer",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_module",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/console:console_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_command_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "@maven//:com_google_code_findbugs_jsr305",
@@ -108,9 +112,6 @@ java_library(
 java_library(
     name = "console_info",
     srcs = ["ConsoleInfo.java"],
-    visibility = DEFAULT_VISIBILITY + [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
-    ],
     deps = [
         ":annotations",
         "@maven//:com_google_guava_guava",

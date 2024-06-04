@@ -31,6 +31,7 @@ java_library(
     ],
     deps = [
         ":console_command_test_module",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_lib",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_module",

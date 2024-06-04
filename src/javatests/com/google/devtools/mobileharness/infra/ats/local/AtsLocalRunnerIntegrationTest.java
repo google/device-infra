@@ -93,8 +93,7 @@ public class AtsLocalRunnerIntegrationTest {
                     }))
             .onStderr(does(stderr -> System.err.printf("server_stderr %s\n", stderr)))
             .redirectStderr(false)
-            .needStdoutInResult(false)
-            .needStderrInResult(false);
+            .showFullResultInException(true);
 
     serverProcess = new CommandExecutor().start(command);
     serverProcess.await();

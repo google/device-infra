@@ -96,6 +96,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:table_formatter",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command/java:java_command_creator",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",

@@ -21,6 +21,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
@@ -30,6 +31,7 @@ import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import java.nio.file.Path;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 import org.jline.reader.LineReader;
@@ -50,6 +52,8 @@ public final class SetCommandTest {
 
   @Bind @SystemProperties
   private static final ImmutableMap<String, String> SYSTEM_PROPERTIES = ImmutableMap.of();
+
+  @Bind @OlcServerJavaPath private static final Path JAVA_PATH = Path.of("/fake_java_path");
 
   @Mock @Bind private LocalFileUtil localFileUtil;
   @Mock @Bind @Nullable @ConsoleLineReader private LineReader lineReader;

@@ -336,7 +336,7 @@ public class XtsTradefedTest extends BaseDriver
     ImmutableList<String> cmd =
         XtsCommandUtil.getXtsJavaCommand(
             xtsType,
-            tmpXtsRootDir.toString(),
+            tmpXtsRootDir,
             ImmutableList.of(
                 "-Xmx" + Flags.instance().xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError"),
             requireNonNull(

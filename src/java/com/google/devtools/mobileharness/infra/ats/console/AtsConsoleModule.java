@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
@@ -33,7 +34,9 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseComm
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
+import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
@@ -98,6 +101,14 @@ public class AtsConsoleModule extends AbstractModule {
   @MainArgs
   ImmutableList<String> provideMainArgs() {
     return mainArgs;
+  }
+
+  @Provides
+  @Singleton
+  @OlcServerJavaPath
+  Path provideJavaPath(ConsoleInfo consoleInfo, CommandHelper commandHelper) {
+    return XtsCommandUtil.getJavaBinary(
+        commandHelper.getXtsType(), consoleInfo.getXtsRootDirectoryNonEmpty());
   }
 
   @Provides

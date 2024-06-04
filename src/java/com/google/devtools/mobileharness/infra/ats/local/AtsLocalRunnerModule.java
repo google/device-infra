@@ -19,9 +19,11 @@ package com.google.devtools.mobileharness.infra.ats.local;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provider;
@@ -48,6 +50,13 @@ public final class AtsLocalRunnerModule extends AbstractModule {
     install(
         new OlcServerModule(
             olcServerBinary, deviceInfraServiceFlags, "ATS local runner", runnerId));
+  }
+
+  @Provides
+  @Singleton
+  @OlcServerJavaPath
+  Path provideJavaPath(SystemUtil systemUtil) {
+    return Path.of(systemUtil.getJavaBin());
   }
 
   @Provides

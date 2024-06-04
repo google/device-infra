@@ -55,6 +55,11 @@ public class Annotations {
   @Retention(RetentionPolicy.RUNTIME)
   @interface ServerBinary {}
 
+  /** Java path to launch OLC server. */
+  @Qualifier
+  @Retention(RetentionPolicy.RUNTIME)
+  public @interface OlcServerJavaPath {}
+
   /** Flags of OLC server and its caller (ATS console / local runner). */
   @Qualifier
   @Retention(RetentionPolicy.RUNTIME)

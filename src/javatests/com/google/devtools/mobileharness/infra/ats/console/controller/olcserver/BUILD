@@ -40,6 +40,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/port:portprober",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
