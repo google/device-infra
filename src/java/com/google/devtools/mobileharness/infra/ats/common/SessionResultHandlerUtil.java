@@ -156,8 +156,9 @@ public class SessionResultHandlerUtil {
     Path serverSessionLogsDir = logDir.resolve("olc_server_session_logs");
     Path tmpTradefedTestResultsDir = null;
     try {
+      // Prepares the log directory. To avoid creating empty result directory, the result directory
+      // will be prepared when needed.
       localFileUtil.prepareDir(logDir);
-      localFileUtil.prepareDir(resultDir);
       tmpTradefedTestResultsDir =
           Path.of(localFileUtil.createTempDir(Flags.instance().tmpDirRoot.getNonNull()));
       if (sessionRequestInfo == null) {
@@ -597,7 +598,6 @@ public class SessionResultHandlerUtil {
       TestInfo tradefedTestInfo, Path tmpResultDir, Path resultDirInZip)
       throws MobileHarnessException, InterruptedException {
     Path tmpTestResultDir = prepareLogOrResultDirForTest(tradefedTestInfo, tmpResultDir);
-    localFileUtil.prepareDir(resultDirInZip);
     ImmutableList<Path> genFiles = getGenFilesFromTest(tradefedTestInfo);
     for (Path genFile : genFiles) {
       if (genFile.getFileName().toString().endsWith("gen-files")) {
@@ -618,6 +618,9 @@ public class SessionResultHandlerUtil {
           }
           List<Path> resultFilesOrDirs =
               localFileUtil.listFilesOrDirs(tfGenResultDir.get(), path -> true);
+          if (!resultFilesOrDirs.isEmpty()) {
+            localFileUtil.prepareDir(resultDirInZip);
+          }
           for (Path resultFileOrDir : resultFilesOrDirs) {
             logger.atInfo().log(
                 "Copying tradefed test result relevant file/dir [%s] into tmp dir [%s]",
@@ -737,8 +740,6 @@ public class SessionResultHandlerUtil {
       @Nullable String moduleAbi,
       @Nullable String moduleParameter)
       throws MobileHarnessException, InterruptedException {
-    Path testResultDir = prepareLogOrResultDirForTest(nonTradefedTestInfo, resultDir);
-
     NonTradefedTestResult.Builder nonTradefedTestResultBuilder =
         NonTradefedTestResult.builder().setModuleName(moduleName);
     if (moduleAbi != null) {
@@ -764,12 +765,18 @@ public class SessionResultHandlerUtil {
               path -> MOBLY_TEST_RESULT_FILE_NAMES.contains(path.getFileName().toString())));
     }
 
+    // Prepares the test result dir for the non-tradefed test if needed.
+    Optional<Path> testResultDir =
+        Optional.ofNullable(
+            moblyTestResultFiles.isEmpty()
+                ? null
+                : prepareLogOrResultDirForTest(nonTradefedTestInfo, resultDir));
     for (Path moblyTestResultFile : moblyTestResultFiles) {
       logger.atInfo().log(
           "Copying non-tradefed test result relevant file [%s] into dir [%s]",
-          moblyTestResultFile, testResultDir);
+          moblyTestResultFile, testResultDir.get());
       localFileUtil.copyFileOrDirWithOverridingCopyOptions(
-          moblyTestResultFile, testResultDir, ImmutableList.of("-rf"));
+          moblyTestResultFile, testResultDir.get(), ImmutableList.of("-rf"));
       updateNonTradefedTestResult(
           nonTradefedTestResultBuilder,
           moblyTestResultFile.getFileName().toString(),
