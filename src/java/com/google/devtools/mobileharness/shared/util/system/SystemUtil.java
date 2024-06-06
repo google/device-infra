@@ -1297,4 +1297,17 @@ public class SystemUtil {
   public static void setProcessIsShuttingDown() {
     processIsShuttingDown = true;
   }
+
+  public static boolean canRunDockerCommand() {
+    try {
+      // Make sure "docker" package is installed into this host and can work well.
+      new CommandExecutor().exec(Command.of("docker", "ps"));
+      return true;
+    } catch (CommandException e) {
+      return false;
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      return false;
+    }
+  }
 }
