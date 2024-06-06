@@ -121,6 +121,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<Integer> maxSdkLevel();
 
+  public abstract boolean isAtsServerRequest();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -139,7 +141,8 @@ public abstract class SessionRequestInfo {
         .setEnableModuleOptionalParameter(false)
         .setJobTimeout(Duration.ZERO)
         .setStartTimeout(Duration.ZERO)
-        .setHtmlInZip(false);
+        .setHtmlInZip(false)
+        .setIsAtsServerRequest(false);
   }
 
   public abstract Builder toBuilder();
@@ -224,6 +227,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setMinSdkLevel(int minSdkLevel);
 
     public abstract Builder setMaxSdkLevel(int maxSdkLevel);
+
+    public abstract Builder setIsAtsServerRequest(boolean isAtsServerRequest);
 
     protected abstract SessionRequestInfo autoBuild();
 

@@ -465,14 +465,11 @@ final class NewMultiCommandRequestHandler {
       }
     }
 
-    // TODO: add extra args
-    sessionRequestInfoBuilder.setExtraArgs(ImmutableList.of());
-
     // Insert timeout.
     sessionRequestInfoBuilder.setJobTimeout(
         toJavaDuration(request.getTestEnvironment().getInvocationTimeout()));
     sessionRequestInfoBuilder.setStartTimeout(toJavaDuration(request.getQueueTimeout()));
-
+    sessionRequestInfoBuilder.setIsAtsServerRequest(true);
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(sessionRequestInfoBuilder.build());
   }
 
