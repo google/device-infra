@@ -22,6 +22,7 @@ package(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/shared/size:__subpackages__",
+        "//third_party/py/multitest_transport:__subpackages__",
     ],
 )
 
