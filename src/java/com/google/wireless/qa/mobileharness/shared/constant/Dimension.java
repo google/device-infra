@@ -288,7 +288,15 @@ public final class Dimension {
     RADIO_VERSION,
 
     /** A comma-separated string containing information of all available SIM cards on the device. */
-    SIM_INFOS;
+    SIM_INFOS,
+
+    // Used for Wrangler device properties.
+    /** The type of the device. */
+    DEVICETYPE,
+    /** The drivers that the device supports. */
+    DRIVER,
+    /** The decorators that the device supports. */
+    DECORATOR;
 
     public String lowerCaseName() {
       return Ascii.toLowerCase(name());
