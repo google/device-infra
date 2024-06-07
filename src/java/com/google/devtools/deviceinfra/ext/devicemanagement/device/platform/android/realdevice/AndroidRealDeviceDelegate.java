@@ -1351,9 +1351,6 @@ public abstract class AndroidRealDeviceDelegate {
   @VisibleForTesting
   boolean needRebootToClearReadOnlyTestProperties()
       throws MobileHarnessException, InterruptedException {
-    if (!ifClearAnyReadOnlyTestProperties()) {
-      return false;
-    }
     return needRebootToClearTestProperty(
             "ro.telephony.disable-call",
             Flags.instance().disableCalling.getNonNull() ? "true" : "false")
@@ -1363,16 +1360,10 @@ public abstract class AndroidRealDeviceDelegate {
             "ro.audio.silent", Flags.instance().muteAndroid.getNonNull() ? "1" : "0");
   }
 
-  private boolean ifClearAnyReadOnlyTestProperties() {
-    return !Flags.instance().disableCalling.getNonNull()
-        || !Flags.instance().setTestHarnessProperty.getNonNull()
-        || !Flags.instance().muteAndroid.getNonNull();
-  }
-
   private boolean needRebootToClearTestProperty(String roPropName, String newValue)
       throws MobileHarnessException, InterruptedException {
     String devicePropValue = androidAdbUtil.getProperty(deviceId, ImmutableList.of(roPropName));
-    // If current read only prop is not set, no need device reboot.
+    // If current read only prop was not set before, no need device reboot.
     if (Strings.isNullOrEmpty(devicePropValue)) {
       return false;
     }
