@@ -359,7 +359,8 @@ public class MoblyGenericTest extends BaseDriver {
       throws MobileHarnessException, InterruptedException {
 
     // Use the adb and fastboot binaries that ship with Mobile Harness.
-    String adbPathStr = new Adb().getAdbPath();
+    Adb adb = new Adb();
+    String adbPathStr = adb.getAdbPath();
     File adbPath =
         Ascii.equalsIgnoreCase(adbPathStr, "adb")
             ? getSdkToolPath("adb").toFile()
@@ -415,6 +416,7 @@ public class MoblyGenericTest extends BaseDriver {
              */
             .put("PYTHON_RUNFILES", "")
             .put("PATH", path)
+            .put("ADB_VENDOR_KEYS", adb.getAdbKeyPath())
             /*
              * Set TMPDIR so that python lib usage of the tempfile package
              * will use the MH test temp files dir. Even if the test par is killed due to a timeout,
