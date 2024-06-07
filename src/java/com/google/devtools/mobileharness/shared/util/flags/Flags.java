@@ -794,7 +794,7 @@ public class Flags {
   public Flag<Duration> logUploadDelay = logUploadDelayDefault;
 
   private static final Flag<Long> lowerLimitOfJvmMaxMemoryAllowForAllocationDiagnosticDefault =
-      Flag.value(1L * 1024 * 1024 * 1024);
+      Flag.value(512L * 1024 * 1024);
 
   @com.beust.jcommander.Parameter(
       names = "--lower_limit_of_jvm_max_memory_allow_for_allocation_diagnostic",
