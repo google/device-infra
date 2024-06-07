@@ -183,7 +183,9 @@ public class SystemStateManager {
         logger, log, "Cache device %s before reboot with %s", deviceId, cacheDuration);
     cacheDevice(device, cacheDuration);
     try {
-      device.reboot();
+      // Don't use Device#reboot as it has more complex logic while here we just need a simple
+      // device reboot
+      systemStateUtil.reboot(deviceId);
       // `adb wait-for-device` exits with error code when using a proxied device. Therefore, we wait
       // for the device ready by using `systemStateUtil.waitUntilReady` instead.
       if (!DeviceUtil.isOverTcpDevice(deviceId)) {
