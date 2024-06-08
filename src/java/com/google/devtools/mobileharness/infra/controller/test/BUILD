@@ -27,7 +27,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/local:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/manager:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/service:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
     deps = [
         ":test_runner",
