@@ -216,7 +216,9 @@ public class ServerPreparer {
               .addAll(deviceInfraServiceFlags)
               .build();
       ImmutableList<String> serverNativeArguments =
-          ImmutableList.of("-Xmx" + Flags.instance().atsConsoleOlcServerXmx.getNonNull());
+          ImmutableList.of(
+              "-Xmx" + Flags.instance().atsConsoleOlcServerXmx.getNonNull(),
+              "-XX:+HeapDumpOnOutOfMemoryError");
       logger
           .atInfo()
           .with(IMPORTANCE, DEBUG)
