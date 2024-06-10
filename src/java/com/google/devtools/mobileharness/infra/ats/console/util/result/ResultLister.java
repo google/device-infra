@@ -53,8 +53,7 @@ public class ResultLister {
     // Lists all result dirs.
     Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     String resultsDir = XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType).toString();
-    ImmutableList<ResultBundle> results =
-        resultListerHelper.listResults(resultsDir, /* shallow= */ true);
+    ImmutableList<ResultBundle> results = resultListerHelper.listResults(resultsDir);
 
     if (results.isEmpty()) {
       return "No results found";

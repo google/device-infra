@@ -244,7 +244,7 @@ public class XtsTradefedTest extends BaseDriver
                       && !Objects.equals(path.getFileName().toString(), "latest"));
       Path testResultXmlPath = resultDirs.get(0).resolve("test_result.xml");
       Optional<Result> result =
-          compatibilityReportParser.parse(testResultXmlPath, /* shallow= */ false);
+          compatibilityReportParser.parse(testResultXmlPath, /* shallow= */ true);
       if (result.isPresent()) {
         Map<String, String> tradefedTestSummary = new HashMap<>();
         long passedNumber = result.get().getSummary().getPassed();
