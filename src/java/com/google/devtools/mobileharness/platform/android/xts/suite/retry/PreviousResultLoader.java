@@ -120,8 +120,7 @@ public class PreviousResultLoader {
   private Optional<Result> getPrevLegacySessionTestResult(Path resultsDir, int previousSessionIndex)
       throws MobileHarnessException {
     ImmutableList<ResultBundle> results =
-        resultListerHelper.listResults(
-            resultsDir.toAbsolutePath().toString(), /* shallow= */ false);
+        resultListerHelper.listResults(resultsDir.toAbsolutePath().toString());
     Result result = results.get(previousSessionIndex).result();
     return Optional.of(injectArgsFromCommandLine(result));
   }

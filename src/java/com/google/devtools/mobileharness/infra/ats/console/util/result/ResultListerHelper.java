@@ -50,10 +50,8 @@ public class ResultListerHelper {
    * Lists all the results and their directories directly in the "results" dir, ordered by dir name.
    *
    * @param resultsDir the directory to list results from.
-   * @param shallow whether to parse the full result or just the summary.
    */
-  public ImmutableList<ResultBundle> listResults(String resultsDir, boolean shallow)
-      throws MobileHarnessException {
+  public ImmutableList<ResultBundle> listResults(String resultsDir) throws MobileHarnessException {
     ImmutableList.Builder<ResultBundle> resultsBuilder = ImmutableList.builder();
     // Lists all dirs under XTS_ROOT_DIR/android-cts/results and sorts by dir name.
     ImmutableList<File> resultDirs =
@@ -68,13 +66,14 @@ public class ResultListerHelper {
       }
       File resultFile = new File(resultDir, "test_result.xml");
       try {
-        Optional<Result> result = compatibilityReportParser.parse(resultFile.toPath(), shallow);
+        Optional<Result> result =
+            compatibilityReportParser.parse(resultFile.toPath(), /* shallow= */ true);
         if (result.isEmpty()) {
           // TODO: Remove the legacy result support.
           // Legacy result xml file locates at resultsDir/sessionId/sessionId/test_result.xml.
           File legacyResultFile =
               new File(resultDir, String.format("%s/test_result.xml", resultDir.getName()));
-          result = compatibilityReportParser.parse(legacyResultFile.toPath(), shallow);
+          result = compatibilityReportParser.parse(legacyResultFile.toPath(), /* shallow= */ true);
         }
         result.ifPresent(value -> resultsBuilder.add(ResultBundle.of(resultDir, value)));
       } catch (MobileHarnessException e) {
@@ -88,9 +87,7 @@ public class ResultListerHelper {
   /** Lists all the result directories directly in the "results" dir, ordered by dir name. */
   public ImmutableList<File> listResultDirsInOrder(String resultsDir)
       throws MobileHarnessException {
-    return listResults(resultsDir, /* shallow= */ false).stream()
-        .map(ResultBundle::resultDir)
-        .collect(toImmutableList());
+    return listResults(resultsDir).stream().map(ResultBundle::resultDir).collect(toImmutableList());
   }
 
   /** A bundle of the result directory and the parsed result proto. */
