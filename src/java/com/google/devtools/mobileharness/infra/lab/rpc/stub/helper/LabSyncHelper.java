@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.stub.helper;
 
+import static com.google.common.base.StandardSystemProperty.JAVA_VERSION;
 import static com.google.common.base.StandardSystemProperty.OS_NAME;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -47,6 +48,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServicePr
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabRequest;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
+import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
@@ -324,25 +326,29 @@ public class LabSyncHelper {
             labLocation ->
                 hostProperties.addHostProperty(
                     HostProperty.newBuilder()
-                        .setKey(Ascii.toLowerCase(Name.LAB_LOCATION.name()))
+                        .setKey(Ascii.toLowerCase(HostPropertyKey.LAB_LOCATION.name()))
                         .setValue(labLocation)
                         .build()));
     hostProperties.addHostProperty(
         HostProperty.newBuilder()
-            .setKey(Ascii.toLowerCase(Name.HOST_OS.name()))
+            .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_OS.name()))
             .setValue(OS_NAME.value()));
     hostProperties.addHostProperty(
         HostProperty.newBuilder()
-            .setKey(Ascii.toLowerCase(Name.HOST_VERSION.name()))
+            .setKey(Ascii.toLowerCase(HostPropertyKey.JAVA_VERSION.name()))
+            .setValue(JAVA_VERSION.value()));
+    hostProperties.addHostProperty(
+        HostProperty.newBuilder()
+            .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_VERSION.name()))
             .setValue(Version.LAB_VERSION.toString()));
     hostProperties.addHostProperty(
         HostProperty.newBuilder()
-            .setKey(Ascii.toLowerCase(Name.LOCATION_TYPE.name()))
+            .setKey(Ascii.toLowerCase(HostPropertyKey.LOCATION_TYPE.name()))
             .setValue(
                 String.valueOf(Ascii.toLowerCase(netUtil.getLocalHostLocationType().name()))));
     hostProperties.addHostProperty(
         HostProperty.newBuilder()
-            .setKey(Ascii.toLowerCase(Name.HOST_OS_VERSION.name()))
+            .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_OS_VERSION.name()))
             .setValue(System.getProperty("os.version")));
 
     return LabServerFeature.newBuilder().setHostProperties(hostProperties).build();
