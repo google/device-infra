@@ -181,11 +181,19 @@ class ListDevicesCommandHandler {
 
   /** Queries device info from ADB to be the backup info for devices. */
   private ImmutableMap<String, DeviceDescriptor> queryDeviceInfoFromAdb()
-      throws MobileHarnessException, InterruptedException {
-    ImmutableMap.Builder<String, DeviceDescriptor> deviceDescriptorMap = ImmutableMap.builder();
+      throws InterruptedException {
+    Map<String, DeviceState> deviceState;
+    try {
+      deviceState = androidAdbInternalUtil.getDeviceSerialsAsMap(QUERY_DEVICE_TIMEOUT);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to query device state from ADB within %s. Going to use status from DeviceManager"
+              + " directly.",
+          QUERY_DEVICE_TIMEOUT);
+      return ImmutableMap.of();
+    }
 
-    Map<String, DeviceState> deviceState =
-        androidAdbInternalUtil.getDeviceSerialsAsMap(QUERY_DEVICE_TIMEOUT);
+    ImmutableMap.Builder<String, DeviceDescriptor> deviceDescriptorMap = ImmutableMap.builder();
 
     for (Entry<String, DeviceState> entry : deviceState.entrySet()) {
       String serial = entry.getKey();
@@ -194,16 +202,32 @@ class ListDevicesCommandHandler {
           DeviceDescriptor.newBuilder()
               .setSerial(serial)
               .setDeviceState(convertDeviceStateFromAdb(state));
-      builder.setProduct(androidAdbUtil.getProperty(serial, AndroidProperty.PRODUCT_BOARD));
-      builder.setProductVariant(androidAdbUtil.getProperty(serial, AndroidProperty.DEVICE));
-      builder.setBuildId(androidAdbUtil.getProperty(serial, AndroidProperty.BUILD_ALIAS));
-      builder.setBatteryLevel(Integer.toString(androidSystemSettingUtil.getBatteryLevel(serial)));
 
+      // Set default values for device status.
+      builder
+          .setProduct(NOT_APPLICABLE)
+          .setProductVariant(NOT_APPLICABLE)
+          .setBuildId(NOT_APPLICABLE)
+          .setBatteryLevel(NOT_APPLICABLE);
       // Unsupported fields.
-      builder.setAllocationState(NOT_APPLICABLE);
-      builder.setDeviceClass(NOT_APPLICABLE);
-      builder.setTestDeviceState(NOT_APPLICABLE);
-      builder.setIsStubDevice(false);
+      builder
+          .setAllocationState(NOT_APPLICABLE)
+          .setDeviceClass(NOT_APPLICABLE)
+          .setTestDeviceState(NOT_APPLICABLE)
+          .setIsStubDevice(false);
+
+      if (state.equals(DeviceState.DEVICE)) {
+        try {
+          builder
+              .setProduct(androidAdbUtil.getProperty(serial, AndroidProperty.PRODUCT_BOARD))
+              .setProductVariant(androidAdbUtil.getProperty(serial, AndroidProperty.DEVICE))
+              .setBuildId(androidAdbUtil.getProperty(serial, AndroidProperty.BUILD_ALIAS))
+              .setBatteryLevel(Integer.toString(androidSystemSettingUtil.getBatteryLevel(serial)));
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log(
+              "Failed to get info of device - %s from ADB. The device may be offline.", serial);
+        }
+      }
       deviceDescriptorMap.put(serial, builder.build());
     }
     return deviceDescriptorMap.buildOrThrow();
