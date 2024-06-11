@@ -20,13 +20,11 @@ import static com.google.common.base.StandardSystemProperty.JAVA_HOME;
 import static com.google.common.base.StandardSystemProperty.JAVA_VERSION;
 import static com.google.common.base.StandardSystemProperty.OS_VERSION;
 import static com.google.common.base.StandardSystemProperty.USER_NAME;
-import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ArrayListMultimap;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ListMultimap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.graph.Traverser;
@@ -41,8 +39,8 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.errorprone.annotations.DoNotCall;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
-import java.io.BufferedReader;
-import java.io.IOException;
+import com.sun.management.OperatingSystemMXBean;
+import java.lang.management.ManagementFactory;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -1158,25 +1156,6 @@ public class SystemUtil {
     return Flags.instance().javaCommandPath.getNonNull();
   }
 
-  /** Gets the total amount of memory in bytes on the local system. */
-  public long getTotalMemory() throws MobileHarnessException, InterruptedException {
-    if (isOnLinux()) {
-      return getProcMemInfoTag("MemTotal");
-    } else if (isOnMac()) {
-      String output;
-      try {
-        output = executor.run(Command.of("sysctl", "-n", "hw.memsize")).trim();
-      } catch (CommandException e) {
-        throw new MobileHarnessException(
-            BasicErrorId.SYSTEM_MAC_GET_MEMORY_SIZE_ERROR, "Failed to get memory size on Mac.", e);
-      }
-      return Long.parseLong(output);
-    } else {
-      throw new MobileHarnessException(
-          BasicErrorId.SYSTEM_NOT_RUN_ON_LINUX_OR_MAC, "Unsupported Operation system.");
-    }
-  }
-
   /** Returns the disk type of the host. It only works on macOS. */
   public DiskType getDiskType() throws MobileHarnessException, InterruptedException {
     if (isOnMac()) {
@@ -1224,52 +1203,25 @@ public class SystemUtil {
         "Unsupported getting disk type on non-macOS machine.");
   }
 
-  /** Gets the total amount of free memory in bytes on the local system. */
-  public long getFreeMemory() throws MobileHarnessException {
-    if (isOnLinux()) {
-      return getProcMemInfoTag("MemFree");
-    } else {
-      throw new MobileHarnessException(
-          BasicErrorId.SYSTEM_NOT_RUN_ON_LINUX, "Unsupported Operation system.");
-    }
+  /** Gets the total amount of physical memory in bytes on the local system. */
+  public long getTotalMemory() {
+    // TODO: Use getTotalMemorySize() after JDK21.
+    return getOperatingSystemMxBean().getTotalPhysicalMemorySize();
   }
 
-  /** Gets the total amount of used memory in bytes on the local system. */
-  public long getUsedMemory() throws MobileHarnessException, InterruptedException {
+  /** Gets the total amount of free physical memory in bytes on the local system. */
+  public long getFreeMemory() {
+    // TODO: Use getTotalMemorySize() after JDK21.
+    return getOperatingSystemMxBean().getFreePhysicalMemorySize();
+  }
+
+  /** Gets the total amount of used physical memory in bytes on the local system. */
+  public long getUsedMemory() {
     return getTotalMemory() - getFreeMemory();
   }
 
-  /** Gets the memory size in bytes of a tag from the proc mem info file. */
-  @VisibleForTesting
-  long getProcMemInfoTag(String tag) throws MobileHarnessException {
-    for (String line : getProcMemInfoLines()) {
-      @SuppressWarnings("StringSplitter")
-      String[] pieces = line.split("\\s+");
-      if (pieces[0].startsWith(tag)) {
-        try {
-          long total = Long.parseLong(pieces[1]);
-          if (pieces.length >= 3 && pieces[2].equals("kB")) {
-            total = total * 1024;
-          }
-          return total;
-        } catch (NumberFormatException expected) {
-          // It is ok to ignore here since exception will be thrown later.
-        }
-      }
-    }
-    throw new MobileHarnessException(
-        BasicErrorId.SYSTEM_TAG_NOT_FOUND_IN_PROC_MEMINFO, "Could not find tag " + tag);
-  }
-
-  /** Reads the lines of the proc mem info file. */
-  @VisibleForTesting
-  ImmutableList<String> getProcMemInfoLines() throws MobileHarnessException {
-    try (BufferedReader reader = Files.newBufferedReader(Paths.get("/proc/meminfo"))) {
-      return reader.lines().collect(toImmutableList());
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          BasicErrorId.SYSTEM_ACCESS_PROC_MEMINFO_ERROR, "Could not access /proc/meminfo", e);
-    }
+  private static OperatingSystemMXBean getOperatingSystemMxBean() {
+    return (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
   }
 
   /** A simple data structure for tree traversal in {@link #killDescendantAndZombieProcesses}. */
