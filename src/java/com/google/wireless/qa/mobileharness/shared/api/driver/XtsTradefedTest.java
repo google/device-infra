@@ -242,9 +242,19 @@ public class XtsTradefedTest extends BaseDriver
                   localFileUtil.isDirExist(path)
                       && !previousResultDirNames.contains(path.getFileName().toString())
                       && !Objects.equals(path.getFileName().toString(), "latest"));
-      Path testResultXmlPath = resultDirs.get(0).resolve("test_result.xml");
-      Optional<Result> result =
-          compatibilityReportParser.parse(testResultXmlPath, /* shallow= */ true);
+      Optional<Result> result;
+      if (resultDirs.isEmpty()) {
+        logger.atWarning().log("Temp xTS results dir [%s] is empty", tmpXtsResultsDir);
+        result = Optional.empty();
+      } else {
+        if (resultDirs.size() > 1) {
+          logger.atInfo().log(
+              "More than 1 result dirs in temp xTS results dir [%s], use the 1st one: %s",
+              tmpXtsResultsDir, resultDirs);
+        }
+        Path testResultXmlPath = resultDirs.get(0).resolve("test_result.xml");
+        result = compatibilityReportParser.parse(testResultXmlPath, /* shallow= */ true);
+      }
       if (result.isPresent()) {
         Map<String, String> tradefedTestSummary = new HashMap<>();
         long passedNumber = result.get().getSummary().getPassed();
