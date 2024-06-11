@@ -177,14 +177,13 @@ public class PreviousResultLoader {
     if (!localFileUtil.isDirExist(testRecordProtoDir)) {
       return Optional.empty();
     }
-    List<Path> testRecordProtoFiles =
-        localFileUtil.listFilesOrDirs(testRecordProtoDir, p -> p.toFile().isFile());
+    ImmutableList<Path> testRecordProtoFiles =
+        ImmutableList.sortedCopyOf(
+            localFileUtil.listFilesOrDirs(testRecordProtoDir, p -> p.toFile().isFile()));
     if (testRecordProtoFiles.isEmpty()) {
       return Optional.empty();
     }
-    return Optional.of(
-        TradefedResultFilesBundle.of(
-            testResultXmlFile, ImmutableList.copyOf(testRecordProtoFiles)));
+    return Optional.of(TradefedResultFilesBundle.of(testResultXmlFile, testRecordProtoFiles));
   }
 
   /**
