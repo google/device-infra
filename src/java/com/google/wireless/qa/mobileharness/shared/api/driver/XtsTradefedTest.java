@@ -469,7 +469,9 @@ public class XtsTradefedTest extends BaseDriver
                   .needStderrInResult(false)
                   .timeout(getXtsTimeout(testInfo))));
 
-      return xtsProcess.get().await().exitCode() == 0;
+      CommandProcess process = xtsProcess.get();
+      testInfo.log().atInfo().alsoTo(logger).log("xTS TF started, pid=%s", process.getPid());
+      return process.await().exitCode() == 0;
     } catch (CommandStartException e) {
       throw new MobileHarnessException(
           AndroidErrorId.XTS_TRADEFED_START_COMMAND_ERROR,
