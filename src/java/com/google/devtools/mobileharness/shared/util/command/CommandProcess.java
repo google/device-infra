@@ -26,7 +26,6 @@ import java.io.Writer;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.OptionalInt;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
@@ -210,16 +209,16 @@ public class CommandProcess {
    * {@link #kill()} and {@link #killForcibly()} instead if possible.
    *
    * @param signal the signal for killing the command (e.g., 2 for SIGINT and 3 for SIGQUIT)
-   * @throws UnsupportedOperationException if the platform is not UNIX
+   * @throws UnsupportedOperationException if the platform does not support the operation
    * @see <a href="https://ss64.com/bash/kill.html">kill Man Page</a>
    */
   @Beta
   public void killWithSignal(int signal)
       throws UnsupportedOperationException, InterruptedException {
     try {
-      int pid = getUnixPid();
-      EXECUTOR.run(Command.of("kill", "-" + signal, Integer.toString(pid)));
-    } catch (ReflectiveOperationException | CommandException e) {
+      long pid = getPid();
+      EXECUTOR.run(Command.of("kill", "-" + signal, Long.toString(pid)));
+    } catch (CommandException e) {
       throw new UnsupportedOperationException(e);
     }
   }
@@ -308,19 +307,12 @@ public class CommandProcess {
     }
   }
 
-  public int getUnixPid() throws ReflectiveOperationException {
-    try {
-      return (int) backendProcess.processId();
-    } catch (UnsupportedOperationException e) {
-      throw new ReflectiveOperationException(e);
-    }
-  }
-
-  public OptionalInt getUnixPidIfAny() {
-    try {
-      return OptionalInt.of(getUnixPid());
-    } catch (ReflectiveOperationException e) {
-      return OptionalInt.empty();
-    }
+  /**
+   * Gets PID of the process.
+   *
+   * @throws UnsupportedOperationException if the platform does not support the operation
+   */
+  public long getPid() {
+    return backendProcess.processId();
   }
 }

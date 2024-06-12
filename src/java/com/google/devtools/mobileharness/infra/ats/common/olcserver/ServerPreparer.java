@@ -274,7 +274,7 @@ public class ServerPreparer {
         connectWithRetry();
         serverStartingLogger.log(
             "OLC server started, port=%s, pid=%s",
-            Flags.instance().olcServerPort.getNonNull(), serverProcess.getUnixPidIfAny().orElse(0));
+            Flags.instance().olcServerPort.getNonNull(), serverProcess.getPid());
       } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
         // Kills the server.
         if (serverProcess != null && serverProcess.isAlive()) {
