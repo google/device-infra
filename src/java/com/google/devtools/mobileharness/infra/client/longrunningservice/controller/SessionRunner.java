@@ -38,10 +38,10 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.VersionProtoUtil;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
-import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.event.EventBusBackend.Subscriber;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.assistedinject.Assisted;
 import com.google.protobuf.FieldMask;
 import com.google.protobuf.TextFormat.Printer;
@@ -86,6 +86,7 @@ public class SessionRunner implements Callable<Void> {
   private final SessionPluginLoader sessionPluginLoader;
   private final SessionPluginRunner sessionPluginRunner;
   private final ListeningExecutorService threadPool;
+  private final SystemUtil systemUtil;
 
   @GuardedBy("itself")
   private final List<ListenableFuture<?>> sessionNotifyingFutures = new ArrayList<>();
@@ -108,7 +109,8 @@ public class SessionRunner implements Callable<Void> {
       SessionJobRunner sessionJobRunner,
       SessionPluginLoader sessionPluginLoader,
       SessionPluginRunner sessionPluginRunner,
-      ListeningExecutorService threadPool) {
+      ListeningExecutorService threadPool,
+      SystemUtil systemUtil) {
     this.sessionDetailHolder = new SessionDetailHolder(sessionDetail, sessionDetailListener);
     this.cachedSessionNotifications = cachedSessionNotifications;
     this.sessionEnvironmentPreparer = sessionEnvironmentPreparer;
@@ -117,6 +119,7 @@ public class SessionRunner implements Callable<Void> {
     this.sessionPluginLoader = sessionPluginLoader;
     this.sessionPluginRunner = sessionPluginRunner;
     this.threadPool = threadPool;
+    this.systemUtil = systemUtil;
   }
 
   @Override
@@ -127,7 +130,9 @@ public class SessionRunner implements Callable<Void> {
     String sessionId = sessionDetailHolder.getSessionId();
     logger.atInfo().log(
         "Starting session runner %s, server_version=[%s], memory_info=[%s]",
-        sessionId, shortDebugString(VersionProtoUtil.createGetVersionResponse()), getMemoryInfo());
+        sessionId,
+        shortDebugString(VersionProtoUtil.createGetVersionResponse()),
+        systemUtil.getMemoryInfo());
 
     // Loads session plugins.
     ImmutableList<SessionPlugin> sessionPlugins =
@@ -287,17 +292,5 @@ public class SessionRunner implements Callable<Void> {
       receiveSessionNotification = false;
     }
     getUnchecked(whenAllComplete(sessionNotifyingFutures).run(() -> {}, threadPool));
-  }
-
-  private static String getMemoryInfo() {
-    Runtime runtime = Runtime.getRuntime();
-    long freeMemory = runtime.freeMemory();
-    long totalMemory = runtime.totalMemory();
-    long maxMemory = runtime.maxMemory();
-    return String.format(
-        "used=%s, total=%s, max=%s",
-        StrUtil.getHumanReadableSize(totalMemory - freeMemory),
-        StrUtil.getHumanReadableSize(totalMemory),
-        StrUtil.getHumanReadableSize(maxMemory));
   }
 }

@@ -101,7 +101,7 @@ public class SystemUtil {
   private static final Pattern PS_PID_PPID_PGID_OUTPUT_PATTERN =
       Pattern.compile(
           "^\\s*"
-              + "(?<user>[^\\s]+)\\s+(?<pid>\\d+)\\s+(?<ppid>\\d+)\\s+(?<pgid>\\d+)\\s+(?<command>.+)"
+              + "(?<user>\\S+)\\s+(?<pid>\\d+)\\s+(?<ppid>\\d+)\\s+(?<pgid>\\d+)\\s+(?<command>.+)"
               + "$");
 
   @VisibleForTesting static final String GUITAR_CHANGELIST_ENV_VAR = "GUITAR_CHANGELIST";
@@ -1197,6 +1197,17 @@ public class SystemUtil {
         "Unsupported getting disk type on non-macOS machine.");
   }
 
+  /** Gets all memory information. */
+  public MemoryInfo getMemoryInfo() {
+    Runtime runtime = Runtime.getRuntime();
+    return MemoryInfo.of(
+        /* jvmFreeMemory= */ runtime.freeMemory(),
+        /* jvmTotalMemory= */ runtime.totalMemory(),
+        /* jvmMaxMemory= */ runtime.maxMemory(),
+        /* freeMemory= */ getFreeMemory(),
+        /* totalMemory= */ getTotalMemory());
+  }
+
   /** Gets the total amount of physical memory in bytes on the local system. */
   public long getTotalMemory() {
     // TODO: Use getTotalMemorySize() after JDK21.
@@ -1207,11 +1218,6 @@ public class SystemUtil {
   public long getFreeMemory() {
     // TODO: Use getTotalMemorySize() after JDK21.
     return getOperatingSystemMxBean().getFreePhysicalMemorySize();
-  }
-
-  /** Gets the total amount of used physical memory in bytes on the local system. */
-  public long getUsedMemory() {
-    return getTotalMemory() - getFreeMemory();
   }
 
   private static OperatingSystemMXBean getOperatingSystemMxBean() {
