@@ -16,12 +16,22 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
+    name = "memory_info",
+    srcs = ["MemoryInfo.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base",
+    ],
+)
+
+java_library(
     name = "system",
     srcs = ["SystemUtil.java"],
     visibility = [
         "//:deviceinfra_pkg",
     ],
     deps = [
+        ":memory_info",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/java:java_command_creator",
