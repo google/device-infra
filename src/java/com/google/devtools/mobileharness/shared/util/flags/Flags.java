@@ -783,7 +783,7 @@ public class Flags {
   public Flag<Boolean> logFileSizeNoLimit = logFileSizeNoLimitDefault;
 
   private static final Flag<Duration> logUploadDelayDefault =
-      DurationFlag.value(Duration.ofSeconds(40L));
+      DurationFlag.value(Duration.ofSeconds(60L));
 
   @com.beust.jcommander.Parameter(
       names = "--log_upload_delay",
