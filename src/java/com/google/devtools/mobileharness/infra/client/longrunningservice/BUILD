@@ -59,6 +59,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "//src/java/com/google/wireless/qa/mobileharness/shared:log",
         "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dir",
