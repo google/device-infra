@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.flogger.FluentLogger;
@@ -38,6 +39,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -116,6 +118,7 @@ class DumpCommand implements Callable<Integer> {
         PathUtil.join(
             bugreportDirPath, String.format("ats_console_stack_trace_%s.txt", fileSuffix)),
         MoreThrowables.formatStackTraces());
+
     String serverStackTraceFilePath =
         PathUtil.join(bugreportDirPath, String.format("olc_server_stack_trace_%s.txt", fileSuffix));
     createServerStackTraceFile(serverStackTraceFilePath);
@@ -174,6 +177,12 @@ class DumpCommand implements Callable<Integer> {
 
   private void createServerStackTraceFile(String filePath) {
     try {
+      Optional<?> tryConnectResult = serverPreparer.tryConnectToOlcServer();
+      if (tryConnectResult.isEmpty()) {
+        logger.atInfo().log("OLC server isn't running, skip dumping server stack trace");
+        return;
+      }
+
       // Gets server stack trace.
       AtsSessionPluginOutput output =
           runDumpCommandSession(DUMP_STACK_TRACE_SESSION_NAME, DUMP_STACK_TRACE_COMMAND);
@@ -195,8 +204,9 @@ class DumpCommand implements Callable<Integer> {
 
       // Saves server stack trace to file.
       localFileUtil.writeToFile(filePath, serverStackTrace);
-    } catch (MobileHarnessException | InterruptedException e) {
-      logger.atWarning().withCause(e).log("Failed to create server stack trace file");
+    } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
+      logger.atWarning().log(
+          "Failed to create server stack trace file, error=[%s]", shortDebugString(e));
       if (e instanceof InterruptedException) {
         Thread.currentThread().interrupt();
       }
