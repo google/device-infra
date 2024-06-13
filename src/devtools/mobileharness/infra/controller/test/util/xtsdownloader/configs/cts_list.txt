@@ -1035,7 +1035,6 @@ CtsNetTestCasesMaxTargetSdk30
 CtsNetTestCasesMaxTargetSdk31
 CtsNetTestCasesMaxTargetSdk33
 CtsNetTestCasesUpdateStatsPermission
-CtsNfcHceMultiDeviceTestCases
 CtsNfcTestCases
 CtsNNAPIBenchmarkTestCases
 CtsNNAPIJavaTestCases
