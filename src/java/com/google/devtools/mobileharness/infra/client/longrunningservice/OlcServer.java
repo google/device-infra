@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressServerInterceptor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
@@ -88,6 +89,7 @@ public class OlcServer {
   private final ClientApi clientApi;
   private final ServerBuilder<?> serverBuilder;
   private final LocalFileUtil localFileUtil;
+  private final SystemUtil systemUtil;
 
   @Inject
   OlcServer(
@@ -100,7 +102,8 @@ public class OlcServer {
       LogManager<LogRecords> logManager,
       ClientApi clientApi,
       @GrpcServer ServerBuilder<?> serverBuilder,
-      LocalFileUtil localFileUtil) {
+      LocalFileUtil localFileUtil,
+      SystemUtil systemUtil) {
     this.sessionService = sessionService;
     this.versionService = versionService;
     this.controlService = controlService;
@@ -111,6 +114,7 @@ public class OlcServer {
     this.clientApi = clientApi;
     this.serverBuilder = serverBuilder;
     this.localFileUtil = localFileUtil;
+    this.systemUtil = systemUtil;
   }
 
   private void run(List<String> args)
@@ -162,7 +166,9 @@ public class OlcServer {
         "Fatal error while initializing %s exec mode",
         execMode.getClass().getSimpleName());
 
-    logger.atInfo().log("OLC server started, port=%s", server.getPort());
+    logger.atInfo().log(
+        "OLC server started, port=%s, pid=%s, memory_info=[%s]",
+        server.getPort(), ProcessHandle.current().pid(), systemUtil.getMemoryInfo());
 
     server.awaitTermination();
     logger.atInfo().log("Exiting...");
