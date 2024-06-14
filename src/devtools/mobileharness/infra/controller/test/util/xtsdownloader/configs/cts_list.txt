@@ -384,6 +384,7 @@ CtsCompanionDeviceManagerMultiProcessTestCases
 CtsCompanionDeviceManagerNoCompanionServicesTestCases
 CtsCompanionDeviceManagerUiAutomationTestCases
 CtsCompilationApp
+CtsCompilationApp_debuggable
 CtsCompilationApp_with_bad_profile
 CtsCompilationApp_with_good_profile
 CtsCompilationTestCases
@@ -555,7 +556,6 @@ CtsEmptyTestApp
 CtsEmptyTestApp_AppMetadataInApk
 CtsEmptyTestApp_AppMetadataInApk_ExceedSizeLimit
 CtsEmptyTestApp_FullScreenIntent
-CtsEmptyTestApp_MissingAppMetadataInApk
 CtsEmptyTestAppV2
 CtsEncryptionApp
 CtsEncryptionAttributeApp
@@ -875,10 +875,8 @@ CtsKeystoreWycheproofTestCases
 CtsKeyValueBackupRestoreApp
 CtsLauncherAppsTests
 CtsLauncherAppsTestsSupport
-CtsLaunchNonExportedComponentsTestCases
 CtsLeanbackJankApp
 CtsLeanbackJankTestCases
-CtsLegacyNotification20TestCases
 CtsLegacyNotification27TestCases
 CtsLegacyNotification28TestCases
 CtsLegacyNotification29TestCases
@@ -1478,7 +1476,6 @@ CtsTransitionTestCases
 CtsTranslationTestCases
 CtsTtsEngineSelectorTestHelper
 CtsTtsEngineSelectorTestHelper2
-CtsTVConcurrentPlaybackTestCases
 CtsTvProviderTestCases
 CtsTvTestCases
 CtsUffdGcTestCases
@@ -1646,6 +1643,7 @@ MctsMediaMiscTestCases
 MctsMediaMuxerTestCases
 MctsMediaParserTestCases
 MctsMediaPlayerTestCases
+MctsMediaRecorderTestCases
 MctsMediaV2TestCases
 MctsMediaStressTestCases
 MctsMediaDrmFrameworkTestCases
