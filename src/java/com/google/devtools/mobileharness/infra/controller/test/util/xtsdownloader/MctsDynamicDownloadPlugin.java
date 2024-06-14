@@ -307,6 +307,10 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
         URL url = uri.toURL();
         connection = url.openConnection();
         long urlLastModified = connection.getLastModified();
+        if (urlLastModified == 0) {
+          logger.atInfo().log("Url %s not exist.", downloadUrl);
+          return null;
+        }
         // check the file exists and the last modified time.
         if (fileUtil.isFileExist(filePath)) {
           long fileLastModified = fileUtil.getFileLastModifiedTime(filePath).toEpochMilli();
