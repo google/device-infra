@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.protobuf.TextFormat.shortDebugString;
-import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.DEVICE_ID_LIST;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
@@ -218,10 +218,14 @@ final class AtsServerSessionPlugin {
             .setId(testInfo.locator().getId())
             .setRequestId(sessionInfo.getSessionId())
             .setCommandId(newMultiCommandRequestHandler.getCommandIdOfJob(jobInfo));
-    if (testInfo.properties().has(DEVICE_ID_LIST)) {
-      ImmutableList<String> deviceSerials =
-          ImmutableList.copyOf(testInfo.properties().get(DEVICE_ID_LIST).split(","));
-      builder.addAllDeviceSerials(deviceSerials);
+    // ATS server requests use device UUIDs to schedule tests.
+    ImmutableList<String> deviceUuids =
+        jobInfo.subDeviceSpecs().getAllSubDevices().stream()
+            .filter(subDeviceSpec -> subDeviceSpec.dimensions().get("uuid") != null)
+            .map(subDeviceSpec -> subDeviceSpec.dimensions().get("uuid"))
+            .collect(toImmutableList());
+    if (!deviceUuids.isEmpty()) {
+      builder.addAllDeviceSerials(deviceUuids);
     }
 
     // Tradefed test result.
@@ -244,12 +248,20 @@ final class AtsServerSessionPlugin {
           Long.parseLong(
               testInfo.properties().get(MoblyTestInfoMapHelper.MOBLY_TESTS_FAILED_AND_ERROR)));
     }
+    if (testInfo.timing().getStartTime() != null) {
+      builder.setStartTime(TimeUtils.toProtoTimestamp(testInfo.timing().getStartTime()));
+    }
+    if (testInfo.timing().getEndTime() != null) {
+      builder.setEndTime(TimeUtils.toProtoTimestamp(testInfo.timing().getEndTime()));
+    }
+    if (testInfo.timing().getCreateTime() != null) {
+      builder.setCreateTime(TimeUtils.toProtoTimestamp(testInfo.timing().getCreateTime()));
+    }
+    if (testInfo.timing().getModifyTime() != null) {
+      builder.setUpdateTime(TimeUtils.toProtoTimestamp(testInfo.timing().getModifyTime()));
+    }
     return builder
         .setTotalTestCount(builder.getPassedTestCount() + builder.getFailedTestCount())
-        .setStartTime(TimeUtils.toProtoTimestamp(testInfo.timing().getStartTime()))
-        .setEndTime(TimeUtils.toProtoTimestamp(testInfo.timing().getEndTime()))
-        .setCreateTime(TimeUtils.toProtoTimestamp(testInfo.timing().getCreateTime()))
-        .setUpdateTime(TimeUtils.toProtoTimestamp(testInfo.timing().getModifyTime()))
         .setState(convertStatusAndResultToCommandState(testInfo.status(), testInfo.result()))
         .build();
   }

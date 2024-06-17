@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
-import static com.google.wireless.qa.mobileharness.shared.constant.PropertyName.Test.DEVICE_ID_LIST;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -31,6 +30,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
+import com.google.devtools.mobileharness.api.model.job.in.Decorators;
+import com.google.devtools.mobileharness.api.model.job.in.Dimensions;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
@@ -55,6 +56,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
+import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in.DeviceRequirement;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -72,6 +74,9 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestInfos;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Params;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
+import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Properties;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
@@ -128,6 +133,7 @@ public final class AtsServerSessionPluginTest {
   @Mock private TestInfo testInfo;
   @Mock private TestInfos testInfos;
   @Mock private TestLocator testLocator;
+  @Mock private SubDeviceSpecs subDeviceSpecs;
   private Properties testProperties;
 
   @Captor private ArgumentCaptor<UnaryOperator<RequestDetail>> unaryOperatorCaptor;
@@ -207,7 +213,22 @@ public final class AtsServerSessionPluginTest {
     when(testInfo.locator()).thenReturn(testLocator);
     when(testLocator.getId()).thenReturn("test_id");
     testProperties = new Properties(timing);
-    testProperties.add(DEVICE_ID_LIST, "device_id_1,device_id_2");
+    SubDeviceSpec subDeviceSpec1 =
+        SubDeviceSpec.createForTesting(
+            DeviceRequirement.create(
+                "AndroidRealDevice", new Decorators(), new Dimensions().add("uuid", "device_id_1")),
+            new ScopedSpecs(new Timing()),
+            new Timing());
+    SubDeviceSpec subDeviceSpec2 =
+        SubDeviceSpec.createForTesting(
+            DeviceRequirement.create(
+                "AndroidRealDevice", new Decorators(), new Dimensions().add("uuid", "device_id_2")),
+            new ScopedSpecs(new Timing()),
+            new Timing());
+    when(subDeviceSpecs.getAllSubDevices())
+        .thenReturn(ImmutableList.of(subDeviceSpec1, subDeviceSpec2));
+    when(jobInfo.subDeviceSpecs()).thenReturn(subDeviceSpecs);
+    when(jobInfo2.subDeviceSpecs()).thenReturn(subDeviceSpecs);
     testProperties.add(XtsConstants.TRADEFED_TESTS_PASSED, "10");
     testProperties.add(XtsConstants.TRADEFED_TESTS_FAILED, "10");
     when(testInfo.properties()).thenReturn(testProperties);

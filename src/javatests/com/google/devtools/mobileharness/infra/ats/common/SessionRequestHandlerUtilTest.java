@@ -284,7 +284,7 @@ public final class SessionRequestHandlerUtilTest {
         .containsExactly(
             SubDeviceSpec.newBuilder()
                 .setType("AndroidDevice")
-                .setDimensions(StringMap.newBuilder().putContent("id", "device_id_1"))
+                .setDimensions(StringMap.newBuilder().putContent("uuid", "device_id_1"))
                 .build());
   }
 
@@ -310,7 +310,7 @@ public final class SessionRequestHandlerUtilTest {
         .containsExactly(
             SubDeviceSpec.newBuilder()
                 .setType("AndroidDevice")
-                .setDimensions(StringMap.newBuilder().putContent("id", "device_id_1"))
+                .setDimensions(StringMap.newBuilder().putContent("uuid", "device_id_1"))
                 .build());
   }
 

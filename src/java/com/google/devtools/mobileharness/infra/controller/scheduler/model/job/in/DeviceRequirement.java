@@ -33,6 +33,12 @@ public abstract class DeviceRequirement {
     return new AutoValue_DeviceRequirement(deviceType, new Decorators(), new Dimensions());
   }
 
+  /** Creates the requirement of one device for every allocation. */
+  public static DeviceRequirement create(
+      String deviceType, Decorators decorators, Dimensions dimensions) {
+    return new AutoValue_DeviceRequirement(deviceType, decorators, dimensions);
+  }
+
   static DeviceRequirement fromProto(Job.DeviceRequirement proto) {
     DeviceRequirement deviceRequirement = create(proto.getDeviceType());
     deviceRequirement.decorators().addAll(proto.getDecoratorList());

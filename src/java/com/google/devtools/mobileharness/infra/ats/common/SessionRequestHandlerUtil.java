@@ -203,7 +203,7 @@ public class SessionRequestHandlerUtil {
               deviceSerial ->
                   SubDeviceSpec.newBuilder()
                       .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
-                      .setDimensions(StringMap.newBuilder().putContent("id", deviceSerial))
+                      .setDimensions(StringMap.newBuilder().putContent("uuid", deviceSerial))
                       .build())
           .collect(toImmutableList());
     }
