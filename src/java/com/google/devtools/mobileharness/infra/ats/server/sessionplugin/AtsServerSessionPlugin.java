@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
@@ -49,12 +48,14 @@ import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Result;
 import com.google.wireless.qa.mobileharness.shared.model.job.out.Status;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
 import javax.inject.Inject;
@@ -86,15 +87,18 @@ final class AtsServerSessionPlugin {
   private final SessionInfo sessionInfo;
   private final NewMultiCommandRequestHandler newMultiCommandRequestHandler;
   private final LocalSessionStub localSessionStub;
+  private final Clock clock;
 
   @Inject
   AtsServerSessionPlugin(
       SessionInfo sessionInfo,
       NewMultiCommandRequestHandler newMultiCommandRequestHandler,
-      LocalSessionStub localSessionStub) {
+      LocalSessionStub localSessionStub,
+      Clock clock) {
     this.sessionInfo = sessionInfo;
     this.newMultiCommandRequestHandler = newMultiCommandRequestHandler;
     this.localSessionStub = localSessionStub;
+    this.clock = clock;
   }
 
   @Subscribe
@@ -104,18 +108,28 @@ final class AtsServerSessionPlugin {
         sessionInfo.getSessionPluginExecutionConfig().getConfig().unpack(SessionRequest.class);
     if (request.getRequestCase().equals(RequestCase.NEW_MULTI_COMMAND_REQUEST)) {
       synchronized (requestDetailLock) {
-        requestDetail.mergeFrom(
-            newMultiCommandRequestHandler.addTradefedJobs(
-                request.getNewMultiCommandRequest(), sessionInfo));
-        runningTradefedJobCount = sessionInfo.getAllJobs().size();
-        // If no tradefed job was created and the request does not contain any error that cause it
-        // to cancel, create non tradefed jobs directly.
-        if (requestDetail.getCommandDetailsCount() == 0
-            && requestDetail.getState() == RequestState.RUNNING) {
-          createNonTradefedJobs();
+        NewMultiCommandRequest newMultiCommandRequest = request.getNewMultiCommandRequest();
+        requestDetail
+            .setCreateTime(Timestamps.fromMillis(clock.millis()))
+            .setStartTime(Timestamps.fromMillis(clock.millis()))
+            .setId(sessionInfo.getSessionId())
+            .setState(RequestState.RUNNING)
+            .setOriginalRequest(newMultiCommandRequest)
+            .setMaxRetryOnTestFailures(newMultiCommandRequest.getMaxRetryOnTestFailures())
+            .addAllCommandInfos(newMultiCommandRequest.getCommandsList());
+        try {
+          newMultiCommandRequestHandler.addTradefedJobs(
+              newMultiCommandRequest, sessionInfo, requestDetail);
+          runningTradefedJobCount = sessionInfo.getAllJobs().size();
+          // If no tradefed job was created and the request does not contain any error that cause it
+          // to cancel, create non tradefed jobs directly.
+          if (requestDetail.getCommandDetailsCount() == 0
+              && requestDetail.getState() == RequestState.RUNNING) {
+            createNonTradefedJobs();
+          }
+        } finally {
+          updateSessionPluginOutput();
         }
-        RequestDetail latestRequestDetail = requestDetail.build();
-        sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
       }
     }
   }
@@ -145,21 +159,30 @@ final class AtsServerSessionPlugin {
   }
 
   @Subscribe
-  public void onSessionEnded(SessionEndedEvent event)
-      throws InterruptedException, MobileHarnessException {
+  public void onSessionEnded(SessionEndedEvent event) throws InterruptedException {
     synchronized (requestDetailLock) {
-      newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
-      requestDetail.setState(
-          hasSessionPassed(requestDetail.build()) ? RequestState.COMPLETED : RequestState.ERROR);
-      logger.atInfo().log("RequestDetail: %s", shortDebugString(requestDetail.build()));
+      try {
+        newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+      } finally {
+        // Set final state if not in terminal state.
+        if (requestDetail.getState().equals(RequestState.RUNNING)
+            || requestDetail.getState().equals(RequestState.UNKNOWN)) {
+          requestDetail.setState(
+              hasSessionPassed(requestDetail.build())
+                  ? RequestState.COMPLETED
+                  : RequestState.ERROR);
+        }
+        updateSessionPluginOutput();
+      }
 
       if (requestDetail.getState().equals(RequestState.ERROR)
           && requestDetail.getMaxRetryOnTestFailures() > 0) {
-        retrySession();
+        try {
+          retrySession();
+        } catch (MobileHarnessException e) {
+          logger.atWarning().withCause(e).log("Failed to trigger retry session.");
+        }
       }
-
-      RequestDetail latestRequestDetail = requestDetail.build();
-      sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
     }
   }
 
@@ -195,6 +218,7 @@ final class AtsServerSessionPlugin {
     String nextAttemptSessionId =
         localSessionStub.createSession(createSessionRequest).getSessionId().getId();
     requestDetail.setNextAttemptSessionId(nextAttemptSessionId);
+    updateSessionPluginOutput();
   }
 
   private void createNonTradefedJobs() throws MobileHarnessException, InterruptedException {
@@ -203,12 +227,9 @@ final class AtsServerSessionPlugin {
         Optional<CommandDetail> commandDetail =
             newMultiCommandRequestHandler.addNonTradefedJobs(
                 requestDetail.getOriginalRequest(), commandInfo, sessionInfo);
-        if (commandDetail.isPresent()) {
-          requestDetail.putCommandDetails(commandDetail.get().getId(), commandDetail.get());
-        }
+        commandDetail.ifPresent(detail -> requestDetail.putCommandDetails(detail.getId(), detail));
       }
-      RequestDetail latestRequestDetail = requestDetail.build();
-      sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
+      updateSessionPluginOutput();
     }
   }
 
@@ -280,14 +301,21 @@ final class AtsServerSessionPlugin {
               jobInfo, jobInfo.tests().getAll().values().iterator().next());
       requestDetail.addCommandAttemptDetails(commandAttemptDetail);
       requestDetail.setUpdateTime(TimeUtils.toProtoTimestamp(Instant.now()));
+      updateSessionPluginOutput();
+    }
+  }
+
+  private void updateSessionPluginOutput() {
+    synchronized (requestDetailLock) {
       RequestDetail latestRequestDetail = requestDetail.build();
       sessionInfo.setSessionPluginOutput(empty -> latestRequestDetail, RequestDetail.class);
     }
   }
 
   private boolean hasSessionPassed(RequestDetail requestDetail) {
-    return requestDetail.getCommandDetailsMap().values().stream()
-        .allMatch(commandDetail -> commandDetail.getState() == CommandState.COMPLETED);
+    return !requestDetail.getCommandDetailsMap().isEmpty()
+        && requestDetail.getCommandDetailsMap().values().stream()
+            .allMatch(commandDetail -> commandDetail.getState() == CommandState.COMPLETED);
   }
 
   private CommandState convertStatusAndResultToCommandState(Status status, Result result) {

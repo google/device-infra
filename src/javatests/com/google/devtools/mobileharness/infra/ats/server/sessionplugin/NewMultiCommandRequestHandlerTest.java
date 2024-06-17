@@ -57,7 +57,6 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
-import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.Files;
@@ -211,9 +210,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
         .thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
     // Verify request detail.
     assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
@@ -237,15 +235,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Trigger the handler.
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.RUNNING);
-    assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
-    assertThat(requestDetail.getCreateTime()).isEqualTo(Timestamps.fromMillis(1000L));
-    assertThat(requestDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(2000L));
-    assertThat(requestDetail.getUpdateTime()).isEqualTo(Timestamps.fromMillis(3000L));
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
 
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
@@ -298,15 +289,8 @@ public final class NewMultiCommandRequestHandlerTest {
             .build();
 
     // Trigger the handler.
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    assertThat(requestDetail.getState()).isEqualTo(RequestState.RUNNING);
-    assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
-    assertThat(requestDetail.getCreateTime()).isEqualTo(Timestamps.fromMillis(1000L));
-    assertThat(requestDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(2000L));
-    assertThat(requestDetail.getUpdateTime()).isEqualTo(Timestamps.fromMillis(3000L));
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
 
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
@@ -348,248 +332,6 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
-  public void cleanup_success() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
-    // Trigger the handler.
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    verify(sessionInfo).addJob(jobInfo);
-
-    // Verify that handler has mounted the zip file.
-    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
-    Command mountCommand =
-        Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
-            .timeout(Duration.ofMinutes(10));
-    verify(commandExecutor).run(mountCommand);
-
-    // Verify that handler has unmounted the zip file after calling cleanup().
-    newMultiCommandRequestHandler.cleanup(request, sessionInfo);
-    verifyUnmountRootDir(xtsRootDir);
-  }
-
-  private void verifyUnmountRootDir(String xtsRootDir) throws Exception {
-    // Verify that handler has unmounted the zip file after calling cleanup().
-    Command unmountCommand =
-        Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
-    verify(commandExecutor).run(unmountCommand);
-  }
-
-  @Test
-  public void handleResultProcessing_passResult() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
-    Result.Builder resultBuilder =
-        Result.newBuilder().setSummary(Summary.newBuilder().setPassed(10).setFailed(0).build());
-    when(sessionResultHandlerUtil.processResult(
-            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
-        .thenReturn(Optional.of(resultBuilder.build()));
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
-    // Add TF job.
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    verify(sessionInfo).addJob(jobInfo);
-
-    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    RequestDetail.Builder requestDetailBuilder = requestDetail.toBuilder();
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetailBuilder);
-    String commandId =
-        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-    Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
-    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
-    verify(sessionResultHandlerUtil)
-        .processResult(
-            outputPath,
-            outputPath,
-            null,
-            null,
-            ImmutableList.of(jobInfo),
-            sessionRequestInfoCaptor.getValue());
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    assertThat(requestDetailBuilder.getCommandDetailsCount()).isEqualTo(1);
-    CommandDetail commandDetail =
-        requestDetailBuilder.getCommandDetailsMap().values().iterator().next();
-    assertThat(commandDetail.getPassedTestCount()).isEqualTo(10);
-    assertThat(commandDetail.getFailedTestCount()).isEqualTo(0);
-    assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
-    assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
-  }
-
-  @Test
-  public void handleResultProcessing_failResult() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
-    Result.Builder resultBuilder =
-        Result.newBuilder().setSummary(Summary.newBuilder().setPassed(5).setFailed(5).build());
-    when(sessionResultHandlerUtil.processResult(
-            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
-        .thenReturn(Optional.of(resultBuilder.build()));
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
-    // Add TF job.
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    verify(sessionInfo).addJob(jobInfo);
-
-    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    RequestDetail.Builder requestDetailBuilder = requestDetail.toBuilder();
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetailBuilder);
-    String commandId =
-        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-    Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
-    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
-    verify(sessionResultHandlerUtil)
-        .processResult(
-            outputPath,
-            outputPath,
-            null,
-            null,
-            ImmutableList.of(jobInfo),
-            sessionRequestInfoCaptor.getValue());
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    assertThat(requestDetailBuilder.getCommandDetailsCount()).isEqualTo(1);
-    CommandDetail commandDetail =
-        requestDetailBuilder.getCommandDetailsMap().values().iterator().next();
-    assertThat(commandDetail.getPassedTestCount()).isEqualTo(5);
-    assertThat(commandDetail.getFailedTestCount()).isEqualTo(5);
-    assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
-    assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
-  }
-
-  @Test
-  public void handleResultProcessing_zeroTotalTest_treatAsFailure() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
-    Result.Builder resultBuilder =
-        Result.newBuilder().setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build());
-    when(sessionResultHandlerUtil.processResult(
-            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
-        .thenReturn(Optional.of(resultBuilder.build()));
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
-    // Add TF job.
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    verify(sessionInfo).addJob(jobInfo);
-
-    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    RequestDetail.Builder requestDetailBuilder = requestDetail.toBuilder();
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetailBuilder);
-    String commandId =
-        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-    Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
-    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
-    verify(sessionResultHandlerUtil)
-        .processResult(
-            outputPath,
-            outputPath,
-            null,
-            null,
-            ImmutableList.of(jobInfo),
-            sessionRequestInfoCaptor.getValue());
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    assertThat(requestDetailBuilder.getCommandDetailsCount()).isEqualTo(1);
-    CommandDetail commandDetail =
-        requestDetailBuilder.getCommandDetailsMap().values().iterator().next();
-    assertThat(commandDetail.getPassedTestCount()).isEqualTo(0);
-    assertThat(commandDetail.getFailedTestCount()).isEqualTo(0);
-    assertThat(commandDetail.getTotalTestCount()).isEqualTo(0);
-    assertThat(commandDetail.getId()).isEqualTo(commandId);
-    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
-  }
-
-  @Test
-  public void handleResultProcessing_getMalformedOutputURL_onlyCleanup() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
-    // Add TF job.
-    String malformedOutputFileUploadUrl = "malformed_URL";
-    request =
-        request.toBuilder()
-            .setTestEnvironment(
-                request.getTestEnvironment().toBuilder()
-                    .setOutputFileUploadUrl(malformedOutputFileUploadUrl)
-                    .build())
-            .build();
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    verify(sessionInfo).addJob(jobInfo);
-
-    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    when(files.getAll()).thenReturn(ImmutableMultimap.of());
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail.toBuilder());
-    verify(sessionResultHandlerUtil, never())
-        .processResult(any(), any(), any(), any(), any(), any());
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-  }
-
-  @Test
-  public void handleResultProcessing_processResultFailed_onlyCleanup() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
-    // Add TF job.
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    verify(sessionInfo).addJob(jobInfo);
-
-    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    MobileHarnessException mhException = Mockito.mock(MobileHarnessException.class);
-    doThrow(mhException)
-        .when(sessionResultHandlerUtil)
-        .processResult(any(), any(), any(), any(), any(), any());
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail.toBuilder());
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-  }
-
-  @Test
-  public void handleResultProcessing_nonFileUrl_onlyCleanup() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
-    // Add TF job.
-    String malformedOutputFileUploadUrl = "https://www.google.com";
-    request =
-        request.toBuilder()
-            .setTestEnvironment(
-                request.getTestEnvironment().toBuilder()
-                    .setOutputFileUploadUrl(malformedOutputFileUploadUrl)
-                    .build())
-            .build();
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    verify(sessionInfo).addJob(jobInfo);
-
-    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail.toBuilder());
-    verify(sessionResultHandlerUtil, never())
-        .processResult(any(), any(), any(), any(), any(), any());
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-  }
-
-  @Test
   public void addTradefedJobs_mountAndroidXtsZipFailed_cancelRequestWithInvalidResourceError()
       throws Exception {
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
@@ -597,8 +339,8 @@ public final class NewMultiCommandRequestHandlerTest {
     MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
     when(commandExecutor.run(any())).thenThrow(commandExecutorException);
 
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
     // Verify request detail.
     assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
@@ -610,30 +352,6 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
     assertThat(commandDetail.getState()).isEqualTo(CommandState.CANCELED);
     assertThat(commandDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_RESOURCE);
-  }
-
-  @Test
-  public void cleanup_unmountAndroidXtsZipFailed_logWarningAndProceed() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
-    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
-    Command mountCommand =
-        Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
-            .timeout(Duration.ofMinutes(10));
-    when(commandExecutor.run(mountCommand)).thenReturn("COMMAND_OUTPUT");
-
-    // Create a tradefed job so that the xts zip file can be mounted.
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    verify(sessionInfo).addJob(jobInfo);
-
-    // Throw exception when running unmount command.
-    Command unmountCommand =
-        Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
-    MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
-    when(commandExecutor.run(unmountCommand)).thenThrow(commandExecutorException);
-    newMultiCommandRequestHandler.cleanup(request, sessionInfo);
   }
 
   @Test
@@ -656,11 +374,8 @@ public final class NewMultiCommandRequestHandlerTest {
                 TestResource.newBuilder().setUrl(ANDROID_XTS_ZIP).setName("INVALID_NAME").build())
             .build();
 
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
 
     // Verify request detail.
     assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
@@ -687,11 +402,8 @@ public final class NewMultiCommandRequestHandlerTest {
                     .build())
             .build();
 
-    RequestDetail requestDetail =
-        newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo);
-
-    assertThat(requestDetail.getId()).isEqualTo("session_id");
-    assertThat(requestDetail.getCommandInfosList()).isEmpty();
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
 
     // Verify request detail.
     assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.COMMAND_NOT_AVAILABLE);
@@ -801,5 +513,280 @@ public final class NewMultiCommandRequestHandlerTest {
 
     assertThat(commandDetail).isEmpty();
     verify(sessionRequestHandlerUtil, never()).createXtsNonTradefedJobs(any());
+  }
+
+  @Test
+  public void handleResultProcessing_passResult() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    Result.Builder resultBuilder =
+        Result.newBuilder().setSummary(Summary.newBuilder().setPassed(10).setFailed(0).build());
+    when(sessionResultHandlerUtil.processResult(
+            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
+        .thenReturn(Optional.of(resultBuilder.build()));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+    verify(sessionInfo).addJob(jobInfo);
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
+    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+    verify(sessionResultHandlerUtil)
+        .processResult(
+            outputPath,
+            outputPath,
+            null,
+            null,
+            ImmutableList.of(jobInfo),
+            sessionRequestInfoCaptor.getValue());
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(commandDetail.getPassedTestCount()).isEqualTo(10);
+    assertThat(commandDetail.getFailedTestCount()).isEqualTo(0);
+    assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+  }
+
+  @Test
+  public void handleResultProcessing_failResult() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    Result.Builder resultBuilder =
+        Result.newBuilder().setSummary(Summary.newBuilder().setPassed(5).setFailed(5).build());
+    when(sessionResultHandlerUtil.processResult(
+            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
+        .thenReturn(Optional.of(resultBuilder.build()));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+    verify(sessionInfo).addJob(jobInfo);
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
+    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+    verify(sessionResultHandlerUtil)
+        .processResult(
+            outputPath,
+            outputPath,
+            null,
+            null,
+            ImmutableList.of(jobInfo),
+            sessionRequestInfoCaptor.getValue());
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(commandDetail.getPassedTestCount()).isEqualTo(5);
+    assertThat(commandDetail.getFailedTestCount()).isEqualTo(5);
+    assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+  }
+
+  @Test
+  public void handleResultProcessing_zeroTotalTest_treatAsFailure() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    Result.Builder resultBuilder =
+        Result.newBuilder().setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build());
+    when(sessionResultHandlerUtil.processResult(
+            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
+        .thenReturn(Optional.of(resultBuilder.build()));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+    verify(sessionInfo).addJob(jobInfo);
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
+    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+    verify(sessionResultHandlerUtil)
+        .processResult(
+            outputPath,
+            outputPath,
+            null,
+            null,
+            ImmutableList.of(jobInfo),
+            sessionRequestInfoCaptor.getValue());
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(commandDetail.getPassedTestCount()).isEqualTo(0);
+    assertThat(commandDetail.getFailedTestCount()).isEqualTo(0);
+    assertThat(commandDetail.getTotalTestCount()).isEqualTo(0);
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+  }
+
+  @Test
+  public void handleResultProcessing_getMalformedOutputURL_onlyCleanup() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    String malformedOutputFileUploadUrl = "malformed_URL";
+    request =
+        request.toBuilder()
+            .setTestEnvironment(
+                request.getTestEnvironment().toBuilder()
+                    .setOutputFileUploadUrl(malformedOutputFileUploadUrl)
+                    .build())
+            .build();
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+    verify(sessionInfo).addJob(jobInfo);
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    when(files.getAll()).thenReturn(ImmutableMultimap.of());
+    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    verify(sessionResultHandlerUtil, never())
+        .processResult(any(), any(), any(), any(), any(), any());
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+  }
+
+  @Test
+  public void handleResultProcessing_processResultFailed_onlyCleanup() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+    verify(sessionInfo).addJob(jobInfo);
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    MobileHarnessException mhException = Mockito.mock(MobileHarnessException.class);
+    doThrow(mhException)
+        .when(sessionResultHandlerUtil)
+        .processResult(any(), any(), any(), any(), any(), any());
+    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+  }
+
+  @Test
+  public void handleResultProcessing_nonFileUrl_onlyCleanup() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    String malformedOutputFileUploadUrl = "https://www.google.com";
+    request =
+        request.toBuilder()
+            .setTestEnvironment(
+                request.getTestEnvironment().toBuilder()
+                    .setOutputFileUploadUrl(malformedOutputFileUploadUrl)
+                    .build())
+            .build();
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+    verify(sessionInfo).addJob(jobInfo);
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    verify(sessionResultHandlerUtil, never())
+        .processResult(any(), any(), any(), any(), any(), any());
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+  }
+
+  @Test
+  public void cleanup_success() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Trigger the handler.
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+    verify(sessionInfo).addJob(jobInfo);
+
+    // Verify that handler has mounted the zip file.
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    Command mountCommand =
+        Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
+            .timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(mountCommand);
+
+    // Verify that handler has unmounted the zip file after calling cleanup().
+    newMultiCommandRequestHandler.cleanup(sessionInfo);
+    verifyUnmountRootDir(xtsRootDir);
+  }
+
+  @Test
+  public void cleanup_unmountAndroidXtsZipFailed_logWarningAndProceed() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    Command mountCommand =
+        Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
+            .timeout(Duration.ofMinutes(10));
+    when(commandExecutor.run(mountCommand)).thenReturn("COMMAND_OUTPUT");
+
+    // Create a tradefed job so that the xts zip file can be mounted.
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+    verify(sessionInfo).addJob(jobInfo);
+
+    // Throw exception when running unmount command.
+    Command unmountCommand =
+        Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
+    MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
+    when(commandExecutor.run(unmountCommand)).thenThrow(commandExecutorException);
+    newMultiCommandRequestHandler.cleanup(sessionInfo);
+  }
+
+  @Test
+  public void cleanup_cleanupJobGenDirsFailed_logWarningAndProceed() throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    Command mountCommand =
+        Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
+            .timeout(Duration.ofMinutes(10));
+    when(commandExecutor.run(mountCommand)).thenReturn("COMMAND_OUTPUT");
+
+    // Create a tradefed job so that the xts zip file can be mounted.
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+    verify(sessionInfo).addJob(jobInfo);
+
+    // Throw exception when running unmount command.
+
+    MobileHarnessException mhException = Mockito.mock(CommandException.class);
+
+    doThrow(mhException).when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
+    newMultiCommandRequestHandler.cleanup(sessionInfo);
+  }
+
+  private void verifyUnmountRootDir(String xtsRootDir) throws Exception {
+    // Verify that handler has unmounted the zip file after calling cleanup().
+    Command unmountCommand =
+        Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(unmountCommand);
   }
 }

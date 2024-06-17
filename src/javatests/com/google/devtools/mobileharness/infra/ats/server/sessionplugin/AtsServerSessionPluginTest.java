@@ -18,9 +18,11 @@ package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.truth.Truth.assertThat;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -30,6 +32,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.LinkedListMultimap;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.in.Decorators;
 import com.google.devtools.mobileharness.api.model.job.in.Dimensions;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
@@ -101,6 +104,7 @@ import org.junit.runners.JUnit4;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -191,6 +195,7 @@ public final class AtsServerSessionPluginTest {
             .addCommands(commandInfo)
             .setTestEnvironment(
                 TestEnvironment.newBuilder().setOutputFileUploadUrl(OUTPUT_FILE_UPLOAD_URL).build())
+            .setMaxRetryOnTestFailures(3)
             .addTestResources(
                 TestResource.newBuilder()
                     .setUrl(ANDROID_XTS_ZIP)
@@ -249,6 +254,7 @@ public final class AtsServerSessionPluginTest {
 
   @Test
   public void onSessionStarting_success() throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(
             SessionPluginExecutionConfig.newBuilder()
@@ -263,6 +269,13 @@ public final class AtsServerSessionPluginTest {
     RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     assertThat(requestDetail.getId()).isEqualTo("session_id");
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.RUNNING);
+    assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
+    assertThat(requestDetail.getCreateTime()).isEqualTo(Timestamps.fromMillis(1000L));
+    assertThat(requestDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(2000L));
+    assertThat(requestDetail.getUpdateTime()).isEqualTo(Timestamps.fromMillis(3000L));
+    assertThat(requestDetail.getMaxRetryOnTestFailures())
+        .isEqualTo(request.getMaxRetryOnTestFailures());
   }
 
   @Test
@@ -305,6 +318,34 @@ public final class AtsServerSessionPluginTest {
     // Contains the failed command detail.
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
+  }
+
+  @Test
+  public void onSessionStarting_addTfJobsHadException_requestDetailContainBasicInfo()
+      throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    MobileHarnessException mhException = Mockito.mock(MobileHarnessException.class);
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any())).thenThrow(mhException);
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    assertThrows(
+        MobileHarnessException.class,
+        () -> plugin.onSessionStarting(new SessionStartingEvent(sessionInfo)));
+    verify(sessionInfo)
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.RUNNING);
+    assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
+    assertThat(requestDetail.getCreateTime()).isEqualTo(Timestamps.fromMillis(1000L));
+    assertThat(requestDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(2000L));
+    assertThat(requestDetail.getMaxRetryOnTestFailures())
+        .isEqualTo(request.getMaxRetryOnTestFailures());
   }
 
   @Test
@@ -533,10 +574,10 @@ public final class AtsServerSessionPluginTest {
     assertThat(newMultiCommandRequest.getRetryPreviousSessionId()).isEqualTo("session_id");
     assertThat(newMultiCommandRequest.getCommandsList()).containsExactly(commandInfo);
 
-    // sessionInfo.setSessionPluginOutput() is called 4 times. First time in
+    // sessionInfo.setSessionPluginOutput() is called 5 times. First time in
     // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
-    // after job ended signal trigger session output update. Fourth time in OnSessionEnded().
-    verify(sessionInfo, times(4))
+    // after job ended signal trigger session output update. 4th and 5th time in OnSessionEnded().
+    verify(sessionInfo, times(5))
         .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
     RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
@@ -550,7 +591,7 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
-  public void onSessionEnded_sessionFailed() throws Exception {
+  public void onSessionEnded_sessionFailedAndRetryDisabled_noRetry() throws Exception {
     // Disallow retry.
     request = request.toBuilder().setMaxRetryOnTestFailures(0).build();
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
@@ -613,7 +654,6 @@ public final class AtsServerSessionPluginTest {
 
   @Test
   public void onSessionEnded_sessionSucceeded_noRetry() throws Exception {
-    request = request.toBuilder().setMaxRetryOnTestFailures(1).build();
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(
@@ -663,5 +703,80 @@ public final class AtsServerSessionPluginTest {
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
     assertThat(requestDetail.getState()).isEqualTo(RequestState.COMPLETED);
+  }
+
+  @Test
+  public void onSessionEnded_handleResultProcessingThrowException_setErrorState() throws Exception {
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+
+    when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
+    when(testInfo.result()).thenReturn(result);
+
+    when(jobInfo.result()).thenReturn(result);
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    IllegalStateException exception = Mockito.mock(IllegalStateException.class);
+    doThrow(exception)
+        .when(sessionResultHandlerUtil)
+        .processResult(any(), any(), any(), any(), any(), any());
+    assertThrows(
+        IllegalStateException.class,
+        () -> plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null)));
+    // sessionInfo.setSessionPluginOutput() is called 4 times. First time in
+    // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
+    // after job ended signal trigger session output update. 4th time in OnSessionEnded().
+    verify(sessionInfo, times(4))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    assertThat(Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null).getState())
+        .isEqualTo(RequestState.ERROR);
+  }
+
+  @Test
+  public void onSessionEnded_requestWasCancelled_keepCancelStateAndNoRetry() throws Exception {
+    // Intentionally make it fail to create any tradefed test and fail non tradefed test check.
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any())).thenReturn(Optional.empty());
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo, never()).addJob(any());
+    verify(sessionInfo)
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+    // Contains the failed command detail.
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    assertThat(requestDetail.getCancelReason()).isEqualTo(CancelReason.INVALID_REQUEST);
+
+    plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+    verify(localSessionStub, never()).createSession(any());
+
+    // sessionInfo.setSessionPluginOutput() is called 2 times. First time in
+    // OnSessionStarting() after creating tradefed jobs. Second time in OnSessionEnded().
+    verify(sessionInfo, times(2))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail finalRequestDetail =
+        Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
+    assertThat(finalRequestDetail.getState()).isEqualTo(RequestState.CANCELED);
   }
 }
