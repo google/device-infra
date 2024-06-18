@@ -362,7 +362,7 @@ public class AndroidPhone implements Device {
       throws DeviceActionException, InterruptedException {
     try {
       switch (mode) {
-          // Handle bootloader case using fastboot.
+        // Handle bootloader case using fastboot.
         case BOOTLOADER:
           return;
         case RECOVERY:
