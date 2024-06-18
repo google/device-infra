@@ -1098,7 +1098,7 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
             commandsAfterSettings.add("echo -n 533000 > /sys/class/devfreq/dfrgx/min_freq");
             break;
           case "taimen":
-            // fall through
+          // fall through
           case "walleye":
             minPwrLevel = "0";
             maxPwrLevel = "0";
