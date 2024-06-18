@@ -16,16 +16,22 @@
 
 package com.google.devtools.mobileharness.platform.android.device;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static java.util.Arrays.stream;
+
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty.DoNotAddToDimension;
+import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty.KeepDimensionValueCase;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
+import java.lang.annotation.Annotation;
 
 /** Helper class for Android Device. */
 public class AndroidDeviceHelper {
@@ -39,11 +45,10 @@ public class AndroidDeviceHelper {
   public static final String PROPERTY_NAME_CACHED_SDK_VERSION = "cached_sdk_version";
 
   private static final ImmutableSet<AndroidProperty> RETAIN_CAPS_PROPERTIES =
-      ImmutableSet.of(AndroidProperty.SERIAL, AndroidProperty.BUILD);
+      getAnnotatedAndroidProperties(KeepDimensionValueCase.class);
 
   public static final ImmutableSet<AndroidProperty> PROP_NOT_SET_AS_DIMENSION =
-      ImmutableSet.of(
-          AndroidProperty.FLAVOR, AndroidProperty.KAIOS_RUNTIME_TOKEN, AndroidProperty.PRODUCT);
+      getAnnotatedAndroidProperties(DoNotAddToDimension.class);
 
   private final AndroidAdbUtil androidAdbUtil;
 
@@ -131,12 +136,11 @@ public class AndroidDeviceHelper {
    * 1) value unchanged, and 2) a lower-cased value.
    */
   public ImmutableSet<String> maybeLowerCaseProperty(AndroidProperty key, String value) {
-    ImmutableSet.Builder<String> valuesBuilder = ImmutableSet.<String>builder();
+    ImmutableSet.Builder<String> valuesBuilder = ImmutableSet.builder();
     if (RETAIN_CAPS_PROPERTIES.contains(key)) {
       valuesBuilder.add(value);
     }
-    valuesBuilder.add(Ascii.toLowerCase(value));
-    return valuesBuilder.build();
+    return valuesBuilder.add(Ascii.toLowerCase(value)).build();
   }
 
   /**
@@ -160,5 +164,21 @@ public class AndroidDeviceHelper {
   public String getPropertyValue(String deviceId, AndroidProperty key)
       throws MobileHarnessException, InterruptedException {
     return androidAdbUtil.getProperty(deviceId, key);
+  }
+
+  /** Gets all enum items of {@link AndroidProperty} that are annotated by the given annotation. */
+  private static ImmutableSet<AndroidProperty> getAnnotatedAndroidProperties(
+      Class<? extends Annotation> annotation) {
+    return stream(AndroidProperty.class.getFields())
+        .filter(field -> field.isAnnotationPresent(annotation))
+        .map(
+            field -> {
+              try {
+                return (AndroidProperty) field.get(null);
+              } catch (IllegalAccessException e) {
+                throw new AssertionError(e);
+              }
+            })
+        .collect(toImmutableSet());
   }
 }

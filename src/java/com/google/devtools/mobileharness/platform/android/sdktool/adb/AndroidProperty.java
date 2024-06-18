@@ -17,9 +17,19 @@
 package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 
 import com.google.common.collect.ImmutableList;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * Android device properties.
+ *
+ * <p>Each enum item (except those annotated with {@link DoNotAddToDimension}) will be added to
+ * device dimensions, whose key is the lower case of the enum name, and whose value is the lower
+ * case of device property value (if the enum item is annotated with {@link KeepDimensionValueCase},
+ * the dimension value will be a list containing the original device property value and the lower
+ * case string). If the device property value is empty, the dimension will not be added.
  *
  * @see
  *     com.google.devtools.mobileharness.platform.android.device.AndroidDeviceHelper#updateAndroidPropertyDimensions
@@ -30,22 +40,26 @@ public enum AndroidProperty {
   BASEBAND_VERSION("gsm.version.baseband"),
   BOOT_TO_VR("ro.boot.vr"),
   BRAND("ro.product.brand"),
+  @KeepDimensionValueCase
   BUILD("ro.build.display.id"),
   BUILD_ALIAS("ro.build.id"),
   BUILD_TYPE("ro.build.type"),
   CHARACTERISTICS("ro.build.characteristics"),
   CODENAME("ro.build.version.codename"),
   DEVICE("ro.product.vendor.device", "ro.vendor.product.device", "ro.product.device"),
+  @DoNotAddToDimension
   FLAVOR("ro.build.flavor"),
   HARDWARE("ro.hardware"),
   HARDWARE_TYPE("ro.hardware.type"),
   INCREMENTAL_BUILD("ro.build.version.incremental"),
+  @DoNotAddToDimension
   KAIOS_RUNTIME_TOKEN("kaios.services.runtime.token"),
   LANGUAGE("persist.sys.language", "ro.product.locale.language"),
   LOCALE("persist.sys.locale"),
   MODEL("ro.product.model"),
   NATIVE_BRIDGE("ro.dalvik.vm.native.bridge"),
   PREVIEW_SDK_VERSION("ro.build.version.preview_sdk"),
+  @DoNotAddToDimension
   PRODUCT("ro.build.product"),
   PRODUCT_BOARD("ro.product.board", "ro.hardware"),
   REGION("persist.sys.country", "ro.product.locale.region"),
@@ -53,6 +67,7 @@ public enum AndroidProperty {
   REVISION("ro.revision", "ro.boot.revision", "ro.boot.hardware.revision"),
   SCREEN_DENSITY("qemu.sf.lcd_density", "ro.sf.lcd_density"),
   SDK_VERSION("ro.build.version.sdk"),
+  @KeepDimensionValueCase
   SERIAL("ro.serialno"),
   SIGN("ro.build.tags"),
   SIM_STATE("gsm.sim.state"),
@@ -76,4 +91,18 @@ public enum AndroidProperty {
   public ImmutableList<String> getPropertyKeys() {
     return keys;
   }
+
+  /** Indicate that the enum item will not be added to device dimensions. */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.FIELD)
+  public @interface DoNotAddToDimension {}
+
+  /**
+   * Indicate that when the enum item is added as a device dimension, the dimension value list will
+   * be the original device property value string and its lower case string, instead of a list
+   * containing only the lower case of the device property value string.
+   */
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.FIELD)
+  public @interface KeepDimensionValueCase {}
 }
