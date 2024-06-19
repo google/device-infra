@@ -13,7 +13,7 @@ const (
 	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
 	RBECASConcurrency = 500
 	// DefaultRPCTimeout is the default RPC timeout for per-rpc deadline.
-	DefaultRPCTimeout = 60 * time.Second	// 60s to match AB (CAS default is 20s)
+	DefaultRPCTimeout = 60 * time.Second // 60s to match AB (CAS default is 20s)
 )
 
 // Opts contains options for creating a new RBE client.
@@ -57,7 +57,6 @@ func New(ctx context.Context, clientOpts Opts) (*client.Client, error) {
 		CredFile:              clientOpts.ServiceAccountJSON,
 		UseApplicationDefault: clientOpts.UseApplicationDefault,
 		MaxConcurrentRequests: client.DefaultMaxConcurrentRequests,
-		MaxConcurrentStreams:  client.DefaultMaxConcurrentStreams,
 	}, opts...)
 	log.Infof("created RBE client, took %s", time.Since(start))
 	return newClient, err
