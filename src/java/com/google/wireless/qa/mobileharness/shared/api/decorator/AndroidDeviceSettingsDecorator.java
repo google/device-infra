@@ -599,12 +599,14 @@ public class AndroidDeviceSettingsDecorator extends BaseDecorator
 
     // enable_audio
     if (spec.hasEnableAudio()) {
-      props.put("ro.audio.silent", spec.getEnableAudio() ? "0" : "1");
+      props.put(AndroidProperty.SILENT.getPrimaryPropertyKey(), spec.getEnableAudio() ? "0" : "1");
     }
 
     // disable_calling
     if (spec.hasDisableCalling()) {
-      props.put("ro.telephony.disable-call", spec.getDisableCalling() ? "true" : "false");
+      props.put(
+          AndroidProperty.DISABLE_CALL.getPrimaryPropertyKey(),
+          spec.getDisableCalling() ? "true" : "false");
     }
 
     // disable_package_in_test

@@ -330,7 +330,7 @@ public abstract class AndroidRealDeviceDelegate {
             .build());
   }
 
-  private void addADBCommunication(String deviceId) throws InterruptedException {
+  private void addAdbCommunication(String deviceId) throws InterruptedException {
     CommunicationList.Builder communicationList = CommunicationList.newBuilder();
     // Adds the ADB communication.
     ADB adbCommunication = ADB.newBuilder().setSerial(deviceId).build();
@@ -401,7 +401,7 @@ public abstract class AndroidRealDeviceDelegate {
    * ensure it won't interrupt the device setup process.
    */
   private void addRealDeviceBasicDimensionsAndProperties() throws InterruptedException {
-    addADBCommunication(deviceId);
+    addAdbCommunication(deviceId);
     // Adds real device specific dimensions.
     try {
       device.addDimension(
@@ -1326,15 +1326,19 @@ public abstract class AndroidRealDeviceDelegate {
     }
     if (Flags.instance().disableCalling.getNonNull()) {
       logger.atInfo().log("Disable calling on device %s", serial);
-      androidAdbUtil.setProperty(serial, "ro.telephony.disable-call", "true", true);
+      androidAdbUtil.setProperty(
+          serial, AndroidProperty.DISABLE_CALL.getPrimaryPropertyKey(), "true", true);
     }
     if (Flags.instance().setTestHarnessProperty.getNonNull()) {
-      logger.atInfo().log("Set property ro.test_harness to 1 on device %s", serial);
-      androidAdbUtil.setProperty(serial, "ro.test_harness", "1", true);
+      logger.atInfo().log(
+          "Set property %s to 1 on device %s",
+          AndroidProperty.TEST_HARNESS.getPrimaryPropertyKey(), serial);
+      androidAdbUtil.setProperty(
+          serial, AndroidProperty.TEST_HARNESS.getPrimaryPropertyKey(), "1", true);
     }
     if (Flags.instance().muteAndroid.getNonNull()) {
       logger.atInfo().log("Mute audio on device %s", serial);
-      androidAdbUtil.setProperty(serial, "ro.audio.silent", "1", true);
+      androidAdbUtil.setProperty(serial, AndroidProperty.SILENT.getPrimaryPropertyKey(), "1", true);
     }
     if (Flags.instance().disableCellBroadcastReceiver.getNonNull()) {
       try {
@@ -1352,12 +1356,14 @@ public abstract class AndroidRealDeviceDelegate {
   boolean needRebootToClearReadOnlyTestProperties()
       throws MobileHarnessException, InterruptedException {
     return needRebootToClearTestProperty(
-            "ro.telephony.disable-call",
+            AndroidProperty.DISABLE_CALL.getPrimaryPropertyKey(),
             Flags.instance().disableCalling.getNonNull() ? "true" : "false")
         || needRebootToClearTestProperty(
-            "ro.test_harness", Flags.instance().setTestHarnessProperty.getNonNull() ? "1" : "0")
+            AndroidProperty.TEST_HARNESS.getPrimaryPropertyKey(),
+            Flags.instance().setTestHarnessProperty.getNonNull() ? "1" : "0")
         || needRebootToClearTestProperty(
-            "ro.audio.silent", Flags.instance().muteAndroid.getNonNull() ? "1" : "0");
+            AndroidProperty.SILENT.getPrimaryPropertyKey(),
+            Flags.instance().muteAndroid.getNonNull() ? "1" : "0");
   }
 
   private boolean needRebootToClearTestProperty(String roPropName, String newValue)
@@ -1757,7 +1763,7 @@ public abstract class AndroidRealDeviceDelegate {
     Dimension.Name dimensionFreeStorage;
     Dimension.Name dimensionFreeStoragePercentage;
     String externalOrInternal;
-    int freeStorageAlertMB;
+    int freeStorageAlertMb;
     StorageInfo storageInfo = null;
 
     if (isExternal) {
@@ -1765,13 +1771,13 @@ public abstract class AndroidRealDeviceDelegate {
       dimensionFreeStorage = Dimension.Name.FREE_EXTERNAL_STORAGE;
       dimensionFreeStoragePercentage = Dimension.Name.FREE_EXTERNAL_STORAGE_PERCENTAGE;
       externalOrInternal = AndroidRealDeviceConstants.STRING_EXTERNAL;
-      freeStorageAlertMB = AndroidRealDeviceConstants.FREE_EXTERNAL_STORAGE_ALERT_MB;
+      freeStorageAlertMb = AndroidRealDeviceConstants.FREE_EXTERNAL_STORAGE_ALERT_MB;
     } else {
       dimensionStorageStatus = Dimension.Name.INTERNAL_STORAGE_STATUS;
       dimensionFreeStorage = Dimension.Name.FREE_INTERNAL_STORAGE;
       dimensionFreeStoragePercentage = Dimension.Name.FREE_INTERNAL_STORAGE_PERCENTAGE;
       externalOrInternal = AndroidRealDeviceConstants.STRING_INTERNAL;
-      freeStorageAlertMB = Flags.instance().internalStorageAlert.getNonNull();
+      freeStorageAlertMb = Flags.instance().internalStorageAlert.getNonNull();
     }
     logger.atInfo().log("Checking device %s %s storage usage...", deviceId, externalOrInternal);
 
@@ -1799,12 +1805,12 @@ public abstract class AndroidRealDeviceDelegate {
           storageInfo.totalKB(),
           storageInfo.freeKB(),
           storageFreePercentageStr);
-      long freeStorageMB = storageInfo.freeKB() >> 10;
+      long freeStorageMb = storageInfo.freeKB() >> 10;
 
-      boolean isOutOfStorageSpace = freeStorageMB < freeStorageAlertMB;
+      boolean isOutOfStorageSpace = freeStorageMb < freeStorageAlertMb;
       isDimensionChanged |=
           device.updateDimension(
-              dimensionFreeStorage, StrUtil.getHumanReadableSize(freeStorageMB << 20));
+              dimensionFreeStorage, StrUtil.getHumanReadableSize(freeStorageMb << 20));
       isDimensionChanged |=
           device.updateDimension(dimensionFreeStoragePercentage, storageFreePercentageStr);
       isDimensionChanged |=

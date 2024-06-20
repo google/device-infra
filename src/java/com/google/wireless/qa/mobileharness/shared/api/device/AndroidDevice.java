@@ -16,7 +16,6 @@
 
 package com.google.wireless.qa.mobileharness.shared.api.device;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableSet;
@@ -41,11 +40,6 @@ public abstract class AndroidDevice extends BaseDevice {
   static final String DIMENSION_NAME_INTERNET = "internet";
 
   private static final ImmutableSet<String> UNROOTED_DEVICE_WHITELIST = ImmutableSet.of("nokia 1");
-
-  @VisibleForTesting
-  static final ImmutableSet<AndroidProperty> PROP_NOT_SET_AS_DIMENSION =
-      ImmutableSet.of(
-          AndroidProperty.FLAVOR, AndroidProperty.KAIOS_RUNTIME_TOKEN, AndroidProperty.PRODUCT);
 
   private AndroidDeviceDelegate delegate;
 

@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.platform.android.sdktool.adb;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 import com.google.common.collect.ImmutableList;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -48,6 +50,8 @@ public enum AndroidProperty {
   CODENAME("ro.build.version.codename"),
   DEVICE("ro.product.vendor.device", "ro.vendor.product.device", "ro.product.device"),
   @DoNotAddToDimension
+  DISABLE_CALL("ro.telephony.disable-call"),
+  @DoNotAddToDimension
   FLAVOR("ro.build.flavor"),
   HARDWARE("ro.hardware"),
   HARDWARE_TYPE("ro.hardware.type"),
@@ -70,9 +74,13 @@ public enum AndroidProperty {
   @KeepDimensionValueCase
   SERIAL("ro.serialno"),
   SIGN("ro.build.tags"),
+  @DoNotAddToDimension
+  SILENT("ro.audio.silent"),
   SIM_STATE("gsm.sim.state"),
   SOC_ID("ro.boot.hw.soc.id"),
   SOC_REV("ro.boot.hw.soc.rev"),
+  @DoNotAddToDimension
+  TEST_HARNESS("ro.test_harness"),
   TYPE("ro.product.name"),
   VERITYMODE("ro.boot.veritymode");
 
@@ -84,12 +92,18 @@ public enum AndroidProperty {
    * with the first key, the remaining keys are not used. Else will use the second key and so on.
    */
   AndroidProperty(String... keys) {
+    checkArgument(keys.length > 0);
     this.keys = ImmutableList.copyOf(keys);
   }
 
-  /** Returns list of Android system property keys. */
+  /** Returns the list of Android system property keys whose length >= 1. */
   public ImmutableList<String> getPropertyKeys() {
     return keys;
+  }
+
+  /** Gets the first element in {@link #getPropertyKeys()}. */
+  public String getPrimaryPropertyKey() {
+    return keys.get(0);
   }
 
   /** Indicate that the enum item will not be added to device dimensions. */
