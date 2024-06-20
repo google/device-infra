@@ -16,9 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.controller.scheduler.simple;
 
-import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.ConcurrentHashMap;
 import javax.annotation.Nullable;
 
@@ -63,8 +64,8 @@ class SimpleLabInfo {
   }
 
   /** Gets all the devices in this lab. */
-  public ImmutableSet<DeviceScheduleUnit> getDevices() {
-    return ImmutableSet.copyOf(devices.values());
+  public Collection<DeviceScheduleUnit> getDevices() {
+    return Collections.unmodifiableCollection(devices.values());
   }
 
   /**

@@ -629,6 +629,16 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableRdh = enableRdhDefault;
 
+  private static final Flag<Boolean> enableSimpleSchedulerShuffleDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_simple_scheduler_shuffle",
+      description =
+          "Whether to enable the shuffle of the devices in the single scheduler, to randomly"
+              + " allocate devices for the same requests. The default value is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableSimpleSchedulerShuffle = enableSimpleSchedulerShuffleDefault;
+
   private static final Flag<Boolean> enableStackdriverDebugModeDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

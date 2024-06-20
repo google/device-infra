@@ -305,6 +305,7 @@ public class AtsDdaIntegrationTest {
                             "--enable_client_experiment_manager=false",
                             "--enable_client_file_transfer=false",
                             "--enable_grpc_lab_server=true",
+                            "--enable_simple_scheduler_shuffle=true",
                             "--olc_server_port=" + olcServerPort,
                             "--public_dir=" + tmpFolder.newFolder("olc_server_public_dir"),
                             "--tmp_dir_root=" + tmpFolder.newFolder("olc_server_tmp_dir")),
