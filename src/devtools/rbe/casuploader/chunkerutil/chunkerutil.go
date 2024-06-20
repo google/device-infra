@@ -59,7 +59,6 @@ func CreateIndexFile(inDir string, chunksIndex []ChunksIndex) error {
 
 // RestoreFiles restores files to dstDir with chunks index file and chunks file in srcDir.
 func RestoreFiles(srcDir string, dstDir string) error {
-	start := time.Now()
 	indexPath, err := FindChunksIndex(srcDir)
 	if err != nil {
 		log.Infof("no chunk index file found, skip restoring chunked files")
@@ -89,7 +88,7 @@ func RestoreFiles(srcDir string, dstDir string) error {
 	}
 
 	err = DeleteChunkFilesAndIndex(srcDir)
-	log.Infof("restored %d chunked files, took %s", len(chunksIndexEntries), time.Since(start))
+	log.Infof("restored %d chunked files", len(chunksIndexEntries))
 	return err
 }
 
