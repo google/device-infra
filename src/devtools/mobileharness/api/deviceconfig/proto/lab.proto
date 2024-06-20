@@ -56,6 +56,9 @@ message LabConfig {
 
   // The SSH groups of this lab.
   repeated SshGroup ssh_groups = 10;
+
+  // The UUID of devices which should be MiscDevice.
+  repeated string misc_device_uuid = 11;
 }
 
 // The configuration of a SSH group to define users/groups that can ssh to this
