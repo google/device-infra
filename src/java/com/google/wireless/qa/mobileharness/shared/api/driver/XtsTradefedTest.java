@@ -608,7 +608,7 @@ public class XtsTradefedTest extends BaseDriver
       for (String leadingJar : leadingJarsSet) {
         result.addAll(foundLeadingJars.get(leadingJar));
       }
-      result.addAll(ImmutableList.sortedCopyOf(restOfJars.build()));
+      result.addAll(restOfJars.build());
 
       return Joiner.on(':').join(result.build());
     } catch (IOException e) {
