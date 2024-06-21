@@ -48,6 +48,7 @@ java_proto_library(
 proto_library(
     name = "communication_proto",
     srcs = ["communication.proto"],
+    deps = ["//storage/datapol/annotations/proto:datapol_annotations"],
 )
 
 java_proto_library(

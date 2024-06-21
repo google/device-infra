@@ -20,6 +20,7 @@ package mobileharness.api.deviceconfig;
 
 import "src/devtools/mobileharness/api/deviceconfig/proto/basic.proto";
 import "src/devtools/mobileharness/api/model/proto/lab.proto";
+import "storage/datapol/annotations/proto/semantic_annotations.proto";
 
 option java_package = "com.google.devtools.mobileharness.api.deviceconfig.proto";
 option java_outer_classname = "Lab";
@@ -78,7 +79,7 @@ message OverSshDevice {
   // The user name for the SSH connection.
   string username = 2;  // Required
   // The password for the SSH connection, optional.
-  string password = 3;
+  string password = 3 [(datapol.semantic_type) = ST_ACCOUNT_CREDENTIAL];
   // The device type of ssh device, Required
   string ssh_device_type = 4;
 }

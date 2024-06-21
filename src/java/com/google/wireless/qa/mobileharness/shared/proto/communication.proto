@@ -18,6 +18,8 @@ syntax = "proto3";
 
 package mobileharness.shared;
 
+import "storage/datapol/annotations/proto/semantic_annotations.proto";
+
 option java_package = "com.google.wireless.qa.mobileharness.shared.proto";
 option java_multiple_files = true;
 
@@ -49,7 +51,7 @@ message SSH {
   string ip = 1;
   int32 port = 2;
   string username = 3;
-  string password = 4;
+  string password = 4 [(datapol.semantic_type) = ST_ACCOUNT_CREDENTIAL];
 }
 
 message TCP {

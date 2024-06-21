@@ -57,6 +57,7 @@ proto_library(
     deps = [
         ":basic_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_proto",
+        "//storage/datapol/annotations/proto:datapol_annotations",
     ],
 )
 
