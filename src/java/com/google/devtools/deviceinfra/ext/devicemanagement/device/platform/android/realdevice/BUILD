@@ -23,13 +23,13 @@ java_library(
     ],
     deps = [
         ":android_real_device_constants",
-        ":android_real_device_delegate_helper",
         "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:basic_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/util:error_id_comparator",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device:base_device_helper",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:android_device_delegate",
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:android_device_delegate_helper",
         "//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",
@@ -80,23 +80,10 @@ java_library(
 )
 
 java_library(
-    name = "android_real_device_delegate_helper",
-    srcs = ["AndroidRealDeviceDelegateHelper.java"],
-    deps = [
-        ":android_real_device_constants",
-        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:base_device",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "android_real_device_constants",
     srcs = ["AndroidRealDeviceConstants.java"],
     visibility = [
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__subpackages__",
         "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__subpackages__",
     ],

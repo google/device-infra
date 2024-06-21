@@ -74,3 +74,20 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "android_device_delegate_helper",
+    srcs = ["AndroidDeviceDelegateHelper.java"],
+    visibility = [
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:android_real_device_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:enums",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:android_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device:base_device",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
+        "@maven//:com_google_guava_guava",
+    ],
+)

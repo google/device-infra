@@ -31,6 +31,7 @@ import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto;
 import com.google.devtools.common.metrics.stability.util.ErrorIdComparator;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.BaseDeviceHelper;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegate;
+import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegateHelper;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Enums.FastbootProperty;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
@@ -272,7 +273,7 @@ public abstract class AndroidRealDeviceDelegate {
         }
         logger.atInfo().log("Disable setup wizard and reboot device %s successfully.", deviceId);
       } catch (MobileHarnessException e) {
-        AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
+        AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
         logger.atWarning().log("%s", e.getMessage());
         throw e;
       } finally {
@@ -640,7 +641,7 @@ public abstract class AndroidRealDeviceDelegate {
     if (androidAdbInternalUtil.getRealDeviceSerials(/* online= */ true).contains(deviceId)) {
       setUpOnlineModeDevice();
     } else {
-      AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
+      AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_REAL_DEVICE_RECOVER_RECOVERY_DEVICE_FAILED,
           String.format("Failed to recover recovery device %s, reboot device later.", deviceId));
@@ -682,7 +683,7 @@ public abstract class AndroidRealDeviceDelegate {
     // mode to notify the lab admins.
     if (androidAdbInternalUtil.getDeviceSerialsByState(DeviceState.RECOVERY).contains(deviceId)) {
       logger.atInfo().log("Checking recovery device %s. Rebooting...", deviceId);
-      AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
+      AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_REAL_DEVICE_DELEGATE_RECOVERY_DEVICE_TO_REBOOT,
           "Checking recovery device. Rebooting to fastboot mode.");
@@ -696,7 +697,7 @@ public abstract class AndroidRealDeviceDelegate {
             && clock
                 .instant()
                 .isAfter(lastSetupTime.plus(AndroidRealDeviceConstants.AUTO_FASTWIPE_TIMEOUT))) {
-          AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
+          AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
           throw new MobileHarnessException(
               AndroidErrorId.ANDROID_REAL_DEVICE_DELEGATE_FASTBOOT_DEVICE_TO_REBOOT,
               "Checking fastboot device. Rebooting to fastboot mode.");
@@ -704,7 +705,7 @@ public abstract class AndroidRealDeviceDelegate {
             && clock
                 .instant()
                 .isAfter(lastSetupTime.plus(AndroidRealDeviceConstants.AUTO_RECOVERY_TIMEOUT))) {
-          AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
+          AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
           throw new MobileHarnessException(
               AndroidErrorId.ANDROID_REAL_DEVICE_DELEGATE_FASTBOOT_DEVICE_TO_REBOOT,
               "Checking fastboot device. Rebooting to fastboot mode.");
@@ -950,7 +951,7 @@ public abstract class AndroidRealDeviceDelegate {
             // TODO: Add monitors for fast wipe.
             // If wipe recovery enabled, reboot the device to fastboot and wipe the device.
             logger.atInfo().log("Fast wipe device %s to clean all user data.", deviceId);
-            AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
+            AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
             return PostTestDeviceOp.REBOOT;
           } else {
             logger.atWarning().log(
@@ -960,7 +961,7 @@ public abstract class AndroidRealDeviceDelegate {
         } else if (isTestHarnessRecoveryDevice()) {
           if (isQOrAboveBuild(deviceId)) {
             logger.atInfo().log("It'll factory reset device %s via Test Harness Mode.", deviceId);
-            AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
+            AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
             return PostTestDeviceOp.REBOOT;
           } else {
             logger.atInfo().log(
@@ -970,7 +971,7 @@ public abstract class AndroidRealDeviceDelegate {
           // If fast recovery enabled, reboot the device to recovery and clean all user data even if
           // the system build changed.
           logger.atInfo().log("Reboot device %s to recovery to clean all user data.", deviceId);
-          AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.RECOVERY);
+          AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.RECOVERY);
           return PostTestDeviceOp.REBOOT;
         }
       }
@@ -985,7 +986,7 @@ public abstract class AndroidRealDeviceDelegate {
             builds.stream().findFirst().get(),
             androidAdbUtil.getProperty(deviceId, AndroidProperty.BUILD))) {
           logger.atInfo().log("Reboot device %s since the system build changed.", deviceId);
-          AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
+          AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
           return PostTestDeviceOp.REBOOT;
         }
       } else {
@@ -1933,7 +1934,7 @@ public abstract class AndroidRealDeviceDelegate {
       }
     }
     if (!serviceAvailable && !Flags.instance().disableDeviceReboot.getNonNull()) {
-      AndroidRealDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
+      AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_REAL_DEVICE_ONLINE_DEVICE_NOT_READY,
           String.format(

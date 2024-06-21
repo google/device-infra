@@ -18,7 +18,6 @@ package com.google.wireless.qa.mobileharness.shared.api.device;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableListMultimap;
-import com.google.common.collect.ImmutableSet;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegate;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
@@ -27,19 +26,13 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.api.validator.ValidatorFactory;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
-import java.util.List;
 import javax.annotation.Nullable;
 
 /** Android device operator, for controlling a specific Android real device or emulator. */
 public abstract class AndroidDevice extends BaseDevice {
 
-  /** Name of the CPU dimension. */
-  static final String DIMENSION_NAME_ROOTED = "rooted";
-
   /** Name of the dimension which means whether the device can access Internet. */
-  static final String DIMENSION_NAME_INTERNET = "internet";
-
-  private static final ImmutableSet<String> UNROOTED_DEVICE_WHITELIST = ImmutableSet.of("nokia 1");
+  static final String DIMENSION_NAME_INTERNET = Ascii.toLowerCase(Dimension.Name.INTERNET.name());
 
   private AndroidDeviceDelegate delegate;
 
@@ -138,14 +131,6 @@ public abstract class AndroidDevice extends BaseDevice {
   /** List of decorators that should be supported by root/non-root devices. */
   protected void basicAndroidDecoratorConfiguration() throws InterruptedException {
     delegate.basicAndroidDecoratorConfiguration();
-  }
-
-  public boolean isInSupportedWhitelistForPerformanceLockDecorator() {
-    List<String> model = getDimension(Ascii.toLowerCase(Dimension.Name.MODEL.name()));
-    if (model.size() == 1) {
-      return UNROOTED_DEVICE_WHITELIST.contains(model.get(0));
-    }
-    return false;
   }
 
   private AndroidDeviceDelegate getAndroidDeviceDelegate() {

@@ -14,19 +14,20 @@
  * limitations under the License.
  */
 
-package com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice;
+package com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android;
 
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice.AndroidRealDeviceConstants;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.DeviceState;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.BaseDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import java.util.List;
 
-/** Helper utility for {@link AndroidRealDeviceDelegate}. */
-public class AndroidRealDeviceDelegateHelper {
+/** Helper utility for AndroidDevice. */
+public class AndroidDeviceDelegateHelper {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
@@ -57,5 +58,5 @@ public class AndroidRealDeviceDelegateHelper {
     return false;
   }
 
-  private AndroidRealDeviceDelegateHelper() {}
+  private AndroidDeviceDelegateHelper() {}
 }
