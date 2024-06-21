@@ -57,6 +57,7 @@ public abstract class DetectionResult {
     IDEVICE_ID,
     MAC,
     MANEKI,
+    MISC,
     MONITOR,
     NEST,
     NO_OP,

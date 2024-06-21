@@ -32,6 +32,7 @@ public class MiscDevice extends BaseDevice {
   public void setUp() throws MobileHarnessException, InterruptedException {
     super.setUp();
     addSupportedDeviceType(this.getClass().getSimpleName());
+    addSupportedDriver("MoblyTest");
     addSupportedDriver("NoOpDriver");
   }
 }

@@ -84,6 +84,8 @@ public interface ApiConfig {
   /** Gets the host properties. */
   HostProperties getHostProperties();
 
+  List<String> getMiscDeviceUuids();
+
   /** Adds the observer to listen to config change. */
   void addObserver(Observer observer);
 }
