@@ -49,7 +49,7 @@ message SSH {
   string ip = 1;
   int32 port = 2;
   string username = 3;
-  string password = 4;
+  string password = 4 [(datapol.semantic_type) = ST_ACCOUNT_CREDENTIAL];
 }
 
 message TCP {
