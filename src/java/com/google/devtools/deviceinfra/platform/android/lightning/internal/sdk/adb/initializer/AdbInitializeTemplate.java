@@ -39,9 +39,13 @@ public abstract class AdbInitializeTemplate {
   protected static final ImmutableList<String> ADB_KEY_NAMES =
       ImmutableList.of("adbkey", "adbkey.pub");
 
+  protected static final String ANDROID_ADB_SERVER_PORT_ENV_VAR = "ANDROID_ADB_SERVER_PORT";
+
   private static final int DEFAULT_ANDROID_ADB_SERVER_PORT = 5037;
 
   private static final String DEFAULT_ADB_SERVER_HOST = "localhost";
+
+  private static final String ADB_LIBUSB_ENV_VAR = "ADB_LIBUSB";
 
   /** Initializes ADB environment and returns {@link AdbParam} storing the info. */
   public AdbParam initializeAdb() {
@@ -149,6 +153,10 @@ public abstract class AdbInitializeTemplate {
 
   /** Gets the adb server port being used along with the adb. */
   protected int getAdbServerPort() {
+    String systemEnv = System.getenv(ANDROID_ADB_SERVER_PORT_ENV_VAR);
+    if (!Strings.isNullOrEmpty(systemEnv)) {
+      return Integer.parseInt(systemEnv);
+    }
     return DEFAULT_ANDROID_ADB_SERVER_PORT;
   }
 
@@ -159,6 +167,10 @@ public abstract class AdbInitializeTemplate {
 
   /** Whether to start the adb server with flag ADB_LIBUSB=1. */
   protected boolean ifEnableAdbLibusb() {
+    String systemEnv = System.getenv(ADB_LIBUSB_ENV_VAR);
+    if (!Strings.isNullOrEmpty(systemEnv)) {
+      return systemEnv.equals("1");
+    }
     return Flags.instance().adbLibusb.getNonNull();
   }
 
@@ -177,9 +189,7 @@ public abstract class AdbInitializeTemplate {
       commandEnvVars.put("ADB_VENDOR_KEYS", adbKeyPath);
     }
 
-    commandEnvVars.put("ADB_LIBUSB", enableAdbLibusb ? "1" : "0");
-
-    return commandEnvVars.buildOrThrow();
+    return commandEnvVars.put(ADB_LIBUSB_ENV_VAR, enableAdbLibusb ? "1" : "0").buildOrThrow();
   }
 
   /** Gets the value of flag {@link Flags#adbPathFromUser}. */

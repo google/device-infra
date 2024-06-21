@@ -117,8 +117,8 @@ public class AdbInitializeTemplateImpl extends AdbInitializeTemplate {
                     stockAdbPath, adbKeyPath, enableAdbLibusb, adbServerPort, adbServerHost));
 
     // Always set ADB server port to make sure expected port got used.
-    commandEnvVars.put("ANDROID_ADB_SERVER_PORT", String.valueOf(adbServerPort));
-
-    return commandEnvVars.buildOrThrow();
+    return commandEnvVars
+        .put(AdbInitializeTemplate.ANDROID_ADB_SERVER_PORT_ENV_VAR, String.valueOf(adbServerPort))
+        .buildOrThrow();
   }
 }
