@@ -21,7 +21,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/client:__subpackages__",
     ],
     exports = [
         ":exception",
@@ -49,10 +48,7 @@ java_library(
 java_library(
     name = "test_message_poster_util",
     srcs = ["TestMessagePosterUtil.java"],
-    visibility = [
-        "//java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__",
-    ],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/client/api/controller/job:__pkg__"],
     deps = [
         ":manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:direct_test_runner",
