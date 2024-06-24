@@ -92,11 +92,6 @@ public abstract class AndroidDevice extends BaseDevice {
     return delegate.getCachedScreenDensity().orElse(null);
   }
 
-  /** Updates the sdk version of this device. */
-  public void updateSdkVersion() throws MobileHarnessException, InterruptedException {
-    delegate.updateCachedSdkVersion();
-  }
-
   /**
    * Updates the dimensions "gservices_android_id".
    *
