@@ -45,6 +45,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Com
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestContext;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
@@ -53,6 +54,7 @@ import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -66,6 +68,9 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.Devic
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
@@ -86,14 +91,13 @@ import org.mockito.junit.MockitoRule;
 @RunWith(JUnit4.class)
 public final class NewMultiCommandRequestHandlerTest {
   private static final String ANDROID_XTS_ZIP = "file:///path/to/xts/zip/file.zip";
-  private static final String OUTPUT_FILE_UPLOAD_URL = "file:///path/to/output";
-
   private static final String DEFAULT_COMMAND_LINE =
       "cts-plan --module module1 --test test1 --logcat-on-failure --shard-count 2"
           + " --parallel-setup true --parallel-setup-timeout 0";
 
   private CommandInfo commandInfo = CommandInfo.getDefaultInstance();
   private NewMultiCommandRequest request = NewMultiCommandRequest.getDefaultInstance();
+  private String outputFileUploadPath = "";
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
   @Rule public final TemporaryFolder tmpFolder = new TemporaryFolder();
@@ -151,6 +155,7 @@ public final class NewMultiCommandRequestHandlerTest {
                     .setValue("device_id_2")
                     .build())
             .build();
+    outputFileUploadPath = tmpFolder.newFolder("output_file_upload_path").getAbsolutePath();
     request =
         NewMultiCommandRequest.newBuilder()
             .setUserId("user_id")
@@ -174,7 +179,7 @@ public final class NewMultiCommandRequestHandlerTest {
             .setTestEnvironment(
                 TestEnvironment.newBuilder()
                     .setInvocationTimeout(toProtoDuration(Duration.ofSeconds(2000L)))
-                    .setOutputFileUploadUrl(OUTPUT_FILE_UPLOAD_URL)
+                    .setOutputFileUploadUrl("file://" + outputFileUploadPath)
                     .putAllEnvVars(ImmutableMap.of("env_key1", "env_value1"))
                     .setUseParallelSetup(true)
                     .build())
@@ -320,7 +325,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.retrySessionId()).hasValue("retry_previous_session_id");
-    String retryResultDir = "/path/to/output/retry_previous_session_id/" + commandId;
+    String retryResultDir = outputFileUploadPath + "/retry_previous_session_id/" + commandId;
     assertThat(sessionRequestInfo.retryResultDir()).hasValue(retryResultDir);
 
     // Verify that handler has mounted the zip file.
@@ -517,36 +522,19 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_passResult() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
-    Result.Builder resultBuilder =
-        Result.newBuilder().setSummary(Summary.newBuilder().setPassed(10).setFailed(0).build());
-    when(sessionResultHandlerUtil.processResult(
-            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
-        .thenReturn(Optional.of(resultBuilder.build()));
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
-    // Add TF job.
+    Result result =
+        Result.newBuilder()
+            .setSummary(Summary.newBuilder().setPassed(10).setFailed(0).build())
+            .build();
     RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
-    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
-    verify(sessionInfo).addJob(jobInfo);
+    mockProcessResult(result);
 
-    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    createJobAndHandleResultProcessing(requestDetail);
+
     String commandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-    Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
-    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
-    verify(sessionResultHandlerUtil)
-        .processResult(
-            outputPath,
-            outputPath,
-            null,
-            null,
-            ImmutableList.of(jobInfo),
-            sessionRequestInfoCaptor.getValue());
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+
+    // Verify command detail.
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getPassedTestCount()).isEqualTo(10);
@@ -554,86 +542,47 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.COMPLETED);
+    assertThat(requestDetail.getTestContextsCount()).isEqualTo(1);
   }
 
   @Test
   public void handleResultProcessing_failResult() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
-    Result.Builder resultBuilder =
-        Result.newBuilder().setSummary(Summary.newBuilder().setPassed(5).setFailed(5).build());
-    when(sessionResultHandlerUtil.processResult(
-            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
-        .thenReturn(Optional.of(resultBuilder.build()));
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
-    // Add TF job.
+    Result result =
+        Result.newBuilder()
+            .setSummary(Summary.newBuilder().setPassed(5).setFailed(5).build())
+            .build();
     RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
-    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
-    verify(sessionInfo).addJob(jobInfo);
 
-    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
-    String commandId =
-        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-    Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
-    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
-    verify(sessionResultHandlerUtil)
-        .processResult(
-            outputPath,
-            outputPath,
-            null,
-            null,
-            ImmutableList.of(jobInfo),
-            sessionRequestInfoCaptor.getValue());
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    mockProcessResult(result);
+    createJobAndHandleResultProcessing(requestDetail);
+
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getPassedTestCount()).isEqualTo(5);
     assertThat(commandDetail.getFailedTestCount()).isEqualTo(5);
     assertThat(commandDetail.getTotalTestCount()).isEqualTo(10);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
   }
 
   @Test
   public void handleResultProcessing_zeroTotalTest_treatAsFailure() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
     Result.Builder resultBuilder =
         Result.newBuilder().setSummary(Summary.newBuilder().setPassed(0).setFailed(0).build());
-    when(sessionResultHandlerUtil.processResult(
-            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
-        .thenReturn(Optional.of(resultBuilder.build()));
-    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
-
-    // Add TF job.
     RequestDetail.Builder requestDetail = RequestDetail.newBuilder().setOriginalRequest(request);
-    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
-    verify(sessionInfo).addJob(jobInfo);
 
-    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
-    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
-    String commandId =
-        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-    Path outputPath = Path.of("/path/to/output/session_id/" + commandId);
-    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
-    verify(sessionResultHandlerUtil)
-        .processResult(
-            outputPath,
-            outputPath,
-            null,
-            null,
-            ImmutableList.of(jobInfo),
-            sessionRequestInfoCaptor.getValue());
-    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
-    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    mockProcessResult(resultBuilder.build());
+    createJobAndHandleResultProcessing(requestDetail);
+
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
     assertThat(commandDetail.getPassedTestCount()).isEqualTo(0);
     assertThat(commandDetail.getFailedTestCount()).isEqualTo(0);
     assertThat(commandDetail.getTotalTestCount()).isEqualTo(0);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     assertThat(commandDetail.getId()).isEqualTo(commandId);
     assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
   }
@@ -788,5 +737,67 @@ public final class NewMultiCommandRequestHandlerTest {
     Command unmountCommand =
         Command.of("fusermount", "-u", xtsRootDir).timeout(Duration.ofMinutes(10));
     verify(commandExecutor).run(unmountCommand);
+  }
+
+  private void mockProcessResult(Result result) throws Exception {
+    doAnswer(
+            invocation -> {
+              Path path = invocation.getArgument(0, Path.class);
+              LocalFileUtil localFileUtil = new LocalFileUtil();
+              localFileUtil.prepareDir(path);
+              Path resultFile = path.resolve("result.xml");
+              java.nio.file.Files.createFile(resultFile);
+              localFileUtil.zipDir(path.toString(), path.toString() + ".zip");
+              return Optional.of(result);
+            })
+        .when(sessionResultHandlerUtil)
+        .processResult(any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any());
+  }
+
+  private void createJobAndHandleResultProcessing(RequestDetail.Builder requestDetail)
+      throws Exception {
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+
+    // Add TF job.
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+    verify(sessionInfo).addJob(jobInfo);
+
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    Path outputPath = Path.of(outputFileUploadPath + "/session_id/" + commandId);
+    Path logPath = outputPath.resolve("logs");
+    ArgumentCaptor<Path> pathCaptor1 = ArgumentCaptor.forClass(Path.class);
+    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+    verify(sessionResultHandlerUtil)
+        .processResult(
+            pathCaptor1.capture(),
+            eq(logPath),
+            eq(null),
+            eq(null),
+            eq(ImmutableList.of(jobInfo)),
+            eq(sessionRequestInfoCaptor.getValue()));
+
+    verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
+    verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
+    String path1 = pathCaptor1.getValue().toString();
+    String fileNamePrefix =
+        DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm")
+            .withZone(ZoneId.systemDefault())
+            .format(Instant.now());
+    assertThat(path1).startsWith(outputPath.toString() + "/" + fileNamePrefix);
+    // Verify test context.
+    TestContext testContext = requestDetail.getTestContextsMap().get(commandId);
+    assertThat(testContext.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(testContext.getTestResourcesCount()).isEqualTo(1);
+    TestResource testResource = testContext.getTestResources(0);
+    assertThat(testResource.getName()).startsWith(fileNamePrefix);
+    assertThat(testResource.getName()).endsWith(".zip");
+    assertThat(testResource.getUrl())
+        .startsWith("file://" + outputPath.toString() + "/" + testResource.getName());
   }
 }
