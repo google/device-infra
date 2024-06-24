@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
+import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerLogs.SERVER_STARTED_SIGNAL;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 
@@ -28,6 +29,7 @@ import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInte
 import com.google.devtools.mobileharness.infra.client.api.ClientApi;
 import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.GrpcServer;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.WorkerGrpcServer;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
@@ -37,6 +39,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
 import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressServerInterceptor;
+import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager;
+import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager.LabeledServer;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -47,8 +51,8 @@ import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 import io.grpc.BindableService;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
-import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -60,8 +64,7 @@ public class OlcServer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
-  public static void main(String[] args)
-      throws MobileHarnessException, IOException, InterruptedException {
+  public static void main(String[] args) throws MobileHarnessException, InterruptedException {
     // Parses flags.
     Flags.parse(args);
 
@@ -73,6 +76,7 @@ public class OlcServer {
                     Flags.instance().enableAtsMode.getNonNull(),
                     serverStartTime,
                     Flags.instance().olcServerPort.getNonNull(),
+                    Flags.instance().atsWorkerGrpcPort.getNonNull(),
                     Flags.instance().useAlts.getNonNull(),
                     Flags.instance().restrictOlcServiceToUsers.getNonNull()))
             .getInstance(OlcServer.class);
@@ -88,6 +92,7 @@ public class OlcServer {
   private final LogManager<LogRecords> logManager;
   private final ClientApi clientApi;
   private final ServerBuilder<?> serverBuilder;
+  private final ServerBuilder<?> workerServerBuilder;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
 
@@ -102,6 +107,7 @@ public class OlcServer {
       LogManager<LogRecords> logManager,
       ClientApi clientApi,
       @GrpcServer ServerBuilder<?> serverBuilder,
+      @WorkerGrpcServer ServerBuilder<?> workerServerBuilder,
       LocalFileUtil localFileUtil,
       SystemUtil systemUtil) {
     this.sessionService = sessionService;
@@ -113,12 +119,12 @@ public class OlcServer {
     this.logManager = logManager;
     this.clientApi = clientApi;
     this.serverBuilder = serverBuilder;
+    this.workerServerBuilder = workerServerBuilder;
     this.localFileUtil = localFileUtil;
     this.systemUtil = systemUtil;
   }
 
-  private void run(List<String> args)
-      throws MobileHarnessException, IOException, InterruptedException {
+  private void run(List<String> args) throws MobileHarnessException, InterruptedException {
     // Prepares dirs.
     localFileUtil.prepareDir(DirCommon.getPublicDirRoot());
     localFileUtil.prepareDir(DirCommon.getTempDirRoot());
@@ -143,7 +149,8 @@ public class OlcServer {
     logManager.start();
     LogRecorder.getInstance().initialize(logManager);
 
-    // Starts RPC server.
+    // Starts RPC servers.
+    List<LabeledServer> managedServers = new ArrayList<>();
     ImmutableList<BindableService> extraServices =
         execMode instanceof ServiceProvider
             ? ((ServiceProvider) execMode).provideServices()
@@ -156,8 +163,17 @@ public class OlcServer {
         .addService(versionService);
     extraServices.forEach(serverBuilder::addService);
     Server server = serverBuilder.build();
-    controlService.setServer(server);
-    server.start();
+    managedServers.add(LabeledServer.create(server, "Non-worker"));
+    if (execMode instanceof ServiceProvider) {
+      workerServerBuilder.executor(threadPool).intercept(new ClientAddressServerInterceptor());
+      ((ServiceProvider) execMode)
+          .provideServicesForWorkers()
+          .forEach(workerServerBuilder::addService);
+      managedServers.add(LabeledServer.create(workerServerBuilder.build(), "Worker"));
+    }
+    LifecycleManager manager = new LifecycleManager(threadPool, managedServers);
+    controlService.setLifecycleManager(manager);
+    manager.start();
 
     logger.atInfo().log("Starting %s exec mode", execMode.getClass().getSimpleName());
     logFailure(
@@ -165,12 +181,12 @@ public class OlcServer {
         Level.SEVERE,
         "Fatal error while initializing %s exec mode",
         execMode.getClass().getSimpleName());
-
+    logger.atInfo().log("Servers have started: %s.", SERVER_STARTED_SIGNAL);
     logger.atInfo().log(
-        "OLC server started, port=%s, pid=%s, memory_info=[%s]",
-        server.getPort(), ProcessHandle.current().pid(), systemUtil.getMemoryInfo());
+        "Process info: pid=%s, memory_info=[%s]",
+        ProcessHandle.current().pid(), systemUtil.getMemoryInfo());
 
-    server.awaitTermination();
+    manager.awaitTermination();
     logger.atInfo().log("Exiting...");
     System.exit(0);
   }

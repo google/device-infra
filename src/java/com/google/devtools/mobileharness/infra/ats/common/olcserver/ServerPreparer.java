@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerLogs.SERVER_STARTED_SIGNAL;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
@@ -88,8 +89,6 @@ public class ServerPreparer {
 
   private static final ImmutableList<String> UNFINISHED_SESSIONS_TABLE_HEADER =
       ImmutableList.of("Session ID", "Name", "Status", "Submitted Time");
-
-  private static final String SERVER_STARTED_SIGNAL = "OLC server started";
 
   /** Logger for printing logs of OLC server until it starts successfully. */
   @FunctionalInterface

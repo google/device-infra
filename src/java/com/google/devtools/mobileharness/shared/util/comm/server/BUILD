@@ -72,3 +72,18 @@ java_library(
         "@io_grpc_grpc_java//context",
     ],
 )
+
+java_library(
+    name = "lifecycle",
+    srcs = [
+        "LifecycleManager.java",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)

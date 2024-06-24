@@ -33,6 +33,7 @@ java_library(
         "//src/devtools/mobileharness/infra/client/longrunningservice/proto:session_java_proto",
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
         "//src/java/com/google/devtools/mobileharness/infra/ats/dda/stub:ats_dda_stub",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:logs",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",

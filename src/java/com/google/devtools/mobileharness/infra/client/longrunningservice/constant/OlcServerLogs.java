@@ -14,17 +14,13 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.client.longrunningservice.controller;
+package com.google.devtools.mobileharness.infra.client.longrunningservice.constant;
 
-import com.google.common.collect.ImmutableList;
-import io.grpc.BindableService;
+/** Constants used in OLC server logs. */
+public final class OlcServerLogs {
 
-/** Service provider for providing {@link BindableService}s. */
-public interface ServiceProvider {
+  /** Signal in logs to indicate the successful start of an OLC server. */
+  public static final String SERVER_STARTED_SIGNAL = "OLC server started";
 
-  /** Provides services for non-worker clients. */
-  ImmutableList<BindableService> provideServices();
-
-  /** Provides services for worker clients. */
-  ImmutableList<BindableService> provideServicesForWorkers();
+  private OlcServerLogs() {}
 }

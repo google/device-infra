@@ -275,6 +275,14 @@ public class Flags {
       converter = Flag.StringConverter.class)
   public Flag<String> atsStoragePath = atsStoragePathDefault;
 
+  private static final Flag<Integer> atsWorkerGrpcPortDefault = Flag.value(7031);
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_worker_grpc_port",
+      description = "Grpc port for ATS worker connections. By default, it is 7031.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> atsWorkerGrpcPort = atsWorkerGrpcPortDefault;
+
   private static final Flag<Boolean> cacheInstalledApksDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

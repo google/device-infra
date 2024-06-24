@@ -17,8 +17,6 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
-import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.base.Ascii;
@@ -27,7 +25,6 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.RemovalListener;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcServiceUtil;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsConsumer;
@@ -48,7 +45,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
-import io.grpc.Server;
+import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
@@ -67,7 +64,6 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
 
   private final LogManager<LogRecords> logManager;
   private final SessionManager sessionManager;
-  private final ListeningScheduledExecutorService threadPool;
 
   /** Value is unused. */
   private final Cache<String, Boolean> aliveClientIds =
@@ -82,21 +78,17 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
                   })
           .build();
 
-  /** Set in {@link #setServer}. */
-  private volatile Server server;
+  /** Set in {@link #setLifecycleManager}. */
+  private volatile LifecycleManager lifecycleManager;
 
   @Inject
-  ControlService(
-      LogManager<LogRecords> logManager,
-      SessionManager sessionManager,
-      ListeningScheduledExecutorService threadPool) {
+  ControlService(LogManager<LogRecords> logManager, SessionManager sessionManager) {
     this.logManager = logManager;
     this.sessionManager = sessionManager;
-    this.threadPool = threadPool;
   }
 
-  public void setServer(Server server) {
-    this.server = server;
+  public void setLifecycleManager(LifecycleManager lifecycleManager) {
+    this.lifecycleManager = lifecycleManager;
   }
 
   @Override
@@ -166,12 +158,7 @@ public class ControlService extends ControlServiceGrpc.ControlServiceImplBase {
 
     if (unfinishedNotAbortedSessions.isEmpty() && currentAliveClientIds.isEmpty()) {
       logger.atInfo().log("Exiting by KillServerRequest");
-      server.shutdown();
-      logFailure(
-          threadPool.schedule(
-              threadRenaming(server::shutdownNow, () -> "server-shutdown"), Duration.ofSeconds(3L)),
-          Level.SEVERE,
-          "Fatal error while shutting down server");
+      lifecycleManager.shutdown();
       return responseBuilder.setSuccess(Success.getDefaultInstance()).build();
     } else {
       KillServerResponse response =

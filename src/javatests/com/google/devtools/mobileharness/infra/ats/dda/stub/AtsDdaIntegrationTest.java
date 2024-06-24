@@ -20,6 +20,7 @@ import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerLogs.SERVER_STARTED_SIGNAL;
 import static com.google.devtools.mobileharness.shared.util.command.LineCallback.does;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
@@ -143,6 +144,7 @@ public class AtsDdaIntegrationTest {
   private SessionInfo sessionInfo;
 
   private int olcServerPort;
+  private int atsWorkerGrpcPort;
   private ManagedChannel olcServerChannel;
   private AtsDdaStub atsDdaStub;
 
@@ -151,6 +153,7 @@ public class AtsDdaIntegrationTest {
 
   @Before
   public void setUp() throws Exception {
+    atsWorkerGrpcPort = PortProber.pickUnusedPort();
     olcServerPort = PortProber.pickUnusedPort();
     olcServerChannel = ChannelFactory.createLocalChannel(olcServerPort, directExecutor());
     atsDdaStub = new AtsDdaStub(olcServerChannel);
@@ -306,6 +309,7 @@ public class AtsDdaIntegrationTest {
                             "--enable_client_file_transfer=false",
                             "--enable_grpc_lab_server=true",
                             "--olc_server_port=" + olcServerPort,
+                            "--ats_worker_grpc_port=" + atsWorkerGrpcPort,
                             "--public_dir=" + tmpFolder.newFolder("olc_server_public_dir"),
                             "--tmp_dir_root=" + tmpFolder.newFolder("olc_server_tmp_dir")),
                         ImmutableList.of()))
@@ -325,7 +329,7 @@ public class AtsDdaIntegrationTest {
                         olcServerAllRemoteDevicesFound.countDown();
                       }
                     }))
-            .successfulStartCondition(line -> line.contains("OLC server started"))
+            .successfulStartCondition(line -> line.contains(SERVER_STARTED_SIGNAL))
             .redirectStderr(false)
             .needStdoutInResult(false)
             .needStderrInResult(false);
@@ -371,7 +375,7 @@ public class AtsDdaIntegrationTest {
                             "--enable_trace_span_processor=false",
                             "--external_adb_initializer_template=true",
                             "--grpc_port=" + labServerGrpcPort,
-                            "--master_grpc_target=localhost:" + olcServerPort,
+                            "--master_grpc_target=localhost:" + atsWorkerGrpcPort,
                             "--mute_android=false",
                             "--no_op_device_num=" + deviceNum,
                             "--no_op_device_type=AndroidRealDevice",
