@@ -18,14 +18,21 @@ package com.google.devtools.mobileharness.infra.ats.console.result.checksum;
 
 import static com.google.common.truth.Truth.assertThat;
 
+import com.google.common.hash.BloomFilter;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.StackTrace;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
+import java.io.BufferedInputStream;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -124,27 +131,61 @@ public final class CompatibilityReportChecksumHelperTest {
     File checksumData = new File(resultDir, CompatibilityReportChecksumHelper.NAME);
     assertThat(checksumData.exists()).isTrue();
 
-    CompatibilityReportChecksumHelper checksumHelper =
-        new CompatibilityReportChecksumHelper(resultDir, BUILD_FINGERPRINT);
-    assertThat(checksumHelper.containsFile(fakeLogFile, resultDir.getName())).isTrue();
+    FileInputStream fileStream = new FileInputStream(checksumData);
+    InputStream outputStream = new BufferedInputStream(fileStream);
+    ObjectInput objectInput = new ObjectInputStream(outputStream);
 
-    // Checks tests in MODULE1
-    for (TestCase testCase : MODULE1.getTestCaseList()) {
-      for (com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test test :
-          testCase.getTestList()) {
-        assertThat(checksumHelper.containsTestResult(MODULE1, testCase, test, BUILD_FINGERPRINT))
-            .isTrue();
-      }
-    }
+    short magicNumber = objectInput.readShort();
+    short version = objectInput.readShort();
+    @SuppressWarnings("unchecked")
+    BloomFilter<CharSequence> resultChecksum = (BloomFilter<CharSequence>) objectInput.readObject();
+    @SuppressWarnings("unchecked")
+    HashMap<String, byte[]> fileChecksum = (HashMap<String, byte[]>) objectInput.readObject();
 
-    // Checks tests in MODULE2
-    for (TestCase testCase : MODULE2.getTestCaseList()) {
-      for (com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Test test :
-          testCase.getTestList()) {
-        assertThat(checksumHelper.containsTestResult(MODULE2, testCase, test, BUILD_FINGERPRINT))
-            .isTrue();
-      }
-    }
+    assertThat(magicNumber).isEqualTo(650);
+    assertThat(version).isEqualTo(1);
+
+    // Checks files in the result report
+    assertThat(fileChecksum).containsKey(resultDir.getName() + "/" + fakeLogFile.getName());
+    // Checks MODULE1
+    assertThat(resultChecksum.mightContain("deviceBuildFingerprint/arm64-v8a Module1/false/1"))
+        .isTrue();
+    assertThat(resultChecksum.mightContain("deviceBuildFingerprint/arm64-v8a Module1/1")).isTrue();
+    assertThat(
+            resultChecksum.mightContain(
+                "deviceBuildFingerprint/arm64-v8a"
+                    + " Module1/android.cts.Dummy1Test#testMethod1/fail/Test error stack trace./"))
+        .isTrue();
+    assertThat(
+            resultChecksum.mightContain(
+                "deviceBuildFingerprint/arm64-v8a"
+                    + " Module1/android.cts.Dummy1Test#testMethod2/pass//"))
+        .isTrue();
+    assertThat(
+            resultChecksum.mightContain(
+                "deviceBuildFingerprint/arm64-v8a"
+                    + " Module1/android.cts.Dummy2Test#testMethod1/pass//"))
+        .isTrue();
+    assertThat(
+            resultChecksum.mightContain(
+                "deviceBuildFingerprint/arm64-v8a"
+                    + " Module1/android.cts.Dummy2Test#testMethod2/pass//"))
+        .isTrue();
+
+    // Checks MODULE2
+    assertThat(resultChecksum.mightContain("deviceBuildFingerprint/arm64-v8a Module2/false/0"))
+        .isTrue();
+    assertThat(resultChecksum.mightContain("deviceBuildFingerprint/arm64-v8a Module2/0")).isTrue();
+    assertThat(
+            resultChecksum.mightContain(
+                "deviceBuildFingerprint/arm64-v8a"
+                    + " Module2/android.cts.Hello1Test#testMethod1/pass//"))
+        .isTrue();
+    assertThat(
+            resultChecksum.mightContain(
+                "deviceBuildFingerprint/arm64-v8a"
+                    + " Module2/android.cts.Hello2Test#testMethod1/pass//"))
+        .isTrue();
 
     // Now creates another fake log file in the result dir, which is not included by the above
     // checksum data file
@@ -152,6 +193,7 @@ public final class CompatibilityReportChecksumHelperTest {
         folder.newFile(Paths.get(resultDir.getName(), "another-fake-log-file.xml").toString());
     Files.writeString(anotherFakeLogFile.toPath(), "This is an another fake log file for testing.");
 
-    assertThat(checksumHelper.containsFile(anotherFakeLogFile, resultDir.getName())).isFalse();
+    assertThat(fileChecksum)
+        .doesNotContainKey(resultDir.getName() + "/" + anotherFakeLogFile.getName());
   }
 }

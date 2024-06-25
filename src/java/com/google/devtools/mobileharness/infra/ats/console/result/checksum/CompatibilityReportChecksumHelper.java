@@ -30,15 +30,12 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectInput;
-import java.io.ObjectInputStream;
 import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
 import java.security.DigestException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -70,64 +67,18 @@ public class CompatibilityReportChecksumHelper {
   /**
    * Creates new instance of {@link CompatibilityReportChecksumHelper}.
    *
-   * @param testCount the number of test results that will be stored
+   * @param totalCount the total number of module result signatures, module summary signatures and
+   *     test result signatures that will be stored
    * @param fpp the false positive probability for result lookup misses
    * @param version the version of the checksum
    * @param buildFingerprint build fingerprint for the device under test
    */
   private CompatibilityReportChecksumHelper(
-      int testCount, double fpp, short version, String buildFingerprint) {
-    resultChecksum = BloomFilter.create(Funnels.unencodedCharsFunnel(), testCount, fpp);
+      int totalCount, double fpp, short version, String buildFingerprint) {
+    resultChecksum = BloomFilter.create(Funnels.unencodedCharsFunnel(), totalCount, fpp);
     fileChecksum = new HashMap<>();
     this.version = version;
     this.buildFingerprint = buildFingerprint;
-  }
-
-  /**
-   * Deserializes checksum from file.
-   *
-   * @param directory the parent directory containing the checksum file
-   * @throws ChecksumValidationException if get errors in deserializing the checksum file
-   */
-  @VisibleForTesting
-  CompatibilityReportChecksumHelper(File directory, String buildFingerprint)
-      throws ChecksumValidationException {
-    this.buildFingerprint = buildFingerprint;
-    File file = new File(directory, NAME);
-    try (FileInputStream fileStream = new FileInputStream(file);
-        InputStream outputStream = new BufferedInputStream(fileStream);
-        ObjectInput objectInput = new ObjectInputStream(outputStream)) {
-      short magicNumber = objectInput.readShort();
-      switch (magicNumber) {
-        case SERIALIZED_FORMAT_CODE:
-          version = objectInput.readShort();
-          Object bfObject = objectInput.readObject();
-          if (!(bfObject instanceof BloomFilter<?>)) {
-            throw new ChecksumValidationException(
-                "Unexpected object, expected Bloom Filter; found " + bfObject.getClass().getName());
-          }
-          @SuppressWarnings("unchecked") // Safe by convention.
-          BloomFilter<CharSequence> resultChecksumTmp = (BloomFilter<CharSequence>) bfObject;
-          resultChecksum = resultChecksumTmp;
-
-          Object hashObject = objectInput.readObject();
-          if (!(hashObject instanceof HashMap<?, ?>)) {
-            throw new ChecksumValidationException(
-                "Unexpected object, expected HashMap; found " + hashObject.getClass().getName());
-          }
-          @SuppressWarnings("unchecked") // Safe by convention.
-          HashMap<String, byte[]> fileChecksumTmp = (HashMap<String, byte[]>) hashObject;
-          fileChecksum = fileChecksumTmp;
-          break;
-        default:
-          throw new ChecksumValidationException("Unknown format of serialized data.");
-      }
-    } catch (IOException | ClassNotFoundException e) {
-      throw new ChecksumValidationException("Unable to load checksum from file.", e);
-    }
-    if (version > CURRENT_VERSION) {
-      throw new ChecksumValidationException("File contains a newer version of ReportChecksum.");
-    }
   }
 
   /**
@@ -139,7 +90,10 @@ public class CompatibilityReportChecksumHelper {
    */
   public static boolean tryCreateChecksum(File dir, Result resultReport, String buildFingerprint) {
     try {
-      int totalCount = countTests(resultReport.getModuleInfoList());
+      // The total number of module result signatures, module summary signatures and test
+      // result signatures.
+      int totalCount =
+          resultReport.getModuleInfoCount() * 2 + countTests(resultReport.getModuleInfoList());
       CompatibilityReportChecksumHelper reportChecksum =
           new CompatibilityReportChecksumHelper(
               totalCount, DEFAULT_FPP, CURRENT_VERSION, buildFingerprint);
@@ -363,30 +317,6 @@ public class CompatibilityReportChecksumHelper {
       objectOutput.writeObject(resultChecksum);
       objectOutput.writeObject(fileChecksum);
     }
-  }
-
-  /** Uses this method to test that a test entry can be matched by the checksum. */
-  @VisibleForTesting
-  boolean containsTestResult(Module module, TestCase testCase, Test test, String buildFingerprint) {
-    String signature =
-        buildTestResultSignature(
-            test, module.getName(), testCase.getName(), module.getAbi(), buildFingerprint);
-    return resultChecksum.mightContain(signature);
-  }
-
-  /** Uses this method to validate that a file entry can be checked by the checksum. */
-  @VisibleForTesting
-  boolean containsFile(File file, String path) {
-    String key = path + SEPARATOR + file.getName();
-    if (fileChecksum.containsKey(key)) {
-      try {
-        byte[] crc = calculateFileChecksum(file);
-        return Arrays.equals(fileChecksum.get(key), crc);
-      } catch (ChecksumValidationException e) {
-        return false;
-      }
-    }
-    return false;
   }
 
   /** Explicit exception for report checksum validation. */
