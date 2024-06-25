@@ -17,6 +17,7 @@
 package com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.collect.Streams.concat;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -1313,10 +1314,15 @@ public abstract class AndroidRealDeviceDelegate {
     if (!ifTrySetDevicePropertiesAndDisablePackages()) {
       return;
     }
+
+    ImmutableSet<AndroidProperty> needRebootToClearReadOnlyTestProperties =
+        needRebootToClearReadOnlyTestProperties();
     if (!Flags.instance().disableDeviceReboot.getNonNull()) {
       try {
-        if (needRebootToClearReadOnlyTestProperties()) {
-          logger.atInfo().log("Reboot device %s to clear ro properties", serial);
+        if (!needRebootToClearReadOnlyTestProperties.isEmpty()) {
+          logger.atInfo().log(
+              "Reboot device %s to clear ro properties %s",
+              serial, needRebootToClearReadOnlyTestProperties);
           systemStateManager.reboot(device, /* log= */ null, /* deviceReadyTimeout= */ null);
         }
       } catch (MobileHarnessException e) {
@@ -1353,28 +1359,37 @@ public abstract class AndroidRealDeviceDelegate {
     }
   }
 
+  /** Returns properties that make it necessary to reboot the device to set their values. */
   @VisibleForTesting
-  boolean needRebootToClearReadOnlyTestProperties()
+  ImmutableSet<AndroidProperty> needRebootToClearReadOnlyTestProperties()
       throws MobileHarnessException, InterruptedException {
-    return needRebootToClearTestProperty(
-            AndroidProperty.DISABLE_CALL.getPrimaryPropertyKey(),
-            Flags.instance().disableCalling.getNonNull() ? "true" : "false")
-        || needRebootToClearTestProperty(
-            AndroidProperty.TEST_HARNESS.getPrimaryPropertyKey(),
-            Flags.instance().setTestHarnessProperty.getNonNull() ? "1" : "0")
-        || needRebootToClearTestProperty(
-            AndroidProperty.SILENT.getPrimaryPropertyKey(),
-            Flags.instance().muteAndroid.getNonNull() ? "1" : "0");
+    return concat(
+            needRebootToClearTestProperty(
+                AndroidProperty.DISABLE_CALL,
+                Flags.instance().disableCalling.getNonNull() ? "true" : "false")
+                .stream(),
+            needRebootToClearTestProperty(
+                AndroidProperty.TEST_HARNESS,
+                Flags.instance().setTestHarnessProperty.getNonNull() ? "1" : "0")
+                .stream(),
+            needRebootToClearTestProperty(
+                AndroidProperty.SILENT, Flags.instance().muteAndroid.getNonNull() ? "1" : "0")
+                .stream())
+        .collect(toImmutableSet());
   }
 
-  private boolean needRebootToClearTestProperty(String roPropName, String newValue)
+  /** Returns present to indicate that the device needs to reboot to clear the property. */
+  private Optional<AndroidProperty> needRebootToClearTestProperty(
+      AndroidProperty property, String expectedValue)
       throws MobileHarnessException, InterruptedException {
-    String devicePropValue = androidAdbUtil.getProperty(deviceId, ImmutableList.of(roPropName));
+    String devicePropValue = androidAdbUtil.getProperty(deviceId, property);
     // If current read only prop was not set before, no need device reboot.
     if (Strings.isNullOrEmpty(devicePropValue)) {
-      return false;
+      return Optional.empty();
     }
-    return !Ascii.equalsIgnoreCase(devicePropValue, newValue);
+    return Ascii.equalsIgnoreCase(devicePropValue, expectedValue)
+        ? Optional.empty()
+        : Optional.of(property);
   }
 
   /**
