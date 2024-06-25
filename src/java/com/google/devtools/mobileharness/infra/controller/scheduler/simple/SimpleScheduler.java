@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.api.model.lab.LabLocator;
 import com.google.devtools.mobileharness.api.model.lab.LabScheduleUnit;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AdhocTestbedSchedulingUtil;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
@@ -35,6 +36,7 @@ import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestScheduleUnit;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -48,7 +50,7 @@ import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /**
- * Simple scheduler. It rotately assigns devices to waiting jobs. So a huge job won't blocking the
+ * Simple scheduler. It rotately assigns devices to waiting jobs. So a huge job won't block the
  * latter jobs.
  */
 public class SimpleScheduler extends AbstractScheduler implements Runnable {
@@ -205,7 +207,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
       lab = exLab;
     }
 
-    DeviceScheduleUnit exDevice = null;
+    DeviceScheduleUnit exDevice;
     synchronized (allocationLock) {
       exDevice = lab.upsertDevice(deviceUnit);
     }
@@ -416,7 +418,7 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
     }
     logger.atInfo().log("Created allocation %s", allocation);
 
-    // After the allocation, we send out event to notify external framework. If the framework can
+    // After the allocation, we send events to notify external framework. If the framework can
     // not accept the event because the test/devices are removed, it will call scheduler to undo the
     // allocation.
     if (fireEvent) {
@@ -427,15 +429,34 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
 
   /** Goes through all labs to allocate devices for the given single-device test. */
   private boolean allocateSingleDeviceJob(JobScheduleUnit job, TestLocator test) {
-    for (SimpleLabInfo labInfo : labs.values()) {
-      for (DeviceScheduleUnit device : labInfo.getDevices()) {
-        DeviceLocator deviceLocator = device.locator();
-        if (!deviceAllocations.containsKey(deviceLocator.universalId())
-            && ifDeviceSupports(device, job)) {
-          // Found a suitable and idle device for the new test.
-          return allocate(test, device, true);
+    if (Flags.instance().enableSimpleSchedulerShuffle.getNonNull()) {
+      List<DeviceScheduleUnit> allDevices = new ArrayList<>();
+      labs.values().forEach(simpleLabInfo -> allDevices.addAll(simpleLabInfo.getDevices()));
+      Collections.shuffle(allDevices);
+      for (DeviceScheduleUnit device : allDevices) {
+        if (checkAndAllocateSingleDevice(job, test, device, true)) {
+          return true;
         }
       }
+    } else {
+      for (SimpleLabInfo labInfo : labs.values()) {
+        for (DeviceScheduleUnit device : labInfo.getDevices()) {
+          if (checkAndAllocateSingleDevice(job, test, device, true)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  /** Checks whether the device can meet the job requirement. If so, allocates it to the test. */
+  private boolean checkAndAllocateSingleDevice(
+      JobScheduleUnit job, TestLocator test, DeviceScheduleUnit device, boolean fireEvent) {
+    if (!deviceAllocations.containsKey(device.locator().universalId())
+        && ifDeviceSupports(device, job)) {
+      // Found a suitable and idle device for the new test.
+      return allocate(test, device, fireEvent);
     }
     return false;
   }
@@ -444,8 +465,13 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
   private boolean allocateAdhocTestbedJob(JobScheduleUnit job, TestLocator test)
       throws InterruptedException {
     Set<String> types = job.subDeviceSpecs().getAllSubDeviceTypes();
-
-    for (SimpleLabInfo labInfo : labs.values()) {
+    Collection<SimpleLabInfo> labInfos = labs.values();
+    if (Flags.instance().enableSimpleSchedulerShuffle.getNonNull()) {
+      List<SimpleLabInfo> labList = new ArrayList<>(labInfos);
+      Collections.shuffle(labList);
+      labInfos = labList;
+    }
+    for (SimpleLabInfo labInfo : labInfos) {
       List<DeviceScheduleUnit> filteredDevices =
           labInfo.getDevices().stream()
               // Filter out already allocated devices
@@ -460,6 +486,9 @@ public class SimpleScheduler extends AbstractScheduler implements Runnable {
             adhocTestbedSchedulingUtil.findSubDevicesSupportingJob(filteredDevices, job);
         // The order matters in the allocated list as it needs to match the spec.
         if (!deviceList.isEmpty()) {
+          if (Flags.instance().enableSimpleSchedulerShuffle.getNonNull()) {
+            Collections.shuffle(deviceList);
+          }
           return allocate(test, deviceList, true);
         }
       }

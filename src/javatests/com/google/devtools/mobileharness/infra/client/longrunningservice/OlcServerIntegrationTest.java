@@ -253,7 +253,10 @@ public class OlcServerIntegrationTest {
   @Test
   public void noOpTest_localMode() throws Exception {
     String deviceControlId = "NoOpDevice-4";
-    startServers(/* enableAtsMode= */ false, createApiConfigFile(deviceControlId));
+    startServers(
+        /* enableAtsMode= */ false,
+        createApiConfigFile(deviceControlId),
+        /* enableSchedulerShuffle= */ false);
 
     // Checks the server version.
     VersionStub versionStub = new VersionStub(olcServerChannel);
@@ -351,7 +354,10 @@ public class OlcServerIntegrationTest {
   @Test
   public void noOpTest_atsMode() throws Exception {
     String deviceControlId = "NoOpDevice-3";
-    startServers(/* enableAtsMode= */ true, createApiConfigFile(deviceControlId));
+    startServers(
+        /* enableAtsMode= */ true,
+        createApiConfigFile(deviceControlId),
+        /* enableSchedulerShuffle= */ true);
 
     // Checks the server version.
     VersionStub versionStub = new VersionStub(olcServerChannel);
@@ -451,7 +457,8 @@ public class OlcServerIntegrationTest {
     assertThat(olcServerProcess.isAlive()).isFalse();
   }
 
-  private void startServers(boolean enableAtsMode, Path apiConfigFile)
+  private void startServers(
+      boolean enableAtsMode, Path apiConfigFile, boolean enableScheudlerShuffle)
       throws IOException, CommandStartException, InterruptedException, ExecutionException {
     int noOpDeviceNum = 5;
 
@@ -480,6 +487,7 @@ public class OlcServerIntegrationTest {
                             "--enable_device_state_change_recover=false",
                             "--enable_device_system_settings_change=false",
                             "--enable_grpc_lab_server=true",
+                            "--enable_simple_scheduler_shuffle=" + enableScheudlerShuffle,
                             "--external_adb_initializer_template=true",
                             "--mute_android=false",
                             "--no_op_device_num=" + noOpDeviceNum,
