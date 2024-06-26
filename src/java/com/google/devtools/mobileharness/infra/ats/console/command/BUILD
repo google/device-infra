@@ -106,7 +106,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/system",
         "@maven//:com_google_guava_guava",
         "@maven//:info_picocli_picocli",
         "@maven//:javax_inject_jsr330_api",
