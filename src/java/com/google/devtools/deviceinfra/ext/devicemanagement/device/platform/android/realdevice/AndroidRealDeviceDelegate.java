@@ -196,7 +196,7 @@ public abstract class AndroidRealDeviceDelegate {
     this.deviceId = device.getDeviceId();
     device.setProperty(
         AndroidRealDeviceConstants.PROPERTY_NAME_REBOOT_TO_STATE, DeviceState.DEVICE.name());
-    this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil);
+    this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil, systemSettingUtil);
   }
 
   /**

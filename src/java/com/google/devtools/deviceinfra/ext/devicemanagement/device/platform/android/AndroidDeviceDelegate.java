@@ -108,7 +108,7 @@ public abstract class AndroidDeviceDelegate {
     this.androidSystemSettingUtil = androidSystemSettingUtil;
     this.androidProcessUtil = androidProcessUtil;
     this.deviceId = device.getDeviceId();
-    this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil);
+    this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil, androidSystemSettingUtil);
   }
 
   /** Ensures device is booted up and ready to respond. */
@@ -301,15 +301,6 @@ public abstract class AndroidDeviceDelegate {
   /** Returns the cached screen density of this device. */
   public Optional<Integer> getCachedScreenDensity() {
     return device.getIntegerProperty(AndroidDeviceHelper.PROPERTY_NAME_CACHED_SCREEN_DENSITY);
-  }
-
-  /** Updates the cached sdk version of the device. */
-  public void updateCachedSdkVersion() throws MobileHarnessException, InterruptedException {
-    int sdkVersion = androidSystemSettingUtil.getDeviceSdkVersion(deviceId);
-    device.setProperty(
-        AndroidDeviceHelper.PROPERTY_NAME_CACHED_SDK_VERSION, Integer.toString(sdkVersion));
-    logger.atInfo().log("Updating device %s dimension sdk_version to: %s", deviceId, sdkVersion);
-    device.updateDimension(Dimension.Name.SDK_VERSION, Integer.toString(sdkVersion));
   }
 
   /**
