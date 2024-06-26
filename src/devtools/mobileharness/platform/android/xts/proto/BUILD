@@ -41,3 +41,13 @@ java_proto_library(
     name = "device_configuration_java_proto",
     deps = [":device_configuration_proto"],
 )
+
+proto_library(
+    name = "test_message_proto",
+    srcs = ["test_message.proto"],
+)
+
+java_proto_library(
+    name = "test_message_java_proto",
+    deps = [":test_message_proto"],
+)
