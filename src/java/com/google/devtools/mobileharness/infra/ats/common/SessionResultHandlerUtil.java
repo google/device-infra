@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Attribute;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
@@ -44,7 +45,6 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryReportMerger;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
-import com.google.devtools.mobileharness.platform.testbed.mobly.util.MoblyTestInfoMapHelper;
 import com.google.devtools.mobileharness.shared.util.concurrent.Callables;
 import com.google.devtools.mobileharness.shared.util.concurrent.MobileHarnessCallable;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -86,6 +86,9 @@ public class SessionResultHandlerUtil {
           "test_result_failures_suite.html");
   private static final ImmutableSet<String> EXCLUDED_TF_GEN_RESULT_DIRS =
       ImmutableSet.of("module_reports");
+
+  private static final ImmutableSet<TestResult> COMPLETED_RESULTS =
+      ImmutableSet.of(TestResult.PASS, TestResult.FAIL, TestResult.SKIP);
 
   private final LocalFileUtil localFileUtil;
   private final CompatibilityReportMerger compatibilityReportMerger;
@@ -940,28 +943,18 @@ public class SessionResultHandlerUtil {
     }
   }
 
-  public boolean isSessionPassed(List<JobInfo> jobInfos) {
+  /** Returns true if any of the {@code jobInfos} has a test with a completed result. */
+  public boolean isSessionCompleted(List<JobInfo> jobInfos) {
     if (jobInfos.isEmpty()) {
       return false;
     }
     for (JobInfo jobInfo : jobInfos) {
-      // Tradefed Jobs.
-      if (jobInfo.properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false)) {
-        for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
-          if (!testInfo.properties().has(XtsConstants.TRADEFED_JOBS_PASSED)) {
-            return false;
-          }
-        }
-      }
-      // Non Tradefed Jobs.
-      if (jobInfo.properties().getBoolean(Job.IS_XTS_NON_TF_JOB).orElse(false)) {
-        for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
-          if (!testInfo.properties().has(MoblyTestInfoMapHelper.MOBLY_JOBS_PASSED)) {
-            return false;
-          }
+      for (TestInfo testInfo : jobInfo.tests().getAll().values()) {
+        if (COMPLETED_RESULTS.contains(testInfo.resultWithCause().get().type())) {
+          return true;
         }
       }
     }
-    return true;
+    return false;
   }
 }
