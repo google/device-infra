@@ -49,7 +49,7 @@ public class CommandPreprocessor {
     }
   }
 
-  private static final String OPTION_EXIT_AFTER_RUN = "--exit-after-run=true";
+  private static final ImmutableList<String> EXIT_COMMAND = ImmutableList.of("exit", "-c");
 
   private final CommandFileParser commandFileParser;
 
@@ -83,11 +83,12 @@ public class CommandPreprocessor {
       ImmutableList<String> tokens, boolean exitAfterRun) {
     ImmutableList.Builder<String> modifiedTokens =
         ImmutableList.<String>builder().add(tokens.get(0)).addAll(tokens.subList(2, tokens.size()));
+    ImmutableList.Builder<ImmutableList<String>> commandsBuilder = ImmutableList.builder();
+    commandsBuilder.add(modifiedTokens.build());
     if (exitAfterRun) {
-      modifiedTokens.add(OPTION_EXIT_AFTER_RUN);
+      commandsBuilder.add(EXIT_COMMAND);
     }
-    return PreprocessingResult.of(
-        ImmutableList.of(modifiedTokens.build()), /* errorMessage= */ null);
+    return PreprocessingResult.of(commandsBuilder.build(), /* errorMessage= */ null);
   }
 
   private PreprocessingResult preprocessRunCmdfileCommand(
@@ -95,6 +96,7 @@ public class CommandPreprocessor {
     if (tokens.size() < 3) {
       return PreprocessingResult.of(/* modifiedCommands= */ null, "Cmdfile path is not specified");
     }
+    ImmutableList.Builder<ImmutableList<String>> commandsBuilder = ImmutableList.builder();
     List<CommandLine> commandsFromFile;
     try {
       commandsFromFile = commandFileParser.parseFile(new File(tokens.get(2)));
@@ -105,7 +107,7 @@ public class CommandPreprocessor {
     }
     String firstToken = tokens.get(0);
     ImmutableList<String> extraArgs = tokens.subList(3, tokens.size());
-    return PreprocessingResult.of(
+    commandsBuilder.addAll(
         commandsFromFile.stream()
             .map(
                 command -> {
@@ -114,12 +116,12 @@ public class CommandPreprocessor {
                           .add(firstToken)
                           .addAll(command)
                           .addAll(extraArgs);
-                  if (exitAfterRun) {
-                    modifiedTokens.add(OPTION_EXIT_AFTER_RUN);
-                  }
                   return modifiedTokens.build();
                 })
-            .collect(toImmutableList()),
-        /* errorMessage= */ null);
+            .collect(toImmutableList()));
+    if (exitAfterRun) {
+      commandsBuilder.add(EXIT_COMMAND);
+    }
+    return PreprocessingResult.of(commandsBuilder.build(), /* errorMessage= */ null);
   }
 }
