@@ -328,6 +328,9 @@ public final class Dimension {
     /** Dimension value for public shared pool. */
     public static final String POOL_SHARED = "shared";
 
+    /** Dimension value for satellite pool that is managed by Wrangler. */
+    public static final String POOL_SATELLITE = "shared";
+
     /** Dimension value that excludes the shared pool. */
     public static final String POOL_NONSHARED = "^((?!shared).)*$";
 
