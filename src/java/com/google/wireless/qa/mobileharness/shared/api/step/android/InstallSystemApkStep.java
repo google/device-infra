@@ -163,6 +163,7 @@ public class InstallSystemApkStep {
 
           logger.atInfo().log("Pushing %s to %s.", systemApk, DATA_PATH);
           fileUtil.push(deviceId, sdkVersion, systemApk, DATA_PATH, null);
+          fileUtil.makeFileExecutableReadableNonWritable(deviceId, srcPath);
 
           // Handle test_attempts > 1
           logger.atInfo().log("rm symlink %s if exist.", desPath);

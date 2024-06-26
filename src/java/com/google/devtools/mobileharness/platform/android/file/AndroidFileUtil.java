@@ -123,6 +123,10 @@ public class AndroidFileUtil {
   /** ADB shell command to make the file executable. */
   @VisibleForTesting static final String ADB_SHELL_MAKE_FILE_EXECUTABLE = "chmod 777 %s";
 
+  /** ADB shell command to make the file executable but not writeable. */
+  @VisibleForTesting
+  static final String ADB_SHELL_MAKE_FILE_EXECUTABLE_READABLE_NON_WRITEABLE = "chmod 555 %s";
+
   /** ADB shell for calculating md5 in device with (sdk >= 16 && sdk <= 22). */
   @VisibleForTesting static final String ADB_SHELL_MD5 = "md5";
 
@@ -772,6 +776,36 @@ public class AndroidFileUtil {
     } catch (MobileHarnessException e) {
       throw new MobileHarnessException(
           AndroidErrorId.ANDROID_FILE_UTIL_MAKE_FILE_EXECUTABLE_ERROR, e.getMessage(), e);
+    }
+  }
+
+  /**
+   * Makes a file executable in device.
+   *
+   * <p>Note: it cannot make files lived in external storage executable which is limited by Android
+   * System.
+   *
+   * <p>For command output, Adb uses "\r\n" as line separator on SDK<=23, while uses "\n" as line
+   * separator on SDK>23. It's callers' responsibility to parse it correctly.
+   *
+   * @param serial the serial number of the device
+   * @param binFilePath the filepath of the binary file
+   * @return std/err output
+   * @throws MobileHarnessException if fails to execute the commands or timeout
+   * @throws InterruptedException if the thread executing the commands is interrupted
+   */
+  @CanIgnoreReturnValue
+  public String makeFileExecutableReadableNonWritable(String serial, String binFilePath)
+      throws MobileHarnessException, InterruptedException {
+    try {
+      return adb.runShellWithRetry(
+          serial,
+          String.format(ADB_SHELL_MAKE_FILE_EXECUTABLE_READABLE_NON_WRITEABLE, binFilePath));
+    } catch (MobileHarnessException e) {
+      throw new MobileHarnessException(
+          AndroidErrorId.ANDROID_FILE_UTIL_MAKE_FILE_EXECUTABLE_READABLE_NOT_WRITEABLE_ERROR,
+          String.format("Failed to change file %s mode to 555 in device %s", binFilePath, serial),
+          e);
     }
   }
 
