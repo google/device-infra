@@ -22,7 +22,12 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.StackTrace;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestCase;
+import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.TestFailure;
 import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordWriter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
@@ -49,6 +54,10 @@ public final class CompatibilityReportCreatorTest {
   private static final String CTS_TEST_RESULT_XML =
       TestRunfilesUtil.getRunfilesLocation(
           "result/report/testdata/xml/report_creator_cts_test_result.xml");
+
+  private static final String CTS_NON_TF_TEST_RESULT_XML =
+      TestRunfilesUtil.getRunfilesLocation(
+          "result/report/testdata/xml/report_creator_cts_non_tf_test_result.xml");
 
   private static final Splitter LINE_SPLITTER = Splitter.onPattern("\r\n|\n|\r");
 
@@ -86,6 +95,57 @@ public final class CompatibilityReportCreatorTest {
                     .trim()))
         .isEqualTo(
             replaceLineBreak(realLocalFileUtil.readFile(Path.of(CTS_TEST_RESULT_XML)).trim()));
+  }
+
+  @Test
+  public void writeReportWithNonTfModuleToXml_escapeXmlContent() throws Exception {
+    Module module =
+        Module.newBuilder()
+            .setName("NonTfModule1")
+            .setIsNonTfModule(true)
+            .setAbi("arm64-v8a")
+            .setDone(true)
+            .setTotalTests(1)
+            .setPassed(0)
+            .setFailedTests(1)
+            .setRuntimeMillis(6046L)
+            .addTestCase(
+                TestCase.newBuilder()
+                    .setName("android.cts.DummyFoo1Test")
+                    .addTest(
+                        ReportProto.Test.newBuilder()
+                            .setResult("fail")
+                            .setName("test_hello_world1_1")
+                            .setFailure(
+                                TestFailure.newBuilder()
+                                    .setMsg(
+                                        "AssertionError: X coordinates should be the same"
+                                            + " expected:<-25.0> but was:<15.0>")
+                                    .setStackTrace(
+                                        StackTrace.newBuilder()
+                                            .setContent(
+                                                "AssertionError: X coordinates should be the same"
+                                                    + " expected:<-25.0> but was:<15.0>\n"
+                                                    + " Traceback (most recent call last):\n"
+                                                    + "   File \"mobly/base_test.py\", line 818, in"
+                                                    + " exec_one_test\n")))))
+            .build();
+    Result report = Result.newBuilder().addModuleInfo(module).build();
+    File xmlResultDir = temporaryFolder.newFolder("xml_result");
+
+    reportCreator.writeReportToXml(report, xmlResultDir);
+
+    assertThat(
+            replaceLineBreak(
+                realLocalFileUtil
+                    .readFile(
+                        xmlResultDir
+                            .toPath()
+                            .resolve(CompatibilityReportCreator.TEST_RESULT_FILE_NAME))
+                    .trim()))
+        .isEqualTo(
+            replaceLineBreak(
+                realLocalFileUtil.readFile(Path.of(CTS_NON_TF_TEST_RESULT_XML)).trim()));
   }
 
   @Test

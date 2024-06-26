@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no' ?><?xml-stylesheet type="text/xsl" href="compatibility_result.xsl"?>
+<Result>
+  <Build />
+  <Summary pass="0" failed="0" modules_done="0" modules_total="0" />
+  <Module name="NonTfModule1" abi="arm64-v8a" runtime="6046" done="true" pass="0" total_tests="1">
+    <TestCase name="android.cts.DummyFoo1Test">
+      <Test result="fail" name="test_hello_world1_1">
+        <Failure message="AssertionError: X coordinates should be the same expected:&amp;lt;-25.0&amp;gt; but was:&amp;lt;15.0&amp;gt;">
+          <StackTrace>AssertionError: X coordinates should be the same expected:&amp;lt;-25.0&amp;gt; but was:&amp;lt;15.0&amp;gt;
+ Traceback (most recent call last):
+   File "mobly/base_test.py", line 818, in exec_one_test
+</StackTrace>
+        </Failure>
+      </Test>
+    </TestCase>
+  </Module>
+</Result>

@@ -280,6 +280,7 @@ public class CompatibilityReportCreator {
 
     // Modules
     for (Module module : report.getModuleInfoList()) {
+      boolean isNonTfModule = module.getIsNonTfModule();
       serializer.startTag(NS, XmlConstants.MODULE_TAG);
       serializer.attribute(NS, XmlConstants.NAME_ATTR, module.getName());
       if (module.hasAbi()) {
@@ -302,7 +303,9 @@ public class CompatibilityReportCreator {
       if (module.hasReason()) {
         serializer.startTag(NS, XmlConstants.MODULES_NOT_DONE_REASON);
         serializer.attribute(
-            NS, XmlConstants.MESSAGE_ATTR, sanitizeXmlContent(module.getReason().getMsg()));
+            NS,
+            XmlConstants.MESSAGE_ATTR,
+            sanitizeXmlContent(module.getReason().getMsg(), isNonTfModule));
         if (!module.getReason().getErrorName().isEmpty()
             && !module.getReason().getErrorCode().isEmpty()) {
           serializer.attribute(NS, XmlConstants.ERROR_NAME_ATTR, module.getReason().getErrorName());
@@ -310,7 +313,7 @@ public class CompatibilityReportCreator {
         }
         serializer.endTag(NS, XmlConstants.MODULES_NOT_DONE_REASON);
       }
-      serializeTestCases(serializer, module.getTestCaseList());
+      serializeTestCases(serializer, module.getTestCaseList(), isNonTfModule);
       serializer.endTag(NS, XmlConstants.MODULE_TAG);
     }
 
@@ -323,7 +326,8 @@ public class CompatibilityReportCreator {
     }
   }
 
-  private static void serializeTestCases(XmlSerializer serializer, List<TestCase> testCases)
+  private static void serializeTestCases(
+      XmlSerializer serializer, List<TestCase> testCases, boolean inNonTfModule)
       throws IOException {
     for (TestCase testCase : testCases) {
       serializer.startTag(NS, XmlConstants.CASE_TAG);
@@ -341,7 +345,7 @@ public class CompatibilityReportCreator {
         }
 
         if (test.hasFailure()) {
-          handleTestFailure(serializer, test.getFailure());
+          handleTestFailure(serializer, test.getFailure(), inNonTfModule);
         }
         if (test.hasBugReport()) {
           handleLoggedFile(
@@ -367,7 +371,7 @@ public class CompatibilityReportCreator {
         for (Metric metric : test.getMetricList()) {
           serializer.startTag(NS, XmlConstants.METRIC_TAG);
           serializer.attribute(NS, XmlConstants.METRIC_KEY, metric.getKey());
-          serializer.text(sanitizeXmlContent(metric.getContent()));
+          serializer.text(sanitizeXmlContent(metric.getContent(), inNonTfModule));
           serializer.endTag(NS, XmlConstants.METRIC_TAG);
         }
 
@@ -378,17 +382,18 @@ public class CompatibilityReportCreator {
     }
   }
 
-  private static void handleTestFailure(XmlSerializer serializer, TestFailure testFailure)
-      throws IOException {
+  private static void handleTestFailure(
+      XmlSerializer serializer, TestFailure testFailure, boolean inNonTfModule) throws IOException {
     serializer.startTag(NS, XmlConstants.FAILURE_TAG);
-    serializer.attribute(NS, XmlConstants.MESSAGE_ATTR, sanitizeXmlContent(testFailure.getMsg()));
+    serializer.attribute(
+        NS, XmlConstants.MESSAGE_ATTR, sanitizeXmlContent(testFailure.getMsg(), inNonTfModule));
     if (!testFailure.getErrorName().isEmpty() && !testFailure.getErrorCode().isEmpty()) {
       serializer.attribute(NS, XmlConstants.ERROR_NAME_ATTR, testFailure.getErrorName());
       serializer.attribute(NS, XmlConstants.ERROR_CODE_ATTR, testFailure.getErrorCode());
     }
     if (testFailure.hasStackTrace()) {
       serializer.startTag(NS, XmlConstants.STACKTRACE_TAG);
-      serializer.text(sanitizeXmlContent(testFailure.getStackTrace().getContent()));
+      serializer.text(sanitizeXmlContent(testFailure.getStackTrace().getContent(), inNonTfModule));
       serializer.endTag(NS, XmlConstants.STACKTRACE_TAG);
     }
     serializer.endTag(NS, XmlConstants.FAILURE_TAG);
@@ -405,8 +410,10 @@ public class CompatibilityReportCreator {
     serializer.endTag(NS, tag);
   }
 
-  private static String sanitizeXmlContent(String s) {
-    return XmlEscapers.xmlContentEscaper().escape(s);
+  private static String sanitizeXmlContent(String s, boolean inNonTfModule) {
+    // If it's in a non-TF module, we need to escape the content like how TF does. If it's in a TF
+    // module, we don't need to additionally escape the content as TF has done so.
+    return inNonTfModule ? XmlEscapers.xmlContentEscaper().escape(s) : s;
   }
 
   /** Copies the xml formatting files stored in this jar to the {@code resultDir} directory. */
