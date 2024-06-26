@@ -20,6 +20,7 @@ import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
+import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 
@@ -31,16 +32,14 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
+import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
-import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
-import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
-import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportParser;
 import com.google.devtools.mobileharness.infra.ats.server.sessionplugin.TradefedConfigGenerator;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogRecorder;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord;
@@ -49,6 +48,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdb
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
@@ -71,11 +71,14 @@ import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.google.protobuf.ExtensionRegistry;
+import com.google.protobuf.TextFormat.ParseException;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.api.CompositeDeviceUtil;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.DriverAnnotation;
 import com.google.wireless.qa.mobileharness.shared.api.device.CompositeDevice;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
+import com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.SpecConfigable;
 import com.google.wireless.qa.mobileharness.shared.proto.spec.driver.XtsTradefedTestDriverSpec;
@@ -97,11 +100,11 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import org.apache.commons.text.StringSubstitutor;
 
@@ -123,11 +126,8 @@ public class XtsTradefedTest extends BaseDriver
 
   private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(5L);
 
-  private volatile ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
-
   private final CommandExecutor cmdExecutor;
   private final LocalFileUtil localFileUtil;
-  private final CompatibilityReportParser compatibilityReportParser;
   private final SystemUtil systemUtil;
   private final Adb adb;
   private final Aapt aapt;
@@ -135,55 +135,36 @@ public class XtsTradefedTest extends BaseDriver
   private final ListeningExecutorService threadPool;
   private final Sleeper sleeper;
 
+  private final Object tfProcessLock = new Object();
+
+  @GuardedBy("tfProcessLock")
+  private XtsTradefedRunCancellation xtsTradefedRunCancellation;
+
+  @GuardedBy("tfProcessLock")
+  private CommandProcess tfProcess;
+
+  private volatile ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
+
   @Inject
   XtsTradefedTest(
       Device device,
       TestInfo testInfo,
       CommandExecutor cmdExecutor,
       LocalFileUtil localFileUtil,
-      CompatibilityReportParser compatibilityReportParser,
       SystemUtil systemUtil,
       Adb adb,
       Aapt aapt,
       ListeningExecutorService threadPool,
       Sleeper sleeper) {
-    this(
-        device,
-        testInfo,
-        cmdExecutor,
-        localFileUtil,
-        compatibilityReportParser,
-        systemUtil,
-        adb,
-        aapt,
-        threadPool,
-        sleeper,
-        LogRecorder.getInstance());
-  }
-
-  @VisibleForTesting
-  XtsTradefedTest(
-      Device device,
-      TestInfo testInfo,
-      CommandExecutor cmdExecutor,
-      LocalFileUtil localFileUtil,
-      CompatibilityReportParser compatibilityReportParser,
-      SystemUtil systemUtil,
-      Adb adb,
-      Aapt aapt,
-      ListeningExecutorService threadPool,
-      Sleeper sleeper,
-      LogRecorder logRecorder) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
     this.localFileUtil = localFileUtil;
-    this.compatibilityReportParser = compatibilityReportParser;
     this.systemUtil = systemUtil;
     this.adb = adb;
     this.aapt = aapt;
     this.threadPool = threadPool;
     this.sleeper = sleeper;
-    this.logRecorder = logRecorder;
+    this.logRecorder = LogRecorder.getInstance();
   }
 
   @Override
@@ -198,81 +179,48 @@ public class XtsTradefedTest extends BaseDriver
       setUpXtsWorkDir(spec, getXtsRootDir(spec, testInfo), tmpXtsRootDir, xtsType, testInfo);
       logger.atInfo().log("xTS Tradefed temp working root directory is %s", tmpXtsRootDir);
 
-      boolean xtsRunCommandSuccess = runXtsCommand(testInfo, spec, tmpXtsRootDir, xtsType);
+      Optional<Integer> tfExitCode = runXtsCommand(testInfo, spec, tmpXtsRootDir, xtsType);
+
       testInfo
           .log()
           .atInfo()
           .alsoTo(logger)
-          .log(
-              "Finished running %s test. xTS run command exit status: %s",
-              xtsType, xtsRunCommandSuccess);
-
-      if (xtsRunCommandSuccess && isTestRunPass(tmpXtsRootDir, xtsType, testInfo)) {
-        testInfo.resultWithCause().setPass();
-      } else {
-        // The test run command exit in success but contains failure cases.
-        if (xtsRunCommandSuccess) {
-          testInfo
-              .resultWithCause()
-              .setNonPassing(
-                  TestResult.FAIL,
-                  MobileHarnessExceptionFactory.create(
-                      BasicErrorId.TEST_RESULT_FAILED_IN_TEST_XML,
-                      "There's no test run or exists failure test cases. Please refer to the log"
-                          + " files under results directory for more details.",
-                      /* cause= */ null,
-                      /* addErrorIdToMessage= */ false,
-                      /* clearStackTrace= */ true));
-        }
-      }
+          .log("Finished running %s test. xTS run command exit code: %s", xtsType, tfExitCode);
+      setTestResult(testInfo, tfExitCode.orElse(null));
     } finally {
       CompositeDeviceUtil.uncacheTestbed(getDevice());
       postTest(tmpXtsRootDir, testInfo, xtsType);
     }
   }
 
-  private boolean isTestRunPass(Path tmpXtsRootDir, String xtsType, TestInfo testInfo)
-      throws MobileHarnessException {
-    Path tmpXtsResultsDir = XtsDirUtil.getXtsResultsDir(tmpXtsRootDir, xtsType);
-    if (localFileUtil.isDirExist(tmpXtsResultsDir)) {
-      List<Path> resultDirs =
-          localFileUtil.listFilesOrDirs(
-              tmpXtsResultsDir,
-              path ->
-                  localFileUtil.isDirExist(path)
-                      && !previousResultDirNames.contains(path.getFileName().toString())
-                      && !Objects.equals(path.getFileName().toString(), "latest"));
-      Optional<Result> result;
-      if (resultDirs.isEmpty()) {
-        logger.atWarning().log("Temp xTS results dir [%s] is empty", tmpXtsResultsDir);
-        result = Optional.empty();
-      } else {
-        if (resultDirs.size() > 1) {
-          logger.atInfo().log(
-              "More than 1 result dirs in temp xTS results dir [%s], use the 1st one: %s",
-              tmpXtsResultsDir, resultDirs);
-        }
-        Path testResultXmlPath = resultDirs.get(0).resolve("test_result.xml");
-        result = compatibilityReportParser.parse(testResultXmlPath, /* shallow= */ true);
-      }
-      if (result.isPresent()) {
-        Map<String, String> tradefedTestSummary = new HashMap<>();
-        long passedNumber = result.get().getSummary().getPassed();
-        long failedNumber = result.get().getSummary().getFailed();
-        long doneNumber = result.get().getSummary().getModulesDone();
-        long totalNumber = result.get().getSummary().getModulesTotal();
-        tradefedTestSummary.put(XtsConstants.TRADEFED_TESTS_PASSED, String.valueOf(passedNumber));
-        tradefedTestSummary.put(XtsConstants.TRADEFED_TESTS_FAILED, String.valueOf(failedNumber));
-        tradefedTestSummary.put(XtsConstants.TRADEFED_TESTS_DONE, String.valueOf(doneNumber));
-        tradefedTestSummary.put(XtsConstants.TRADEFED_TESTS_TOTAL, String.valueOf(totalNumber));
-        testInfo.properties().addAll(tradefedTestSummary);
-        if (doneNumber == totalNumber && failedNumber == 0 && passedNumber > 0) {
-          testInfo.properties().add(XtsConstants.TRADEFED_JOBS_PASSED, "true");
-          return true;
-        }
-      }
+  private void setTestResult(TestInfo testInfo, @Nullable Integer tfExitCode) {
+    if (tfExitCode == null) {
+      testInfo
+          .resultWithCause()
+          .setNonPassing(
+              TestResult.ERROR,
+              MobileHarnessExceptionFactory.create(
+                  AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
+                  "xTS command didn't start",
+                  /* cause= */ null,
+                  /* addErrorIdToMessage= */ false,
+                  /* clearStackTrace= */ true));
+      return;
     }
-    return false;
+    if (tfExitCode != 0) {
+      testInfo
+          .resultWithCause()
+          .setNonPassing(
+              TestResult.ERROR,
+              MobileHarnessExceptionFactory.create(
+                  AndroidErrorId.XTS_TRADEFED_RUN_COMMAND_ERROR,
+                  "Non-zero xTS command exit code: " + tfExitCode,
+                  /* cause= */ null,
+                  /* addErrorIdToMessage= */ false,
+                  /* clearStackTrace= */ true));
+      return;
+    }
+    testInfo.resultWithCause().setPass();
   }
 
   private void postTest(Path tmpXtsRootDir, TestInfo testInfo, String xtsType) {
@@ -338,7 +286,36 @@ public class XtsTradefedTest extends BaseDriver
     }
   }
 
-  private boolean runXtsCommand(
+  @Subscribe
+  private void onTestMessage(TestMessageEvent event) throws ParseException, InterruptedException {
+    XtsTradefedRunCancellation.Builder xtsTradefedRunCancellation =
+        XtsTradefedRunCancellation.newBuilder();
+    if (event.decodeProtoTestMessage(
+        xtsTradefedRunCancellation, ExtensionRegistry.getEmptyRegistry())) {
+      handleXtsTradefedRunCancellation(xtsTradefedRunCancellation.build());
+    }
+  }
+
+  private void handleXtsTradefedRunCancellation(
+      XtsTradefedRunCancellation xtsTradefedRunCancellation) throws InterruptedException {
+    getTest()
+        .log()
+        .atInfo()
+        .alsoTo(logger)
+        .log(
+            "Receive XtsTradefedRunCancellation: %s", shortDebugString(xtsTradefedRunCancellation));
+    synchronized (tfProcessLock) {
+      this.xtsTradefedRunCancellation = xtsTradefedRunCancellation;
+      if (tfProcess != null) {
+        int signal = xtsTradefedRunCancellation.getKillTradefedSignal();
+        getTest().log().atInfo().alsoTo(logger).log("Kill TF with signal %s", signal);
+        tfProcess.killWithSignal(signal);
+      }
+    }
+  }
+
+  /** Returns the exit code of the TF process or empty if the process doesn't start. */
+  private Optional<Integer> runXtsCommand(
       TestInfo testInfo, XtsTradefedTestDriverSpec spec, Path tmpXtsRootDir, String xtsType)
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, String> env =
@@ -397,81 +374,101 @@ public class XtsTradefedTest extends BaseDriver
           Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_OUTPUT_FILE_NAME);
     }
 
-    AtomicReference<CommandProcess> xtsProcess = new AtomicReference<>();
     AtomicBoolean tfHasFinished = new AtomicBoolean();
     try (BufferedWriter writer = Files.newBufferedWriter(tfOutputPath)) {
-      xtsProcess.set(
-          cmdExecutor.start(
-              Command.of(cmd)
-                  .extraEnv(env)
-                  .onStdout(
-                      LineCallback.does(
-                          line -> {
-                            // Writes to LogManager.
-                            LogRecord.Builder logRecord =
-                                LogRecord.newBuilder()
-                                    .setFormattedLogRecord(line + "\n")
-                                    .setSourceType(SourceType.TF)
-                                    .setImportance(Importance.TF.value());
-                            if (olcSessionClientId != null) {
-                              logRecord.setClientId(olcSessionClientId);
-                            }
-                            logRecorder.addLogRecord(logRecord.build());
+      synchronized (tfProcessLock) {
+        if (xtsTradefedRunCancellation != null) {
+          testInfo
+              .log()
+              .atInfo()
+              .alsoTo(logger)
+              .log(
+                  "Skip starting xTS TF since it was cancelled: %s",
+                  shortDebugString(xtsTradefedRunCancellation));
+          return Optional.empty();
+        }
+        tfProcess =
+            cmdExecutor.start(
+                Command.of(cmd)
+                    .extraEnv(env)
+                    .onStdout(
+                        LineCallback.does(
+                            line -> {
+                              // Writes to LogManager.
+                              LogRecord.Builder logRecord =
+                                  LogRecord.newBuilder()
+                                      .setFormattedLogRecord(line + "\n")
+                                      .setSourceType(SourceType.TF)
+                                      .setImportance(Importance.TF.value());
+                              if (olcSessionClientId != null) {
+                                logRecord.setClientId(olcSessionClientId);
+                              }
+                              logRecorder.addLogRecord(logRecord.build());
 
-                            // Writes to CommandOutputLogger.
-                            commandOutputLogger.logStdoutLine(line);
+                              // Writes to CommandOutputLogger.
+                              commandOutputLogger.logStdoutLine(line);
 
-                            // Writes to file.
-                            try {
-                              writer.write(line + "\n");
-                            } catch (IOException e) {
-                              throw new LineCallbackException(
-                                  "Failed to write",
-                                  e,
-                                  /* killCommand= */ false,
-                                  /* stopReadingOutput= */ true);
-                            }
+                              // Writes to file.
+                              try {
+                                writer.write(line + "\n");
+                              } catch (IOException e) {
+                                throw new LineCallbackException(
+                                    "Failed to write",
+                                    e,
+                                    /* killCommand= */ false,
+                                    /* stopReadingOutput= */ true);
+                              }
 
-                            // Checks if finished.
-                            if (tfFinished(line) && tfHasFinished.compareAndSet(false, true)) {
-                              testInfo.log().atInfo().alsoTo(logger).log("TF finished");
-                              logFailure(
-                                  threadPool.submit(
-                                      threadRenaming(
-                                          (Callable<Void>)
-                                              () -> {
-                                                sleeper.sleep(KILL_TF_AFTER_FINISH_TIME);
+                              // Checks if finished.
+                              if (tfFinished(line) && tfHasFinished.compareAndSet(false, true)) {
+                                testInfo.log().atInfo().alsoTo(logger).log("TF finished");
+                                logFailure(
+                                    threadPool.submit(
+                                        threadRenaming(
+                                            (Callable<Void>)
+                                                () -> {
+                                                  sleeper.sleep(KILL_TF_AFTER_FINISH_TIME);
 
-                                                // Kills the TF process if it finished but the
-                                                // process is still alive.
-                                                CommandProcess process = xtsProcess.get();
-                                                if (process != null && process.isAlive()) {
-                                                  testInfo
-                                                      .log()
-                                                      .atInfo()
-                                                      .alsoTo(logger)
-                                                      .log(
-                                                          "Kill TF process since it has finished"
-                                                              + " for %s",
-                                                          KILL_TF_AFTER_FINISH_TIME);
-                                                  process.killAndThenKillForcibly(
-                                                      /* timeout= */ Duration.ofMinutes(1L));
-                                                }
-                                                return null;
-                                              },
-                                          () -> "tf-process-monitor-" + testId)),
-                                  Level.WARNING,
-                                  "Error occurred when waiting TF process exits");
-                            }
-                          }))
-                  .redirectStderr(true)
-                  .needStdoutInResult(false)
-                  .needStderrInResult(false)
-                  .timeout(getXtsTimeout(testInfo))));
+                                                  // Kills the TF process if it finished but the
+                                                  // process is still alive.
+                                                  Optional<CommandProcess> process = getTfProcess();
+                                                  if (process.isPresent()
+                                                      && process.get().isAlive()) {
+                                                    testInfo
+                                                        .log()
+                                                        .atInfo()
+                                                        .alsoTo(logger)
+                                                        .log(
+                                                            "Kill TF process since it has finished"
+                                                                + " for %s",
+                                                            KILL_TF_AFTER_FINISH_TIME);
+                                                    process
+                                                        .get()
+                                                        .killAndThenKillForcibly(
+                                                            /* timeout= */ Duration.ofMinutes(1L));
+                                                  }
+                                                  return null;
+                                                },
+                                            () -> "tf-process-monitor-" + testId)),
+                                    Level.WARNING,
+                                    "Error occurred when waiting TF process exits");
+                              }
+                            }))
+                    .onExit(
+                        commandResult -> {
+                          synchronized (tfProcessLock) {
+                            tfProcess = null;
+                          }
+                        })
+                    .redirectStderr(true)
+                    .needStdoutInResult(false)
+                    .needStderrInResult(false)
+                    .timeout(getXtsTimeout(testInfo)));
+      }
 
-      CommandProcess process = xtsProcess.get();
+      CommandProcess process = getTfProcess().orElseThrow();
       testInfo.log().atInfo().alsoTo(logger).log("xTS TF started, pid=%s", process.getPid());
-      return process.await().exitCode() == 0;
+      return Optional.of(process.await().exitCode());
     } catch (CommandStartException e) {
       throw new MobileHarnessException(
           AndroidErrorId.XTS_TRADEFED_START_COMMAND_ERROR,
@@ -493,7 +490,7 @@ public class XtsTradefedTest extends BaseDriver
                   e,
                   /* addErrorIdToMessage= */ false,
                   /* clearStackTrace= */ true));
-      return false;
+      return Optional.of(e.result().exitCode());
     } catch (CommandTimeoutException e) {
       testInfo
           .resultWithCause()
@@ -505,20 +502,26 @@ public class XtsTradefedTest extends BaseDriver
                   e,
                   /* addErrorIdToMessage= */ false,
                   /* clearStackTrace= */ true));
-      return false;
+      return Optional.of(e.result().exitCode());
     } catch (InterruptedException e) {
       testInfo.log().atWarning().alsoTo(logger).log("xTS Tradefed was interrupted.");
       throw e;
     } finally {
-      CommandProcess process = xtsProcess.get();
-      if (process != null && process.isAlive()) {
-        process.killAndThenKillForcibly(/* timeout= */ Duration.ofMinutes(1L));
+      Optional<CommandProcess> process = getTfProcess();
+      if (process.isPresent() && process.get().isAlive()) {
+        process.get().killAndThenKillForcibly(/* timeout= */ Duration.ofMinutes(1L));
       }
     }
   }
 
   private static boolean tfFinished(String line) {
     return line.contains("CommandScheduler: All done");
+  }
+
+  private Optional<CommandProcess> getTfProcess() {
+    synchronized (tfProcessLock) {
+      return Optional.ofNullable(tfProcess);
+    }
   }
 
   private boolean isJarFileIncluded(
