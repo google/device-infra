@@ -250,6 +250,7 @@ maven_install(
         "com.google.api.grpc:proto-google-cloud-logging-v2:0.63.0",
         "com.google.auth:google-auth-library-credentials:1.23.0",
         "com.google.auth:google-auth-library-oauth2-http:1.23.0",
+        "com.google.cloud:google-cloud-pubsub:1.130.1",
         "com.google.code.findbugs:jsr305:3.0.2",
         "com.google.code.gson:gson:2.10.1",
         "com.google.errorprone:error_prone_annotations:2.24.1",
