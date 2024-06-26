@@ -135,6 +135,7 @@ java_library(
     name = "apache_commons_io",
     visibility = [
         "//src/java/com/google/devtools/mobileharness/shared/util/path:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/zip:__pkg__",
     ],
     exports = [
         "@maven//:commons_io_commons_io",
