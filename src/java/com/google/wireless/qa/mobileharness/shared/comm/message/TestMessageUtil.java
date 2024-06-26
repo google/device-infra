@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.message.TestMessageInfo;
+import com.google.protobuf.Message;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
 import java.util.ArrayList;
@@ -130,6 +131,25 @@ public class TestMessageUtil {
         .map(TestInfo::locator)
         .map(TestLocator::getId)
         .collect(toImmutableList());
+  }
+
+  /**
+   * Sends a proto test message to a test. See {@link #sendMessageToTest(TestInfo, Map)} for more
+   * information.
+   *
+   * <p>When receiving the corresponding {@linkplain
+   * com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent
+   * TestMessageEvent}, please use {@linkplain
+   * com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent#decodeProtoTestMessage
+   * TestMessageEvent.decodeProtoTestMessage()} to get the proto message.
+   *
+   * @see #sendMessageToTest(TestInfo, Map)
+   * @see
+   *     com.google.wireless.qa.mobileharness.shared.comm.message.event.TestMessageEvent#decodeProtoTestMessage
+   */
+  public void sendProtoMessageToTest(TestInfo test, Message protoTestMessage)
+      throws MobileHarnessException {
+    sendMessageToTest(test, ProtoTestMessageUtil.encodeProtoTestMessage(protoTestMessage));
   }
 
   /**

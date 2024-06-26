@@ -46,6 +46,19 @@ java_library(
 )
 
 java_library(
+    name = "proto_test_message_util",
+    srcs = ["ProtoTestMessageUtil.java"],
+    visibility = [
+        # Do not make it public.
+        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message/event:__pkg__",
+    ],
+    deps = [
+        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "test_message_manager",
     srcs = [
         "TestMessageManager.java",
@@ -70,10 +83,12 @@ java_library(
     ],
     visibility = [":test_message_users"],
     deps = [
+        ":proto_test_message_util",
+        ":test_message_manager",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/comm/message:test_message_manager",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
     ],
 )
