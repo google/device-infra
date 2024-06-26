@@ -57,7 +57,6 @@ import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.Timeout;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
-import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -246,12 +245,6 @@ public final class RunCommand implements Callable<Integer> {
   private List<String> excludeFilters;
 
   @Option(
-      names = {"--exit-after-run"},
-      paramLabel = "<exit_after_run>",
-      description = "If true, exit the console after the command finishes. Default is false.")
-  private boolean exitAfterRun;
-
-  @Option(
       names = {"--html-in-zip"},
       paramLabel = "<html_in_zip>",
       description = "Whether to include html reports in the result zip file. Default is false.")
@@ -327,7 +320,6 @@ public final class RunCommand implements Callable<Integer> {
   private final ConsoleUtil consoleUtil;
   private final CommandHelper commandHelper;
   private final SubPlanLister subPlanLister;
-  private final SystemUtil systemUtil;
 
   private final ServerPreparer serverPreparer;
   private final ServerLogPrinter serverLogPrinter;
@@ -343,7 +335,6 @@ public final class RunCommand implements Callable<Integer> {
       ConsoleUtil consoleUtil,
       CommandHelper commandHelper,
       SubPlanLister subPlanLister,
-      SystemUtil systemUtil,
       ServerPreparer serverPreparer,
       ServerLogPrinter serverLogPrinter,
       ListeningExecutorService executorService,
@@ -356,7 +347,6 @@ public final class RunCommand implements Callable<Integer> {
     this.consoleUtil = consoleUtil;
     this.commandHelper = commandHelper;
     this.subPlanLister = subPlanLister;
-    this.systemUtil = systemUtil;
     this.serverPreparer = serverPreparer;
     this.serverLogPrinter = serverLogPrinter;
     this.executorService = executorService;
@@ -592,9 +582,6 @@ public final class RunCommand implements Callable<Integer> {
     consoleUtil.printlnStdout(
         output.length() > 0 ? output.deleteCharAt(output.length() - 1).toString() : "");
 
-    if (exitAfterRun) {
-      consoleInfo.setShouldExitConsole(true);
-    }
     return ExitCode.OK;
   }
 
@@ -707,7 +694,7 @@ public final class RunCommand implements Callable<Integer> {
     RUNNING_COMMAND_COUNT.incrementAndGet();
     addCallback(
         atsRunSessionFuture,
-        new RunCommandFutureCallback(consoleUtil, serverLogPrinter, systemUtil, exitAfterRun),
+        new RunCommandFutureCallback(consoleUtil, serverLogPrinter),
         executorService);
     consoleUtil.printlnStdout("Command submitted.");
     return ExitCode.OK;
@@ -718,35 +705,27 @@ public final class RunCommand implements Callable<Integer> {
 
     private final ConsoleUtil consoleUtil;
     private final ServerLogPrinter serverLogPrinter;
-    private final SystemUtil systemUtil;
-    private final boolean exitAfterRun;
 
-    public RunCommandFutureCallback(
-        ConsoleUtil consoleUtil,
-        ServerLogPrinter serverLogPrinter,
-        SystemUtil systemUtil,
-        boolean exitAfterRun) {
+    public RunCommandFutureCallback(ConsoleUtil consoleUtil, ServerLogPrinter serverLogPrinter) {
       this.consoleUtil = consoleUtil;
       this.serverLogPrinter = serverLogPrinter;
-      this.systemUtil = systemUtil;
-      this.exitAfterRun = exitAfterRun;
     }
 
     @Override
     public void onSuccess(AtsSessionPluginOutput output) {
       PluginOutputPrinter.printOutput(output, consoleUtil);
 
-      disableServerLogPrinterAndExitIfNecessary(output.hasSuccess() ? 0 : 1);
+      disableServerLogPrinterIfNecessary();
     }
 
     @Override
     public void onFailure(Throwable error) {
       logger.atWarning().withCause(error).log("Failed to execute command");
 
-      disableServerLogPrinterAndExitIfNecessary(/* exitCode= */ 1);
+      disableServerLogPrinterIfNecessary();
     }
 
-    private void disableServerLogPrinterAndExitIfNecessary(int exitCode) {
+    private void disableServerLogPrinterIfNecessary() {
       if (RUNNING_COMMAND_COUNT.decrementAndGet() == 0) {
         try {
           serverLogPrinter.enable(false);
@@ -755,11 +734,6 @@ public final class RunCommand implements Callable<Integer> {
           if (e instanceof InterruptedException) {
             Thread.currentThread().interrupt();
           }
-        }
-
-        if (exitAfterRun) {
-          logger.atInfo().log("Exiting after the run command finishes");
-          systemUtil.exit(exitCode);
         }
       }
     }
