@@ -249,7 +249,7 @@ public final class RunCommandHandlerTest {
 
     when(sessionInfo.getAllJobs())
         .thenReturn(ImmutableList.of(tradefedJobInfo, nonTradefedJobInfo));
-    when(sessionResultHandlerUtil.isSessionPassed(anyList())).thenReturn(true);
+    when(sessionResultHandlerUtil.isSessionCompleted(anyList())).thenReturn(true);
 
     runCommandHandler.initialize(command);
     runCommandHandler.handleResultProcessing(command, RunCommandState.getDefaultInstance());

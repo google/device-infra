@@ -224,14 +224,14 @@ class RunCommandHandler {
       sessionResultHandlerUtil.cleanUpJobGenDirs(allJobs);
 
       String xtsTestResultSummary = createXtsTestResultSummary(result, command, resultDir, logDir);
-      boolean isSessionPassed = sessionResultHandlerUtil.isSessionPassed(allJobs);
+      boolean isSessionCompleted = sessionResultHandlerUtil.isSessionCompleted(allJobs);
       String sessionSummary =
           String.format(
               "run_command session_id: [%s], command_id: [%s], result: %s.\n"
                   + "command_line_args: %s\n%s",
               sessionInfo.getSessionId(),
               runCommandState.getCommandId(),
-              isSessionPassed ? "SUCCESS" : "FAILURE",
+              isSessionCompleted ? "COMPLETED" : "ERROR",
               command.getInitialState().getCommandLineArgs(),
               xtsTestResultSummary);
 
@@ -239,7 +239,7 @@ class RunCommandHandler {
           oldOutput -> {
             AtsSessionPluginOutput.Builder builder =
                 oldOutput == null ? AtsSessionPluginOutput.newBuilder() : oldOutput.toBuilder();
-            if (isSessionPassed) {
+            if (isSessionCompleted) {
               builder.setSuccess(Success.newBuilder().setOutputMessage(sessionSummary).build());
             } else {
               builder.setFailure(Failure.newBuilder().setErrorMessage(sessionSummary).build());
