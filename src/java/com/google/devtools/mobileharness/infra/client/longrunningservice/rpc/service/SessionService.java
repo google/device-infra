@@ -37,10 +37,13 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
@@ -48,6 +51,7 @@ import com.google.protobuf.FieldMask;
 import com.google.protobuf.util.FieldMaskUtil;
 import io.grpc.stub.StreamObserver;
 import java.util.ArrayList;
+import java.util.List;
 import javax.inject.Inject;
 
 /** Implementation of {@link SessionServiceGrpc}. */
@@ -123,6 +127,18 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
   }
 
   @Override
+  public void notifyAllSessions(
+      NotifyAllSessionsRequest request,
+      StreamObserver<NotifyAllSessionsResponse> responseObserver) {
+    GrpcServiceUtil.invoke(
+        request,
+        responseObserver,
+        this::doNotifyAllSessions,
+        SessionServiceGrpc.getServiceDescriptor(),
+        SessionServiceGrpc.getNotifyAllSessionsMethod());
+  }
+
+  @Override
   public void abortSessions(
       AbortSessionsRequest request, StreamObserver<AbortSessionsResponse> responseObserver) {
     GrpcServiceUtil.invoke(
@@ -184,17 +200,59 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
   }
 
   private NotifySessionResponse doNotifySession(NotifySessionRequest request) {
-    boolean successful =
-        sessionManager.notifySession(
-            request.getSessionId().getId(), request.getSessionNotification());
-    return NotifySessionResponse.newBuilder().setSuccessful(successful).build();
+    String sessionId = request.getSessionId().getId();
+    ImmutableList<String> notifiedSessionIds =
+        sessionManager.notifySessions(
+            ImmutableList.of(sessionId), request.getSessionNotification());
+
+    return NotifySessionResponse.newBuilder()
+        .setSuccessful(notifiedSessionIds.contains(sessionId))
+        .build();
+  }
+
+  @VisibleForTesting
+  NotifyAllSessionsResponse doNotifyAllSessions(NotifyAllSessionsRequest request) {
+    ImmutableList<String> sessionIds =
+        getSessionIds(request.getSessionIdList(), request.getSessionFilter());
+    if (sessionIds.isEmpty()) {
+      return NotifyAllSessionsResponse.getDefaultInstance();
+    }
+
+    ImmutableList<String> notifiedSessionIds =
+        sessionManager.notifySessions(sessionIds, request.getSessionNotification());
+    return NotifyAllSessionsResponse.newBuilder()
+        .addAllSessionId(
+            notifiedSessionIds.stream()
+                .map(sessionId -> SessionId.newBuilder().setId(sessionId).build())
+                .collect(toImmutableList()))
+        .build();
   }
 
   @VisibleForTesting
   AbortSessionsResponse doAbortSessions(AbortSessionsRequest request) {
-    if (request.getSessionIdList().isEmpty() && !request.hasSessionFilter()) {
-      // Doing nothing for an empty request.
+    ImmutableList<String> sessionIds =
+        getSessionIds(request.getSessionIdList(), request.getSessionFilter());
+    if (sessionIds.isEmpty()) {
       return AbortSessionsResponse.getDefaultInstance();
+    }
+
+    sessionManager.abortSessions(sessionIds);
+    return AbortSessionsResponse.newBuilder()
+        .addAllSessionId(
+            sessionIds.stream()
+                .map(sessionId -> SessionId.newBuilder().setId(sessionId).build())
+                .collect(toImmutableList()))
+        .build();
+  }
+
+  /**
+   * Gets all session ids that match the given session ids and session filter. If the given session
+   * ids is empty, other filters will filter all sessions instead of no sessions.
+   */
+  @VisibleForTesting
+  ImmutableList<String> getSessionIds(List<SessionId> sessionIds, SessionFilter sessionFilter) {
+    if (sessionIds.isEmpty() && sessionFilter.equals(SessionFilter.getDefaultInstance())) {
+      return ImmutableList.of();
     }
 
     ArrayList<String> allSessionIds = new ArrayList<>();
@@ -203,28 +261,21 @@ public class SessionService extends SessionServiceGrpc.SessionServiceImplBase {
             .map(sessionDetail -> sessionDetail.getSessionId().getId())
             .collect(toImmutableList()));
     ImmutableList<String> givenSessionIds =
-        request.getSessionIdList().stream().map(SessionId::getId).collect(toImmutableList());
+        sessionIds.stream().map(SessionId::getId).collect(toImmutableList());
     if (!givenSessionIds.isEmpty()) {
       allSessionIds.retainAll(givenSessionIds);
     }
-    if (request.hasSessionFilter()) {
+    if (!sessionFilter.equals(SessionFilter.getDefaultInstance())) {
       ImmutableList<String> filteredSessionIds =
           filteredSessionIds =
               sessionManager
-                  .getAllSessions(
-                      SessionQueryUtil.SESSION_ID_FIELD_MASK, request.getSessionFilter())
+                  .getAllSessions(SessionQueryUtil.SESSION_ID_FIELD_MASK, sessionFilter)
                   .stream()
                   .map(sessionDetail -> sessionDetail.getSessionId().getId())
                   .collect(toImmutableList());
       allSessionIds.retainAll(filteredSessionIds);
     }
-    sessionManager.abortSessions(allSessionIds);
-    return AbortSessionsResponse.newBuilder()
-        .addAllSessionId(
-            allSessionIds.stream()
-                .map(sessionId -> SessionId.newBuilder().setId(sessionId).build())
-                .collect(toImmutableList()))
-        .build();
+    return ImmutableList.copyOf(allSessionIds);
   }
 
   private static RunSessionResponse createRunSessionResponse(SessionDetail finalResult) {

@@ -30,6 +30,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifySessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
@@ -95,7 +97,16 @@ public class SessionStub {
         sessionServiceBlockingStub::notifySession,
         request,
         InfraErrorId.OLCS_STUB_NOTIFY_SESSION_ERROR,
-        "Failed to notify session");
+        "Failed to notify a specific session");
+  }
+
+  public NotifyAllSessionsResponse notifyAllSessions(NotifyAllSessionsRequest request)
+      throws GrpcExceptionWithErrorId {
+    return GrpcStubUtil.invoke(
+        sessionServiceBlockingStub::notifyAllSessions,
+        request,
+        InfraErrorId.OLCS_STUB_NOTIFY_SESSION_ERROR,
+        "Failed to notify all sessions ");
   }
 
   public AbortSessionsResponse abortSessions(AbortSessionsRequest request)
