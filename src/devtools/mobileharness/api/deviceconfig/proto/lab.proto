@@ -55,7 +55,7 @@ message LabConfig {
   mobileharness.api.model.HostProperties host_properties = 9;
 
   // Deprecated. Use ssh_group instead.
-  repeated SshGroup ssh_groups = 10;
+  repeated SshGroup ssh_groups = 10 [deprecated = true];
 
   // The UUID of devices which should be MiscDevice.
   repeated string misc_device_uuid = 11;
