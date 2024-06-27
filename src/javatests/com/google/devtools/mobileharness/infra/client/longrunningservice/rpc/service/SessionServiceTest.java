@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -31,6 +32,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.util.SessionQueryUtil;
 import java.util.Arrays;
@@ -58,7 +61,7 @@ public final class SessionServiceTest {
   }
 
   @Test
-  public void doAbortSessions_success() {
+  public void getSessionIds() {
     SessionFilter filter =
         SessionFilter.newBuilder().setSessionNameRegex("session_name_regex").build();
     when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(null)))
@@ -66,17 +69,56 @@ public final class SessionServiceTest {
     when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(filter)))
         .thenReturn(createSessionDetails("b", "c", "e"));
 
-    AbortSessionsResponse response =
-        sessionService.doAbortSessions(
-            AbortSessionsRequest.newBuilder()
-                .addAllSessionId(createSessionIds("a", "b", "c"))
-                .setSessionFilter(filter)
-                .build());
+    ImmutableList<String> sessionIds =
+        sessionService.getSessionIds(createSessionIds("a", "b", "c"), filter);
 
     verify(sessionManager, times(2))
         .getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), any());
-    verify(sessionManager).abortSessions(eq(ImmutableList.of("b", "c")));
-    assertThat(response.getSessionIdList()).isEqualTo(createSessionIds("b", "c"));
+    assertThat(sessionIds).containsExactly("b", "c");
+  }
+
+  @Test
+  public void getSessionIds_emptySessionIds() {
+    SessionFilter filter =
+        SessionFilter.newBuilder().setSessionNameRegex("session_name_regex").build();
+    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(null)))
+        .thenReturn(createSessionDetails("a", "b", "c", "d", "e"));
+    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(filter)))
+        .thenReturn(createSessionDetails("a", "b", "c"));
+
+    ImmutableList<String> sessionIds = sessionService.getSessionIds(ImmutableList.of(), filter);
+
+    verify(sessionManager, times(2))
+        .getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), any());
+    assertThat(sessionIds).containsExactly("a", "b", "c");
+  }
+
+  @Test
+  public void getSessionIds_emptyFilter() {
+    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(null)))
+        .thenReturn(createSessionDetails("a", "b", "c", "d", "e"));
+
+    ImmutableList<String> sessionIds =
+        sessionService.getSessionIds(createSessionIds("c"), SessionFilter.getDefaultInstance());
+
+    verify(sessionManager).getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), any());
+    assertThat(sessionIds).containsExactly("c");
+  }
+
+  @Test
+  public void getSessionIds_noSessionMatched() {
+    SessionFilter filter =
+        SessionFilter.newBuilder().setSessionNameRegex("session_name_regex").build();
+    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(null)))
+        .thenReturn(createSessionDetails("a", "b", "c", "d", "e"));
+    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(filter)))
+        .thenReturn(ImmutableList.of());
+
+    ImmutableList<String> sessionIds = sessionService.getSessionIds(ImmutableList.of(), filter);
+
+    verify(sessionManager, times(2))
+        .getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), any());
+    assertThat(sessionIds).isEmpty();
   }
 
   @Test
@@ -89,54 +131,11 @@ public final class SessionServiceTest {
   }
 
   @Test
-  public void doAbortSessions_emptySessionIds_success() {
-    SessionFilter filter =
-        SessionFilter.newBuilder().setSessionNameRegex("session_name_regex").build();
-    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(null)))
-        .thenReturn(createSessionDetails("a", "b", "c", "d", "e"));
-    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(filter)))
-        .thenReturn(createSessionDetails("a", "b", "c"));
+  public void doNotifiySessions_emptyRequest_success() {
+    NotifyAllSessionsResponse response =
+        sessionService.doNotifyAllSessions(NotifyAllSessionsRequest.getDefaultInstance());
 
-    AbortSessionsResponse response =
-        sessionService.doAbortSessions(
-            AbortSessionsRequest.newBuilder().setSessionFilter(filter).build());
-
-    verify(sessionManager, times(2))
-        .getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), any());
-    verify(sessionManager).abortSessions(eq(ImmutableList.of("a", "b", "c")));
-    assertThat(response.getSessionIdList()).isEqualTo(createSessionIds("a", "b", "c"));
-  }
-
-  @Test
-  public void doAbortSessions_emptyFilter_success() {
-    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(null)))
-        .thenReturn(createSessionDetails("a", "b", "c", "d", "e"));
-
-    AbortSessionsResponse response =
-        sessionService.doAbortSessions(
-            AbortSessionsRequest.newBuilder().addAllSessionId(createSessionIds("c")).build());
-
-    verify(sessionManager).getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), any());
-    verify(sessionManager).abortSessions(eq(ImmutableList.of("c")));
-    assertThat(response.getSessionIdList()).isEqualTo(createSessionIds("c"));
-  }
-
-  @Test
-  public void doAbortSessions_noSessionMatched() {
-    SessionFilter filter =
-        SessionFilter.newBuilder().setSessionNameRegex("session_name_regex").build();
-    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(null)))
-        .thenReturn(createSessionDetails("a", "b", "c", "d", "e"));
-    when(sessionManager.getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), eq(filter)))
-        .thenReturn(ImmutableList.of());
-
-    AbortSessionsResponse response =
-        sessionService.doAbortSessions(
-            AbortSessionsRequest.newBuilder().setSessionFilter(filter).build());
-
-    verify(sessionManager, times(2))
-        .getAllSessions(eq(SessionQueryUtil.SESSION_ID_FIELD_MASK), any());
-    verify(sessionManager).abortSessions(eq(ImmutableList.of()));
+    verify(sessionManager, never()).notifySessions(any(), any());
     assertThat(response.getSessionIdList()).isEmpty();
   }
 

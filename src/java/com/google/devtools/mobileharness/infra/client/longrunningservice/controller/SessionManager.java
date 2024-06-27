@@ -290,28 +290,41 @@ public class SessionManager {
     return new SessionSubscriber(responseObserver).getRequestObserver();
   }
 
-  public boolean notifySession(String sessionId, SessionNotification sessionNotification) {
+  /** Returns IDs of sessions that are successfully notified. */
+  public ImmutableList<String> notifySessions(
+      ImmutableList<String> sessionIds, SessionNotification sessionNotification) {
     synchronized (sessionsLock) {
-      RunningSession runningSession = runningSessions.get(sessionId);
-      if (runningSession != null) {
-        SessionRunner sessionRunner = runningSession.sessionRunner();
-        logger.atInfo().log(
-            "Notify running session [%s]: [%s]",
-            sessionId, sessionRunner.getProtoPrinter().shortDebugString(sessionNotification));
-        return sessionRunner.notifySession(sessionNotification);
+      ImmutableList.Builder<String> notifiedSessionIds = ImmutableList.builder();
+      for (String sessionId : sessionIds) {
+        if (notifySession(sessionId, sessionNotification)) {
+          notifiedSessionIds.add(sessionId);
+        }
       }
-      PendingSession pendingSession = pendingSessions.get(sessionId);
-      if (pendingSession != null) {
-        logger.atInfo().log(
-            "Notify pending session [%s]: [%s]", sessionId, shortDebugString(sessionNotification));
-        pendingSession.cachedSessionNotifications().add(sessionNotification);
-        return true;
-      }
-      logger.atInfo().log(
-          "Discard notification to session [%s]: [%s]",
-          sessionId, shortDebugString(sessionNotification));
-      return false;
+      return notifiedSessionIds.build();
     }
+  }
+
+  @GuardedBy("sessionsLock")
+  private boolean notifySession(String sessionId, SessionNotification sessionNotification) {
+    RunningSession runningSession = runningSessions.get(sessionId);
+    if (runningSession != null) {
+      SessionRunner sessionRunner = runningSession.sessionRunner();
+      logger.atInfo().log(
+          "Notify running session [%s]: [%s]",
+          sessionId, sessionRunner.getProtoPrinter().shortDebugString(sessionNotification));
+      return sessionRunner.notifySession(sessionNotification);
+    }
+    PendingSession pendingSession = pendingSessions.get(sessionId);
+    if (pendingSession != null) {
+      logger.atInfo().log(
+          "Notify pending session [%s]: [%s]", sessionId, shortDebugString(sessionNotification));
+      pendingSession.cachedSessionNotifications().add(sessionNotification);
+      return true;
+    }
+    logger.atInfo().log(
+        "Discard notification to session [%s]: [%s]",
+        sessionId, shortDebugString(sessionNotification));
+    return false;
   }
 
   public void abortSessions(List<String> sessionIds) {
