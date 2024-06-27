@@ -25,6 +25,8 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -70,9 +72,22 @@ final class ExitCommand implements Callable<Integer> {
   @Override
   public Integer call() {
     try {
-      if (waitForCommand) {
-        waitUntilNoRunningSessions();
+      if (!waitForCommand) {
+        try {
+          atsSessionStub.cancelUnfinishedNotAbortedSessions(
+              /* fromCurrentClient= */ true,
+              AtsSessionPluginNotification.newBuilder()
+                  .setSessionCancellation(
+                      AtsSessionCancellation.newBuilder().setReason("Exit command."))
+                  .build());
+        } catch (MobileHarnessException e) {
+          logger.atWarning().log(
+              "Failed to cancel unfinished sessions with error. Error=[%s]",
+              MoreThrowables.shortDebugString(e));
+        }
       }
+      // Wait until no running sessions.
+      waitUntilNoRunningSessions();
     } finally {
       // Exits the console directly. Its shutdown hook will kill olc server.
       consoleInfo.setShouldExitConsole(true);
