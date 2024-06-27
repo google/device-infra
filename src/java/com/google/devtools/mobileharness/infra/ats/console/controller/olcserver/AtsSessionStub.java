@@ -38,12 +38,14 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionF
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.AtsSessionPluginConfigOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionDetail;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginConfigs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginError;
@@ -59,6 +61,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsRequest;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.RunSessionResponse;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
@@ -305,6 +309,37 @@ public class AtsSessionStub {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_ABORT_SESSION_ERROR,
           String.format("Failed to abort sessions, request=[%s]", shortDebugString(request)),
+          e);
+    }
+  }
+
+  public void cancelUnfinishedNotAbortedSessions(
+      boolean fromCurrentClient, AtsSessionPluginNotification notification)
+      throws MobileHarnessException {
+    SessionFilter sessionFilter =
+        fromCurrentClient
+            ? SessionQueryUtil.getAllAbortableSessionFromClientFilter(clientId)
+            : SessionQueryUtil.UNFINISHED_NOT_ABORTED_SESSION_FILTER;
+    NotifyAllSessionsRequest request =
+        NotifyAllSessionsRequest.newBuilder()
+            .setSessionFilter(sessionFilter)
+            .setSessionNotification(
+                SessionNotification.newBuilder().setNotification(Any.pack(notification)))
+            .build();
+    try {
+      NotifyAllSessionsResponse response =
+          requireNonNull(sessionStubProvider.get()).notifyAllSessions(request);
+      logger
+          .atInfo()
+          .with(IMPORTANCE, DEBUG)
+          .log(
+              "Successfully notified sessions to cancel themselves, response=[%s]",
+              shortDebugString(response));
+    } catch (GrpcExceptionWithErrorId e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATSC_SESSION_STUB_CANCEL_UNFINISHED_SESSIONS_ERROR,
+          String.format(
+              "Failed to cancel unfinished sessions, request=[%s]", shortDebugString(request)),
           e);
     }
   }

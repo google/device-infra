@@ -35,7 +35,9 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerMod
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.GetSessionRequest;
@@ -178,5 +180,16 @@ public class AtsSessionStubTest {
             AtsSessionPluginOutput.newBuilder()
                 .setFailure(Failure.newBuilder().setErrorMessage("Unimplemented []"))
                 .build());
+  }
+
+  @Test
+  public void cancelUnfinishedNotAbortedSessions() throws Exception {
+    serverPreparer.prepareOlcServer();
+
+    atsSessionStub.cancelUnfinishedNotAbortedSessions(
+        /* fromCurrentClient= */ true,
+        AtsSessionPluginNotification.newBuilder()
+            .setSessionCancellation(AtsSessionCancellation.newBuilder().setReason("Exit command."))
+            .build());
   }
 }
