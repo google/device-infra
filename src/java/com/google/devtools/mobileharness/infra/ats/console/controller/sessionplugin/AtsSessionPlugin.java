@@ -30,8 +30,11 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig.CommandCase;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification.TypeCase;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DumpCommand;
@@ -42,19 +45,25 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
+import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
+import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.UnaryOperator;
@@ -62,7 +71,11 @@ import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
 /** OmniLab long-running client session plugin for ATS console. */
-@WithProto({AtsSessionPluginConfig.class, AtsSessionPluginOutput.class})
+@WithProto({
+  AtsSessionPluginConfig.class,
+  AtsSessionPluginOutput.class,
+  AtsSessionPluginNotification.class
+})
 public class AtsSessionPlugin {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
@@ -70,6 +83,8 @@ public class AtsSessionPlugin {
   private static final AtomicInteger NEXT_RUN_COMMAND_ID = new AtomicInteger(1);
 
   private final Object tradefedJobsLock = new Object();
+
+  private final Object testCancellationLock = new Object();
 
   @GuardedBy("tradefedJobsLock")
   private final Map<String, Boolean> runningTradefedJobs = new HashMap<>();
@@ -81,6 +96,13 @@ public class AtsSessionPlugin {
   private final ListDevicesCommandHandler listDevicesCommandHandler;
   private final ListModulesCommandHandler listModulesCommandHandler;
   private final RunCommandHandler runCommandHandler;
+  private final TestMessageUtil testMessageUtil;
+
+  @GuardedBy("testCancellationLock")
+  private final List<TestInfo> startedTestsBeforeCancellation = new ArrayList<>();
+
+  @GuardedBy("testCancellationLock")
+  private XtsTradefedRunCancellation cancellationTestMessage;
 
   /** Set in {@link #onSessionStarting}. */
   private volatile AtsSessionPluginConfig config;
@@ -93,7 +115,8 @@ public class AtsSessionPlugin {
       DumpUptimeCommandHandler dumpUptimeCommandHandler,
       ListDevicesCommandHandler listDevicesCommandHandler,
       ListModulesCommandHandler listModulesCommandHandler,
-      RunCommandHandler runCommandHandler) {
+      RunCommandHandler runCommandHandler,
+      TestMessageUtil testMessageUtil) {
     this.sessionInfo = sessionInfo;
     this.dumpEnvVarCommandHandler = dumpEnvVarCommandHandler;
     this.dumpStackCommandHandler = dumpStackCommandHandler;
@@ -101,6 +124,7 @@ public class AtsSessionPlugin {
     this.listDevicesCommandHandler = listDevicesCommandHandler;
     this.listModulesCommandHandler = listModulesCommandHandler;
     this.runCommandHandler = runCommandHandler;
+    this.testMessageUtil = testMessageUtil;
   }
 
   @Subscribe
@@ -117,7 +141,7 @@ public class AtsSessionPlugin {
   }
 
   private void onSessionStarting() throws MobileHarnessException, InterruptedException {
-    if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
+    if (config.getCommandCase() == CommandCase.RUN_COMMAND) {
       RunCommand runCommand = config.getRunCommand();
 
       String commandId = Integer.toString(NEXT_RUN_COMMAND_ID.getAndIncrement());
@@ -131,36 +155,32 @@ public class AtsSessionPlugin {
               "Command [%s] scheduled, args=[%s]",
               commandId, runCommand.getInitialState().getCommandLineArgs());
       return;
-    } else if (config.getCommandCase().equals(CommandCase.LIST_COMMAND)) {
+    } else if (config.getCommandCase() == CommandCase.LIST_COMMAND) {
       ListCommand listCommand = config.getListCommand();
-      if (listCommand.getCommandCase().equals(ListCommand.CommandCase.LIST_DEVICES_COMMAND)) {
+      if (listCommand.getCommandCase() == ListCommand.CommandCase.LIST_DEVICES_COMMAND) {
         AtsSessionPluginOutput output =
             listDevicesCommandHandler.handle(listCommand.getListDevicesCommand());
         setFinalOutputForNonRunCommand(output);
         return;
-      } else if (listCommand
-          .getCommandCase()
-          .equals(ListCommand.CommandCase.LIST_MODULES_COMMAND)) {
+      } else if (listCommand.getCommandCase() == ListCommand.CommandCase.LIST_MODULES_COMMAND) {
         AtsSessionPluginOutput output =
             listModulesCommandHandler.handle(listCommand.getListModulesCommand());
         setFinalOutputForNonRunCommand(output);
         return;
       }
-    } else if (config.getCommandCase().equals(CommandCase.DUMP_COMMAND)) {
+    } else if (config.getCommandCase() == CommandCase.DUMP_COMMAND) {
       DumpCommand dumpCommand = config.getDumpCommand();
-      if (dumpCommand.getCommandCase().equals(DumpCommand.CommandCase.DUMP_STACK_TRACE_COMMAND)) {
+      if (dumpCommand.getCommandCase() == DumpCommand.CommandCase.DUMP_STACK_TRACE_COMMAND) {
         AtsSessionPluginOutput output =
             dumpStackCommandHandler.handle(dumpCommand.getDumpStackTraceCommand());
         setFinalOutputForNonRunCommand(output);
         return;
-      } else if (dumpCommand
-          .getCommandCase()
-          .equals(DumpCommand.CommandCase.DUMP_ENV_VAR_COMMAND)) {
+      } else if (dumpCommand.getCommandCase() == DumpCommand.CommandCase.DUMP_ENV_VAR_COMMAND) {
         AtsSessionPluginOutput output =
             dumpEnvVarCommandHandler.handle(dumpCommand.getDumpEnvVarCommand());
         setFinalOutputForNonRunCommand(output);
         return;
-      } else if (dumpCommand.getCommandCase().equals(DumpCommand.CommandCase.DUMP_UPTIME_COMMAND)) {
+      } else if (dumpCommand.getCommandCase() == DumpCommand.CommandCase.DUMP_UPTIME_COMMAND) {
         AtsSessionPluginOutput output =
             dumpUptimeCommandHandler.handle(dumpCommand.getDumpUptimeCommand());
         setFinalOutputForNonRunCommand(output);
@@ -178,7 +198,7 @@ public class AtsSessionPlugin {
   @Subscribe
   public void onSessionStarted(SessionStartedEvent event)
       throws MobileHarnessException, InterruptedException {
-    if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
+    if (config.getCommandCase() == CommandCase.RUN_COMMAND) {
       RunCommand runCommand = config.getRunCommand();
       RunCommandState runCommandState = getRunCommandState();
 
@@ -231,8 +251,7 @@ public class AtsSessionPlugin {
   }
 
   @Subscribe
-  public void onJobStart(JobStartEvent jobStartEvent)
-      throws MobileHarnessException, InterruptedException {
+  public void onJobStart(JobStartEvent jobStartEvent) {
     ImmutableList<String> testIds =
         jobStartEvent.getJob().tests().getAll().values().stream()
             .map(testInfo -> testInfo.locator().getId())
@@ -248,13 +267,14 @@ public class AtsSessionPlugin {
 
   @Subscribe
   public void onTestStarting(TestStartingEvent event) {
+    TestInfo testInfo = event.getTest();
     ImmutableList<String> deviceSerials =
         event.getAllocation().getAllDeviceLocators().stream()
             .map(DeviceLocator::getSerial)
             .collect(toImmutableList());
     setRunCommandState(
         oldState -> {
-          String testId = event.getTest().locator().getId();
+          String testId = testInfo.locator().getId();
           logger
               .atInfo()
               .with(IMPORTANCE, IMPORTANT)
@@ -274,6 +294,15 @@ public class AtsSessionPlugin {
         });
     sessionInfo.putSessionProperty(
         SessionProperties.PROPERTY_KEY_SESSION_CONTAIN_STARTED_TEST, "true");
+
+    // Sends cancellation test message if necessary.
+    synchronized (testCancellationLock) {
+      if (cancellationTestMessage == null) {
+        startedTestsBeforeCancellation.add(testInfo);
+      } else {
+        sendCancellationMessageToStartedTest(testInfo, cancellationTestMessage);
+      }
+    }
   }
 
   @Subscribe
@@ -307,6 +336,66 @@ public class AtsSessionPlugin {
               testInfo.locator().getId(),
               testInfo.locator().getName(),
               resultTypeWithCause.toStringWithDetail());
+    }
+  }
+
+  @Subscribe
+  public void onSessionNotification(SessionNotificationEvent event)
+      throws InvalidProtocolBufferException {
+    AtsSessionPluginNotification notification =
+        event.sessionNotification().getNotification().unpack(AtsSessionPluginNotification.class);
+    logger.atInfo().log("Notification: %s", shortDebugString(notification));
+
+    if (notification.getTypeCase() == TypeCase.SESSION_CANCELLATION) {
+      onSessionCancellation(notification.getSessionCancellation());
+    }
+  }
+
+  /** TODO: Support killing jobs here (for non-TF jobs or jobs during allocation). */
+  private void onSessionCancellation(AtsSessionCancellation sessionCancellation) {
+    if (config.getCommandCase() == CommandCase.RUN_COMMAND) {
+      // Stops adding new jobs.
+      runCommandHandler.onSessionCancellation(sessionCancellation);
+
+      // Creates test message.
+      XtsTradefedRunCancellation cancellationTestMessage =
+          XtsTradefedRunCancellation.newBuilder()
+              .setKillTradefedSignal(KillSignal.SIGTSTP.value())
+              .setCancelReason(sessionCancellation.getReason())
+              .build();
+
+      // Sends test message to started tests.
+      ImmutableList<TestInfo> startedTestsBeforeCancellation;
+      synchronized (testCancellationLock) {
+        if (this.cancellationTestMessage != null) {
+          logger.atInfo().log(
+              "Session has been cancelled, current cancellation [%s], previous"
+                  + " cancellation [%s]",
+              shortDebugString(cancellationTestMessage),
+              shortDebugString(this.cancellationTestMessage));
+        }
+        this.cancellationTestMessage = cancellationTestMessage;
+        startedTestsBeforeCancellation = ImmutableList.copyOf(this.startedTestsBeforeCancellation);
+        this.startedTestsBeforeCancellation.clear();
+      }
+      for (TestInfo testInfo : startedTestsBeforeCancellation) {
+        sendCancellationMessageToStartedTest(testInfo, cancellationTestMessage);
+      }
+    }
+  }
+
+  /** TODO: Don't send to non-TF tests. */
+  private void sendCancellationMessageToStartedTest(
+      TestInfo testInfo, XtsTradefedRunCancellation cancellationTestMessage) {
+    logger.atInfo().log(
+        "Send cancellation message to test [%s]: [%s]",
+        testInfo.locator().getId(), shortDebugString(cancellationTestMessage));
+    try {
+      testMessageUtil.sendProtoMessageToTest(testInfo, cancellationTestMessage);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Failed to send cancellation message to test [%s]: [%s]",
+          testInfo.locator().getId(), shortDebugString(cancellationTestMessage));
     }
   }
 
