@@ -41,6 +41,7 @@ import com.google.devtools.mobileharness.shared.util.quota.QuotaManager;
 import com.google.devtools.mobileharness.shared.util.quota.QuotaManager.Lease;
 import com.google.devtools.mobileharness.shared.util.quota.proto.Quota.QuotaKey;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -95,6 +96,8 @@ public class Fastboot {
 
   private final SystemUtil systemUtil;
 
+  private final Sleeper sleeper;
+
   /** Command output callback for capturing fastboot command output. */
   private LineCallback outputCallback;
 
@@ -103,7 +106,8 @@ public class Fastboot {
         Suppliers.memoize(() -> new FastbootInitializer().initializeFastbootEnvironment()),
         QuotaManager.getInstance(),
         new CommandExecutor(),
-        new SystemUtil());
+        new SystemUtil(),
+        Sleeper.defaultSleeper());
   }
 
   @VisibleForTesting
@@ -111,11 +115,13 @@ public class Fastboot {
       Supplier<FastbootParam> fastbootParamSupplier,
       QuotaManager quotaManager,
       CommandExecutor cmdExecutor,
-      SystemUtil systemUtil) {
+      SystemUtil systemUtil,
+      Sleeper sleeper) {
     this.fastbootParamSupplier = fastbootParamSupplier;
     this.quotaManager = quotaManager;
     this.cmdExecutor = cmdExecutor;
     this.systemUtil = systemUtil;
+    this.sleeper = sleeper;
   }
 
   /** Interface for specifying logic to run on retry. */
@@ -483,6 +489,21 @@ public class Fastboot {
    */
   public String rebootBootloader(String serial)
       throws MobileHarnessException, InterruptedException {
+    // Testing showed a 1-3 second delay before reboot. Wait 5.
+    return rebootBootloader(serial, Duration.ofSeconds(5L));
+  }
+
+  /**
+   * Reboots the device to bootloader.
+   *
+   * @param serial device serial number
+   * @param waitTime the time to wait for the device really being rebooted to bootloader
+   * @return the command output
+   * @throws MobileHarnessException if fails to execute the command or timeout
+   * @throws InterruptedException if the thread executing the command is interrupted
+   */
+  public String rebootBootloader(String serial, Duration waitTime)
+      throws MobileHarnessException, InterruptedException {
     checkFastboot();
     String output =
         runWithRetry(
@@ -493,9 +514,7 @@ public class Fastboot {
 
     // 'fastboot reboot-bootloader' can return immediately, before the device has rebooted.
     // If another flash command is issued before the device reboots, the flash will fail.
-    //
-    // Testing showed a 1-3 second delay before reboot. Wait 5.
-    Thread.sleep(5000);
+    sleeper.sleep(waitTime);
 
     return output;
   }
