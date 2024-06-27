@@ -55,6 +55,17 @@ message AtsSessionPluginOutput {
   RunCommandState run_command_state = 3;
 }
 
+message AtsSessionPluginNotification {
+  oneof type {
+    AtsSessionCancellation session_cancellation = 1;
+  }
+}
+
+message AtsSessionCancellation {
+  // Required.
+  string reason = 1;
+}
+
 enum DeviceType {
   DEVICE_TYPE_UNSPECIFIED = 0;
   EMULATOR = 1;

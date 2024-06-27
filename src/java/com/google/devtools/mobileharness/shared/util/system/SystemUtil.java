@@ -124,7 +124,8 @@ public class SystemUtil {
     // Terminates a process immediately. However, this signal can be handled, ignored or caught in
     // code. If the signal is not caught by a process, the process is killed. Also, this is used for
     // graceful termination of a process.
-    SIGTERM(15);
+    SIGTERM(15),
+    SIGTSTP(20);
 
     private final int value;
 

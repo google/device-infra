@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Success;
@@ -55,6 +56,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
 /** Handler for "run" commands. */
@@ -70,6 +72,11 @@ class RunCommandHandler {
   private final SessionResultHandlerUtil sessionResultHandlerUtil;
   private final LocalFileUtil localFileUtil;
   private final SessionInfo sessionInfo;
+
+  private final Object addingJobLock = new Object();
+
+  @GuardedBy("addingJobLock")
+  private AtsSessionCancellation sessionCancellation;
 
   /** Set in {@link #initialize}. */
   private volatile boolean initialized;
@@ -95,6 +102,17 @@ class RunCommandHandler {
         TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits());
     sessionRequestInfo = generateSessionRequestInfo(command);
     initialized = true;
+  }
+
+  /** Stop adding new jobs. */
+  void onSessionCancellation(AtsSessionCancellation sessionCancellation) {
+    logger
+        .atInfo()
+        .with(IMPORTANCE, IMPORTANT)
+        .log("Stop adding new jobs due to [%s]", shortDebugString(sessionCancellation));
+    synchronized (addingJobLock) {
+      this.sessionCancellation = sessionCancellation;
+    }
   }
 
   private static int getRandom4Digits() {
@@ -136,11 +154,14 @@ class RunCommandHandler {
 
     addEnableXtsDynamicDownloadToJob(jobInfo.get(), command);
 
-    sessionInfo.addJob(jobInfo.get());
-    String jobId = jobInfo.get().locator().getId();
-    logger.atInfo().log(
-        "Added tradefed job[%s] to the session %s", jobId, sessionInfo.getSessionId());
-    return ImmutableList.of(jobId);
+    if (addJobToSession(jobInfo.get())) {
+      String jobId = jobInfo.get().locator().getId();
+      logger.atInfo().log(
+          "Added tradefed job[%s] to the session %s", jobId, sessionInfo.getSessionId());
+      return ImmutableList.of(jobId);
+    } else {
+      return ImmutableList.of();
+    }
   }
 
   /**
@@ -166,11 +187,12 @@ class RunCommandHandler {
         jobInfo -> {
           addEnableXtsDynamicDownloadToJob(jobInfo, runCommand);
 
-          sessionInfo.addJob(jobInfo);
-          nonTradefedJobIds.add(jobInfo.locator().getId());
-          logger.atInfo().log(
-              "Added non-tradefed job[%s] to the session %s",
-              jobInfo.locator().getId(), sessionInfo.getSessionId());
+          if (addJobToSession(jobInfo)) {
+            nonTradefedJobIds.add(jobInfo.locator().getId());
+            logger.atInfo().log(
+                "Added non-tradefed job[%s] to the session %s",
+                jobInfo.locator().getId(), sessionInfo.getSessionId());
+          }
         });
     return nonTradefedJobIds.build();
   }
@@ -247,6 +269,24 @@ class RunCommandHandler {
             return builder.build();
           },
           AtsSessionPluginOutput.class);
+    }
+  }
+
+  /**
+   * Returns true if the job has been added to the session successfully, false if the job was not
+   * added to the session.
+   */
+  private boolean addJobToSession(JobInfo jobInfo) {
+    synchronized (addingJobLock) {
+      if (sessionCancellation == null) {
+        sessionInfo.addJob(jobInfo);
+        return true;
+      } else {
+        logger.atInfo().log(
+            "Skip adding job [%s] to session due to [%s]",
+            jobInfo.locator().getId(), shortDebugString(sessionCancellation));
+        return false;
+      }
     }
   }
 
