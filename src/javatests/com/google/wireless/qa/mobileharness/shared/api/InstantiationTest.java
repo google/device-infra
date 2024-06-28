@@ -107,6 +107,8 @@ public class InstantiationTest {
     when(testInfo.locator()).thenReturn(testLocator);
     when(testInfo.getTmpFileDir())
         .thenReturn(tmpFolder.newFolder("test_tmp_file_dir").getAbsolutePath());
+    when(testInfo.getGenFileDir())
+        .thenReturn(tmpFolder.newFolder("test_gen_file_dir").getAbsolutePath());
     when(testInfo.files()).thenReturn(testFiles);
     when(testLocator.getId()).thenReturn("fake_test_id");
     when(jobInfo.params()).thenReturn(jobParams);
