@@ -873,6 +873,44 @@ public final class AndroidFileUtilTest {
   }
 
   @Test
+  public void makeFileExecutableReadableNonWritable() throws Exception {
+    String filePathOnDevice = "/path/to/file";
+    when(adb.runShellWithRetry(
+            SERIAL,
+            String.format(
+                AndroidFileUtil.ADB_SHELL_MAKE_FILE_EXECUTABLE_READABLE_NON_WRITEABLE,
+                filePathOnDevice)))
+        .thenReturn("OK");
+
+    assertThat(androidFileUtil.makeFileExecutableReadableNonWritable(SERIAL, filePathOnDevice))
+        .isEqualTo("OK");
+  }
+
+  @Test
+  public void makeFileExecutableReadableNonWritable_throwsMobileHarnessException()
+      throws Exception {
+    String filePathOnDevice = "/path/to/file";
+    when(adb.runShellWithRetry(
+            SERIAL,
+            String.format(
+                AndroidFileUtil.ADB_SHELL_MAKE_FILE_EXECUTABLE_READABLE_NON_WRITEABLE,
+                filePathOnDevice)))
+        .thenThrow(
+            new MobileHarnessException(
+                AndroidErrorId.ANDROID_ADB_SYNC_CMD_EXECUTION_FAILURE, "Error"));
+
+    assertThat(
+            assertThrows(
+                    MobileHarnessException.class,
+                    () ->
+                        androidFileUtil.makeFileExecutableReadableNonWritable(
+                            SERIAL, filePathOnDevice))
+                .getErrorId())
+        .isEqualTo(
+            AndroidErrorId.ANDROID_FILE_UTIL_MAKE_FILE_EXECUTABLE_READABLE_NOT_WRITEABLE_ERROR);
+  }
+
+  @Test
   public void md5() throws Exception {
     int sdkVersion = 18;
     when(adb.runShellWithRetry(SERIAL, AndroidFileUtil.ADB_SHELL_MD5 + " " + APK_PATH))
