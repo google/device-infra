@@ -77,7 +77,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/module:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
