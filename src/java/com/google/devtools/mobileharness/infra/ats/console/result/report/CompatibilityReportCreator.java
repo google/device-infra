@@ -69,6 +69,9 @@ public class CompatibilityReportCreator {
 
   private static final String ENCODING = "UTF-8";
 
+  // The maximum size of a stack trace saved in the report.
+  private static final int STACK_TRACE_MAX_SIZE = 1024 * 1024;
+
   @VisibleForTesting static final String TEST_RESULT_FILE_NAME = "test_result.xml";
   @VisibleForTesting static final String HTML_REPORT_NAME = "test_result.html";
   @VisibleForTesting static final String REPORT_XSL_FILE_NAME = "compatibility_result.xsl";
@@ -393,7 +396,9 @@ public class CompatibilityReportCreator {
     }
     if (testFailure.hasStackTrace()) {
       serializer.startTag(NS, XmlConstants.STACKTRACE_TAG);
-      serializer.text(sanitizeXmlContent(testFailure.getStackTrace().getContent(), inNonTfModule));
+      String truncatedStackTrace =
+          truncateStackTrace(testFailure.getStackTrace().getContent(), inNonTfModule);
+      serializer.text(sanitizeXmlContent(truncatedStackTrace, inNonTfModule));
       serializer.endTag(NS, XmlConstants.STACKTRACE_TAG);
     }
     serializer.endTag(NS, XmlConstants.FAILURE_TAG);
@@ -408,6 +413,17 @@ public class CompatibilityReportCreator {
     serializer.attribute(NS, XmlConstants.LOG_FILE_NAME_ATTR, fileName);
     serializer.text(text);
     serializer.endTag(NS, tag);
+  }
+
+  @VisibleForTesting
+  static String truncateStackTrace(String fullStackTrace, boolean inNonTfModule) {
+    // If it's in a non-TF module, we need to truncate the full stack trace with maximum {@link
+    // STACK_TRACE_MAX_SIZE} characters like how TF does. If it's in a TF module, we don't need to
+    // additionally truncate the full stack trace as TF has done so.
+    if (inNonTfModule && fullStackTrace.length() > STACK_TRACE_MAX_SIZE) {
+      return fullStackTrace.substring(0, STACK_TRACE_MAX_SIZE);
+    }
+    return fullStackTrace;
   }
 
   private static String sanitizeXmlContent(String s, boolean inNonTfModule) {

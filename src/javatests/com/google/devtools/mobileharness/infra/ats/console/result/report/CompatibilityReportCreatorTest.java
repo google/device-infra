@@ -149,6 +149,15 @@ public final class CompatibilityReportCreatorTest {
   }
 
   @Test
+  public void truncateLargeStacktrace() throws Exception {
+    String fullStacktrace = "expected:<-25.0> but was:<15.0>\n".repeat(100000);
+    assertThat(
+            CompatibilityReportCreator.truncateStackTrace(
+                fullStacktrace, /* inNonTfModule= */ true))
+        .isEqualTo("expected:<-25.0> but was:<15.0>\n".repeat(1024 * 32));
+  }
+
+  @Test
   public void createReport() throws Exception {
     Result report = reportParser.parse(Path.of(CTS_TEST_RESULT_XML), /* shallow= */ false).get();
 
