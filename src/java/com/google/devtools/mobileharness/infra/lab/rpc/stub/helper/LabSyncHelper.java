@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.infra.lab.rpc.stub.helper;
 
 import static com.google.common.base.StandardSystemProperty.JAVA_VERSION;
 import static com.google.common.base.StandardSystemProperty.OS_NAME;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
@@ -68,7 +69,7 @@ import java.util.stream.Collectors;
 
 /** RPC stub helper for talking to MobileHarness Master V5 LabSyncService. */
 public class LabSyncHelper {
-  public static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @VisibleForTesting
   static final VersionCheckRequest VERSION_CHECK_REQ =
@@ -238,7 +239,7 @@ public class LabSyncHelper {
         // TODO: Define the scope of the Drivers alongside the Driver code.
         if (!device.getDimension(Name.POOL).stream()
             .map(String::toLowerCase)
-            .collect(Collectors.toSet())
+            .collect(toImmutableSet())
             .contains(Value.POOL_SHARED)) {
           drivers.removeAll(ImmutableList.of("AndroidMonkey"));
         }
@@ -317,8 +318,8 @@ public class LabSyncHelper {
     }
   }
 
-  private LabServerFeature getLabServerFeature() throws MobileHarnessException {
-    HostProperties.Builder hostProperties = apiConfig.getHostProperties().toBuilder();
+  public HostProperties getNonConfigurableHostProperties() throws MobileHarnessException {
+    HostProperties.Builder hostProperties = HostProperties.newBuilder();
 
     netUtil
         .getLocalHostLocation()
@@ -351,6 +352,12 @@ public class LabSyncHelper {
             .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_OS_VERSION.name()))
             .setValue(System.getProperty("os.version")));
 
+    return hostProperties.build();
+  }
+
+  private LabServerFeature getLabServerFeature() throws MobileHarnessException {
+    HostProperties.Builder hostProperties = apiConfig.getHostProperties().toBuilder();
+    hostProperties.addAllHostProperty(getNonConfigurableHostProperties().getHostPropertyList());
     return LabServerFeature.newBuilder().setHostProperties(hostProperties).build();
   }
 

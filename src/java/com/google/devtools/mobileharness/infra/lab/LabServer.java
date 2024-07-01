@@ -165,6 +165,8 @@ public class LabServer {
       MasterSyncerForDevice masterSyncerForDevice = null;
       MasterSyncerForJob masterSyncerForJob = null;
 
+      LabSyncHelper labSyncHelper = null;
+
       LabSyncStub labSyncStub = null;
       JobSyncStub jobSyncStub = null;
 
@@ -177,7 +179,7 @@ public class LabServer {
       }
 
       if (labSyncStub != null) {
-        LabSyncHelper labSyncHelper =
+        labSyncHelper =
             new LabSyncHelper(
                 labSyncStub,
                 rpcPort,
