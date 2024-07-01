@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.console.util.tradefed;
 
 import com.android.tradefed.result.proto.TestRecordProto.TestRecord;
+import com.google.devtools.mobileharness.shared.util.base.ByteArrayList;
 import com.google.protobuf.CodedInputStream;
 import java.io.File;
 import java.io.FileInputStream;

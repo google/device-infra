@@ -32,10 +32,33 @@ java_library(
 )
 
 java_library(
+    name = "byte_array_list",
+    srcs = ["ByteArrayList.java"],
+    deps = [
+        "@maven//:com_google_errorprone_error_prone_annotations",
+    ],
+)
+
+java_library(
+    name = "byte_array_util",
+    srcs = ["ByteArrayUtil.java"],
+)
+
+java_library(
     name = "stack_set",
     srcs = ["StackSet.java"],
     deps = [
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "stream_util",
+    srcs = ["StreamUtil.java"],
+    deps = [
+        ":byte_array_list",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
         "@maven//:com_google_guava_guava",
     ],
 )
