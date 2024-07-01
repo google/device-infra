@@ -222,4 +222,13 @@ message RequestDetail {
   optional CancelReason cancel_reason = 20;
   optional NewMultiCommandRequest original_request = 21;
   optional string next_attempt_session_id = 22;
+
+  // Test context for each command id.
+  map<string, TestContext> test_contexts = 23;
+}
+
+message TestContext {
+  optional string command_line = 1;
+  map<string, string> env_vars = 2;
+  repeated TestResource test_resources = 3;
 }
