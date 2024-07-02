@@ -422,9 +422,19 @@ public class Flags {
 
   @com.beust.jcommander.Parameter(
       names = "--disable_device_reboot",
-      description = "Whether to disable device reboot.",
+      description = "Whether to disable device reboot. Default is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> disableDeviceReboot = disableDeviceRebootDefault;
+
+  private static final Flag<Boolean> disableDeviceRebootForRoPropertiesDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--disable_device_reboot_for_ro_properties",
+      description =
+          "Whether to disable 'device reboot for read-only properties'. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> disableDeviceRebootForRoProperties =
+      disableDeviceRebootForRoPropertiesDefault;
 
   private static final Flag<Boolean> enableAndroidDeviceReadyCheckDefault = Flag.value(true);
 

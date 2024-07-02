@@ -20,6 +20,7 @@ java_library(
     srcs = ["AndroidRealDeviceDelegate.java"],
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
+        "//src/javatests/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android/realdevice:__pkg__",
     ],
     deps = [
         ":android_real_device_constants",
@@ -55,6 +56,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/systemspec",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemstate:system_state_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/user:android_user_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
