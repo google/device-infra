@@ -98,10 +98,6 @@ func RestoreFile(path string, chunksDir string, chunks []ChunkInfo) error {
 			return fmt.Errorf("failed to read chunk data from file: %v", err)
 		}
 
-		if _, err = file.Seek(0, io.SeekEnd); err != nil { // Seek to the end of the file for appending.
-			return err
-		}
-
 		if _, err = file.Write(chunkData); err != nil {
 			return err
 		}
