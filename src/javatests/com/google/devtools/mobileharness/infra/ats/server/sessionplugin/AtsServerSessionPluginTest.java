@@ -39,7 +39,9 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelSession;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandAttemptDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CommandInfo;
@@ -53,8 +55,10 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Tes
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionNotificationEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionId;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionNotification;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionPluginExecutionConfig;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.CreateSessionResponse;
@@ -68,8 +72,11 @@ import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import com.google.protobuf.Any;
+import com.google.protobuf.TextFormat;
 import com.google.protobuf.util.Timestamps;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
+import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
+import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -128,6 +135,7 @@ public final class AtsServerSessionPluginTest {
   @Bind @Mock private Clock clock;
   @Bind @Mock private XtsTypeLoader xtsTypeLoader;
   @Bind @Mock private LocalSessionStub localSessionStub;
+  @Bind @Mock private TestMessageUtil testMessageUtil;
   @Mock private JobInfo jobInfo;
   @Mock private JobInfo jobInfo2;
   @Mock private JobInfo moblyJobInfo;
@@ -349,6 +357,40 @@ public final class AtsServerSessionPluginTest {
   }
 
   @Test
+  public void onSessionStarting_manuallyCancelSession_noJobCreated() throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of());
+    AtsServerSessionNotification notification =
+        AtsServerSessionNotification.newBuilder()
+            .setCancelSession(CancelSession.getDefaultInstance())
+            .build();
+    plugin.onSessionNotification(
+        new SessionNotificationEvent(
+            sessionInfo,
+            SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
+            TextFormat.printer()));
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo, never()).addJob(any());
+    verify(sessionInfo, times(2))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
+    assertThat(requestDetail.getId()).isEqualTo("session_id");
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
+    assertThat(requestDetail.getCommandInfosList()).containsExactly(commandInfo);
+    assertThat(requestDetail.getCreateTime()).isEqualTo(Timestamps.fromMillis(1000L));
+    assertThat(requestDetail.getStartTime()).isEqualTo(Timestamps.fromMillis(2000L));
+    assertThat(requestDetail.getMaxRetryOnTestFailures())
+        .isEqualTo(request.getMaxRetryOnTestFailures());
+  }
+
+  @Test
   public void onJobEnded_tradefedJobEnded_triggerNonTradefedJob() throws Exception {
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
     when(sessionInfo.getSessionPluginExecutionConfig())
@@ -385,6 +427,83 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.containsCommandDetails(commandId)).isTrue();
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().get(commandId);
     assertThat(commandDetail.getOriginalCommandInfo()).isEqualTo(commandInfo);
+  }
+
+  @Test
+  public void onTestStarting_cancelSession_sendCancelMessageToTest() throws Exception {
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
+    when(jobInfo.result()).thenReturn(result);
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+    AtsServerSessionNotification notification =
+        AtsServerSessionNotification.newBuilder()
+            .setCancelSession(CancelSession.getDefaultInstance())
+            .build();
+    plugin.onSessionNotification(
+        new SessionNotificationEvent(
+            sessionInfo,
+            SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
+            TextFormat.printer()));
+    plugin.onTestStarting(new TestStartingEvent(testInfo, null));
+
+    verify(testMessageUtil).sendProtoMessageToTest(eq(testInfo), any());
+  }
+
+  @Test
+  public void onJobEnded_manuallyCancelSession_skipCreatingNonTradefedJob() throws Exception {
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+    when(jobInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
+    when(jobInfo.result()).thenReturn(result);
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+    AtsServerSessionNotification notification =
+        AtsServerSessionNotification.newBuilder()
+            .setCancelSession(CancelSession.getDefaultInstance())
+            .build();
+    plugin.onTestStarting(new TestStartingEvent(testInfo, null));
+    plugin.onSessionNotification(
+        new SessionNotificationEvent(
+            sessionInfo,
+            SessionNotification.newBuilder().setNotification(Any.pack(notification)).build(),
+            TextFormat.printer()));
+    verify(testMessageUtil).sendProtoMessageToTest(eq(testInfo), any());
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+
+    // Verify added non tradefed jobs.
+    verify(sessionInfo, never()).addJob(moblyJobInfo);
+    verify(sessionInfo, times(3))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = unaryOperatorCaptor.getValue().apply(null);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.CANCELED);
   }
 
   @Test

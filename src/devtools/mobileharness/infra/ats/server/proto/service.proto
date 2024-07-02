@@ -223,3 +223,11 @@ message RequestDetail {
   optional NewMultiCommandRequest original_request = 21;
   optional string next_attempt_session_id = 22;
 }
+
+message AtsServerSessionNotification {
+  oneof notification {
+    CancelSession cancel_session = 1;
+  }
+}
+
+message CancelSession {}
