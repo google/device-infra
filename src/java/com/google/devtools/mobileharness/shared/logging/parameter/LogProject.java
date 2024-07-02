@@ -20,7 +20,7 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 
 /** The log project in stackdriver. */
 public enum LogProject {
-  LAB_SERVER("lab_server");
+  ;
 
   private final String projectName;
 
