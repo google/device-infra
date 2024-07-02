@@ -130,7 +130,7 @@ public class Params {
       return defaultValue;
     } else if (Ascii.equalsIgnoreCase(Boolean.TRUE.toString(), value.get())) {
       return true;
-    } else if (Boolean.FALSE.toString().equalsIgnoreCase(value.get())) {
+    } else if (Ascii.equalsIgnoreCase(Boolean.FALSE.toString(), value.get())) {
       return false;
     } else {
       return defaultValue;
