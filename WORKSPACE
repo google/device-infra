@@ -2,7 +2,6 @@ workspace(name = "com_google_deviceinfra")
 
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
-
 # GoogleTest/GoogleMock framework. Used by most unit-tests.
 http_archive(
     name = "com_google_googletest",
@@ -188,7 +187,7 @@ http_archive(
     url = "https://github.com/bazelbuild/rules_jvm_external/archive/4.2.zip",
 )
 
-load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS", "grpc_java_repositories")
+load("@io_grpc_grpc_java//:repositories.bzl", "IO_GRPC_GRPC_JAVA_ARTIFACTS", "grpc_java_repositories")
 
 grpc_java_repositories()
 
@@ -242,7 +241,10 @@ maven_install(
         "androidx.annotation:annotation:1.2.0",
         "androidx.core:core:1.6.0",
         "com.beust:jcommander:1.82",
+        "com.google.api:gax:2.8.1",
+        "com.google.api:gax-grpc:2.8.1",
         "com.google.api-client:google-api-client:1.35.2",
+        "com.google.api.grpc:proto-google-cloud-pubsub-v1:1.113.0",
         "com.google.apis:google-api-services-storage:v1-rev20211201-1.32.1",
         "com.google.auto.value:auto-value:1.10.4",
         "com.google.auto.value:auto-value-annotations:1.10.4",
@@ -250,6 +252,7 @@ maven_install(
         "com.google.api.grpc:proto-google-cloud-logging-v2:0.63.0",
         "com.google.auth:google-auth-library-credentials:1.23.0",
         "com.google.auth:google-auth-library-oauth2-http:1.23.0",
+        "com.google.cloud:google-cloud-pubsub:1.131.0",
         "com.google.code.findbugs:jsr305:3.0.2",
         "com.google.code.gson:gson:2.10.1",
         "com.google.errorprone:error_prone_annotations:2.24.1",
@@ -284,7 +287,7 @@ maven_install(
     ] + IO_GRPC_GRPC_JAVA_ARTIFACTS + PROTOBUF_MAVEN_ARTIFACTS,
     fetch_sources = True,
     generate_compat_repositories = True,
-    override_targets = IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS,
+    # override_targets = IO_GRPC_GRPC_JAVA_OVERRIDE_TARGETS,
     repositories = [
         "https://maven.google.com",
         "https://repo1.maven.org/maven2",
