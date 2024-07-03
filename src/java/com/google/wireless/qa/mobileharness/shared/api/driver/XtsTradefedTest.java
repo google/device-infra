@@ -693,9 +693,15 @@ public class XtsTradefedTest extends BaseDriver
     return ImmutableMap.copyOf(environmentToTradefedConsole);
   }
 
-  private static String getConcatenatedLdLibraryPath(Path tmpXtsRootDir, String xtsType) {
-    Path xtsLibDir = XtsDirUtil.getXtsLibDir(tmpXtsRootDir, xtsType);
-    return String.format("%s:%s64", xtsLibDir, xtsLibDir);
+  private String getConcatenatedLdLibraryPath(Path tmpXtsRootDir, String xtsType) {
+    List<String> libPathSegments = new ArrayList<>();
+    libPathSegments.add(XtsDirUtil.getXtsLibDir(tmpXtsRootDir, xtsType).toString());
+    libPathSegments.add(XtsDirUtil.getXtsLib64Dir(tmpXtsRootDir, xtsType).toString());
+    String existingLdLibraryPath = systemUtil.getEnv("LD_LIBRARY_PATH");
+    if (existingLdLibraryPath != null) {
+      libPathSegments.add(existingLdLibraryPath);
+    }
+    return Joiner.on(':').join(libPathSegments);
   }
 
   private String getEnvPath() throws MobileHarnessException, InterruptedException {
@@ -867,16 +873,19 @@ public class XtsTradefedTest extends BaseDriver
     Path sourceXtsBundledTestcasesDir = XtsDirUtil.getXtsTestCasesDir(sourceXtsRootDir, xtsType);
     Path sourceXtsBundledToolsDir = XtsDirUtil.getXtsToolsDir(sourceXtsRootDir, xtsType);
     Path sourceXtsBundledLibDir = XtsDirUtil.getXtsLibDir(sourceXtsRootDir, xtsType);
+    Path sourceXtsBundledLib64Dir = XtsDirUtil.getXtsLib64Dir(sourceXtsRootDir, xtsType);
 
     Path linkJdkDir = XtsDirUtil.getXtsJdkDir(tmpXtsWorkDir, xtsType);
     Path linkTestcasesDir = XtsDirUtil.getXtsTestCasesDir(tmpXtsWorkDir, xtsType);
     Path linkToolsDir = XtsDirUtil.getXtsToolsDir(tmpXtsWorkDir, xtsType);
     Path linkLibDir = XtsDirUtil.getXtsLibDir(tmpXtsWorkDir, xtsType);
+    Path linkLib64Dir = XtsDirUtil.getXtsLib64Dir(tmpXtsWorkDir, xtsType);
 
     createSymlink(linkJdkDir, sourceXtsBundledJdkDir);
     createSymlinksForTestCases(linkTestcasesDir, sourceXtsBundledTestcasesDir);
     createSymlink(linkToolsDir, sourceXtsBundledToolsDir);
     createSymlink(linkLibDir, sourceXtsBundledLibDir);
+    createSymlink(linkLib64Dir, sourceXtsBundledLib64Dir);
 
     if (testInfo.properties().has(XtsConstants.XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY)) {
       // Integrates the dynamic downloaded test cases with the temp XTS workspace.
