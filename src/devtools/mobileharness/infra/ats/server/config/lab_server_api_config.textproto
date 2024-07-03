@@ -1,0 +1,9 @@
+# proto-file: third_party/deviceinfra/src/java/com/google/wireless/qa/mobileharness/shared/proto/config.proto
+# proto-message: mobileharness.shared.ApiConfig
+
+composite_dimension {
+  supported_dimension {
+    name: "recovery"
+    value: "test_harness"
+  }
+}
