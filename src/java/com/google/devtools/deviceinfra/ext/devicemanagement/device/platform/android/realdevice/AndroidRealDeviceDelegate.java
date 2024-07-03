@@ -16,9 +16,11 @@
 
 package com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.realdevice;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.common.collect.Streams.concat;
 
+import com.google.auto.value.AutoValue;
+import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Ascii;
 import com.google.common.base.Joiner;
@@ -588,7 +590,7 @@ public abstract class AndroidRealDeviceDelegate {
     logger.atInfo().log("Set device %s test properties", deviceId);
     // This function will make all flags working, if anyone wants to modify the flag in special
     // situation, please make sure the modification is running before this function.
-    enableTestPropertiesAndDisablePackages(deviceId);
+    enableTestPropertiesAndDisablePackages();
     // Tries to keep device awake.
     logger.atInfo().log("Device %s stays awake", deviceId);
     systemSettingUtil.keepAwake(deviceId, /* alwaysAwake= */ true);
@@ -1061,8 +1063,7 @@ public abstract class AndroidRealDeviceDelegate {
   /**
    * Customized operations in the device after test step which is executed before the default one.
    */
-  protected abstract void prependedRealDeviceAfterTestProcess(
-      com.google.wireless.qa.mobileharness.shared.model.job.TestInfo testInfo)
+  protected abstract void prependedRealDeviceAfterTestProcess(TestInfo testInfo)
       throws InterruptedException;
 
   /** Returns {@code true} if skip the default operations after the test. */
@@ -1309,92 +1310,165 @@ public abstract class AndroidRealDeviceDelegate {
    *
    * @see <a href="http://b/14574172">background</a>
    */
-  private void enableTestPropertiesAndDisablePackages(String serial)
+  private void enableTestPropertiesAndDisablePackages()
       throws MobileHarnessException, InterruptedException {
     if (!ifTrySetDevicePropertiesAndDisablePackages()) {
       return;
     }
 
-    ImmutableSet<AndroidProperty> needRebootToClearReadOnlyTestProperties =
-        needRebootToClearReadOnlyTestProperties();
-    if (!Flags.instance().disableDeviceReboot.getNonNull()) {
-      try {
-        if (!needRebootToClearReadOnlyTestProperties.isEmpty()) {
-          logger.atInfo().log(
-              "Reboot device %s to clear ro properties %s",
-              serial, needRebootToClearReadOnlyTestProperties);
+    // Creates read-only property settings.
+    ImmutableList<ReadOnlyPropertySetting> readOnlyPropertySettings =
+        createReadOnlyPropertySettings();
+    ImmutableList<ReadOnlyPropertySetting> needRebootToClearReadOnlyProperties =
+        readOnlyPropertySettings.stream()
+            .filter(ReadOnlyPropertySetting::needRebootToSetProperty)
+            .collect(toImmutableList());
+    boolean canRebootToClearReadOnlyProperties =
+        !Flags.instance().disableDeviceReboot.getNonNull()
+            && !Flags.instance().disableDeviceRebootForRoProperties.getNonNull();
+
+    // Reboots if necessary and allowed.
+    boolean hasRebooted = false;
+    if (!needRebootToClearReadOnlyProperties.isEmpty()) {
+      if (canRebootToClearReadOnlyProperties) {
+        logger.atInfo().log(
+            "Reboot device %s to clear read-only properties %s",
+            deviceId, needRebootToClearReadOnlyProperties);
+        try {
           systemStateManager.reboot(device, /* log= */ null, /* deviceReadyTimeout= */ null);
+          hasRebooted = true;
+        } catch (MobileHarnessException e) {
+          logger.atWarning().log(
+              "Failed to reboot device %s to clear read-only properties %s",
+              deviceId, MoreThrowables.shortDebugString(e));
         }
-      } catch (MobileHarnessException e) {
-        logger.atWarning().log(
-            "Failed to check device %s read only properties: %s",
-            serial, MoreThrowables.shortDebugString(e));
+      } else {
+        logger.atInfo().log(
+            "Need reboot device %s to clear read-only properties %s but device reboot is disabled"
+                + " by flags",
+            deviceId, needRebootToClearReadOnlyProperties);
       }
     }
-    if (Flags.instance().disableCalling.getNonNull()) {
-      logger.atInfo().log("Disable calling on device %s", serial);
-      androidAdbUtil.setProperty(
-          serial, AndroidProperty.DISABLE_CALL.getPrimaryPropertyKey(), "true", true);
+
+    // Sets read-only properties.
+    for (ReadOnlyPropertySetting readOnlyPropertySetting : readOnlyPropertySettings) {
+      setReadOnlyProperty(readOnlyPropertySetting, hasRebooted);
     }
-    if (Flags.instance().setTestHarnessProperty.getNonNull()) {
-      logger.atInfo().log(
-          "Set property %s to 1 on device %s",
-          AndroidProperty.TEST_HARNESS.getPrimaryPropertyKey(), serial);
-      androidAdbUtil.setProperty(
-          serial, AndroidProperty.TEST_HARNESS.getPrimaryPropertyKey(), "1", true);
-    }
-    if (Flags.instance().muteAndroid.getNonNull()) {
-      logger.atInfo().log("Mute audio on device %s", serial);
-      androidAdbUtil.setProperty(serial, AndroidProperty.SILENT.getPrimaryPropertyKey(), "1", true);
-    }
+
+    // Disables packages.
     if (Flags.instance().disableCellBroadcastReceiver.getNonNull()) {
       try {
-        androidPkgManagerUtil.disablePackage(serial, "com.android.cellbroadcastreceiver");
+        androidPkgManagerUtil.disablePackage(deviceId, "com.android.cellbroadcastreceiver");
       } catch (MobileHarnessException e) {
         logger.atWarning().log(
             "Failed to disable package com.android.cellbroadcastreceiver when setup the device "
                 + "%s: %s",
-            serial, MoreThrowables.shortDebugString(e));
+            deviceId, MoreThrowables.shortDebugString(e));
       }
     }
   }
 
-  /** Returns properties that make it necessary to reboot the device to set their values. */
   @VisibleForTesting
-  ImmutableSet<AndroidProperty> needRebootToClearReadOnlyTestProperties()
+  ImmutableList<ReadOnlyPropertySetting> createReadOnlyPropertySettings()
       throws MobileHarnessException, InterruptedException {
-    return concat(
-            needRebootToClearTestProperty(
-                AndroidProperty.DISABLE_CALL,
-                Flags.instance().disableCalling.getNonNull() ? "true" : "false")
-                .stream(),
-            needRebootToClearTestProperty(
-                AndroidProperty.TEST_HARNESS,
-                Flags.instance().setTestHarnessProperty.getNonNull() ? "1" : "0")
-                .stream(),
-            needRebootToClearTestProperty(
-                AndroidProperty.SILENT, Flags.instance().muteAndroid.getNonNull() ? "1" : "0")
-                .stream())
-        .collect(toImmutableSet());
+    return ImmutableList.of(
+        ReadOnlyPropertySetting.create(
+            AndroidProperty.DISABLE_CALL,
+            Flags.instance().disableCalling.getNonNull() ? "true" : "false",
+            !Flags.instance().disableCalling.getNonNull(),
+            deviceId,
+            androidAdbUtil),
+        ReadOnlyPropertySetting.create(
+            AndroidProperty.TEST_HARNESS,
+            Flags.instance().setTestHarnessProperty.getNonNull() ? "1" : "0",
+            !Flags.instance().setTestHarnessProperty.getNonNull(),
+            deviceId,
+            androidAdbUtil),
+        ReadOnlyPropertySetting.create(
+            AndroidProperty.SILENT,
+            Flags.instance().muteAndroid.getNonNull() ? "1" : "0",
+            !Flags.instance().muteAndroid.getNonNull(),
+            deviceId,
+            androidAdbUtil));
   }
 
-  /** Returns present to indicate that the device needs to reboot to clear the property. */
-  private Optional<AndroidProperty> needRebootToClearTestProperty(
-      AndroidProperty property, String expectedValue)
+  private void setReadOnlyProperty(
+      ReadOnlyPropertySetting readOnlyPropertySetting, boolean hasRebooted)
       throws MobileHarnessException, InterruptedException {
-    String devicePropValue = androidAdbUtil.getProperty(deviceId, property);
-    // If current read only prop was not set before, no need device reboot.
-    if (Strings.isNullOrEmpty(devicePropValue)) {
-      return Optional.empty();
+    if (readOnlyPropertySetting.needSetProperty()) {
+      if (readOnlyPropertySetting.needRebootToSetProperty() && !hasRebooted) {
+        logger.atWarning().log(
+            "Setting read-only property [%s] needs reboot device but device %s hasn't been rebooted"
+                + " due to flags or reboot failure",
+            readOnlyPropertySetting, deviceId);
+      } else {
+        logger.atInfo().log(
+            "Set read-only property [%s] on device %s", readOnlyPropertySetting, deviceId);
+        androidAdbUtil.setProperty(
+            deviceId,
+            readOnlyPropertySetting.property().getPrimaryPropertyKey(),
+            readOnlyPropertySetting.expectedValue(),
+            /* ignoreError= */ true);
+      }
+    } else {
+      logger.atInfo().log(
+          "Don't need to set read-only property [%s] on device %s",
+          readOnlyPropertySetting, deviceId);
     }
-    return Ascii.equalsIgnoreCase(devicePropValue, expectedValue)
-        ? Optional.empty()
-        : Optional.of(property);
   }
 
-  /**
-   * Returns {@code true} if need to run {@link #enableTestPropertiesAndDisablePackages(String)}.
-   */
+  @AutoValue
+  abstract static class ReadOnlyPropertySetting {
+
+    abstract AndroidProperty property();
+
+    abstract String currentValue();
+
+    abstract String expectedValue();
+
+    /** Returns whether an empty current value is expected. */
+    abstract boolean emptyValueExpected();
+
+    @Memoized
+    boolean needSetProperty() {
+      return !((currentValue().isEmpty() && emptyValueExpected())
+          || Ascii.equalsIgnoreCase(currentValue(), expectedValue()));
+    }
+
+    @Memoized
+    boolean needRebootToSetProperty() {
+      return !currentValue().isEmpty() && needSetProperty();
+    }
+
+    private static ReadOnlyPropertySetting create(
+        AndroidProperty property,
+        String expectedValue,
+        boolean emptyValueExpected,
+        String deviceId,
+        AndroidAdbUtil androidAdbUtil)
+        throws InterruptedException, MobileHarnessException {
+      return of(
+          /* property= */ property,
+          /* currentValue= */ androidAdbUtil.getProperty(deviceId, property),
+          /* expectedValue= */ expectedValue,
+          /* emptyValueExpected= */ emptyValueExpected);
+    }
+
+    @VisibleForTesting
+    static ReadOnlyPropertySetting of(
+        AndroidProperty property,
+        String currentValue,
+        String expectedValue,
+        boolean emptyValueExpected) {
+      return new AutoValue_AndroidRealDeviceDelegate_ReadOnlyPropertySetting(
+          /* property= */ property,
+          /* currentValue= */ currentValue,
+          /* expectedValue= */ expectedValue,
+          /* emptyValueExpected= */ emptyValueExpected);
+    }
+  }
+
+  /** Returns {@code true} if need to run {@link #enableTestPropertiesAndDisablePackages()}. */
   protected abstract boolean ifTrySetDevicePropertiesAndDisablePackages();
 
   /**
