@@ -54,6 +54,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:control_service",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:session_service",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:version_service",
+        "//src/java/com/google/devtools/mobileharness/infra/monitoring:monitor_module",
+        "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_provider",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/server:client_address_server_interceptor",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/server:lifecycle",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",

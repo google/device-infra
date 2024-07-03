@@ -34,7 +34,7 @@ public class BatchPipelineService<T extends Message> extends AbstractScheduledSe
   // The period duration between two publish actions.
   private static final Duration PUBLISH_INTERVAL = Duration.ofMinutes(1);
   // Initial delay of publish actions.
-  private static final Duration INITIAL_DELAY = Duration.ofMinutes(5);
+  private static final Duration INITIAL_DELAY = Duration.ofMinutes(1);
 
   public BatchPipelineService(DataPuller<T> puller, DataPusher pusher) {
     this.puller = puller;

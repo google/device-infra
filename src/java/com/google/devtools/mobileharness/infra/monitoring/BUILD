@@ -18,6 +18,7 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
     ],
 )
@@ -45,6 +46,24 @@ java_library(
         "@maven//:com_google_auth_google_auth_library_oauth2_http",
         "@maven//:com_google_cloud_google_cloud_pubsub",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "monitor_module",
+    srcs = [
+        "LabDataPuller.java",
+        "MonitorModule.java",
+    ],
+    deps = [
+        ":cloud_pubsub",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_provider",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "@maven//:com_google_api_grpc_proto_google_cloud_pubsub_v1",
+        "@maven//:com_google_cloud_google_cloud_pubsub",
         "@maven//:com_google_guava_guava",
     ],
 )
