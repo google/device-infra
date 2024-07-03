@@ -275,6 +275,7 @@ maven_install(
         "junit:junit:4.13.2",
         "net.bytebuddy:byte-buddy:1.14.11",
         "net.sf.kxml:kxml2:2.3.0",
+        "org.apache.commons:commons-compress:1.25.0",
         "org.apache.commons:commons-lang3:3.14.0",
         "org.apache.commons:commons-text:1.10.0",
         "org.jline:jline:3.25.1",

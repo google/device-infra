@@ -14,8 +14,9 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console.util.tradefed;
+package com.google.devtools.mobileharness.infra.ats.util.tradefed;
 
+import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Arrays;
 
 /**
@@ -133,6 +134,7 @@ public class ByteArrayList {
    * @param b The {@code byte} to append to the list
    * @return {@code true}
    */
+  @CanIgnoreReturnValue
   public boolean add(byte b) {
     ensureCapacity(curBytes + 1);
     storage[curBytes] = b;

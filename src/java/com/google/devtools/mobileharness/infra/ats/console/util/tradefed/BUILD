@@ -16,11 +16,6 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "byte_array_list",
-    srcs = ["ByteArrayList.java"],
-)
-
-java_library(
     name = "test_record_helper",
     srcs = ["TestRecordHelper.java"],
     visibility = [
@@ -62,8 +57,8 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__subpackages__",
     ],
     deps = [
-        ":byte_array_list",
         "//src/devtools/mobileharness/infra/ats/console/tradefed/proto:record_java_proto",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/util/tradefed:byte_array_list",
         "@com_google_protobuf//:protobuf_java",
     ],
 )
