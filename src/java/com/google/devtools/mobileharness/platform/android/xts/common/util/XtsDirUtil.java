@@ -43,6 +43,11 @@ public class XtsDirUtil {
     return xtsRootDir.resolve(String.format("android-%s/lib", toLowerCase(xtsType)));
   }
 
+  /** Gets the lib64 directory for the given {@code xtsType}. */
+  public static Path getXtsLib64Dir(Path xtsRootDir, String xtsType) {
+    return xtsRootDir.resolve(String.format("android-%s/lib64", toLowerCase(xtsType)));
+  }
+
   /** Gets the logs directory for the given {@code xtsType}. */
   public static Path getXtsLogsDir(Path xtsRootDir, String xtsType) {
     return xtsRootDir.resolve(String.format("android-%s/logs", toLowerCase(xtsType)));
