@@ -31,6 +31,7 @@ java_library(
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device:base_device_helper",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:android_device_delegate",
         "//src/java/com/google/devtools/deviceinfra/ext/devicemanagement/device/platform/android:android_device_delegate_helper",
+        "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb:constants",
         "//src/java/com/google/devtools/deviceinfra/platform/android/sdk/fastboot",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache",

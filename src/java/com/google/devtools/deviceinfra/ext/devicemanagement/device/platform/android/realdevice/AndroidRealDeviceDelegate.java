@@ -35,6 +35,7 @@ import com.google.devtools.common.metrics.stability.util.ErrorIdComparator;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.BaseDeviceHelper;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegate;
 import com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.android.AndroidDeviceDelegateHelper;
+import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Constants;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Enums.FastbootProperty;
 import com.google.devtools.deviceinfra.platform.android.sdk.fastboot.Fastboot;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
@@ -252,7 +253,7 @@ public abstract class AndroidRealDeviceDelegate {
         DeviceCache.getInstance()
             .cache(
                 deviceId,
-                getClass().getSimpleName(),
+                device.getClass().getSimpleName(),
                 AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
         logger.atInfo().log("Start rebooting the wiped device %s.", deviceId);
 
@@ -621,8 +622,9 @@ public abstract class AndroidRealDeviceDelegate {
       DeviceCache.getInstance()
           .cache(
               deviceId,
-              getClass().getSimpleName(),
-              AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT);
+              device.getClass().getSimpleName(),
+              AndroidRealDeviceConstants.WAIT_FOR_REBOOT_TIMEOUT.plus(
+                  Constants.DEFAULT_ADB_COMMAND_TIMEOUT));
       systemStateUtil.reboot(deviceId);
       systemStateUtil.waitForState(
           deviceId,
@@ -1166,7 +1168,7 @@ public abstract class AndroidRealDeviceDelegate {
         InfraErrorId.LAB_GET_DEVICE_LOG_METHOD_UNSUPPORTED,
         String.format(
             "The device log type %s for the device %s[%s] is not supported.",
-            deviceLogType, deviceId, getClass().getSimpleName()));
+            deviceLogType, deviceId, device.getClass().getSimpleName()));
   }
 
   /**
