@@ -35,6 +35,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStubImpl;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
+import com.google.devtools.mobileharness.infra.monitoring.MonitorModule;
 import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
@@ -67,6 +68,7 @@ class ServerModule extends AbstractModule {
   private final int grpcPort;
   private final int workerGrpcPort;
   private final boolean useAlts;
+  private final boolean enableLabMonitoring;
   private final ImmutableSet<String> restrictToAuthUsers;
 
   ServerModule(
@@ -75,12 +77,14 @@ class ServerModule extends AbstractModule {
       int grpcPort,
       int workerGrpcPort,
       boolean useAlts,
+      boolean enableLabMonitoring,
       List<String> restrictToAuthUsers) {
     this.serverStartTime = serverStartTime;
     this.isAtsMode = isAtsMode;
     this.grpcPort = grpcPort;
     this.workerGrpcPort = workerGrpcPort;
     this.useAlts = useAlts;
+    this.enableLabMonitoring = enableLabMonitoring;
     this.restrictToAuthUsers = ImmutableSet.copyOf(restrictToAuthUsers);
   }
 
@@ -90,6 +94,10 @@ class ServerModule extends AbstractModule {
     install(new ClientApiModule());
     if (isAtsMode) {
       installByClassName(ATS_MODE_MODULE_CLASS_NAME);
+    }
+
+    if (enableLabMonitoring) {
+      install(new MonitorModule());
     }
 
     bind(ClientApi.class).in(Scopes.SINGLETON);

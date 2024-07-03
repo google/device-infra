@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
+import com.google.devtools.mobileharness.infra.monitoring.PipelineLauncher;
 import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressServerInterceptor;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager.LabeledServer;
@@ -45,6 +46,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.Guice;
+import com.google.inject.Injector;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageManager;
 import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
@@ -70,16 +72,23 @@ public class OlcServer {
 
     // Creates and runs the server.
     Instant serverStartTime = Instant.now();
-    OlcServer server =
+    Injector injector =
         Guice.createInjector(
-                new ServerModule(
-                    Flags.instance().enableAtsMode.getNonNull(),
-                    serverStartTime,
-                    Flags.instance().olcServerPort.getNonNull(),
-                    Flags.instance().atsWorkerGrpcPort.getNonNull(),
-                    Flags.instance().useAlts.getNonNull(),
-                    Flags.instance().restrictOlcServiceToUsers.getNonNull()))
-            .getInstance(OlcServer.class);
+            new ServerModule(
+                Flags.instance().enableAtsMode.getNonNull(),
+                serverStartTime,
+                Flags.instance().olcServerPort.getNonNull(),
+                Flags.instance().atsWorkerGrpcPort.getNonNull(),
+                Flags.instance().useAlts.getNonNull(),
+                Flags.instance().enableLabMonitoring.getNonNull(),
+                Flags.instance().restrictOlcServiceToUsers.getNonNull()));
+
+    // Get the injector here to start the underlying monitoring pipeline.
+    if (Flags.instance().enableLabMonitoring.getNonNull()) {
+      injector.getInstance(PipelineLauncher.class).start();
+    }
+
+    OlcServer server = injector.getInstance(OlcServer.class);
     server.run(Arrays.asList(args));
   }
 
