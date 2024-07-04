@@ -22,46 +22,11 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
     ],
     deps = [
-        ":plan_config_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:plan_config_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
-    name = "plan_config_util",
-    srcs = ["PlanConfigUtil.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util/plan:__pkg__",
-    ],
-    deps = [
-        ":jar_file_util",
-        "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
-        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/path:file_name_util",
-        "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
-    name = "jar_file_util",
-    srcs = ["JarFileUtil.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util/plan:__pkg__",
-    ],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@maven//:com_google_guava_guava",
     ],
 )

@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
@@ -145,6 +146,7 @@ public class SessionRequestHandlerUtil {
   private final Provider<ResUtil> resUtilProvider;
   private final PreviousResultLoader previousResultLoader;
   private final DeviceDetailsRetriever deviceDetailsRetriever;
+  private final TestPlanParser testPlanParser;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -159,7 +161,8 @@ public class SessionRequestHandlerUtil {
       @SessionTempDir Path sessionTempDir,
       Provider<ResUtil> resUtilProvider,
       PreviousResultLoader previousResultLoader,
-      DeviceDetailsRetriever deviceDetailsRetriever) {
+      DeviceDetailsRetriever deviceDetailsRetriever,
+      TestPlanParser testPlanParser) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
@@ -172,6 +175,7 @@ public class SessionRequestHandlerUtil {
     this.resUtilProvider = resUtilProvider;
     this.previousResultLoader = previousResultLoader;
     this.deviceDetailsRetriever = deviceDetailsRetriever;
+    this.testPlanParser = testPlanParser;
   }
 
   /** Information used to create the Tradefed job. */
@@ -876,7 +880,7 @@ public class SessionRequestHandlerUtil {
       throws MobileHarnessException, InterruptedException {
     return createXtsNonTradefedJobs(
         sessionRequestInfo,
-        TestPlanLoader.parseFilters(
+        testPlanParser.parseFilters(
             Path.of(sessionRequestInfo.xtsRootDir()),
             sessionRequestInfo.xtsType(),
             sessionRequestInfo.testPlan()));
@@ -884,7 +888,7 @@ public class SessionRequestHandlerUtil {
 
   @VisibleForTesting
   ImmutableList<JobInfo> createXtsNonTradefedJobs(
-      SessionRequestInfo sessionRequestInfo, TestPlanLoader.TestPlanFilter testPlanFilter)
+      SessionRequestInfo sessionRequestInfo, TestPlanParser.TestPlanFilter testPlanFilter)
       throws MobileHarnessException, InterruptedException {
     if (!canCreateNonTradefedJobs(sessionRequestInfo)) {
       logger

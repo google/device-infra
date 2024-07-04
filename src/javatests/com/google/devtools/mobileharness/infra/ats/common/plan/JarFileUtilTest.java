@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console.util.plan;
+package com.google.devtools.mobileharness.infra.ats.common.plan;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableList;
-import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
-import com.google.devtools.mobileharness.infra.ats.console.util.plan.JarFileUtil.EntryFilter;
+import com.google.devtools.mobileharness.infra.ats.common.plan.JarFileUtil.EntryFilter;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.Guice;
 import java.io.File;
 import java.nio.file.Path;
@@ -60,8 +60,11 @@ public final class JarFileUtilTest {
 
   @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  private static final String TEST_DATA_PREFIX =
+      "javatests/com/google/devtools/mobileharness/infra/ats/common/plan/testdata/";
+
   private static final String TEST_JAR =
-      TestRunfilesUtil.getRunfilesLocation("util/plan/testdata/jar/test_app_jar");
+      RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "jar/test_app_jar");
 
   private final LocalFileUtil realLocalFileUtil = new LocalFileUtil();
   private static Path testJar;

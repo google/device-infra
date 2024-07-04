@@ -14,21 +14,22 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.common;
+package com.google.devtools.mobileharness.infra.ats.common.plan;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.junit.Assert.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableSet;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.common.TestPlanLoader.TestPlanFilter;
+import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser.TestPlanFilter;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import java.io.FileInputStream;
 import java.nio.file.Path;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
+import java.util.Optional;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,11 +37,12 @@ import org.junit.runners.JUnit4;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
+import org.w3c.dom.Document;
 
 @RunWith(JUnit4.class)
-public final class TestPlanLoaderTest {
+public final class TestPlanParserTest {
   private static final String TEST_DATA_PREFIX =
-      "javatests/com/google/devtools/mobileharness/infra/ats/common/testdata/testplan/";
+      "javatests/com/google/devtools/mobileharness/infra/ats/common/plan/testdata/testplan/";
 
   private static final String TEST_PLAN_A_XML =
       RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "test-plan-a.xml");
@@ -50,24 +52,28 @@ public final class TestPlanLoaderTest {
       RunfilesUtil.getRunfilesLocation(TEST_DATA_PREFIX + "test-plan-c.xml");
 
   @Rule public final MockitoRule mocks = MockitoJUnit.rule();
-  @Mock private JarFile xtsTradefedJarFile;
-  @Mock private JarEntry entryA;
-  @Mock private JarEntry entryB;
-  @Mock private JarEntry entryC;
+  @Mock private PlanConfigUtil planConfigUtil;
+
+  private TestPlanParser testPlanParser;
+
+  @Before
+  public void setUp() throws Exception {
+    DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+    Document testPlanA = documentBuilder.parse(new FileInputStream(TEST_PLAN_A_XML));
+    Document testPlanB = documentBuilder.parse(new FileInputStream(TEST_PLAN_B_XML));
+    Document testPlanC = documentBuilder.parse(new FileInputStream(TEST_PLAN_C_XML));
+
+    when(planConfigUtil.loadConfig(eq("test-plan-a"), any())).thenReturn(Optional.of(testPlanA));
+    when(planConfigUtil.loadConfig(eq("test-plan-b"), any())).thenReturn(Optional.of(testPlanB));
+    when(planConfigUtil.loadConfig(eq("test-plan-c"), any())).thenReturn(Optional.of(testPlanC));
+
+    testPlanParser = new TestPlanParser(planConfigUtil);
+  }
 
   @Test
   public void parseFilters_success() throws Exception {
-    when(xtsTradefedJarFile.getJarEntry(eq("config/test-plan-a.xml"))).thenReturn(entryA);
-    when(xtsTradefedJarFile.getJarEntry(eq("config/test-plan-b.xml"))).thenReturn(entryB);
-    when(xtsTradefedJarFile.getJarEntry(eq("config/test-plan-c.xml"))).thenReturn(entryC);
-    when(xtsTradefedJarFile.getInputStream(eq(entryA)))
-        .thenReturn(new FileInputStream(TEST_PLAN_A_XML));
-    when(xtsTradefedJarFile.getInputStream(eq(entryB)))
-        .thenReturn(new FileInputStream(TEST_PLAN_B_XML));
-    when(xtsTradefedJarFile.getInputStream(eq(entryC)))
-        .thenReturn(new FileInputStream(TEST_PLAN_C_XML));
+    TestPlanFilter filter = testPlanParser.parseFilters(Path.of("android-cts"), "test-plan-a");
 
-    TestPlanFilter filter = TestPlanLoader.parseFilters(xtsTradefedJarFile, "test-plan-a");
     assertThat(filter.includeFilters())
         .containsExactly(
             "CtsAppSecurityHostTestCases"
@@ -82,17 +88,8 @@ public final class TestPlanLoaderTest {
   }
 
   @Test
-  public void parseFilters_invalidPlanName() throws Exception {
-    when(xtsTradefedJarFile.getJarEntry(eq("invalid-plan-name"))).thenReturn(null);
-
-    assertThrows(
-        MobileHarnessException.class,
-        () -> TestPlanLoader.parseFilters(xtsTradefedJarFile, "invalid-plan-name"));
-  }
-
-  @Test
   public void parseFilters_retry() throws Exception {
-    assertThat(TestPlanLoader.parseFilters(Path.of("mock"), "cts", "retry"))
+    assertThat(testPlanParser.parseFilters(Path.of("mock"), "cts", "retry"))
         .isEqualTo(TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of()));
   }
 }

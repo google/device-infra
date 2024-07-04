@@ -32,15 +32,17 @@ java_library(
         ":testdata",
     ],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:jar_file_util",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:plan_config_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:plan_config_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:test_plan_parser",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/util:test_runfiles_util",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
     ],
 )
 
@@ -48,6 +50,7 @@ junit_test_suites(
     name = "gen_tests",
     sizes = [
         "small",
+        "medium",
     ],
     deps = [":plan"],
 )

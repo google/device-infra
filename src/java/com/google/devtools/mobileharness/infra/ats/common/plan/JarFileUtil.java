@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console.util.plan;
+package com.google.devtools.mobileharness.infra.ats.common.plan;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;

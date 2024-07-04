@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
+import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportMerger;
@@ -120,7 +121,7 @@ public final class SessionRequestHandlerUtilTest {
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
   private LocalFileUtil realLocalFileUtil;
-  private TestPlanLoader.TestPlanFilter testPlanFilter;
+  private TestPlanParser.TestPlanFilter testPlanFilter;
 
   @Before
   public void setUp() throws Exception {
@@ -130,7 +131,7 @@ public final class SessionRequestHandlerUtilTest {
     sessionTempDir = folder.newFolder("session_temp_dir").toPath();
 
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    testPlanFilter = TestPlanLoader.TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
+    testPlanFilter = TestPlanParser.TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
     realLocalFileUtil = new LocalFileUtil();
   }
 

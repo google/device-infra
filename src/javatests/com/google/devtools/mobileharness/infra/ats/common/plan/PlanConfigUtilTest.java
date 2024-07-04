@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console.util.plan;
+package com.google.devtools.mobileharness.infra.ats.common.plan;
 
 import static com.google.common.truth.Truth.assertThat;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.devtools.mobileharness.infra.ats.console.util.TestRunfilesUtil;
-import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanConfigUtil.PlanConfigInfo;
+import com.google.devtools.mobileharness.infra.ats.common.plan.PlanConfigUtil.PlanConfigInfo;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.inject.Guice;
 import java.nio.file.Path;
 import java.util.List;
@@ -38,8 +38,11 @@ public final class PlanConfigUtilTest {
 
   @Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  private static final String TEST_DATA_JAR_DIRECTORY =
+      "javatests/com/google/devtools/mobileharness/infra/ats/common/plan/testdata/jar";
+
   private static final String TEST_JAR_DIR =
-      TestRunfilesUtil.getRunfilesLocation("util/plan/testdata/jar");
+      RunfilesUtil.getRunfilesLocation(TEST_DATA_JAR_DIRECTORY);
 
   private final LocalFileUtil realLocalFileUtil = new LocalFileUtil();
 
@@ -54,7 +57,7 @@ public final class PlanConfigUtilTest {
 
   @Test
   public void loadAllConfigs_success() {
-    ImmutableMap<String, PlanConfigInfo> configInfo = planConfigUtil.loadAllConfigs(testJarDir);
+    ImmutableMap<String, PlanConfigInfo> configInfo = planConfigUtil.loadAllConfigsInfo(testJarDir);
 
     assertThat(configInfo)
         .containsExactly(

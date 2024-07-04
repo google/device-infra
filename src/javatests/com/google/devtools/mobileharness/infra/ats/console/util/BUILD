@@ -21,7 +21,10 @@ package(
 java_library(
     name = "test_runfiles_util",
     srcs = ["TestRunfilesUtil.java"],
-    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__"],
+    visibility = [
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/plan:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
+    ],
     deps = [
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
     ],

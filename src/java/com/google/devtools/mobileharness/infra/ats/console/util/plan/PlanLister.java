@@ -18,9 +18,10 @@ package com.google.devtools.mobileharness.infra.ats.console.util.plan;
 
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.common.plan.PlanConfigUtil;
+import com.google.devtools.mobileharness.infra.ats.common.plan.PlanConfigUtil.PlanConfigInfo;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
-import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanConfigUtil.PlanConfigInfo;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import java.nio.file.Path;
 import java.util.function.Supplier;
@@ -50,6 +51,6 @@ public class PlanLister {
   private ImmutableMap<String, PlanConfigInfo> doListPlans() {
     Path xtsRootDir = consoleInfo.getXtsRootDirectoryNonEmpty();
     Path toolsDir = XtsDirUtil.getXtsToolsDir(xtsRootDir, commandHelper.getXtsType());
-    return planConfigUtil.loadAllConfigs(toolsDir);
+    return planConfigUtil.loadAllConfigsInfo(toolsDir);
   }
 }

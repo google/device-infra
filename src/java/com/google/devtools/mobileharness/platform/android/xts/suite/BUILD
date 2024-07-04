@@ -83,7 +83,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/version:__pkg__",
     ],
     deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:jar_file_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:jar_file_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",

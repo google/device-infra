@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.console.util.plan;
+package com.google.devtools.mobileharness.infra.ats.common.plan;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Strings;
@@ -22,7 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
-import com.google.devtools.mobileharness.infra.ats.console.util.plan.JarFileUtil.EntryFilter;
+import com.google.devtools.mobileharness.infra.ats.common.plan.JarFileUtil.EntryFilter;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.path.FileNameUtil;
@@ -111,11 +111,11 @@ public class PlanConfigUtil {
   }
 
   /**
-   * Loads all plan configs from the JAR files in {@code dir}.
+   * Loads info of all plan configs from the JAR files in {@code dir}.
    *
    * @return all plan configs or empty if some error occurs
    */
-  public ImmutableMap<String, PlanConfigInfo> loadAllConfigs(Path dir) {
+  public ImmutableMap<String, PlanConfigInfo> loadAllConfigsInfo(Path dir) {
     ImmutableMap.Builder<String, PlanConfigInfo> configNameToPlanConfigInfo =
         ImmutableMap.builder();
     try {
@@ -127,11 +127,12 @@ public class PlanConfigUtil {
       for (Map.Entry<String, Path> entry : configNameToJar.entrySet()) {
         String configName = entry.getKey();
         Path jarPath = entry.getValue();
-        Optional<PlanConfigInfo> planConfigInfo = loadConfig(configName, jarPath);
-        if (planConfigInfo.isEmpty()) {
+        Optional<Document> document = loadConfig(configName, jarPath);
+        if (document.isEmpty()) {
           continue;
         }
-        configNameToPlanConfigInfo.put(configName, planConfigInfo.get());
+        configNameToPlanConfigInfo.put(
+            configName, loadPlanConfigInfo(configName, jarPath, document.get()));
       }
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
@@ -141,31 +142,35 @@ public class PlanConfigUtil {
     return configNameToPlanConfigInfo.buildOrThrow();
   }
 
-  private Optional<PlanConfigInfo> loadConfig(String configName, Path jar) {
+  public Optional<Document> loadConfig(String configName, Path jar) {
     Optional<InputStream> configStream = getBundledConfigStream(jar, configName);
     if (configStream.isEmpty()) {
       return Optional.empty();
     }
 
-    String configDescription = "";
+    Document document;
     try (BufferedInputStream bufferedInputStream = new BufferedInputStream(configStream.get())) {
-      DocumentBuilder documentBuilder;
-      Document document;
       try {
-        documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+        DocumentBuilder documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
         document = documentBuilder.parse(bufferedInputStream);
-        configDescription = document.getDocumentElement().getAttribute("description");
       } catch (ParserConfigurationException | SAXException | IOException e) {
         logger.atWarning().log(
             "Failed to load the config [%s] from %s: %s",
             configName, jar, MoreThrowables.shortDebugString(e));
+        return Optional.empty();
       }
     } catch (IOException e) {
       logger.atWarning().log(
           "Failed to load the config [%s] from %s: %s",
           configName, jar, MoreThrowables.shortDebugString(e));
+      return Optional.empty();
     }
-    return Optional.of(PlanConfigInfo.of(configName, jar, configDescription));
+    return Optional.of(document);
+  }
+
+  private PlanConfigInfo loadPlanConfigInfo(String configName, Path jar, Document document) {
+    return PlanConfigInfo.of(
+        configName, jar, document.getDocumentElement().getAttribute("description"));
   }
 
   @SuppressWarnings("SameParameterValue")

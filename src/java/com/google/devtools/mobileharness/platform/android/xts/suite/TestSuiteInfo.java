@@ -18,7 +18,7 @@ package com.google.devtools.mobileharness.platform.android.xts.suite;
 
 import com.google.common.base.Splitter;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.infra.ats.console.util.plan.JarFileUtil;
+import com.google.devtools.mobileharness.infra.ats.common.plan.JarFileUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import java.io.IOException;
 import java.io.InputStream;

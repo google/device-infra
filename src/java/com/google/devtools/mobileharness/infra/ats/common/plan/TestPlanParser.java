@@ -14,40 +14,30 @@
  * limitations under the License.
  */
 
-package com.google.devtools.mobileharness.infra.ats.common;
+package com.google.devtools.mobileharness.infra.ats.common.plan;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
+import javax.inject.Inject;
 import org.w3c.dom.Document;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
 
-/** A loader to load test plan XMLs from the xts-tradefed.jar file only. */
-public class TestPlanLoader {
+/** A parser to parse test plans from the xts-tradefed.jar file only. */
+public class TestPlanParser {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
-
-  private static final String TEST_PLAN_DIR_IN_JAR = "config";
 
   private static final String CONFIGURATION_NODE_NAME = "configuration";
   private static final String OPTION_NODE_NAME = "option";
@@ -59,37 +49,29 @@ public class TestPlanLoader {
   private static final String INCLUDE_FILTER_ATTR_NAME = "compatibility:include-filter";
   private static final String EXCLUDE_FILTER_ATTR_NAME = "compatibility:exclude-filter";
 
-  public static TestPlanFilter parseFilters(Path xtsRootPath, String type, String rootTestPlan)
+  private final PlanConfigUtil planConfigUtil;
+
+  @Inject
+  TestPlanParser(PlanConfigUtil planConfigUtil) {
+    this.planConfigUtil = planConfigUtil;
+  }
+
+  public TestPlanFilter parseFilters(Path xtsRootPath, String type, String rootTestPlan)
       throws MobileHarnessException {
     if (rootTestPlan.equals("retry")) {
       // Skip parsing the retry test plan since it is not a valid XML.
       return TestPlanFilter.create(ImmutableSet.of(), ImmutableSet.of());
     }
 
-    try (JarFile xtsTradefedJarFile = createXtsTradefedJarFile(xtsRootPath, type)) {
-      return parseFilters(xtsTradefedJarFile, rootTestPlan);
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_XTS_TEST_PLAN_LOADER_JARFILE_CLOSE_ERROR,
-          String.format("JarFile close failure, xts_root_path=[%s], type=[%s]", xtsRootPath, type),
-          e);
-    }
+    Path xtsTradefedJarPath =
+        XtsDirUtil.getXtsToolsDir(xtsRootPath, type)
+            .resolve(String.format("%s-tradefed.jar", type));
+    return parseFilters(xtsTradefedJarPath, rootTestPlan);
   }
 
   @VisibleForTesting
-  static TestPlanFilter parseFilters(JarFile xtsTradefedJarFile, String rootTestPlan)
+  TestPlanFilter parseFilters(Path xtsTradefedJarPath, String rootTestPlan)
       throws MobileHarnessException {
-    // Check existence of the root test plan.
-    String testPlanPath = getTestPlanPathInJar(rootTestPlan);
-    JarEntry jarEntry = xtsTradefedJarFile.getJarEntry(testPlanPath);
-    if (jarEntry == null) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_XTS_TEST_PLAN_LOADER_TEST_PLAN_NOT_FOUND,
-          String.format(
-              "Root test plan [%s] not found in %s file",
-              rootTestPlan, xtsTradefedJarFile.getName()));
-    }
-
     HashSet<String> includeFilters = new HashSet<>();
     HashSet<String> excludeFilters = new HashSet<>();
     HashSet<String> parsedTestPlans = new HashSet<>();
@@ -100,15 +82,17 @@ public class TestPlanLoader {
     pendingTestPlans.offer(rootTestPlan);
 
     while (pendingTestPlans.peek() != null) {
-      String testPlan = pendingTestPlans.poll();
-      Optional<Document> testPlanXml = parseTestPlan(xtsTradefedJarFile, testPlan);
-      parsedTestPlans.add(testPlan);
+      String testPlanName = pendingTestPlans.poll();
+      Optional<Document> testPlan = planConfigUtil.loadConfig(testPlanName, xtsTradefedJarPath);
+      parsedTestPlans.add(testPlanName);
 
-      if (testPlanXml.isEmpty()) {
-        // Skip the test plan since it is not a valid XML.
+      if (testPlan.isEmpty()) {
+        // Skip the test plan since it is not valid.
+        logger.atWarning().log(
+            "Skip parsing the test plan: %s since it is not a valid test plan.", testPlanName);
         continue;
       }
-      pendingNodes.offer(testPlanXml.get().getDocumentElement());
+      pendingNodes.offer(testPlan.get().getDocumentElement());
       while (pendingNodes.peek() != null) {
         Node node = pendingNodes.poll();
 
@@ -129,21 +113,6 @@ public class TestPlanLoader {
     }
     return TestPlanFilter.create(
         ImmutableSet.copyOf(includeFilters), ImmutableSet.copyOf(excludeFilters));
-  }
-
-  private static JarFile createXtsTradefedJarFile(Path xtsRootDir, String type)
-      throws MobileHarnessException {
-    Path xtsTradefedPath =
-        XtsDirUtil.getXtsToolsDir(xtsRootDir, type).resolve(String.format("%s-tradefed.jar", type));
-
-    try {
-      return new JarFile(xtsRootDir.resolve(xtsTradefedPath).toString());
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_XTS_TEST_PLAN_LOADER_JARFILE_CREATION_ERROR,
-          String.format("JarFile creation failure, jar_path=%s", xtsTradefedPath),
-          e);
-    }
   }
 
   /**
@@ -219,38 +188,6 @@ public class TestPlanLoader {
     }
   }
 
-  private static Optional<Document> parseTestPlan(JarFile xtsTradefedJarFile, String testPlan)
-      throws MobileHarnessException {
-    logger.atInfo().log("Start to parse the test plan: %s", testPlan);
-
-    String testPlanPath = getTestPlanPathInJar(testPlan);
-    JarEntry jarEntry = xtsTradefedJarFile.getJarEntry(testPlanPath);
-    if (jarEntry == null) {
-      logger.atWarning().log(
-          "Skip parsing the test plan: %s since the JarEntry is null.", testPlan);
-      return Optional.empty();
-    }
-
-    try {
-      InputStream inputStream = xtsTradefedJarFile.getInputStream(jarEntry);
-      DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-      // Process XML securely, avoid attacks like XML External Entities (XXE)
-      factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-      return Optional.ofNullable(factory.newDocumentBuilder().parse(inputStream));
-    } catch (ParserConfigurationException | SAXException | IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_XTS_TEST_PLAN_LOADER_XML_PARSE_ERROR,
-          String.format("Failed to read test plan, test_plan=%s, path=%s", testPlan, testPlanPath),
-          e);
-    }
-  }
-
-  private static String getTestPlanPathInJar(String testPlan) {
-    return String.format("%s/%s.xml", TEST_PLAN_DIR_IN_JAR, testPlan);
-  }
-
-  private TestPlanLoader() {}
-
   /** A data class for all filters collected from the test plan. */
   @AutoValue
   public abstract static class TestPlanFilter {
@@ -260,7 +197,7 @@ public class TestPlanLoader {
 
     public static TestPlanFilter create(
         ImmutableSet<String> includeFilters, ImmutableSet<String> excludeFilters) {
-      return new AutoValue_TestPlanLoader_TestPlanFilter(includeFilters, excludeFilters);
+      return new AutoValue_TestPlanParser_TestPlanFilter(includeFilters, excludeFilters);
     }
   }
 }
