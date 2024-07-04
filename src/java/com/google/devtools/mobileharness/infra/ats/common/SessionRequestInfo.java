@@ -123,6 +123,8 @@ public abstract class SessionRequestInfo {
 
   public abstract boolean isAtsServerRequest();
 
+  public abstract Optional<String> remoteRunnerFilePathPrefix();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -229,6 +231,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setMaxSdkLevel(int maxSdkLevel);
 
     public abstract Builder setIsAtsServerRequest(boolean isAtsServerRequest);
+
+    public abstract Builder setRemoteRunnerFilePathPrefix(String remoteRunnerFilePathPrefix);
 
     protected abstract SessionRequestInfo autoBuild();
 

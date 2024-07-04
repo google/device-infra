@@ -72,6 +72,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
+import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
 import com.google.protobuf.TextFormat;
@@ -606,7 +607,15 @@ public class SessionRequestHandlerUtil {
     if (!sessionRequestInfoArgs.isEmpty()) {
       driverParams.put("run_command_args", sessionRequestInfoArgs);
     }
-
+    if (sessionRequestInfo.remoteRunnerFilePathPrefix().isPresent()
+        && driverParams.containsKey("subplan_xml")) {
+      driverParams.put(
+          "subplan_xml",
+          PathUtil.join(
+              sessionRequestInfo.remoteRunnerFilePathPrefix().get(),
+              PathUtil.makeRelative(
+                  Flags.instance().atsStoragePath.getNonNull(), driverParams.get("subplan_xml"))));
+    }
     jobConfigBuilder.setDriver(
         Driver.newBuilder().setName("XtsTradefedTest").setParam(new Gson().toJson(driverParams)));
 

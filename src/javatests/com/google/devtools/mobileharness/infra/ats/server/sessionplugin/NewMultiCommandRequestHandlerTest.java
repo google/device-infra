@@ -267,6 +267,7 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.testPlanFile()).hasValue("ats-file-server::" + testPlanFile);
+    assertThat(sessionRequestInfo.remoteRunnerFilePathPrefix()).hasValue("ats-file-server::");
 
     // Verify that handler has mounted the zip file.
     Command mountCommand =

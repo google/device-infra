@@ -424,6 +424,8 @@ final class NewMultiCommandRequestHandler {
         ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
     sessionRequestInfoBuilder.setTestPlanFile(
         replacePathForRemoteRunner(commandPath.toAbsolutePath().toString()));
+    sessionRequestInfoBuilder.setRemoteRunnerFilePathPrefix(
+        RemoteFileType.ATS_FILE_SERVER.prefix());
 
     if (!request.getRetryPreviousSessionId().isEmpty()) {
       sessionRequestInfoBuilder.setTestPlan("retry");
