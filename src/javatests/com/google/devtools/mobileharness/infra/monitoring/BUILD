@@ -13,24 +13,33 @@
 # limitations under the License.
 #
 
+# Tests for com.google.devtools.mobileharness.infra.monitoring
+load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
+
 package(
     default_applicable_licenses = ["//:license"],
-    default_visibility = [
-        "//src/javatests/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
-    ],
+    default_testonly = 1,
 )
 
 java_library(
-    name = "monitor_lib",
-    srcs = [
-        "BatchPipelineService.java",
-        "DataPuller.java",
-        "DataPusher.java",
-    ],
+    name = "test_lib",
+    srcs = glob(["*Test.java"]),
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@com_google_protobuf//:protobuf_java",
+        "//src/java/com/google/devtools/mobileharness/infra/monitoring:monitor_lib",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
         "@maven//:com_google_guava_guava",
+        "@maven//:junit_junit",
+        "@maven//:org_mockito_mockito_core",
+    ],
+)
+
+junit_test_suites(
+    name = "gen_tests",
+    sizes = [
+        "small",
+    ],
+    deps = [
+        ":test_lib",
     ],
 )
