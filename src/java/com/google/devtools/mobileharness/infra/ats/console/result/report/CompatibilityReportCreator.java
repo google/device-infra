@@ -98,6 +98,28 @@ public class CompatibilityReportCreator {
    * Creates report and related files under directory {@code resultDir}, and a zip file for
    * directory {@code resultDir} and its contents later for upload.
    *
+   * <p>See more details in {@link #createReport(Result, Path, TestRecord, boolean, Map, List)}.
+   */
+  public void createReport(
+      Result report,
+      Path resultDir,
+      @Nullable TestRecord testRecord,
+      boolean includeHtmlInZip,
+      Map<String, String> testReportProperties)
+      throws MobileHarnessException, InterruptedException {
+    createReport(
+        report,
+        resultDir,
+        testRecord,
+        includeHtmlInZip,
+        testReportProperties,
+        /* extraFilesOrDirsToZip= */ ImmutableList.of());
+  }
+
+  /**
+   * Creates report and related files under directory {@code resultDir}, and a zip file for
+   * directory {@code resultDir} and its contents later for upload.
+   *
    * <p>Things done in this method:
    *
    * <ol>
@@ -114,6 +136,8 @@ public class CompatibilityReportCreator {
    * @param testRecord test record proto packed into the report if specified
    * @param includeHtmlInZip whether to include html reports in the zip file
    * @param testReportProperties the properties to be written to the test report properties file
+   * @param extraFilesOrDirsToZip extra files or directories to be copied into directly under {@code
+   *     resultDir} and included in the generated zip file
    * @throws MobileHarnessException if failed to write the report to a XML file
    */
   public void createReport(
@@ -121,7 +145,8 @@ public class CompatibilityReportCreator {
       Path resultDir,
       @Nullable TestRecord testRecord,
       boolean includeHtmlInZip,
-      Map<String, String> testReportProperties)
+      Map<String, String> testReportProperties,
+      List<Path> extraFilesOrDirsToZip)
       throws MobileHarnessException, InterruptedException {
     localFileUtil.prepareDir(resultDir);
     try {
@@ -134,13 +159,6 @@ public class CompatibilityReportCreator {
     }
     writeTestReportProperties(testReportProperties, resultDir.toFile());
     copyFormattingFiles(resultDir.toFile());
-    if (!report.getBuild().getBuildFingerprint().isEmpty()
-        && !CompatibilityReportChecksumHelper.tryCreateChecksum(
-            resultDir.toFile(), report, report.getBuild().getBuildFingerprint())) {
-      logger.atWarning().log(
-          "Failed to crete checksum for result dir [%s] and report with build fingerprint [%s]",
-          resultDir, report.getBuild().getBuildFingerprint());
-    }
 
     if (testRecord != null) {
       Path testRecordProtoDir = resultDir.resolve("proto");
@@ -160,6 +178,19 @@ public class CompatibilityReportCreator {
       // Create the html reports before the zip file.
       htmlReport = createHtmlReport(testResultXmlFile);
       htmlFailureReport = createFailureHtmlReport(testResultXmlFile);
+    }
+
+    for (Path extraFileOrDir : extraFilesOrDirsToZip) {
+      localFileUtil.copyFileOrDir(extraFileOrDir, resultDir);
+    }
+
+    // Creates checksum data for the report and the files in directory {@code resultDir}.
+    if (!report.getBuild().getBuildFingerprint().isEmpty()
+        && !CompatibilityReportChecksumHelper.tryCreateChecksum(
+            resultDir.toFile(), report, report.getBuild().getBuildFingerprint())) {
+      logger.atWarning().log(
+          "Failed to crete checksum for result dir [%s] and report with build fingerprint [%s]",
+          resultDir, report.getBuild().getBuildFingerprint());
     }
 
     try {

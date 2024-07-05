@@ -263,7 +263,8 @@ public class TestRecordHelper {
       List<Path> testRecordProtoFiles) {
     List<ListenableFuture<TestRecord>> parseTestRecordFutures = new ArrayList<>();
     logger.atInfo().log(
-        "Start to parse test record proto files:\n - %s",
+        "Start to parse %d test record proto files:\n - %s",
+        testRecordProtoFiles.size(),
         testRecordProtoFiles.stream().map(Path::toString).collect(joining(",\n - ")));
     for (Path testRecordProtoFile : testRecordProtoFiles) {
       parseTestRecordFutures.add(parseTestRecordProtoFileAsync(testRecordProtoFile));
