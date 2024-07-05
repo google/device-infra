@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.platform.android.shared.autovalue.UtilA
 import com.google.devtools.mobileharness.platform.android.shared.constant.Splitters;
 import com.google.devtools.mobileharness.shared.util.base.StrUtil;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -354,6 +355,16 @@ public class AndroidConnectivityUtil {
    */
   public boolean connectToWifi(ConnectToWifiArgs args, @Nullable LogCollector<?> log)
       throws MobileHarnessException, InterruptedException {
+    if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
+      SharedLogUtil.logMsg(
+          logger,
+          Level.INFO,
+          log,
+          /* cause= */ null,
+          "Wifi util functionality is disabled. Skip connecting device %s to wifi.",
+          args.serial());
+      return false;
+    }
     String serial = args.serial();
     int sdkVersion = args.sdkVersion();
     String wifiSsid = args.wifiSsid();
@@ -696,6 +707,11 @@ public class AndroidConnectivityUtil {
    * @return whether the ping is successfully
    */
   public boolean pingSuccessfully(String serial) throws InterruptedException {
+    if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
+      logger.atInfo().log(
+          "Wifi util functionality is disabled. Skip pinging for device %s.", serial);
+      return false;
+    }
     String targetUrl = HOST_FOR_NOT_IN_CHINA;
     try {
       if (netUtil.getLocalHostLocationType().equals(LocationType.IN_CHINA)) {

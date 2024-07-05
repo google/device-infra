@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidVer
 import com.google.devtools.mobileharness.platform.android.shared.constant.PackageConstants;
 import com.google.devtools.mobileharness.platform.android.systemsetting.AndroidSystemSettingUtil;
 import com.google.devtools.mobileharness.platform.android.systemsetting.PostSetDmVerityDeviceOp;
+import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
 import com.google.wireless.qa.mobileharness.shared.android.Aapt;
 import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
@@ -135,7 +136,8 @@ public class AndroidCleanAppsDecorator extends BaseDecorator implements AndroidC
       // detail information.
       int deviceSdkVersion =
           androidSystemSettingUtil.getDeviceSdkVersion(getDevice().getDeviceId());
-      if (deviceSdkVersion >= AndroidVersion.PI.getStartSdkVersion()) {
+      if (!Flags.instance().disableWifiUtilFunc.getNonNull()
+          && deviceSdkVersion >= AndroidVersion.PI.getStartSdkVersion()) {
         packagesToKeep.add(wifiUtil.getWifiUtilApkPackageName());
       }
 

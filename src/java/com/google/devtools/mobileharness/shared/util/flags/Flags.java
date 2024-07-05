@@ -436,6 +436,14 @@ public class Flags {
   public Flag<Boolean> disableDeviceRebootForRoProperties =
       disableDeviceRebootForRoPropertiesDefault;
 
+  private static final Flag<Boolean> disableWifiUtilFuncDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--disable_wifi_util_func",
+      description = "Whether to disable WifiUtil functionality on device. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> disableWifiUtilFunc = disableWifiUtilFuncDefault;
+
   private static final Flag<Boolean> enableAndroidDeviceReadyCheckDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(

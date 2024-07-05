@@ -1483,6 +1483,11 @@ public abstract class AndroidRealDeviceDelegate {
   private void connectToWifi(String serial, int sdkVersion, String ssid, String pwd)
       throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
           InterruptedException {
+    if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
+      logger.atInfo().log(
+          "Wifi util functionality is disabled. Skip connecting device %s to wifi.", serial);
+      return;
+    }
     WifiUtil wifiUtil = new WifiUtil();
     apkInstaller.installApkIfVersionMismatched(
         device, ApkInstallArgs.builder().setApkPath(wifiUtil.getWifiUtilApkPath()).build(), null);
@@ -1510,24 +1515,30 @@ public abstract class AndroidRealDeviceDelegate {
   @VisibleForTesting
   boolean checkNetwork() throws InterruptedException {
     if (needToInstallWifiApk()) {
-      // Install the wifi apk for Stallite lab only. (b/200517628)
-      try {
-        WifiUtil wifiUtil = new WifiUtil();
-        apkInstaller.installApk(
-            device,
-            ApkInstallArgs.builder()
-                .setApkPath(wifiUtil.getWifiUtilApkPath())
-                .setSkipIfCached(true)
-                .setSkipIfVersionMatch(false)
-                .setSkipDowngrade(false)
-                .setGrantPermissions(
-                    false) // Do not grant permission, either the installation fails on some OEM
-                // device. {@link b/197480620#comment6}.
-                .build(),
-            null);
-      } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
-        logger.atWarning().log(
-            "Failed to install WiFi apk: %s", MoreThrowables.shortDebugString(e));
+      if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
+        logger.atInfo().log(
+            "Wifi util functionality is disabled. Skip installing WifiUtil apk on device %s.",
+            deviceId);
+      } else {
+        // Install the wifi apk for Stallite lab only. (b/200517628)
+        try {
+          WifiUtil wifiUtil = new WifiUtil();
+          apkInstaller.installApk(
+              device,
+              ApkInstallArgs.builder()
+                  .setApkPath(wifiUtil.getWifiUtilApkPath())
+                  .setSkipIfCached(true)
+                  .setSkipIfVersionMatch(false)
+                  .setSkipDowngrade(false)
+                  .setGrantPermissions(
+                      false) // Do not grant permission, either the installation fails on some OEM
+                  // device. {@link b/197480620#comment6}.
+                  .build(),
+              null);
+        } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
+          logger.atWarning().log(
+              "Failed to install WiFi apk: %s", MoreThrowables.shortDebugString(e));
+        }
       }
     }
 

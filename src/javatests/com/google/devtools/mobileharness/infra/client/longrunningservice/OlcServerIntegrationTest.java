@@ -458,7 +458,7 @@ public class OlcServerIntegrationTest {
   }
 
   private void startServers(
-      boolean enableAtsMode, Path apiConfigFile, boolean enableScheudlerShuffle)
+      boolean enableAtsMode, Path apiConfigFile, boolean enableSchedulerShuffle)
       throws IOException, CommandStartException, InterruptedException, ExecutionException {
     int noOpDeviceNum = 5;
 
@@ -480,6 +480,7 @@ public class OlcServerIntegrationTest {
                             "--detect_adb_device=false",
                             "--disable_calling=false",
                             "--disable_device_reboot=true",
+                            "--disable_wifi_util_func=true",
                             "--enable_android_device_ready_check=false",
                             "--enable_ats_mode=" + enableAtsMode,
                             "--enable_client_experiment_manager=false",
@@ -487,7 +488,7 @@ public class OlcServerIntegrationTest {
                             "--enable_device_state_change_recover=false",
                             "--enable_device_system_settings_change=false",
                             "--enable_grpc_lab_server=true",
-                            "--enable_simple_scheduler_shuffle=" + enableScheudlerShuffle,
+                            "--enable_simple_scheduler_shuffle=" + enableSchedulerShuffle,
                             "--external_adb_initializer_template=true",
                             "--mute_android=false",
                             "--no_op_device_num=" + noOpDeviceNum,
@@ -554,6 +555,7 @@ public class OlcServerIntegrationTest {
                               "--detect_adb_device=false",
                               "--disable_calling=false",
                               "--disable_device_reboot=true",
+                              "--disable_wifi_util_func=true",
                               "--enable_android_device_ready_check=false",
                               "--enable_cloud_logging=false",
                               "--enable_device_state_change_recover=false",

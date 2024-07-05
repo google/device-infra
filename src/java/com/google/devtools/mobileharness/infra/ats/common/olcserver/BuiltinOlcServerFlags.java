@@ -34,6 +34,7 @@ class BuiltinOlcServerFlags {
           "--clear_android_device_multi_users=false",
           "--disable_calling=false",
           "--disable_device_reboot=true",
+          "--disable_wifi_util_func=true",
           "--enable_android_device_ready_check=false",
           "--enable_device_state_change_recover=false",
           "--enable_device_system_settings_change=false",
