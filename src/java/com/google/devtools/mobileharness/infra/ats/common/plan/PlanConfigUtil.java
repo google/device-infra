@@ -168,18 +168,7 @@ public class PlanConfigUtil {
     return Optional.of(document);
   }
 
-  private PlanConfigInfo loadPlanConfigInfo(String configName, Path jar, Document document) {
-    return PlanConfigInfo.of(
-        configName, jar, document.getDocumentElement().getAttribute("description"));
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  private ImmutableMap<String, Path> getConfigsFromJars(
-      List<Path> jarFiles, @Nullable String subPath) {
-    return jarFileUtil.getEntriesFromJars(jarFiles, new ConfigInJarFilter(subPath));
-  }
-
-  private Optional<InputStream> getBundledConfigStream(Path jar, String name) {
+  public Optional<InputStream> getBundledConfigStream(Path jar, String name) {
     String ext = fileNameUtil.getExtension(name);
     if (Strings.isNullOrEmpty(ext)) {
       // If the default name doesn't have an extension, search all possible extensions.
@@ -195,6 +184,17 @@ public class PlanConfigUtil {
     }
 
     return jarFileUtil.getZipEntryInputStream(jar, String.format("%s%s", getConfigPrefix(), name));
+  }
+
+  private PlanConfigInfo loadPlanConfigInfo(String configName, Path jar, Document document) {
+    return PlanConfigInfo.of(
+        configName, jar, document.getDocumentElement().getAttribute("description"));
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  private ImmutableMap<String, Path> getConfigsFromJars(
+      List<Path> jarFiles, @Nullable String subPath) {
+    return jarFileUtil.getEntriesFromJars(jarFiles, new ConfigInJarFilter(subPath));
   }
 
   /**

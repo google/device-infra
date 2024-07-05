@@ -16,8 +16,8 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "plan_lister",
-    srcs = ["PlanLister.java"],
+    name = "plan_helper",
+    srcs = ["PlanHelper.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
     ],
@@ -26,6 +26,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/command:command_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

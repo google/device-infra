@@ -16,19 +16,28 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.util.plan;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.common.plan.PlanConfigUtil;
 import com.google.devtools.mobileharness.infra.ats.common.plan.PlanConfigUtil.PlanConfigInfo;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.function.Supplier;
 import javax.inject.Inject;
 
-/** Lister for listing plans/configs. */
-public class PlanLister {
+/** Helper to list or dump plans/configs. */
+public class PlanHelper {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private final PlanConfigUtil planConfigUtil;
   private final ConsoleInfo consoleInfo;
@@ -38,7 +47,7 @@ public class PlanLister {
       Suppliers.memoize(this::doListPlans);
 
   @Inject
-  PlanLister(PlanConfigUtil planConfigUtil, ConsoleInfo consoleInfo, CommandHelper commandHelper) {
+  PlanHelper(PlanConfigUtil planConfigUtil, ConsoleInfo consoleInfo, CommandHelper commandHelper) {
     this.planConfigUtil = planConfigUtil;
     this.consoleInfo = consoleInfo;
     this.commandHelper = commandHelper;
@@ -46,6 +55,36 @@ public class PlanLister {
 
   public ImmutableMap<String, PlanConfigInfo> listPlans() {
     return plansSupplier.get();
+  }
+
+  public String loadConfigContent(String configName) {
+    ImmutableMap<String, PlanConfigInfo> configInfo = listPlans();
+    if (!configInfo.containsKey(configName)) {
+      logger.atWarning().log("Config [%s] not found.", configName);
+      return "";
+    }
+    PlanConfigInfo planConfigInfo = configInfo.get(configName);
+    Optional<InputStream> content =
+        planConfigUtil.getBundledConfigStream(planConfigInfo.source(), configName);
+    if (content.isEmpty()) {
+      logger.atWarning().log("Failed to load config [%s] content.", configName);
+      return "";
+    }
+    return convertPlanStreamToString(content.get());
+  }
+
+  private String convertPlanStreamToString(InputStream inputStream) {
+    StringBuilder stringBuilder = new StringBuilder();
+    try (BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream, UTF_8))) {
+      String line;
+      while ((line = reader.readLine()) != null) {
+        stringBuilder.append(line).append("\n"); // Add newline for readability
+      }
+    } catch (Exception e) {
+      logger.atWarning().withCause(e).log("Failed to convert config content to string");
+      return "";
+    }
+    return stringBuilder.toString();
   }
 
   private ImmutableMap<String, PlanConfigInfo> doListPlans() {

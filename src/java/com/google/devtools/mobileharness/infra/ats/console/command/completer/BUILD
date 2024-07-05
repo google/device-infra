@@ -25,7 +25,7 @@ java_library(
     srcs = ["CommandCompleter.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:plan_config_util",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:plan_lister",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/plan:plan_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "@maven//:com_google_guava_guava",

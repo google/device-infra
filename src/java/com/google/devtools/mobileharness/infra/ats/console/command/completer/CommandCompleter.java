@@ -29,7 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.infra.ats.common.plan.PlanConfigUtil.PlanConfigInfo;
-import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanLister;
+import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanHelper;
 import java.util.List;
 import java.util.logging.Level;
 import javax.inject.Inject;
@@ -43,15 +43,15 @@ import org.jline.reader.ParsedLine;
 public class CommandCompleter {
 
   private final ListeningExecutorService threadPool;
-  private final PlanLister planLister;
+  private final PlanHelper planHelper;
 
   private final SettableFuture<ImmutableList<Candidate>> listTestPlansFuture =
       SettableFuture.create();
 
   @Inject
-  CommandCompleter(ListeningExecutorService threadPool, PlanLister planLister) {
+  CommandCompleter(ListeningExecutorService threadPool, PlanHelper planHelper) {
     this.threadPool = threadPool;
-    this.planLister = planLister;
+    this.planHelper = planHelper;
   }
 
   public void startListingTestPlans() {
@@ -82,7 +82,7 @@ public class CommandCompleter {
   }
 
   private ImmutableList<Candidate> listTestPlans() {
-    ImmutableMap<String, PlanConfigInfo> testPlans = planLister.listPlans();
+    ImmutableMap<String, PlanConfigInfo> testPlans = planHelper.listPlans();
     return testPlans.keySet().stream().map(Candidate::new).collect(toImmutableList());
   }
 }

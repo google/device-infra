@@ -33,6 +33,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.infra.ats.console.util.log.LogDumper;
+import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanHelper;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -47,6 +48,7 @@ import picocli.CommandLine.ExitCode;
 import picocli.CommandLine.HelpCommand;
 import picocli.CommandLine.Model.CommandSpec;
 import picocli.CommandLine.ParameterException;
+import picocli.CommandLine.Parameters;
 import picocli.CommandLine.Spec;
 
 /** Command for "dump" commands. */
@@ -75,17 +77,20 @@ class DumpCommand implements Callable<Integer> {
   private final ServerPreparer serverPreparer;
   private final AtsSessionStub atsSessionStub;
   private final LocalFileUtil localFileUtil;
+  private final PlanHelper planHelper;
 
   @Inject
   DumpCommand(
       ConsoleUtil consoleUtil,
       ServerPreparer serverPreparer,
       AtsSessionStub atsSessionStub,
-      LocalFileUtil localFileUtil) {
+      LocalFileUtil localFileUtil,
+      PlanHelper planHelper) {
     this.consoleUtil = consoleUtil;
     this.serverPreparer = serverPreparer;
     this.atsSessionStub = atsSessionStub;
     this.localFileUtil = localFileUtil;
+    this.planHelper = planHelper;
   }
 
   @Override
@@ -127,6 +132,22 @@ class DumpCommand implements Callable<Integer> {
     String bugreportFilePath = PathUtil.join(baseDirPath, String.format("%s.zip", bugreportName));
     localFileUtil.zipDir(bugreportDirPath, bugreportFilePath);
     consoleUtil.printlnStdout("Output bugreport zip in %s", bugreportFilePath);
+    return ExitCode.OK;
+  }
+
+  @Command(
+      name = "config",
+      aliases = {"c"},
+      description = "Dump the content of the specified config")
+  public int config(
+      @Parameters(
+              index = "0",
+              paramLabel = "<config>",
+              hideParamSyntax = true,
+              description = "Name of the config to dump.")
+          String configName) {
+    String config = planHelper.loadConfigContent(configName);
+    consoleUtil.printlnStdout(config);
     return ExitCode.OK;
   }
 

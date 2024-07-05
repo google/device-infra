@@ -35,7 +35,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplu
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
-import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanLister;
+import com.google.devtools.mobileharness.infra.ats.console.util.plan.PlanHelper;
 import com.google.devtools.mobileharness.infra.ats.console.util.result.ResultLister;
 import com.google.devtools.mobileharness.infra.ats.console.util.subplan.SubPlanLister;
 import com.google.devtools.mobileharness.platform.android.xts.suite.params.ModuleParameters;
@@ -71,7 +71,7 @@ class ListCommand implements Callable<Integer> {
   private final ServerPreparer serverPreparer;
   private final AtsSessionStub atsSessionStub;
   private final ResultLister resultLister;
-  private final PlanLister planLister;
+  private final PlanHelper planHelper;
   private final SubPlanLister subPlanLister;
   private final CommandHelper commandHelper;
 
@@ -82,7 +82,7 @@ class ListCommand implements Callable<Integer> {
       ServerPreparer serverPreparer,
       AtsSessionStub atsSessionStub,
       ResultLister resultLister,
-      PlanLister planLister,
+      PlanHelper planHelper,
       SubPlanLister subPlanLister,
       CommandHelper commandHelper) {
     this.consoleInfo = consoleInfo;
@@ -90,7 +90,7 @@ class ListCommand implements Callable<Integer> {
     this.serverPreparer = serverPreparer;
     this.atsSessionStub = atsSessionStub;
     this.resultLister = resultLister;
-    this.planLister = planLister;
+    this.planHelper = planHelper;
     this.subPlanLister = subPlanLister;
     this.commandHelper = commandHelper;
   }
@@ -189,7 +189,7 @@ class ListCommand implements Callable<Integer> {
       aliases = {"p", "configs"},
       description = "List all plans/configs available")
   public int plans() throws MobileHarnessException {
-    consoleUtil.printlnStdout(formatPlans(planLister.listPlans()));
+    consoleUtil.printlnStdout(formatPlans(planHelper.listPlans()));
     return ExitCode.OK;
   }
 
