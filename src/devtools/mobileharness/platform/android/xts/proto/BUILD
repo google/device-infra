@@ -43,6 +43,19 @@ java_proto_library(
 )
 
 proto_library(
+    name = "runtime_info_proto",
+    srcs = ["runtime_info.proto"],
+    deps = [
+        "@com_google_protobuf//:timestamp_proto",
+    ],
+)
+
+java_proto_library(
+    name = "runtime_info_java_proto",
+    deps = [":runtime_info_proto"],
+)
+
+proto_library(
     name = "test_message_proto",
     srcs = ["test_message.proto"],
 )

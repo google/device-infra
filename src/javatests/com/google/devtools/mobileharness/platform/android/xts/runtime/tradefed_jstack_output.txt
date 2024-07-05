@@ -1,0 +1,522 @@
+2024-07-04 20:50:57
+Full thread dump OpenJDK 64-Bit Server VM (21.0.1+-11233762 mixed mode, sharing):
+
+Threads class SMR info:
+_java_thread_list=0x00007f1958152630, length=29, elements={
+0x00007f1b1028eab0, 0x00007f1b10290100, 0x00007f1b10291be0, 0x00007f1b10293220,
+0x00007f1b102947c0, 0x00007f1b102963c0, 0x00007f1b10297ac0, 0x00007f1b102aab80,
+0x00007f1b102a0710, 0x00007f1b1082c2e0, 0x00007f1b1092fb80, 0x00007f1b10a0ed10,
+0x00007f18f80372b0, 0x00007f18f8040a70, 0x00007f18f8070ac0, 0x00007f18f8071980,
+0x00007f18f80ae3c0, 0x00007f1b10032780, 0x00007f19580af660, 0x00007f1a58000ff0,
+0x00007f18ec017e00, 0x00007f18ec01c180, 0x00007f1844001b90, 0x00007f18ec015c10,
+0x00007f18ec01d110, 0x00007f183c0063c0, 0x00007f1850110cb0, 0x00007f1834002200,
+0x00007f185010f8b0
+}
+
+"Reference Handler" #9 [665089] daemon prio=10 os_prio=0 cpu=2.40ms elapsed=88.72s tid=0x00007f1b1028eab0 nid=665089 waiting on condition  [0x00007f1ac35fe000]
+   java.lang.Thread.State: RUNNABLE
+        at java.lang.ref.Reference.waitForReferencePendingList(java.base@21.0.1/Native Method)
+        at java.lang.ref.Reference.processPendingReferences(java.base@21.0.1/Reference.java:246)
+        at java.lang.ref.Reference$ReferenceHandler.run(java.base@21.0.1/Reference.java:208)
+
+"Finalizer" #10 [665090] daemon prio=8 os_prio=0 cpu=0.29ms elapsed=88.72s tid=0x00007f1b10290100 nid=665090 in Object.wait()  [0x00007f1ac34fd000]
+   java.lang.Thread.State: WAITING (on object monitor)
+        at java.lang.Object.wait0(java.base@21.0.1/Native Method)
+        - waiting on <0x0000000204e1a808> (a java.lang.ref.NativeReferenceQueue$Lock)
+        at java.lang.Object.wait(java.base@21.0.1/Object.java:366)
+        at java.lang.Object.wait(java.base@21.0.1/Object.java:339)
+        at java.lang.ref.NativeReferenceQueue.await(java.base@21.0.1/NativeReferenceQueue.java:48)
+        at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.1/ReferenceQueue.java:158)
+        at java.lang.ref.NativeReferenceQueue.remove(java.base@21.0.1/NativeReferenceQueue.java:89)
+        - locked <0x0000000204e1a808> (a java.lang.ref.NativeReferenceQueue$Lock)
+        at java.lang.ref.Finalizer$FinalizerThread.run(java.base@21.0.1/Finalizer.java:173)
+
+"Signal Dispatcher" #11 [665091] daemon prio=9 os_prio=0 cpu=0.40ms elapsed=88.72s tid=0x00007f1b10291be0 nid=665091 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Service Thread" #12 [665092] daemon prio=9 os_prio=0 cpu=10.87ms elapsed=88.72s tid=0x00007f1b10293220 nid=665092 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Monitor Deflation Thread" #13 [665093] daemon prio=9 os_prio=0 cpu=5.91ms elapsed=88.72s tid=0x00007f1b102947c0 nid=665093 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"C2 CompilerThread0" #14 [665094] daemon prio=9 os_prio=0 cpu=3851.52ms elapsed=88.72s tid=0x00007f1b102963c0 nid=665094 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"C1 CompilerThread0" #28 [665095] daemon prio=9 os_prio=0 cpu=469.61ms elapsed=88.72s tid=0x00007f1b10297ac0 nid=665095 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+   No compile task
+
+"Notification Thread" #35 [665100] daemon prio=9 os_prio=0 cpu=0.14ms elapsed=88.70s tid=0x00007f1b102aab80 nid=665100 runnable  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Common-Cleaner" #36 [665101] daemon prio=8 os_prio=0 cpu=2.75ms elapsed=88.70s tid=0x00007f1b102a0710 nid=665101 waiting on condition  [0x00007f1ac2cf5000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+        at jdk.internal.misc.Unsafe.park(java.base@21.0.1/Native Method)
+        - parking to wait for  <0x0000000204e1c048> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.1/LockSupport.java:269)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.await(java.base@21.0.1/AbstractQueuedSynchronizer.java:1847)
+        at java.lang.ref.ReferenceQueue.await(java.base@21.0.1/ReferenceQueue.java:71)
+        at java.lang.ref.ReferenceQueue.remove0(java.base@21.0.1/ReferenceQueue.java:143)
+        at java.lang.ref.ReferenceQueue.remove(java.base@21.0.1/ReferenceQueue.java:218)
+        at jdk.internal.ref.CleanerImpl.run(java.base@21.0.1/CleanerImpl.java:140)
+        at java.lang.Thread.runWith(java.base@21.0.1/Thread.java:1596)
+        at java.lang.Thread.run(java.base@21.0.1/Thread.java:1583)
+        at jdk.internal.misc.InnocuousThread.run(java.base@21.0.1/InnocuousThread.java:186)
+
+"process reaper" #86 [665162] daemon prio=10 os_prio=0 cpu=40.94ms elapsed=88.47s tid=0x00007f1b1082c2e0 nid=665162 waiting on condition  [0x00007f1ac39b9000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+        at jdk.internal.misc.Unsafe.park(java.base@21.0.1/Native Method)
+        - parking to wait for  <0x0000000206483960> (a java.util.concurrent.SynchronousQueue$TransferStack)
+        at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.1/LockSupport.java:269)
+        at java.util.concurrent.SynchronousQueue$TransferStack.transfer(java.base@21.0.1/SynchronousQueue.java:401)
+        at java.util.concurrent.SynchronousQueue.poll(java.base@21.0.1/SynchronousQueue.java:903)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(java.base@21.0.1/ThreadPoolExecutor.java:1069)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.1/ThreadPoolExecutor.java:1130)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(java.base@21.0.1/ThreadPoolExecutor.java:642)
+        at java.lang.Thread.runWith(java.base@21.0.1/Thread.java:1596)
+        at java.lang.Thread.run(java.base@21.0.1/Thread.java:1583)
+        at jdk.internal.misc.InnocuousThread.run(java.base@21.0.1/InnocuousThread.java:186)
+
+"clearcut-client-thread" #88 [665191] daemon prio=5 os_prio=0 cpu=22.72ms elapsed=88.10s tid=0x00007f1b1092fb80 nid=665191 waiting on condition  [0x00007f1ac2af3000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+        at jdk.internal.misc.Unsafe.park(java.base@21.0.1/Native Method)
+        - parking to wait for  <0x0000000208001228> (a java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject)
+        at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.1/LockSupport.java:269)
+        at java.util.concurrent.locks.AbstractQueuedSynchronizer$ConditionObject.awaitNanos(java.base@21.0.1/AbstractQueuedSynchronizer.java:1758)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(java.base@21.0.1/ScheduledThreadPoolExecutor.java:1182)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$DelayedWorkQueue.take(java.base@21.0.1/ScheduledThreadPoolExecutor.java:899)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(java.base@21.0.1/ThreadPoolExecutor.java:1070)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.1/ThreadPoolExecutor.java:1130)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(java.base@21.0.1/ThreadPoolExecutor.java:642)
+        at java.lang.Thread.runWith(java.base@21.0.1/Thread.java:1596)
+        at java.lang.Thread.run(java.base@21.0.1/Thread.java:1583)
+
+"grpc-default-boss-ELG-1-1" #113 [665232] daemon prio=5 os_prio=0 cpu=22.07ms elapsed=87.92s tid=0x00007f1b10a0ed10 nid=665232 runnable  [0x00007f1a6c9ec000]
+   java.lang.Thread.State: RUNNABLE
+        at io.grpc.netty.shaded.io.netty.channel.epoll.Native.epollWait(Native Method)
+        at io.grpc.netty.shaded.io.netty.channel.epoll.Native.epollWait(Native.java:209)
+        at io.grpc.netty.shaded.io.netty.channel.epoll.Native.epollWait(Native.java:202)
+        at io.grpc.netty.shaded.io.netty.channel.epoll.EpollEventLoop.epollWaitNoTimerChange(EpollEventLoop.java:306)
+        at io.grpc.netty.shaded.io.netty.channel.epoll.EpollEventLoop.run(EpollEventLoop.java:363)
+        at io.grpc.netty.shaded.io.netty.util.concurrent.SingleThreadEventExecutor$4.run(SingleThreadEventExecutor.java:997)
+        at io.grpc.netty.shaded.io.netty.util.internal.ThreadExecutorMap$2.run(ThreadExecutorMap.java:74)
+        at io.grpc.netty.shaded.io.netty.util.concurrent.FastThreadLocalRunnable.run(FastThreadLocalRunnable.java:30)
+        at java.lang.Thread.runWith(java.base@21.0.1/Thread.java:1596)
+        at java.lang.Thread.run(java.base@21.0.1/Thread.java:1583)
+
+"FastbootMonitor" #116 [665240] daemon prio=5 os_prio=0 cpu=12.85ms elapsed=87.81s tid=0x00007f18f80372b0 nid=665240 waiting on condition  [0x00007f1a6c7ea000]
+   java.lang.Thread.State: TIMED_WAITING (sleeping)
+        at java.lang.Thread.sleep0(java.base@21.0.1/Native Method)
+        at java.lang.Thread.sleep(java.base@21.0.1/Thread.java:509)
+        at com.android.tradefed.util.RunUtil.sleep(RunUtil.java:723)
+        at com.android.tradefed.device.DeviceManager$FastbootMonitor.run(DeviceManager.java:1505)
+
+"Monitor" #118 [665243] daemon prio=5 os_prio=0 cpu=0.60ms elapsed=87.81s tid=0x00007f18f8040a70 nid=665243 runnable  [0x00007f1a6c5e8000]
+   java.lang.Thread.State: RUNNABLE
+        at sun.nio.ch.EPoll.wait(java.base@21.0.1/Native Method)
+        at sun.nio.ch.EPollSelectorImpl.doSelect(java.base@21.0.1/EPollSelectorImpl.java:121)
+        at sun.nio.ch.SelectorImpl.lockAndDoSelect(java.base@21.0.1/SelectorImpl.java:130)
+        - locked <0x00000002080033d8> (a sun.nio.ch.Util$2)
+        - locked <0x0000000208003388> (a sun.nio.ch.EPollSelectorImpl)
+        at sun.nio.ch.SelectorImpl.select(java.base@21.0.1/SelectorImpl.java:147)
+        at com.android.ddmlib.internal.MonitorThread.run(MonitorThread.java:175)
+
+"JdwpProxyConnection" #122 [665253] daemon prio=5 os_prio=0 cpu=0.18ms elapsed=87.79s tid=0x00007f18f8070ac0 nid=665253 runnable  [0x00007f1a6c6e9000]
+   java.lang.Thread.State: RUNNABLE
+        at sun.nio.ch.EPoll.wait(java.base@21.0.1/Native Method)
+        at sun.nio.ch.EPollSelectorImpl.doSelect(java.base@21.0.1/EPollSelectorImpl.java:121)
+        at sun.nio.ch.SelectorImpl.lockAndDoSelect(java.base@21.0.1/SelectorImpl.java:130)
+        - locked <0x0000000208003ac8> (a sun.nio.ch.Util$2)
+        - locked <0x0000000208003a78> (a sun.nio.ch.EPollSelectorImpl)
+        at sun.nio.ch.SelectorImpl.select(java.base@21.0.1/SelectorImpl.java:147)
+        at com.android.ddmlib.internal.jdwp.JdwpProxyServer.runAsServer(JdwpProxyServer.java:269)
+        at com.android.ddmlib.internal.jdwp.JdwpProxyServer.run(JdwpProxyServer.java:321)
+        at java.lang.Thread.runWith(java.base@21.0.1/Thread.java:1596)
+        at java.lang.Thread.run(java.base@21.0.1/Thread.java:1583)
+
+"Device List Monitor" #123 [665254] daemon prio=5 os_prio=0 cpu=7.63ms elapsed=87.79s tid=0x00007f18f8071980 nid=665254 runnable  [0x00007f1a6c4e7000]
+   java.lang.Thread.State: RUNNABLE
+        at sun.nio.ch.SocketDispatcher.read0(java.base@21.0.1/Native Method)
+        at sun.nio.ch.SocketDispatcher.read(java.base@21.0.1/SocketDispatcher.java:47)
+        at sun.nio.ch.IOUtil.readIntoNativeBuffer(java.base@21.0.1/IOUtil.java:340)
+        at sun.nio.ch.IOUtil.read(java.base@21.0.1/IOUtil.java:306)
+        at sun.nio.ch.IOUtil.read(java.base@21.0.1/IOUtil.java:269)
+        at sun.nio.ch.SocketChannelImpl.read(java.base@21.0.1/SocketChannelImpl.java:425)
+        at com.android.ddmlib.internal.AdbSocketUtils.read(AdbSocketUtils.java:37)
+        at com.android.ddmlib.internal.AdbSocketUtils.read(AdbSocketUtils.java:53)
+        at com.android.ddmlib.internal.AdbSocketUtils.readLength(AdbSocketUtils.java:66)
+        at com.android.ddmlib.internal.DeviceListMonitorTask.run(DeviceListMonitorTask.java:136)
+        at java.lang.Thread.runWith(java.base@21.0.1/Thread.java:1596)
+        at java.lang.Thread.run(java.base@21.0.1/Thread.java:1583)
+
+"CommandScheduler" #114 [665261] prio=5 os_prio=0 cpu=16.95ms elapsed=87.74s tid=0x00007f18f80ae3c0 nid=665261 in Object.wait()  [0x00007f1a6c3e6000]
+   java.lang.Thread.State: TIMED_WAITING (on object monitor)
+        at java.lang.Object.wait0(java.base@21.0.1/Native Method)
+        - waiting on <0x000000020800d7d0> (a com.android.tradefed.command.CommandScheduler$WaitObj)
+        at java.lang.Object.wait(java.base@21.0.1/Object.java:366)
+        at com.android.tradefed.command.CommandScheduler$WaitObj.waitForEvent(CommandScheduler.java:2495)
+        - locked <0x000000020800d7d0> (a com.android.tradefed.command.CommandScheduler$WaitObj)
+        at com.android.tradefed.command.CommandScheduler$WaitObj.waitAndReset(CommandScheduler.java:2530)
+        - locked <0x000000020800d7d0> (a com.android.tradefed.command.CommandScheduler$WaitObj)
+        at com.android.tradefed.command.CommandScheduler.run(CommandScheduler.java:1234)
+
+"DestroyJavaVM" #131 [665081] prio=5 os_prio=0 cpu=786.82ms elapsed=87.74s tid=0x00007f1b10032780 nid=665081 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"ForkJoinPool.commonPool-worker-2" #160 [665347] daemon prio=5 os_prio=0 cpu=207.39ms elapsed=87.09s tid=0x00007f19580af660 nid=665347 waiting on condition  [0x00007f18ddedd000]
+   java.lang.Thread.State: WAITING (parking)
+        at jdk.internal.misc.Unsafe.park(java.base@21.0.1/Native Method)
+        - parking to wait for  <0x0000000206498028> (a java.util.concurrent.ForkJoinPool)
+        at java.util.concurrent.locks.LockSupport.park(java.base@21.0.1/LockSupport.java:371)
+        at java.util.concurrent.ForkJoinPool.awaitWork(java.base@21.0.1/ForkJoinPool.java:1893)
+        at java.util.concurrent.ForkJoinPool.runWorker(java.base@21.0.1/ForkJoinPool.java:1809)
+        at java.util.concurrent.ForkJoinWorkerThread.run(java.base@21.0.1/ForkJoinWorkerThread.java:188)
+
+"Attach Listener" #165 [665860] daemon prio=9 os_prio=0 cpu=1.57ms elapsed=78.67s tid=0x00007f1a58000ff0 nid=665860 waiting on condition  [0x0000000000000000]
+   java.lang.Thread.State: RUNNABLE
+
+"Timer-1" #194 [669958] daemon prio=5 os_prio=0 cpu=0.16ms elapsed=13.56s tid=0x00007f18ec017e00 nid=669958 in Object.wait()  [0x00007f18ddad9000]
+   java.lang.Thread.State: WAITING (on object monitor)
+        at java.lang.Object.wait0(java.base@21.0.1/Native Method)
+        - waiting on <0x00000003140000c0> (a java.util.TaskQueue)
+        at java.lang.Object.wait(java.base@21.0.1/Object.java:366)
+        at java.lang.Object.wait(java.base@21.0.1/Object.java:339)
+        at java.util.TimerThread.mainLoop(java.base@21.0.1/Timer.java:537)
+        - locked <0x00000003140000c0> (a java.util.TaskQueue)
+        at java.util.TimerThread.run(java.base@21.0.1/Timer.java:516)
+
+"Invocation-1B231FDEE000VH" #193 [669959] prio=5 os_prio=0 cpu=666.18ms elapsed=13.55s tid=0x00007f18ec01c180 nid=669959 waiting on condition  [0x00007f18dd9d7000]
+   java.lang.Thread.State: TIMED_WAITING (sleeping)
+        at java.lang.Thread.sleep0(java.base@21.0.1/Native Method)
+        at java.lang.Thread.sleep(java.base@21.0.1/Thread.java:509)
+        at com.android.ddmlib.AdbHelper.executeRemoteCommand(AdbHelper.java:733)
+        at com.android.ddmlib.AdbHelper.executeRemoteCommand(AdbHelper.java:511)
+        at com.android.ddmlib.internal.DeviceImpl.executeShellCommand(DeviceImpl.java:741)
+        at com.android.ddmlib.testrunner.RemoteAndroidTestRunner.run(RemoteAndroidTestRunner.java:359)
+        at com.android.tradefed.device.NativeDevice$5.run(NativeDevice.java:1215)
+        at com.android.tradefed.device.NativeDevice.performDeviceAction(NativeDevice.java:2641)
+        at com.android.tradefed.device.NativeDevice.runInstrumentationTests(NativeDevice.java:1219)
+        at com.android.tradefed.device.NativeDevice.runInstrumentationTests(NativeDevice.java:1234)
+        at com.android.tradefed.testtype.InstrumentationTest.runInstrumentationTests(InstrumentationTest.java:1061)
+        at com.android.tradefed.testtype.InstrumentationTest.doTestRun(InstrumentationTest.java:1039)
+        at com.android.tradefed.testtype.InstrumentationTest.run(InstrumentationTest.java:873)
+        at com.android.tradefed.testtype.AndroidJUnitTest.run(AndroidJUnitTest.java:447)
+        at com.android.compatibility.common.tradefed.targetprep.ApkInstrumentationPreparer.instrument(ApkInstrumentationPreparer.java:160)
+        at com.android.compatibility.common.tradefed.targetprep.ApkInstrumentationPreparer.run(ApkInstrumentationPreparer.java:90)
+        at com.android.compatibility.common.tradefed.targetprep.DeviceInfoCollector.setUp(DeviceInfoCollector.java:149)
+        at com.android.tradefed.invoker.InvocationExecution.runPreparationOnDevice(InvocationExecution.java:621)
+        at com.android.tradefed.invoker.InvocationExecution.runPreparersSetup(InvocationExecution.java:522)
+        at com.android.tradefed.invoker.InvocationExecution.doSetup(InvocationExecution.java:375)
+        at com.android.tradefed.invoker.TestInvocation.prepareAndRun(TestInvocation.java:620)
+        at com.android.tradefed.invoker.TestInvocation.performInvocation(TestInvocation.java:288)
+        at com.android.tradefed.invoker.TestInvocation.invoke(TestInvocation.java:1423)
+        at com.android.tradefed.command.CommandScheduler$InvocationThread.run(CommandScheduler.java:689)
+
+"BackgroundDeviceAction-logcat -b all -v threadtime,uid" #198 [669969] daemon prio=5 os_prio=0 cpu=30.02ms elapsed=13.47s tid=0x00007f1844001b90 nid=669969 waiting on condition  [0x00007f1a6c1e4000]
+   java.lang.Thread.State: TIMED_WAITING (sleeping)
+        at java.lang.Thread.sleep0(java.base@21.0.1/Native Method)
+        at java.lang.Thread.sleep(java.base@21.0.1/Thread.java:509)
+        at com.android.ddmlib.AdbHelper.executeRemoteCommand(AdbHelper.java:733)
+        at com.android.ddmlib.AdbHelper.executeRemoteCommand(AdbHelper.java:511)
+        at com.android.ddmlib.internal.DeviceImpl.executeShellCommand(DeviceImpl.java:722)
+        at com.android.tradefed.device.BackgroundDeviceAction.run(BackgroundDeviceAction.java:103)
+
+"Timer-2" #204 [669975] daemon prio=5 os_prio=0 cpu=0.09ms elapsed=13.45s tid=0x00007f18ec015c10 nid=669975 in Object.wait()  [0x00007f18dfefd000]
+   java.lang.Thread.State: WAITING (on object monitor)
+        at java.lang.Object.wait0(java.base@21.0.1/Native Method)
+        - waiting on <0x0000000314105260> (a java.util.TaskQueue)
+        at java.lang.Object.wait(java.base@21.0.1/Object.java:366)
+        at java.lang.Object.wait(java.base@21.0.1/Object.java:339)
+        at java.util.TimerThread.mainLoop(java.base@21.0.1/Timer.java:537)
+        - locked <0x0000000314105260> (a java.util.TaskQueue)
+        at java.util.TimerThread.run(java.base@21.0.1/Timer.java:516)
+
+"Invocation-18311FDEE002Y4" #203 [669976] prio=5 os_prio=0 cpu=696.21ms elapsed=13.45s tid=0x00007f18ec01d110 nid=669976 waiting on condition  [0x00007f18dd7d5000]
+   java.lang.Thread.State: TIMED_WAITING (sleeping)
+        at java.lang.Thread.sleep0(java.base@21.0.1/Native Method)
+        at java.lang.Thread.sleep(java.base@21.0.1/Thread.java:509)
+        at com.android.ddmlib.AdbHelper.executeRemoteCommand(AdbHelper.java:733)
+        at com.android.ddmlib.AdbHelper.executeRemoteCommand(AdbHelper.java:511)
+        at com.android.ddmlib.internal.DeviceImpl.executeShellCommand(DeviceImpl.java:741)
+        at com.android.ddmlib.testrunner.RemoteAndroidTestRunner.run(RemoteAndroidTestRunner.java:359)
+        at com.android.tradefed.device.NativeDevice$5.run(NativeDevice.java:1215)
+        at com.android.tradefed.device.NativeDevice.performDeviceAction(NativeDevice.java:2641)
+        at com.android.tradefed.device.NativeDevice.runInstrumentationTests(NativeDevice.java:1219)
+        at com.android.tradefed.device.NativeDevice.runInstrumentationTests(NativeDevice.java:1234)
+        at com.android.tradefed.testtype.InstrumentationTest.runInstrumentationTests(InstrumentationTest.java:1061)
+        at com.android.tradefed.testtype.InstrumentationTest.doTestRun(InstrumentationTest.java:1039)
+        at com.android.tradefed.testtype.InstrumentationTest.run(InstrumentationTest.java:873)
+        at com.android.tradefed.testtype.AndroidJUnitTest.run(AndroidJUnitTest.java:447)
+        at com.android.compatibility.common.tradefed.targetprep.ApkInstrumentationPreparer.instrument(ApkInstrumentationPreparer.java:160)
+        at com.android.compatibility.common.tradefed.targetprep.ApkInstrumentationPreparer.run(ApkInstrumentationPreparer.java:90)
+        at com.android.compatibility.common.tradefed.targetprep.DeviceInfoCollector.setUp(DeviceInfoCollector.java:149)
+        at com.android.tradefed.invoker.InvocationExecution.runPreparationOnDevice(InvocationExecution.java:621)
+        at com.android.tradefed.invoker.InvocationExecution.runPreparersSetup(InvocationExecution.java:522)
+        at com.android.tradefed.invoker.InvocationExecution.doSetup(InvocationExecution.java:375)
+        at com.android.tradefed.invoker.TestInvocation.prepareAndRun(TestInvocation.java:620)
+        at com.android.tradefed.invoker.TestInvocation.performInvocation(TestInvocation.java:288)
+        at com.android.tradefed.invoker.TestInvocation.invoke(TestInvocation.java:1423)
+        at com.android.tradefed.command.CommandScheduler$InvocationThread.run(CommandScheduler.java:689)
+
+"BackgroundDeviceAction-logcat -b all -v threadtime,uid" #207 [669979] daemon prio=5 os_prio=0 cpu=26.91ms elapsed=13.44s tid=0x00007f183c0063c0 nid=669979 waiting on condition  [0x00007f18dd6d5000]
+   java.lang.Thread.State: TIMED_WAITING (sleeping)
+        at java.lang.Thread.sleep0(java.base@21.0.1/Native Method)
+        at java.lang.Thread.sleep(java.base@21.0.1/Thread.java:509)
+        at com.android.ddmlib.AdbHelper.executeRemoteCommand(AdbHelper.java:733)
+        at com.android.ddmlib.AdbHelper.executeRemoteCommand(AdbHelper.java:511)
+        at com.android.ddmlib.internal.DeviceImpl.executeShellCommand(DeviceImpl.java:722)
+        at com.android.tradefed.device.BackgroundDeviceAction.run(BackgroundDeviceAction.java:103)
+
+"ForkJoinPool.commonPool-worker-3" #213 [669992] daemon prio=5 os_prio=0 cpu=9.73ms elapsed=13.35s tid=0x00007f1850110cb0 nid=669992 waiting on condition  [0x00007f18ddbda000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+        at jdk.internal.misc.Unsafe.park(java.base@21.0.1/Native Method)
+        - parking to wait for  <0x0000000206498028> (a java.util.concurrent.ForkJoinPool)
+        at java.util.concurrent.locks.LockSupport.parkUntil(java.base@21.0.1/LockSupport.java:449)
+        at java.util.concurrent.ForkJoinPool.awaitWork(java.base@21.0.1/ForkJoinPool.java:1891)
+        at java.util.concurrent.ForkJoinPool.runWorker(java.base@21.0.1/ForkJoinPool.java:1809)
+        at java.util.concurrent.ForkJoinWorkerThread.run(java.base@21.0.1/ForkJoinWorkerThread.java:188)
+
+"process reaper" #215 [669995] daemon prio=10 os_prio=0 cpu=49.82ms elapsed=13.34s tid=0x00007f1834002200 nid=669995 waiting on condition  [0x00007f1ac398e000]
+   java.lang.Thread.State: TIMED_WAITING (parking)
+        at jdk.internal.misc.Unsafe.park(java.base@21.0.1/Native Method)
+        - parking to wait for  <0x0000000206483960> (a java.util.concurrent.SynchronousQueue$TransferStack)
+        at java.util.concurrent.locks.LockSupport.parkNanos(java.base@21.0.1/LockSupport.java:269)
+        at java.util.concurrent.SynchronousQueue$TransferStack.transfer(java.base@21.0.1/SynchronousQueue.java:401)
+        at java.util.concurrent.SynchronousQueue.poll(java.base@21.0.1/SynchronousQueue.java:903)
+        at java.util.concurrent.ThreadPoolExecutor.getTask(java.base@21.0.1/ThreadPoolExecutor.java:1069)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(java.base@21.0.1/ThreadPoolExecutor.java:1130)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(java.base@21.0.1/ThreadPoolExecutor.java:642)
+        at java.lang.Thread.runWith(java.base@21.0.1/Thread.java:1596)
+        at java.lang.Thread.run(java.base@21.0.1/Thread.java:1583)
+        at jdk.internal.misc.InnocuousThread.run(java.base@21.0.1/InnocuousThread.java:186)
+
+"Keep-Alive-Timer" #218 [670031] daemon prio=8 os_prio=0 cpu=1.72ms elapsed=13.09s tid=0x00007f185010f8b0 nid=670031 waiting on condition  [0x00007f18dd5d4000]
+   java.lang.Thread.State: TIMED_WAITING (sleeping)
+        at java.lang.Thread.sleep0(java.base@21.0.1/Native Method)
+        at java.lang.Thread.sleep(java.base@21.0.1/Thread.java:509)
+        at sun.net.www.http.KeepAliveCache.run(java.base@21.0.1/KeepAliveCache.java:238)
+        at java.lang.Thread.runWith(java.base@21.0.1/Thread.java:1596)
+        at java.lang.Thread.run(java.base@21.0.1/Thread.java:1583)
+        at jdk.internal.misc.InnocuousThread.run(java.base@21.0.1/InnocuousThread.java:186)
+
+"VM Thread" os_prio=0 cpu=109.04ms elapsed=88.72s tid=0x00007f1b10281c00 nid=665088 runnable
+
+"GC Thread#0" os_prio=0 cpu=292.43ms elapsed=88.74s tid=0x00007f1b1006b110 nid=665082 runnable
+
+"GC Thread#1" os_prio=0 cpu=310.28ms elapsed=88.55s tid=0x00007f1a68019bd0 nid=665109 runnable
+
+"GC Thread#2" os_prio=0 cpu=322.13ms elapsed=88.55s tid=0x00007f1a6801a640 nid=665110 runnable
+
+"GC Thread#3" os_prio=0 cpu=310.34ms elapsed=88.55s tid=0x00007f1a6801b120 nid=665111 runnable
+
+"GC Thread#4" os_prio=0 cpu=309.03ms elapsed=88.55s tid=0x00007f1a6801bc00 nid=665112 runnable
+
+"GC Thread#5" os_prio=0 cpu=323.02ms elapsed=88.55s tid=0x00007f1a6801c6e0 nid=665113 runnable
+
+"GC Thread#6" os_prio=0 cpu=315.37ms elapsed=88.55s tid=0x00007f1a6801d1f0 nid=665114 runnable
+
+"GC Thread#7" os_prio=0 cpu=296.98ms elapsed=88.55s tid=0x00007f1a6801dd00 nid=665115 runnable
+
+"GC Thread#8" os_prio=0 cpu=304.32ms elapsed=88.55s tid=0x00007f1a6801e850 nid=665116 runnable
+
+"GC Thread#9" os_prio=0 cpu=321.81ms elapsed=88.55s tid=0x00007f1a6801f3a0 nid=665117 runnable
+
+"GC Thread#10" os_prio=0 cpu=303.39ms elapsed=88.55s tid=0x00007f1a6801fef0 nid=665118 runnable
+
+"GC Thread#11" os_prio=0 cpu=295.12ms elapsed=88.55s tid=0x00007f1a68020a40 nid=665119 runnable
+
+"GC Thread#12" os_prio=0 cpu=269.48ms elapsed=88.55s tid=0x00007f1a68021590 nid=665120 runnable
+
+"GC Thread#13" os_prio=0 cpu=247.57ms elapsed=88.55s tid=0x00007f1a680220e0 nid=665121 runnable
+
+"GC Thread#14" os_prio=0 cpu=309.86ms elapsed=88.55s tid=0x00007f1a68022c30 nid=665122 runnable
+
+"GC Thread#15" os_prio=0 cpu=317.27ms elapsed=88.55s tid=0x00007f1a68023780 nid=665123 runnable
+
+"GC Thread#16" os_prio=0 cpu=311.39ms elapsed=88.55s tid=0x00007f1a680242d0 nid=665124 runnable
+
+"GC Thread#17" os_prio=0 cpu=287.01ms elapsed=88.55s tid=0x00007f1a68024e20 nid=665125 runnable
+
+"GC Thread#18" os_prio=0 cpu=272.94ms elapsed=88.55s tid=0x00007f1a68025970 nid=665126 runnable
+
+"GC Thread#19" os_prio=0 cpu=298.37ms elapsed=88.55s tid=0x00007f1a680268b0 nid=665127 runnable
+
+"GC Thread#20" os_prio=0 cpu=284.71ms elapsed=88.55s tid=0x00007f1a680277f0 nid=665128 runnable
+
+"GC Thread#21" os_prio=0 cpu=278.43ms elapsed=88.55s tid=0x00007f1a68028730 nid=665129 runnable
+
+"GC Thread#22" os_prio=0 cpu=310.88ms elapsed=88.55s tid=0x00007f1a68029670 nid=665130 runnable
+
+"GC Thread#23" os_prio=0 cpu=324.42ms elapsed=88.55s tid=0x00007f1a6802a5b0 nid=665131 runnable
+
+"GC Thread#24" os_prio=0 cpu=306.61ms elapsed=88.55s tid=0x00007f1a6802b4f0 nid=665132 runnable
+
+"GC Thread#25" os_prio=0 cpu=297.19ms elapsed=88.55s tid=0x00007f1a6802c430 nid=665133 runnable
+
+"GC Thread#26" os_prio=0 cpu=299.93ms elapsed=88.55s tid=0x00007f1a6802d370 nid=665134 runnable
+
+"GC Thread#27" os_prio=0 cpu=343.23ms elapsed=88.55s tid=0x00007f1a6802e2b0 nid=665135 runnable
+
+"GC Thread#28" os_prio=0 cpu=307.34ms elapsed=88.55s tid=0x00007f1a6802f1f0 nid=665136 runnable
+
+"GC Thread#29" os_prio=0 cpu=269.30ms elapsed=88.55s tid=0x00007f1a68030130 nid=665137 runnable
+
+"GC Thread#30" os_prio=0 cpu=271.27ms elapsed=88.55s tid=0x00007f1a68031070 nid=665138 runnable
+
+"GC Thread#31" os_prio=0 cpu=304.56ms elapsed=88.55s tid=0x00007f1a68031fb0 nid=665139 runnable
+
+"GC Thread#32" os_prio=0 cpu=257.72ms elapsed=88.55s tid=0x00007f1a68032ef0 nid=665140 runnable
+
+"GC Thread#33" os_prio=0 cpu=287.74ms elapsed=88.55s tid=0x00007f1a68033e30 nid=665141 runnable
+
+"GC Thread#34" os_prio=0 cpu=298.47ms elapsed=88.55s tid=0x00007f1a68034d70 nid=665142 runnable
+
+"GC Thread#35" os_prio=0 cpu=309.09ms elapsed=88.55s tid=0x00007f1a68035cb0 nid=665143 runnable
+
+"GC Thread#36" os_prio=0 cpu=268.62ms elapsed=88.55s tid=0x00007f1a68036bf0 nid=665144 runnable
+
+"GC Thread#37" os_prio=0 cpu=311.13ms elapsed=88.55s tid=0x00007f1a68037b30 nid=665145 runnable
+
+"GC Thread#38" os_prio=0 cpu=336.16ms elapsed=88.55s tid=0x00007f1a68038a70 nid=665146 runnable
+
+"GC Thread#39" os_prio=0 cpu=289.26ms elapsed=88.55s tid=0x00007f1a680399b0 nid=665147 runnable
+
+"GC Thread#40" os_prio=0 cpu=283.32ms elapsed=88.55s tid=0x00007f1a6803a8f0 nid=665148 runnable
+
+"GC Thread#41" os_prio=0 cpu=302.00ms elapsed=88.55s tid=0x00007f1a6803b830 nid=665149 runnable
+
+"GC Thread#42" os_prio=0 cpu=284.48ms elapsed=88.55s tid=0x00007f1a6803c770 nid=665150 runnable
+
+"GC Thread#43" os_prio=0 cpu=294.43ms elapsed=88.55s tid=0x00007f1a6803d6b0 nid=665151 runnable
+
+"GC Thread#44" os_prio=0 cpu=255.95ms elapsed=88.55s tid=0x00007f1a6803e5f0 nid=665152 runnable
+
+"GC Thread#45" os_prio=0 cpu=283.66ms elapsed=88.55s tid=0x00007f1a6803f530 nid=665153 runnable
+
+"GC Thread#46" os_prio=0 cpu=287.68ms elapsed=88.55s tid=0x00007f1a68040470 nid=665154 runnable
+
+"GC Thread#47" os_prio=0 cpu=279.78ms elapsed=88.55s tid=0x00007f1a680413b0 nid=665155 runnable
+
+"GC Thread#48" os_prio=0 cpu=323.38ms elapsed=88.55s tid=0x00007f1a680422f0 nid=665156 runnable
+
+"GC Thread#49" os_prio=0 cpu=275.86ms elapsed=87.99s tid=0x00007f1a6804d0c0 nid=665198 runnable
+
+"GC Thread#50" os_prio=0 cpu=263.04ms elapsed=87.99s tid=0x00007f1a6804d630 nid=665199 runnable
+
+"GC Thread#51" os_prio=0 cpu=297.34ms elapsed=87.99s tid=0x00007f1a6804dd20 nid=665200 runnable
+
+"GC Thread#52" os_prio=0 cpu=279.77ms elapsed=87.99s tid=0x00007f1a6804e410 nid=665201 runnable
+
+"GC Thread#53" os_prio=0 cpu=290.72ms elapsed=87.99s tid=0x00007f1a6804eb00 nid=665202 runnable
+
+"GC Thread#54" os_prio=0 cpu=299.41ms elapsed=87.99s tid=0x00007f1a6804f420 nid=665203 runnable
+
+"GC Thread#55" os_prio=0 cpu=290.23ms elapsed=87.99s tid=0x00007f1a6804fd40 nid=665204 runnable
+
+"GC Thread#56" os_prio=0 cpu=273.34ms elapsed=87.99s tid=0x00007f1a68050660 nid=665205 runnable
+
+"GC Thread#57" os_prio=0 cpu=303.19ms elapsed=87.99s tid=0x00007f1a68077580 nid=665206 runnable
+
+"GC Thread#58" os_prio=0 cpu=285.20ms elapsed=87.99s tid=0x00007f1a68078060 nid=665207 runnable
+
+"GC Thread#59" os_prio=0 cpu=310.58ms elapsed=87.99s tid=0x00007f1a68078b70 nid=665208 runnable
+
+"GC Thread#60" os_prio=0 cpu=287.23ms elapsed=87.99s tid=0x00007f1a68079680 nid=665209 runnable
+
+"GC Thread#61" os_prio=0 cpu=304.11ms elapsed=87.99s tid=0x00007f1a6807a1d0 nid=665210 runnable
+
+"GC Thread#62" os_prio=0 cpu=275.58ms elapsed=87.99s tid=0x00007f1a6807ad20 nid=665211 runnable
+
+"GC Thread#63" os_prio=0 cpu=307.54ms elapsed=87.99s tid=0x00007f1a6807b870 nid=665212 runnable
+
+"GC Thread#64" os_prio=0 cpu=262.79ms elapsed=87.99s tid=0x00007f1a6807c3c0 nid=665213 runnable
+
+"GC Thread#65" os_prio=0 cpu=273.80ms elapsed=87.99s tid=0x00007f1a6807cf10 nid=665214 runnable
+
+"GC Thread#66" os_prio=0 cpu=289.94ms elapsed=87.99s tid=0x00007f1a6807da60 nid=665215 runnable
+
+"GC Thread#67" os_prio=0 cpu=292.79ms elapsed=87.99s tid=0x00007f1a6807e5b0 nid=665216 runnable
+
+"GC Thread#68" os_prio=0 cpu=269.11ms elapsed=87.99s tid=0x00007f1a6807f100 nid=665217 runnable
+
+"GC Thread#69" os_prio=0 cpu=297.16ms elapsed=87.99s tid=0x00007f1a6807fc50 nid=665218 runnable
+
+"GC Thread#70" os_prio=0 cpu=270.69ms elapsed=87.99s tid=0x00007f1a680807a0 nid=665219 runnable
+
+"GC Thread#71" os_prio=0 cpu=157.20ms elapsed=48.71s tid=0x00007f18e0295050 nid=668009 runnable
+
+"GC Thread#72" os_prio=0 cpu=156.00ms elapsed=48.71s tid=0x00007f196001ca70 nid=668010 runnable
+
+"GC Thread#73" os_prio=0 cpu=156.86ms elapsed=48.71s tid=0x00007f1964073170 nid=668011 runnable
+
+"GC Thread#74" os_prio=0 cpu=157.12ms elapsed=48.71s tid=0x00007f1a481486b0 nid=668012 runnable
+
+"GC Thread#75" os_prio=0 cpu=157.28ms elapsed=48.71s tid=0x00007f1a680b3000 nid=668013 runnable
+
+"GC Thread#76" os_prio=0 cpu=155.75ms elapsed=48.71s tid=0x00007f1a680b35d0 nid=668014 runnable
+
+"GC Thread#77" os_prio=0 cpu=103.99ms elapsed=31.16s tid=0x00007f1a680bdd30 nid=668964 runnable
+
+"GC Thread#78" os_prio=0 cpu=103.28ms elapsed=31.16s tid=0x00007f1a680be210 nid=668965 runnable
+
+"GC Thread#79" os_prio=0 cpu=103.72ms elapsed=31.16s tid=0x00007f1a680be8e0 nid=668966 runnable
+
+"GC Thread#80" os_prio=0 cpu=103.77ms elapsed=31.16s tid=0x00007f1a680befb0 nid=668967 runnable
+
+"GC Thread#81" os_prio=0 cpu=103.56ms elapsed=31.16s tid=0x00007f1a680bf790 nid=668968 runnable
+
+"GC Thread#82" os_prio=0 cpu=104.05ms elapsed=31.16s tid=0x00007f1a680bff90 nid=668969 runnable
+
+"G1 Main Marker" os_prio=0 cpu=4.33ms elapsed=88.74s tid=0x00007f1b10078970 nid=665083 runnable
+
+"G1 Conc#0" os_prio=0 cpu=728.58ms elapsed=88.74s tid=0x00007f1b100799c0 nid=665084 runnable
+
+"G1 Conc#1" os_prio=0 cpu=720.82ms elapsed=87.56s tid=0x00007f1ac8000d90 nid=665276 runnable
+
+"G1 Conc#2" os_prio=0 cpu=700.55ms elapsed=87.55s tid=0x00007f1ac80018b0 nid=665277 runnable
+
+"G1 Conc#3" os_prio=0 cpu=700.33ms elapsed=87.55s tid=0x00007f1ac80023d0 nid=665278 runnable
+
+"G1 Conc#4" os_prio=0 cpu=698.10ms elapsed=87.55s tid=0x00007f1ac8002f20 nid=665279 runnable
+
+"G1 Conc#5" os_prio=0 cpu=698.52ms elapsed=87.55s tid=0x00007f1ac8003a70 nid=665280 runnable
+
+"G1 Conc#6" os_prio=0 cpu=705.54ms elapsed=87.55s tid=0x00007f1ac80045c0 nid=665281 runnable
+
+"G1 Conc#7" os_prio=0 cpu=756.97ms elapsed=87.55s tid=0x00007f1ac8005110 nid=665282 runnable
+
+"G1 Conc#8" os_prio=0 cpu=690.39ms elapsed=87.55s tid=0x00007f1ac8005c60 nid=665283 runnable
+
+"G1 Conc#9" os_prio=0 cpu=706.38ms elapsed=87.55s tid=0x00007f1ac80067b0 nid=665284 runnable
+
+"G1 Conc#10" os_prio=0 cpu=724.79ms elapsed=87.55s tid=0x00007f1ac8007300 nid=665285 runnable
+
+"G1 Conc#11" os_prio=0 cpu=707.02ms elapsed=87.55s tid=0x00007f1ac8007a60 nid=665286 runnable
+
+"G1 Conc#12" os_prio=0 cpu=726.50ms elapsed=87.55s tid=0x00007f1ac80083f0 nid=665287 runnable
+
+"G1 Conc#13" os_prio=0 cpu=718.81ms elapsed=87.55s tid=0x00007f1ac8008f40 nid=665288 runnable
+
+"G1 Conc#14" os_prio=0 cpu=734.85ms elapsed=87.55s tid=0x00007f1ac8009a90 nid=665289 runnable
+
+"G1 Conc#15" os_prio=0 cpu=701.78ms elapsed=87.55s tid=0x00007f1ac800a5e0 nid=665290 runnable
+
+"G1 Conc#16" os_prio=0 cpu=715.99ms elapsed=87.55s tid=0x00007f1ac800b130 nid=665291 runnable
+
+"G1 Conc#17" os_prio=0 cpu=701.21ms elapsed=87.55s tid=0x00007f1ac800bc80 nid=665292 runnable
+
+"G1 Conc#18" os_prio=0 cpu=730.47ms elapsed=87.55s tid=0x00007f1ac800c7d0 nid=665293 runnable
+
+"G1 Conc#19" os_prio=0 cpu=700.52ms elapsed=87.55s tid=0x00007f1ac800d320 nid=665294 runnable
+
+"G1 Conc#20" os_prio=0 cpu=706.96ms elapsed=87.55s tid=0x00007f1ac800de70 nid=665295 runnable
+
+"G1 Refine#0" os_prio=0 cpu=13.90ms elapsed=88.74s tid=0x00007f1b10249a00 nid=665085 runnable
+
+"G1 Service" os_prio=0 cpu=8.23ms elapsed=88.74s tid=0x00007f1b1024a9b0 nid=665086 runnable
+
+"VM Periodic Task Thread" os_prio=0 cpu=33.13ms elapsed=88.73s tid=0x00007f1b10263c80 nid=665087 waiting on condition
+
+JNI global refs: 48, weak refs: 0
