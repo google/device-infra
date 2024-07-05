@@ -103,7 +103,7 @@ public class DeviceInfo extends DeviceScheduleUnit {
   private static Optional<String> getDimensionValue(
       DeviceInfoOrBuilder deviceInfo, Name dimensionName) {
     return deviceInfo.getDimensionList().stream()
-        .filter(dimension -> dimension.getName().equals(dimensionName.name().toLowerCase()))
+        .filter(dimension -> dimension.getName().equals(dimensionName.lowerCaseName()))
         .findFirst()
         .map(Dimension::getValue);
   }

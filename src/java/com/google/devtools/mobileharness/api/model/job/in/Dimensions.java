@@ -49,11 +49,11 @@ public class Dimensions {
    * Adds the given dimension. If there is another dimension with the same name exists, it will be
    * overwritten.
    *
-   * <p>The name of the dimension is as the {@code name.name().toLowerCase()}.
+   * <p>The name of the dimension is as the {@code name.lowerCaseName()}.
    */
   @CanIgnoreReturnValue
   public Dimensions add(Dimension.Name name, String value) {
-    return add(name == null ? null : name.name().toLowerCase(), value);
+    return add(name == null ? null : name.lowerCaseName(), value);
   }
 
   /** Adds the given dimension if the dimension name doesn't already exist. */
@@ -66,11 +66,11 @@ public class Dimensions {
   /**
    * Adds the given dimension if the dimension name doesn't already exist.
    *
-   * <p>The name of the dimension is as the {@code name.name().toLowerCase()}.
+   * <p>The name of the dimension is as the {@code name.lowerCaseName()}.
    */
   @CanIgnoreReturnValue
   public Dimensions addIfAbsent(Dimension.Name name, String value) {
-    return addIfAbsent(name == null ? null : name.name().toLowerCase(), value);
+    return addIfAbsent(name == null ? null : name.lowerCaseName(), value);
   }
 
   /** Adds all the given dimensions. */
@@ -90,7 +90,7 @@ public class Dimensions {
   /** Removes the given dimension. Does nothing if it doesn't exist. */
   @CanIgnoreReturnValue
   public Dimensions remove(Dimension.Name name) {
-    return remove(name.name().toLowerCase());
+    return remove(name.lowerCaseName());
   }
 
   /** Returns whether the dimension map is empty. */
@@ -115,6 +115,6 @@ public class Dimensions {
 
   /** Gets the dimension value of the given dimension name. */
   public Optional<String> get(Dimension.Name name) {
-    return get(name.name().toLowerCase());
+    return get(name.lowerCaseName());
   }
 }

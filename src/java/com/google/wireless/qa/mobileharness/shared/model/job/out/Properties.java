@@ -64,7 +64,7 @@ public class Properties {
    * @throws NullPointerException if the specified key or value is null
    */
   public String add(PropertyName key, String value) {
-    return add(key.toString().toLowerCase(), value);
+    return add(Ascii.toLowerCase(key.toString()), value);
   }
 
   /**
@@ -91,7 +91,7 @@ public class Properties {
    * @throws NullPointerException if the specified key or value is null
    */
   public String addIfAbsent(PropertyName key, String value) {
-    return addIfAbsent(key.toString().toLowerCase(), value);
+    return addIfAbsent(Ascii.toLowerCase(key.toString()), value);
   }
 
   /**
@@ -130,7 +130,7 @@ public class Properties {
    */
   @Nullable
   public String get(PropertyName key) {
-    return get(key.toString().toLowerCase());
+    return get(Ascii.toLowerCase(key.toString()));
   }
 
   /**
@@ -180,7 +180,7 @@ public class Properties {
    * properties contains no mapping for the key or the value is not a valid long.
    */
   public Optional<Long> getLong(PropertyName key) {
-    return getLong(key.toString().toLowerCase());
+    return getLong(Ascii.toLowerCase(key.toString()));
   }
 
   /**
@@ -225,7 +225,7 @@ public class Properties {
    * @throws NullPointerException if the key is {@code null}
    */
   public long plusLong(PropertyName key, long delta) {
-    return plusLong(key.toString().toLowerCase(), delta);
+    return plusLong(Ascii.toLowerCase(key.toString()), delta);
   }
 
   /**
@@ -250,7 +250,7 @@ public class Properties {
    * returned.
    */
   public Optional<Boolean> getBoolean(PropertyName key) {
-    return getBoolean(key.toString().toLowerCase());
+    return getBoolean(Ascii.toLowerCase(key.toString()));
   }
 
   /** Returns all the properties. */
@@ -280,6 +280,6 @@ public class Properties {
    * @throws NullPointerException if the specified key is null
    */
   public String remove(PropertyName key) {
-    return remove(key.toString().toLowerCase());
+    return remove(Ascii.toLowerCase(key.toString()));
   }
 }

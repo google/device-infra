@@ -17,6 +17,7 @@
 package com.google.wireless.qa.mobileharness.shared.model.lab.in;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Multimap;
@@ -25,8 +26,6 @@ import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.NoSuchElementException;
 import java.util.Set;
 
 /** Supported dimensions of a device. */
@@ -46,7 +45,7 @@ public class Dimensions {
   /** Adds a dimension pair with the given name and value. */
   @CanIgnoreReturnValue
   public Dimensions add(Dimension.Name name, String value) {
-    add(name.name().toLowerCase(), value);
+    add(name.lowerCaseName(), value);
     return this;
   }
 
@@ -95,7 +94,7 @@ public class Dimensions {
 
   /** Gets the dimension value of the given dimension name. */
   public Collection<String> get(Dimension.Name name) {
-    return get(name.name().toLowerCase());
+    return get(name.lowerCaseName());
   }
 
   /**
@@ -111,7 +110,7 @@ public class Dimensions {
    * dimension with the given name.
    */
   public String getFirst(Dimension.Name name, String defaultValue) {
-    return getFirst(name.name().toLowerCase(), defaultValue);
+    return getFirst(name.lowerCaseName(), defaultValue);
   }
 
   /**
@@ -141,7 +140,7 @@ public class Dimensions {
    * @throws IllegalArgumentException if there are multiple dimensions with the given name
    */
   public String getOnly(Dimension.Name name) {
-    return getOnly(name.name().toLowerCase());
+    return getOnly(name.lowerCaseName());
   }
 
   /**
@@ -151,12 +150,12 @@ public class Dimensions {
    * @throws IllegalArgumentException if there are multiple dimensions with the given name
    */
   public String getOnly(Dimension.Name name, String defaultValue) {
-    return getOnly(name.name().toLowerCase(), defaultValue);
+    return getOnly(name.lowerCaseName(), defaultValue);
   }
 
   /** Gets a copy of all the supported dimensions. */
   public synchronized ListMultimap<String, String> getAll() {
-    return getAll(new HashSet<>());
+    return getAll(ImmutableSet.of());
   }
 
   /**
