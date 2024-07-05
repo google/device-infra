@@ -399,6 +399,12 @@ public interface PropertyName {
 
       /** Test specific Android instrumentation test arguments. */
       TEST_SPECIFIC_TEST_ARGS,
+
+      /**
+       * Store the ';' separated filenames of instrumentation logs (relative to
+       * TestInfo.getGenFileDir)
+       */
+      ANDROID_INSTRUMENTATION_LOG_FILENAMES,
     }
 
     /** AndroidSetPropDecorator property name constants. */
