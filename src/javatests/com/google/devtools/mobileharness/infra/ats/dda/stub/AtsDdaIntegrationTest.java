@@ -365,7 +365,7 @@ public class AtsDdaIntegrationTest {
                             "--clear_android_device_multi_users=false",
                             "--detect_adb_device=false",
                             "--disable_calling=false",
-                            "--disable_device_reboot=true",
+                            "--disable_device_reboot_for_ro_properties=true",
                             "--disable_wifi_util_func=true",
                             "--enable_android_device_ready_check=false",
                             "--enable_cloud_logging=false",
