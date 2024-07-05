@@ -37,9 +37,7 @@ public class DeviceInfo extends DeviceScheduleUnit {
 
   /** Create a device data model with the give locator and status. */
   public DeviceInfo(DeviceLocator deviceLocator, DeviceStatus status) {
-    super(deviceLocator);
-    this.status = new Status(status);
-    this.deviceErrors = ImmutableList.of();
+    this(deviceLocator, status, ImmutableList.of());
   }
 
   /** Create a device data model with the give locator and status. */
@@ -92,7 +90,7 @@ public class DeviceInfo extends DeviceScheduleUnit {
 
   /** Device id. */
   public String deviceId() {
-    return this.locator().getSerial();
+    return locator().getSerial();
   }
 
   /** Device errors. */

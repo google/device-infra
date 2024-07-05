@@ -19,7 +19,6 @@ package com.google.wireless.qa.mobileharness.shared.model.job;
 import com.google.common.annotations.Beta;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.Lists;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Warnings;
@@ -380,9 +379,7 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
     return testExecutionUnitSupplier.get();
   }
 
-  /**
-   * @return the root test of the test.
-   */
+  /** Returns the root test of the test. */
   public TestInfo getRootTest() {
     TestInfo iter = this;
     while (iter.parentTest != null) {
@@ -401,16 +398,9 @@ public class TestInfo extends TestScheduleUnit implements Cloneable {
   /** Gets the path(to job GEN/TMP file dir) of the gen/tmp file dir of the test. */
   private String genTestSubdirPath(String jobDirPath) {
     List<String> testIds = new ArrayList<>();
-    TestInfo test = this;
-    while (true) {
-      testIds.add(test.locator().getId());
-      TestInfo parent = test.parentTest();
-      if (parent == null) {
-        break;
-      }
-      test = parent;
+    for (TestInfo test = this; test != null; test = test.parentTest()) {
+      testIds.add(0, test.locator().getId());
     }
-    testIds = Lists.reverse(testIds);
     return TestDirUtil.getTestDirPath(
         jobDirPath, testIds.get(0), testIds.stream().skip(1L).toArray(String[]::new));
   }

@@ -58,9 +58,7 @@ public class Dimensions {
   @CanIgnoreReturnValue
   public Dimensions add(String name, String value) {
     newDimensions.add(name, value);
-    if (timing != null) {
-      timing.touch();
-    }
+    touch();
     return this;
   }
 
@@ -73,9 +71,7 @@ public class Dimensions {
   @CanIgnoreReturnValue
   public Dimensions add(Dimension.Name name, String value) {
     newDimensions.add(name, value);
-    if (timing != null) {
-      timing.touch();
-    }
+    touch();
     return this;
   }
 
@@ -83,9 +79,7 @@ public class Dimensions {
   @CanIgnoreReturnValue
   public Dimensions addIfAbsent(String name, String value) {
     newDimensions.addIfAbsent(name, value);
-    if (timing != null) {
-      timing.touch();
-    }
+    touch();
     return this;
   }
 
@@ -97,9 +91,7 @@ public class Dimensions {
   @CanIgnoreReturnValue
   public Dimensions addIfAbsent(Dimension.Name name, String value) {
     newDimensions.addIfAbsent(name, value);
-    if (timing != null) {
-      timing.touch();
-    }
+    touch();
     return this;
   }
 
@@ -107,9 +99,7 @@ public class Dimensions {
   @CanIgnoreReturnValue
   public Dimensions addAll(Map<String, String> dimensions) {
     newDimensions.addAll(dimensions);
-    if (timing != null) {
-      timing.touch();
-    }
+    touch();
     return this;
   }
 
@@ -121,9 +111,7 @@ public class Dimensions {
   @CanIgnoreReturnValue
   public Dimensions remove(String name) {
     newDimensions.remove(name);
-    if (timing != null) {
-      timing.touch();
-    }
+    touch();
     return this;
   }
 
@@ -135,9 +123,7 @@ public class Dimensions {
   @CanIgnoreReturnValue
   public Dimensions remove(Dimension.Name name) {
     newDimensions.remove(name);
-    if (timing != null) {
-      timing.touch();
-    }
+    touch();
     return this;
   }
 
@@ -166,5 +152,11 @@ public class Dimensions {
   @Nullable
   public String get(Dimension.Name name) {
     return newDimensions.get(name).orElse(null);
+  }
+
+  private void touch() {
+    if (timing != null) {
+      timing.touch();
+    }
   }
 }

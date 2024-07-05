@@ -55,13 +55,17 @@ public class Params {
     this.timing = null;
   }
 
+  private void touch() {
+    if (timing != null) {
+      timing.touch();
+    }
+  }
+
   /** Adds the given parameter. */
   @CanIgnoreReturnValue
   public Params add(String name, String value) {
     params.put(name, value);
-    if (timing != null) {
-      timing.touch();
-    }
+    touch();
     return this;
   }
 
@@ -69,9 +73,7 @@ public class Params {
   @CanIgnoreReturnValue
   public Params addAll(Map<String, String> params) {
     this.params.putAll(params);
-    if (timing != null) {
-      timing.touch();
-    }
+    touch();
     return this;
   }
 
@@ -113,9 +115,8 @@ public class Params {
     String value = params.get(name);
     if (StrUtil.isEmptyOrWhitespace(value)) {
       return defaultValue;
-    } else {
-      return value;
     }
+    return value;
   }
 
   /**
@@ -128,13 +129,15 @@ public class Params {
     Optional<String> value = get(name);
     if (value.isEmpty() || StrUtil.isEmptyOrWhitespace(value.get())) {
       return defaultValue;
-    } else if (Ascii.equalsIgnoreCase(Boolean.TRUE.toString(), value.get())) {
-      return true;
-    } else if (Ascii.equalsIgnoreCase(Boolean.FALSE.toString(), value.get())) {
-      return false;
-    } else {
-      return defaultValue;
     }
+    String str = value.get();
+    if (Ascii.equalsIgnoreCase(Boolean.TRUE.toString(), str)) {
+      return true;
+    }
+    if (Ascii.equalsIgnoreCase(Boolean.FALSE.toString(), str)) {
+      return false;
+    }
+    return defaultValue;
   }
 
   /**
