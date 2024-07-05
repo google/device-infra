@@ -20,10 +20,12 @@ import com.google.common.collect.ImmutableList;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.console.controller.olcserver.AtsSessionStub;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.AtsSessionPluginConfigOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.PluginOutputPrinter;
 import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
-import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.AbortSessionsResponse;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.NotifyAllSessionsResponse;
 import java.util.concurrent.Callable;
 import javax.inject.Inject;
 import picocli.CommandLine.Command;
@@ -75,7 +77,14 @@ class InvocationCommand implements Callable<Integer> {
   @Command(name = "stop", description = "Stop the given invocation.")
   public Integer stop() throws MobileHarnessException, InterruptedException {
     serverPreparer.prepareOlcServer();
-    AbortSessionsResponse response = atsSessionStub.abortSessionByCommandId(commandId);
+    NotifyAllSessionsResponse response =
+        atsSessionStub.cancelSessionByCommandId(
+            commandId,
+            AtsSessionPluginNotification.newBuilder()
+                .setSessionCancellation(
+                    AtsSessionCancellation.newBuilder()
+                        .setReason("Stop the session by InvocationCommand."))
+                .build());
     if (response.getSessionIdList().isEmpty()) {
       consoleUtil.printlnStdout(
           String.format(

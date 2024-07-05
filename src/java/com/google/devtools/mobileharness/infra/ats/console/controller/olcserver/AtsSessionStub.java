@@ -281,23 +281,10 @@ public class AtsSessionStub {
     abortSessions(AbortSessionsRequest.newBuilder().setSessionFilter(sessionFilter).build());
   }
 
-  /** Aborts the session from this client by the command id. */
-  public AbortSessionsResponse abortSessionByCommandId(String commandId)
-      throws MobileHarnessException {
-    SessionFilter sessionFilter =
-        SessionQueryUtil.getAbortableSessionFromClientFilter(commandId, clientId);
-    logger
-        .atInfo()
-        .with(IMPORTANCE, DEBUG)
-        .log("Aborting sessions, sessionFilter=[%s]", shortDebugString(sessionFilter));
-    return abortSessions(AbortSessionsRequest.newBuilder().setSessionFilter(sessionFilter).build());
-  }
-
   @CanIgnoreReturnValue
   private AbortSessionsResponse abortSessions(AbortSessionsRequest request)
       throws MobileHarnessException {
     try {
-
       AbortSessionsResponse response =
           requireNonNull(sessionStubProvider.get()).abortSessions(request);
       logger
@@ -313,6 +300,20 @@ public class AtsSessionStub {
     }
   }
 
+  /** Cancels the session from this client by the command id. */
+  public NotifyAllSessionsResponse cancelSessionByCommandId(
+      String commandId, AtsSessionPluginNotification notification) throws MobileHarnessException {
+    SessionFilter sessionFilter =
+        SessionQueryUtil.getAbortableSessionFromClientFilter(commandId, clientId);
+    NotifyAllSessionsRequest request =
+        NotifyAllSessionsRequest.newBuilder()
+            .setSessionFilter(sessionFilter)
+            .setSessionNotification(
+                SessionNotification.newBuilder().setNotification(Any.pack(notification)))
+            .build();
+    return cancelSessionsByNotification(request);
+  }
+
   public void cancelUnfinishedNotAbortedSessions(
       boolean fromCurrentClient, AtsSessionPluginNotification notification)
       throws MobileHarnessException {
@@ -326,6 +327,12 @@ public class AtsSessionStub {
             .setSessionNotification(
                 SessionNotification.newBuilder().setNotification(Any.pack(notification)))
             .build();
+    cancelSessionsByNotification(request);
+  }
+
+  @CanIgnoreReturnValue
+  private NotifyAllSessionsResponse cancelSessionsByNotification(NotifyAllSessionsRequest request)
+      throws MobileHarnessException {
     try {
       NotifyAllSessionsResponse response =
           requireNonNull(sessionStubProvider.get()).notifyAllSessions(request);
@@ -335,6 +342,7 @@ public class AtsSessionStub {
           .log(
               "Successfully notified sessions to cancel themselves, response=[%s]",
               shortDebugString(response));
+      return response;
     } catch (GrpcExceptionWithErrorId e) {
       throw new MobileHarnessException(
           InfraErrorId.ATSC_SESSION_STUB_CANCEL_UNFINISHED_SESSIONS_ERROR,
