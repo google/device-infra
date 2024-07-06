@@ -19,7 +19,9 @@ package com.google.devtools.mobileharness.shared.util.message;
 import static java.util.Comparator.comparing;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -41,6 +43,8 @@ import java.util.stream.Collectors;
 
 /** The proto util. */
 public final class ProtoUtil {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   private ProtoUtil() {}
 
   /**
@@ -366,6 +370,7 @@ public final class ProtoUtil {
    */
   public static <T extends Message.Builder> void filterMessageFields(
       T message, List<String> selectedFields, List<String> ignoredFields) {
+    Stopwatch watch = Stopwatch.createStarted();
     Set<FieldNameAndShouldSelect> fieldFilterRuleSet = new HashSet<>();
     selectedFields.forEach(
         field -> fieldFilterRuleSet.add(FieldNameAndShouldSelect.of(field, true)));
@@ -388,6 +393,7 @@ public final class ProtoUtil {
     filterFilterRuleList.add(
         0, FieldNameAndShouldSelect.of("", !filterFilterRuleList.get(0).shouldSelect()));
     innerFilterFields(message, filterFilterRuleList, 0, 1, "");
+    logger.atInfo().log("Filter message fields time: %s", watch.stop().elapsed());
   }
 
   /**
