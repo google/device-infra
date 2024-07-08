@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.ControlService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.SessionService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.VersionService;
+import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
 import com.google.devtools.mobileharness.shared.util.comm.server.ClientAddressServerInterceptor;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager;
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager.LabeledServer;
@@ -57,6 +58,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 
 /** OLC server. */
@@ -78,6 +80,7 @@ public class OlcServer {
                     Flags.instance().olcServerPort.getNonNull(),
                     Flags.instance().atsWorkerGrpcPort.getNonNull(),
                     Flags.instance().useAlts.getNonNull(),
+                    Flags.instance().enableCloudPubsubMonitoring.getNonNull(),
                     Flags.instance().restrictOlcServiceToUsers.getNonNull()))
             .getInstance(OlcServer.class);
     server.run(Arrays.asList(args));
@@ -86,6 +89,7 @@ public class OlcServer {
   private final SessionService sessionService;
   private final VersionService versionService;
   private final ControlService controlService;
+  @Nullable private final MonitorPipelineLauncher monitorPipelineLauncher;
   private final ListeningExecutorService threadPool;
   private final ExecMode execMode;
   private final EventBus globalInternalEventBus;
@@ -101,6 +105,7 @@ public class OlcServer {
       SessionService sessionService,
       VersionService versionService,
       ControlService controlService,
+      @Nullable MonitorPipelineLauncher monitorPipelineLauncher,
       ListeningExecutorService threadPool,
       ExecMode execMode,
       @GlobalInternalEventBus EventBus globalInternalEventBus,
@@ -113,6 +118,7 @@ public class OlcServer {
     this.sessionService = sessionService;
     this.versionService = versionService;
     this.controlService = controlService;
+    this.monitorPipelineLauncher = monitorPipelineLauncher;
     this.threadPool = threadPool;
     this.execMode = execMode;
     this.globalInternalEventBus = globalInternalEventBus;
@@ -136,6 +142,8 @@ public class OlcServer {
         OlcServerDirs.getLogDir(),
         ImmutableList.of(logManager.getLogHandler()),
         /* disableConsoleHandler= */ false);
+
+    Runtime.getRuntime().addShutdownHook(new Thread(this::onShutdown));
 
     // Logs arguments.
     if (!args.isEmpty()) {
@@ -175,6 +183,12 @@ public class OlcServer {
     controlService.setLifecycleManager(manager);
     manager.start();
 
+    if (Flags.instance().enableCloudPubsubMonitoring.getNonNull()
+        && monitorPipelineLauncher != null) {
+      logger.atInfo().log("Starting monitoring service.");
+      monitorPipelineLauncher.start();
+    }
+
     logger.atInfo().log("Starting %s exec mode", execMode.getClass().getSimpleName());
     logFailure(
         threadPool.submit(threadRenaming(new ExecModeInitializer(), () -> "exec-mode-initializer")),
@@ -197,6 +211,13 @@ public class OlcServer {
     public Void call() throws InterruptedException {
       execMode.initialize(globalInternalEventBus);
       return null;
+    }
+  }
+
+  private void onShutdown() {
+    if (monitorPipelineLauncher != null) {
+      logger.atInfo().log("Stopping monitoring service.");
+      monitorPipelineLauncher.stop();
     }
   }
 }

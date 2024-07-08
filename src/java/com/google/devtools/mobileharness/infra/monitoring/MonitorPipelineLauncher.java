@@ -1,0 +1,43 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package com.google.devtools.mobileharness.infra.monitoring;
+
+import com.google.devtools.mobileharness.infra.monitoring.proto.MonitorEntryProto.MonitorEntry;
+import com.google.inject.Inject;
+import com.google.inject.Singleton;
+
+/** Launches monitoring pipelines. */
+@Singleton
+public final class MonitorPipelineLauncher {
+
+  private final BatchPipelineService<MonitorEntry> labMonitorService;
+
+  @Inject
+  MonitorPipelineLauncher(BatchPipelineService<MonitorEntry> labMonitorService) {
+    this.labMonitorService = labMonitorService;
+  }
+
+  /** Starts the monitoring pipelines. */
+  public void start() {
+    labMonitorService.startAsync();
+  }
+
+  /** Stops the monitoring pipelines. */
+  public void stop() {
+    labMonitorService.stopAsync();
+  }
+}

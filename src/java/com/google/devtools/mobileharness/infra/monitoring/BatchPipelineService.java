@@ -21,6 +21,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.inject.Inject;
 import com.google.protobuf.Message;
 import java.time.Duration;
 
@@ -28,6 +29,7 @@ import java.time.Duration;
 public class BatchPipelineService<T extends Message> extends AbstractScheduledService {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   private final DataPuller<T> puller;
   private final DataPusher pusher;
 
@@ -36,6 +38,7 @@ public class BatchPipelineService<T extends Message> extends AbstractScheduledSe
   // Initial delay of publish actions.
   private static final Duration INITIAL_DELAY = Duration.ofMinutes(5);
 
+  @Inject
   public BatchPipelineService(DataPuller<T> puller, DataPusher pusher) {
     this.puller = puller;
     this.pusher = pusher;

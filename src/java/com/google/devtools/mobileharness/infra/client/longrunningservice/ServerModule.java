@@ -35,6 +35,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStub;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.service.LocalSessionStubImpl;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
+import com.google.devtools.mobileharness.infra.monitoring.CloudPubsubMonitorModule;
+import com.google.devtools.mobileharness.infra.monitoring.MonitorPipelineLauncher;
 import com.google.devtools.mobileharness.shared.util.comm.server.ServerBuilderFactory;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.reflection.ReflectionUtil;
@@ -43,6 +45,7 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.Scopes;
+import com.google.inject.util.Providers;
 import io.grpc.ServerBuilder;
 import java.time.Clock;
 import java.time.Instant;
@@ -67,6 +70,7 @@ class ServerModule extends AbstractModule {
   private final int grpcPort;
   private final int workerGrpcPort;
   private final boolean useAlts;
+  private final boolean enableCloudPubsubMonitoring;
   private final ImmutableSet<String> restrictToAuthUsers;
 
   ServerModule(
@@ -75,12 +79,14 @@ class ServerModule extends AbstractModule {
       int grpcPort,
       int workerGrpcPort,
       boolean useAlts,
+      boolean enableCloudPubsubMonitoring,
       List<String> restrictToAuthUsers) {
     this.serverStartTime = serverStartTime;
     this.isAtsMode = isAtsMode;
     this.grpcPort = grpcPort;
     this.workerGrpcPort = workerGrpcPort;
     this.useAlts = useAlts;
+    this.enableCloudPubsubMonitoring = enableCloudPubsubMonitoring;
     this.restrictToAuthUsers = ImmutableSet.copyOf(restrictToAuthUsers);
   }
 
@@ -88,8 +94,15 @@ class ServerModule extends AbstractModule {
   protected void configure() {
     install(new ControllerModule());
     install(new ClientApiModule());
+
     if (isAtsMode) {
       installByClassName(ATS_MODE_MODULE_CLASS_NAME);
+    }
+
+    if (enableCloudPubsubMonitoring) {
+      install(new CloudPubsubMonitorModule());
+    } else {
+      bind(MonitorPipelineLauncher.class).toProvider(Providers.of(null));
     }
 
     bind(ClientApi.class).in(Scopes.SINGLETON);

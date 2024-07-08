@@ -521,6 +521,39 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableCloudMetrics = enableCloudMetricsDefault;
 
+  private static final Flag<Boolean> enableCloudPubsubMonitoringDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_cloud_pubsub_monitoring",
+      description =
+          "Whether to enable sending lab monitoring data to Cloud Pub/Sub. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableCloudPubsubMonitoring = enableCloudPubsubMonitoringDefault;
+
+  private static final Flag<String> cloudPubsubProjectIdDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_pubsub_project_id",
+      description = "The project ID of the Cloud Pub/Sub topic to upload monitoring data to.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> cloudPubsubProjectId = cloudPubsubProjectIdDefault;
+
+  private static final Flag<String> cloudPubsubTopicIdDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_pubsub_topic_id",
+      description = "The topic ID of the Cloud Pub/Sub topic to upload monitoring data to.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> cloudPubsubTopicId = cloudPubsubTopicIdDefault;
+
+  private static final Flag<String> cloudPubsubCredFileDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_pubsub_cred_file",
+      description = "The credential file to use for Cloud Pub/Sub.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> cloudPubsubCredFile = cloudPubsubCredFileDefault;
+
   private static final Flag<Boolean> enableDebugModeDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

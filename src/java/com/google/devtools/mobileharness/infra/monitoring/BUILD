@@ -16,7 +16,42 @@
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/service:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/monitoring:__pkg__",
+    ],
+)
+
+java_library(
+    name = "cloud_pubsub_monitor_module",
+    srcs = [
+        "CloudPubsubMonitorModule.java",
+        "LabInfoPullerImpl.java",
+        "PubsubClientImpl.java",
+    ],
+    deps = [
+        ":monitor_lib",
+        ":monitor_pipeline_launcher",
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
+        "//src/devtools/mobileharness/infra/monitoring/proto:monitor_entry_java_proto",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
+        "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc:stub_util",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/labinfo:lab_info_provider",
+        "//src/java/com/google/devtools/mobileharness/shared/util/flags",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
+        "@com_google_protobuf//:protobuf_java",
+        "@com_google_protobuf//:protobuf_java_util",
+        "@io_grpc_grpc_java//auth",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_api_grpc_grpc_google_cloud_pubsub_v1",
+        "@maven//:com_google_api_grpc_proto_google_cloud_pubsub_v1",
+        "@maven//:com_google_auth_google_auth_library_oauth2_http",
+        "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+        "@maven//:javax_inject_jsr330_api",
     ],
 )
 
@@ -32,5 +67,16 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@com_google_protobuf//:protobuf_java",
         "@maven//:com_google_guava_guava",
+        "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "monitor_pipeline_launcher",
+    srcs = ["MonitorPipelineLauncher.java"],
+    deps = [
+        ":monitor_lib",
+        "//src/devtools/mobileharness/infra/monitoring/proto:monitor_entry_java_proto",
+        "@maven//:com_google_inject_guice",
     ],
 )
