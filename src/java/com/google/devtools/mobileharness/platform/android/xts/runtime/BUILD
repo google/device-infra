@@ -18,7 +18,11 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "tradefed_invocations_fetcher",
     srcs = ["TradefedInvocationsFetcher.java"],
-    visibility = ["//src/javatests/com/google/devtools/mobileharness/platform/android/xts/runtime:__pkg__"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/runtime:__pkg__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+    ],
     deps = [
         "//src/devtools/mobileharness/platform/android/xts/proto:runtime_info_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",

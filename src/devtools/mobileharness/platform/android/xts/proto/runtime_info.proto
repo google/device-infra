@@ -27,7 +27,8 @@ option java_outer_classname = "RuntimeInfoProto";
 message XtsTradefedRuntimeInfo {
   // Optional.
   //
-  // Empty indicates that the invocation information is unknown yet.
+  // Empty indicates that the invocation information is unknown (the process has
+  // not started or has ended).
   TradefedInvocations invocations = 1;
 }
 

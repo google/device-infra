@@ -34,7 +34,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.deviceinfra.platform.android.lightning.internal.sdk.adb.Adb;
 import com.google.devtools.mobileharness.api.model.error.AndroidErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -49,8 +51,12 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCom
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.TradefedInvocationsFetcher;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.proto.RuntimeInfoProto.TradefedInvocations;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.proto.RuntimeInfoProto.XtsTradefedRuntimeInfo;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.util.command.Command;
+import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandFailureException;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
@@ -60,6 +66,7 @@ import com.google.devtools.mobileharness.shared.util.command.CommandTimeoutExcep
 import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.LineCallbackException;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -133,15 +140,26 @@ public class XtsTradefedTest extends BaseDriver
   private final Aapt aapt;
   private final LogRecorder logRecorder;
   private final ListeningExecutorService threadPool;
+  private final ListeningScheduledExecutorService scheduledThreadPool;
   private final Sleeper sleeper;
+  private final TradefedInvocationsFetcher tradefedInvocationsFetcher;
 
   private final Object tfProcessLock = new Object();
 
+  @Nullable
   @GuardedBy("tfProcessLock")
   private XtsTradefedRunCancellation xtsTradefedRunCancellation;
 
+  @Nullable
   @GuardedBy("tfProcessLock")
   private CommandProcess tfProcess;
+
+  @Nullable
+  @GuardedBy("tfProcessLock")
+  private ListenableFuture<?> fetchInvocationsTask;
+
+  @GuardedBy("tfProcessLock")
+  private final XtsTradefedRuntimeInfo.Builder runtimeInfo = XtsTradefedRuntimeInfo.newBuilder();
 
   private volatile ImmutableSet<String> previousResultDirNames = ImmutableSet.of();
 
@@ -155,7 +173,8 @@ public class XtsTradefedTest extends BaseDriver
       Adb adb,
       Aapt aapt,
       ListeningExecutorService threadPool,
-      Sleeper sleeper) {
+      Sleeper sleeper,
+      TradefedInvocationsFetcher tradefedInvocationsFetcher) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
     this.localFileUtil = localFileUtil;
@@ -164,7 +183,11 @@ public class XtsTradefedTest extends BaseDriver
     this.aapt = aapt;
     this.threadPool = threadPool;
     this.sleeper = sleeper;
+    this.tradefedInvocationsFetcher = tradefedInvocationsFetcher;
     this.logRecorder = LogRecorder.getInstance();
+    this.scheduledThreadPool =
+        ThreadPools.createStandardScheduledThreadPool(
+            "xts-tradefed-test-" + testInfo.locator().getId(), /* corePoolSize= */ 2);
   }
 
   @Override
@@ -188,6 +211,7 @@ public class XtsTradefedTest extends BaseDriver
           .log("Finished running %s test. xTS run command exit code: %s", xtsType, tfExitCode);
       setTestResult(testInfo, tfExitCode.orElse(null));
     } finally {
+      scheduledThreadPool.shutdown();
       CompositeDeviceUtil.uncacheTestbed(getDevice());
       postTest(tmpXtsRootDir, testInfo, xtsType);
     }
@@ -339,6 +363,9 @@ public class XtsTradefedTest extends BaseDriver
     Joiner.on(' ').appendTo(commandString, cmd);
     logger.atInfo().log("Running %s command:%n%s", xtsType, commandString);
 
+    // Gets jstack path.
+    Path jstackPath = XtsDirUtil.getXtsJdkDir(tmpXtsRootDir, xtsType).resolve("bin/jstack");
+
     // Creates CommandOutputLogger.
     String testId = testInfo.locator().getId();
     String outputLoggerPrefix =
@@ -374,6 +401,7 @@ public class XtsTradefedTest extends BaseDriver
           Path.of(testInfo.getGenFileDir()).resolve(XtsConstants.TRADEFED_OUTPUT_FILE_NAME);
     }
 
+    CommandProcess process = null;
     AtomicBoolean tfHasFinished = new AtomicBoolean();
     try (BufferedWriter writer = Files.newBufferedWriter(tfOutputPath)) {
       synchronized (tfProcessLock) {
@@ -431,9 +459,11 @@ public class XtsTradefedTest extends BaseDriver
 
                                                   // Kills the TF process if it finished but the
                                                   // process is still alive.
-                                                  Optional<CommandProcess> process = getTfProcess();
-                                                  if (process.isPresent()
-                                                      && process.get().isAlive()) {
+                                                  CommandProcess tfProcess;
+                                                  synchronized (tfProcessLock) {
+                                                    tfProcess = this.tfProcess;
+                                                  }
+                                                  if (tfProcess != null && tfProcess.isAlive()) {
                                                     testInfo
                                                         .log()
                                                         .atInfo()
@@ -442,10 +472,8 @@ public class XtsTradefedTest extends BaseDriver
                                                             "Kill TF process since it has finished"
                                                                 + " for %s",
                                                             KILL_TF_AFTER_FINISH_TIME);
-                                                    process
-                                                        .get()
-                                                        .killAndThenKillForcibly(
-                                                            /* timeout= */ Duration.ofMinutes(1L));
+                                                    tfProcess.killAndThenKillForcibly(
+                                                        /* timeout= */ Duration.ofMinutes(1L));
                                                   }
                                                   return null;
                                                 },
@@ -458,16 +486,32 @@ public class XtsTradefedTest extends BaseDriver
                         commandResult -> {
                           synchronized (tfProcessLock) {
                             tfProcess = null;
+                            if (fetchInvocationsTask != null) {
+                              fetchInvocationsTask.cancel(/* mayInterruptIfRunning= */ false);
+                            }
+                            fetchInvocationsTask = null;
+
+                            runtimeInfo.clearInvocations();
+                            onRuntimeInfoUpdate();
                           }
                         })
                     .redirectStderr(true)
                     .needStdoutInResult(false)
                     .needStderrInResult(false)
                     .timeout(getXtsTimeout(testInfo)));
+        process = tfProcess;
+        long pid = process.getPid();
+        testInfo.log().atInfo().alsoTo(logger).log("xTS TF started, pid=%s", pid);
+
+        fetchInvocationsTask =
+            scheduledThreadPool.scheduleWithFixedDelay(
+                threadRenaming(
+                    () -> fetchTradefedInvocations(jstackPath, pid),
+                    () -> "tradefed-invocations-fetcher-" + testId),
+                Duration.ofSeconds(3L),
+                Duration.ofMinutes(1L));
       }
 
-      CommandProcess process = getTfProcess().orElseThrow();
-      testInfo.log().atInfo().alsoTo(logger).log("xTS TF started, pid=%s", process.getPid());
       return Optional.of(process.await().exitCode());
     } catch (CommandStartException e) {
       throw new MobileHarnessException(
@@ -507,9 +551,8 @@ public class XtsTradefedTest extends BaseDriver
       testInfo.log().atWarning().alsoTo(logger).log("xTS Tradefed was interrupted.");
       throw e;
     } finally {
-      Optional<CommandProcess> process = getTfProcess();
-      if (process.isPresent() && process.get().isAlive()) {
-        process.get().killAndThenKillForcibly(/* timeout= */ Duration.ofMinutes(1L));
+      if (process != null && process.isAlive()) {
+        process.killAndThenKillForcibly(/* timeout= */ Duration.ofMinutes(1L));
       }
     }
   }
@@ -518,10 +561,31 @@ public class XtsTradefedTest extends BaseDriver
     return line.contains("CommandScheduler: All done");
   }
 
-  private Optional<CommandProcess> getTfProcess() {
-    synchronized (tfProcessLock) {
-      return Optional.ofNullable(tfProcess);
+  private void fetchTradefedInvocations(Path jstackPath, long pid) {
+    try {
+      TradefedInvocations invocations =
+          tradefedInvocationsFetcher.fetchTradefedInvocations(jstackPath, pid);
+
+      synchronized (tfProcessLock) {
+        if (tfProcess != null) {
+          runtimeInfo.setInvocations(invocations);
+          onRuntimeInfoUpdate();
+        }
+      }
+    } catch (CommandException | InterruptedException | RuntimeException | Error e) {
+      if (e instanceof InterruptedException) {
+        logger.atInfo().log("Interrupted when fetching TF invocations");
+        Thread.currentThread().interrupt();
+      } else {
+        logger.atInfo().log(
+            "Error when fetching TF invocations: %s", MoreThrowables.shortDebugString(e));
+      }
     }
+  }
+
+  @GuardedBy("tfProcessLock")
+  private void onRuntimeInfoUpdate() {
+    // TODO: Updates to test property.
   }
 
   private boolean isJarFileIncluded(
