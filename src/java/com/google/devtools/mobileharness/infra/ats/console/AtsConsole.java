@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
@@ -64,6 +65,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
@@ -82,7 +85,9 @@ public class AtsConsole {
 
   private static final String HELP_PATTERN = "h|help";
 
-  public static void main(String[] args) throws IOException {
+  private static final String USE_NEW_OLC_SERVER_ENV_VAR = "USE_NEW_OLC_SERVER";
+
+  public static void main(String[] args) throws IOException, InterruptedException {
     // Gets system properties.
     ImmutableMap<String, String> systemProperties =
         System.getProperties().entrySet().stream()
@@ -91,7 +96,8 @@ public class AtsConsole {
     // Parses flags.
     ImmutableList<String> deviceInfraServiceFlags =
         DeviceInfraServiceUtil.parseDeviceInfraServiceFlagsFromSystemProperty();
-    DeviceInfraServiceUtil.parseFlags(deviceInfraServiceFlags);
+    ImmutableList<String> finalFlags = preprocessDeviceInfraServiceFlags(deviceInfraServiceFlags);
+    DeviceInfraServiceUtil.parseFlags(finalFlags);
 
     // Initializes line reader.
     LineReader lineReader = createLineReader();
@@ -101,7 +107,7 @@ public class AtsConsole {
         Guice.createInjector(
             new AtsConsoleModule(
                 "ats-console-" + UUID.randomUUID(),
-                deviceInfraServiceFlags,
+                finalFlags,
                 asList(args),
                 systemProperties,
                 lineReader,
@@ -336,5 +342,25 @@ public class AtsConsole {
     } catch (GrpcExceptionWithErrorId e) {
       // Does nothing.
     }
+  }
+
+  private static ImmutableList<String> preprocessDeviceInfraServiceFlags(
+      List<String> deviceInfraServiceFlags) throws IOException, InterruptedException {
+    ImmutableList.Builder<String> flags =
+        new ImmutableList.Builder<String>().addAll(deviceInfraServiceFlags);
+    if (Objects.equals(System.getenv(USE_NEW_OLC_SERVER_ENV_VAR), "true")) {
+      // Generate random flags for a new OLC server
+      flags.addAll(getRandomServerFlags());
+    }
+    return flags.build();
+  }
+
+  private static ImmutableList<String> getRandomServerFlags()
+      throws IOException, InterruptedException {
+    int olcPort = PortProber.pickUnusedPort();
+    return ImmutableList.of(
+        String.format("--olc_server_port=%d", olcPort),
+        String.format("--public_dir=/tmp/xts_console/server_%d", olcPort),
+        String.format("--tmp_dir_root=/tmp/xts_console/server_%d", olcPort));
   }
 }
