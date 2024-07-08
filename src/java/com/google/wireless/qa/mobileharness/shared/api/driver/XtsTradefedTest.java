@@ -52,6 +52,7 @@ import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCon
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.TradefedInvocationsFetcher;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoUtil;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.proto.RuntimeInfoProto.TradefedInvocations;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.proto.RuntimeInfoProto.XtsTradefedRuntimeInfo;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
@@ -143,6 +144,7 @@ public class XtsTradefedTest extends BaseDriver
   private final ListeningScheduledExecutorService scheduledThreadPool;
   private final Sleeper sleeper;
   private final TradefedInvocationsFetcher tradefedInvocationsFetcher;
+  private final XtsTradefedRuntimeInfoUtil xtsTradefedRuntimeInfoUtil;
 
   private final Object tfProcessLock = new Object();
 
@@ -174,7 +176,8 @@ public class XtsTradefedTest extends BaseDriver
       Aapt aapt,
       ListeningExecutorService threadPool,
       Sleeper sleeper,
-      TradefedInvocationsFetcher tradefedInvocationsFetcher) {
+      TradefedInvocationsFetcher tradefedInvocationsFetcher,
+      XtsTradefedRuntimeInfoUtil xtsTradefedRuntimeInfoUtil) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
     this.localFileUtil = localFileUtil;
@@ -184,6 +187,7 @@ public class XtsTradefedTest extends BaseDriver
     this.threadPool = threadPool;
     this.sleeper = sleeper;
     this.tradefedInvocationsFetcher = tradefedInvocationsFetcher;
+    this.xtsTradefedRuntimeInfoUtil = xtsTradefedRuntimeInfoUtil;
     this.logRecorder = LogRecorder.getInstance();
     this.scheduledThreadPool =
         ThreadPools.createStandardScheduledThreadPool(
@@ -585,7 +589,7 @@ public class XtsTradefedTest extends BaseDriver
 
   @GuardedBy("tfProcessLock")
   private void onRuntimeInfoUpdate() {
-    // TODO: Updates to test property.
+    xtsTradefedRuntimeInfoUtil.saveToTestInfo(getTest(), runtimeInfo);
   }
 
   private boolean isJarFileIncluded(

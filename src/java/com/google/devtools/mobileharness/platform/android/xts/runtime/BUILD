@@ -31,3 +31,17 @@ java_library(
         "@maven//:javax_inject_jsr330_api",
     ],
 )
+
+java_library(
+    name = "xts_tradefed_runtime_info_util",
+    srcs = ["XtsTradefedRuntimeInfoUtil.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/platform/android/xts/proto:runtime_info_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
+        "@com_google_protobuf//:protobuf_java",
+    ],
+)
