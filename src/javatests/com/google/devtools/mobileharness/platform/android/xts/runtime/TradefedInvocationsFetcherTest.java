@@ -68,13 +68,10 @@ public class TradefedInvocationsFetcherTest {
         tradefedInvocationsFetcher.fetchTradefedInvocations(Path.of("/fake_jstack"), 12345L);
 
     assertThat(invocations)
-        .ignoringFieldDescriptors(
-            TradefedInvocations.getDescriptor()
-                .findFieldByNumber(TradefedInvocations.TIMESTAMP_FIELD_NUMBER))
         .isEqualTo(
             TradefedInvocations.newBuilder()
-                .addInvocation(TradefedInvocation.newBuilder().setDeviceId("1B231FDEE000VH"))
-                .addInvocation(TradefedInvocation.newBuilder().setDeviceId("18311FDEE002Y4"))
+                .addInvocation(TradefedInvocation.newBuilder().addDeviceId("1B231FDEE000VH"))
+                .addInvocation(TradefedInvocation.newBuilder().addDeviceId("18311FDEE002Y4"))
                 .build());
   }
 }

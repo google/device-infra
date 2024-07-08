@@ -26,7 +26,6 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/platform/android/xts/proto:runtime_info_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],

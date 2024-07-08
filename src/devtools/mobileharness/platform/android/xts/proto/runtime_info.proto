@@ -27,9 +27,11 @@ option java_outer_classname = "RuntimeInfoProto";
 message XtsTradefedRuntimeInfo {
   // Optional.
   //
-  // Empty indicates that the invocation information is unknown (the process has
-  // not started or has ended).
+  // Empty indicates that the invocation information is unknown.
   TradefedInvocations invocations = 1;
+
+  // Required.
+  google.protobuf.Timestamp timestamp = 2;
 }
 
 message TradefedInvocations {
@@ -37,12 +39,12 @@ message TradefedInvocations {
   //
   // All running invocations.
   repeated TradefedInvocation invocation = 1;
-
-  // Required.
-  google.protobuf.Timestamp timestamp = 2;
 }
 
 message TradefedInvocation {
   // Required.
-  string device_id = 1;
+  repeated string device_id = 1;
+
+  // Required.
+  string status = 2;
 }

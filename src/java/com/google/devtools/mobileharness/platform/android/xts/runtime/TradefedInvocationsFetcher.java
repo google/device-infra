@@ -23,9 +23,7 @@ import com.google.devtools.mobileharness.platform.android.xts.runtime.proto.Runt
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandException;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
-import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import java.nio.file.Path;
-import java.time.Instant;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.inject.Inject;
@@ -54,10 +52,7 @@ public class TradefedInvocationsFetcher {
       throws CommandException, InterruptedException {
     String stackTrace = getTradefedStackTrace(jstackPath, pid);
     ImmutableList<TradefedInvocation> invocations = parseTradefedStackTrace(stackTrace);
-    return TradefedInvocations.newBuilder()
-        .addAllInvocation(invocations)
-        .setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()))
-        .build();
+    return TradefedInvocations.newBuilder().addAllInvocation(invocations).build();
   }
 
   private String getTradefedStackTrace(Path jstackPath, long pid)
@@ -72,7 +67,7 @@ public class TradefedInvocationsFetcher {
       Matcher matcher = INVOCATION_THREAD_HEADER_LINE_PATTERN.matcher(line);
       if (matcher.matches()) {
         String deviceId = matcher.group(1);
-        invocations.add(TradefedInvocation.newBuilder().setDeviceId(deviceId).build());
+        invocations.add(TradefedInvocation.newBuilder().addDeviceId(deviceId).build());
       }
     }
     return invocations.build();
