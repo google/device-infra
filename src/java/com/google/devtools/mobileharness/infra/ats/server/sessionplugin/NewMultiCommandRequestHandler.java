@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Com
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.NewMultiCommandRequest;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestContext;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
@@ -69,6 +70,9 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -76,6 +80,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.inject.Inject;
@@ -89,6 +94,9 @@ final class NewMultiCommandRequestHandler {
 
   /** Timeout setting for slow commands. */
   private static final Duration SLOW_CMD_TIMEOUT = Duration.ofMinutes(10);
+
+  private static final DateTimeFormatter TIMESTAMP_DIR_NAME_FORMATTER =
+      DateTimeFormatter.ofPattern("uuuu.MM.dd_HH.mm.ss.SSS").withZone(ZoneId.systemDefault());
 
   private static final Pattern ANDROID_XTS_ZIP_FILENAME_REGEX =
       Pattern.compile("android-[a-z]+\\.zip");
@@ -490,8 +498,10 @@ final class NewMultiCommandRequestHandler {
           String commandId = commandDetail.getId();
           Path outputDirPath =
               Path.of(outputUrl.getPath()).resolve(sessionInfo.getSessionId()).resolve(commandId);
-          Path resultDir = outputDirPath;
-          Path logDir = outputDirPath;
+          String resultDirectoryName =
+              TIMESTAMP_DIR_NAME_FORMATTER.format(Instant.now()) + "_" + getRandom4Digits();
+          Path resultDir = outputDirPath.resolve(resultDirectoryName);
+          Path logDir = outputDirPath.resolve("logs");
           Optional<Result> result =
               sessionResultHandlerUtil.processResult(
                   resultDir,
@@ -502,6 +512,30 @@ final class NewMultiCommandRequestHandler {
                       .map(jobIdToJobMap::get)
                       .collect(toImmutableList()),
                   sessionRequestInfo);
+          Path resultZip = outputDirPath.resolve(resultDirectoryName + ".zip");
+          if (localFileUtil.isFileExist(resultZip)) {
+            TestContext testContext =
+                TestContext.newBuilder()
+                    .setCommandLine(commandDetail.getCommandLine())
+                    .putAllEnvVar(
+                        requestDetail.getOriginalRequest().getTestEnvironment().getEnvVarsMap())
+                    .addTestResource(
+                        TestResource.newBuilder()
+                            .setName(resultZip.getFileName().toString())
+                            .setUrl("file://" + resultZip)
+                            .build())
+                    .build();
+            // TODO: filter context files.
+            requestDetail.putTestContext(commandId, testContext);
+          }
+          try {
+            localFileUtil.mergeDir(resultDir, outputDirPath);
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to move contents of result dir %s to output dir %s",
+                resultDir, outputDirPath);
+          }
+
           CommandDetail.Builder commandDetailBuilder = commandDetail.toBuilder();
           if (result.isPresent() && result.get().hasSummary()) {
             commandDetailBuilder
@@ -585,5 +619,9 @@ final class NewMultiCommandRequestHandler {
           String.format("Failed to unmount dir %s", mountDirPath),
           e);
     }
+  }
+
+  private static int getRandom4Digits() {
+    return ThreadLocalRandom.current().nextInt(1000, 10000);
   }
 }
