@@ -154,10 +154,8 @@ java_library(
     srcs = ["MoblyReportHelper.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform:__subpackages__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
         ":certification_suite_info",
@@ -180,9 +178,7 @@ java_library(
     srcs = ["CertificationSuiteInfo.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform:__subpackages__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = ["//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value"],
 )
@@ -193,11 +189,9 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform:__subpackages__",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform:__subpackages__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
         ":certification_suite_info",
