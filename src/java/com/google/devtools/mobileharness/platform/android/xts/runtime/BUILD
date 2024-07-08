@@ -44,3 +44,17 @@ java_library(
         "@com_google_protobuf//:protobuf_java",
     ],
 )
+
+java_library(
+    name = "xts_tradefed_runtime_info_file_util",
+    srcs = ["XtsTradefedRuntimeInfoFileUtil.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/platform/android/xts/proto:runtime_info_java_proto",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@com_google_protobuf//:protobuf_java",
+    ],
+)
