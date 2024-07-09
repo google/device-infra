@@ -47,9 +47,7 @@ java_library(
 java_library(
     name = "ats_lab_info_stub",
     srcs = ["AtsLabInfoStub.java"],
-    visibility = [
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/dda:__subpackages__",
-    ],
+    visibility = ["//visibility:private"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
