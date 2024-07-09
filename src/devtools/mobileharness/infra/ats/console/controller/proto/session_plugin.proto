@@ -162,8 +162,16 @@ message RunCommandState {
   // Required.
   string command_line_args = 3;
 
-  // Running invocations by ID (OmniLab test ID).
-  map<string, Invocation> running_invocation = 4;
+  // Running invocations by OmniLab test ID.
+  map<string, Invocations> running_invocation = 4;
+
+  // Invocations of a test.
+  message Invocations {
+    // Required.
+    google.protobuf.Timestamp start_time = 2;
+
+    repeated Invocation invocation = 1;
+  }
 
   message Invocation {
     // Required.
@@ -180,11 +188,6 @@ message RunCommandState {
     // Example: "running cts on build(s) 'DeviceBuildInfo{bid=123,
     // serial=12345}'"
     string state_summary = 4;
-
-    // Required.
-    //
-    // Invocation ID is OmniLab test ID.
-    string invocation_id = 5;
   }
 
   // Required.

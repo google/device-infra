@@ -19,17 +19,22 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
+import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.job.out.Result.ResultTypeWithCause;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig.CommandCase;
@@ -42,6 +47,7 @@ import com.google.devtools.mobileharness.infra.ats.console.controller.proto.Sess
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState.Invocation;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState.Invocations;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionEndedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
@@ -50,8 +56,10 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.protobuf.InvalidProtocolBufferException;
+import com.google.protobuf.Timestamp;
 import com.google.wireless.qa.mobileharness.client.api.event.JobEndEvent;
 import com.google.wireless.qa.mobileharness.client.api.event.JobStartEvent;
 import com.google.wireless.qa.mobileharness.shared.comm.message.TestMessageUtil;
@@ -62,11 +70,15 @@ import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
+import java.util.logging.Level;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
@@ -82,12 +94,8 @@ public class AtsSessionPlugin {
 
   private static final AtomicInteger NEXT_RUN_COMMAND_ID = new AtomicInteger(1);
 
-  private final Object tradefedJobsLock = new Object();
-
   private final Object testCancellationLock = new Object();
-
-  @GuardedBy("tradefedJobsLock")
-  private final Map<String, Boolean> runningTradefedJobs = new HashMap<>();
+  private final Object runningTestsLock = new Object();
 
   private final SessionInfo sessionInfo;
   private final DumpEnvVarCommandHandler dumpEnvVarCommandHandler;
@@ -97,6 +105,13 @@ public class AtsSessionPlugin {
   private final ListModulesCommandHandler listModulesCommandHandler;
   private final RunCommandHandler runCommandHandler;
   private final TestMessageUtil testMessageUtil;
+  private final ListeningScheduledExecutorService scheduledThreadPool;
+
+  @GuardedBy("itself")
+  private final Map<String, Boolean> runningTradefedJobs = new HashMap<>();
+
+  @GuardedBy("runningTestsLock")
+  private final Map<String, RunningTradefedTest> runningTradefedTests = new ConcurrentHashMap<>();
 
   @GuardedBy("testCancellationLock")
   private final List<TestInfo> startedTestsBeforeCancellation = new ArrayList<>();
@@ -125,6 +140,10 @@ public class AtsSessionPlugin {
     this.listModulesCommandHandler = listModulesCommandHandler;
     this.runCommandHandler = runCommandHandler;
     this.testMessageUtil = testMessageUtil;
+    this.scheduledThreadPool =
+        ThreadPools.createStandardScheduledThreadPool(
+            "ats-session-plugin-scheduled-thread-pool-" + sessionInfo.getSessionId(),
+            /* corePoolSize= */ 2);
   }
 
   @Subscribe
@@ -145,8 +164,12 @@ public class AtsSessionPlugin {
       RunCommand runCommand = config.getRunCommand();
 
       String commandId = Integer.toString(NEXT_RUN_COMMAND_ID.getAndIncrement());
-      setRunCommandState(
-          oldState -> runCommand.getInitialState().toBuilder().setCommandId(commandId).build());
+
+      synchronized (runningTestsLock) {
+        setRunCommandState(
+            oldState -> runCommand.getInitialState().toBuilder().setCommandId(commandId).build());
+      }
+
       sessionInfo.putSessionProperty(SessionProperties.PROPERTY_KEY_COMMAND_ID, commandId);
       logger
           .atInfo()
@@ -210,7 +233,7 @@ public class AtsSessionPlugin {
               runCommandState.getCommandId(), runCommand.getInitialState().getCommandLineArgs());
       runCommandHandler.initialize(runCommand);
       ImmutableList<String> tradefedJobIds = runCommandHandler.addTradefedJobs(runCommand);
-      synchronized (tradefedJobsLock) {
+      synchronized (runningTradefedJobs) {
         for (String tradefedJobId : tradefedJobIds) {
           runningTradefedJobs.putIfAbsent(tradefedJobId, true);
         }
@@ -222,13 +245,27 @@ public class AtsSessionPlugin {
             sessionInfo.getSessionId());
         runCommandHandler.addNonTradefedJobs(runCommand);
       }
+
+      // Starts TF runtime info updater.
+      logFailure(
+          scheduledThreadPool.scheduleWithFixedDelay(
+              threadRenaming(
+                  this::updateTradefedRuntimeInfo,
+                  () -> "tradefed-runtime-info-updater-" + sessionInfo.getSessionId()),
+              Duration.ofSeconds(5L),
+              Duration.ofSeconds(5L)),
+          Level.WARNING,
+          "Fatal error in Tradefed runtime info updater");
     }
   }
 
   @Subscribe
   public void onSessionEnded(SessionEndedEvent event)
       throws MobileHarnessException, InterruptedException {
+    scheduledThreadPool.shutdown();
+
     if (config.getCommandCase().equals(CommandCase.RUN_COMMAND)) {
+      // Processes results.
       runCommandHandler.handleResultProcessing(config.getRunCommand(), getRunCommandState());
     }
   }
@@ -236,7 +273,7 @@ public class AtsSessionPlugin {
   @Subscribe
   public void onJobEnd(JobEndEvent jobEndEvent)
       throws MobileHarnessException, InterruptedException {
-    synchronized (tradefedJobsLock) {
+    synchronized (runningTradefedJobs) {
       String jobId = jobEndEvent.getJob().locator().getId();
       if (!runningTradefedJobs.containsKey(jobId)) {
         return;
@@ -268,30 +305,44 @@ public class AtsSessionPlugin {
   @Subscribe
   public void onTestStarting(TestStartingEvent event) {
     TestInfo testInfo = event.getTest();
+    boolean tfTest = testInfo.jobInfo().properties().getBoolean(Job.IS_XTS_TF_JOB).orElse(false);
     ImmutableList<String> deviceSerials =
         event.getAllocation().getAllDeviceLocators().stream()
             .map(DeviceLocator::getSerial)
             .collect(toImmutableList());
-    setRunCommandState(
-        oldState -> {
-          String testId = testInfo.locator().getId();
-          logger
-              .atInfo()
-              .with(IMPORTANCE, IMPORTANT)
-              .log(
-                  "Command [%s]'s invocation [%s] allocated devices [%s].",
-                  oldState.getCommandId(), testId, String.join(", ", deviceSerials));
-          return oldState.toBuilder()
-              .putRunningInvocation(
-                  testId,
-                  Invocation.newBuilder()
-                      .setCommandId(oldState.getCommandId())
-                      .setStartTime(toProtoTimestamp(Instant.now()))
-                      .addAllDeviceId(deviceSerials)
-                      .setStateSummary(config.getRunCommand().getTestPlan())
-                      .build())
-              .build();
-        });
+
+    synchronized (runningTestsLock) {
+      AtomicReference<Invocations.Builder> testInvocations = new AtomicReference<>();
+      setRunCommandState(
+          oldState -> {
+            String testId = testInfo.locator().getId();
+            logger
+                .atInfo()
+                .with(IMPORTANCE, IMPORTANT)
+                .log(
+                    "Command [%s]'s invocation [%s] allocated devices [%s].",
+                    oldState.getCommandId(), testId, String.join(", ", deviceSerials));
+            Timestamp now = toProtoTimestamp(Instant.now());
+            testInvocations.set(
+                Invocations.newBuilder()
+                    .setStartTime(now)
+                    .addInvocation(
+                        Invocation.newBuilder()
+                            .setCommandId(oldState.getCommandId())
+                            .setStartTime(now)
+                            .addAllDeviceId(deviceSerials)
+                            .setStateSummary(config.getRunCommand().getTestPlan())));
+            return oldState.toBuilder()
+                .putRunningInvocation(testId, testInvocations.get().build())
+                .build();
+          });
+
+      if (tfTest) {
+        runningTradefedTests.put(
+            testInfo.locator().getId(), RunningTradefedTest.of(testInfo, testInvocations.get()));
+      }
+    }
+
     sessionInfo.putSessionProperty(
         SessionProperties.PROPERTY_KEY_SESSION_CONTAIN_STARTED_TEST, "true");
 
@@ -307,25 +358,29 @@ public class AtsSessionPlugin {
 
   @Subscribe
   public void onTestEnded(TestEndedEvent event) {
-    setRunCommandState(
-        oldState -> {
-          String testId = event.getTest().locator().getId();
-          logger
-              .atInfo()
-              .with(IMPORTANCE, IMPORTANT)
-              .log("Command [%s]'s invocation [%s] completed.", oldState.getCommandId(), testId);
-          return oldState.toBuilder()
-              .setTotalExecutionTime(
-                  toProtoDuration(
-                      toJavaDuration(oldState.getTotalExecutionTime())
-                          .plus(
-                              Duration.between(
-                                  event.getTest().timing().getStartTime(), Instant.now()))))
-              .removeRunningInvocation(testId)
-              .build();
-        });
-
     TestInfo testInfo = event.getTest();
+
+    synchronized (runningTestsLock) {
+      runningTradefedTests.remove(testInfo.locator().getId());
+
+      setRunCommandState(
+          oldState -> {
+            String testId = testInfo.locator().getId();
+            logger
+                .atInfo()
+                .with(IMPORTANCE, IMPORTANT)
+                .log("Command [%s]'s invocations completed.", oldState.getCommandId());
+            return oldState.toBuilder()
+                .setTotalExecutionTime(
+                    toProtoDuration(
+                        toJavaDuration(oldState.getTotalExecutionTime())
+                            .plus(
+                                Duration.between(testInfo.timing().getStartTime(), Instant.now()))))
+                .removeRunningInvocation(testId)
+                .build();
+          });
+    }
+
     ResultTypeWithCause resultTypeWithCause = testInfo.resultWithCause().get();
     if (!resultTypeWithCause.type().equals(TestResult.PASS)) {
       logger
@@ -348,6 +403,48 @@ public class AtsSessionPlugin {
 
     if (notification.getTypeCase() == TypeCase.SESSION_CANCELLATION) {
       onSessionCancellation(notification.getSessionCancellation());
+    }
+  }
+
+  private void updateTradefedRuntimeInfo() {
+    // Gets a snapshot of running TF tests.
+    Collection<RunningTradefedTest> runningTradefedTests;
+    synchronized (runningTestsLock) {
+      runningTradefedTests = this.runningTradefedTests.values();
+    }
+
+    // Updates runtime info.
+    List<RunningTradefedTest> updatedTests = new ArrayList<>();
+    for (RunningTradefedTest test : runningTradefedTests) {
+      if (test.update()) {
+        updatedTests.add(test);
+      }
+    }
+
+    // Writes to RunCommandState.
+    if (!updatedTests.isEmpty()) {
+      synchronized (runningTestsLock) {
+        setRunCommandState(
+            oldState -> {
+              RunCommandState.Builder result = oldState.toBuilder();
+              for (RunningTradefedTest updatedTest : updatedTests) {
+                String testId = updatedTest.testInfo().locator().getId();
+
+                // Checks if the test still exists.
+                if (oldState.containsRunningInvocation(testId)) {
+                  Invocations invocation = updatedTest.invocations().build();
+                  logger
+                      .atInfo()
+                      .with(IMPORTANCE, IMPORTANT)
+                      .log(
+                          "Updated invocation info of test [%s]: %s",
+                          testId, shortDebugString(invocation));
+                  result.putRunningInvocation(testId, invocation);
+                }
+              }
+              return result.build();
+            });
+      }
     }
   }
 
@@ -405,6 +502,7 @@ public class AtsSessionPlugin {
     logger.atInfo().log("Output: %s", shortDebugString(finalOutput));
   }
 
+  @GuardedBy("runningTestsLock")
   private void setRunCommandState(UnaryOperator<RunCommandState> runCommandStateUpdater) {
     sessionInfo.setSessionPluginOutput(
         oldOutput -> {
@@ -422,5 +520,25 @@ public class AtsSessionPlugin {
         .getSessionPluginOutput(AtsSessionPluginOutput.class)
         .orElse(AtsSessionPluginOutput.getDefaultInstance())
         .getRunCommandState();
+  }
+
+  @AutoValue
+  abstract static class RunningTradefedTest {
+
+    abstract TestInfo testInfo();
+
+    abstract Invocations.Builder invocations();
+
+    abstract AtomicReference<Instant> runtimeInfoFileLastModifiedTime();
+
+    /** Returns whether {@link #invocations()} has been updated. */
+    private boolean update() {
+      return false; // TODO: Reads runtime info from files.
+    }
+
+    private static RunningTradefedTest of(TestInfo testInfo, Invocations.Builder invocations) {
+      return new AutoValue_AtsSessionPlugin_RunningTradefedTest(
+          testInfo, invocations, new AtomicReference<>());
+    }
   }
 }

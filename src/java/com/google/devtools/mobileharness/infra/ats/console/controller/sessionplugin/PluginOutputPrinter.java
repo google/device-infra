@@ -98,6 +98,7 @@ public class PluginOutputPrinter {
         configOutputs.stream()
             .map(PluginOutputPrinter::getRunCommandState)
             .flatMap(runCommandState -> runCommandState.getRunningInvocationMap().values().stream())
+            .flatMap(testInvocations -> testInvocations.getInvocationList().stream())
             .sorted(
                 comparing(Invocation::getCommandId, new NaturalSortOrderComparator())
                     .thenComparing(invocation -> toJavaInstant(invocation.getStartTime())))
@@ -134,6 +135,10 @@ public class PluginOutputPrinter {
 
   private static String formatInvocationCommand(RunCommandState runCommandState) {
     return runCommandState.getRunningInvocationMap().values().stream()
+        .flatMap(testInvocations -> testInvocations.getInvocationList().stream())
+        .sorted(
+            comparing(Invocation::getCommandId, new NaturalSortOrderComparator())
+                .thenComparing(invocation -> toJavaInstant(invocation.getStartTime())))
         .map(
             invocation ->
                 String.format(
