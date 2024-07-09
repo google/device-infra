@@ -152,6 +152,9 @@ java_library(
 java_library(
     name = "xts_tradefed_test",
     srcs = ["XtsTradefedTest.java"],
+    resources = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/agent:tradefed_invocation_agent_deploy.jar",
+    ],
     deps = [
         ":base_driver",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
@@ -177,6 +180,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/error:more_throwables",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",

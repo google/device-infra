@@ -738,6 +738,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableXtsDynamicDownloader = enableXtsDynamicDownloaderDefault;
 
+  private static final Flag<Boolean> enableXtsTradefedInvocationAgentDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--enable_xts_tradefed_invocation_agent",
+      description = "Whether to enable xts tradefed invocation agent. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableXtsTradefedInvocationAgent = enableXtsTradefedInvocationAgentDefault;
+
   private static final Flag<Boolean> enforceSafeDischargeDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(

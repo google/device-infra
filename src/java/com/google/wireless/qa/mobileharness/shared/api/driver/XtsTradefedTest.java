@@ -70,6 +70,7 @@ import com.google.devtools.mobileharness.shared.util.command.linecallback.Comman
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils;
@@ -134,6 +135,9 @@ public class XtsTradefedTest extends BaseDriver
 
   private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(5L);
 
+  private static final String TF_AGENT_RESOURCE_PATH =
+      "/com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar";
+
   private final CommandExecutor cmdExecutor;
   private final LocalFileUtil localFileUtil;
   private final SystemUtil systemUtil;
@@ -145,6 +149,7 @@ public class XtsTradefedTest extends BaseDriver
   private final Sleeper sleeper;
   private final TradefedInvocationsFetcher tradefedInvocationsFetcher;
   private final XtsTradefedRuntimeInfoUtil xtsTradefedRuntimeInfoUtil;
+  private final ResUtil resUtil;
 
   private final Object tfProcessLock = new Object();
 
@@ -177,7 +182,8 @@ public class XtsTradefedTest extends BaseDriver
       ListeningExecutorService threadPool,
       Sleeper sleeper,
       TradefedInvocationsFetcher tradefedInvocationsFetcher,
-      XtsTradefedRuntimeInfoUtil xtsTradefedRuntimeInfoUtil) {
+      XtsTradefedRuntimeInfoUtil xtsTradefedRuntimeInfoUtil,
+      ResUtil resUtil) {
     super(device, testInfo);
     this.cmdExecutor = cmdExecutor;
     this.localFileUtil = localFileUtil;
@@ -192,6 +198,7 @@ public class XtsTradefedTest extends BaseDriver
     this.scheduledThreadPool =
         ThreadPools.createStandardScheduledThreadPool(
             "xts-tradefed-test-" + testInfo.locator().getId(), /* corePoolSize= */ 2);
+    this.resUtil = resUtil;
   }
 
   @Override
@@ -348,12 +355,19 @@ public class XtsTradefedTest extends BaseDriver
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, String> env =
         getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType, spec);
+    ImmutableList.Builder<String> jvmFlagsBuilder =
+        ImmutableList.<String>builder()
+            .add(
+                "-Xmx" + Flags.instance().xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError");
+    if (Flags.instance().enableXtsTradefedInvocationAgent.getNonNull()) {
+      jvmFlagsBuilder.add(
+          String.format("-javaagent:%s=%s", getTradefedAgentFilePath(), /* agentConfigPath */ ""));
+    }
     ImmutableList<String> cmd =
         XtsCommandUtil.getXtsJavaCommand(
             xtsType,
             tmpXtsRootDir,
-            ImmutableList.of(
-                "-Xmx" + Flags.instance().xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError"),
+            jvmFlagsBuilder.build(),
             requireNonNull(
                 env.getOrDefault(
                     TF_PATH_KEY, getConcatenatedJarPath(tmpXtsRootDir, spec, xtsType))),
@@ -1081,5 +1095,9 @@ public class XtsTradefedTest extends BaseDriver
     }
     return new Gson()
         .fromJson(prevSessionTestRecordFilesJsonList, new TypeToken<List<String>>() {}.getType());
+  }
+
+  private String getTradefedAgentFilePath() throws MobileHarnessException {
+    return resUtil.getResourceFile(getClass(), TF_AGENT_RESOURCE_PATH);
   }
 }

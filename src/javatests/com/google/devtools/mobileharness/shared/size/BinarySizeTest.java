@@ -31,9 +31,12 @@ public class BinarySizeTest {
   private static final ImmutableSet<String> ATS_OLC_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST =
       ImmutableSet.of();
   private static final ImmutableSet<String>
-      ATS_OLC_SERVER_LOCAL_MODE_LARGE_RESOURCE_PATH_ALLOWLIST = ImmutableSet.of();
+      ATS_OLC_SERVER_LOCAL_MODE_LARGE_RESOURCE_PATH_ALLOWLIST =
+          ImmutableSet.of(
+              "com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar");
   private static final ImmutableSet<String> LAB_SERVER_LARGE_RESOURCE_PATH_ALLOWLIST =
-      ImmutableSet.of();
+      ImmutableSet.of(
+          "com/google/devtools/mobileharness/platform/android/xts/agent/tradefed_invocation_agent_deploy.jar");
   private static final ImmutableSet<String> ATS_CONSOLE_LARGE_RESOURCE_PATH_ALLOWLIST =
       ImmutableSet.of();
 
@@ -41,8 +44,8 @@ public class BinarySizeTest {
 
   private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 27_850_000L;
   private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 34_100_000L;
-  private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 34_850_000L;
-  private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 33_050_000L;
+  private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 38_550_000L;
+  private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 35_750_000L;
   private static final long MAX_ATS_CONSOLE_BINARY_SIZE_BYTE = 24_260_000L;
 
   private static final long MAX_RESOURCE_FILE_SIZE_BYTE = 800_000L;
