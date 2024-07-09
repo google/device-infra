@@ -23,19 +23,22 @@ import static net.bytebuddy.matcher.ElementMatchers.none;
 import static net.bytebuddy.matcher.ElementMatchers.not;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
+import com.google.common.flogger.FluentLogger;
 import java.lang.instrument.Instrumentation;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
 
 /** The agent to intercept the {@code TestInvocation} class in Tradefed to get the runtime info. */
 public class TradefedInvocationAgent {
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public static void premain(String agentArgs, Instrumentation inst) {
     new TradefedInvocationAgent().run(agentArgs, inst);
   }
 
   private void run(String configPath, Instrumentation inst) {
-    System.out.printf("Agent config path: %s\n", configPath);
+    TradefedInvocationAgentLogger.init();
+    logger.atInfo().log("Agent config path: %s", configPath);
     interceptTradefedTestInvocation(inst);
   }
 
