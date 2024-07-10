@@ -29,8 +29,11 @@ java_library(
     deps = [
         "//src/devtools/mobileharness/platform/android/xts/proto:runtime_info_java_proto",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:tradefed_invocations_fetcher",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
+        "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",
         "@maven//:com_google_inject_guice",
         "@maven//:com_google_truth_extensions_truth_proto_extension",

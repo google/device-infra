@@ -17,11 +17,9 @@
 package com.google.devtools.mobileharness.platform.android.xts.runtime;
 
 import com.google.auto.value.AutoValue;
+import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
-import com.google.devtools.mobileharness.platform.android.xts.runtime.proto.RuntimeInfoProto.TradefedInvocation;
-import com.google.devtools.mobileharness.platform.android.xts.runtime.proto.RuntimeInfoProto.TradefedInvocations;
-import com.google.devtools.mobileharness.platform.android.xts.runtime.proto.RuntimeInfoProto.XtsTradefedRuntimeInfo;
-import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -29,6 +27,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.concurrent.GuardedBy;
 
 /** Monitor in TF process to monitor runtime info. */
@@ -105,18 +104,15 @@ public class XtsTradefedRuntimeInfoMonitor {
 
         // Updates invocations to file.
         if (needUpdate) {
-          TradefedInvocations.Builder invocations = TradefedInvocations.newBuilder();
+          ImmutableList.Builder<TradefedInvocation> invocations = ImmutableList.builder();
           synchronized (runningInvocations) {
             for (Invocation invocation : runningInvocations.values()) {
-              invocations.addInvocation(invocation.update());
+              invocations.add(invocation.update());
             }
           }
 
           XtsTradefedRuntimeInfo runtimeInfo =
-              XtsTradefedRuntimeInfo.newBuilder()
-                  .setInvocations(invocations)
-                  .setTimestamp(TimeUtils.toProtoTimestamp(Instant.now()))
-                  .build();
+              XtsTradefedRuntimeInfo.of(invocations.build(), Instant.now());
           doUpdate(runtimeInfoFilePath, runtimeInfo);
         }
       }
@@ -152,25 +148,25 @@ public class XtsTradefedRuntimeInfoMonitor {
     /** {@code com.android.tradefed.invoker.IInvocationContext}. */
     abstract Object invocationContext();
 
-    /** Proto generated from last {@link #update()}. */
-    abstract TradefedInvocation.Builder previousProto();
+    /** TradefedInvocation generated from last {@link #update()}. */
+    abstract AtomicReference<TradefedInvocation> previousInvocation();
 
     /**
-     * Whether {@link #update()} will generate a different proto compared with {@link
-     * #previousProto()}.
+     * Whether {@link #update()} will generate a different TradefedInvocation compared with {@link
+     * #previousInvocation()}.
      */
     private boolean needUpdate() {
-      return !previousProto().getStatus().equals(getInvocationStatus())
-          || !previousProto().getDeviceIdList().equals(getDeviceIds());
+      TradefedInvocation previousInvocation = previousInvocation().get();
+      return !previousInvocation.status().equals(getInvocationStatus())
+          || !previousInvocation.deviceIds().equals(getDeviceIds());
     }
 
-    /** Updates and returns a new {@link #previousProto()}. */
+    /** Updates and returns a new {@link #previousInvocation()}. */
     private TradefedInvocation update() {
-      previousProto()
-          .setStatus(getInvocationStatus())
-          .clearDeviceId()
-          .addAllDeviceId(getDeviceIds());
-      return previousProto().build();
+      TradefedInvocation newInvocation =
+          TradefedInvocation.of(ImmutableList.copyOf(getDeviceIds()), getInvocationStatus());
+      previousInvocation().set(newInvocation);
+      return newInvocation;
     }
 
     private String getInvocationStatus() {
@@ -189,7 +185,9 @@ public class XtsTradefedRuntimeInfoMonitor {
 
     private static Invocation of(Object testInvocation, Object invocationContext) {
       return new AutoValue_XtsTradefedRuntimeInfoMonitor_Invocation(
-          testInvocation, invocationContext, TradefedInvocation.newBuilder());
+          testInvocation,
+          invocationContext,
+          new AtomicReference<>(TradefedInvocation.getDefaultInstance()));
     }
   }
 }

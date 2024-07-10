@@ -35,9 +35,10 @@ java_library(
     name = "xts_tradefed_runtime_info_file_util",
     srcs = ["XtsTradefedRuntimeInfoFileUtil.java"],
     deps = [
-        "//src/devtools/mobileharness/platform/android/xts/proto:runtime_info_java_proto",
+        ":xts_tradefed_runtime_info",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@com_google_protobuf//:protobuf_java",
+        "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
 
@@ -45,12 +46,12 @@ java_library(
     name = "xts_tradefed_runtime_info_monitor",
     srcs = ["XtsTradefedRuntimeInfoMonitor.java"],
     deps = [
+        ":xts_tradefed_runtime_info",
         ":xts_tradefed_runtime_info_file_util",
-        "//src/devtools/mobileharness/platform/android/xts/proto:runtime_info_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
     ],
 )
 
@@ -65,5 +66,19 @@ java_library(
         "//src/devtools/mobileharness/platform/android/xts/proto:runtime_info_java_proto",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "@com_google_protobuf//:protobuf_java",
+    ],
+)
+
+java_library(
+    name = "xts_tradefed_runtime_info",
+    srcs = ["XtsTradefedRuntimeInfo.java"],
+    visibility = [
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/runtime:__pkg__",
+        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
     ],
 )
