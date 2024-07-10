@@ -31,7 +31,6 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.SettableFuture;
-import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.LabData;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
@@ -75,7 +74,6 @@ import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
-import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.runfiles.RunfilesUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
@@ -170,10 +168,10 @@ public class OlcServerIntegrationTest {
   private static final String LAB_SERVER_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "java/com/google/devtools/mobileharness/infra/lab/lab_server_oss_deploy.jar");
-  private static final String API_CONFIG_TEMPLATE_FILE_PATH =
+  private static final String API_CONFIG_FILE_PATH =
       RunfilesUtil.getRunfilesLocation(
           "javatests/com/google/devtools/mobileharness/infra/client/"
-              + "longrunningservice/api_config.textproto.template");
+              + "longrunningservice/api_config.textproto");
 
   private static final String PLUGIN_CLASS_NAME =
       "com.google.devtools.mobileharness.infra.client.longrunningservice.SessionPluginForTesting";
@@ -198,15 +196,12 @@ public class OlcServerIntegrationTest {
 
   private final CommandExecutor commandExecutor = new CommandExecutor();
   private final LocalFileUtil localFileUtil = new LocalFileUtil();
-  private final NetworkUtil networkUtil = new NetworkUtil();
 
   private final StringBuilder olcServerStdoutBuilder = new StringBuilder();
   private final StringBuilder olcServerStderrBuilder = new StringBuilder();
 
   private final StringBuilder labServerStdoutBuilder = new StringBuilder();
   private final StringBuilder labServerStderrBuilder = new StringBuilder();
-
-  private String localHostName;
 
   private int olcServerPort;
   private int atsWorkerGrpcPort;
@@ -224,8 +219,6 @@ public class OlcServerIntegrationTest {
 
   @Before
   public void setUp() throws Exception {
-    localHostName = networkUtil.getLocalHostName();
-
     olcServerPort = PortProber.pickUnusedPort();
     atsWorkerGrpcPort = PortProber.pickUnusedPort();
     olcServerChannel = ChannelFactory.createLocalChannel(olcServerPort, directExecutor());
@@ -253,10 +246,7 @@ public class OlcServerIntegrationTest {
   @Test
   public void noOpTest_localMode() throws Exception {
     String deviceControlId = "NoOpDevice-4";
-    startServers(
-        /* enableAtsMode= */ false,
-        createApiConfigFile(deviceControlId),
-        /* enableSchedulerShuffle= */ false);
+    startServers(/* enableAtsMode= */ false, /* enableSchedulerShuffle= */ false);
 
     // Checks the server version.
     VersionStub versionStub = new VersionStub(olcServerChannel);
@@ -354,10 +344,7 @@ public class OlcServerIntegrationTest {
   @Test
   public void noOpTest_atsMode() throws Exception {
     String deviceControlId = "NoOpDevice-3";
-    startServers(
-        /* enableAtsMode= */ true,
-        createApiConfigFile(deviceControlId),
-        /* enableSchedulerShuffle= */ true);
+    startServers(/* enableAtsMode= */ true, /* enableSchedulerShuffle= */ true);
 
     // Checks the server version.
     VersionStub versionStub = new VersionStub(olcServerChannel);
@@ -457,8 +444,7 @@ public class OlcServerIntegrationTest {
     assertThat(olcServerProcess.isAlive()).isFalse();
   }
 
-  private void startServers(
-      boolean enableAtsMode, Path apiConfigFile, boolean enableSchedulerShuffle)
+  private void startServers(boolean enableAtsMode, boolean enableSchedulerShuffle)
       throws IOException, CommandStartException, InterruptedException, ExecutionException {
     int noOpDeviceNum = 5;
 
@@ -475,7 +461,7 @@ public class OlcServerIntegrationTest {
                         ImmutableList.of(
                             "--adb_dont_kill_server=true",
                             "--android_device_daemon=false",
-                            "--api_config=" + apiConfigFile,
+                            "--api_config=" + API_CONFIG_FILE_PATH,
                             "--clear_android_device_multi_users=false",
                             "--detect_adb_device=false",
                             "--disable_calling=false",
@@ -550,7 +536,7 @@ public class OlcServerIntegrationTest {
                           ImmutableList.of(
                               "--adb_dont_kill_server=true",
                               "--android_device_daemon=false",
-                              "--api_config=" + apiConfigFile,
+                              "--api_config=" + API_CONFIG_FILE_PATH,
                               "--clear_android_device_multi_users=false",
                               "--detect_adb_device=false",
                               "--disable_calling=false",
@@ -694,16 +680,6 @@ public class OlcServerIntegrationTest {
                                         .setConfig(Any.pack(sessionPluginConfig))
                                         .build()))))
         .build();
-  }
-
-  private Path createApiConfigFile(String deviceControlId)
-      throws MobileHarnessException, IOException {
-    String template = localFileUtil.readFile(API_CONFIG_TEMPLATE_FILE_PATH);
-    String content =
-        template.replace("${device_uuid}", String.format("%s:%s", localHostName, deviceControlId));
-    Path filePath = tmpFolder.newFolder().toPath().resolve("api_config.textproto");
-    localFileUtil.writeToFile(filePath.toString(), content);
-    return filePath;
   }
 
   private static GetSessionResponse createGetSessionResponse(String deviceControlId) {

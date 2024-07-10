@@ -31,7 +31,6 @@ import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceMana
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigFileProcessor;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigFileProcessor.LabConfigAndDeviceConfigs;
-import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -47,14 +46,6 @@ public class LocalFileBasedDeviceConfigManager extends DeviceConfigManager {
       ApiConfigFileProcessor apiConfigFileProcessor) {
     super(localDeviceManager, deviceIdManager, apiConfig, "");
     this.apiConfigFileProcessor = apiConfigFileProcessor;
-  }
-
-  @Override
-  protected boolean beginUsingLongCheckInterval(long checkCount) {
-    return CHECK_DEVICE_CONFIG_SHORT_INTERVAL
-            .multipliedBy(checkCount)
-            .compareTo(Duration.ofMinutes(5L))
-        > 0;
   }
 
   @Override
