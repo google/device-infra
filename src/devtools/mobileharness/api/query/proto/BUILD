@@ -14,6 +14,7 @@
 #
 
 load("@com_google_protobuf//:protobuf.bzl", "py_proto_library")
+load("//tools/build_defs/proto/cpp:cc_proto_library.bzl", "cc_proto_library")
 
 package(
     default_applicable_licenses = ["//:license"],
@@ -29,6 +30,11 @@ proto_library(
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_proto",
     ],
+)
+
+cc_proto_library(
+    name = "device_query_cc_proto",
+    deps = [":device_query_proto"],
 )
 
 java_proto_library(
