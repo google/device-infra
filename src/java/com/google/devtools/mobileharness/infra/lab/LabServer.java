@@ -30,6 +30,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.ServiceManager;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -115,6 +116,7 @@ public class LabServer {
   private final ListeningScheduledExecutorService debugExecutor;
   private final boolean enableStubbyRpcServer;
   private final int rpcPort;
+  ServiceManager serviceManager;
 
   @Inject
   LabServer(
@@ -130,7 +132,8 @@ public class LabServer {
       ListeningExecutorService mainThreadPool,
       @DebugThreadPool ListeningScheduledExecutorService debugExecutor,
       @ServViaStubby boolean enableStubbyRpcServer,
-      @RpcPort int rpcPort) {
+      @RpcPort int rpcPort,
+      ServiceManager serviceManager) {
     this.testManager = testManager;
     this.jobManager = jobManager;
     this.systemUtil = systemUtil;
@@ -144,6 +147,7 @@ public class LabServer {
     this.debugExecutor = debugExecutor;
     this.enableStubbyRpcServer = enableStubbyRpcServer;
     this.rpcPort = rpcPort;
+    this.serviceManager = serviceManager;
   }
 
   /** Initializes and runs lab server, and blocks until shutdown. */
