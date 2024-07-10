@@ -17,10 +17,10 @@
 package com.google.devtools.mobileharness.platform.android.xts.runtime;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Arrays.asList;
 import static java.util.stream.Collectors.joining;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import java.time.Instant;
 import java.util.Base64;
@@ -33,10 +33,14 @@ public abstract class XtsTradefedRuntimeInfo {
   private static final XtsTradefedRuntimeInfo DEFAULT_INSTANCE =
       XtsTradefedRuntimeInfo.of(ImmutableList.of(), Instant.EPOCH);
 
-  private static final String SEPARATOR = "\n";
-  private static final Splitter SPLITTER = Splitter.on(SEPARATOR);
+  private static final String LINE_SEPARATOR = "\n";
+  private static final String TOKEN_SEPARATOR = ",";
 
-  /** Invocations. Empty indicates that the invocation information is unknown. */
+  /**
+   * Invocations.
+   *
+   * <p>Empty indicates that the invocation information is unknown.
+   */
   public abstract ImmutableList<TradefedInvocation> invocations();
 
   /** Updated timestamp. */
@@ -49,14 +53,14 @@ public abstract class XtsTradefedRuntimeInfo {
   /** Returns a string that can be parsed by {@link #decodeFromString(String)}. */
   public String encodeToString() {
     return timestamp().toEpochMilli()
-        + SEPARATOR
+        + LINE_SEPARATOR
         + invocations().stream()
             .map(invocation -> encodeToBase64(invocation.encodeToString()))
-            .collect(joining(SEPARATOR));
+            .collect(joining(LINE_SEPARATOR));
   }
 
   public static XtsTradefedRuntimeInfo decodeFromString(String string) {
-    List<String> parts = SPLITTER.splitToList(string);
+    List<String> parts = split(string, LINE_SEPARATOR);
     Instant timestamp = Instant.ofEpochMilli(Long.parseLong(parts.get(0)));
     ImmutableList.Builder<TradefedInvocation> invocations = ImmutableList.builder();
     for (int i = 1; i < parts.size(); i++) {
@@ -84,10 +88,9 @@ public abstract class XtsTradefedRuntimeInfo {
   /** Details of a Tradefed invocation. */
   @AutoValue
   public abstract static class TradefedInvocation {
+
     private static final TradefedInvocation DEFAULT_INSTANCE =
         TradefedInvocation.of(ImmutableList.of(), "");
-    private static final String SEPARATOR = ",";
-    private static final Splitter SPLITTER = Splitter.on(SEPARATOR);
 
     public abstract ImmutableList<String> deviceIds();
 
@@ -99,12 +102,13 @@ public abstract class XtsTradefedRuntimeInfo {
 
     /** Returns a string that can be parsed by {@link #decodeFromString(String)}. */
     public String encodeToString() {
-      return encodeToBase64(status()).concat(SEPARATOR + String.join(SEPARATOR, deviceIds()));
+      return encodeToBase64(status())
+          .concat(TOKEN_SEPARATOR + String.join(TOKEN_SEPARATOR, deviceIds()));
     }
 
     /** Parses a string into a {@link TradefedInvocation}. */
     public static TradefedInvocation decodeFromString(String string) {
-      List<String> parts = SPLITTER.splitToList(string);
+      List<String> parts = split(string, TOKEN_SEPARATOR);
       String status = decodeFromBase64(parts.get(0));
       ImmutableList.Builder<String> deviceIds = ImmutableList.builder();
       for (int i = 1; i < parts.size(); i++) {
@@ -118,5 +122,10 @@ public abstract class XtsTradefedRuntimeInfo {
     public static TradefedInvocation of(ImmutableList<String> deviceIds, String status) {
       return new AutoValue_XtsTradefedRuntimeInfo_TradefedInvocation(deviceIds, status);
     }
+  }
+
+  private static List<String> split(String string, String separator) {
+    String[] result = string.split(separator);
+    return result.length == 0 ? ImmutableList.of("") : asList(result);
   }
 }

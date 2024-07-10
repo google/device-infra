@@ -16,29 +16,28 @@
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "tradefed_invocations_fetcher",
-    srcs = ["TradefedInvocationsFetcher.java"],
+    name = "xts_tradefed_runtime_info_file_util",
+    srcs = ["XtsTradefedRuntimeInfoFileUtil.java"],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__"],
+    deps = [
+        ":xts_tradefed_runtime_info",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
+)
+
+java_library(
+    name = "xts_tradefed_runtime_info",
+    srcs = ["XtsTradefedRuntimeInfo.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/runtime:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
     ],
     deps = [
-        "//src/devtools/mobileharness/platform/android/xts/proto:runtime_info_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/util/command",
-        "@maven//:com_google_guava_guava",
-        "@maven//:javax_inject_jsr330_api",
-    ],
-)
-
-java_library(
-    name = "xts_tradefed_runtime_info_file_util",
-    srcs = ["XtsTradefedRuntimeInfoFileUtil.java"],
-    deps = [
-        ":xts_tradefed_runtime_info",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
-        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
     ],
 )
 
@@ -51,34 +50,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
-    name = "xts_tradefed_runtime_info_util",
-    srcs = ["XtsTradefedRuntimeInfoUtil.java"],
-    visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-    ],
-    deps = [
-        "//src/devtools/mobileharness/platform/android/xts/proto:runtime_info_java_proto",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
-        "@com_google_protobuf//:protobuf_java",
-    ],
-)
-
-java_library(
-    name = "xts_tradefed_runtime_info",
-    srcs = ["XtsTradefedRuntimeInfo.java"],
-    visibility = [
-        "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/runtime:__pkg__",
-        "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-    ],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",
     ],
 )

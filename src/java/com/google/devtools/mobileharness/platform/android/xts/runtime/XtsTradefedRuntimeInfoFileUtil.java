@@ -17,7 +17,6 @@
 package com.google.devtools.mobileharness.platform.android.xts.runtime;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.flogger.FluentLogger;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -29,58 +28,47 @@ import java.time.Instant;
 import java.util.Optional;
 import javax.annotation.Nullable;
 
-/** A file utility to read/write {@code XtsTradefedRuntimeInfo} for XTS Tradefed tests. */
+/** A file utility to read/write {@link XtsTradefedRuntimeInfo} for XTS Tradefed tests. */
 public class XtsTradefedRuntimeInfoFileUtil {
-
-  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   public void writeInfo(Path infoPath, XtsTradefedRuntimeInfo info) throws IOException {
     Path lockFilePath = prepareLockFile(infoPath);
 
-    logger.atInfo().log("Acquiring file lock to write XtsTradefedRuntimeInfo to %s", infoPath);
     try (FileChannel lockFile = new FileOutputStream(lockFilePath.toString()).getChannel();
         FileLock ignored = lockFile.lock()) {
       Files.writeString(infoPath, info.encodeToString());
-    } catch (IOException e) {
-      logger.atWarning().log("Failed to write XtsTradefedRuntimeInfo to %s", infoPath);
-      throw e;
     }
   }
 
   /**
    * Returns empty if the file doesn't exist or the file is unchanged since {@code
-   * lastModifiledTime}.
+   * lastModifiedTime}.
    */
   public Optional<XtsTradefedRuntimeInfoFileDetail> readInfo(
-      Path infoPath, @Nullable Instant lastModifiledTime) throws IOException {
-
-    if (!Files.exists(infoPath)) {
+      Path runtimeInfoFilePath, @Nullable Instant lastModifiedTime) throws IOException {
+    if (!Files.exists(runtimeInfoFilePath)) {
       return Optional.empty();
     }
 
-    if (lastModifiledTime != null
-        && !Files.getLastModifiedTime(infoPath).toInstant().isAfter(lastModifiledTime)) {
+    if (lastModifiedTime != null
+        && !Files.getLastModifiedTime(runtimeInfoFilePath).toInstant().isAfter(lastModifiedTime)) {
       return Optional.empty();
     }
 
-    Path lockFilePath = prepareLockFile(infoPath);
-    logger.atInfo().log("Acquiring file lock to read XtsTradefedRuntimeInfo from %s", infoPath);
+    Path lockFilePath = prepareLockFile(runtimeInfoFilePath);
+
     try (FileChannel lockFile = new FileOutputStream(lockFilePath.toString()).getChannel();
         FileLock ignored = lockFile.lock()) {
-      String content = Files.readString(infoPath);
-      Instant fileLastModifiedTime = Files.getLastModifiedTime(infoPath).toInstant();
+      String content = Files.readString(runtimeInfoFilePath);
+      Instant fileLastModifiedTime = Files.getLastModifiedTime(runtimeInfoFilePath).toInstant();
       return Optional.of(
           XtsTradefedRuntimeInfoFileDetail.of(
               XtsTradefedRuntimeInfo.decodeFromString(content), fileLastModifiedTime));
-    } catch (IOException e) {
-      logger.atWarning().log("Failed to read XtsTradefedRuntimeInfo from %s", infoPath);
-      throw e;
     }
   }
 
   private Path prepareLockFile(Path infoPath) throws IOException {
     Path lockFilePath = Path.of(infoPath + ".lck");
-
     if (!Files.exists(lockFilePath)) {
       Files.createFile(lockFilePath);
     }
@@ -88,14 +76,16 @@ public class XtsTradefedRuntimeInfoFileUtil {
     return lockFilePath;
   }
 
+  /** Details of runtime info file. */
   @AutoValue
-  abstract static class XtsTradefedRuntimeInfoFileDetail {
-    abstract XtsTradefedRuntimeInfo info();
+  public abstract static class XtsTradefedRuntimeInfoFileDetail {
+
+    public abstract XtsTradefedRuntimeInfo runtimeInfo();
 
     /** Last modified time of the file. Empty when the file doesn't exist. */
-    abstract Instant lastModifiedTime();
+    public abstract Instant lastModifiedTime();
 
-    private static XtsTradefedRuntimeInfoFileDetail of(
+    public static XtsTradefedRuntimeInfoFileDetail of(
         XtsTradefedRuntimeInfo info, Instant lastModifiedTime) {
       return new AutoValue_XtsTradefedRuntimeInfoFileUtil_XtsTradefedRuntimeInfoFileDetail(
           info, lastModifiedTime);
