@@ -28,6 +28,7 @@ java_library(
         "//src/devtools/mobileharness/api/deviceconfig/proto:device_java_proto",
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
+        "//src/devtools/mobileharness/api/model/proto:lab_java_proto",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:proto_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/message:str_pair",

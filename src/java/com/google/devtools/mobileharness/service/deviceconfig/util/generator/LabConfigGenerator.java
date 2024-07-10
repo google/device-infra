@@ -20,6 +20,7 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDevic
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.WifiConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceCompositeDimension;
+import com.google.devtools.mobileharness.api.model.proto.Lab.HostProperty;
 import com.google.devtools.mobileharness.shared.util.message.ProtoUtil;
 import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
 import com.google.protobuf.Int32Value;
@@ -83,6 +84,14 @@ public final class LabConfigGenerator {
     if (apiConfig.hasMaxConsecutiveFail()) {
       basicDeviceConfig.setMaxConsecutiveFail(Int32Value.of(apiConfig.getMaxConsecutiveFail()));
     }
+    // Set lab config as host mode when there's no device level device config is specified in api
+    // config file so the default device config will apply for all devices in the lab host.
+    if (deviceConfigs.isEmpty()) {
+      labConfig
+          .getHostPropertiesBuilder()
+          .addHostProperty(HostProperty.newBuilder().setKey("device_config_mode").setValue("host"));
+    }
+
     return labConfig.setDefaultDeviceConfig(basicDeviceConfig).build();
   }
 }
