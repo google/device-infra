@@ -18,10 +18,12 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "xts_tradefed_runtime_info_file_util",
     srcs = ["XtsTradefedRuntimeInfoFileUtil.java"],
-    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/agent:__pkg__",
+    ],
     deps = [
         ":xts_tradefed_runtime_info",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_code_findbugs_jsr305",
     ],
 )
@@ -32,24 +34,22 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/agent:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/runtime:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
-    ],
-    deps = [
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "@maven//:com_google_guava_guava",
     ],
 )
 
 java_library(
     name = "xts_tradefed_runtime_info_monitor",
     srcs = ["XtsTradefedRuntimeInfoMonitor.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/agent:__pkg__",
+    ],
     deps = [
         ":xts_tradefed_runtime_info",
         ":xts_tradefed_runtime_info_file_util",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_code_findbugs_jsr305",
-        "@maven//:com_google_guava_guava",
     ],
 )

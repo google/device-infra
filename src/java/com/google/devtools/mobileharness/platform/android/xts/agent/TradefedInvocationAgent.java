@@ -24,7 +24,9 @@ import static net.bytebuddy.matcher.ElementMatchers.not;
 import static net.bytebuddy.matcher.ElementMatchers.takesArguments;
 
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoMonitor;
 import java.lang.instrument.Instrumentation;
+import java.nio.file.Path;
 import net.bytebuddy.agent.builder.AgentBuilder;
 import net.bytebuddy.asm.Advice;
 
@@ -36,9 +38,13 @@ public class TradefedInvocationAgent {
     new TradefedInvocationAgent().run(agentArgs, inst);
   }
 
-  private void run(String configPath, Instrumentation inst) {
+  private void run(String runtimeInfoFilePath, Instrumentation inst) {
+    if (runtimeInfoFilePath.isEmpty()) {
+      return;
+    }
     TradefedInvocationAgentLogger.init();
-    logger.atInfo().log("Agent config path: %s", configPath);
+    logger.atInfo().log("Runtime info file path: %s", runtimeInfoFilePath);
+    XtsTradefedRuntimeInfoMonitor.getInstance().start(Path.of(runtimeInfoFilePath));
     interceptTradefedTestInvocation(inst);
   }
 
@@ -57,15 +63,18 @@ public class TradefedInvocationAgent {
   }
 
   private static class TradefedTestInvocationInterceptor {
+
     @Advice.OnMethodEnter()
     public static void onEnter(
-        // @Advice.This Object testInvocation, @Advice.Argument(value = 0) Object invocationContext
-        ) {}
+        @Advice.This Object testInvocation, @Advice.Argument(value = 0) Object invocationContext) {
+      XtsTradefedRuntimeInfoMonitor.getInstance()
+          .onInvocationEnter(testInvocation, invocationContext);
+    }
 
     @Advice.OnMethodExit()
-    public static void onExit(
-        // @Advice.This Object testInvocation, @Advice.Argument(value = 0) Object invocationContext
-        ) {}
+    public static void onExit(@Advice.This Object testInvocation) {
+      XtsTradefedRuntimeInfoMonitor.getInstance().onInvocationExit(testInvocation);
+    }
   }
 
   private TradefedInvocationAgent() {}

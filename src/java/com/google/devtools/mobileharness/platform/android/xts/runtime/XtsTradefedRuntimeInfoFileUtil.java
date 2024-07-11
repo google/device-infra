@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.runtime;
 
-import com.google.auto.value.AutoValue;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
@@ -62,7 +61,7 @@ public class XtsTradefedRuntimeInfoFileUtil {
       String content = Files.readString(runtimeInfoFilePath);
       Instant fileLastModifiedTime = Files.getLastModifiedTime(runtimeInfoFilePath).toInstant();
       return Optional.of(
-          XtsTradefedRuntimeInfoFileDetail.of(
+          new XtsTradefedRuntimeInfoFileDetail(
               XtsTradefedRuntimeInfo.decodeFromString(content), fileLastModifiedTime));
     }
   }
@@ -77,18 +76,24 @@ public class XtsTradefedRuntimeInfoFileUtil {
   }
 
   /** Details of runtime info file. */
-  @AutoValue
-  public abstract static class XtsTradefedRuntimeInfoFileDetail {
+  public static class XtsTradefedRuntimeInfoFileDetail {
 
-    public abstract XtsTradefedRuntimeInfo runtimeInfo();
+    private final XtsTradefedRuntimeInfo runtimeInfo;
+    private final Instant lastModifiedTime;
+
+    public XtsTradefedRuntimeInfoFileDetail(
+        XtsTradefedRuntimeInfo runtimeInfo, Instant lastModifiedTime) {
+      this.runtimeInfo = runtimeInfo;
+      this.lastModifiedTime = lastModifiedTime;
+    }
+
+    public XtsTradefedRuntimeInfo runtimeInfo() {
+      return runtimeInfo;
+    }
 
     /** Last modified time of the file. Empty when the file doesn't exist. */
-    public abstract Instant lastModifiedTime();
-
-    public static XtsTradefedRuntimeInfoFileDetail of(
-        XtsTradefedRuntimeInfo info, Instant lastModifiedTime) {
-      return new AutoValue_XtsTradefedRuntimeInfoFileUtil_XtsTradefedRuntimeInfoFileDetail(
-          info, lastModifiedTime);
+    public Instant lastModifiedTime() {
+      return lastModifiedTime;
     }
   }
 }

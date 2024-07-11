@@ -13,7 +13,6 @@
 # limitations under the License.
 #
 
-load("//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:server.bzl", "olc_server_binary")
 load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_suites.bzl", "junit_test_suites")
 
 package(
@@ -22,28 +21,22 @@ package(
 )
 
 java_library(
-    name = "size",
+    name = "agent",
     srcs = glob(["*.java"]),
     data = [
-        ":base_olc_server_deploy.jar",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_deploy.jar",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:ats_olc_server_local_mode_deploy.jar",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_deploy.jar",
-        "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server_oss_deploy.jar",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/agent:tradefed_invocation_agent_deploy.jar",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/agent/testdata:fake_tradefed_deploy.jar",
     ],
     deps = [
-        "//src/javatests/com/google/devtools/mobileharness/shared/util/file/local:binary_size_checker",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info_file_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/system",
+        "//src/java/com/google/devtools/mobileharness/shared/util/time:sleeper",
+        "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
         "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_guava_guava",
         "@maven//:junit_junit",
-    ],
-)
-
-olc_server_binary(
-    name = "base_olc_server",
-    extra_runtime_deps = [
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/ats",
     ],
 )
 
@@ -52,5 +45,5 @@ junit_test_suites(
     sizes = [
         "small",
     ],
-    deps = [":size"],
+    deps = [":agent"],
 )

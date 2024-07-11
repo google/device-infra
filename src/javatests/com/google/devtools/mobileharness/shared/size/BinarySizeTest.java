@@ -40,13 +40,15 @@ public class BinarySizeTest {
   private static final ImmutableSet<String> ATS_CONSOLE_LARGE_RESOURCE_PATH_ALLOWLIST =
       ImmutableSet.of();
 
+  // ================================================================================
   // Please keep all binary sizes below in the precision "xxx_x50_000L" bytes.
-
-  private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 27_850_000L;
-  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 34_100_000L;
+  // ================================================================================
+  private static final long MAX_BASE_OLC_SERVER_BINARY_SIZE_BYTE = 27_750_000L;
+  private static final long MAX_ATS_OLC_SERVER_BINARY_SIZE_BYTE = 34_150_000L;
   private static final long MAX_ATS_OLC_SERVER_LOCAL_MODE_BINARY_SIZE_BYTE = 38_750_000L;
   private static final long MAX_LAB_SERVER_BINARY_SIZE_BYTE = 35_950_000L;
-  private static final long MAX_ATS_CONSOLE_BINARY_SIZE_BYTE = 24_260_000L;
+  private static final long MAX_ATS_CONSOLE_BINARY_SIZE_BYTE = 23_350_000L;
+  private static final long MAX_XTS_TRADEFED_AGENT_BINARY_SIZE_BYTE = 4_550_000L;
 
   private static final long MAX_RESOURCE_FILE_SIZE_BYTE = 800_000L;
 
@@ -90,6 +92,14 @@ public class BinarySizeTest {
   private static final String ATS_CONSOLE_BINARY_SOURCE_PATH =
       "google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness"
           + "/infra/ats/console:ats_console_deploy.jar";
+
+  private static final String XTS_TRADEFED_AGENT_PATH =
+      RunfilesUtil.getRunfilesLocation(
+          "java/com/google/devtools/mobileharness/platform/"
+              + "android/xts/agent/tradefed_invocation_agent_deploy.jar");
+  private static final String XTS_TRADEFED_AGENT_SOURCE_PATH =
+      "google3/third_party/deviceinfra/src/java/com/google/devtools/mobileharness/platform/"
+          + "android/xts/agent:tradefed_invocation_agent_deploy.jar";
 
   @Test
   public void checkBaseOlcServerBinarySize() throws Exception {
@@ -189,5 +199,14 @@ public class BinarySizeTest {
         ATS_CONSOLE_LARGE_RESOURCE_PATH_ALLOWLIST,
         ATS_CONSOLE_BINARY_SOURCE_PATH,
         BINARY_SIZE_TEST_SOURCE_PATH + "#ATS_CONSOLE_LARGE_RESOURCE_PATH_ALLOWLIST");
+  }
+
+  @Test
+  public void checkXtsTradefedAgentBinarySize() throws Exception {
+    BinarySizeChecker.checkBinarySize(
+        "xts_tradefed_agent_deploy.jar",
+        MAX_XTS_TRADEFED_AGENT_BINARY_SIZE_BYTE,
+        XTS_TRADEFED_AGENT_PATH,
+        XTS_TRADEFED_AGENT_SOURCE_PATH);
   }
 }

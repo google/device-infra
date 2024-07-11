@@ -30,6 +30,8 @@ import javax.annotation.Nullable;
 
 /** The logger for the TradefedInvocationAgent. */
 public class TradefedInvocationAgentLogger {
+
+  @SuppressWarnings("MismatchedQueryAndUpdateOfCollection")
   private static final Map<String, Logger> configuredLoggers = new ConcurrentHashMap<>();
 
   private static final Formatter TRADEFED_FORMATTER = new TradefedFormatter();

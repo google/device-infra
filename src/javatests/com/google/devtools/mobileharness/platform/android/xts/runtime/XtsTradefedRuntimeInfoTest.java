@@ -32,14 +32,14 @@ public final class XtsTradefedRuntimeInfoTest {
   public void xtsTradefedRuntimeInfo_convertString() {
     ImmutableList<TradefedInvocation> invocations =
         ImmutableList.of(
-            TradefedInvocation.of(ImmutableList.of("left", "123", "abc"), "failed"),
-            TradefedInvocation.of(ImmutableList.of("right", "11"), "passed"),
-            TradefedInvocation.of(ImmutableList.of("top"), ""),
-            TradefedInvocation.of(ImmutableList.of(), "passed"));
+            new TradefedInvocation(ImmutableList.of("left", "123", "abc"), "failed"),
+            new TradefedInvocation(ImmutableList.of("right", "11"), "passed"),
+            new TradefedInvocation(ImmutableList.of("top"), ""),
+            new TradefedInvocation(ImmutableList.of(), "passed"));
     XtsTradefedRuntimeInfo info =
-        XtsTradefedRuntimeInfo.of(invocations, Instant.ofEpochMilli(1234567890L));
+        new XtsTradefedRuntimeInfo(invocations, Instant.ofEpochMilli(1234567890L));
     XtsTradefedRuntimeInfo intoWithoutInvocations =
-        XtsTradefedRuntimeInfo.of(ImmutableList.of(), Instant.ofEpochMilli(1234567890L));
+        new XtsTradefedRuntimeInfo(ImmutableList.of(), Instant.ofEpochMilli(1234567890L));
 
     assertThat(XtsTradefedRuntimeInfo.decodeFromString(info.encodeToString())).isEqualTo(info);
     assertThat(XtsTradefedRuntimeInfo.decodeFromString(intoWithoutInvocations.encodeToString()))
@@ -49,12 +49,12 @@ public final class XtsTradefedRuntimeInfoTest {
   @Test
   public void tradefedInvocation_convertString() {
     TradefedInvocation invocation =
-        TradefedInvocation.of(ImmutableList.of("left", "123", "abc"), "failed");
+        new TradefedInvocation(ImmutableList.of("left", "123", "abc"), "failed");
     TradefedInvocation invocationWithoutStatus =
-        TradefedInvocation.of(ImmutableList.of("left", "123", "abc", "efg"), "");
+        new TradefedInvocation(ImmutableList.of("left", "123", "abc", "efg"), "");
     TradefedInvocation invocationWithoutDevices =
-        TradefedInvocation.of(ImmutableList.of(), "failed");
-    TradefedInvocation emptyInvocation = TradefedInvocation.of(ImmutableList.of(), "");
+        new TradefedInvocation(ImmutableList.of(), "failed");
+    TradefedInvocation emptyInvocation = new TradefedInvocation(ImmutableList.of(), "");
 
     assertThat(TradefedInvocation.decodeFromString(invocation.encodeToString()))
         .isEqualTo(invocation);

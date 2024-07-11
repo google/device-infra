@@ -16,18 +16,16 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.runtime;
 
-import com.google.auto.value.AutoValue;
-import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.concurrent.GuardedBy;
 
 /** Monitor in TF process to monitor runtime info. */
@@ -65,7 +63,7 @@ public class XtsTradefedRuntimeInfoMonitor {
   public void onInvocationEnter(Object testInvocation, Object invocationContext) {
     synchronized (runningInvocations) {
       runningInvocations.computeIfAbsent(
-          testInvocation, invocation -> Invocation.of(invocation, invocationContext));
+          testInvocation, invocation -> new Invocation(invocation, invocationContext));
     }
     triggerAsyncUpdate();
   }
@@ -104,7 +102,7 @@ public class XtsTradefedRuntimeInfoMonitor {
 
         // Updates invocations to file.
         if (needUpdate) {
-          ImmutableList.Builder<TradefedInvocation> invocations = ImmutableList.builder();
+          List<TradefedInvocation> invocations = new ArrayList<>();
           synchronized (runningInvocations) {
             for (Invocation invocation : runningInvocations.values()) {
               invocations.add(invocation.update());
@@ -112,7 +110,7 @@ public class XtsTradefedRuntimeInfoMonitor {
           }
 
           XtsTradefedRuntimeInfo runtimeInfo =
-              XtsTradefedRuntimeInfo.of(invocations.build(), Instant.now());
+              new XtsTradefedRuntimeInfo(invocations, Instant.now());
           doUpdate(runtimeInfoFilePath, runtimeInfo);
         }
       }
@@ -139,55 +137,53 @@ public class XtsTradefedRuntimeInfoMonitor {
     }
   }
 
-  @AutoValue
-  abstract static class Invocation {
+  private static class Invocation {
 
     /** {@code com.android.tradefed.invoker.ITestInvocation}. */
-    abstract Object testInvocation();
+    private final Object testInvocation;
 
     /** {@code com.android.tradefed.invoker.IInvocationContext}. */
-    abstract Object invocationContext();
+    private final Object invocationContext;
 
     /** TradefedInvocation generated from last {@link #update()}. */
-    abstract AtomicReference<TradefedInvocation> previousInvocation();
+    private volatile TradefedInvocation previousInvocation;
+
+    private Invocation(Object testInvocation, Object invocationContext) {
+      this.testInvocation = testInvocation;
+      this.invocationContext = invocationContext;
+      this.previousInvocation = TradefedInvocation.getDefaultInstance();
+    }
 
     /**
      * Whether {@link #update()} will generate a different TradefedInvocation compared with {@link
-     * #previousInvocation()}.
+     * #previousInvocation}.
      */
     private boolean needUpdate() {
-      TradefedInvocation previousInvocation = previousInvocation().get();
+      TradefedInvocation previousInvocation = this.previousInvocation;
       return !previousInvocation.status().equals(getInvocationStatus())
           || !previousInvocation.deviceIds().equals(getDeviceIds());
     }
 
-    /** Updates and returns a new {@link #previousInvocation()}. */
+    /** Updates and returns a new {@link #previousInvocation}. */
     private TradefedInvocation update() {
       TradefedInvocation newInvocation =
-          TradefedInvocation.of(ImmutableList.copyOf(getDeviceIds()), getInvocationStatus());
-      previousInvocation().set(newInvocation);
+          new TradefedInvocation(getDeviceIds(), getInvocationStatus());
+      previousInvocation = newInvocation;
       return newInvocation;
     }
 
     private String getInvocationStatus() {
-      return testInvocation().toString();
+      return testInvocation.toString();
     }
 
     @SuppressWarnings("unchecked")
     private List<String> getDeviceIds() {
       try {
         return (List<String>)
-            invocationContext().getClass().getMethod("getSerials").invoke(invocationContext());
+            invocationContext.getClass().getMethod("getSerials").invoke(invocationContext);
       } catch (ReflectiveOperationException e) {
         throw new LinkageError("Failed to call IInvocationContext.getSerials()", e);
       }
-    }
-
-    private static Invocation of(Object testInvocation, Object invocationContext) {
-      return new AutoValue_XtsTradefedRuntimeInfoMonitor_Invocation(
-          testInvocation,
-          invocationContext,
-          new AtomicReference<>(TradefedInvocation.getDefaultInstance()));
     }
   }
 }

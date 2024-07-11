@@ -23,9 +23,12 @@ java_binary(
     ],
     visibility = [
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/agent:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/size:__pkg__",
     ],
     deps = [
         ":tradefed_invocation_agent_logger",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/runtime:xts_tradefed_runtime_info_monitor",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:net_bytebuddy_byte_buddy",
     ],
@@ -34,5 +37,7 @@ java_binary(
 java_library(
     name = "tradefed_invocation_agent_logger",
     srcs = ["TradefedInvocationAgentLogger.java"],
-    deps = ["@maven//:com_google_code_findbugs_jsr305"],
+    deps = [
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
 )
