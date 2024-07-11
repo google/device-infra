@@ -399,7 +399,7 @@ class RunCommandHandler {
         + String.format("PASSED TESTCASES            : %s\n", totalPassedTestNumber)
         + String.format("FAILED TESTCASES            : %s\n", totalFailedTestNumber)
         + (totalSkippedTestNumber > 0
-            ? String.format("SKIPPED TESTCASES           : %s\n", totalSkippedTestNumber)
+            ? String.format("IGNORED TESTCASES           : %s\n", totalSkippedTestNumber)
             : "")
         + (totalAssumeFailureTestNumber > 0
             ? String.format("ASSUMPTION_FAILURE TESTCASES: %s\n", totalAssumeFailureTestNumber)

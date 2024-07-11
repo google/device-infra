@@ -131,7 +131,7 @@ public final class MoblyReportParserTest {
                         .setName("HelloWorldTest2")
                         .addTest(
                             ReportProto.Test.newBuilder()
-                                .setResult("SKIPPED")
+                                .setResult("IGNORED")
                                 .setSkipped(true)
                                 .setName("test_hello_world2_1"))
                         .addTest(

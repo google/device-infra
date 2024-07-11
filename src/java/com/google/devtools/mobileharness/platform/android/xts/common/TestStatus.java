@@ -64,7 +64,8 @@ public enum TestStatus {
       case ERROR:
         return "fail";
       case SKIP:
-        return TestStatus.SKIPPED.toString();
+        // Skipped Mobly test is considered as ignored in the report
+        return TestStatus.IGNORED.toString();
       case NULL:
         return TestStatus.INCOMPLETE.toString();
       default:
