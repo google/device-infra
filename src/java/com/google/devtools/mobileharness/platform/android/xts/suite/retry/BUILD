@@ -109,7 +109,6 @@ java_library(
     srcs = ["RetryReportMerger.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
     ],
     deps = [
