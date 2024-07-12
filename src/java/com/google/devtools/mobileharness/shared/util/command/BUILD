@@ -26,6 +26,7 @@ java_library(
     ),
     visibility = [
         "//:deviceinfra_all_pkg",
+        "//java/com/google/testing/platform/cats/plugin/androidperfetto:__pkg__",
     ],
     exports = [
         ":command_result",
@@ -53,7 +54,7 @@ java_library(
     srcs = [
         "CommandResult.java",
     ],
-    visibility = ["//visibility:private"],
+    visibility = ["//java/com/google/testing/platform/cats/plugin/androidperfetto:__pkg__"],
     deps = [
         "@maven//:com_google_guava_guava",
     ],
