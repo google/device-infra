@@ -26,13 +26,25 @@ public class XtsConstants {
   public static final String TRADEFED_JOBS_PASSED = "tradefed_jobs_passed";
 
   public static final String TRADEFED_OUTPUT_FILE_NAME = "xts_tf_output.log";
+
+  /** A MH test property key of TF invocation dir name. */
   public static final String TRADEFED_INVOCATION_DIR_NAME = "tf_inv_dir_name";
+
   public static final String TRADEFED_INVOCATION_DIR_NAME_PREFIX = "inv_";
+
+  /**
+   * A MH test property key of TF runtime info file path.
+   *
+   * <p>Use {@linkplain
+   * com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil
+   * XtsTradefedRuntimeInfoFileUtil} to read its content.
+   */
+  public static final String TRADEFED_RUNTIME_INFO_FILE_PATH = "tf_runtime_info_file_path";
 
   /** A MH job property key to indicate whether xTS dynamic download is enabled. */
   public static final String IS_XTS_DYNAMIC_DOWNLOAD_ENABLED = "is_xts_dynamic_download_enabled";
 
-  /** A path relative to the test temp dir. */
+  /** A MH test property key of path relative to the test temp dir. */
   public static final String XTS_DYNAMIC_DOWNLOAD_PATH_TEST_PROPERTY_KEY =
       "xts_dynamic_download_path";
 

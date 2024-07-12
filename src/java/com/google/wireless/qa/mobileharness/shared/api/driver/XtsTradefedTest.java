@@ -336,14 +336,23 @@ public class XtsTradefedTest extends BaseDriver
       throws MobileHarnessException, InterruptedException {
     ImmutableMap<String, String> env =
         getEnvironmentToTradefedConsole(tmpXtsRootDir, xtsType, spec);
+
+    // Create runtime info file path.
+    Path runtimeInfoFilePath = Path.of(testInfo.getTmpFileDir()).resolve("tf_runtime_info");
+    testInfo
+        .properties()
+        .add(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_PATH, runtimeInfoFilePath.toString());
+
+    // Creates JVM flags.
     ImmutableList.Builder<String> jvmFlagsBuilder =
         ImmutableList.<String>builder()
             .add(
                 "-Xmx" + Flags.instance().xtsTfXmx.getNonNull(), "-XX:+HeapDumpOnOutOfMemoryError");
     if (Flags.instance().enableXtsTradefedInvocationAgent.getNonNull()) {
       jvmFlagsBuilder.add(
-          String.format("-javaagent:%s=%s", getTradefedAgentFilePath(), /* agentConfigPath */ ""));
+          String.format("-javaagent:%s=%s", getTradefedAgentFilePath(), runtimeInfoFilePath));
     }
+
     ImmutableList<String> cmd =
         XtsCommandUtil.getXtsJavaCommand(
             xtsType,

@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
@@ -26,7 +27,6 @@ import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toPro
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
 import static com.google.protobuf.TextFormat.shortDebugString;
 
-import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
@@ -55,8 +55,13 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartedEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionStartingEvent;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.WithProto;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.message.proto.TestMessageProto.XtsTradefedRunCancellation;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
+import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil.XtsTradefedRuntimeInfoFileDetail;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil.KillSignal;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.Timestamp;
@@ -67,6 +72,8 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEve
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -74,11 +81,13 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.UnaryOperator;
 import java.util.logging.Level;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 
@@ -105,6 +114,8 @@ public class AtsSessionPlugin {
   private final ListModulesCommandHandler listModulesCommandHandler;
   private final RunCommandHandler runCommandHandler;
   private final TestMessageUtil testMessageUtil;
+  private final XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil;
+  private final LocalFileUtil localFileUtil;
   private final ListeningScheduledExecutorService scheduledThreadPool;
 
   @GuardedBy("itself")
@@ -131,7 +142,9 @@ public class AtsSessionPlugin {
       ListDevicesCommandHandler listDevicesCommandHandler,
       ListModulesCommandHandler listModulesCommandHandler,
       RunCommandHandler runCommandHandler,
-      TestMessageUtil testMessageUtil) {
+      TestMessageUtil testMessageUtil,
+      XtsTradefedRuntimeInfoFileUtil xtsTradefedRuntimeInfoFileUtil,
+      LocalFileUtil localFileUtil) {
     this.sessionInfo = sessionInfo;
     this.dumpEnvVarCommandHandler = dumpEnvVarCommandHandler;
     this.dumpStackCommandHandler = dumpStackCommandHandler;
@@ -140,6 +153,8 @@ public class AtsSessionPlugin {
     this.listModulesCommandHandler = listModulesCommandHandler;
     this.runCommandHandler = runCommandHandler;
     this.testMessageUtil = testMessageUtil;
+    this.xtsTradefedRuntimeInfoFileUtil = xtsTradefedRuntimeInfoFileUtil;
+    this.localFileUtil = localFileUtil;
     this.scheduledThreadPool =
         ThreadPools.createStandardScheduledThreadPool(
             "ats-session-plugin-scheduled-thread-pool-" + sessionInfo.getSessionId(),
@@ -312,7 +327,7 @@ public class AtsSessionPlugin {
             .collect(toImmutableList());
 
     synchronized (runningTestsLock) {
-      AtomicReference<Invocations.Builder> testInvocations = new AtomicReference<>();
+      AtomicReference<Invocations> testInvocations = new AtomicReference<>();
       setRunCommandState(
           oldState -> {
             String testId = testInfo.locator().getId();
@@ -331,15 +346,14 @@ public class AtsSessionPlugin {
                             .setCommandId(oldState.getCommandId())
                             .setStartTime(now)
                             .addAllDeviceId(deviceSerials)
-                            .setStateSummary(config.getRunCommand().getTestPlan())));
-            return oldState.toBuilder()
-                .putRunningInvocation(testId, testInvocations.get().build())
-                .build();
+                            .setStateSummary(config.getRunCommand().getTestPlan()))
+                    .build());
+            return oldState.toBuilder().putRunningInvocation(testId, testInvocations.get()).build();
           });
 
       if (tfTest) {
         runningTradefedTests.put(
-            testInfo.locator().getId(), RunningTradefedTest.of(testInfo, testInvocations.get()));
+            testInfo.locator().getId(), new RunningTradefedTest(testInfo, testInvocations.get()));
       }
     }
 
@@ -428,18 +442,18 @@ public class AtsSessionPlugin {
             oldState -> {
               RunCommandState.Builder result = oldState.toBuilder();
               for (RunningTradefedTest updatedTest : updatedTests) {
-                String testId = updatedTest.testInfo().locator().getId();
+                String testId = updatedTest.testInfo.locator().getId();
 
                 // Checks if the test still exists.
                 if (oldState.containsRunningInvocation(testId)) {
-                  Invocations invocation = updatedTest.invocations().build();
+                  Invocations invocations = updatedTest.invocations;
                   logger
                       .atInfo()
                       .with(IMPORTANCE, IMPORTANT)
                       .log(
                           "Updated invocation info of test [%s]: %s",
-                          testId, shortDebugString(invocation));
-                  result.putRunningInvocation(testId, invocation);
+                          testId, shortDebugString(invocations));
+                  result.putRunningInvocation(testId, invocations);
                 }
               }
               return result.build();
@@ -522,23 +536,79 @@ public class AtsSessionPlugin {
         .getRunCommandState();
   }
 
-  @AutoValue
-  abstract static class RunningTradefedTest {
+  private class RunningTradefedTest {
 
-    abstract TestInfo testInfo();
+    private final TestInfo testInfo;
 
-    abstract Invocations.Builder invocations();
+    /** It should contain at least one invocation. */
+    private final Invocations initialInvocations;
 
-    abstract AtomicReference<Instant> runtimeInfoFileLastModifiedTime();
+    /** Updated by {@link #update()}. */
+    private volatile Invocations invocations;
 
-    /** Returns whether {@link #invocations()} has been updated. */
-    private boolean update() {
-      return false; // TODO: Reads runtime info from files.
+    /** Updated by {@link #update()}. */
+    @Nullable private volatile Instant runtimeInfoFileLastModifiedTime;
+
+    private RunningTradefedTest(TestInfo testInfo, Invocations initialInvocations) {
+      checkArgument(initialInvocations.getInvocationCount() > 0);
+      this.testInfo = testInfo;
+      this.initialInvocations = initialInvocations;
+      this.invocations = initialInvocations;
     }
 
-    private static RunningTradefedTest of(TestInfo testInfo, Invocations.Builder invocations) {
-      return new AutoValue_AtsSessionPlugin_RunningTradefedTest(
-          testInfo, invocations, new AtomicReference<>());
+    /** Returns whether {@link #invocations} has been updated. */
+    private boolean update() {
+      // Checks if the file exists.
+      Optional<Path> runtimeInfoFilePath =
+          testInfo
+              .properties()
+              .getOptional(XtsConstants.TRADEFED_RUNTIME_INFO_FILE_PATH)
+              .filter(localFileUtil::isFileExist)
+              .map(Path::of);
+      if (runtimeInfoFilePath.isEmpty()) {
+        return false;
+      }
+
+      // Reads the file.
+      Optional<XtsTradefedRuntimeInfoFileDetail> fileDetailOptional;
+      try {
+        fileDetailOptional =
+            xtsTradefedRuntimeInfoFileUtil.readInfo(
+                runtimeInfoFilePath.get(), runtimeInfoFileLastModifiedTime);
+      } catch (IOException | RuntimeException | Error e) {
+        logger.atWarning().log(
+            "Failed to read Tradefed runtime info of test %s from file %s",
+            testInfo.locator().getId(), runtimeInfoFilePath.get());
+        return false;
+      }
+
+      // If the file doesn't exist or is not updated, returns directly.
+      if (fileDetailOptional.isEmpty()) {
+        return false;
+      }
+
+      // Updates invocations.
+      XtsTradefedRuntimeInfoFileDetail fileDetail = fileDetailOptional.get();
+      invocations = convert(fileDetail.runtimeInfo());
+      runtimeInfoFileLastModifiedTime = fileDetail.lastModifiedTime();
+      return true;
+    }
+
+    private Invocations convert(XtsTradefedRuntimeInfo runtimeInfo) {
+      Invocation initialFirstInvocation = initialInvocations.getInvocation(0);
+      return initialInvocations.toBuilder()
+          .clearInvocation()
+          .addAllInvocation(
+              runtimeInfo.invocations().stream()
+                  .map(
+                      invocation ->
+                          initialFirstInvocation.toBuilder()
+                              .clearDeviceId()
+                              .addAllDeviceId(invocation.deviceIds())
+                              .setStateSummary(invocation.status())
+                              .build())
+                  .collect(toImmutableList()))
+          .build();
     }
   }
 }
