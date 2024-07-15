@@ -45,6 +45,7 @@ java_library(
 
 junit_test_suites(
     name = "tests",
+    timeout = "moderate",
     sizes = [
         "small",
     ],
