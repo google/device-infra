@@ -16,12 +16,12 @@
 
 package com.google.devtools.mobileharness.platform.android.xts.agent;
 
-import static com.google.common.truth.Correspondence.transforming;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.truth.Correspondence;
+import com.google.common.truth.Correspondence.BinaryPredicate;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfo.TradefedInvocation;
 import com.google.devtools.mobileharness.platform.android.xts.runtime.XtsTradefedRuntimeInfoFileUtil;
@@ -95,19 +95,19 @@ public class TradefedInvocationAgentTest {
       }
     }
 
-    Correspondence<XtsTradefedRuntimeInfo, List<TradefedInvocation>> hasInvocationsThat =
-        transforming(
-            (Function<XtsTradefedRuntimeInfo, List<TradefedInvocation>>)
-                XtsTradefedRuntimeInfo::invocations,
-            "has invocations that");
+    Correspondence<XtsTradefedRuntimeInfo, List<List<String>>> correspondence =
+        Correspondence.from(
+            (BinaryPredicate<XtsTradefedRuntimeInfo, List<List<String>>>)
+                (actual, expected) ->
+                    actual.invocations().stream()
+                        .map(TradefedInvocation::deviceIds)
+                        .collect(toImmutableList())
+                        .equals(expected),
+            "has invocations containing devices that");
     assertThat(runtimeInfos)
-        .comparingElementsUsing(hasInvocationsThat)
-        .contains(
-            ImmutableList.of(
-                new TradefedInvocation(ImmutableList.of("device1", "device2"), "running")));
-    assertThat(runtimeInfos)
-        .comparingElementsUsing(hasInvocationsThat)
-        .contains(ImmutableList.of());
+        .comparingElementsUsing(correspondence)
+        .contains(ImmutableList.of(ImmutableList.of("device1", "device2")));
+    assertThat(runtimeInfos).comparingElementsUsing(correspondence).contains(ImmutableList.of());
 
     CommandResult commandResult = commandProcess.await();
     assertThat(commandResult.exitCode()).isEqualTo(0);
