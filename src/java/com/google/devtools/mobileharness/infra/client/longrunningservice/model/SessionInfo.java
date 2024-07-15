@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.model;
 
-import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionOutput;

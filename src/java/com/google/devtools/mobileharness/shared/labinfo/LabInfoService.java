@@ -21,7 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.google.common.collect.Maps.immutableEntry;
-import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Comparator.comparing;

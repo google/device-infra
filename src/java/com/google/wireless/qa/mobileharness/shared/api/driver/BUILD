@@ -170,6 +170,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
         "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/linecallback:command_output_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",

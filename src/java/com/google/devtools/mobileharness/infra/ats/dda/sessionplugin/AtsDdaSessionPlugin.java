@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.dda.sessionplugin;
 
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
-import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;

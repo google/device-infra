@@ -26,6 +26,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:exec_test",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:prepare_test",
         "//src/java/com/google/devtools/mobileharness/shared/constant/environment",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/version/rpc/stub",
         "@maven//:com_google_guava_guava",

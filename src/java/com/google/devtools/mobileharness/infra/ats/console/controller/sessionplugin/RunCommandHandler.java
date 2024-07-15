@@ -19,7 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.controller.sessionpl
 import static com.google.common.base.Ascii.toUpperCase;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
-import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;

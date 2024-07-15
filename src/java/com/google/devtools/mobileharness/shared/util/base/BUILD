@@ -32,6 +32,14 @@ java_library(
 )
 
 java_library(
+    name = "proto_text_format",
+    srcs = ["ProtoTextFormat.java"],
+    deps = [
+        "@com_google_protobuf//:protobuf_java",
+    ],
+)
+
+java_library(
     name = "stack_set",
     srcs = ["StackSet.java"],
     deps = [

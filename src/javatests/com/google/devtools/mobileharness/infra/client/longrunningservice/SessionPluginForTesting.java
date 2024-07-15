@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
 import static com.google.common.collect.Iterables.getOnlyElement;
-import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.eventbus.Subscribe;

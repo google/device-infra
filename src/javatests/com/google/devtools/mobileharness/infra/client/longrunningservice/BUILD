@@ -105,6 +105,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/testrunner/event/test",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_event",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/client/api/event:job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",

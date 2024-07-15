@@ -19,10 +19,10 @@ package com.google.devtools.mobileharness.infra.client.api.mode.ats;
 import static com.google.common.base.Ascii.toLowerCase;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
-import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;

@@ -19,8 +19,8 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.getUnchecked;
 import static com.google.common.util.concurrent.Futures.whenAllComplete;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
-import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;

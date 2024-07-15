@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.server.sessionplugin;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;

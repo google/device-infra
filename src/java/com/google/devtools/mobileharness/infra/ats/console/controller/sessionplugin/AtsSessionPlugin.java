@@ -20,12 +20,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toJavaDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoTimestamp;
-import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.Subscribe;

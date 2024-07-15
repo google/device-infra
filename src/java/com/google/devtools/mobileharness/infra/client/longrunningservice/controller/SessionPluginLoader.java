@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.longrunningservice.controller;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static java.util.Arrays.stream;
 
 import com.google.auto.value.AutoValue;

@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.command;
 
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.error.MoreThrowables.shortDebugString;
-import static com.google.protobuf.TextFormat.shortDebugString;
 
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;

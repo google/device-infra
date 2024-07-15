@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.infra.lab.controller.util;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.FluentLogger;
@@ -39,7 +39,6 @@ import com.google.wireless.qa.mobileharness.shared.model.job.in.ScopedSpecs;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.spec.JobSpecHelper.FilePathVisitor;
-import com.google.wireless.qa.mobileharness.shared.proto.spec.JobSpec;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -265,8 +264,8 @@ public class LabFileNotifier {
   }
 
   /**
-   * A visitor of {@link JobSpec}. Used to replace the original path in JobSpec (from sender) with
-   * the target path (in receiver).
+   * A visitor of {@linkplain com.google.wireless.qa.mobileharness.shared.proto.spec.JobSpec}. Used
+   * to replace the original path in JobSpec (from sender) with the target path (in receiver).
    */
   private class SpecFileReplacer extends FilePathVisitor {
 

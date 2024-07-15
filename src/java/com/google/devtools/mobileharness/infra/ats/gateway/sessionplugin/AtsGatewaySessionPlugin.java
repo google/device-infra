@@ -16,7 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.ats.gateway.sessionplugin;
 
-import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;

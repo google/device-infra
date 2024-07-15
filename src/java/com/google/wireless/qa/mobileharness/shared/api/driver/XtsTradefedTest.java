@@ -18,9 +18,9 @@ package com.google.wireless.qa.mobileharness.shared.api.driver;
 
 import static com.google.common.base.StandardSystemProperty.JAVA_IO_TMPDIR;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
-import static com.google.protobuf.TextFormat.shortDebugString;
 import static java.lang.Math.min;
 import static java.util.Objects.requireNonNull;
 

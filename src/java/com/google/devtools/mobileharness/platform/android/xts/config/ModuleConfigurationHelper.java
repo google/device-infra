@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.platform.android.xts.config;
 
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 
 import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ImmutableMap;

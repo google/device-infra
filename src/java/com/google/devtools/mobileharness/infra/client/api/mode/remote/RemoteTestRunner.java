@@ -17,7 +17,7 @@
 package com.google.devtools.mobileharness.infra.client.api.mode.remote;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.protobuf.TextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.toCollection;
 
