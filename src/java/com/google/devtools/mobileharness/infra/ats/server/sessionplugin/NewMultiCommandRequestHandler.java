@@ -53,6 +53,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Tes
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -436,9 +437,6 @@ final class NewMultiCommandRequestHandler {
         RemoteFileType.ATS_FILE_SERVER.prefix());
 
     if (!request.getRetryPreviousSessionId().isEmpty()) {
-      sessionRequestInfoBuilder.setTestPlan("retry");
-      // TODO: customize retry type based on UI input.
-      sessionRequestInfoBuilder.setRetrySessionId(request.getRetryPreviousSessionId());
       try {
         URL outputUrl = URI.create(request.getTestEnvironment().getOutputFileUploadUrl()).toURL();
         if (outputUrl.getProtocol().equals("file")) {
@@ -448,16 +446,17 @@ final class NewMultiCommandRequestHandler {
               Path.of(outputUrl.getPath())
                   .resolve(request.getRetryPreviousSessionId())
                   .resolve(previousCommandId);
+          localFileUtil.checkFile(outputDirPath.resolve(SuiteCommon.TEST_RESULT_PB_FILE_NAME));
           sessionRequestInfoBuilder.setRetryResultDir(outputDirPath.toString());
+          sessionRequestInfoBuilder.setTestPlan("retry");
+          // TODO: customize retry type based on UI input.
+          sessionRequestInfoBuilder.setRetrySessionId(request.getRetryPreviousSessionId());
         }
-      } catch (MalformedURLException e) {
-        throw new MobileHarnessException(
-            InfraErrorId.ATS_SERVER_INVALID_REQUEST_ERROR,
-            String.format(
-                "Failed to parse output file upload url: %s, skip processing result for session:"
-                    + " %s.",
-                request.getTestEnvironment().getOutputFileUploadUrl(), sessionInfo.getSessionId()),
-            e);
+      } catch (MalformedURLException | MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to parse prevous session's output file, skip processing result for previous"
+                + " session: %s. Will rerun the command directly.",
+            request.getRetryPreviousSessionId());
       }
     }
 

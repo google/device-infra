@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMultimap;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
@@ -85,6 +86,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -108,6 +110,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
   @Bind @Mock private XtsTypeLoader xtsTypeLoader;
+  @Bind @Spy private LocalFileUtil localFileUtil = new LocalFileUtil();
 
   @Mock private SessionInfo sessionInfo;
   @Mock private JobInfo jobInfo;
@@ -288,6 +291,9 @@ public final class NewMultiCommandRequestHandlerTest {
     when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
         .thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    Mockito.doReturn(Path.of("/path/to/previous_result.pb"))
+        .when(localFileUtil)
+        .checkFile(any(Path.class));
     request =
         request.toBuilder()
             .setRetryPreviousSessionId("retry_previous_session_id")
@@ -329,6 +335,63 @@ public final class NewMultiCommandRequestHandlerTest {
     String retryResultDir = outputFileUploadPath + "/retry_previous_session_id/" + commandId;
     assertThat(sessionRequestInfo.retryResultDir()).hasValue(retryResultDir);
 
+    // Verify that handler has mounted the zip file.
+    Command mountCommand =
+        Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(mountCommand);
+    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
+    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
+  }
+
+  @Test
+  public void addTradefedJobs_retryResultNotFound_runAsNewAttempt() throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+        .thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    MobileHarnessException fakeException =
+        new MobileHarnessException(
+            BasicErrorId.LOCAL_FILE_IS_DIR, "Failed to find retry result file");
+    doThrow(fakeException).when(localFileUtil).checkFile(any(Path.class));
+    request =
+        request.toBuilder()
+            .setRetryPreviousSessionId("retry_previous_session_id")
+            .setRetryType("FAILED")
+            .build();
+
+    // Trigger the handler.
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
+    assertThat(commandId)
+        .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+
+    verify(sessionInfo).addJob(jobInfo);
+    verify(properties).add("xts-tradefed-job", "true");
+    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify sessionRequestInfo has been correctly generated.
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("cts-plan");
+    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
+    assertThat(sessionRequestInfo.testName()).hasValue("test1");
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    String zipFile = "/path/to/xts/zip/file.zip";
+    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
+    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
+    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
+    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
+    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
+    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
+    assertThat(sessionRequestInfo.retrySessionId()).isEmpty();
+    assertThat(sessionRequestInfo.retryResultDir()).isEmpty();
     // Verify that handler has mounted the zip file.
     Command mountCommand =
         Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
