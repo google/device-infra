@@ -19,10 +19,10 @@ java_library(
     name = "ats_dda_stub",
     srcs = ["AtsDdaStub.java"],
     visibility = [
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/dda:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
     ],
     deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/infra/ats/dda/proto:session_plugin_java_proto",

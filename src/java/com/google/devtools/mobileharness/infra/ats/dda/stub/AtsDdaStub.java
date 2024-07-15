@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.time.TimeUtils.toProtoDuration;
 
 import com.google.auto.value.AutoValue;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.devtools.common.metrics.stability.converter.DeserializedException;
@@ -118,8 +117,7 @@ public class AtsDdaStub {
         ddaTimeout);
   }
 
-  @VisibleForTesting
-  String createSession(
+  public String createSession(
       String sessionName, ImmutableMap<String, String> dimensions, Duration ddaTimeout)
       throws GrpcExceptionWithErrorId {
     AtsDdaSessionPluginConfig pluginConfig =
