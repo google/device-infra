@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.controller.device;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static java.util.stream.Collectors.joining;
 
@@ -240,6 +242,7 @@ public class LocalDeviceDispatch {
         if (runner.isStopped() && future.isDone()) {
           devices.remove(id);
           logger.atInfo().log("Runner thread of dead device %s(%s) stopped", id, deadReason);
+          logger.atInfo().with(IMPORTANCE, IMPORTANT).log("Device becomes not available: %s", id);
           logger.atInfo().log("Post LocalDeviceDownEvent");
           globalInternalBus.post(
               new LocalDeviceDownEvent(
@@ -272,7 +275,7 @@ public class LocalDeviceDispatch {
       }
 
       isChanged = true;
-      logger.atInfo().log("New device %s", newId);
+      logger.atInfo().with(IMPORTANCE, IMPORTANT).log("New device %s", newId);
       LocalDeviceRunner runner;
       try {
         DeviceStat deviceStat = labStat.getOrCreateDeviceStat(newId);

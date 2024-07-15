@@ -69,6 +69,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/lab:locator",
         "//src/java/com/google/devtools/mobileharness/api/testrunner/device/cache:device_cache_manager",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device/external:external_device_manager",
+        "//src/java/com/google/devtools/mobileharness/shared/constant:log_record_importance",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:more_futures",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",

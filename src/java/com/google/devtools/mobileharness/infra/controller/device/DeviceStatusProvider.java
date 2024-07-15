@@ -24,9 +24,9 @@ import javax.annotation.Nullable;
 
 /** Interface for providing device status. */
 public interface DeviceStatusProvider {
-  /** Inforamtion with a device and the status info. */
+  /** Information with a device and the status info. */
   @AutoValue
-  public abstract static class DeviceWithStatusInfo {
+  abstract class DeviceWithStatusInfo {
     public abstract Device device();
 
     public abstract DeviceStatusInfo deviceStatusInfo();
