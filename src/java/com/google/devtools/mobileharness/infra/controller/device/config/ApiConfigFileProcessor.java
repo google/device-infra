@@ -28,12 +28,15 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDevic
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.LabDevice.LabDeviceConfig;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.service.deviceconfig.util.generator.DeviceConfigGenerator;
 import com.google.devtools.mobileharness.service.deviceconfig.util.generator.LabConfigGenerator;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.protobuf.TextFormat;
+import com.google.protobuf.TextFormat.ParseException;
 import com.google.protobuf.UninitializedMessageException;
 import com.google.wireless.qa.mobileharness.shared.proto.Config;
 import com.google.wireless.qa.mobileharness.shared.util.NetUtil;
@@ -76,38 +79,29 @@ public class ApiConfigFileProcessor {
   }
 
   public Optional<LabConfigAndDeviceConfigs> readApiConfigFile() throws MobileHarnessException {
-    String localConfigPath = Flags.instance().apiConfigFile.getNonNull();
-    if (localConfigPath.isEmpty()) {
+    String apiConfigPath = Flags.instance().apiConfigFile.getNonNull();
+    String labDeviceConfigPath = Flags.instance().labDeviceConfigFile.getNonNull();
+    if (!labDeviceConfigPath.isEmpty()) {
+      return readLabDeviceConfigFile(labDeviceConfigPath);
+    } else if (!apiConfigPath.isEmpty()) {
+      return readApiConfigFile(apiConfigPath);
+    } else {
       logger.atInfo().atMostEvery(10, MINUTES).log(
-          "Not load api config file because api_config flag is empty.");
+          "Not load api config file because both api_config and lab_device_config flag are empty.");
       return Optional.empty();
     }
-    return readApiConfigFile(localConfigPath);
   }
 
   @VisibleForTesting
   Optional<LabConfigAndDeviceConfigs> readApiConfigFile(String path) throws MobileHarnessException {
-    // Checks file.
-    try {
-      fileUtil.checkFile(path);
-    } catch (MobileHarnessException e) {
-      logger.atInfo().log("Skip loading config from file %s because it does not exist", path);
+    Optional<String> content = readConfigFileContent(path);
+    if (content.isEmpty()) {
       return Optional.empty();
     }
-
-    // Reads file.
-    logger.atInfo().log("Loading config from file: %s", path);
-    String text = fileUtil.readFile(path).trim();
-    if (text.isEmpty()) {
-      logger.atInfo().log("Config from file %s is empty", path);
-      return Optional.empty();
-    }
-    logger.atFine().log("Api config file content:\n%s", text);
-
     // Parses proto.
     Config.ApiConfig.Builder builder;
     try {
-      builder = ApiConfigProtoUtil.fromText(text);
+      builder = ApiConfigProtoUtil.fromText(content.get());
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       throw new MobileHarnessException(
           BasicErrorId.API_CONFIG_FILE_READ_ERROR, "Failed to convert text file to proto.", e);
@@ -129,6 +123,50 @@ public class ApiConfigFileProcessor {
       throw new MobileHarnessException(
           BasicErrorId.API_CONFIG_FILE_READ_ERROR, "Config file error: " + e.getMessage());
     }
+  }
+
+  @VisibleForTesting
+  Optional<LabConfigAndDeviceConfigs> readLabDeviceConfigFile(String path)
+      throws MobileHarnessException {
+    Optional<String> content = readConfigFileContent(path);
+    if (content.isEmpty()) {
+      return Optional.empty();
+    }
+
+    LabDeviceConfig.Builder labDeviceConfig = LabDeviceConfig.newBuilder();
+    try {
+      TextFormat.merge(content.get(), labDeviceConfig);
+    } catch (ParseException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LAB_DEVICE_CONFIG_FILE_READ_ERROR,
+          "Failed to convert text file to lab device config proto.",
+          e);
+    }
+    return Optional.of(
+        LabConfigAndDeviceConfigs.of(
+            labDeviceConfig.getLabConfig(),
+            ImmutableList.copyOf(labDeviceConfig.getDeviceConfigList())));
+  }
+
+  private Optional<String> readConfigFileContent(String path) throws MobileHarnessException {
+    // Checks file.
+    try {
+      fileUtil.checkFile(path);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().withCause(e).log(
+          "Skip loading config from file %s because it does not exist", path);
+      return Optional.empty();
+    }
+
+    // Reads file.
+    logger.atInfo().log("Loading config from file: %s", path);
+    String text = fileUtil.readFile(path).trim();
+    if (text.isEmpty()) {
+      logger.atWarning().log("Config from file %s is empty", path);
+      return Optional.empty();
+    }
+    logger.atInfo().log("Config file content:\n%s", text);
+    return Optional.of(text);
   }
 
   private LabConfigAndDeviceConfigs convertApiConfigToLabDeviceConfig(Config.ApiConfig apiConfig)
