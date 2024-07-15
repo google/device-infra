@@ -726,7 +726,8 @@ public final class RunCommand implements Callable<Integer> {
     }
 
     private void disableServerLogPrinterIfNecessary() {
-      if (RUNNING_COMMAND_COUNT.decrementAndGet() == 0) {
+      if (!Flags.instance().enableAtsConsoleOlcServerLog.getNonNull()
+          && RUNNING_COMMAND_COUNT.decrementAndGet() == 0) {
         try {
           serverLogPrinter.enable(false);
         } catch (MobileHarnessException | InterruptedException e) {
