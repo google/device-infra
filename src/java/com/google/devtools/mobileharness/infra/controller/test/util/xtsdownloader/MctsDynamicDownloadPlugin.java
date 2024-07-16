@@ -93,6 +93,7 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
           "armeabi-v7a", "arm",
           "armeabi-v7a-hard", "arm",
           "arm64-v8a", "arm64",
+          "x86", "x86_64",
           "x86_64", "x86_64");
   private final AndroidPackageManagerUtil androidPackageManagerUtil;
   private final AndroidAdbUtil adbUtil;
