@@ -535,6 +535,7 @@ public class SessionResultHandlerUtil {
     } else {
       invocationDir =
           localFileUtil.createTempDir(logRootDir, XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX);
+      localFileUtil.setFilePermission(invocationDir, "rwxr-xr-x");
     }
     Path testLogDir = prepareLogOrResultDirForTest(tradefedTestInfo, invocationDir);
 

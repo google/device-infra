@@ -390,6 +390,7 @@ public class XtsTradefedTest extends BaseDriver
       Path innocationPath =
           localFileUtil.createTempDir(
               logRootPath, XtsConstants.TRADEFED_INVOCATION_DIR_NAME_PREFIX);
+      localFileUtil.setFilePermission(innocationPath, "rwxr-xr-x");
       tfOutputPath =
           innocationPath
               .resolve(

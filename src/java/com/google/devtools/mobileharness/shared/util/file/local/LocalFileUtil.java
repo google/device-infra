@@ -437,7 +437,7 @@ public class LocalFileUtil {
     return tempDirectoryPath;
   }
 
-  /** Creates a temp file under the directory. */
+  /** Creates a temp file under the directory with default permission rwx------. */
   public Path createTempDir(Path parentDirPath, String fileNamePrefix)
       throws MobileHarnessException {
     try {
