@@ -52,6 +52,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",
         "//src/java/com/google/devtools/mobileharness/infra/master/rpc/stub/grpc:lab_info",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:count_down_set",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:channel_factory",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/stub:master_grpc_stub_helper",
         "//src/java/com/google/devtools/mobileharness/shared/util/command",

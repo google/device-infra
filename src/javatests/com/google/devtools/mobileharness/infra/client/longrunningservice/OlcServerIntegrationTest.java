@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
 import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
@@ -27,6 +28,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -67,6 +69,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stu
 import com.google.devtools.mobileharness.infra.master.rpc.stub.grpc.LabInfoGrpcStub;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoRequest;
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
+import com.google.devtools.mobileharness.shared.util.base.CountDownSet;
 import com.google.devtools.mobileharness.shared.util.comm.stub.ChannelFactory;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -90,9 +93,11 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import org.junit.After;
@@ -193,6 +198,8 @@ public class OlcServerIntegrationTest {
                                               .build()))
                                   .build())))
           .build();
+
+  private static final Pattern DEVICE_ID_PATTERN = Pattern.compile("NoOpDevice-\\d+");
 
   private final CommandExecutor commandExecutor = new CommandExecutor();
   private final LocalFileUtil localFileUtil = new LocalFileUtil();
@@ -449,8 +456,13 @@ public class OlcServerIntegrationTest {
     int noOpDeviceNum = 5;
 
     // Starts the OLC server.
-    CountDownLatch olcServerAllLocalDevicesFound = new CountDownLatch(noOpDeviceNum);
-    CountDownLatch olcServerAllRemoteDevicesFound = new CountDownLatch(noOpDeviceNum);
+    ImmutableList<String> deviceIds =
+        IntStream.range(0, noOpDeviceNum)
+            .boxed()
+            .map(i -> "NoOpDevice-" + i)
+            .collect(toImmutableList());
+    CountDownSet<String> olcServerUndetectedLocalDevices = new CountDownSet<>(deviceIds);
+    CountDownSet<String> olcServerUnreportedRemoteDevices = new CountDownSet<>(deviceIds);
 
     Command olcServerCommand =
         Command.of(
@@ -498,9 +510,9 @@ public class OlcServerIntegrationTest {
                       olcServerStderrBuilder.append(stderr).append('\n');
 
                       if (stderr.contains("New device NoOpDevice-")) {
-                        olcServerAllLocalDevicesFound.countDown();
+                        findAllDeviceIds(stderr).forEach(olcServerUndetectedLocalDevices::remove);
                       } else if (stderr.contains("Sign up lab") && stderr.contains("NoOpDevice-")) {
-                        olcServerAllRemoteDevicesFound.countDown();
+                        findAllDeviceIds(stderr).forEach(olcServerUnreportedRemoteDevices::remove);
                       }
                     }))
             .successfulStartCondition(line -> line.contains(SERVER_STARTED_SIGNAL))
@@ -521,7 +533,7 @@ public class OlcServerIntegrationTest {
 
     // Starts the lab server.
     if (enableAtsMode) {
-      CountDownLatch labServerAllLocalDevicesFound = new CountDownLatch(noOpDeviceNum);
+      CountDownSet<String> labServerUndetectedLocalDevices = new CountDownSet<>(deviceIds);
 
       int labServerGrpcPort = PortProber.pickUnusedPort();
       int labServerRpcPort = PortProber.pickUnusedPort();
@@ -576,7 +588,7 @@ public class OlcServerIntegrationTest {
                         labServerStderrBuilder.append(stderr).append('\n');
 
                         if (stderr.contains("New device NoOpDevice-")) {
-                          labServerAllLocalDevicesFound.countDown();
+                          findAllDeviceIds(stderr).forEach(labServerUndetectedLocalDevices::remove);
                         }
                       }))
               .successfulStartCondition(line -> line.contains("Lab server successfully started"))
@@ -595,22 +607,25 @@ public class OlcServerIntegrationTest {
       } catch (TimeoutException e) {
         throw new AssertionError("Lab server didn't start in 60 seconds", e);
       }
-      assertWithMessage("Lab server didn't detect all devices in 15 seconds")
-          .that(labServerAllLocalDevicesFound.await(15L, SECONDS))
-          .isTrue();
+      assertWithMessage("Lab server didn't detect all devices in 15 seconds\nundetected devices")
+          .that(labServerUndetectedLocalDevices.await(Duration.ofSeconds(15L)))
+          .isEmpty();
     }
 
     if (enableAtsMode) {
       // Verifies the remote device manager receives device signup successfully.
       assertWithMessage(
-              "The remote device manager has not received all device signups in 15 seconds")
-          .that(olcServerAllRemoteDevicesFound.await(15L, SECONDS))
-          .isTrue();
+              "The remote device manager has not received all device signups in 15 seconds\n"
+                  + "unreported devices")
+          .that(olcServerUnreportedRemoteDevices.await(Duration.ofSeconds(15L)))
+          .isEmpty();
     } else {
       // Verifies the local device manager starts successfully.
-      assertWithMessage("The local device manager has not detected all devices in 15 seconds")
-          .that(olcServerAllLocalDevicesFound.await(15L, SECONDS))
-          .isTrue();
+      assertWithMessage(
+              "The local device manager has not detected all devices in 15 seconds\n"
+                  + "undetected devices")
+          .that(olcServerUndetectedLocalDevices.await(Duration.ofSeconds(15L)))
+          .isEmpty();
     }
   }
 
@@ -720,5 +735,14 @@ public class OlcServerIntegrationTest {
     public void onCompleted() {
       logger.atInfo().log("Completed to get log from server");
     }
+  }
+
+  private static ImmutableSet<String> findAllDeviceIds(String string) {
+    ImmutableSet.Builder<String> result = ImmutableSet.builder();
+    Matcher matcher = DEVICE_ID_PATTERN.matcher(string);
+    while (matcher.find()) {
+      result.add(matcher.group());
+    }
+    return result.build();
   }
 }

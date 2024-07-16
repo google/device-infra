@@ -32,6 +32,15 @@ java_library(
 )
 
 java_library(
+    name = "count_down_set",
+    srcs = ["CountDownSet.java"],
+    deps = [
+        "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "proto_text_format",
     srcs = ["ProtoTextFormat.java"],
     deps = [
