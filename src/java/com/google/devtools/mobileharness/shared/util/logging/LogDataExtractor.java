@@ -22,8 +22,8 @@ import com.google.common.flogger.LogSites;
 import com.google.common.flogger.MetadataKey;
 import com.google.common.flogger.backend.system.AbstractLogRecord;
 import com.google.common.flogger.context.Tags;
-import java.util.Optional;
 import java.util.logging.LogRecord;
+import javax.annotation.Nullable;
 
 /** See {@link com.google.common.flogger.backend.system.LogDataExtractor}. */
 public class LogDataExtractor {
@@ -31,12 +31,12 @@ public class LogDataExtractor {
   /**
    * See {@link com.google.common.flogger.backend.system.LogDataExtractor#getSingleMetadataValue}.
    */
-  public static <T> Optional<T> getSingleMetadataValue(LogRecord record, MetadataKey<T> key) {
+  @Nullable
+  public static <T> T getSingleMetadataValue(LogRecord record, MetadataKey<T> key) {
     if (record instanceof AbstractLogRecord) {
-      return Optional.ofNullable(
-          ((AbstractLogRecord) record).getMetadataProcessor().getSingleValue(key));
+      return ((AbstractLogRecord) record).getMetadataProcessor().getSingleValue(key);
     }
-    return Optional.empty();
+    return null;
   }
 
   /** See {@link com.google.common.flogger.backend.system.LogDataExtractor#getLogSite}. */

@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.ats.console.util.console;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance;
+import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.LogImportanceScope;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.errorprone.annotations.FormatMethod;
 import java.io.PrintStream;
@@ -157,7 +158,9 @@ public class ConsoleUtil {
       setFilter(
           record ->
               !Objects.equals(record.getLoggerName(), LOGGER_NAME)
-                  && LogRecordImportance.getLogRecordImportance(record).value()
+                  && LogRecordImportance.getLogRecordImportance(
+                              record, LogImportanceScope.getCurrentScope())
+                          .value()
                       >= minLogRecordImportance);
     }
 

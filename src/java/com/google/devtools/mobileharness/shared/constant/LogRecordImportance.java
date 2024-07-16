@@ -18,14 +18,13 @@ package com.google.devtools.mobileharness.shared.constant;
 
 import static com.google.common.base.Preconditions.checkNotNull;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.flogger.MetadataKey;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.base.StackSet;
 import com.google.devtools.mobileharness.shared.util.logging.LogDataExtractor;
-import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.logging.LogRecord;
+import javax.annotation.Nullable;
 
 /** Constants of importance of log records. */
 public class LogRecordImportance {
@@ -82,9 +81,9 @@ public class LogRecordImportance {
     private static final ThreadLocal<StackSet<LogImportanceScope>> SCOPES =
         ThreadLocal.withInitial(StackSet::new);
 
-    @VisibleForTesting
-    static Optional<Importance> getCurrentImportance(LogRecord logRecord) {
-      return SCOPES.get().getLast().flatMap(scope -> scope.importanceForLogRecord(logRecord));
+    @Nullable
+    public static LogImportanceScope getCurrentScope() {
+      return SCOPES.get().getLast();
     }
 
     private final Importance importance;
@@ -101,19 +100,28 @@ public class LogRecordImportance {
       SCOPES.get().removeUntilLast(this);
     }
 
-    private Optional<Importance> importanceForLogRecord(LogRecord logRecord) {
-      if (logRecordFilter.test(logRecord)) {
-        return Optional.of(importance);
-      } else {
-        return Optional.empty();
-      }
+    @Nullable
+    public Importance importanceForLogRecord(LogRecord logRecord) {
+      return logRecordFilter.test(logRecord) ? importance : null;
     }
   }
 
-  public static Importance getLogRecordImportance(LogRecord logRecord) {
-    return LogDataExtractor.getSingleMetadataValue(logRecord, LogRecordImportance.IMPORTANCE)
-        .or(() -> LogImportanceScope.getCurrentImportance(logRecord))
-        .orElse(Importance.NORMAL);
+  public static Importance getLogRecordImportance(
+      LogRecord logRecord, @Nullable LogImportanceScope importanceScope) {
+    Importance recordImportance =
+        LogDataExtractor.getSingleMetadataValue(logRecord, LogRecordImportance.IMPORTANCE);
+    if (recordImportance != null) {
+      return recordImportance;
+    }
+
+    if (importanceScope != null) {
+      Importance scopeImportance = importanceScope.importanceForLogRecord(logRecord);
+      if (scopeImportance != null) {
+        return scopeImportance;
+      }
+    }
+
+    return Importance.NORMAL;
   }
 
   private LogRecordImportance() {}
