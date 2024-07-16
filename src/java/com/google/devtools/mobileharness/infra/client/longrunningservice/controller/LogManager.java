@@ -24,6 +24,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecord.SourceType;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance;
+import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.LogImportanceScope;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import java.util.HashSet;
 import java.util.Objects;
@@ -31,6 +32,7 @@ import java.util.Set;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.inject.Inject;
 import javax.inject.Singleton;
@@ -79,7 +81,8 @@ public class LogManager<D> {
    * A ring buffer of log records. When it is full and a new record is being added, the earliest
    * record will be discarded.
    *
-   * <p>The record class type is {@link LogRecord} or {@link LogProto.LogRecord}.
+   * <p>The record class type is {@link LogRecord} / {@link LogProto.LogRecord} / {@link
+   * LogRecordWithContext}.
    */
   @GuardedBy("itself")
   private final Object[] records = new Object[CAPACITY];
@@ -179,7 +182,8 @@ public class LogManager<D> {
   /**
    * Adds a log record to the ring buffer. Discards the earliest one if the buffer is full.
    *
-   * <p>The record class type is {@link LogRecord} or {@link LogProto.LogRecord}.
+   * <p>The record class type is {@link LogRecord} / {@link LogProto.LogRecord} / {@link
+   * LogRecordWithContext}.
    */
   private void addLogRecordToBuffer(Object logRecord) {
     synchronized (records) {
@@ -206,7 +210,12 @@ public class LogManager<D> {
     @Override
     public void publish(LogRecord logRecord) {
       if (isLoggable(logRecord)) {
-        addLogRecordToBuffer(logRecord);
+        LogImportanceScope importanceScope = LogImportanceScope.getCurrentScope();
+        if (importanceScope == null) {
+          addLogRecordToBuffer(logRecord);
+        } else {
+          addLogRecordToBuffer(new LogRecordWithContext(logRecord, importanceScope));
+        }
       }
     }
 
@@ -222,17 +231,40 @@ public class LogManager<D> {
   }
 
   private LogProto.LogRecord generateLogRecord(Object logRecord) {
-    if (logRecord instanceof LogRecord) {
-      LogRecord record = (LogRecord) logRecord;
-      String formattedLogRecord = logHandler.getFormatter().format(record);
-      int importance = LogRecordImportance.getLogRecordImportance(record).value();
-      return LogProto.LogRecord.newBuilder()
-          .setFormattedLogRecord(formattedLogRecord)
-          .setSourceType(SourceType.SELF)
-          .setImportance(importance)
-          .build();
-    } else {
+    if (logRecord instanceof LogProto.LogRecord) {
       return (LogProto.LogRecord) logRecord;
+    }
+
+    LogRecord record;
+    LogImportanceScope importanceScope;
+    if (logRecord instanceof LogRecord) {
+      record = (LogRecord) logRecord;
+      importanceScope = null;
+    } else {
+      LogRecordWithContext recordWithContext = (LogRecordWithContext) logRecord;
+      record = recordWithContext.logRecord;
+      importanceScope = recordWithContext.logImportanceScope;
+    }
+
+    String formattedLogRecord = logHandler.getFormatter().format(record);
+    int importance = LogRecordImportance.getLogRecordImportance(record, importanceScope).value();
+    return LogProto.LogRecord.newBuilder()
+        .setFormattedLogRecord(formattedLogRecord)
+        .setSourceType(SourceType.SELF)
+        .setImportance(importance)
+        .build();
+  }
+
+  private static class LogRecordWithContext {
+
+    private final LogRecord logRecord;
+
+    @Nullable private final LogImportanceScope logImportanceScope;
+
+    private LogRecordWithContext(
+        LogRecord logRecord, @Nullable LogImportanceScope logImportanceScope) {
+      this.logRecord = logRecord;
+      this.logImportanceScope = logImportanceScope;
     }
   }
 }

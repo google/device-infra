@@ -48,7 +48,10 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/constant:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/logging/util:__pkg__",
     ],
-    deps = ["//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
+        "@maven//:com_google_code_findbugs_jsr305",
+    ],
 )
 
 java_library(
