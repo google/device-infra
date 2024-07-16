@@ -43,6 +43,7 @@ import picocli.CommandLine.Option;
     aliases = {"quit", "q"},
     description = "Exit the console.")
 final class ExitCommand implements Callable<Integer> {
+
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   @Option(
@@ -51,6 +52,9 @@ final class ExitCommand implements Callable<Integer> {
       paramLabel = "<wait_for_command>",
       description = "Whether to exit only after all commands have executed.")
   private boolean waitForCommand = false;
+
+  private static final Duration SHORT_SLEEP_INTERVAL = Duration.ofSeconds(3L);
+  private static final Duration LONG_SLEEP_INTERVAL = Duration.ofSeconds(30L);
 
   private final ConsoleInfo consoleInfo;
   private final ConsoleUtil consoleUtil;
@@ -100,6 +104,7 @@ final class ExitCommand implements Callable<Integer> {
     consoleUtil.printlnStdout("Will exit the console after all commands have executed.");
     try {
       ImmutableList<String> unfinishedNotAbortedSessions;
+      int sleepCount = 0;
       do {
         unfinishedNotAbortedSessions =
             atsSessionStub.getAllUnfinishedNotAbortedSessions(/* fromCurrentClient= */ true);
@@ -112,7 +117,8 @@ final class ExitCommand implements Callable<Integer> {
               .log(
                   "Still need to wait as sessions - %s are still running.",
                   unfinishedNotAbortedSessions);
-          sleeper.sleep(Duration.ofSeconds(30));
+          sleeper.sleep(sleepCount < 10 ? SHORT_SLEEP_INTERVAL : LONG_SLEEP_INTERVAL);
+          sleepCount++;
         }
       } while (!unfinishedNotAbortedSessions.isEmpty());
     } catch (MobileHarnessException e) {

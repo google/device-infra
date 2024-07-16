@@ -464,34 +464,32 @@ public class AtsSessionPlugin {
 
   /** TODO: Support killing jobs here (for non-TF jobs or jobs during allocation). */
   private void onSessionCancellation(AtsSessionCancellation sessionCancellation) {
-    if (config.getCommandCase() == CommandCase.RUN_COMMAND) {
-      // Stops adding new jobs.
-      runCommandHandler.onSessionCancellation(sessionCancellation);
+    // Stops adding new jobs.
+    runCommandHandler.onSessionCancellation(sessionCancellation);
 
-      // Creates test message.
-      XtsTradefedRunCancellation cancellationTestMessage =
-          XtsTradefedRunCancellation.newBuilder()
-              .setKillTradefedSignal(KillSignal.SIGTSTP.value())
-              .setCancelReason(sessionCancellation.getReason())
-              .build();
+    // Creates test message.
+    XtsTradefedRunCancellation cancellationTestMessage =
+        XtsTradefedRunCancellation.newBuilder()
+            .setKillTradefedSignal(KillSignal.SIGTSTP.value())
+            .setCancelReason(sessionCancellation.getReason())
+            .build();
 
-      // Sends test message to started tests.
-      ImmutableList<TestInfo> startedTestsBeforeCancellation;
-      synchronized (testCancellationLock) {
-        if (this.cancellationTestMessage != null) {
-          logger.atInfo().log(
-              "Session has been cancelled, current cancellation [%s], previous"
-                  + " cancellation [%s]",
-              shortDebugString(cancellationTestMessage),
-              shortDebugString(this.cancellationTestMessage));
-        }
-        this.cancellationTestMessage = cancellationTestMessage;
-        startedTestsBeforeCancellation = ImmutableList.copyOf(this.startedTestsBeforeCancellation);
-        this.startedTestsBeforeCancellation.clear();
+    // Sends test message to started tests.
+    ImmutableList<TestInfo> startedTestsBeforeCancellation;
+    synchronized (testCancellationLock) {
+      if (this.cancellationTestMessage != null) {
+        logger.atInfo().log(
+            "Session has been cancelled, current cancellation [%s], previous"
+                + " cancellation [%s]",
+            shortDebugString(cancellationTestMessage),
+            shortDebugString(this.cancellationTestMessage));
       }
-      for (TestInfo testInfo : startedTestsBeforeCancellation) {
-        sendCancellationMessageToStartedTest(testInfo, cancellationTestMessage);
-      }
+      this.cancellationTestMessage = cancellationTestMessage;
+      startedTestsBeforeCancellation = ImmutableList.copyOf(this.startedTestsBeforeCancellation);
+      this.startedTestsBeforeCancellation.clear();
+    }
+    for (TestInfo testInfo : startedTestsBeforeCancellation) {
+      sendCancellationMessageToStartedTest(testInfo, cancellationTestMessage);
     }
   }
 
