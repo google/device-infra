@@ -82,8 +82,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
     ],
 )

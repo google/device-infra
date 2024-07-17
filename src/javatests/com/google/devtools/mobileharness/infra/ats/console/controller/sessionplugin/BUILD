@@ -52,6 +52,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/systemsetting:system_setting_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_result_reporter",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",

@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotat
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbInternalUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteResultReporter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -100,6 +101,7 @@ public final class RunCommandHandlerTest {
   @Bind @SessionTempDir private Path sessionTempDir;
   @Bind @Mock private SessionInfo sessionInfo;
   @Bind @Mock private AndroidAdbInternalUtil androidAdbInternalUtil;
+  @Bind @Mock private SuiteResultReporter suiteResultReporter;
 
   @Inject private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -193,7 +195,8 @@ public final class RunCommandHandlerTest {
                 new LocalFileUtil(),
                 sessionRequestHandlerUtil,
                 sessionResultHandlerUtil,
-                sessionInfo));
+                sessionInfo,
+                suiteResultReporter));
     doNothing().when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
     when(sessionInfo.getSessionProperty("timestamp_dir_name"))
         .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));
