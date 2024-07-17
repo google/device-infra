@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Tes
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.shared.util.command.Command;
@@ -188,6 +189,8 @@ public final class NewMultiCommandRequestHandlerTest {
                     .build())
             .build();
     when(clock.millis()).thenReturn(1000L);
+    when(sessionInfo.getSessionProperty(SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH))
+        .thenReturn(Optional.of("/path/to/server_session_log.txt"));
   }
 
   @After
@@ -691,11 +694,19 @@ public final class NewMultiCommandRequestHandlerTest {
     verify(sessionInfo).addJob(jobInfo);
 
     when(sessionInfo.getAllJobs()).thenReturn(ImmutableList.of(jobInfo));
+    when(sessionInfo.getSessionProperty(SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH))
+        .thenReturn(Optional.empty());
     MobileHarnessException mhException = Mockito.mock(MobileHarnessException.class);
     doThrow(mhException)
         .when(sessionResultHandlerUtil)
         .processResult(any(), any(), any(), any(), any(), any());
+    Mockito.doNothing().when(localFileUtil).prepareDir(any(Path.class));
     newMultiCommandRequestHandler.handleResultProcessing(sessionInfo, requestDetail);
+    verify(sessionInfo)
+        .putSessionProperty(
+            SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
+            outputFileUploadPath
+                + "/session_id/olc_server_session_logs/olc_server_session_log.txt");
     verifyUnmountRootDir(DirUtil.getPublicGenDir() + "/session_session_id/file");
     verify(sessionResultHandlerUtil).cleanUpJobGenDirs(ImmutableList.of(jobInfo));
   }

@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Req
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestContext;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
@@ -474,7 +475,7 @@ final class NewMultiCommandRequestHandler {
    */
   void handleResultProcessing(SessionInfo sessionInfo, RequestDetail.Builder requestDetail)
       throws InterruptedException {
-    URL outputUrl;
+    URL outputUrl = null;
     String outputFileUploadUrl =
         requestDetail.getOriginalRequest().getTestEnvironment().getOutputFileUploadUrl();
     Map<String, JobInfo> jobIdToJobMap = new HashMap<>();
@@ -565,6 +566,32 @@ final class NewMultiCommandRequestHandler {
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log(
           "Failed to process result for session: %s", sessionInfo.getSessionId());
+    }
+
+    // Record OLC server session logs if no command recorded it due to empty command list or result
+    // processing failures.
+    if (outputUrl != null
+        && outputUrl.getProtocol().equals("file")
+        && sessionInfo
+            .getSessionProperty(SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH)
+            .isEmpty()) {
+      logger.atInfo().log(
+          "Setting OLC session log in session's directory because no command recorded the OLC log."
+              + " Session: %s",
+          sessionInfo.getSessionId());
+      Path serverSessionLogsDir =
+          Path.of(outputUrl.getPath())
+              .resolve(sessionInfo.getSessionId())
+              .resolve("olc_server_session_logs");
+      try {
+        localFileUtil.prepareDir(serverSessionLogsDir);
+        sessionInfo.putSessionProperty(
+            SessionProperties.PROPERTY_KEY_SERVER_SESSION_LOG_PATH,
+            serverSessionLogsDir.resolve("olc_server_session_log.txt").toString());
+      } catch (MobileHarnessException e) {
+        logger.atWarning().withCause(e).log(
+            "Failed to create server session logs dir for session: %s", sessionInfo.getSessionId());
+      }
     }
     cleanup(sessionInfo);
   }
