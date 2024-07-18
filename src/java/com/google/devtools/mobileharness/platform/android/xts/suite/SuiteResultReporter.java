@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import java.time.Duration;
 import java.time.Instant;
@@ -46,6 +47,8 @@ public class SuiteResultReporter {
     AtomicInteger totalModules = new AtomicInteger(0);
     AtomicInteger completeModules = new AtomicInteger(0);
     Map<String, String> failedModule = new HashMap<>();
+    // Map holding the preparation time for each Module.
+    Map<String, ModulePrepTimes> preparationMap = new HashMap<>();
     StringBuilder invocationSummary = new StringBuilder();
     long totalTests = 0L;
     long passedTests = 0L;
@@ -59,7 +62,7 @@ public class SuiteResultReporter {
         if (module.getDone()) {
           completeModules.incrementAndGet();
         } else {
-          failedModule.put(module.getName(), module.getReason().getMsg());
+          failedModule.put(getModuleName(module), module.getReason().getMsg());
         }
         totalTests += module.getTotalTests();
         passedTests += module.getPassed();
@@ -76,6 +79,13 @@ public class SuiteResultReporter {
             getNumTestsInState(
                 module,
                 TestStatus.convertToTestStatusCompatibilityString(TestStatus.ASSUMPTION_FAILURE));
+
+        // Get the module metrics for target preparation
+        if (module.hasPrepTimeMillis() && module.hasTeardownTimeMillis()) {
+          preparationMap.put(
+              getModuleName(module),
+              new ModulePrepTimes(module.getPrepTimeMillis(), module.getTeardownTimeMillis()));
+        }
       }
     }
     // print a short report summary
@@ -84,6 +94,7 @@ public class SuiteResultReporter {
     if (result != null) {
       printModuleTestTime(result.getModuleInfoList(), invocationSummary);
       printTopSlowModules(result.getModuleInfoList(), invocationSummary);
+      printPreparationMetrics(preparationMap, invocationSummary);
       // TODO: Add PreparationMetrics, ModuleCheckersMetric, ModuleRetriesInformation
     }
     invocationSummary.append("=============== Summary ===============\n");
@@ -136,7 +147,7 @@ public class SuiteResultReporter {
       invocationSummary.append(
           String.format(
               "    %s: %s\n",
-              m.getName(),
+              getModuleName(m),
               TimeUtils.toReadableDurationString(Duration.ofMillis(m.getRuntimeMillis()))));
       totalRunTime += m.getRuntimeMillis();
     }
@@ -176,11 +187,35 @@ public class SuiteResultReporter {
       invocationSummary.append(
           String.format(
               "    %s: %.02f tests/sec [%s tests / %s msec]\n",
-              moduleTime.get(i).getName(),
+              getModuleName(moduleTime.get(i)),
               (moduleTime.get(i).getTotalTests() / (moduleTime.get(i).getRuntimeMillis() / 1000f)),
               moduleTime.get(i).getTotalTests(),
               moduleTime.get(i).getRuntimeMillis()));
     }
+  }
+
+  /** Print the collected times for Module preparation and tear Down. */
+  private void printPreparationMetrics(
+      Map<String, ModulePrepTimes> metrics, StringBuilder invocationSummary) {
+    if (metrics.isEmpty()) {
+      return;
+    }
+    invocationSummary.append("============== Modules Preparation Times ==============\n");
+    long totalPrep = 0L;
+    long totalTear = 0L;
+
+    for (String moduleName : metrics.keySet()) {
+      invocationSummary.append(
+          String.format("    %s => %s\n", moduleName, metrics.get(moduleName)));
+      totalPrep += metrics.get(moduleName).prepTime;
+      totalTear += metrics.get(moduleName).tearDownTime;
+    }
+    invocationSummary.append(
+        String.format(
+            "Total preparation time: %s  ||  Total tear down time: %s\n",
+            TimeUtils.toReadableDurationString(Duration.ofMillis(totalPrep)),
+            TimeUtils.toReadableDurationString(Duration.ofMillis(totalTear))));
+    invocationSummary.append("=======================================================\n");
   }
 
   private static long getReportStartTime(Result result) {
@@ -204,5 +239,26 @@ public class SuiteResultReporter {
         .flatMap(testCase -> testCase.getTestList().stream())
         .filter(test -> Ascii.equalsIgnoreCase(test.getResult(), testStatus))
         .count();
+  }
+
+  private static String getModuleName(Module module) {
+    return AbiUtil.createId(module.getAbi(), module.getName());
+  }
+
+  /** Object holder for the preparation and tear down time of one module. */
+  private static class ModulePrepTimes {
+
+    public final long prepTime;
+    public final long tearDownTime;
+
+    public ModulePrepTimes(long prepTime, long tearTime) {
+      this.prepTime = prepTime;
+      this.tearDownTime = tearTime;
+    }
+
+    @Override
+    public String toString() {
+      return String.format("prep = %s ms || clean = %s ms", prepTime, tearDownTime);
+    }
   }
 }
