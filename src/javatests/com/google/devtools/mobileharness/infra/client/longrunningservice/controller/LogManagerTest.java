@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
@@ -28,6 +29,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.LogProto.LogRecords;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.LogImportanceScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
@@ -85,7 +88,10 @@ public class LogManagerTest {
     logManager.start();
     logManager.addConsumer(logRecordsConsumer);
 
-    logger.atInfo().log("Foo");
+    try (ContextScope ignored =
+        new ContextScope(ImmutableMap.of(InvocationType.OLC_CLIENT, "fake_client_id"))) {
+      logger.atInfo().log("Foo");
+    }
 
     verify(logRecordsConsumer, timeout(Duration.ofSeconds(2L).toMillis()))
         .consumeLogRecords(
@@ -94,6 +100,7 @@ public class LogManagerTest {
                     LogProto.LogRecord.newBuilder()
                         .setFormattedLogRecord("Foo")
                         .setSourceType(SourceType.SELF)
+                        .setClientId("fake_client_id")
                         .setImportance(Importance.NORMAL.value()))
                 .build());
 

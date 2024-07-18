@@ -19,12 +19,14 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static com.google.devtools.mobileharness.shared.context.InvocationContext.propagateContext;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static java.lang.Math.min;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
@@ -49,6 +51,8 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SessionFilter;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -400,22 +404,30 @@ public class SessionManager {
     // Starts session runners.
     for (RunningSession runningSession : newRunningSessions) {
       SessionRunner sessionRunner = runningSession.sessionRunner();
-
-      // Triggers subscribers after session status becomes SESSION_RUNNING.
-      SessionSubscribers subscribers = runningSession.sessionSubscribers();
-      subscribers.receiveSessionDetail(/* finalSessionDetail= */ false);
-      subscribers.setSessionDetailSupplier(sessionRunner::getSession);
-
       String sessionId = sessionRunner.getSessionId();
-      logger.atInfo().log("Starting session [%s]", sessionId);
 
-      runningSessions.put(sessionId, runningSession);
-      addCallback(
-          threadPool.submit(threadRenaming(sessionRunner, () -> "session-runner-" + sessionId)),
-          threadRenaming(
-              new SessionRunnerCallback(runningSession),
-              () -> "session-runner-post-run" + sessionId),
-          directExecutor());
+      // Adds context info.
+      try (ContextScope ignored =
+          new ContextScope(getContext(sessionId, sessionRunner.getSessionConfig()))) {
+
+        // Triggers subscribers after session status becomes SESSION_RUNNING.
+        SessionSubscribers subscribers = runningSession.sessionSubscribers();
+        subscribers.receiveSessionDetail(/* finalSessionDetail= */ false);
+        subscribers.setSessionDetailSupplier(sessionRunner::getSession);
+
+        logger.atInfo().log("Starting session [%s]", sessionId);
+
+        runningSessions.put(sessionId, runningSession);
+        addCallback(
+            threadPool.submit(
+                propagateContext(
+                    threadRenaming(sessionRunner, () -> "session-runner-" + sessionId))),
+            propagateContext(
+                threadRenaming(
+                    new SessionRunnerCallback(runningSession),
+                    () -> "session-runner-post-run" + sessionId)),
+            directExecutor());
+      }
     }
   }
 
@@ -651,6 +663,19 @@ public class SessionManager {
       }
     }
     return Optional.empty();
+  }
+
+  private static ImmutableMap<InvocationType, String> getContext(
+      String sessionId, SessionConfig sessionConfig) {
+    ImmutableMap.Builder<InvocationType, String> result = ImmutableMap.builder();
+    result.put(InvocationType.OLC_SESSION, sessionId);
+    if (sessionConfig.containsSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)) {
+      result.put(
+          InvocationType.OLC_CLIENT,
+          sessionConfig.getSessionPropertyOrThrow(
+              SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID));
+    }
+    return result.buildOrThrow();
   }
 
   /** {@link SessionDetail} and the future of the final result of the session. */
