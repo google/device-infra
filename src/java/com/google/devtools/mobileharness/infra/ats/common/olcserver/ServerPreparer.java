@@ -422,7 +422,9 @@ public class ServerPreparer {
   }
 
   private void checkAndPrintServerVersionWarning(GetVersionResponse serverVersion) {
-    GetVersionResponse clientVersion = VersionProtoUtil.createGetVersionResponse();
+    serverVersion = serverVersion.toBuilder().clearProcessId().build();
+    GetVersionResponse clientVersion =
+        VersionProtoUtil.createGetVersionResponse().toBuilder().clearProcessId().build();
     if (!clientVersion.equals(serverVersion)) {
       logger.atWarning().log(
           "Using existing OLC server in a different version, "
