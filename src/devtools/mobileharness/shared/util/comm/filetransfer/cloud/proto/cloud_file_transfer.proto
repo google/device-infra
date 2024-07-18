@@ -1,0 +1,244 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.shared;
+
+import "google/protobuf/any.proto";
+import "src/devtools/mobileharness/shared/util/comm/filetransfer/common/proto/file_info.proto";
+
+option java_package = "com.google.devtools.mobileharness.shared.util.comm.filetransfer.cloud.proto";
+option java_outer_classname = "CloudFileTransfer";
+
+/** Options for compressing/decompressing file during file transfer. */
+message CompressOptions {
+  // whether pack all file together without any compression.
+  bool store_only = 1;
+
+  // the timeout of the zip operation in millisecond.
+  int64 timeout_ms = 2;
+}
+
+// Request for download a gcs file to local.
+message DownloadGcsFileRequest {
+  // Path of the GCS file.
+  string gcs_file = 1;
+  // Md5 of the file.
+  string checksum = 2;
+  // Name of the bucket in which the GCS file is cached.
+  string bucket = 3;
+
+  // Key to decrypt the file after download. Empty string means no encryption.
+  string encrypt_key = 4;
+
+  // Metadata of the request.
+  google.protobuf.Any metadata = 5;
+
+  // Original path in client side.
+  // TODO: remove it.
+  string original_path = 6;
+
+  // Whether |gcs_file| is compressed.
+  bool is_compressed = 7;
+
+  // Options while decompressing a file. It is used only if
+  // |is_compressed| is true.
+  CompressOptions compress_options = 8;
+}
+
+message DownloadGcsFileResponse {}
+
+// Request to start downloading a gcs file.
+message StartDownloadingGcsFileRequest {
+  DownloadGcsFileRequest request = 1;
+
+  // Waiting timeout after starting downloading. If the process is finished
+  // in timeout, the result will be fulfilled in
+  // |StartDownloadingGcsFileResponse.process_response|.
+  int32 initial_timeout_sec = 2;
+}
+
+// Response of starting downlaoding gcs file.
+message StartDownloadingGcsFileResponse {
+  string process_id = 1;
+
+  // Response of process |process_id|.
+  // It contains the response if the process is finished.
+  DownloadGcsFileResponse response = 2;
+}
+
+// Request for uploading a file to GCS.
+message UploadFileRequest {
+  // Local path to upload.
+  string path = 1;
+  // Name of the bucket that the file should be uploaded to.
+  string bucket = 2;
+  // Key to encrypt the file before uploading. Empty string means no encryption.
+  string encrypt_key = 3;
+
+  // Options while compressing a file. It is used only if
+  // |UploadFileResponse.is_compressed| is true.
+  CompressOptions compress_options = 5;
+}
+
+message UploadFileResponse {
+  // Path of the uploaded GCS file.
+  string gcs_file = 1;
+  // Md5 of the file.
+  string checksum = 2;
+  // Whether compressed the file before uploading.
+  bool is_compressed = 3;
+}
+
+// Request to start uploading a file to GCS.
+message StartUploadingFileRequest {
+  UploadFileRequest request = 1;
+
+  // Waiting timeout after starting downloading. If the process is finished
+  // in timeout, the result will be fulfilled in
+  // |StartUploadingGcsFileResponse.process_response|.
+  int32 initial_timeout_sec = 2;
+}
+
+// Response of starting uploading.
+message StartUploadingFileResponse {
+  string process_id = 1;
+
+  // Response of process |process_id|.
+  // It contains the response if the process is finished.
+  UploadFileResponse response = 2;
+}
+
+// Request to get status of a process.
+message GetProcessStatusRequest {
+  string process_id = 1;
+}
+
+// Response of getting status of a process.
+message GetProcessStatusResponse {
+  enum ProcessStatus {
+    // The process information is lost. It is either because the process id
+    // is invalid, or because the process response has been removed from
+    // cache.
+    UNKNOWN = 0;
+    // The Process is still running.
+    RUNNING = 1;
+    // The Process has finished.
+    FINISHED = 2;
+  }
+  // Status of a process.
+  ProcessStatus status = 1;
+
+  // Response of a process. It is fulfilled only when the process is finished.
+  google.protobuf.Any response = 2;
+}
+
+// Request of Getting file information list.
+message ListFilesRequest {
+  // The absolute path of directory where files reside.
+  string dir_path = 1;
+}
+
+// Response of getting the file information list.
+message ListFilesResponse {
+  // Detailed information about each file.
+  repeated FileInfo file = 1;
+}
+
+// Request to saving a small file directly.
+message SaveFileRequest {
+  // Metadata of the request.
+  google.protobuf.Any metadata = 1;
+
+  // Original path in client side.
+  // TODO: remove it.
+  string original_path = 2;
+
+  // Whether |gcs_file| is compressed.
+  bool is_compressed = 3;
+
+  // Contents of file |original_path|.
+  bytes content = 4;
+
+  // Options while decompressing a file. It is used only if
+  // |is_compressed| is true.
+  CompressOptions compress_options = 5;
+}
+
+message SaveFileResponse {}
+
+message GetFileRequest {
+  // Local file to get.
+  string path = 1;
+
+  // Limitation of file size (unit: byte).
+  int64 file_size_byte_limit = 2;
+
+  // Options while compressing a file. It is used only if
+  // |GetFileResponse.is_compressed| is true.
+  CompressOptions compress_options = 3;
+}
+
+message GetFileResponse {
+  // Whether file size exceeded the limitation.
+  bool size_exceed = 1;
+
+  // Content of file to get. It is only fulfilled if file size doesn't exceed
+  // |file_size_limit| in request.
+  bytes content = 2;
+
+  // Whether compressed the file before getting.
+  bool is_compressed = 3;
+}
+
+// Service to send file to Google Cloud Storage(GCS) or get file from GCS.
+// Deadline of all RPCs MUST LESS THAN 1 minute due to CloudRpc limitation.
+service CloudFileTransferService {
+  // Downloads GCS files that is specified in |DownloadGcsFileRequest|.
+  // DEPRECATED.
+  rpc DownloadGcsFile(DownloadGcsFileRequest)
+      returns (DownloadGcsFileResponse) {}
+
+  // Uploads files that is specified in |UploadFileRequest| to GCS file.
+  // DEPRECATED.
+  rpc UploadFile(UploadFileRequest) returns (UploadFileResponse) {}
+
+  // Gets a list of file information for all the files in the path.
+  rpc ListFiles(ListFilesRequest) returns (ListFilesResponse) {}
+
+  // Starts uploading files that is specified in |UploadFileRequest| to GCS
+  // file.
+  rpc StartUploadingFile(StartUploadingFileRequest)
+      returns (StartUploadingFileResponse) {}
+
+  // Starts uploading files that is specified in |UploadFileRequest| to GCS
+  // file.
+  rpc StartDownloadingGcsFile(StartDownloadingGcsFileRequest)
+      returns (StartDownloadingGcsFileResponse) {}
+
+  // Gets status of a process with process_id specified in the request.
+  rpc GetProcessStatus(GetProcessStatusRequest)
+      returns (GetProcessStatusResponse) {}
+
+  // Saves a file directly to service. The file should be small enough to send
+  // in one single request (< 3MB).
+  rpc SaveFile(SaveFileRequest) returns (SaveFileResponse) {}
+
+  // Gets file directly from service. The file should be small enough to get
+  // in one single request (< 3MB).
+  rpc GetFile(GetFileRequest) returns (GetFileResponse) {}
+}

@@ -13,6 +13,8 @@
 # limitations under the License.
 #
 
+load("@io_grpc_grpc_java//:java_grpc_library.bzl", "java_grpc_library")
+
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
@@ -21,33 +23,21 @@ package(
 )
 
 proto_library(
-    name = "file_handlers_test_proto",
-    srcs = ["file_handlers_test.proto"],
-)
-
-java_proto_library(
-    name = "file_handlers_test_java_proto",
-    deps = [":file_handlers_test_proto"],
-)
-
-proto_library(
-    name = "file_info_proto",
-    srcs = ["file_info.proto"],
+    name = "cloud_file_transfer_proto",
+    srcs = ["cloud_file_transfer.proto"],
     deps = [
+        "//src/devtools/mobileharness/shared/util/comm/filetransfer/common/proto:file_info_proto",
+        "@com_google_protobuf//:any_proto",
     ],
 )
 
 java_proto_library(
-    name = "file_info_java_proto",
-    deps = [":file_info_proto"],
+    name = "cloud_file_transfer_java_proto",
+    deps = [":cloud_file_transfer_proto"],
 )
 
-proto_library(
-    name = "tagged_file_metadata_proto",
-    srcs = ["tagged_file_metadata.proto"],
-)
-
-java_proto_library(
-    name = "tagged_file_metadata_java_proto",
-    deps = [":tagged_file_metadata_proto"],
+java_grpc_library(
+    name = "cloud_file_transfer_grpc_proto",
+    srcs = [":cloud_file_transfer_proto"],
+    deps = [":cloud_file_transfer_java_proto"],
 )
