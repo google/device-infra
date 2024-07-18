@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
+import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.command.parser.CommandLineParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -110,6 +111,7 @@ final class NewMultiCommandRequestHandler {
   private final CommandExecutor commandExecutor;
   private final Clock clock;
   private final XtsTypeLoader xtsTypeLoader;
+  private final XtsJobCreator xtsJobCreator;
 
   // Command id to its job ids
   private final SetMultimap<String, String> commandToJobsMap = HashMultimap.create();
@@ -132,13 +134,15 @@ final class NewMultiCommandRequestHandler {
       LocalFileUtil localFileUtil,
       CommandExecutor commandExecutor,
       Clock clock,
-      XtsTypeLoader xtsTypeLoader) {
+      XtsTypeLoader xtsTypeLoader,
+      XtsJobCreator xtsJobCreator) {
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.sessionResultHandlerUtil = sessionResultHandlerUtil;
     this.localFileUtil = localFileUtil;
     this.commandExecutor = commandExecutor;
     this.clock = clock;
     this.xtsTypeLoader = xtsTypeLoader;
+    this.xtsJobCreator = xtsJobCreator;
   }
 
   void addTradefedJobs(
@@ -202,8 +206,7 @@ final class NewMultiCommandRequestHandler {
       return Optional.empty();
     }
 
-    ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+    ImmutableList<JobInfo> jobInfos = xtsJobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
 
     if (jobInfos.isEmpty()) {
       logger.atInfo().log(
@@ -289,8 +292,7 @@ final class NewMultiCommandRequestHandler {
       return commandDetailBuilder.build();
     }
 
-    Optional<JobInfo> jobInfo =
-        sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfo);
+    Optional<JobInfo> jobInfo = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
     if (jobInfo.isPresent()) {
       String commandId =
           UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();

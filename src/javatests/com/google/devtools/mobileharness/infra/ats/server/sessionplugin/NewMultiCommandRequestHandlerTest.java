@@ -37,6 +37,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
+import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -108,6 +109,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Bind @Mock private DeviceQuerier deviceQuerier;
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
   @Bind @Mock private SessionResultHandlerUtil sessionResultHandlerUtil;
+  @Bind @Mock private XtsJobCreator xtsJobCreator;
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
   @Bind @Mock private XtsTypeLoader xtsTypeLoader;
@@ -218,8 +220,7 @@ public final class NewMultiCommandRequestHandlerTest {
     request =
         request.toBuilder().clearCommands().addCommands(commandInfoWithInvalidCommandLine).build();
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
     newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
@@ -241,8 +242,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void addTradefedJobs_success() throws Exception {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Trigger the handler.
@@ -259,7 +259,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
     verify(sessionInfo).addJob(jobInfo);
     verify(properties).add("xts-tradefed-job", "true");
-    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
@@ -291,8 +291,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void addTradefedJobs_fromRetrySession_success() throws Exception {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     Mockito.doReturn(Path.of("/path/to/previous_result.pb"))
         .when(localFileUtil)
@@ -317,7 +316,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
     verify(sessionInfo).addJob(jobInfo);
     verify(properties).add("xts-tradefed-job", "true");
-    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
@@ -349,8 +348,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void addTradefedJobs_retryResultNotFound_runAsNewAttempt() throws Exception {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     MobileHarnessException fakeException =
         new MobileHarnessException(
@@ -376,7 +374,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
     verify(sessionInfo).addJob(jobInfo);
     verify(properties).add("xts-tradefed-job", "true");
-    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
 
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
@@ -406,8 +404,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void addTradefedJobs_mountAndroidXtsZipFailed_cancelRequestWithInvalidResourceError()
       throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
     when(commandExecutor.run(any())).thenThrow(commandExecutorException);
 
@@ -484,8 +481,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void addNonTradefedJob_success() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any()))
-        .thenReturn(ImmutableList.of(jobInfo));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(jobInfo));
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     when(files.getAll())
@@ -529,8 +525,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void addNonTradefedJob_invalidRequest_returnEmptyCommandList() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any()))
-        .thenReturn(ImmutableList.of(jobInfo));
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     CommandInfo commandInfo =
         CommandInfo.newBuilder()
@@ -560,7 +555,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void addNonTradefedJob_createdZeroJobInfo_returnEmptyCommandList() throws Exception {
 
-    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
 
@@ -575,7 +570,7 @@ public final class NewMultiCommandRequestHandlerTest {
   public void addNonTradefedJob_cannotCreateNonTradefedJobs_returnEmptyCommandList()
       throws Exception {
 
-    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
+    when(xtsJobCreator.createXtsNonTradefedJobs(any())).thenReturn(ImmutableList.of());
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
 
@@ -584,7 +579,7 @@ public final class NewMultiCommandRequestHandlerTest {
         newMultiCommandRequestHandler.addNonTradefedJobs(request, commandInfo, sessionInfo);
 
     assertThat(commandDetail).isEmpty();
-    verify(sessionRequestHandlerUtil, never()).createXtsNonTradefedJobs(any());
+    verify(xtsJobCreator, never()).createXtsNonTradefedJobs(any());
   }
 
   @Test
@@ -656,8 +651,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_getMalformedOutputURL_onlyCleanup() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Add TF job.
@@ -684,8 +678,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_processResultFailed_onlyCleanup() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Add TF job.
@@ -713,8 +706,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_nonFileUrl_onlyCleanup() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Add TF job.
@@ -740,8 +732,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void cleanup_success() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Trigger the handler.
@@ -763,8 +754,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void cleanup_unmountAndroidXtsZipFailed_logWarningAndProceed() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     Command mountCommand =
         Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
@@ -786,8 +776,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void cleanup_cleanupJobGenDirsFailed_logWarningAndProceed() throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     Command mountCommand =
         Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
@@ -831,8 +820,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   private void createJobAndHandleResultProcessing(RequestDetail.Builder requestDetail)
       throws Exception {
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Add TF job.
@@ -847,7 +835,7 @@ public final class NewMultiCommandRequestHandlerTest {
     Path outputPath = Path.of(outputFileUploadPath + "/session_id/" + commandId);
     Path logPath = outputPath.resolve("logs");
     ArgumentCaptor<Path> pathCaptor1 = ArgumentCaptor.forClass(Path.class);
-    verify(sessionRequestHandlerUtil).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
     verify(sessionResultHandlerUtil)
         .processResult(
             pathCaptor1.capture(),

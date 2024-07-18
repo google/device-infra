@@ -47,6 +47,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_result_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_type_loader",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:xts_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:ats_server_session_plugin_lib",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:new_multi_command_request_handler",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:tradefed_config_generator",

@@ -21,7 +21,6 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -38,6 +37,7 @@ import com.google.devtools.mobileharness.api.model.job.in.Dimensions;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
+import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Summary;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.AtsServerSessionNotification;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -131,6 +131,7 @@ public final class AtsServerSessionPluginTest {
   @Bind @Mock private SessionInfo sessionInfo;
   @Bind @Mock private SessionRequestHandlerUtil sessionRequestHandlerUtil;
   @Bind @Mock private SessionResultHandlerUtil sessionResultHandlerUtil;
+  @Bind @Mock private XtsJobCreator xtsJobCreator;
   @Bind @Mock private CommandExecutor commandExecutor;
   @Bind @Mock private Clock clock;
   @Bind @Mock private XtsTypeLoader xtsTypeLoader;
@@ -168,10 +169,10 @@ public final class AtsServerSessionPluginTest {
     when(moblyJobInfo.properties()).thenReturn(properties);
     when(moblyJobInfo2.locator()).thenReturn(new JobLocator("mobly_job_id2", "mobly_job_name2"));
     when(moblyJobInfo2.properties()).thenReturn(properties);
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any()))
+    when(xtsJobCreator.createXtsTradefedTestJob(any()))
         .thenReturn(Optional.of(jobInfo))
         .thenReturn(Optional.of(jobInfo2));
-    when(sessionRequestHandlerUtil.createXtsNonTradefedJobs(any()))
+    when(xtsJobCreator.createXtsNonTradefedJobs(any()))
         .thenReturn(ImmutableList.of(moblyJobInfo))
         .thenReturn(ImmutableList.of(moblyJobInfo2));
     when(jobInfo.files()).thenReturn(files);
@@ -179,9 +180,8 @@ public final class AtsServerSessionPluginTest {
     when(moblyJobInfo.files()).thenReturn(files);
     when(moblyJobInfo2.files()).thenReturn(files);
     when(files.getAll()).thenReturn(ImmutableMultimap.of());
-    doAnswer(invocation -> invocation.getArgument(0))
-        .when(sessionRequestHandlerUtil)
-        .addNonTradefedModuleInfo(any());
+    when(sessionRequestHandlerUtil.addNonTradefedModuleInfo(any()))
+        .thenAnswer(invocation -> invocation.getArgument(0));
     commandInfo =
         CommandInfo.newBuilder()
             .setName("command")
@@ -290,7 +290,7 @@ public final class AtsServerSessionPluginTest {
   public void onSessionStarting_requestHasZeroTradefedJob_tryCreateNonTradefedJob()
       throws Exception {
     // Intentionally make it fail to create any tradefed test.
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any())).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.empty());
     // Though the command cannot generate a tradefed job, it can generate non-tradefed job.
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
     when(sessionInfo.getSessionPluginExecutionConfig())
@@ -308,7 +308,7 @@ public final class AtsServerSessionPluginTest {
   public void onSessionStarting_requestHasNeitherTradefedJobNorNonTradefedJob_cancelSession()
       throws Exception {
     // Intentionally make it fail to create any tradefed test and fail non tradefed test check.
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any())).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.empty());
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(
@@ -333,7 +333,7 @@ public final class AtsServerSessionPluginTest {
       throws Exception {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
     MobileHarnessException mhException = Mockito.mock(MobileHarnessException.class);
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any())).thenThrow(mhException);
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenThrow(mhException);
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(
             SessionPluginExecutionConfig.newBuilder()
@@ -584,7 +584,7 @@ public final class AtsServerSessionPluginTest {
 
     // Verify first jobInfo end signal won't trigger non-TF job creation.
     plugin.onJobEnded(new JobEndEvent(jobInfo, null));
-    verify(sessionRequestHandlerUtil, never()).createXtsNonTradefedJobs(any());
+    verify(xtsJobCreator, never()).createXtsNonTradefedJobs(any());
 
     when(jobInfo2.timing()).thenReturn(timing);
     when(jobInfo2.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
@@ -597,7 +597,7 @@ public final class AtsServerSessionPluginTest {
     plugin.onJobEnded(new JobEndEvent(jobInfo2, null));
     verify(sessionInfo).addJob(moblyJobInfo);
     verify(sessionInfo).addJob(moblyJobInfo2);
-    verify(sessionRequestHandlerUtil, times(2)).createXtsNonTradefedJobs(any());
+    verify(xtsJobCreator, times(2)).createXtsNonTradefedJobs(any());
   }
 
   @Test
@@ -868,7 +868,7 @@ public final class AtsServerSessionPluginTest {
   @Test
   public void onSessionEnded_requestWasCancelled_keepCancelStateAndNoRetry() throws Exception {
     // Intentionally make it fail to create any tradefed test and fail non tradefed test check.
-    when(sessionRequestHandlerUtil.createXtsTradefedTestJob(any())).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.empty());
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(

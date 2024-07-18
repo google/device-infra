@@ -76,10 +76,18 @@ public abstract class RetryArgs {
   public abstract static class Builder {
     public abstract Builder setResultsDir(Path resultsDir);
 
-    /** One of previousSessionIndex or previousSessionId must be set. */
+    /**
+     * Previous session index for ATS Console.
+     *
+     * <p>One of previousSessionIndex or previousSessionId must be set.
+     */
     public abstract Builder setPreviousSessionIndex(int previousSessionIndex);
 
-    /** One of previousSessionIndex or previousSessionId must be set. */
+    /**
+     * Previous session for ATS Server.
+     *
+     * <p>One of previousSessionIndex or previousSessionId must be set.
+     */
     public abstract Builder setPreviousSessionId(String previousSessionId);
 
     public abstract Builder setRetryType(RetryType retryType);

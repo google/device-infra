@@ -18,35 +18,29 @@ load("//src/javatests/com/google/devtools/mobileharness/builddefs:junit_test_sui
 package(default_applicable_licenses = ["//:license"])
 
 java_library(
-    name = "common",
+    name = "creator",
     testonly = True,
     srcs = glob(["*.java"]),
+    data = [
+        ":testdata",
+    ],
     deps = [
-        "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
-        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_details",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_selection",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:device_selection_options",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_handler_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:console_job_creator",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:server_job_creator",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:test_plan_parser",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:certification_suite_info_factory",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_creator",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_merger",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:compatibility_report_parser",
-        "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
-        "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:previous_result_loader",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_args",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_generator",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:sub_plan",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_config_java_proto",
         "//src/javatests/com/google/devtools/mobileharness/builddefs:truth",
-        "@maven//:com_google_code_gson_gson",
+        "//src/javatests/com/google/devtools/mobileharness/shared/util/runfiles:runfiles_util",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_extensions_guice_testlib",
         "@maven//:com_google_inject_guice",
@@ -56,10 +50,15 @@ java_library(
     ],
 )
 
+filegroup(
+    name = "testdata",
+    srcs = glob(["testdata/**/*"]),
+)
+
 junit_test_suites(
     name = "tests",
     sizes = [
         "small",
     ],
-    deps = [":common"],
+    deps = [":creator"],
 )

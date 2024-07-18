@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.ats.common;
 
-import static com.google.common.base.Strings.emptyToNull;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
@@ -38,7 +37,6 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Streams;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
@@ -59,21 +57,14 @@ import com.google.devtools.mobileharness.platform.android.xts.config.proto.Confi
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Device;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.DeviceConfigurations;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.DeviceConfigurationProto.ModuleDeviceConfiguration;
-import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
-import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
-import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader.TradefedResultFilesBundle;
-import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
-import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
-import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
-import com.google.devtools.mobileharness.shared.util.path.PathUtil;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
 import com.google.protobuf.TextFormat;
@@ -91,22 +82,14 @@ import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryFilter;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.nio.file.Path;
-import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
-import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -139,14 +122,11 @@ public class SessionRequestHandlerUtil {
   private final ConfigurationUtil configurationUtil;
   private final ModuleConfigurationHelper moduleConfigurationHelper;
   private final CertificationSuiteInfoFactory certificationSuiteInfoFactory;
-  private final RetryGenerator retryGenerator;
   private final Provider<AndroidAdbUtil> androidAdbUtilProvider;
   private final Path sessionGenDir;
   private final Path sessionTempDir;
   private final Provider<ResUtil> resUtilProvider;
-  private final PreviousResultLoader previousResultLoader;
   private final DeviceDetailsRetriever deviceDetailsRetriever;
-  private final TestPlanParser testPlanParser;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -155,27 +135,21 @@ public class SessionRequestHandlerUtil {
       ConfigurationUtil configurationUtil,
       ModuleConfigurationHelper moduleConfigurationHelper,
       CertificationSuiteInfoFactory certificationSuiteInfoFactory,
-      RetryGenerator retryGenerator,
       Provider<AndroidAdbUtil> androidAdbUtilProvider,
       @SessionGenDir Path sessionGenDir,
       @SessionTempDir Path sessionTempDir,
       Provider<ResUtil> resUtilProvider,
-      PreviousResultLoader previousResultLoader,
-      DeviceDetailsRetriever deviceDetailsRetriever,
-      TestPlanParser testPlanParser) {
+      DeviceDetailsRetriever deviceDetailsRetriever) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
     this.moduleConfigurationHelper = moduleConfigurationHelper;
     this.certificationSuiteInfoFactory = certificationSuiteInfoFactory;
-    this.retryGenerator = retryGenerator;
     this.androidAdbUtilProvider = androidAdbUtilProvider;
     this.sessionGenDir = sessionGenDir;
     this.sessionTempDir = sessionTempDir;
     this.resUtilProvider = resUtilProvider;
-    this.previousResultLoader = previousResultLoader;
     this.deviceDetailsRetriever = deviceDetailsRetriever;
-    this.testPlanParser = testPlanParser;
   }
 
   /** Information used to create the Tradefed job. */
@@ -304,8 +278,36 @@ public class SessionRequestHandlerUtil {
     return info.deviceType().orElse(ANDROID_DEVICE_TYPE);
   }
 
-  public Optional<JobInfo> createXtsTradefedTestJob(SessionRequestInfo sessionRequestInfo)
+  public Optional<JobInfo> createXtsTradefedTestJob(
+      SessionRequestInfo sessionRequestInfo, TradefedJobInfo tradefedJobInfo)
       throws MobileHarnessException, InterruptedException {
+    JobInfo jobInfo =
+        JobInfoCreator.createJobInfo(
+            tradefedJobInfo.jobConfig(),
+            ImmutableList.of(),
+            tradefedJobInfo.jobConfig().getGenFileDir(),
+            createJobTmpDir(tradefedJobInfo.jobConfig().getName()).toString());
+    addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
+    jobInfo.properties().add(Job.IS_XTS_TF_JOB, "true");
+    injectCommonParams(jobInfo);
+    tradefedJobInfo
+        .extraJobProperties()
+        .forEach((key, value) -> jobInfo.properties().add(key, value));
+    printCreatedJobInfo(jobInfo, /* isTf= */ true);
+    return Optional.of(jobInfo);
+  }
+
+  /**
+   * Gets a list of filtered tradefed modules.
+   *
+   * <p>The list of modules is filtered by include/exclude filters and the given module names.
+   *
+   * @return an optional list of filtered tradefed modules. If the list isn't present, it means no
+   *     tradefed modules satisfy the given filters. If the list is present and contains no modules,
+   *     it means all tradefed modules are satisfied by the given filters.
+   */
+  public Optional<ImmutableList<String>> getFilteredTradefedModules(
+      SessionRequestInfo sessionRequestInfo) throws MobileHarnessException {
     Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
       logger.atInfo().log(
@@ -372,39 +374,16 @@ public class SessionRequestHandlerUtil {
       return Optional.empty();
     }
 
-    Optional<TradefedJobInfo> tradefedJobInfo =
-        createXtsTradefedTestJobInfo(
-            sessionRequestInfo, modules.isEmpty() ? ImmutableList.of() : filteredModules);
-    if (tradefedJobInfo.isEmpty()) {
-      return Optional.empty();
-    }
-    JobInfo jobInfo =
-        JobInfoCreator.createJobInfo(
-            tradefedJobInfo.get().jobConfig(),
-            ImmutableList.of(),
-            tradefedJobInfo.get().jobConfig().getGenFileDir(),
-            createJobTmpDir(tradefedJobInfo.get().jobConfig().getName()).toString());
-    addSessionClientIdToJobInfo(jobInfo, sessionRequestInfo);
-    jobInfo.properties().add(Job.IS_XTS_TF_JOB, "true");
-    injectCommonParams(jobInfo);
-    tradefedJobInfo
-        .get()
-        .extraJobProperties()
-        .forEach((key, value) -> jobInfo.properties().add(key, value));
-    printCreatedJobInfo(jobInfo, /* isTf= */ true);
-    return Optional.of(jobInfo);
+    return Optional.of(modules.isEmpty() ? ImmutableList.of() : filteredModules);
   }
 
-  @VisibleForTesting
-  Optional<TradefedJobInfo> createXtsTradefedTestJobInfo(
-      SessionRequestInfo sessionRequestInfo, ImmutableList<String> tfModules)
-      throws MobileHarnessException, InterruptedException {
+  /** Initializes a {@link JobConfig} for a tradefed job. */
+  public Optional<JobConfig> initializeJobConfig(
+      SessionRequestInfo sessionRequestInfo, Map<String, String> driverParams)
+      throws InterruptedException, MobileHarnessException {
     String testPlan = sessionRequestInfo.testPlan();
-    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     String xtsType = sessionRequestInfo.xtsType();
     int shardCount = sessionRequestInfo.shardCount().orElse(0);
-    ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
-    ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
 
     // TODO: migrate multi-device tests to non-TF
     int minDeviceCount = testPlan.matches(xtsType + "-multi-?device") ? 2 : 1;
@@ -442,184 +421,6 @@ public class SessionRequestHandlerUtil {
                     .addContent(String.format("xts-tradefed-test-%s", testPlan)));
     jobConfigBuilder.setDevice(DeviceList.newBuilder().addAllSubDeviceSpec(subDeviceSpecList));
 
-    Map<String, String> driverParams = new HashMap<>();
-    driverParams.put("xts_type", xtsType);
-
-    // Use android xts zip file path if specified in request. Otherwise use root directory path.
-    if (sessionRequestInfo.androidXtsZip().isPresent()) {
-      driverParams.put("android_xts_zip", sessionRequestInfo.androidXtsZip().get());
-    } else {
-      driverParams.put("xts_root_dir", xtsRootDir.toString());
-    }
-    driverParams.put("xts_test_plan", testPlan);
-    if (isRunRetry(testPlan)) {
-      extraJobProperties.put(Job.IS_RUN_RETRY, "true");
-      if (SessionHandlerHelper.useTfRetry()) {
-        Optional<Path> testReportPropertiesFile =
-            getPrevSessionTestReportProperties(sessionRequestInfo);
-        if (testReportPropertiesFile.isPresent()) {
-          Properties testReportProperties =
-              loadTestReportProperties(testReportPropertiesFile.get());
-          // If previous session doesn't have TF module, skip running TF retry.
-          if (!Boolean.parseBoolean(
-              testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))) {
-            logger
-                .atInfo()
-                .with(IMPORTANCE, IMPORTANT)
-                .log(
-                    "Previous session doesn't have tradefed module, skip creating tradefed jobs for"
-                        + " the retry.");
-            return Optional.empty();
-          }
-          extraJobProperties
-              .put(
-                  Job.PREV_SESSION_HAS_TF_MODULE,
-                  String.valueOf(
-                      Boolean.parseBoolean(
-                          testReportProperties.getProperty(
-                              SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))))
-              .put(
-                  Job.PREV_SESSION_HAS_NON_TF_MODULE,
-                  String.valueOf(
-                      Boolean.parseBoolean(
-                          testReportProperties.getProperty(
-                              SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))));
-        }
-        TradefedResultFilesBundle tfRunRetryFilesBundle =
-            findTfRunRetryFilesBundle(
-                xtsRootDir, xtsType, sessionRequestInfo.retrySessionIndex().orElseThrow());
-        driverParams.put(
-            "prev_session_test_result_xml",
-            tfRunRetryFilesBundle.testResultXml().toAbsolutePath().toString());
-        driverParams.put(
-            "prev_session_test_record_files",
-            new Gson()
-                .toJson(
-                    tfRunRetryFilesBundle.testRecordProtoFiles().stream()
-                        .map(Path::toAbsolutePath)
-                        .map(Path::toString)
-                        .collect(toImmutableList())));
-        if (sessionRequestInfo.retryType().isPresent()) {
-          driverParams.put("retry_type", sessionRequestInfo.retryType().get().toString());
-        }
-      } else {
-        Optional<SubPlan> runRetryTfSubPlan;
-        final ImmutableSet<String> allNonTfModules =
-            getNonTfModules(sessionRequestInfo.v2ConfigsMap());
-        if (sessionRequestInfo.retrySessionIndex().isPresent()) {
-          runRetryTfSubPlan =
-              prepareRunRetrySubPlan(
-                  xtsRootDir,
-                  sessionRequestInfo.xtsType(),
-                  sessionRequestInfo.retrySessionIndex().orElseThrow(),
-                  sessionRequestInfo.retryType().orElse(null),
-                  sessionRequestInfo.includeFilters(),
-                  sessionRequestInfo.excludeFilters(),
-                  allNonTfModules,
-                  /* forTf= */ true,
-                  sessionRequestInfo.moduleNames());
-        } else {
-          runRetryTfSubPlan =
-              prepareRunRetrySubPlan(
-                  sessionRequestInfo.retryResultDir().orElseThrow(),
-                  sessionRequestInfo.retrySessionId().orElseThrow(),
-                  sessionRequestInfo.retryType().orElse(null),
-                  sessionRequestInfo.includeFilters(),
-                  sessionRequestInfo.excludeFilters(),
-                  allNonTfModules,
-                  /* forTf= */ true,
-                  sessionRequestInfo.moduleNames());
-        }
-        if (runRetryTfSubPlan.isEmpty()) {
-          return Optional.empty();
-        }
-        driverParams.put(
-            "prev_session_xts_test_plan", runRetryTfSubPlan.get().getPreviousSessionXtsTestPlan());
-        extraJobProperties.put(
-            Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT,
-            runRetryTfSubPlan.get().getPreviousSessionDeviceBuildFingerprint().orElse(""));
-        Path runRetryTfSubPlanXmlFile;
-        if (sessionRequestInfo.retrySessionIndex().isPresent()) {
-          runRetryTfSubPlanXmlFile =
-              prepareRunRetryTfSubPlanXmlFile(
-                  xtsRootDir,
-                  sessionRequestInfo.xtsType(),
-                  sessionRequestInfo.retrySessionIndex().orElseThrow(),
-                  runRetryTfSubPlan.get());
-        } else {
-          runRetryTfSubPlanXmlFile =
-              prepareRunRetryTfSubPlanXmlFile(
-                  xtsRootDir,
-                  sessionRequestInfo.retrySessionId().orElseThrow(),
-                  runRetryTfSubPlan.get());
-        }
-        driverParams.put("subplan_xml", runRetryTfSubPlanXmlFile.toAbsolutePath().toString());
-      }
-    } else if (sessionRequestInfo.subPlanName().isPresent()) {
-      Optional<Path> tfSubPlan =
-          prepareTfSubPlan(
-              xtsRootDir, sessionRequestInfo.xtsType(), sessionRequestInfo.subPlanName().get());
-      if (tfSubPlan.isEmpty()) {
-        return Optional.empty();
-      }
-      driverParams.put("subplan_xml", tfSubPlan.get().toAbsolutePath().toString());
-    }
-
-    if (!sessionRequestInfo.envVars().isEmpty()) {
-      driverParams.put("env_vars", new Gson().toJson(sessionRequestInfo.envVars()));
-    }
-    if (sessionRequestInfo.testPlanFile().isPresent()) {
-      driverParams.put("xts_test_plan_file", sessionRequestInfo.testPlanFile().get());
-    }
-    ImmutableList<String> shardCountArg =
-        shardCount > 0
-            ? ImmutableList.of(String.format("--shard-count %s", shardCount))
-            : ImmutableList.of();
-
-    Optional<String> testNameArg =
-        sessionRequestInfo.testName().map((String value) -> String.format("-t %s", value));
-
-    String sessionRequestInfoArgs =
-        Joiner.on(' ')
-            .join(
-                Streams.concat(
-                        // For "run retry" command, the given modules have been processed when
-                        // generating the subplan above, no need to pass these again to underneath
-                        // TF
-                        (!SessionHandlerHelper.useTfRetry() && isRunRetry(testPlan)
-                            ? Stream.empty()
-                            : tfModules.stream().map(module -> String.format("-m %s", module))),
-                        testNameArg.stream(),
-                        shardCountArg.stream(),
-                        // For "run retry" command, the passed in include filters and exclude
-                        // filters are set in generated subplan, no need to set in TF command again.
-                        !SessionHandlerHelper.useTfRetry() && isRunRetry(testPlan)
-                            ? Stream.empty()
-                            : sessionRequestInfo.includeFilters().stream()
-                                .map(
-                                    includeFilter ->
-                                        String.format("--include-filter \"%s\"", includeFilter)),
-                        !SessionHandlerHelper.useTfRetry() && isRunRetry(testPlan)
-                            ? Stream.empty()
-                            : sessionRequestInfo.excludeFilters().stream()
-                                .map(
-                                    excludeFilter ->
-                                        String.format("--exclude-filter \"%s\"", excludeFilter)),
-                        extraArgs.stream()
-                            .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
-                    .collect(toImmutableList()));
-    if (!sessionRequestInfoArgs.isEmpty()) {
-      driverParams.put("run_command_args", sessionRequestInfoArgs);
-    }
-    if (sessionRequestInfo.remoteRunnerFilePathPrefix().isPresent()
-        && driverParams.containsKey("subplan_xml")) {
-      driverParams.put(
-          "subplan_xml",
-          PathUtil.join(
-              sessionRequestInfo.remoteRunnerFilePathPrefix().get(),
-              PathUtil.makeRelative(
-                  Flags.instance().atsStoragePath.getNonNull(), driverParams.get("subplan_xml"))));
-    }
     jobConfigBuilder.setDriver(
         Driver.newBuilder().setName("XtsTradefedTest").setParam(new Gson().toJson(driverParams)));
 
@@ -628,84 +429,7 @@ public class SessionRequestHandlerUtil {
 
     JobConfig jobConfig = jobConfigBuilder.build();
     logger.atInfo().log("XtsTradefedTest job config: %s", shortDebugString(jobConfig));
-
-    return Optional.of(TradefedJobInfo.of(jobConfig, extraJobProperties.buildOrThrow()));
-  }
-
-  private Optional<Path> prepareTfSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
-      throws MobileHarnessException, InterruptedException {
-    Path subPlansDir = XtsDirUtil.getXtsSubPlansDir(xtsRootDir, xtsType);
-    Path subPlanPath = subPlansDir.resolve(subPlanName + ".xml");
-    SubPlan subPlan = SessionHandlerHelper.loadSubPlan(subPlanPath.toFile());
-
-    if (subPlan.getIncludeFiltersMultimap().isEmpty()
-        && subPlan.getExcludeFiltersMultimap().isEmpty()) {
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log("No include or exclude filters found for TF modules and tests ");
-      return Optional.empty();
-    }
-
-    // If the subplan only includes TF modules and tests, use the subplan file directly
-    if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
-        && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
-      return Optional.of(subPlanPath);
-    }
-
-    Path tfOnlySubPlanPath = subPlansDir.resolve(String.format("%s_tf_auto_gen.xml", subPlanName));
-    if (localFileUtil.isFileExist(tfOnlySubPlanPath)) {
-      localFileUtil.removeFileOrDir(tfOnlySubPlanPath);
-    }
-    try (OutputStream outputStream = new FileOutputStream(tfOnlySubPlanPath.toFile())) {
-      subPlan.serialize(outputStream, /* tfFiltersOnly= */ true);
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_RUN_SUBPLAN_COMMAND_WRITE_SUBPLAN_XML_ERROR,
-          String.format("Failed to write the TF subplan xml file at %s", tfOnlySubPlanPath),
-          e);
-    }
-
-    return Optional.of(tfOnlySubPlanPath);
-  }
-
-  // For ATS Console
-  private Path prepareRunRetryTfSubPlanXmlFile(
-      Path xtsRootDir, String xtsType, int previousSessionIndex, SubPlan subPlan)
-      throws MobileHarnessException {
-    Path xtsSubPlansDir = XtsDirUtil.getXtsSubPlansDir(xtsRootDir, xtsType);
-
-    return serializeRetrySubPlan(
-        xtsSubPlansDir, subPlan, String.format("#%s", previousSessionIndex));
-  }
-
-  // For ATS Server
-  private Path prepareRunRetryTfSubPlanXmlFile(
-      Path xtsRootDir, String previousSessionId, SubPlan subPlan) throws MobileHarnessException {
-    Path xtsSubPlansDir = xtsRootDir.getParent();
-    return serializeRetrySubPlan(xtsSubPlansDir, subPlan, previousSessionId);
-  }
-
-  private Path serializeRetrySubPlan(
-      Path xtsSubPlansDir, SubPlan subPlan, String formattedPreviousSessionIdentifier)
-      throws MobileHarnessException {
-    localFileUtil.prepareDir(xtsSubPlansDir);
-    Path subPlanPath =
-        xtsSubPlansDir.resolve(
-            String.format(
-                "tf_retry_session_%s_%d.xml",
-                formattedPreviousSessionIdentifier, Clock.systemUTC().millis()));
-    try (OutputStream outputStream = new FileOutputStream(subPlanPath.toFile())) {
-      subPlan.serialize(outputStream, /* tfFiltersOnly= */ true);
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_RUN_RETRY_COMMAND_PREPARE_SUBPLAN_ERROR,
-          String.format(
-              "Failed to write the subplan xml file when retrying session %s",
-              formattedPreviousSessionIdentifier),
-          e);
-    }
-    return subPlanPath;
+    return Optional.of(jobConfigBuilder.build());
   }
 
   /**
@@ -876,110 +600,12 @@ public class SessionRequestHandlerUtil {
    *
    * @return a list of added non-tradefed jobInfos.
    */
-  public ImmutableList<JobInfo> createXtsNonTradefedJobs(SessionRequestInfo sessionRequestInfo)
+  public ImmutableList<JobInfo> createXtsNonTradefedJobs(
+      SessionRequestInfo sessionRequestInfo,
+      TestPlanParser.TestPlanFilter testPlanFilter,
+      @Nullable SubPlan subPlan,
+      Map<XtsPropertyName, String> extraJobProperties)
       throws MobileHarnessException, InterruptedException {
-    return createXtsNonTradefedJobs(
-        sessionRequestInfo,
-        testPlanParser.parseFilters(
-            Path.of(sessionRequestInfo.xtsRootDir()),
-            sessionRequestInfo.xtsType(),
-            sessionRequestInfo.testPlan()));
-  }
-
-  @VisibleForTesting
-  ImmutableList<JobInfo> createXtsNonTradefedJobs(
-      SessionRequestInfo sessionRequestInfo, TestPlanParser.TestPlanFilter testPlanFilter)
-      throws MobileHarnessException, InterruptedException {
-    if (!canCreateNonTradefedJobs(sessionRequestInfo)) {
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log(
-              "Skip creating non-tradefed jobs as none of given modules is for non-tradefed module:"
-                  + " %s",
-              sessionRequestInfo.moduleNames());
-      return ImmutableList.of();
-    }
-    String testPlan = sessionRequestInfo.testPlan();
-    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
-    if (!localFileUtil.isDirExist(xtsRootDir)) {
-      logger.atInfo().log(
-          "xTS root dir [%s] doesn't exist, skip creating non-tradefed jobs.", xtsRootDir);
-      return ImmutableList.of();
-    }
-
-    Map<XtsPropertyName, String> extraJobProperties = new HashMap<>();
-    String xtsType = sessionRequestInfo.xtsType();
-    Optional<SubPlan> subPlanOpt = Optional.empty();
-    if (isRunRetry(testPlan)) {
-      extraJobProperties.put(Job.IS_RUN_RETRY, "true");
-      Optional<Path> testReportPropertiesFile =
-          getPrevSessionTestReportProperties(sessionRequestInfo);
-      if (testReportPropertiesFile.isPresent()) {
-        Properties testReportProperties = loadTestReportProperties(testReportPropertiesFile.get());
-        // If previous session doesn't have Non-TF module, skip the retry.
-        if (!Boolean.parseBoolean(
-            testReportProperties.getProperty(SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))) {
-          logger
-              .atInfo()
-              .with(IMPORTANCE, IMPORTANT)
-              .log(
-                  "Previous session doesn't have non-tradefed module, skip creating non-tradefed"
-                      + " jobs for the retry.");
-          return ImmutableList.of();
-        }
-        extraJobProperties.put(
-            Job.PREV_SESSION_HAS_TF_MODULE,
-            String.valueOf(
-                Boolean.parseBoolean(
-                    testReportProperties.getProperty(
-                        SuiteCommon.TEST_REPORT_PROPERTY_HAS_TF_MODULE))));
-        extraJobProperties.put(
-            Job.PREV_SESSION_HAS_NON_TF_MODULE,
-            String.valueOf(
-                Boolean.parseBoolean(
-                    testReportProperties.getProperty(
-                        SuiteCommon.TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE))));
-      }
-      if (sessionRequestInfo.retrySessionIndex().isPresent()) {
-        subPlanOpt =
-            prepareRunRetrySubPlan(
-                xtsRootDir,
-                sessionRequestInfo.xtsType(),
-                sessionRequestInfo.retrySessionIndex().orElseThrow(),
-                sessionRequestInfo.retryType().orElse(null),
-                sessionRequestInfo.includeFilters(),
-                sessionRequestInfo.excludeFilters(),
-                getNonTfModules(sessionRequestInfo.v2ConfigsMap()),
-                /* forTf= */ false,
-                sessionRequestInfo.moduleNames());
-      } else {
-        subPlanOpt =
-            prepareRunRetrySubPlan(
-                sessionRequestInfo.retryResultDir().orElseThrow(),
-                sessionRequestInfo.retrySessionId().orElseThrow(),
-                sessionRequestInfo.retryType().orElse(null),
-                sessionRequestInfo.includeFilters(),
-                sessionRequestInfo.excludeFilters(),
-                getNonTfModules(sessionRequestInfo.v2ConfigsMap()),
-                /* forTf= */ false,
-                sessionRequestInfo.moduleNames());
-      }
-      if (subPlanOpt.isEmpty()) {
-        return ImmutableList.of();
-      }
-      extraJobProperties.put(
-          Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT,
-          subPlanOpt.get().getPreviousSessionDeviceBuildFingerprint().orElse(""));
-    } else if (sessionRequestInfo.subPlanName().isPresent()) {
-      subPlanOpt =
-          prepareNonTfSubPlan(
-              xtsRootDir, sessionRequestInfo.xtsType(), sessionRequestInfo.subPlanName().get());
-      if (subPlanOpt.isEmpty()) {
-        return ImmutableList.of();
-      }
-    }
-
     ImmutableSet<String> givenMatchedNonTfModules = sessionRequestInfo.givenMatchedNonTfModules();
     ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
 
@@ -995,9 +621,9 @@ public class SessionRequestHandlerUtil {
                 testPlanFilter.includeFilters().stream())
             .map(SuiteTestFilter::create)
             .collect(toImmutableList());
-    if (subPlanOpt.isPresent()) {
+    if (subPlan != null) {
       includeFilters =
-          subPlanOpt.get().getNonTfIncludeFiltersMultimap().entries().stream()
+          subPlan.getNonTfIncludeFiltersMultimap().entries().stream()
               .map(
                   e ->
                       SuiteTestFilter.create(
@@ -1025,6 +651,8 @@ public class SessionRequestHandlerUtil {
             ? DEFAULT_NON_TRADEFED_START_TIMEOUT
             : sessionRequestInfo.startTimeout();
 
+    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
+    String xtsType = sessionRequestInfo.xtsType();
     // Reads DeviceConfigurations text proto.
     Path xtsDeviceConfigFile = getXtsDeviceConfigFilePath(xtsRootDir, xtsType);
     DeviceConfigurations xtsDeviceConfig = readXtsDeviceConfigFile(xtsDeviceConfigFile);
@@ -1039,8 +667,8 @@ public class SessionRequestHandlerUtil {
       String expandedModuleName = entry.getKey();
       // If it has a subplan(either from the retry command or the subplan command), do a early check
       // for whether the module should be ran
-      if (subPlanOpt.isPresent()
-          && !subPlanOpt.get().getNonTfIncludeFiltersMultimap().containsKey(expandedModuleName)) {
+      if (subPlan != null
+          && !subPlan.getNonTfIncludeFiltersMultimap().containsKey(expandedModuleName)) {
         continue;
       }
       ImmutableList.Builder<String> matchedTestCasesBuilder = ImmutableList.builder();
@@ -1058,8 +686,8 @@ public class SessionRequestHandlerUtil {
                     excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))) {
           continue;
         }
-        if (subPlanOpt.isPresent()
-            && subPlanOpt.get().getNonTfExcludeFiltersMultimap().keySet().stream()
+        if (subPlan != null
+            && subPlan.getNonTfExcludeFiltersMultimap().keySet().stream()
                 .map(SuiteTestFilter::create)
                 .anyMatch(
                     excludeFilter ->
@@ -1094,10 +722,8 @@ public class SessionRequestHandlerUtil {
             createXtsNonTradefedJob(
                 xtsRootDir,
                 xtsType,
-                testPlan,
-                subPlanOpt
-                    .map(subPlan -> emptyToNull(subPlan.getPreviousSessionXtsTestPlan()))
-                    .orElse(null),
+                sessionRequestInfo.testPlan(),
+                subPlan == null ? null : subPlan.getPreviousSessionXtsTestPlan(),
                 Path.of(requireNonNull(moduleNameToConfigFilePathMap.get(originalModuleName))),
                 entry.getValue(),
                 moduleDeviceConfigurations.getOrDefault(
@@ -1264,6 +890,7 @@ public class SessionRequestHandlerUtil {
     return Optional.of(jobInfo);
   }
 
+  /** Injects common params to the job info for both tradefed and non-tradefed jobs. */
   private void injectCommonParams(JobInfo jobInfo) {
     // Skip to clear gservice flag overrides.
     jobInfo.params().add("clear_gservices_overrides", "false");
@@ -1377,125 +1004,8 @@ public class SessionRequestHandlerUtil {
     return matcher.find() ? Optional.of(matcher.group("moduleParam")) : Optional.empty();
   }
 
-  private boolean isRunRetry(String testPlan) {
+  public static boolean isRunRetry(String testPlan) {
     return Ascii.equalsIgnoreCase(testPlan, "retry");
-  }
-
-  private Optional<SubPlan> prepareNonTfSubPlan(Path xtsRootDir, String xtsType, String subPlanName)
-      throws MobileHarnessException {
-    SubPlan subPlan = SessionHandlerHelper.loadSubPlan(xtsRootDir, xtsType, subPlanName);
-    if (subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
-        && subPlan.getNonTfExcludeFiltersMultimap().isEmpty()) {
-      logger
-          .atInfo()
-          .with(IMPORTANCE, IMPORTANT)
-          .log("No include or exclude filters found for Non-TF modules and tests");
-      return Optional.empty();
-    }
-    return Optional.of(subPlan);
-  }
-
-  private TradefedResultFilesBundle findTfRunRetryFilesBundle(
-      Path xtsRootDir, String xtsType, int previousSessionIndex) throws MobileHarnessException {
-    return previousResultLoader
-        .getPrevSessionResultFilesBundle(
-            XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType), previousSessionIndex)
-        .orElseThrow(
-            () ->
-                new MobileHarnessException(
-                    InfraErrorId.ATSC_RUN_RETRY_COMMAND_PREV_SESSION_MISS_RESULT_FILES,
-                    String.format(
-                        "Session %s misses test-record proto files and the test_result.xml file,"
-                            + " not able to retry it",
-                        previousSessionIndex)));
-  }
-
-  // For ATS Console
-  private Optional<SubPlan> prepareRunRetrySubPlan(
-      Path xtsRootDir,
-      String xtsType,
-      int previousSessionIndex,
-      @Nullable RetryType retryType,
-      ImmutableList<String> passedInIncludeFilters,
-      ImmutableList<String> passedInExcludeFilters,
-      ImmutableSet<String> allNonTradefedModules,
-      boolean forTf,
-      ImmutableList<String> passedInModules)
-      throws MobileHarnessException {
-    RetryArgs.Builder retryArgs =
-        RetryArgs.builder()
-            .setResultsDir(XtsDirUtil.getXtsResultsDir(xtsRootDir, xtsType))
-            .setPreviousSessionIndex(previousSessionIndex)
-            .setPassedInExcludeFilters(
-                passedInExcludeFilters.stream()
-                    .map(SuiteTestFilter::create)
-                    .collect(toImmutableSet()))
-            .setPassedInIncludeFilters(
-                passedInIncludeFilters.stream()
-                    .map(SuiteTestFilter::create)
-                    .collect(toImmutableSet()))
-            .setAllNonTfModules(allNonTradefedModules);
-    if (retryType != null) {
-      retryArgs.setRetryType(retryType);
-    }
-    if (!passedInModules.isEmpty()) {
-      retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
-    }
-    return generateRetrySubPlan(retryArgs.build(), forTf, String.valueOf(previousSessionIndex));
-  }
-
-  // For ATS Server
-  private Optional<SubPlan> prepareRunRetrySubPlan(
-      String retryResultDir,
-      String previousSessionId,
-      @Nullable RetryType retryType,
-      ImmutableList<String> passedInIncludeFilters,
-      ImmutableList<String> passedInExcludeFilters,
-      ImmutableSet<String> allNonTradefedModules,
-      boolean forTf,
-      ImmutableList<String> passedInModules)
-      throws MobileHarnessException {
-    RetryArgs.Builder retryArgs =
-        RetryArgs.builder()
-            .setResultsDir(Path.of(retryResultDir))
-            .setPreviousSessionId(previousSessionId)
-            .setPassedInExcludeFilters(
-                passedInExcludeFilters.stream()
-                    .map(SuiteTestFilter::create)
-                    .collect(toImmutableSet()))
-            .setPassedInIncludeFilters(
-                passedInIncludeFilters.stream()
-                    .map(SuiteTestFilter::create)
-                    .collect(toImmutableSet()))
-            .setAllNonTfModules(allNonTradefedModules);
-
-    if (retryType != null) {
-      retryArgs.setRetryType(retryType);
-    }
-    if (!passedInModules.isEmpty()) {
-      retryArgs.setPassedInModules(ImmutableSet.copyOf(passedInModules));
-    }
-    return generateRetrySubPlan(retryArgs.build(), forTf, previousSessionId);
-  }
-
-  private Optional<SubPlan> generateRetrySubPlan(
-      RetryArgs retryArgs, boolean forTf, String previousSessionIdOrIndex)
-      throws MobileHarnessException {
-    SubPlan subPlan = retryGenerator.generateRetrySubPlan(retryArgs);
-    if ((forTf
-            && subPlan.getIncludeFiltersMultimap().isEmpty()
-            && subPlan.getExcludeFiltersMultimap().isEmpty())
-        || (!forTf
-            && subPlan.getNonTfIncludeFiltersMultimap().isEmpty()
-            && subPlan.getNonTfExcludeFiltersMultimap().isEmpty())) {
-      logger.atInfo().log(
-          "No include or exclude filters found for %s retry session %s with retry type %s",
-          forTf ? "TF" : "Non-TF",
-          previousSessionIdOrIndex,
-          retryArgs.retryType().isPresent() ? retryArgs.retryType().get() : "UNKNOWN");
-      return Optional.empty();
-    }
-    return Optional.of(subPlan);
   }
 
   private static ImmutableSet<String> matchModules(List<String> filters, Set<String> allModules)
@@ -1532,7 +1042,8 @@ public class SessionRequestHandlerUtil {
     }
   }
 
-  private static ImmutableSet<String> getNonTfModules(
+  /** Gets all the non-tradefed modules from the config map. */
+  public static ImmutableSet<String> getNonTfModules(
       ImmutableMap<String, Configuration> configsMap) {
     return configsMap.values().stream()
         .map(config -> config.getMetadata().getXtsModule())
@@ -1561,30 +1072,5 @@ public class SessionRequestHandlerUtil {
     return jobTimeout.compareTo(JOB_TEST_TIMEOUT_DIFF.multipliedBy(2L)) < 0
         ? jobTimeout.dividedBy(2L)
         : jobTimeout.minus(JOB_TEST_TIMEOUT_DIFF);
-  }
-
-  private Optional<Path> getPrevSessionTestReportProperties(SessionRequestInfo sessionRequestInfo)
-      throws MobileHarnessException {
-    return sessionRequestInfo.retrySessionIndex().isPresent()
-        ? previousResultLoader.getPrevSessionTestReportProperties(
-            XtsDirUtil.getXtsResultsDir(
-                Path.of(sessionRequestInfo.xtsRootDir()), sessionRequestInfo.xtsType()),
-            sessionRequestInfo.retrySessionIndex().orElseThrow())
-        : previousResultLoader.getPrevSessionTestReportProperties(
-            Path.of(sessionRequestInfo.retryResultDir().orElseThrow()));
-  }
-
-  private static Properties loadTestReportProperties(Path testReportPropertiesFile)
-      throws MobileHarnessException {
-    Properties properties = new Properties();
-    try (InputStream inputStream = new FileInputStream(testReportPropertiesFile.toFile())) {
-      properties.load(inputStream);
-    } catch (IOException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATSC_RUN_RETRY_COMMAND_TEST_REPORT_PROPERTIES_FILE_READ_ERROR,
-          String.format("Failed to read test report properties file %s", testReportPropertiesFile),
-          e);
-    }
-    return properties;
   }
 }

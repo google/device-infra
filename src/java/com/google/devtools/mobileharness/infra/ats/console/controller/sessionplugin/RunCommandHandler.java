@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
+import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.Failure;
@@ -71,6 +72,7 @@ class RunCommandHandler {
   private final LocalFileUtil localFileUtil;
   private final SessionInfo sessionInfo;
   private final SuiteResultReporter suiteResultReporter;
+  private final XtsJobCreator xtsJobCreator;
 
   private final Object addingJobLock = new Object();
 
@@ -89,12 +91,14 @@ class RunCommandHandler {
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
       SessionResultHandlerUtil sessionResultHandlerUtil,
       SessionInfo sessionInfo,
-      SuiteResultReporter suiteResultReporter) {
+      SuiteResultReporter suiteResultReporter,
+      XtsJobCreator xtsJobCreator) {
     this.localFileUtil = localFileUtil;
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.sessionResultHandlerUtil = sessionResultHandlerUtil;
     this.sessionInfo = sessionInfo;
     this.suiteResultReporter = suiteResultReporter;
+    this.xtsJobCreator = xtsJobCreator;
   }
 
   void initialize(RunCommand command) throws MobileHarnessException, InterruptedException {
@@ -131,8 +135,7 @@ class RunCommandHandler {
   @CanIgnoreReturnValue
   ImmutableList<String> addTradefedJobs(RunCommand command)
       throws MobileHarnessException, InterruptedException {
-    Optional<JobInfo> jobInfo =
-        sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfo);
+    Optional<JobInfo> jobInfo = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
     if (jobInfo.isEmpty()) {
       logger.atInfo().log(
           "No tradefed jobs created, double check device availability. The run command -> %s",
@@ -174,8 +177,7 @@ class RunCommandHandler {
   @CanIgnoreReturnValue
   ImmutableList<String> addNonTradefedJobs(RunCommand runCommand)
       throws MobileHarnessException, InterruptedException {
-    ImmutableList<JobInfo> jobInfos =
-        sessionRequestHandlerUtil.createXtsNonTradefedJobs(sessionRequestInfo);
+    ImmutableList<JobInfo> jobInfos = xtsJobCreator.createXtsNonTradefedJobs(sessionRequestInfo);
     if (jobInfos.isEmpty()) {
       logger.atInfo().log(
           "No valid module(s) matched, no non-tradefed jobs will run. The run command -> %s",

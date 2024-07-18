@@ -31,6 +31,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerU
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
+import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.DeviceType;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommand;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.RunCommandState;
@@ -102,6 +103,7 @@ public final class RunCommandHandlerTest {
   @Bind @Mock private SessionInfo sessionInfo;
   @Bind @Mock private AndroidAdbInternalUtil androidAdbInternalUtil;
   @Bind @Mock private SuiteResultReporter suiteResultReporter;
+  @Bind @Mock private XtsJobCreator xtsJobCreator;
 
   @Inject private RunCommandHandler runCommandHandler;
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
@@ -196,7 +198,8 @@ public final class RunCommandHandlerTest {
                 sessionRequestHandlerUtil,
                 sessionResultHandlerUtil,
                 sessionInfo,
-                suiteResultReporter));
+                suiteResultReporter,
+                xtsJobCreator));
     doNothing().when(sessionResultHandlerUtil).cleanUpJobGenDirs(any());
     when(sessionInfo.getSessionProperty("timestamp_dir_name"))
         .thenReturn(Optional.of(TIMESTAMP_DIR_NAME));
