@@ -310,6 +310,82 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> clearAndroidDeviceMultiUsers = clearAndroidDeviceMultiUsersDefault;
 
+  private static final Flag<Integer> cloudFileTransferMaximumAttemptsDefault = Flag.value(3);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_file_transfer_maximum_attempts",
+      description = "Attempts to transferring a file. Default is 3.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> cloudFileTransferMaximumAttempts = cloudFileTransferMaximumAttemptsDefault;
+
+  private static final Flag<Duration> cloudFileTransferTimeoutDefault =
+      DurationFlag.value(Duration.ofMinutes(20L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_file_transfer_timeout",
+      description = "Retry times if failed to transfer a file. Default is 20 minutes.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> cloudFileTransferTimeout = cloudFileTransferTimeoutDefault;
+
+  private static final Flag<Integer> cloudFileTransferUploadShardSizeDefault = Flag.value(200);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_file_transfer_upload_shard_size",
+      description = "Size (in megabytes) of shards during uploading",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> cloudFileTransferUploadShardSize = cloudFileTransferUploadShardSizeDefault;
+
+  private static final Flag<Integer> cloudFileTransferDownloadShardSizeDefault = Flag.value(200);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_file_transfer_download_shard_size",
+      description = "Size (in megabytes) of shards during uploading",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> cloudFileTransferDownloadShardSize =
+      cloudFileTransferDownloadShardSizeDefault;
+
+  private static final Flag<Duration> cloudFileTransferInitialTimeoutDefault =
+      DurationFlag.value(Duration.ofSeconds(5L));
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_file_transfer_initial_timeout",
+      description = "Timeout while starting uploading/downloading.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> cloudFileTransferInitialTimeout = cloudFileTransferInitialTimeoutDefault;
+
+  private static final Flag<Long> cloudFileTransferSmallFileSizeKbDefault = Flag.value(256L);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_file_transfer_small_file_size_kb",
+      description =
+          "The bytes limitation for a *small* file, which will send/get direct without GCS.",
+      converter = Flag.LongConverter.class)
+  public Flag<Long> cloudFileTransferSmallFileSizeKb = cloudFileTransferSmallFileSizeKbDefault;
+
+  private static final Flag<String> cloudPubsubCredFileDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_pubsub_cred_file",
+      description = "The credential file to use for Cloud Pub/Sub.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> cloudPubsubCredFile = cloudPubsubCredFileDefault;
+
+  private static final Flag<String> cloudPubsubProjectIdDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_pubsub_project_id",
+      description = "The project ID of the Cloud Pub/Sub topic to upload monitoring data to.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> cloudPubsubProjectId = cloudPubsubProjectIdDefault;
+
+  private static final Flag<String> cloudPubsubTopicIdDefault = Flag.value(null);
+
+  @com.beust.jcommander.Parameter(
+      names = "--cloud_pubsub_topic_id",
+      description = "The topic ID of the Cloud Pub/Sub topic to upload monitoring data to.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> cloudPubsubTopicId = cloudPubsubTopicIdDefault;
+
   private static final Flag<Integer> commandPortDefault = Flag.value(9995);
 
   @com.beust.jcommander.Parameter(
@@ -530,29 +606,13 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableCloudPubsubMonitoring = enableCloudPubsubMonitoringDefault;
 
-  private static final Flag<String> cloudPubsubProjectIdDefault = Flag.value(null);
+  private static final Flag<Boolean> enableCloudFileTransferDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
-      names = "--cloud_pubsub_project_id",
-      description = "The project ID of the Cloud Pub/Sub topic to upload monitoring data to.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> cloudPubsubProjectId = cloudPubsubProjectIdDefault;
-
-  private static final Flag<String> cloudPubsubTopicIdDefault = Flag.value(null);
-
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_pubsub_topic_id",
-      description = "The topic ID of the Cloud Pub/Sub topic to upload monitoring data to.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> cloudPubsubTopicId = cloudPubsubTopicIdDefault;
-
-  private static final Flag<String> cloudPubsubCredFileDefault = Flag.value(null);
-
-  @com.beust.jcommander.Parameter(
-      names = "--cloud_pubsub_cred_file",
-      description = "The credential file to use for Cloud Pub/Sub.",
-      converter = Flag.StringConverter.class)
-  public Flag<String> cloudPubsubCredFile = cloudPubsubCredFileDefault;
+      names = "--enable_cloud_file_transfer",
+      description = "Whether enable cloud file transfer. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> enableCloudFileTransfer = enableCloudFileTransferDefault;
 
   private static final Flag<Boolean> enableDebugModeDefault = Flag.value(false);
 
@@ -785,6 +845,32 @@ public class Flags {
       description = "File path of the fastboot tool",
       converter = Flag.StringConverter.class)
   public Flag<String> fastbootPathFromUser = fastbootPathFromUserDefault;
+
+  private static final Flag<String> fileTransferBucketDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--file_transfer_cloud_bucket",
+      description = "Google Cloud Storage bucket of file transfer.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> fileTransferBucket = fileTransferBucketDefault;
+
+  private static final Flag<Duration> fileTransferCloudCacheTtlDefault =
+      DurationFlag.value(Duration.ofHours(12));
+
+  @com.beust.jcommander.Parameter(
+      names = "--file_transfer_cloud_cache_ttl",
+      description = "TTL of File Transfer caches in Google Cloud Storage. Default is 1 day.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> fileTransferCloudCacheTtl = fileTransferCloudCacheTtlDefault;
+
+  private static final Flag<Duration> fileTransferLocalCacheTtlDefault =
+      DurationFlag.value(Duration.ofHours(3));
+
+  @com.beust.jcommander.Parameter(
+      names = "--file_transfer_local_cache_ttl",
+      description = "TTL of File Transfer caches in Google Cloud Storage. Default is 3 hour.",
+      converter = DurationFlag.DurationConverter.class)
+  public Flag<Duration> fileTransferLocalCacheTtl = fileTransferLocalCacheTtlDefault;
 
   private static final Flag<Duration> getTestStatusRpcCallIntervalDefault =
       DurationFlag.value(Duration.ofSeconds(5L));
