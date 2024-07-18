@@ -30,24 +30,24 @@ message AndroidInstallPrebuiltDecoratorSpec {
     optional AndroidInstallPrebuiltDecoratorSpec ext = 1008;
   }
 
-  optional string type = 1
+  optional string prebuilt_type = 1
       [(field_detail) = { help: "Specifies the type of Prebuilt to install." }];
 
-  optional string branch = 2 [(field_detail) = {
-    help: "Specifies the branch to get the build from. The build used will be "
-          "the latest build from the specified branch. If the 'build_id' param "
+  optional string prebuilt_branch = 2 [(field_detail) = {
+    help: "Specifies the branch to get the Prebuilt build from. The build used will be "
+          "the latest build from the specified branch. If the 'prebuilt_build_id' param "
           "is also specified, this param is ignored."
   }];
 
-  optional string build_id = 3 [(field_detail) = {
+  optional string prebuilt_build_id = 3 [(field_detail) = {
     help: "Specifies the ID of the Prebuilt build to install."
   }];
 
-  optional string build_target = 4 [(field_detail) = {
+  optional string prebuilt_target = 4 [(field_detail) = {
     help: "Specifies the build target of the Prebuilt build to install."
   }];
 
-  optional bool disabled = 5 [
+  optional bool disable_prebuilt_installer = 5 [
     default = false,
     (field_detail) = { help: "If the decorator is disabled. Default is false." }
   ];
