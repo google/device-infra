@@ -30,8 +30,10 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/shared/logging:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/context:invocation_context",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/linecallback:command_output_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "@maven//:com_google_code_findbugs_jsr305",

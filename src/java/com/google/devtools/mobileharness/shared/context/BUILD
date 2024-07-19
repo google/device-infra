@@ -20,6 +20,7 @@ java_library(
     srcs = ["InvocationContext.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
     ],
     deps = [

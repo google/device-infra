@@ -29,6 +29,7 @@ import com.google.devtools.mobileharness.shared.context.InvocationContext;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Handler;
@@ -213,11 +214,16 @@ public class LogManager<D> {
     public void publish(LogRecord logRecord) {
       if (isLoggable(logRecord)) {
         LogImportanceScope importanceScope = LogImportanceScope.getCurrentScope();
-        String clientId = InvocationContext.getCurrentContext().get(InvocationType.OLC_CLIENT);
+
+        Map<InvocationType, String> context = InvocationContext.getCurrentContext();
+        String clientId = context.get(InvocationType.OLC_CLIENT);
+        String formattedLogRecord = context.isEmpty() ? null : getFormatter().format(logRecord);
+
         if (importanceScope == null && clientId == null) {
           addLogRecordToBuffer(logRecord);
         } else {
-          addLogRecordToBuffer(new LogRecordWithContext(logRecord, importanceScope, clientId));
+          addLogRecordToBuffer(
+              new LogRecordWithContext(logRecord, importanceScope, clientId, formattedLogRecord));
         }
       }
     }
@@ -241,18 +247,23 @@ public class LogManager<D> {
     LogRecord record;
     LogImportanceScope importanceScope;
     String clientId;
+    String formattedLogRecord;
     if (logRecord instanceof LogRecord) {
       record = (LogRecord) logRecord;
       importanceScope = null;
       clientId = null;
+      formattedLogRecord = null;
     } else {
       LogRecordWithContext recordWithContext = (LogRecordWithContext) logRecord;
       record = recordWithContext.logRecord;
       importanceScope = recordWithContext.logImportanceScope;
       clientId = recordWithContext.clientId;
+      formattedLogRecord = recordWithContext.formattedLogRecord;
     }
 
-    String formattedLogRecord = logHandler.getFormatter().format(record);
+    if (formattedLogRecord == null) {
+      formattedLogRecord = logHandler.getFormatter().format(record);
+    }
     int importance = LogRecordImportance.getLogRecordImportance(record, importanceScope).value();
     LogProto.LogRecord.Builder result =
         LogProto.LogRecord.newBuilder()
@@ -273,13 +284,17 @@ public class LogManager<D> {
 
     @Nullable private final String clientId;
 
+    @Nullable private final String formattedLogRecord;
+
     private LogRecordWithContext(
         LogRecord logRecord,
         @Nullable LogImportanceScope logImportanceScope,
-        @Nullable String clientId) {
+        @Nullable String clientId,
+        @Nullable String formattedLogRecord) {
       this.logRecord = logRecord;
       this.logImportanceScope = logImportanceScope;
       this.clientId = clientId;
+      this.formattedLogRecord = formattedLogRecord;
     }
   }
 }

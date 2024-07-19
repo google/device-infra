@@ -16,11 +16,15 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.controller;
 
+import static com.google.common.truth.extensions.proto.ProtoTruth.assertThat;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.truth.extensions.proto.FieldScope;
+import com.google.common.truth.extensions.proto.FieldScopes;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsCollector;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.controller.LogManager.LogRecordsConsumer;
@@ -32,12 +36,11 @@ import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Log
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
+import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogFormatter;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
 import java.time.Duration;
-import java.util.logging.Formatter;
-import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import javax.inject.Inject;
 import org.junit.After;
@@ -57,6 +60,11 @@ public class LogManagerTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
+  private static final FieldScope IGNORING_FORMATTED_LOG_RECORD =
+      FieldScopes.ignoringFieldDescriptors(
+          LogProto.LogRecord.getDescriptor()
+              .findFieldByNumber(LogProto.LogRecord.FORMATTED_LOG_RECORD_FIELD_NUMBER));
+
   private static final Logger rootLogger = Logger.getLogger("");
 
   @Mock private LogRecordsConsumer<LogRecords> logRecordsConsumer;
@@ -73,7 +81,7 @@ public class LogManagerTest {
   @Before
   public void setUp() throws Exception {
     Guice.createInjector(BoundFieldModule.of(this)).injectMembers(this);
-    logManager.getLogHandler().setFormatter(new SimpleLogFormatter());
+    logManager.getLogHandler().setFormatter(MobileHarnessLogFormatter.getDefaultFormatter());
 
     rootLogger.addHandler(logManager.getLogHandler());
   }
@@ -89,20 +97,38 @@ public class LogManagerTest {
     logManager.addConsumer(logRecordsConsumer);
 
     try (ContextScope ignored =
-        new ContextScope(ImmutableMap.of(InvocationType.OLC_CLIENT, "fake_client_id"))) {
+        new ContextScope(
+            ImmutableMap.of(
+                InvocationType.OLC_CLIENT,
+                "fake_client_id",
+                InvocationType.OMNILAB_TEST,
+                "fake_test_id"))) {
       logger.atInfo().log("Foo");
     }
 
     verify(logRecordsConsumer, timeout(Duration.ofSeconds(2L).toMillis()))
         .consumeLogRecords(
-            LogRecords.newBuilder()
-                .addLogRecord(
-                    LogProto.LogRecord.newBuilder()
-                        .setFormattedLogRecord("Foo")
-                        .setSourceType(SourceType.SELF)
-                        .setClientId("fake_client_id")
-                        .setImportance(Importance.NORMAL.value()))
-                .build());
+            argThat(
+                logRecords -> {
+                  try {
+                    assertThat(logRecords)
+                        .withPartialScope(IGNORING_FORMATTED_LOG_RECORD)
+                        .isEqualTo(
+                            LogRecords.newBuilder()
+                                .addLogRecord(
+                                    LogProto.LogRecord.newBuilder()
+                                        .setSourceType(SourceType.SELF)
+                                        .setClientId("fake_client_id")
+                                        .setImportance(Importance.NORMAL.value()))
+                                .build());
+                    return logRecords
+                        .getLogRecord(0)
+                        .getFormattedLogRecord()
+                        .contains("Foo {test_id=fake_test_id, olc_client_id=fake_client_id}");
+                  } catch (RuntimeException | Error e) {
+                    return false;
+                  }
+                }));
 
     try (LogImportanceScope ignored =
         new LogImportanceScope(Importance.IMPORTANT, record -> true)) {
@@ -111,20 +137,22 @@ public class LogManagerTest {
 
     verify(logRecordsConsumer, timeout(Duration.ofSeconds(2L).toMillis()))
         .consumeLogRecords(
-            LogRecords.newBuilder()
-                .addLogRecord(
-                    LogProto.LogRecord.newBuilder()
-                        .setFormattedLogRecord("Goo")
-                        .setSourceType(SourceType.SELF)
-                        .setImportance(Importance.IMPORTANT.value()))
-                .build());
-  }
-
-  private static class SimpleLogFormatter extends Formatter {
-
-    @Override
-    public String format(LogRecord record) {
-      return record.getMessage();
-    }
+            argThat(
+                logRecords -> {
+                  try {
+                    assertThat(logRecords)
+                        .withPartialScope(IGNORING_FORMATTED_LOG_RECORD)
+                        .isEqualTo(
+                            LogRecords.newBuilder()
+                                .addLogRecord(
+                                    LogProto.LogRecord.newBuilder()
+                                        .setSourceType(SourceType.SELF)
+                                        .setImportance(Importance.IMPORTANT.value()))
+                                .build());
+                    return logRecords.getLogRecord(0).getFormattedLogRecord().contains("Goo");
+                  } catch (RuntimeException | Error e) {
+                    return false;
+                  }
+                }));
   }
 }

@@ -32,10 +32,21 @@ public class InvocationContext {
 
   /** Invocation type. */
   public enum InvocationType {
-    OMNILAB_JOB,
-    OMNILAB_TEST,
-    OLC_SESSION,
-    OLC_CLIENT,
+    OMNILAB_TEST("test_id"),
+    OMNILAB_JOB("job_id"),
+    OLC_SESSION("olc_session_id"),
+    OLC_CLIENT("olc_client_id");
+
+    private final String name;
+
+    InvocationType(String name) {
+      this.name = name;
+    }
+
+    @Override
+    public String toString() {
+      return name;
+    }
   }
 
   /** An auto closeable scope of context. */

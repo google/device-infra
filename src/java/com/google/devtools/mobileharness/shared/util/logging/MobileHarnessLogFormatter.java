@@ -20,10 +20,13 @@ import static com.google.common.base.Strings.nullToEmpty;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.shared.context.InvocationContext;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Map;
 import java.util.logging.Formatter;
 import java.util.logging.LogRecord;
 import javax.annotation.Nullable;
@@ -60,20 +63,22 @@ public final class MobileHarnessLogFormatter {
             "%s\n%s", logRecord.getMessage(), printThrowable(logRecord.getThrown()));
       } else if (simplified) {
         return String.format(
-            "%s %s/%s: %s\n%s",
+            "%s %s/%s: %s%s\n%s",
             SIMPLIFIED_DATE_TIME_FORMATTER.format(logRecord.getInstant()),
             logRecord.getLevel().toString().charAt(0),
             getLoggerSimpleName(logRecord.getLoggerName()),
             logRecord.getMessage(),
+            getContext(),
             printThrowable(logRecord.getThrown()));
       } else {
         return String.format(
-            "%s %s %s [%s] %s\n%s",
+            "%s %s %s [%s] %s%s\n%s",
             DATE_TIME_FORMATTER.format(logRecord.getInstant()),
             logRecord.getLevel().toString().charAt(0),
             logRecord.getLoggerName(),
             logRecord.getSourceMethodName(),
             logRecord.getMessage(),
+            getContext(),
             printThrowable(logRecord.getThrown()));
       }
     }
@@ -81,6 +86,11 @@ public final class MobileHarnessLogFormatter {
     private static String getLoggerSimpleName(@Nullable String loggerName) {
       String name = nullToEmpty(loggerName);
       return name.substring(name.lastIndexOf('.') + 1);
+    }
+
+    private static String getContext() {
+      Map<InvocationType, String> context = InvocationContext.getCurrentContext();
+      return context.isEmpty() ? "" : " " + context;
     }
   }
 
