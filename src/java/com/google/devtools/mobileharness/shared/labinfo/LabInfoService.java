@@ -128,7 +128,8 @@ public class LabInfoService extends LabInfoServiceGrpc.LabInfoServiceImplBase {
     LabQueryResult result;
 
     // Gets cached result if any.
-    Optional<LabQueryResult> cachedResult = getCachedResult(session, page);
+    Optional<LabQueryResult> cachedResult =
+        request.getUseRealtimeData() ? Optional.empty() : getCachedResult(session, page);
 
     if (cachedResult.isPresent()) {
       result = cachedResult.get();

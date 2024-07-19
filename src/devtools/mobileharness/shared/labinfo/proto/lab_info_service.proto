@@ -34,6 +34,11 @@ message GetLabInfoRequest {
 
   // Optional.
   mobileharness.api.query.Page page = 2;
+
+  // Optional.
+  //
+  // True to not use client/query-level cache.
+  bool use_realtime_data = 3;
 }
 
 message GetLabInfoResponse {
