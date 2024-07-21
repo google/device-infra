@@ -16,7 +16,13 @@ import (
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/uploadinfo"
 	repb "github.com/bazelbuild/remote-apis/build/bazel/remote/execution/v2"
 	"github.com/google/device-infra/src/devtools/rbe/casuploader/chunkerutil"
+	"github.com/google/device-infra/src/devtools/rbe/casuploader/metrics"
 	"google.golang.org/protobuf/proto"
+)
+
+const (
+	allEntriesMessage     = "all entries in the directory"
+	missingEntriesMessage = "missing entries in remote server"
 )
 
 // fileLoader is the common interface to load content of files
@@ -67,7 +73,7 @@ func (du *DirUploader) DoUpload() (digest.Digest, error) {
 	if err != nil {
 		return digest.Digest{}, fmt.Errorf("failed to compute merkle tree: %v", err)
 	}
-	printEntriesStats(uploadEntries, "all entries in the directory")
+	printEntriesStats(uploadEntries, allEntriesMessage, du.CommonConfig.metrics)
 	err = du.exportUploadFilesDetails(rootDigest, uploadEntries)
 	if err != nil {
 		log.Warningf("failed to export upload files info: %v", err)
@@ -145,6 +151,7 @@ func (du *DirUploader) chunkAndUpload() (digest.Digest, error) {
 }
 
 func (du *DirUploader) chunkFiles(chunksDir string, paths []string) ([]chunkerutil.ChunksIndex, error) {
+	start := time.Now()
 	chunksIndexEntries := []chunkerutil.ChunksIndex{}
 	for _, path := range paths {
 		relPath, err := filepath.Rel(du.dirPath, path)
@@ -157,7 +164,9 @@ func (du *DirUploader) chunkFiles(chunksDir string, paths []string) ([]chunkerut
 		}
 		chunksIndexEntries = append(chunksIndexEntries, chunksIndex)
 	}
-
+	elapsedTime := time.Since(start)
+	du.CommonConfig.metrics.ChunkTimeMs = elapsedTime.Milliseconds()
+	log.Infof("Chunked %d files. Elapsed time: %v\n", len(paths), elapsedTime)
 	return chunksIndexEntries, nil
 }
 
@@ -183,7 +192,7 @@ func (du *DirUploader) findMissing(uploadInfos []*uploadinfo.Entry) ([]*uploadin
 			missingEntries = append(missingEntries, entry)
 		}
 	}
-	printEntriesStats(missingEntries, "missing entries in remote server")
+	printEntriesStats(missingEntries, missingEntriesMessage, du.CommonConfig.metrics)
 	return missingEntries, nil
 }
 
@@ -191,12 +200,16 @@ func (du *DirUploader) upload(uploadInfos []*uploadinfo.Entry) error {
 	start := time.Now()
 	digests, size, err := du.client.UploadIfMissing(du.ctx, uploadInfos...)
 	if err == nil {
-		log.Infof("Uploaded %d blobs, %d bytes. Elapsed time: %v\n", len(digests), size, time.Since(start))
+		elapsedTime := time.Since(start)
+		du.CommonConfig.metrics.UploadedSizeBytes = size
+		du.CommonConfig.metrics.UploadedEntries = len(digests)
+		du.CommonConfig.metrics.UploadTimeMs = elapsedTime.Milliseconds()
+		log.Infof("Uploaded %d blobs, %d bytes. Elapsed time: %v\n", len(digests), size, elapsedTime)
 	}
 	return err
 }
 
-func printEntriesStats(entries []*uploadinfo.Entry, message string) {
+func printEntriesStats(entries []*uploadinfo.Entry, message string, metrics *metrics.Metrics) {
 	var size int64
 	var numFiles, numBlobs int
 	for _, entry := range entries {
@@ -207,6 +220,13 @@ func printEntriesStats(entries []*uploadinfo.Entry, message string) {
 		if entry.IsFile() {
 			numFiles++
 		}
+	}
+	if message == allEntriesMessage {
+		metrics.SizeBytes = size
+		metrics.Entries = len(entries)
+	} else if message == missingEntriesMessage {
+		metrics.UploadedSizeBytes = size
+		metrics.UploadedEntries = len(entries)
 	}
 	log.Infof("Stats of %s. Size: %d bytes, count: %d, files: %d, blobs: %d\n",
 		message, size, len(entries), numFiles, numBlobs)

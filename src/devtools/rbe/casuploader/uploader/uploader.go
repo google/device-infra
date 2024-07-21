@@ -8,6 +8,7 @@ import (
 
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/client"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
+	"github.com/google/device-infra/src/devtools/rbe/casuploader/metrics"
 	"github.com/google/uuid"
 )
 
@@ -25,10 +26,11 @@ type CommonConfig struct {
 	dumpFileDetails string
 	chunk           bool
 	avgChunkSize    int
+	metrics         *metrics.Metrics
 }
 
 // NewCommonConfig creates a common CAS uploader configuration.
-func NewCommonConfig(ctx context.Context, client *client.Client, excludeFilters []string, dumpFileDetails string, chunk bool, avgChunkSize int) *CommonConfig {
+func NewCommonConfig(ctx context.Context, client *client.Client, excludeFilters []string, dumpFileDetails string, chunk bool, avgChunkSize int, metrics *metrics.Metrics) *CommonConfig {
 	return &CommonConfig{
 		ctx:             ctx,
 		client:          client,
@@ -36,6 +38,7 @@ func NewCommonConfig(ctx context.Context, client *client.Client, excludeFilters 
 		dumpFileDetails: dumpFileDetails,
 		chunk:           chunk,
 		avgChunkSize:    avgChunkSize,
+		metrics:         metrics,
 	}
 }
 

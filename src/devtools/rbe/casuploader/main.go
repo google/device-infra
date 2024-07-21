@@ -14,11 +14,12 @@ import (
 	
 	log "github.com/golang/glog"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
+	"github.com/google/device-infra/src/devtools/rbe/casuploader/metrics"
 	"github.com/google/device-infra/src/devtools/rbe/casuploader/uploader"
 	"github.com/google/device-infra/src/devtools/rbe/rbeclient"
 )
 
-const version = "1.2"
+const version = "1.3"
 
 // multiStringFlag is a slice of strings for parsing command flags into a string list.
 type multiStringFlag []string
@@ -50,6 +51,7 @@ var (
 	useADC          = flag.Bool("use-adc", false, "True to use Application Default Credentials (ADC).")
 	dumpDigest      = flag.String("dump-digest", "", "Output the digest to file")
 	dumpFileDetails = flag.String("dump-file-details", "", "Export information of all uploaded files to a file")
+	dumpMetrics     = flag.String("dump-metrics", "", "Export metrics to a file")
 	// Flags for concurrency (affects peak memory), specify 0 for default.
 	casConcurrency = flag.Int("cas-concurrency", 0, "the maximum number of concurrent upload operations.")
 	excludeFilters multiStringFlag
@@ -125,8 +127,9 @@ func main() {
 	}
 	defer client.Close()
 
+	metrics := metrics.Metrics{}
 	var rootDigest digest.Digest
-	uploaderConfig := uploader.NewCommonConfig(ctx, client, excludeFilters, *dumpFileDetails, *chunk, *avgChunkSizeKb)
+	uploaderConfig := uploader.NewCommonConfig(ctx, client, excludeFilters, *dumpFileDetails, *chunk, *avgChunkSizeKb, &metrics)
 	if *zipPath != "" {
 		zipUploader := uploader.NewZipUploader(uploaderConfig, *zipPath)
 		rootDigest, err = zipUploader.DoUpload()
@@ -151,5 +154,13 @@ func main() {
 	if *dumpDigest != "" {
 		os.WriteFile(*dumpDigest, []byte(output), 0644)
 	}
-	log.Infof("Uploaded %s to RBE instance %s, root digest: %s. E2E time: %v\n", *zipPath, *casInstance, output, time.Since(start))
+	elapsedTime := time.Since(start)
+	metrics.TimeMs = elapsedTime.Milliseconds()
+	log.Infof("Uploaded %s to RBE instance %s, root digest: %s. E2E time: %v\n", *zipPath, *casInstance, output, elapsedTime)
+
+	if *dumpMetrics != "" {
+		if err := metrics.Dump(*dumpMetrics); err != nil {
+			log.Errorf("Failed to dump metrics to %s: %v", *dumpMetrics, err)
+		}
+	}
 }

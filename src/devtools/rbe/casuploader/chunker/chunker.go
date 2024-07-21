@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"path/filepath"
 
@@ -60,7 +59,6 @@ func ChunkFile(path string, chunksDir string, avgChunkSizeKb int) ([]ChunkInfo, 
 		chunkList = append(chunkList, ChunkInfo{SHA256: sha256, Offset: chunk.Offset})
 	}
 
-	log.Printf("ChunkFile: %d chunks (avg size: %dK) for %s saved to %s\n", len(chunks), avgChunkSizeKb, path, chunksDir)
 	return chunkList, nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"time"
 
 	log "github.com/golang/glog"
 	"github.com/bazelbuild/remote-apis-sdks/go/pkg/digest"
@@ -35,6 +36,7 @@ func (fu *FileUploader) DoUpload() (digest.Digest, error) {
 	}()
 
 	if fu.CommonConfig.chunk {
+		start := time.Now()
 		chunksDir := filepath.Join(targetDir, chunkerutil.ChunksDirName)
 		os.MkdirAll(chunksDir, 0755)
 
@@ -46,6 +48,7 @@ func (fu *FileUploader) DoUpload() (digest.Digest, error) {
 		if err := chunkerutil.CreateIndexFile(targetDir, []chunkerutil.ChunksIndex{chunksIndex}); err != nil {
 			return digest.Digest{}, fmt.Errorf("failed to create index file for file %s: %v", fu.path, err)
 		}
+		fu.CommonConfig.metrics.ChunkTimeMs = time.Since(start).Milliseconds()
 	} else {
 		// Upload as a dir with the file in it.
 		path := filepath.Join(targetDir, filepath.Base(fu.path))

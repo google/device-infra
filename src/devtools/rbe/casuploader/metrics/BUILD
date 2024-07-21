@@ -13,21 +13,17 @@
 # limitations under the License.
 #
 
-load("@io_bazel_rules_go//go:def.bzl", "go_binary")
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
 
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = ["//visibility:public"],
 )
 
-go_binary(
-    name = "casuploader",
-    srcs = ["main.go"],
-    deps = [
-        "//src/devtools/rbe/casuploader/metrics",
-        "//src/devtools/rbe/casuploader/uploader",
-        "//src/devtools/rbe/rbeclient",
-        "@com_github_bazelbuild_remote_apis_sdks//go/pkg/digest",
-        "@com_github_golang_glog//:glog",
+go_library(
+    name = "metrics",
+    srcs = [
+        "metrics.go",
     ],
+    importpath = "github.com/google/device-infra/src/devtools/rbe/casuploader/metrics",
 )

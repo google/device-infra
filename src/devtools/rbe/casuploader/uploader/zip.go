@@ -69,6 +69,7 @@ func (zu *ZipUploader) DoUpload() (digest.Digest, error) {
 	}
 	defer unarchiver.Close()
 
+	start := time.Now()
 	err = unarchiver.extractAll(extractOptions{
 		// For in-zip chunking, the entire zip file needs to be decompressed.
 		skipIfDigestExists: zu.CommonConfig.chunk == false,
@@ -76,6 +77,7 @@ func (zu *ZipUploader) DoUpload() (digest.Digest, error) {
 	if err != nil {
 		return digest.Digest{}, fmt.Errorf("failed to extract %s to %s: %v", zu.zipPath, targetDir, err)
 	}
+	zu.CommonConfig.metrics.UnzipTimeMs = time.Since(start).Milliseconds()
 
 	du := NewDirUploader(&zu.CommonConfig, targetDir, &zipFileLoader{Unarchiver: unarchiver})
 	rootDigest, err := du.DoUpload()
