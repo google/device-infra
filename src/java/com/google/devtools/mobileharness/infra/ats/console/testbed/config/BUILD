@@ -18,11 +18,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "yaml_testbed_updater",
     srcs = ["YamlTestbedUpdater.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/command:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/testbed/config:__subpackages__",
-    ],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console/testbed/config:__subpackages__"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
