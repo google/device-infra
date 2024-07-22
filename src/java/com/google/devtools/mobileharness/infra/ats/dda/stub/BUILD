@@ -19,10 +19,10 @@ java_library(
     name = "ats_dda_stub",
     srcs = ["AtsDdaStub.java"],
     visibility = [
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/dda:__subpackages__",
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
     ],
     deps = [
-        "//src/devtools/common/metrics/stability/model/proto:error_java_proto",
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
         "//src/devtools/mobileharness/infra/ats/dda/proto:session_plugin_java_proto",
@@ -35,7 +35,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/util:session_error_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
-        "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "@com_google_protobuf//:protobuf_java",
         "@com_google_protobuf_protobuf_java",
         "@io_grpc_grpc_java//core",
