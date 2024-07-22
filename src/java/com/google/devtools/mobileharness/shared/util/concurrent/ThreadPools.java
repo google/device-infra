@@ -19,34 +19,42 @@ package com.google.devtools.mobileharness.shared.util.concurrent;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.devtools.mobileharness.shared.context.InvocationContextExecutors;
 import java.util.concurrent.Executors;
 
 /** Utilities for creating thread pools. */
 public class ThreadPools {
 
   /**
-   * Creates a cached thread pool whose threads are daemon threads and have the given name prefix.
+   * Creates a cached thread pool whose threads are daemon threads, have the given name prefix and
+   * have a default uncaught exception handler, and which will automatically propagate invocation
+   * context.
    *
    * @param threadNamePrefix if it is "foo", the thread names are like "foo-1", "foo-2", etc.
    */
   public static ListeningExecutorService createStandardThreadPool(String threadNamePrefix) {
-    return MoreExecutors.listeningDecorator(
-        Executors.newCachedThreadPool(
-            ThreadFactoryUtil.createThreadFactory(threadNamePrefix, /* daemon= */ true)));
+    return InvocationContextExecutors.propagatingContext(
+        MoreExecutors.listeningDecorator(
+            Executors.newCachedThreadPool(
+                ThreadFactoryUtil.createThreadFactory(threadNamePrefix, /* daemon= */ true))),
+        ListeningExecutorService.class);
   }
 
   /**
    * Creates a scheduled thread pool with the given core pool size, whose threads are daemon threads
-   * and have the given name prefix.
+   * , have the given name prefix and have a default uncaught exception handler, and which will
+   * automatically propagate invocation context.
    *
    * @param threadNamePrefix if it is "foo", the thread names are like "foo-1", "foo-2", etc.
    */
   public static ListeningScheduledExecutorService createStandardScheduledThreadPool(
       String threadNamePrefix, int corePoolSize) {
-    return MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(
-            corePoolSize,
-            ThreadFactoryUtil.createThreadFactory(threadNamePrefix, /* daemon= */ true)));
+    return InvocationContextExecutors.propagatingContext(
+        MoreExecutors.listeningDecorator(
+            Executors.newScheduledThreadPool(
+                corePoolSize,
+                ThreadFactoryUtil.createThreadFactory(threadNamePrefix, /* daemon= */ true))),
+        ListeningScheduledExecutorService.class);
   }
 
   private ThreadPools() {}

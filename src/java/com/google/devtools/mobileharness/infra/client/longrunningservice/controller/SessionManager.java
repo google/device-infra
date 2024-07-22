@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.client.longrunningservice.contro
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.util.concurrent.Futures.addCallback;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-import static com.google.devtools.mobileharness.shared.context.InvocationContext.propagateContext;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 import static java.lang.Math.min;
@@ -419,13 +418,10 @@ public class SessionManager {
 
         runningSessions.put(sessionId, runningSession);
         addCallback(
-            threadPool.submit(
-                propagateContext(
-                    threadRenaming(sessionRunner, () -> "session-runner-" + sessionId))),
-            propagateContext(
-                threadRenaming(
-                    new SessionRunnerCallback(runningSession),
-                    () -> "session-runner-post-run" + sessionId)),
+            threadPool.submit(threadRenaming(sessionRunner, () -> "session-runner-" + sessionId)),
+            threadRenaming(
+                new SessionRunnerCallback(runningSession),
+                () -> "session-runner-post-run" + sessionId),
             directExecutor());
       }
     }

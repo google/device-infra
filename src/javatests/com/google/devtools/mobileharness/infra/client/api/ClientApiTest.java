@@ -22,13 +22,17 @@ import static com.google.common.truth.Truth.assertWithMessage;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.verify;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.eventbus.EventBus;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogFormatter;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -59,6 +63,8 @@ public class ClientApiTest {
 
   @Rule public final MockitoRule mockito = MockitoJUnit.rule();
 
+  private static final Logger rootLogger = Logger.getLogger("");
+
   @Mock private Handler logHandler;
 
   @Bind @GlobalInternalEventBus private EventBus globalInternalEventBus;
@@ -71,7 +77,10 @@ public class ClientApiTest {
   public void setUp() {
     Flags.parse(new String[] {"--no_op_device_num=1", "--detect_adb_device=false"});
 
-    Logger.getLogger("").addHandler(logHandler);
+    rootLogger.addHandler(logHandler);
+    for (Handler handler : rootLogger.getHandlers()) {
+      handler.setFormatter(MobileHarnessLogFormatter.getDefaultFormatter());
+    }
 
     globalInternalEventBus = new EventBus();
 
@@ -82,14 +91,15 @@ public class ClientApiTest {
   public void tearDown() {
     Flags.resetToDefault();
 
-    Logger.getLogger("").removeHandler(logHandler);
+    rootLogger.removeHandler(logHandler);
   }
 
   @Test
   public void startJob() throws Exception {
     JobInfo jobInfo = createJobInfo();
 
-    try {
+    try (var ignored =
+        new ContextScope(ImmutableMap.of(InvocationType.OLC_CLIENT, "fake_client_id"))) {
       clientApi.startJob(jobInfo, new LocalMode());
 
       assertThat(jobInfo.properties().get(Job.EXEC_MODE)).isNotNull();

@@ -83,6 +83,13 @@ public class InvocationContext {
     return ImmutableMap.copyOf(getCurrentContext());
   }
 
+  /** Propagated the current context to the thread that runs the given {@code runnable}. */
+  public static Runnable propagateContext(Runnable runnable) {
+    checkNotNull(runnable);
+    Map<InvocationType, String> context = new EnumMap<>(getCurrentContext());
+    return new RunnableWithContext(runnable, context);
+  }
+
   /** Propagated the current context to the thread that runs the given {@code callable}. */
   public static <V> Callable<V> propagateContext(Callable<V> callable) {
     checkNotNull(callable);
@@ -100,6 +107,24 @@ public class InvocationContext {
   private final Map<InvocationType, String> context = new EnumMap<>(InvocationType.class);
 
   private InvocationContext() {}
+
+  private static class RunnableWithContext implements Runnable {
+
+    private final Runnable runnable;
+    private final Map<InvocationType, String> context;
+
+    private RunnableWithContext(Runnable runnable, Map<InvocationType, String> context) {
+      this.runnable = runnable;
+      this.context = context;
+    }
+
+    @Override
+    public void run() {
+      try (ContextScope ignored = new ContextScope(context)) {
+        runnable.run();
+      }
+    }
+  }
 
   private static class CallableWithContext<V> implements Callable<V> {
 

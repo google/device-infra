@@ -21,11 +21,27 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/context:__pkg__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "invocation_context_executors",
+    srcs = ["InvocationContextExecutors.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/shared/context:__pkg__",
+    ],
+    deps = [
+        ":invocation_context",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",
     ],
 )
