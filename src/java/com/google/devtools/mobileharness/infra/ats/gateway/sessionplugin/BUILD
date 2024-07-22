@@ -18,10 +18,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "sessionplugin",
     srcs = glob(["*.java"]),
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/gateway/sessionplugin:__pkg__",
-    ],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/gateway/sessionplugin:__pkg__"],
     deps = [
         "//src/devtools/mobileharness/api/gateway/proto:setting_java_proto",
         "//src/devtools/mobileharness/infra/ats/gateway/proto:session_plugin_java_proto",
