@@ -18,6 +18,9 @@ package com.google.devtools.mobileharness.infra.ats.dda.stub;
 
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Splitter;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
+import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.devtools.mobileharness.api.query.proto.LabQueryProto.DeviceInfo;
@@ -36,13 +39,19 @@ import java.util.stream.Collectors;
 
 /** Stub for query lab and device information. */
 public class AtsLabInfoStub {
-  private final LabInfoGrpcStub labInfoStub;
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final ImmutableList<String> REQUIRED_DIMENSIONS =
+      ImmutableList.of(
+          "id", "brand", "model", "hardware", "sdk_version", "screen_size", "screen_density");
 
   private static final GetLabInfoRequest GET_ALL_DEVICES_REQ =
       GetLabInfoRequest.newBuilder()
           .setLabQuery(
               LabQuery.newBuilder().setDeviceViewRequest(DeviceViewRequest.getDefaultInstance()))
           .build();
+
+  private final LabInfoGrpcStub labInfoStub;
 
   public AtsLabInfoStub(ManagedChannel olcServerChannel) {
     this.labInfoStub =
@@ -57,6 +66,7 @@ public class AtsLabInfoStub {
     DeviceList deviceList =
         response.getLabQueryResult().getDeviceView().getGroupedDevices().getDeviceList();
     return deviceList.getDeviceInfoList().stream()
+        .filter(device -> this.checkContainsDimensions(device, REQUIRED_DIMENSIONS))
         .collect(Collectors.groupingBy(this::genMetadataFromDeviceInfo));
   }
 
@@ -71,6 +81,12 @@ public class AtsLabInfoStub {
       screenX = Integer.parseInt(screenSizeParts.get(0));
       screenY = Integer.parseInt(screenSizeParts.get(1));
     }
+    // Always set screenY as the larger one.
+    if (screenY < screenX) {
+      int tmp = screenX;
+      screenX = screenY;
+      screenY = tmp;
+    }
 
     return DeviceGroupMetadata.builder()
         .setBrand(findDimensionValue(supportedDimensions, "brand"))
@@ -82,6 +98,20 @@ public class AtsLabInfoStub {
         .setScreenDensity(
             Integer.parseInt(findDimensionValue(supportedDimensions, "screen_density")))
         .build();
+  }
+
+  private boolean checkContainsDimensions(DeviceInfo device, List<String> requiredDimensions) {
+    List<DeviceDimension> dimensions =
+        device.getDeviceFeature().getCompositeDimension().getSupportedDimensionList();
+    String deviceId = findDimensionValue(dimensions, "id");
+    for (String dimension : requiredDimensions) {
+      if (Strings.isNullOrEmpty(findDimensionValue(dimensions, dimension))) {
+        logger.atWarning().log(
+            "Device %s doesn't contain dimension: %s. Skip this device.", deviceId, dimension);
+        return false;
+      }
+    }
+    return true;
   }
 
   private String findDimensionValue(List<DeviceDimension> dimensions, String name) {
