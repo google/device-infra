@@ -22,7 +22,6 @@ java_library(
         "LineReader.java",
     ],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/shared/util/command:__subpackages__",
     ],
     deps = [
