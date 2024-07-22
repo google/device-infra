@@ -20,10 +20,7 @@ java_library(
     srcs = [
         "XmlResultFormatter.java",
     ],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-    ],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__"],
     runtime_deps = [
         "@maven//:net_sf_kxml_kxml2",
     ],
@@ -44,10 +41,7 @@ java_library(
     srcs = [
         "MoblyResultInfo.java",
     ],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__",
-    ],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console/result:__subpackages__"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",
@@ -59,10 +53,7 @@ java_library(
     srcs = [
         "XmlResultUtil.java",
     ],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
-    ],
+    visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/sdktool/adb:adb_util",
