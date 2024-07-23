@@ -60,7 +60,14 @@ public class InvocationContextExecutorsTest {
   @SuppressWarnings({"UnusedAssignment", "unused"})
   @Test
   public void propagatingContext() throws Exception {
+    InvocationContext.propagateContext(() -> {}).run();
+
     try (var ignored = new ContextScope(ImmutableMap.of(OMNILAB_TEST, "fake_test_id"))) {
+      assertThat(InvocationContext.getCurrentContext())
+          .containsExactly(OMNILAB_TEST, "fake_test_id");
+
+      InvocationContext.propagateContext(() -> {}).run();
+
       assertThat(InvocationContext.getCurrentContext())
           .containsExactly(OMNILAB_TEST, "fake_test_id");
 

@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.infra.controller.test.launcher;
 import static com.google.devtools.mobileharness.shared.util.concurrent.Callables.threadRenaming;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -29,6 +30,9 @@ import com.google.devtools.mobileharness.infra.controller.test.TestRunner;
 import com.google.devtools.mobileharness.infra.controller.test.TestRunnerLauncher;
 import com.google.devtools.mobileharness.infra.controller.test.model.TestExecutionResult;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
+import com.google.devtools.mobileharness.shared.context.InvocationContext;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,7 +60,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
     }
 
     @Override
-    public TestExecutionResult executeTest() throws InterruptedException {
+    public TestExecutionResult doExecuteTest() throws InterruptedException {
       // Waits until all devices are ready.
       if (testExecutors.size() > 1) {
         logger.atInfo().log("Waiting until all devices are ready");
@@ -96,7 +100,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
     }
 
     @Override
-    public TestExecutionResult executeTest() throws InterruptedException {
+    public TestExecutionResult doExecuteTest() throws InterruptedException {
       // Waits until all device are ready.
       logger.atInfo().log("Waiting until all devices are ready");
       try {
@@ -134,7 +138,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
       this.deviceRunner = deviceRunner;
     }
 
-    protected LocalDeviceTestRunner getDeviceRunner() {
+    protected final LocalDeviceTestRunner getDeviceRunner() {
       return deviceRunner;
     }
 
@@ -142,8 +146,19 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
     public final TestRunner getTestRunner() {
       return LocalDeviceTestRunnerLauncher.this.getTestRunner();
     }
+
+    @Override
+    public final TestExecutionResult executeTest() throws InterruptedException {
+      try (var ignored = new ContextScope(context)) {
+        return doExecuteTest();
+      }
+    }
+
+    protected abstract TestExecutionResult doExecuteTest() throws InterruptedException;
   }
 
+  private final ImmutableMap<InvocationType, String> context =
+      InvocationContext.getCurrentContextImmutable();
   private final ImmutableList<AbstractDeviceTestExecutor> testExecutors;
   private final CyclicBarrier barrier;
   private final SettableFuture<TestExecutionResult> resultFuture = SettableFuture.create();

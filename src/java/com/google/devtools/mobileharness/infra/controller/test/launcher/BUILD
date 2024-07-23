@@ -28,6 +28,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/controller/test:test_runner",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/model:test_execution_result",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable",
+        "//src/java/com/google/devtools/mobileharness/shared/context:invocation_context",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:callables",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",

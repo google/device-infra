@@ -45,7 +45,6 @@ java_library(
         "@maven//:com_google_inject_guice",
         "@maven//:javax_inject_jsr330_api",
         "@maven//:junit_junit",
-        "@maven//:org_mockito_mockito_core",
     ],
 )
 

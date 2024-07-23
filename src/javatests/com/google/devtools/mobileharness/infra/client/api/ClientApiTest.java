@@ -16,15 +16,17 @@
 
 package com.google.devtools.mobileharness.infra.client.api;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
-import static org.mockito.Mockito.atLeast;
-import static org.mockito.Mockito.verify;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.eventbus.EventBus;
+import com.google.common.truth.Correspondence;
+import com.google.common.truth.Correspondence.BinaryPredicate;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
@@ -42,34 +44,27 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobLocator;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
+import java.io.ByteArrayOutputStream;
+import java.util.List;
 import java.util.logging.Handler;
-import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+import java.util.logging.StreamHandler;
 import javax.inject.Inject;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 
 @RunWith(JUnit4.class)
 public class ClientApiTest {
 
-  @Rule public final MockitoRule mockito = MockitoJUnit.rule();
-
   private static final Logger rootLogger = Logger.getLogger("");
 
-  @Mock private Handler logHandler;
+  private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+  private Handler logHandler;
 
   @Bind @GlobalInternalEventBus private EventBus globalInternalEventBus;
-
-  @Captor private ArgumentCaptor<LogRecord> logRecordCaptor;
 
   @Inject private ClientApi clientApi;
 
@@ -77,10 +72,8 @@ public class ClientApiTest {
   public void setUp() {
     Flags.parse(new String[] {"--no_op_device_num=1", "--detect_adb_device=false"});
 
+    logHandler = new StreamHandler(outputStream, MobileHarnessLogFormatter.getDefaultFormatter());
     rootLogger.addHandler(logHandler);
-    for (Handler handler : rootLogger.getHandlers()) {
-      handler.setFormatter(MobileHarnessLogFormatter.getDefaultFormatter());
-    }
 
     globalInternalEventBus = new EventBus();
 
@@ -113,6 +106,22 @@ public class ClientApiTest {
       TestInfo testInfo = Iterables.getOnlyElement(jobInfo.tests().getAll().values());
       assertThat(testInfo.resultWithCause().get().type()).isEqualTo(TestResult.PASS);
       assertThat(testInfo.log().get(0)).contains("Sleep for 5 seconds");
+
+      String logs = outputStream.toString(UTF_8);
+
+      assertThat(Splitter.on('\n').splitToList(logs))
+          .comparingElementsUsing(
+              Correspondence.from(
+                  (BinaryPredicate<String, List<String>>)
+                      (actual, expected) -> expected.stream().allMatch(actual::contains),
+                  "has all substrings in"))
+          .contains(ImmutableList.of("Sleep for 5 seconds", "{olc_client_id=fake_client_id}"));
+
+      assertWithMessage(
+              "Log of a passed MH job should not contain exception stack traces, which will"
+                  + " confuse users when they debug a failed one")
+          .that(logs)
+          .doesNotContain("\tat ");
     } catch (
         @SuppressWarnings("InterruptedExceptionSwallowed")
         Throwable e) {
@@ -123,24 +132,6 @@ public class ClientApiTest {
                   jobInfo.resultWithCause().get().toStringWithDetail(), jobInfo.log().get(0))));
       throw e;
     }
-
-    assertNoExceptionInLog();
-  }
-
-  private void assertNoExceptionInLog() {
-    verify(logHandler, atLeast(0)).publish(logRecordCaptor.capture());
-    assertWithMessage(
-            "Log of a passed ATS job should not contain exception stack traces, which will confuse"
-                + " users when they debug a failed one")
-        .that(
-            logRecordCaptor.getAllValues().stream()
-                .filter(ClientApiTest::logRecordWithException)
-                .collect(toImmutableList()))
-        .isEmpty();
-  }
-
-  private static boolean logRecordWithException(LogRecord logRecord) {
-    return logRecord.getThrown() != null || logRecord.getMessage().contains("\tat ");
   }
 
   private static JobInfo createJobInfo() {

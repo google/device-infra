@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.infra.client.api.Annotations.ExtraJobIn
 import com.google.devtools.mobileharness.infra.client.api.Annotations.JobThreadPool;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.ShutdownJobThreadWhenShutdownProcess;
 import com.google.devtools.mobileharness.infra.client.api.plugin.GenFileHandler;
+import com.google.devtools.mobileharness.shared.context.InvocationContextExecutors;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
@@ -38,16 +39,20 @@ public class ClientApiModule extends AbstractModule {
   @Singleton
   @EnvThreadPool
   ListeningExecutorService provideEnvThreadPool() {
-    return MoreExecutors.listeningDecorator(
-        Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory("env-thread")));
+    return InvocationContextExecutors.propagatingContext(
+        MoreExecutors.listeningDecorator(
+            Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory("env-thread"))),
+        ListeningExecutorService.class);
   }
 
   @Provides
   @Singleton
   @JobThreadPool
   ListeningExecutorService provideJobThreadPool() {
-    return MoreExecutors.listeningDecorator(
-        Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory("job-thread")));
+    return InvocationContextExecutors.propagatingContext(
+        MoreExecutors.listeningDecorator(
+            Executors.newCachedThreadPool(ThreadFactoryUtil.createThreadFactory("job-thread"))),
+        ListeningExecutorService.class);
   }
 
   @Provides

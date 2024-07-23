@@ -20,6 +20,7 @@ java_library(
     srcs = ["InvocationContext.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/test/launcher:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/longrunningservice/controller:__pkg__",
@@ -36,6 +37,7 @@ java_library(
     name = "invocation_context_executors",
     srcs = ["InvocationContextExecutors.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/shared/context:__pkg__",
     ],

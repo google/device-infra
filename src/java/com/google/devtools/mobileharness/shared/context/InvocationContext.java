@@ -59,7 +59,7 @@ public class InvocationContext {
      * object is {@linkplain NonThrowingAutoCloseable#close() closed}.
      */
     public ContextScope(Map<InvocationType, String> scopedContext) {
-      this.scopedContext = new EnumMap<>(scopedContext);
+      this.scopedContext = copy(scopedContext);
       getCurrentContext().putAll(this.scopedContext);
     }
 
@@ -86,22 +86,25 @@ public class InvocationContext {
   /** Propagated the current context to the thread that runs the given {@code runnable}. */
   public static Runnable propagateContext(Runnable runnable) {
     checkNotNull(runnable);
-    Map<InvocationType, String> context = new EnumMap<>(getCurrentContext());
-    return new RunnableWithContext(runnable, context);
+    Map<InvocationType, String> parentContext = getCurrentContext();
+    Map<InvocationType, String> context = copy(parentContext);
+    return new RunnableWithContext(runnable, context, parentContext);
   }
 
   /** Propagated the current context to the thread that runs the given {@code callable}. */
   public static <V> Callable<V> propagateContext(Callable<V> callable) {
     checkNotNull(callable);
-    Map<InvocationType, String> context = new EnumMap<>(getCurrentContext());
-    return new CallableWithContext<>(callable, context);
+    Map<InvocationType, String> parentContext = getCurrentContext();
+    Map<InvocationType, String> context = copy(parentContext);
+    return new CallableWithContext<>(callable, context, parentContext);
   }
 
   /** Propagated the current context to the thread that runs the given {@code futureCallback}. */
   public static <V> FutureCallback<V> propagateContext(FutureCallback<V> futureCallback) {
     checkNotNull(futureCallback);
-    Map<InvocationType, String> context = new EnumMap<>(getCurrentContext());
-    return new FutureCallbackWithContext<>(futureCallback, context);
+    Map<InvocationType, String> parentContext = getCurrentContext();
+    Map<InvocationType, String> context = copy(parentContext);
+    return new FutureCallbackWithContext<>(futureCallback, context, parentContext);
   }
 
   private final Map<InvocationType, String> context = new EnumMap<>(InvocationType.class);
@@ -112,16 +115,23 @@ public class InvocationContext {
 
     private final Runnable runnable;
     private final Map<InvocationType, String> context;
+    private final Object parentContext;
 
-    private RunnableWithContext(Runnable runnable, Map<InvocationType, String> context) {
+    private RunnableWithContext(
+        Runnable runnable, Map<InvocationType, String> context, Object parentContext) {
       this.runnable = runnable;
       this.context = context;
+      this.parentContext = parentContext;
     }
 
     @Override
     public void run() {
-      try (ContextScope ignored = new ContextScope(context)) {
+      if (getCurrentContext() == parentContext) {
         runnable.run();
+      } else {
+        try (ContextScope ignored = new ContextScope(context)) {
+          runnable.run();
+        }
       }
     }
   }
@@ -130,16 +140,23 @@ public class InvocationContext {
 
     private final Callable<V> callable;
     private final Map<InvocationType, String> context;
+    private final Object parentContext;
 
-    private CallableWithContext(Callable<V> callable, Map<InvocationType, String> context) {
+    private CallableWithContext(
+        Callable<V> callable, Map<InvocationType, String> context, Object parentContext) {
       this.callable = callable;
       this.context = context;
+      this.parentContext = parentContext;
     }
 
     @Override
     public V call() throws Exception {
-      try (ContextScope ignored = new ContextScope(context)) {
+      if (getCurrentContext() == parentContext) {
         return callable.call();
+      } else {
+        try (ContextScope ignored = new ContextScope(context)) {
+          return callable.call();
+        }
       }
     }
   }
@@ -148,25 +165,41 @@ public class InvocationContext {
 
     private final FutureCallback<V> futureCallback;
     private final Map<InvocationType, String> context;
+    private final Object parentContext;
 
     private FutureCallbackWithContext(
-        FutureCallback<V> futureCallback, Map<InvocationType, String> context) {
+        FutureCallback<V> futureCallback,
+        Map<InvocationType, String> context,
+        Object parentContext) {
       this.futureCallback = futureCallback;
       this.context = context;
+      this.parentContext = parentContext;
     }
 
     @Override
     public void onSuccess(V result) {
-      try (ContextScope ignored = new ContextScope(context)) {
+      if (getCurrentContext() == parentContext) {
         futureCallback.onSuccess(result);
+      } else {
+        try (ContextScope ignored = new ContextScope(context)) {
+          futureCallback.onSuccess(result);
+        }
       }
     }
 
     @Override
     public void onFailure(Throwable t) {
-      try (ContextScope ignored = new ContextScope(context)) {
+      if (getCurrentContext() == parentContext) {
         futureCallback.onFailure(t);
+      } else {
+        try (ContextScope ignored = new ContextScope(context)) {
+          futureCallback.onFailure(t);
+        }
       }
     }
+  }
+
+  private static Map<InvocationType, String> copy(Map<InvocationType, String> map) {
+    return map.isEmpty() ? new EnumMap<>(InvocationType.class) : new EnumMap<>(map);
   }
 }
