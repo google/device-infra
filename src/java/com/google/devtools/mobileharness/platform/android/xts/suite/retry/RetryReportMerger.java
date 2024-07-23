@@ -316,7 +316,7 @@ public class RetryReportMerger {
       Set<String> matchedRetryExcludeTestFilters) {
     if (matchedRetryIncludeTestFilters.contains(SubPlan.ALL_TESTS_IN_MODULE)
         && matchedRetryIncludeTestFilters.size() == 1
-        && !matchedRetryExcludeTestFilters.contains(SubPlan.ALL_TESTS_IN_MODULE)) {
+        && matchedRetryExcludeTestFilters.isEmpty()) {
       // Try best to determine if the entire module was retried.
       return moduleFromRetry;
     }
@@ -452,7 +452,7 @@ public class RetryReportMerger {
     String testName = testFromPrevSession.getName();
     boolean testFoundInRetry = testsFromRetry.containsKey(testName);
     boolean testNotRetried = false;
-    if (matchedRetryExcludeTestFilters.contains(testName)) {
+    if (matchedRetryExcludeTestFilters.stream().anyMatch(filter -> filter.contains(testName))) {
       testNotRetried = true;
     } else if (!testFoundInRetry) {
       logger.atInfo().log("Test %s %s#%s was not retried ", moduleId, testCaseName, testName);
