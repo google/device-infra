@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.master.rpc.stub.grpc;
 
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
+import static com.google.devtools.mobileharness.shared.util.comm.stub.Stubs.withDeadline;
 
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
@@ -27,6 +28,7 @@ import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProt
 import com.google.devtools.mobileharness.shared.labinfo.proto.LabInfoServiceProto.GetLabInfoResponse;
 import com.google.devtools.mobileharness.shared.util.comm.stub.MasterGrpcStubHelper;
 import io.grpc.ClientInterceptors;
+import java.time.Duration;
 import javax.inject.Inject;
 
 /** gRPC stub of {@link LabInfoStub}. */
@@ -45,7 +47,7 @@ public class LabInfoGrpcStub implements LabInfoStub {
   @Override
   public GetLabInfoResponse getLabInfo(GetLabInfoRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        labInfoServiceBlockingStub::getLabInfo,
+        withDeadline(labInfoServiceBlockingStub, Duration.ofSeconds(30L))::getLabInfo,
         request,
         InfraErrorId.MASTER_RPC_STUB_LAB_INFO_GET_LAB_INFO_ERROR,
         String.format("Failed to get lab info, request=%s", shortDebugString(request)));

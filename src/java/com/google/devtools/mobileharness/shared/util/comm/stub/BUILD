@@ -21,18 +21,6 @@ package(
 )
 
 java_library(
-    name = "client_interceptor_factory",
-    srcs = ["ClientInterceptorFactory.java"],
-    deps = [
-        "@io_grpc_grpc_java//auth",
-        "@io_grpc_grpc_java//core",
-        "@maven//:com_google_auth_google_auth_library_credentials",
-        "@maven//:com_google_auth_google_auth_library_oauth2_http",
-        "@maven//:com_google_guava_guava",
-    ],
-)
-
-java_library(
     name = "channel_factory",
     srcs = ["ChannelFactory.java"],
     deps = [
@@ -55,6 +43,18 @@ java_library(
 )
 
 java_library(
+    name = "client_interceptor_factory",
+    srcs = ["ClientInterceptorFactory.java"],
+    deps = [
+        "@io_grpc_grpc_java//auth",
+        "@io_grpc_grpc_java//core",
+        "@maven//:com_google_auth_google_auth_library_credentials",
+        "@maven//:com_google_auth_google_auth_library_oauth2_http",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
     name = "master_grpc_stub_helper",
     srcs = [
         "MasterGrpcStubHelper.java",
@@ -65,5 +65,13 @@ java_library(
         "@io_grpc_grpc_java//core",
         "@io_grpc_grpc_java//stub",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "stubs",
+    srcs = ["Stubs.java"],
+    deps = [
+        "@io_grpc_grpc_java//stub",
     ],
 )

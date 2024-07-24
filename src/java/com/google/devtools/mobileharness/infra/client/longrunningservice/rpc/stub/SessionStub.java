@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub;
 
+import static com.google.devtools.mobileharness.shared.util.comm.stub.Stubs.withDeadline;
+
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -40,6 +42,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
 import io.grpc.Channel;
 import io.grpc.stub.StreamObserver;
+import java.time.Duration;
 
 /** Stub of {@link SessionServiceGrpc}. */
 public class SessionStub {
@@ -55,7 +58,7 @@ public class SessionStub {
   public CreateSessionResponse createSession(CreateSessionRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        sessionServiceBlockingStub::createSession,
+        withDeadline(sessionServiceBlockingStub, Duration.ofMinutes(2L))::createSession,
         request,
         InfraErrorId.OLCS_STUB_CREATE_SESSION_ERROR,
         "Failed to create session");
@@ -63,7 +66,7 @@ public class SessionStub {
 
   public RunSessionResponse runSession(RunSessionRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        sessionServiceBlockingStub::runSession,
+        withDeadline(sessionServiceBlockingStub, Duration.ofMinutes(2L))::runSession,
         request,
         InfraErrorId.OLCS_STUB_RUN_SESSION_ERROR,
         "Failed to run session");
@@ -71,7 +74,7 @@ public class SessionStub {
 
   public GetSessionResponse getSession(GetSessionRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        sessionServiceBlockingStub::getSession,
+        withDeadline(sessionServiceBlockingStub, Duration.ofSeconds(40L))::getSession,
         request,
         InfraErrorId.OLCS_STUB_GET_SESSION_ERROR,
         "Failed to get session");
@@ -80,7 +83,7 @@ public class SessionStub {
   public GetAllSessionsResponse getAllSessions(GetAllSessionsRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        sessionServiceBlockingStub::getAllSessions,
+        withDeadline(sessionServiceBlockingStub, Duration.ofSeconds(40L))::getAllSessions,
         request,
         InfraErrorId.OLCS_STUB_GET_ALL_SESSIONS_ERROR,
         "Failed to get all sessions");
@@ -94,7 +97,7 @@ public class SessionStub {
   public NotifySessionResponse notifySession(NotifySessionRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        sessionServiceBlockingStub::notifySession,
+        withDeadline(sessionServiceBlockingStub, Duration.ofSeconds(40L))::notifySession,
         request,
         InfraErrorId.OLCS_STUB_NOTIFY_SESSION_ERROR,
         "Failed to notify a specific session");
@@ -103,7 +106,7 @@ public class SessionStub {
   public NotifyAllSessionsResponse notifyAllSessions(NotifyAllSessionsRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        sessionServiceBlockingStub::notifyAllSessions,
+        withDeadline(sessionServiceBlockingStub, Duration.ofSeconds(40L))::notifyAllSessions,
         request,
         InfraErrorId.OLCS_STUB_NOTIFY_SESSION_ERROR,
         "Failed to notify all sessions ");
@@ -112,7 +115,7 @@ public class SessionStub {
   public AbortSessionsResponse abortSessions(AbortSessionsRequest request)
       throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        sessionServiceBlockingStub::abortSessions,
+        withDeadline(sessionServiceBlockingStub, Duration.ofSeconds(40L))::abortSessions,
         request,
         InfraErrorId.OLCS_STUB_ABORT_SESSIONS_ERROR,
         "Failed to abort sessions");

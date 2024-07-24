@@ -298,7 +298,7 @@ public class ServerPreparer {
    */
   public void killExistingServer(boolean forcibly)
       throws MobileHarnessException, InterruptedException {
-    serverStartingLogger.log("Killing existing OLC server...");
+    serverStartingLogger.log("Killing existing OLC server...%s", forcibly ? " (forcibly)" : "");
     KillServerResponse killServerResponse;
     try {
       killServerResponse =
@@ -326,8 +326,8 @@ public class ServerPreparer {
     }
 
     if (forcibly) {
-      serverStartingLogger.log("Existing OLC server (pid=%s) forcibly killed", serverPid);
       killServerProcess(serverPid);
+      serverStartingLogger.log("Existing OLC server (pid=%s) forcibly killed", serverPid);
     } else {
       if (killServerResponse.getResultCase() == ResultCase.FAILURE) {
         throw MobileHarnessExceptionFactory.create(

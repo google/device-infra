@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub;
 
+import static com.google.devtools.mobileharness.shared.util.comm.stub.Stubs.withDeadline;
+
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -31,6 +33,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.grpc.Channel;
 import io.grpc.stub.StreamObserver;
+import java.time.Duration;
 
 /** Stub of {@link ControlServiceGrpc}. */
 public class ControlStub {
@@ -46,7 +49,7 @@ public class ControlStub {
   @CanIgnoreReturnValue
   public KillServerResponse killServer(KillServerRequest request) throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        controlServiceBlockingStub::killServer,
+        withDeadline(controlServiceBlockingStub, Duration.ofSeconds(20L))::killServer,
         request,
         InfraErrorId.OLCS_STUB_KILL_SERVER_ERROR,
         "Failed to kill server");
@@ -58,7 +61,7 @@ public class ControlStub {
 
   public void setLogLevel(SetLogLevelRequest request) throws GrpcExceptionWithErrorId {
     GrpcStubUtil.invoke(
-        controlServiceBlockingStub::setLogLevel,
+        withDeadline(controlServiceBlockingStub, Duration.ofSeconds(20L))::setLogLevel,
         request,
         InfraErrorId.OLCS_STUB_SET_LOG_LEVEL_ERROR,
         "Failed to set log level");
@@ -66,7 +69,7 @@ public class ControlStub {
 
   public void heartbeat(HeartbeatRequest request) throws GrpcExceptionWithErrorId {
     GrpcStubUtil.invoke(
-        controlServiceBlockingStub::heartbeat,
+        withDeadline(controlServiceBlockingStub, Duration.ofSeconds(20L))::heartbeat,
         request,
         InfraErrorId.OLCS_STUB_HEARTBEAT_ERROR,
         "Failed to send heartbeat");

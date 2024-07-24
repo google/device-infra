@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub;
 
+import static com.google.devtools.mobileharness.shared.util.comm.stub.Stubs.withDeadline;
+
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcStubUtil;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -25,6 +27,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.V
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.VersionServiceProto.GetVersionResponse;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import io.grpc.Channel;
+import java.time.Duration;
 
 /** Stub of {@link VersionServiceGrpc}. */
 public class VersionStub {
@@ -38,7 +41,7 @@ public class VersionStub {
   @CanIgnoreReturnValue
   public GetVersionResponse getVersion() throws GrpcExceptionWithErrorId {
     return GrpcStubUtil.invoke(
-        versionServiceStub::getVersion,
+        withDeadline(versionServiceStub, Duration.ofSeconds(10L))::getVersion,
         GetVersionRequest.getDefaultInstance(),
         InfraErrorId.OLCS_STUB_GET_SERVER_VERSION_ERROR,
         "Failed to get server version");
