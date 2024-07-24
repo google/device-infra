@@ -421,7 +421,7 @@ public class SessionManager {
             threadPool.submit(threadRenaming(sessionRunner, () -> "session-runner-" + sessionId)),
             threadRenaming(
                 new SessionRunnerCallback(runningSession),
-                () -> "session-runner-post-run" + sessionId),
+                () -> "session-runner-post-run-" + sessionId),
             directExecutor());
       }
     }
