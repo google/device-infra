@@ -929,6 +929,14 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> jobGenFileExpiredTime = jobGenFileExpiredTimeDefault;
 
+  private static final Flag<String> labDeviceConfigFileDefault = Flag.value("");
+
+  @com.beust.jcommander.Parameter(
+      names = "--lab_device_config",
+      description = "Path of the text format protobuf lab device config file.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> labDeviceConfigFile = labDeviceConfigFileDefault;
+
   private static final Flag<Integer> logFileNumberDefault = Flag.value(100);
 
   @com.beust.jcommander.Parameter(

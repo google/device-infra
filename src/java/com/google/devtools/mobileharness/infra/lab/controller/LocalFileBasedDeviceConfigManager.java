@@ -25,12 +25,12 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceCon
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceLocator;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceLocatorConfigPair;
 import com.google.devtools.mobileharness.api.deviceconfig.proto.Lab.LabConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.LabDevice.LabDeviceConfig;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceIdManager;
 import com.google.devtools.mobileharness.infra.controller.device.LocalDeviceManager;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigFileProcessor;
-import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigFileProcessor.LabConfigAndDeviceConfigs;
 import java.util.List;
 import java.util.Optional;
 
@@ -50,8 +50,8 @@ public class LocalFileBasedDeviceConfigManager extends DeviceConfigManager {
 
   @Override
   protected Optional<LabConfig> loadLabConfig(String hostName) throws MobileHarnessException {
-    Optional<LabConfigAndDeviceConfigs> result = apiConfigFileProcessor.readApiConfigFile();
-    return result.map(LabConfigAndDeviceConfigs::labConfig);
+    Optional<LabDeviceConfig> result = apiConfigFileProcessor.readConfigFile();
+    return result.map(labDeviceConfig -> labDeviceConfig.getLabConfig());
   }
 
   @Override
@@ -62,11 +62,11 @@ public class LocalFileBasedDeviceConfigManager extends DeviceConfigManager {
       throws MobileHarnessException {
     ImmutableSet<String> deviceUuids =
         deviceLocators.stream().map(DeviceLocator::getDeviceUuid).collect(toImmutableSet());
-    Optional<LabConfigAndDeviceConfigs> result = apiConfigFileProcessor.readApiConfigFile();
+    Optional<LabDeviceConfig> result = apiConfigFileProcessor.readConfigFile();
     return result
         .map(
-            labConfigAndDeviceConfigs ->
-                labConfigAndDeviceConfigs.deviceConfigs().stream()
+            labDeviceConfig ->
+                labDeviceConfig.getDeviceConfigList().stream()
                     .filter(config -> deviceUuids.contains(config.getUuid()))
                     .collect(toImmutableList()))
         .orElseGet(ImmutableList::of);

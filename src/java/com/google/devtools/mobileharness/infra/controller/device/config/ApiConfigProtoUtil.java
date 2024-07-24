@@ -16,23 +16,21 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.config;
 
-import com.google.devtools.mobileharness.shared.util.message.StrPairUtil;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Basic.BasicDeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.Device.DeviceConfig;
+import com.google.devtools.mobileharness.api.deviceconfig.proto.LabDevice.LabDeviceConfig;
+import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
-import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
-import com.google.wireless.qa.mobileharness.shared.api.ClassUtil;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
-import com.google.wireless.qa.mobileharness.shared.constant.ErrorCode;
-import com.google.wireless.qa.mobileharness.shared.proto.Common.StrPair;
 import com.google.wireless.qa.mobileharness.shared.proto.Config;
-import com.google.wireless.qa.mobileharness.shared.proto.Config.ApiConfigOrBuilder;
-import com.google.wireless.qa.mobileharness.shared.proto.Config.DeviceConfig;
-import com.google.wireless.qa.mobileharness.shared.proto.Config.DeviceConfigOrBuilder;
-import com.google.wireless.qa.mobileharness.shared.proto.Config.DriverConfig;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 import javax.annotation.Nullable;
 
@@ -47,48 +45,25 @@ public final class ApiConfigProtoUtil {
    *
    * @return the errors of the given config, or an empty list if the config is ok
    */
-  public static List<String> verifyConfig(ApiConfigOrBuilder apiConfig) {
+  public static List<String> verifyConfig(LabDeviceConfig labDeviceConfig) {
     List<String> errors = new ArrayList<>();
 
+    BasicDeviceConfig basicDeviceConfig = labDeviceConfig.getLabConfig().getDefaultDeviceConfig();
     // Makes sure there isn't any public owners in the lab owner list.
-    errors.addAll(verifyOwners(apiConfig.getOwnerList()));
+    errors.addAll(verifyOwners(basicDeviceConfig.getOwnerList()));
 
     // Makes sure the lab-server-wide dimension values don't start with "regex".
-    List<StrPair> labWideDimensions = new ArrayList<>(apiConfig.getDimensionList());
-    labWideDimensions.addAll(
-        StrPairUtil.convertFromDeviceDimension(
-            apiConfig.getCompositeDimension().getRequiredDimensionList()));
-    labWideDimensions.addAll(
-        StrPairUtil.convertFromDeviceDimension(
-            apiConfig.getCompositeDimension().getSupportedDimensionList()));
+    List<DeviceDimension> labWideDimensions = new ArrayList<>();
+    labWideDimensions.addAll(basicDeviceConfig.getCompositeDimension().getRequiredDimensionList());
+    labWideDimensions.addAll(basicDeviceConfig.getCompositeDimension().getSupportedDimensionList());
     errors.addAll(verifyDimensions(/* deviceId= */ null, labWideDimensions));
 
     // Makes sure the device ids are unique, and dimension values don't start with "regex".
     Set<String> ids = new HashSet<>();
-    for (DeviceConfig deviceConfig : apiConfig.getDeviceConfigList()) {
+    for (DeviceConfig deviceConfig : labDeviceConfig.getDeviceConfigList()) {
       errors.addAll(verifyDeviceConfig(deviceConfig, ids));
     }
 
-    // Makes sure the core drivers exist and their names are unique.
-    Set<String> driverNames = new HashSet<>();
-    for (DriverConfig driverConfig : apiConfig.getDriverConfigList()) {
-      String name = driverConfig.getName();
-      try {
-        ClassUtil.getDriverClass(name);
-      } catch (MobileHarnessException e) {
-        errors.add(e.getMessage());
-      }
-      try {
-        ClassUtil.getDecoratorClass(name);
-        errors.add("driver_config.name should NOT be a name of a decorator");
-      } catch (MobileHarnessException e) {
-        // Makes sure the driver is a core driver.
-      }
-      if (driverNames.contains(name)) {
-        errors.add("Two driver_configs should NOT share the same driver name: " + name);
-      }
-      driverNames.add(name);
-    }
     return errors;
   }
 
@@ -99,14 +74,13 @@ public final class ApiConfigProtoUtil {
    * @param ids existed device ids. It should be mutable
    * @return the errors found in the DeviceConfig
    */
-  public static List<String> verifyDeviceConfig(
-      DeviceConfigOrBuilder deviceConfig, Set<String> ids) {
+  public static List<String> verifyDeviceConfig(DeviceConfig deviceConfig, Set<String> ids) {
     List<String> errors = new ArrayList<>();
 
-    if (!deviceConfig.hasId()) {
+    if (deviceConfig.getUuid().isEmpty()) {
       errors.add("Must specify the device id in the device config");
     } else {
-      String id = deviceConfig.getId();
+      String id = deviceConfig.getUuid();
       if (ids.contains(id)) {
         errors.add("Two device_configs should NOT share the same device id: " + id);
       }
@@ -114,26 +88,24 @@ public final class ApiConfigProtoUtil {
     }
 
     // Makes sure there isn't any public owners in the device owner list.
-    errors.addAll(verifyOwners(deviceConfig.getOwnerList()));
+    errors.addAll(verifyOwners(deviceConfig.getBasicConfig().getOwnerList()));
 
-    List<StrPair> deviceWideDimensions = new ArrayList<>(deviceConfig.getDimensionList());
+    List<DeviceDimension> deviceWideDimensions = new ArrayList<>();
     deviceWideDimensions.addAll(
-        StrPairUtil.convertFromDeviceDimension(
-            deviceConfig.getCompositeDimension().getRequiredDimensionList()));
+        deviceConfig.getBasicConfig().getCompositeDimension().getRequiredDimensionList());
     deviceWideDimensions.addAll(
-        StrPairUtil.convertFromDeviceDimension(
-            deviceConfig.getCompositeDimension().getSupportedDimensionList()));
-    errors.addAll(verifyDimensions(deviceConfig.getId(), deviceWideDimensions));
+        deviceConfig.getBasicConfig().getCompositeDimension().getSupportedDimensionList());
+    errors.addAll(verifyDimensions(deviceConfig.getUuid(), deviceWideDimensions));
     return errors;
   }
 
   /** Verifies the given list of lab/device dimensions. */
   private static List<String> verifyDimensions(
-      @Nullable String deviceId, List<StrPair> dimensions) {
+      @Nullable String deviceId, List<DeviceDimension> dimensions) {
     List<String> errors = new ArrayList<>();
-    for (StrPair dimension : dimensions) {
+    for (DeviceDimension dimension : dimensions) {
       String dimensionValue = dimension.getValue();
-      if (dimensionValue.toLowerCase().startsWith(Dimension.Value.PREFIX_REGEX)) {
+      if (dimensionValue.toLowerCase(Locale.ROOT).startsWith(Dimension.Value.PREFIX_REGEX)) {
         errors.add(
             String.format(
                 "The value of dimension %s %s should NOT start with %s",
@@ -166,29 +138,38 @@ public final class ApiConfigProtoUtil {
   }
 
   @CanIgnoreReturnValue
-  public static Config.ApiConfig.Builder fromText(String text) throws MobileHarnessException {
-    Config.ApiConfig.Builder builder = Config.ApiConfig.newBuilder();
+  public static Config.ApiConfig fromApiConfigText(String text) throws MobileHarnessException {
+    Config.ApiConfig.Builder apiConfig = Config.ApiConfig.newBuilder();
     try {
-      TextFormat.Parser.newBuilder().setAllowUnknownFields(true).build().merge(text, builder);
+      getTextFormatParser().merge(text, apiConfig);
     } catch (ParseException e) {
       throw new MobileHarnessException(
-          ErrorCode.DEVICE_CONFIG_ERROR, "Failed to parse Config.ApiConfig from text: " + text, e);
-    }
-    return builder;
-  }
-
-  public static DeviceConfig.Builder deviceConfigFromText(String text)
-      throws MobileHarnessException {
-    DeviceConfig.Builder builder = DeviceConfig.newBuilder();
-    try {
-      TextFormat.Parser.newBuilder().setAllowUnknownFields(true).build().merge(text, builder);
-    } catch (ParseException e) {
-      throw new MobileHarnessException(
-          ErrorCode.DEVICE_CONFIG_ERROR,
-          "Failed to parse Config.DeviceConfig from text: " + text,
+          BasicErrorId.API_CONFIG_FILE_READ_ERROR,
+          "Failed to parse Config.ApiConfig from text: " + text,
           e);
     }
-    return builder;
+    return apiConfig.build();
+  }
+
+  @CanIgnoreReturnValue
+  public static LabDeviceConfig fromLabDeviceConfigText(String text) throws MobileHarnessException {
+    LabDeviceConfig.Builder labDeviceConfig = LabDeviceConfig.newBuilder();
+    try {
+      getTextFormatParser().merge(text, labDeviceConfig);
+    } catch (ParseException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LAB_DEVICE_CONFIG_FILE_READ_ERROR,
+          "Failed to convert text file to lab device config proto.",
+          e);
+    }
+    return labDeviceConfig.build();
+  }
+
+  private static TextFormat.Parser getTextFormatParser() {
+    return TextFormat.Parser.newBuilder()
+        .setAllowUnknownFields(true)
+        .setAllowUnknownExtensions(true)
+        .build();
   }
 
   private ApiConfigProtoUtil() {}

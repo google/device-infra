@@ -64,3 +64,17 @@ java_proto_library(
     name = "lab_java_proto",
     deps = [":lab_proto"],
 )
+
+proto_library(
+    name = "lab_device_proto",
+    srcs = ["lab_device.proto"],
+    deps = [
+        ":device_proto",
+        ":lab_proto",
+    ],
+)
+
+java_proto_library(
+    name = "lab_device_java_proto",
+    deps = [":lab_device_proto"],
+)
