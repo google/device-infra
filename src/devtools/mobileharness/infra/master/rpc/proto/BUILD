@@ -142,6 +142,7 @@ proto_library(
         "//src/devtools/mobileharness/api/model/proto:device_proto",
         "//src/devtools/mobileharness/api/model/proto:lab_proto",
         "//src/devtools/mobileharness/shared/version/proto:version_proto",
+        "@com_google_protobuf//:duration_proto",
     ],
 )
 

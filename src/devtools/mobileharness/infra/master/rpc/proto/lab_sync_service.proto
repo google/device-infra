@@ -18,6 +18,7 @@ syntax = "proto3";
 
 package mobileharness.infra.master.rpc;
 
+import "google/protobuf/duration.proto";
 import "src/devtools/common/metrics/stability/model/proto/exception.proto";
 import "src/devtools/mobileharness/api/model/proto/device.proto";
 import "src/devtools/mobileharness/api/model/proto/lab.proto";
@@ -161,6 +162,17 @@ message RemoveMissingHostsRequest {
 
 message RemoveMissingHostsResponse {}
 
+message QuarantineDeviceRequest {
+  string device_uuid = 1;    // Required.
+  string lab_host_name = 2;  // Required.
+  google.protobuf.Duration timeout = 3;
+  string reason = 4;
+}
+
+message QuarantineDeviceResponse {
+  // Empty but may be extended.
+}
+
 // Service for updating labs and device info to master.
 service LabSyncService {
   // Sends full information of the Lab Server and its devices to Master.
@@ -187,4 +199,8 @@ service LabSyncService {
   // Removes the missing hosts in master.
   rpc RemoveMissingHosts(RemoveMissingHostsRequest)
       returns (RemoveMissingHostsResponse) {}
+
+  // Quarantine a device.
+  rpc QuarantineDevice(QuarantineDeviceRequest)
+      returns (QuarantineDeviceResponse) {}
 }
