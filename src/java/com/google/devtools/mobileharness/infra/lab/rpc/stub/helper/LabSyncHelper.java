@@ -16,7 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.lab.rpc.stub.helper;
 
-import static com.google.common.base.StandardSystemProperty.JAVA_VERSION;
 import static com.google.common.base.StandardSystemProperty.OS_NAME;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
@@ -52,6 +51,7 @@ import com.google.devtools.mobileharness.infra.master.rpc.stub.LabSyncStub;
 import com.google.devtools.mobileharness.shared.constant.hostmanagement.HostPropertyConstants.HostPropertyKey;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.devtools.mobileharness.shared.version.proto.Version.VersionCheckRequest;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -337,7 +337,7 @@ public class LabSyncHelper {
     hostProperties.addHostProperty(
         HostProperty.newBuilder()
             .setKey(Ascii.toLowerCase(HostPropertyKey.JAVA_VERSION.name()))
-            .setValue(JAVA_VERSION.value()));
+            .setValue(SystemUtil.getJavaVersion()));
     hostProperties.addHostProperty(
         HostProperty.newBuilder()
             .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_VERSION.name()))
@@ -350,7 +350,7 @@ public class LabSyncHelper {
     hostProperties.addHostProperty(
         HostProperty.newBuilder()
             .setKey(Ascii.toLowerCase(HostPropertyKey.HOST_OS_VERSION.name()))
-            .setValue(System.getProperty("os.version")));
+            .setValue(SystemUtil.getOsVersion()));
 
     return hostProperties.build();
   }
