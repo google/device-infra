@@ -159,6 +159,7 @@ func main() {
 	log.Infof("Uploaded %s to RBE instance %s, root digest: %s. E2E time: %v\n", *zipPath, *casInstance, output, elapsedTime)
 
 	if *dumpMetrics != "" {
+		metrics.Digest = output
 		if err := metrics.Dump(*dumpMetrics); err != nil {
 			log.Errorf("Failed to dump metrics to %s: %v", *dumpMetrics, err)
 		}

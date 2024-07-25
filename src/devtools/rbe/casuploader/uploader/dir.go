@@ -200,11 +200,9 @@ func (du *DirUploader) upload(uploadInfos []*uploadinfo.Entry) error {
 	start := time.Now()
 	digests, size, err := du.client.UploadIfMissing(du.ctx, uploadInfos...)
 	if err == nil {
-		elapsedTime := time.Since(start)
 		du.CommonConfig.metrics.UploadedSizeBytes = size
 		du.CommonConfig.metrics.UploadedEntries = len(digests)
-		du.CommonConfig.metrics.UploadTimeMs = elapsedTime.Milliseconds()
-		log.Infof("Uploaded %d blobs, %d bytes. Elapsed time: %v\n", len(digests), size, elapsedTime)
+		log.Infof("Uploaded %d blobs, %d bytes. Elapsed time: %v\n", len(digests), size, time.Since(start))
 	}
 	return err
 }
