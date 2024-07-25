@@ -16,8 +16,6 @@
 
 package com.google.devtools.mobileharness.infra.lab;
 
-import static com.google.common.base.StandardSystemProperty.OS_NAME;
-import static com.google.common.base.StandardSystemProperty.OS_VERSION;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -403,7 +401,7 @@ public class LabServer {
                     .add(Ascii.toLowerCase(Name.LAB_LOCATION.name()), labLocation));
     LabDimensionManager.getInstance()
         .getSupportedLocalDimensions()
-        .add(Ascii.toLowerCase(Name.HOST_OS.name()), OS_NAME.value());
+        .add(Ascii.toLowerCase(Name.HOST_OS.name()), systemUtil.getOsName());
     LabDimensionManager.getInstance()
         .getSupportedLocalDimensions()
         .add(Ascii.toLowerCase(Name.HOST_VERSION.name()), Version.LAB_VERSION.toString());
@@ -414,7 +412,7 @@ public class LabServer {
             Ascii.toLowerCase(netUtil.getLocalHostLocationType().name()));
     LabDimensionManager.getInstance()
         .getSupportedLocalDimensions()
-        .add(Ascii.toLowerCase(Name.HOST_OS_VERSION.name()), OS_VERSION.value());
+        .add(Ascii.toLowerCase(Name.HOST_OS_VERSION.name()), systemUtil.getOsVersion());
   }
 
   /** Test services created by lab server. */
