@@ -78,6 +78,7 @@ import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.wireless.qa.mobileharness.shared.android.RuntimeChargingUtil;
 import com.google.wireless.qa.mobileharness.shared.android.WifiUtil;
@@ -150,6 +151,7 @@ public abstract class AndroidRealDeviceDelegate {
   private final Fastboot fastboot;
   private final LocalFileUtil fileUtil;
   private final AndroidDeviceHelper androidDeviceHelper;
+  private final SystemUtil systemUtil;
 
   protected AndroidRealDeviceDelegate(
       AndroidDevice device,
@@ -173,7 +175,8 @@ public abstract class AndroidRealDeviceDelegate {
       SystemStateManager systemStateManager,
       DeviceDaemonHelper deviceDaemonHelper,
       Fastboot fastboot,
-      LocalFileUtil fileUtil) {
+      LocalFileUtil fileUtil,
+      SystemUtil systemUtil) {
     this.device = device;
     this.androidDeviceDelegate = androidDeviceDelegate;
     this.deviceStat = deviceStat;
@@ -200,6 +203,7 @@ public abstract class AndroidRealDeviceDelegate {
     device.setProperty(
         AndroidRealDeviceConstants.PROPERTY_NAME_REBOOT_TO_STATE, DeviceState.DEVICE.name());
     this.androidDeviceHelper = new AndroidDeviceHelper(androidAdbUtil, systemSettingUtil);
+    this.systemUtil = systemUtil;
   }
 
   /**
@@ -2360,6 +2364,19 @@ public abstract class AndroidRealDeviceDelegate {
       systemStateUtil.waitUntilReady(deviceId);
     }
     return rooted;
+  }
+
+  /** Do not support AndroidFlashstationDecorator if the server is on mac. */
+  @VisibleForTesting
+  void checkAndAddFlashstationDecoratorSupport() throws InterruptedException {
+    if (systemUtil.isOnMac()) {
+      logger.atInfo().log(
+          "Skip adding AndroidFlashstationDecorator support for device %s because the server is on"
+              + " mac.",
+          device.getDeviceId());
+      return;
+    }
+    device.addSupportedDecorator("AndroidFlashstationDecorator");
   }
 
   /**
