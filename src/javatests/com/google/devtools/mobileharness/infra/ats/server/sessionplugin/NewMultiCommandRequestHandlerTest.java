@@ -402,6 +402,72 @@ public final class NewMultiCommandRequestHandlerTest {
   }
 
   @Test
+  public void addTradefedJobs_fromRetryTestRun_success() throws Exception {
+    when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
+    String expectedCommandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    request =
+        request.toBuilder()
+            .setPrevTestContext(
+                TestContext.newBuilder()
+                    .addTestResource(
+                        TestResource.newBuilder()
+                            .setUrl(
+                                "file:///path/retry_previous_test_run_id/output/"
+                                    + "retry_previous_session_id/"
+                                    + expectedCommandId
+                                    + "/2024.07.16_15.09.01.972_5844.zip")
+                            .setName("2024.07.16_15.09.01.972_5844.zip")
+                            .build())
+                    .build())
+            .build();
+
+    // Trigger the handler.
+    RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
+    newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
+
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
+    assertThat(commandId).isEqualTo(expectedCommandId);
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
+    assertThat(commandDetail.getId()).isEqualTo(commandId);
+
+    verify(sessionInfo).addJob(jobInfo);
+    verify(properties).add("xts-tradefed-job", "true");
+    verify(xtsJobCreator).createXtsTradefedTestJob(sessionRequestInfoCaptor.capture());
+
+    // Verify sessionRequestInfo has been correctly generated.
+    SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
+    assertThat(sessionRequestInfo.testPlan()).isEqualTo("retry");
+    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
+    assertThat(sessionRequestInfo.testName()).hasValue("test1");
+    String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
+    String zipFile = "/path/to/xts/zip/file.zip";
+    assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
+    assertThat(sessionRequestInfo.xtsType()).isEqualTo("cts");
+    assertThat(sessionRequestInfo.androidXtsZip()).hasValue("ats-file-server::" + zipFile);
+    assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
+    assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
+    assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
+    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
+    assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
+    assertThat(sessionRequestInfo.retrySessionId()).hasValue("retry_previous_session_id");
+    String retryResultDir =
+        "/path/retry_previous_test_run_id/output/retry_previous_session_id/" + commandId;
+    assertThat(sessionRequestInfo.retryResultDir()).hasValue(retryResultDir);
+
+    // Verify that handler has mounted the zip file.
+    Command mountCommand =
+        Command.of("fuse-zip", "-r", zipFile, xtsRootDir).timeout(Duration.ofMinutes(10));
+    verify(commandExecutor).run(mountCommand);
+    verify(files).add(eq("test-name-1"), eq("ats-file-server::/path/to/file1"));
+    verify(files).add(eq("test-name-2"), eq("ats-file-server::/path/to/file2"));
+  }
+
+  @Test
   public void addTradefedJobs_mountAndroidXtsZipFailed_cancelRequestWithInvalidResourceError()
       throws Exception {
     when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));

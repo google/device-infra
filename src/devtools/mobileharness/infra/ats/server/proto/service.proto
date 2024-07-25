@@ -44,6 +44,7 @@ message NewMultiCommandRequest {
   // Retry Info.
   optional string retry_previous_session_id = 8;
   optional string retry_type = 9;
+  optional TestContext prev_test_context = 10;
 }
 
 // Command information of a test request.
