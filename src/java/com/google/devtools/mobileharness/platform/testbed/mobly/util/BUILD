@@ -19,9 +19,7 @@ java_library(
     name = "mobly_aosp_package_test_setup_util",
     srcs = ["MoblyAospPackageTestSetupUtil.java"],
     visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/testbed/mobly/util:__pkg__",
         "//src/javatests/com/google/wireless/qa/mobileharness/shared/api:__subpackages__",
     ],
