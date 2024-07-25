@@ -31,6 +31,7 @@ java_library(
         "//src/devtools/mobileharness/api/deviceconfig/proto:lab_device_java_proto",
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:dimension",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:config_java_proto",
         "@com_google_protobuf//:protobuf_java",

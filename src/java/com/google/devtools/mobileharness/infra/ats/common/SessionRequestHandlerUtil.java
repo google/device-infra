@@ -61,15 +61,14 @@ import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFil
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper;
 import com.google.devtools.mobileharness.platform.android.xts.suite.TestSuiteHelper.DeviceInfo;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
+import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.ResUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.jobconfig.JobInfoCreator;
 import com.google.gson.Gson;
 import com.google.inject.Provider;
-import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
-import com.google.protobuf.TextFormat.Parser;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.Priority;
 import com.google.wireless.qa.mobileharness.shared.proto.JobConfig;
@@ -108,8 +107,6 @@ public class SessionRequestHandlerUtil {
   public static final String ANDROID_DEVICE_TYPE = "AndroidDevice";
   private static final Pattern MODULE_PARAMETER_PATTERN =
       Pattern.compile(".*\\[(?<moduleParam>.*)]$");
-  private static final TextFormat.Parser DEVICE_CONFIG_FILE_PARSER =
-      Parser.newBuilder().setAllowUnknownFields(true).setAllowUnknownExtensions(true).build();
 
   private static final Duration JOB_TEST_TIMEOUT_DIFF = Duration.ofMinutes(1L);
   private static final Duration DEFAULT_TRADEFED_JOB_TIMEOUT = Duration.ofDays(15L);
@@ -772,9 +769,7 @@ public class SessionRequestHandlerUtil {
     }
     try {
       String fileContent = localFileUtil.readFile(xtsDeviceConfigFile);
-      DeviceConfigurations.Builder result = DeviceConfigurations.newBuilder();
-      DEVICE_CONFIG_FILE_PARSER.merge(fileContent, result);
-      return result.build();
+      return ProtoTextFormat.parse(fileContent, DeviceConfigurations.class);
     } catch (MobileHarnessException | ParseException e) {
       throw MobileHarnessExceptionFactory.create(
           InfraErrorId.XTS_DEVICE_CONFIG_FILE_PARSE_ERROR,

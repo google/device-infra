@@ -22,8 +22,8 @@ import com.google.devtools.mobileharness.api.deviceconfig.proto.LabDevice.LabDev
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceDimension;
+import com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
-import com.google.protobuf.TextFormat;
 import com.google.protobuf.TextFormat.ParseException;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.proto.Config;
@@ -139,37 +139,26 @@ public final class ApiConfigProtoUtil {
 
   @CanIgnoreReturnValue
   public static Config.ApiConfig fromApiConfigText(String text) throws MobileHarnessException {
-    Config.ApiConfig.Builder apiConfig = Config.ApiConfig.newBuilder();
     try {
-      getTextFormatParser().merge(text, apiConfig);
+      return ProtoTextFormat.parse(text, Config.ApiConfig.class);
     } catch (ParseException e) {
       throw new MobileHarnessException(
           BasicErrorId.API_CONFIG_FILE_READ_ERROR,
           "Failed to parse Config.ApiConfig from text: " + text,
           e);
     }
-    return apiConfig.build();
   }
 
   @CanIgnoreReturnValue
   public static LabDeviceConfig fromLabDeviceConfigText(String text) throws MobileHarnessException {
-    LabDeviceConfig.Builder labDeviceConfig = LabDeviceConfig.newBuilder();
     try {
-      getTextFormatParser().merge(text, labDeviceConfig);
+      return ProtoTextFormat.parse(text, LabDeviceConfig.class);
     } catch (ParseException e) {
       throw new MobileHarnessException(
           BasicErrorId.LAB_DEVICE_CONFIG_FILE_READ_ERROR,
           "Failed to convert text file to lab device config proto.",
           e);
     }
-    return labDeviceConfig.build();
-  }
-
-  private static TextFormat.Parser getTextFormatParser() {
-    return TextFormat.Parser.newBuilder()
-        .setAllowUnknownFields(true)
-        .setAllowUnknownExtensions(true)
-        .build();
   }
 
   private ApiConfigProtoUtil() {}
