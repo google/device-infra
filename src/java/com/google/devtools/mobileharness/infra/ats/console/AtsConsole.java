@@ -66,7 +66,6 @@ import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
@@ -95,9 +94,10 @@ public class AtsConsole {
 
     // Parses flags.
     ImmutableList<String> deviceInfraServiceFlags =
-        DeviceInfraServiceUtil.parseDeviceInfraServiceFlagsFromSystemProperty();
-    ImmutableList<String> finalFlags = preprocessDeviceInfraServiceFlags(deviceInfraServiceFlags);
-    DeviceInfraServiceUtil.parseFlags(finalFlags);
+        DeviceInfraServiceUtil.getDeviceInfraServiceFlagsFromSystemProperty();
+    ImmutableList<String> finalDeviceInfraServiceFlags =
+        preprocessDeviceInfraServiceFlags(deviceInfraServiceFlags);
+    DeviceInfraServiceUtil.parseFlags(finalDeviceInfraServiceFlags);
 
     // Initializes line reader.
     LineReader lineReader = createLineReader();
@@ -107,7 +107,7 @@ public class AtsConsole {
         Guice.createInjector(
             new AtsConsoleModule(
                 "ats-console-" + UUID.randomUUID(),
-                finalFlags,
+                finalDeviceInfraServiceFlags,
                 asList(args),
                 systemProperties,
                 lineReader,
@@ -348,7 +348,7 @@ public class AtsConsole {
       List<String> deviceInfraServiceFlags) throws IOException, InterruptedException {
     ImmutableList.Builder<String> flags =
         new ImmutableList.Builder<String>().addAll(deviceInfraServiceFlags);
-    if (Objects.equals(System.getenv(USE_NEW_OLC_SERVER_ENV_VAR), "true")) {
+    if (Boolean.parseBoolean(System.getenv(USE_NEW_OLC_SERVER_ENV_VAR))) {
       // Generate random flags for a new OLC server
       flags.addAll(getRandomServerFlags());
     }

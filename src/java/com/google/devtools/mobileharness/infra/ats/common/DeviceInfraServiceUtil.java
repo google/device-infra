@@ -36,23 +36,20 @@ public class DeviceInfraServiceUtil {
    * @return the list of flag strings
    * @implSpec do not use logger since flags has not been parsed
    */
-  public static ImmutableList<String> parseDeviceInfraServiceFlagsFromSystemProperty() {
+  public static ImmutableList<String> getDeviceInfraServiceFlagsFromSystemProperty() {
     String property = System.getProperties().getProperty(DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY);
-    ImmutableList<String> deviceInfraServiceFlags;
-    if (!isNullOrEmpty(property)) {
-      try {
-        deviceInfraServiceFlags = ShellUtils.tokenize(property);
-      } catch (TokenizationException e) {
-        throw new IllegalArgumentException(
-            String.format(
-                "Invalid property value, key=[%s], value=[%s]",
-                DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY, property),
-            e);
-      }
-    } else {
-      deviceInfraServiceFlags = ImmutableList.of();
+    if (isNullOrEmpty(property)) {
+      return ImmutableList.of();
     }
-    return deviceInfraServiceFlags;
+    try {
+      return ShellUtils.tokenize(property);
+    } catch (TokenizationException e) {
+      throw new IllegalArgumentException(
+          String.format(
+              "Invalid property value, key=[%s], value=[%s]",
+              DEVICE_INFRA_SERVICE_FLAGS_PROPERTY_KEY, property),
+          e);
+    }
   }
 
   /**

@@ -62,7 +62,7 @@ public class AtsLocalRunner {
 
   public static void main(String[] args) throws InterruptedException, MobileHarnessException {
     ImmutableList<String> deviceInfraServiceFlags =
-        DeviceInfraServiceUtil.parseDeviceInfraServiceFlagsFromSystemProperty();
+        DeviceInfraServiceUtil.getDeviceInfraServiceFlagsFromSystemProperty();
     // Parse the system property and args
     ImmutableList<String> allFlags =
         ImmutableList.<String>builder()

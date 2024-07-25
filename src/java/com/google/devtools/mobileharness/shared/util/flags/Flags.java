@@ -545,13 +545,14 @@ public class Flags {
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAtsConsoleOlcServer = enableAtsConsoleOlcServerDefault;
 
-  private static final Flag<Boolean> enableAtsConsoleOlcServerLogDefault = Flag.value(false);
+  private static final Flag<Boolean> enableAtsConsoleOlcServerLogDefault = Flag.value(true);
 
   @com.beust.jcommander.Parameter(
       names = "--enable_ats_console_olc_server_log",
       description =
           "If true, start printing OLC server streaming log in ATS console (run log command) when"
-              + " console starts. Default is false.",
+              + " console starts. If false, start/stop the streaming log when \"run\" command"
+              + " starts/stops. Default is false.",
       converter = Flag.BooleanConverter.class)
   public Flag<Boolean> enableAtsConsoleOlcServerLog = enableAtsConsoleOlcServerLogDefault;
 

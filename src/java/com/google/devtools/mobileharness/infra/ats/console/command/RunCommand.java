@@ -686,7 +686,9 @@ public final class RunCommand implements Callable<Integer> {
             .setCommandLineArgs(String.join(" ", commandLineArgs))
             .addAllSeparatedCommandLineArgs(commandLineArgs));
 
-    serverLogPrinter.enable(true);
+    if (!Flags.instance().enableAtsConsoleOlcServerLog.getNonNull()) {
+      serverLogPrinter.enable(true);
+    }
     ListenableFuture<AtsSessionPluginOutput> atsRunSessionFuture =
         atsSessionStub.runSession(
             RUN_COMMAND_SESSION_NAME,
@@ -726,7 +728,8 @@ public final class RunCommand implements Callable<Integer> {
     }
 
     private void disableServerLogPrinterIfNecessary() {
-      if (RUNNING_COMMAND_COUNT.decrementAndGet() == 0) {
+      int runningCommandCount = RUNNING_COMMAND_COUNT.decrementAndGet();
+      if (!Flags.instance().enableAtsConsoleOlcServerLog.getNonNull() && runningCommandCount == 0) {
         try {
           serverLogPrinter.enable(false);
         } catch (MobileHarnessException | InterruptedException e) {
