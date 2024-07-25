@@ -939,6 +939,42 @@ public abstract class AndroidRealDeviceDelegate {
   /** Returns {@code true} if skip default device prepration before running the test. */
   protected abstract boolean skipRealDeviceDefaultPreparationBeforeTest();
 
+  @CanIgnoreReturnValue
+  private Optional<PostTestDeviceOp> checkRecovery()
+      throws MobileHarnessException, InterruptedException {
+    if (isWipeRecoveryDevice()) {
+      // No permission to factory reset for non-rooted device.
+      if (isRooted()) {
+        // TODO: Add monitors for fast wipe.
+        // If wipe recovery enabled, reboot the device to fastboot and wipe the device.
+        logger.atInfo().log("Fast wipe device %s to clean all user data.", deviceId);
+        AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
+        return Optional.of(PostTestDeviceOp.REBOOT);
+      } else {
+        logger.atWarning().log(
+            "Skip factory reset device %s since it‘s invalid for non-rooted devices.", deviceId);
+        return Optional.empty();
+      }
+    } else if (isTestHarnessRecoveryDevice()) {
+      if (isQOrAboveBuild(deviceId)) {
+        logger.atInfo().log("It'll factory reset device %s via Test Harness Mode.", deviceId);
+        AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
+        device.addDimension(Dimension.Name.RECOVERY_STATUS, "dirty");
+        return Optional.of(PostTestDeviceOp.REBOOT);
+      } else {
+        logger.atInfo().log(
+            "Factory reset via Test Harness Mode is not supported on device %s.", deviceId);
+        return Optional.empty();
+      }
+    } else {
+      // If fast recovery enabled, reboot the device to recovery and clean all user data even if
+      // the system build changed.
+      logger.atInfo().log("Reboot device %s to recovery to clean all user data.", deviceId);
+      AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.RECOVERY);
+      return Optional.of(PostTestDeviceOp.REBOOT);
+    }
+  }
+
   /** Operations after a test and before resetting/reloading the driver. */
   @CanIgnoreReturnValue
   public PostTestDeviceOp postRunTest(TestInfo testInfo)
@@ -948,39 +984,21 @@ public abstract class AndroidRealDeviceDelegate {
 
     prependedRealDeviceAfterTestProcess(testInfo);
 
-    if (!skipRealDeviceDefaultAfterTestProcess()) {
-      if (isRecoveryDevice()) {
-        if (isWipeRecoveryDevice()) {
-          // No permission to factory reset for non-rooted device.
-          if (isRooted()) {
-            // TODO: Add monitors for fast wipe.
-            // If wipe recovery enabled, reboot the device to fastboot and wipe the device.
-            logger.atInfo().log("Fast wipe device %s to clean all user data.", deviceId);
-            AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.FASTBOOT);
-            return PostTestDeviceOp.REBOOT;
-          } else {
-            logger.atWarning().log(
-                "Skip factory reset device %s since it‘s invalid for non-rooted devices.",
-                deviceId);
-          }
-        } else if (isTestHarnessRecoveryDevice()) {
-          if (isQOrAboveBuild(deviceId)) {
-            logger.atInfo().log("It'll factory reset device %s via Test Harness Mode.", deviceId);
-            AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.DEVICE);
-            return PostTestDeviceOp.REBOOT;
-          } else {
-            logger.atInfo().log(
-                "Factory reset via Test Harness Mode is not supported on device %s.", deviceId);
-          }
-        } else {
-          // If fast recovery enabled, reboot the device to recovery and clean all user data even if
-          // the system build changed.
-          logger.atInfo().log("Reboot device %s to recovery to clean all user data.", deviceId);
-          AndroidDeviceDelegateHelper.setRebootToStateProperty(device, DeviceState.RECOVERY);
-          return PostTestDeviceOp.REBOOT;
+    // Core lab devices won't have "recovery" device dimension.
+    if (isRecoveryDevice()) {
+      try {
+        Optional<PostTestDeviceOp> postTestDeviceOp = checkRecovery();
+        if (postTestDeviceOp.isPresent()) {
+          return postTestDeviceOp.get();
         }
+      } catch (MobileHarnessException e) {
+        logger.atInfo().log(
+            "Failed to check recovery status for device [%s]: %s",
+            deviceId, MoreThrowables.shortDebugString(e));
       }
+    }
 
+    if (!skipRealDeviceDefaultAfterTestProcess()) {
       // Reboot the device if system build changed.
       ImmutableSet<String> builds =
           device.getDimension(Ascii.toLowerCase(AndroidProperty.BUILD.name())).stream()
@@ -1092,6 +1110,7 @@ public abstract class AndroidRealDeviceDelegate {
           if (isTestHarnessRecoveryDevice()) {
             logger.atInfo().log("Factory reset device %s via Test Harness Mode.", deviceId);
             systemStateUtil.factoryResetViaTestHarness(deviceId, /* waitTime= */ null);
+            device.removeDimension(Dimension.Name.RECOVERY_STATUS);
           } else {
             logger.atInfo().log("Device %s reboot to normal mode", deviceId);
             systemStateUtil.reboot(deviceId);

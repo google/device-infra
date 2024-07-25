@@ -199,6 +199,11 @@ public final class Dimension {
     OEM_UNLOCK,
     /** The recovery tag name of the device. */
     RECOVERY,
+    /**
+     * The recovery status of the device. When set to dirty, it is waiting for recovery. When this
+     * dimension doesn't exist, it means the device has been recovered.
+     */
+    RECOVERY_STATUS,
     /** The screen density. */
     SCREEN_DENSITY,
     /** The screen size. */
