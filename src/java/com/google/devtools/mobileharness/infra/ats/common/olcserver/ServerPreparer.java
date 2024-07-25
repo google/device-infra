@@ -17,20 +17,16 @@
 package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.google.common.util.concurrent.Futures.addCallback;
-import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-import static com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerLogs.SERVER_STARTED_SIGNAL;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.concurrent.TimeUnit.SECONDS;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
-import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -42,6 +38,7 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerBinary;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
+import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.OlcServerDirs;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.HeartbeatRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.ControlServiceProto.KillServerResponse;
@@ -56,7 +53,6 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
-import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.java.JavaCommandCreator;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -67,11 +63,9 @@ import com.google.errorprone.annotations.FormatMethod;
 import io.grpc.Status.Code;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.Objects;
 import java.util.Optional;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 import javax.annotation.concurrent.GuardedBy;
@@ -86,6 +80,9 @@ public class ServerPreparer {
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
   private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(10L);
+
+  private static final int MAX_CONNECT_SERVER_ATTEMPTS = 20;
+  private static final Duration CONNECT_SERVER_INTERVAL = Duration.ofSeconds(1L);
 
   private static final ImmutableList<String> UNFINISHED_SESSIONS_TABLE_HEADER =
       ImmutableList.of("Session ID", "Name", "Status", "Submitted Time");
@@ -224,27 +221,28 @@ public class ServerPreparer {
           .log("OLC server flags: %s, native arguments: %s", serverFlags, serverNativeArguments);
 
       CommandProcess serverProcess = null;
-      ServerStderrLineCallback serverStderrLineCallback = new ServerStderrLineCallback();
+
+      ImmutableList.Builder<String> startOlcServerCommandBuilder = ImmutableList.builder();
+      startOlcServerCommandBuilder.add("nohup");
+      startOlcServerCommandBuilder.addAll(
+          JavaCommandCreator.of(
+                  /* useStandardInvocationForm= */ true, requireNonNull(javaPath.get()).toString())
+              .createJavaCommand(serverBinaryPath, serverFlags, serverNativeArguments));
+      startOlcServerCommandBuilder.add(">/dev/null").add("2>&1").add("&");
+
       try {
         try {
           serverProcess =
               commandExecutor.start(
                   Command.of(
-                          JavaCommandCreator.of(
-                                  /* useStandardInvocationForm= */ true,
-                                  requireNonNull(javaPath.get()).toString())
-                              .createJavaCommand(
-                                  serverBinaryPath, serverFlags, serverNativeArguments))
-                      .onStderr(serverStderrLineCallback)
-                      .successfulStartCondition(line -> line.contains(SERVER_STARTED_SIGNAL))
+                          ImmutableList.of(
+                              "sh",
+                              "-c",
+                              Joiner.on(" ").join(startOlcServerCommandBuilder.build())))
                       .timeout(ChronoUnit.YEARS.getDuration())
                       .redirectStderr(false)
                       .needStdoutInResult(false)
                       .needStderrInResult(false));
-          addCallback(
-              serverProcess.successfulStartFuture(),
-              new ServerSuccessfulStartCallback(serverProcess),
-              directExecutor());
         } catch (CommandStartException e) {
           throw new MobileHarnessException(
               InfraErrorId.ATSC_SERVER_PREPARER_START_OLC_SERVER_ERROR,
@@ -257,38 +255,47 @@ public class ServerPreparer {
             .atInfo()
             .with(IMPORTANCE, DEBUG)
             .log("Wait until OLC server starts, command=[%s]", serverProcess.command());
-        try {
-          if (!serverProcess.successfulStartFuture().get(40L, SECONDS)) {
-            throw new MobileHarnessException(
-                InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_ABNORMAL_EXIT_WHILE_INITIALIZATION,
-                "OLC server exited abnormally while initialization");
-          }
-        } catch (ExecutionException e) {
-          throw new AssertionError(e);
-        } catch (TimeoutException unused) {
-          throw new MobileHarnessException(
-              InfraErrorId.ATSC_SERVER_PREPARER_OLC_SERVER_INITIALIZE_ERROR,
-              "OLC server didn't start in 40 seconds");
-        }
-        connectWithRetry();
+        // Sleep for a while to wait for the server to start.
+        sleeper.sleep(Duration.ofSeconds(1L));
+        GetVersionResponse serverVersion = connectWithRetry();
         serverStartingLogger.log(
             "OLC server started, port=%s, pid=%s",
-            Flags.instance().olcServerPort.getNonNull(), serverProcess.getPid());
+            Flags.instance().olcServerPort.getNonNull(), serverVersion.getProcessId());
       } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
-        // Kills the server.
+        // Kills the wrapper process.
         if (serverProcess != null && serverProcess.isAlive()) {
           serverStartingLogger.log("Killing OLC server");
           serverProcess.kill();
         }
 
-        // Prints stderr of the server.
-        String serverStartingLog = serverStderrLineCallback.getServerStartingLog();
-        if (!serverStartingLog.isEmpty()) {
-          serverStartingLogger.log("olc_server_stderr=[%s]", serverStartingLog);
+        try {
+          printServerStartingLogFromLogFile();
+        } catch (MobileHarnessException | RuntimeException | Error readLogException) {
+          logger.atWarning().withCause(readLogException).log(
+              "Failed to print server starting log from the log file.");
         }
         throw e;
       }
     }
+  }
+
+  private void printServerStartingLogFromLogFile() throws MobileHarnessException {
+    Path logFile = Path.of(OlcServerDirs.getLogDir()).resolve("log0.txt");
+    if (!localFileUtil.isFileOrDirExist(logFile)) {
+      return;
+    }
+    Instant lastModifiedTime = localFileUtil.getFileLastModifiedTime(logFile);
+    Instant now = Instant.now();
+
+    Duration duration = Duration.between(lastModifiedTime, now);
+    if (duration.compareTo(
+            CONNECT_SERVER_INTERVAL.multipliedBy(MAX_CONNECT_SERVER_ATTEMPTS).plusSeconds(5L))
+        > 0) {
+      // Skip printing if the log file wasn't modified recently.
+      return;
+    }
+
+    serverStartingLogger.log("%s", localFileUtil.readFile(logFile));
   }
 
   /**
@@ -355,15 +362,15 @@ public class ServerPreparer {
     systemUtil.killProcess((int) serverPid);
   }
 
-  private void connectWithRetry() throws MobileHarnessException, InterruptedException {
+  private GetVersionResponse connectWithRetry()
+      throws MobileHarnessException, InterruptedException {
     int count = 0;
     while (true) {
       try {
-        requireNonNull(versionStub.get()).getVersion();
-        return;
+        return requireNonNull(versionStub.get()).getVersion();
       } catch (GrpcExceptionWithErrorId e) {
         count++;
-        if (count == 15) {
+        if (count == MAX_CONNECT_SERVER_ATTEMPTS) {
           throw new MobileHarnessException(
               InfraErrorId.ATSC_SERVER_PREPARER_CONNECT_NEW_OLC_SERVER_ERROR,
               "Failed to connect new OLC server",
@@ -430,45 +437,6 @@ public class ServerPreparer {
           "Using existing OLC server in a different version, "
               + "version of OLC server: [%s], version of %s: [%s]",
           shortDebugString(serverVersion), clientComponentName, shortDebugString(clientVersion));
-    }
-  }
-
-  private static class ServerSuccessfulStartCallback implements FutureCallback<Boolean> {
-
-    private final CommandProcess commandProcess;
-
-    private ServerSuccessfulStartCallback(CommandProcess commandProcess) {
-      this.commandProcess = commandProcess;
-    }
-
-    @Override
-    public void onSuccess(Boolean result) {
-      if (Objects.equals(result, Boolean.TRUE)) {
-        commandProcess.stopReadingOutput();
-      }
-    }
-
-    @Override
-    public void onFailure(Throwable t) {}
-  }
-
-  private static class ServerStderrLineCallback implements LineCallback {
-
-    @GuardedBy("itself")
-    private final StringBuilder serverStartingLog = new StringBuilder();
-
-    @Override
-    public Response onLine(String stderrLine) {
-      synchronized (serverStartingLog) {
-        serverStartingLog.append(stderrLine).append('\n');
-      }
-      return Response.empty();
-    }
-
-    private String getServerStartingLog() {
-      synchronized (serverStartingLog) {
-        return serverStartingLog.toString();
-      }
     }
   }
 }

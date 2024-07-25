@@ -21,6 +21,7 @@ java_library(
     name = "dirs",
     srcs = ["OlcServerDirs.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/command:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/log:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/local:__pkg__",
