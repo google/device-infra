@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.platform.android.systemstate.AndroidSys
 import com.google.devtools.mobileharness.platform.android.user.AndroidUserUtil;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.network.NetworkUtil;
+import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.wireless.qa.mobileharness.shared.android.RuntimeChargingUtil;
 import com.google.wireless.qa.mobileharness.shared.api.device.AndroidDevice;
 import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
@@ -90,7 +91,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
         new SystemStateManager(),
         new DeviceDaemonHelper(),
         new Fastboot(),
-        new LocalFileUtil());
+        new LocalFileUtil(),
+        new SystemUtil());
   }
 
   @VisibleForTesting
@@ -116,7 +118,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
       SystemStateManager systemStateManager,
       DeviceDaemonHelper deviceDaemonHelper,
       Fastboot fastboot,
-      LocalFileUtil localFileUtil) {
+      LocalFileUtil localFileUtil,
+      SystemUtil systemUtil) {
     super(
         device,
         androidDeviceDelegate,
@@ -139,7 +142,8 @@ public class AndroidRealDeviceDelegateImpl extends AndroidRealDeviceDelegate {
         systemStateManager,
         deviceDaemonHelper,
         fastboot,
-        localFileUtil);
+        localFileUtil,
+        systemUtil);
     this.androidAdbInternalUtil = androidAdbInternalUtil;
     this.connectivityUtil = connectivityUtil;
     this.noOpDeviceSandboxController = new NoOpDeviceSandboxController(device);
