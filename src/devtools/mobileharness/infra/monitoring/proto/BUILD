@@ -30,3 +30,8 @@ java_proto_library(
     name = "monitor_entry_java_proto",
     deps = [":monitor_entry_proto"],
 )
+
+proto_library(
+    name = "record_proto",
+    srcs = ["record.proto"],
+)

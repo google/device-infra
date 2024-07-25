@@ -1,0 +1,110 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.infra.monitoring;
+
+option java_package = "com.google.devtools.mobileharness.infra.monitoring.proto";
+option java_outer_classname = "RecordProto";
+
+// The record of a host of a certain timestamp.
+message HostRecord {
+  // The hostname of the host, also used as the unique id to distinguish hosts.
+  string host_name = 1;
+
+  // The IP address of the host.
+  string host_ip = 2;
+
+  // The status of the host in upper case, e.g. RUNNING, OFFLINE, etc.
+  string host_status = 3;
+
+  // The OS of the host, e.g. Linux, MacOS.
+  string host_os = 4;
+
+  // The OS version of the host.
+  string host_os_version = 5;
+
+  // The location of the host, e.g. bej, atl97.
+  string host_location = 6;
+
+  // The version of the lab server running on the host.
+  string lab_server_version = 7;
+
+  // The type of the lab, e.g. Core, Satellite, SLaaS.
+  string lab_type = 8;
+
+  // The version of the Xcode installed on the host, Mac OS only.
+  string xcode_version = 9;
+
+  // The group of the host, which is configured by users.
+  string host_group = 10;
+}
+
+// The record of a device of a certain timestamp.
+message DeviceRecord {
+  // The uuid of the device.
+  string device_id = 1;
+
+  // The supported types of the device, e.g. ["AndroidRealDevice",
+  // "AndroidDevice"].
+  repeated string type = 2;
+
+  // The status of the device in upper case, e.g. IDLE, BUSY, etc.
+  string status = 3;
+
+  // The owners of the device.
+  repeated string owner = 4;
+
+  // The platform of the device in upper case, e.g. ANDROID, IOS, TESTBED.
+  string platform = 5;
+
+  // The brand of the device in lower case. E.g., "google", "xiaomi".
+  string brand = 6;
+
+  // The model of the device in lower case.
+  string model = 7;
+
+  // The OS version of the device, sdk_version for ANDROID while
+  // software_version for IOS.
+  string version = 8;
+
+  // The hardware of the device in lower case, e.g. "flame", "selene".
+  // ANDROID only.
+  string hardware = 9;
+
+  // The build type of the installed OS, e.g. "user", "userdebug".
+  // ANDROID only.
+  string build_type = 10;
+
+  // The run target of the device, e.g. "flame-debug". ANDROID only.
+  string run_target = 11;
+
+  // Whether the device has internet access.
+  bool internet = 12;
+
+  // The provisioned_by dimension of the device, IOS only.
+  repeated string provisioned_by = 13;
+
+  // The pool dimension of the device.
+  repeated string pool = 14;
+
+  // The cluster dimension of the device.
+  repeated string cluster = 15;
+
+  // The label dimension of the device.
+  repeated string label = 16;
+}
