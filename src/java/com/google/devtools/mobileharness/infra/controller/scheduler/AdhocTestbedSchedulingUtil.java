@@ -22,6 +22,7 @@ import com.google.common.collect.DiscreteDomain;
 import com.google.common.collect.Range;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.lab.DeviceScheduleUnit;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobScheduleUnit;
 import com.google.wireless.qa.mobileharness.shared.model.job.in.SubDeviceSpec;
 import java.time.Duration;
@@ -33,7 +34,6 @@ import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -45,7 +45,8 @@ public class AdhocTestbedSchedulingUtil {
 
   private static final Duration FIND_SUBDEVICES_TIMEOUT = Duration.ofSeconds(10);
 
-  private final ExecutorService executor = Executors.newCachedThreadPool();
+  private final ExecutorService executor =
+      ThreadPools.createStandardThreadPool("adhoc-testbed-scheduler");
 
   public AdhocTestbedSchedulingUtil() {
     Runtime.getRuntime()

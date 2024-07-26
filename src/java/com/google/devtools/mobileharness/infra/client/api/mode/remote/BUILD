@@ -70,6 +70,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub:prepare_test",
         "//src/java/com/google/devtools/mobileharness/shared/constant/closeable:mobile_harness_auto_closeable",
         "//src/java/com/google/devtools/mobileharness/shared/constant/environment",
+        "//src/java/com/google/devtools/mobileharness/shared/context:invocation_context_executors",
         "//src/java/com/google/devtools/mobileharness/shared/util/base",
         "//src/java/com/google/devtools/mobileharness/shared/util/base:proto_text_format",
         "//src/java/com/google/devtools/mobileharness/shared/util/comm/messaging/message",

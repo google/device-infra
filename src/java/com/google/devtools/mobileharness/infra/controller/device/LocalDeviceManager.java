@@ -25,7 +25,6 @@ import com.google.common.cache.Cache;
 import com.google.common.eventbus.EventBus;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResult;
 import com.google.devtools.mobileharness.api.devicemanager.detector.model.DetectionResults;
@@ -35,6 +34,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatus;
 import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWithTimestamp;
 import com.google.devtools.mobileharness.infra.controller.device.external.ExternalDeviceManager;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
@@ -45,7 +45,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import javax.annotation.Nullable;
@@ -127,7 +126,7 @@ public class LocalDeviceManager extends BaseDeviceStatusProvider
     logger.atInfo().log("Running...");
     // Starts multiple threads for each detector.
     ListeningExecutorService detectorThreadPool =
-        MoreExecutors.listeningDecorator(Executors.newCachedThreadPool());
+        ThreadPools.createStandardThreadPool("detector-thread-pool");
     detectors.forEach(
         detector -> {
           String detectorName = detector.getClass().getSimpleName();

@@ -39,6 +39,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/history:recorder",
         "//src/java/com/google/devtools/mobileharness/shared/util/command/io",
+        "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_pools",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:count_down_timer",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",

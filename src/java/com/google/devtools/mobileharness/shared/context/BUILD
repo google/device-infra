@@ -38,6 +38,9 @@ java_library(
     srcs = ["InvocationContextExecutors.java"],
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/client/api:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/remote:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/client/rbe:__pkg__",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/shared/context:__pkg__",
     ],

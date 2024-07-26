@@ -26,13 +26,13 @@ import com.google.common.io.ByteSink;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.devtools.mobileharness.infra.controller.test.TestContext.TestContextRunnable;
 import com.google.devtools.mobileharness.shared.util.command.LineCallback.Response;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecord;
 import com.google.devtools.mobileharness.shared.util.command.history.CommandRecorder;
 import com.google.devtools.mobileharness.shared.util.command.io.LineCollector;
 import com.google.devtools.mobileharness.shared.util.command.io.LineReader;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.errorprone.annotations.CheckReturnValue;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -43,8 +43,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -614,9 +612,7 @@ public class CommandExecutor {
   private static class LazyLoader {
 
     private static final ListeningExecutorService DEFAULT_NON_PROPAGATING_THREAD_POOL =
-        MoreExecutors.listeningDecorator(
-            Executors.newCachedThreadPool(
-                getThreadFactory(/* threadName= */ "default-mh-command-executor")));
+        ThreadPools.createStandardThreadPool("default-mh-command-executor");
 
     private static final ListeningExecutorService DEFAULT_THREAD_POOL =
         decorateWithLocalTraceSpan(
@@ -624,22 +620,9 @@ public class CommandExecutor {
 
     private static final ListeningScheduledExecutorService DEFAULT_TIMER =
         decorateWithLocalTraceSpan(
-            MoreExecutors.listeningDecorator(
-                Executors.newScheduledThreadPool(
-                    /* corePoolSize= */ 30,
-                    getThreadFactory(/* threadName= */ "default-mh-command-executor-timer"))),
+            ThreadPools.createStandardScheduledThreadPool(
+                "default-mh-command-executor-timer", /* corePoolSize= */ 30),
             ListeningScheduledExecutorService.class);
-
-    private static ThreadFactory getThreadFactory(String threadName) {
-      return runnable -> {
-        Thread thread = new Thread(runnable, threadName);
-        thread.setDaemon(true);
-        thread.setUncaughtExceptionHandler(
-            (t, e) ->
-                logger.atWarning().withCause(e).log("Uncaught error of thread %s", threadName));
-        return thread;
-      };
-    }
   }
 
   @SuppressWarnings("unused")

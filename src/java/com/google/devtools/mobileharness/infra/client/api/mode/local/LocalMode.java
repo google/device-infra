@@ -53,6 +53,7 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.control
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.controller.TestFlowConverter;
 import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.IncompatibleReasonProto;
 import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
+import com.google.devtools.mobileharness.shared.context.InvocationContextExecutors;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -104,9 +105,11 @@ public class LocalMode implements ExecMode {
         if (localDeviceManager == null) {
           logger.atInfo().log("Starting local device manager");
           final ListeningExecutorService localEnvThreadPool =
-              MoreExecutors.listeningDecorator(
-                  Executors.newCachedThreadPool(
-                      ThreadFactoryUtil.createThreadFactory("local-mode-thread-pool")));
+              InvocationContextExecutors.propagatingContext(
+                  MoreExecutors.listeningDecorator(
+                      Executors.newCachedThreadPool(
+                          ThreadFactoryUtil.createThreadFactory("local-mode-thread-pool"))),
+                  ListeningExecutorService.class);
           Runtime.getRuntime().addShutdownHook(new Thread(localEnvThreadPool::shutdownNow));
 
           ApiConfig.getInstance().init(/* defaultPublic= */ true, "");

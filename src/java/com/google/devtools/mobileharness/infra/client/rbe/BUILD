@@ -35,6 +35,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
+        "//src/java/com/google/devtools/mobileharness/shared/context:invocation_context_executors",
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:thread_factory_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/jobconfig:job_info_creator",

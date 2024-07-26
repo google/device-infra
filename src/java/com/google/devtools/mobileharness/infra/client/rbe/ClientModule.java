@@ -25,6 +25,7 @@ import com.google.devtools.mobileharness.infra.client.api.ClientApiModule;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.infra.controller.test.util.SubscriberExceptionLoggingHandler;
+import com.google.devtools.mobileharness.shared.context.InvocationContextExecutors;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
@@ -58,9 +59,11 @@ final class ClientModule extends AbstractModule {
   @Provides
   @Singleton
   ListeningScheduledExecutorService provideListeningScheduledExecutorService() {
-    return MoreExecutors.listeningDecorator(
-        Executors.newScheduledThreadPool(
-            /* corePoolSize= */ 30, ThreadFactoryUtil.createThreadFactory("main-thread")));
+    return InvocationContextExecutors.propagatingContext(
+        MoreExecutors.listeningDecorator(
+            Executors.newScheduledThreadPool(
+                /* corePoolSize= */ 30, ThreadFactoryUtil.createThreadFactory("main-thread"))),
+        ListeningScheduledExecutorService.class);
   }
 
   @Provides
