@@ -34,6 +34,7 @@ import com.google.inject.Injector;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode;
 import com.google.wireless.qa.mobileharness.shared.constant.ExitCode.Lab;
 import com.google.wireless.qa.mobileharness.shared.util.ArrayUtil;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -59,7 +60,7 @@ public class LabServerLauncher {
    *
    * @param args command line arguments, we are using flags only
    */
-  public static void main(String[] args) throws InterruptedException {
+  public static void main(String[] args) throws InterruptedException, IOException {
     // Adds extra flags.
     List<String> extraArgs = new ArrayList<>();
     // Make sure the new ResUtil runs in a different directory.
@@ -102,8 +103,9 @@ public class LabServerLauncher {
   }
 
   /** Initializes and runs lab server. */
-  public void run() throws MobileHarnessException, InterruptedException {
-    initializeEnv();
+  public void run() throws MobileHarnessException, InterruptedException, IOException {
+    Injector injector = Guice.createInjector(new LabServerModule(labArgs, globalInternalBus));
+    initializeEnv(injector);
 
     labServer.run();
   }
@@ -114,8 +116,7 @@ public class LabServerLauncher {
   }
 
   /** Initializes environment by setting appropriate env vars and setting logger. */
-  private void initializeEnv() throws MobileHarnessException {
-    Injector injector = Guice.createInjector(new LabServerModule(labArgs, globalInternalBus));
+  private void initializeEnv(Injector injector) throws MobileHarnessException {
     LabServer.initializeEnv();
     labServer = injector.getInstance(LabServer.class);
 

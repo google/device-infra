@@ -131,9 +131,9 @@ java_library(
     resources = [
     ],
     deps = [
+        ":lab_server",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:exception_handler",
-        "//src/java/com/google/devtools/mobileharness/infra/lab:lab_server",
         "//src/java/com/google/devtools/mobileharness/shared/logging:mobileharness_host_log_manager",
         "//src/java/com/google/devtools/mobileharness/shared/logging/parameter",
         "//src/java/com/google/devtools/mobileharness/shared/util/file/local:res_util",
