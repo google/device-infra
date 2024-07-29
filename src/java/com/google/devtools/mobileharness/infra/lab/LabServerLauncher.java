@@ -27,6 +27,7 @@ import com.google.devtools.mobileharness.shared.logging.parameter.LogManagerPara
 import com.google.devtools.mobileharness.shared.logging.parameter.LogProject;
 import com.google.devtools.mobileharness.shared.logging.parameter.StackdriverLogUploaderParameters;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.version.Version;
 import com.google.inject.Guice;
@@ -41,6 +42,10 @@ import java.util.List;
 
 /** Launcher of lab server. */
 public class LabServerLauncher {
+
+  static {
+    FloggerFormatter.initialize();
+  }
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

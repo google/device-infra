@@ -55,6 +55,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.C
 import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.stub.ControlStub;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.port.PortProber;
 import com.google.devtools.mobileharness.shared.util.shell.ShellUtils.TokenizationException;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -79,6 +80,10 @@ import picocli.CommandLine;
 
 /** ATS Console. */
 public class AtsConsole {
+
+  static {
+    FloggerFormatter.initialize();
+  }
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 

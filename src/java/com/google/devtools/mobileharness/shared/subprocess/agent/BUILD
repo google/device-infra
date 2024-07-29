@@ -20,6 +20,13 @@ package(
     ],
 )
 
+java_library(
+    name = "flogger_redefiner",
+    srcs = ["FloggerRedefiner.java"],
+    visibility = ["//src/java/com/google/devtools/mobileharness/shared/util/logging/flogger:__pkg__"],
+    deps = ["@maven//:net_bytebuddy_byte_buddy"],
+)
+
 # Add the following native arguments to a Java command to use the agent:
 # -javaagent:<mobile_harness_agent_deploy_jar_path>=<mobile_harness_agent_config_file_path>
 # -Xbootclasspath/a:<mobile_harness_agent_boot_class_deploy_jar_path>"

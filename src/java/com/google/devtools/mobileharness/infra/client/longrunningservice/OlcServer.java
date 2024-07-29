@@ -44,6 +44,7 @@ import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManage
 import com.google.devtools.mobileharness.shared.util.comm.server.LifecycleManager.LabeledServer;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
+import com.google.devtools.mobileharness.shared.util.logging.flogger.FloggerFormatter;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.inject.Guice;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessLogger;
@@ -63,6 +64,10 @@ import javax.inject.Inject;
 
 /** OLC server. */
 public class OlcServer {
+
+  static {
+    FloggerFormatter.initialize();
+  }
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
