@@ -31,3 +31,8 @@ filegroup(
     name = "cts_list",
     srcs = ["cts_list.txt"],
 )
+
+filegroup(
+    name = "mcts_list",
+    srcs = ["mcts_list.txt"],
+)
