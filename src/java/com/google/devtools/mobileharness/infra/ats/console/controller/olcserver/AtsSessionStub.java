@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginNotification;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput;
+import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginOutput.ResultCase;
 import com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin.AtsSessionPluginConfigOutput;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionProto.SessionConfig;
@@ -192,7 +193,7 @@ public class AtsSessionStub {
         .atInfo()
         .with(IMPORTANCE, DEBUG)
         .log("Session finished, response=[%s]", PRINTER.shortDebugString(runSessionResponse));
-    return getSessionPluginOutput(runSessionResponse.getSessionDetail());
+    return getSessionPluginOutputForResult(runSessionResponse.getSessionDetail());
   }
 
   /**
@@ -412,7 +413,7 @@ public class AtsSessionStub {
           .log("Session result: [%s]", PRINTER.shortDebugString(sessionDetail));
 
       // Gets session plugin output.
-      return getSessionPluginOutput(sessionDetail);
+      return getSessionPluginOutputForResult(sessionDetail);
     }
   }
 
@@ -469,9 +470,11 @@ public class AtsSessionStub {
         .orElseThrow();
   }
 
-  private static AtsSessionPluginOutput getSessionPluginOutput(SessionDetail sessionDetail)
+  private static AtsSessionPluginOutput getSessionPluginOutputForResult(SessionDetail sessionDetail)
       throws MobileHarnessException {
-    Optional<AtsSessionPluginOutput> result = getSessionPluginOutputIfAny(sessionDetail);
+    Optional<AtsSessionPluginOutput> result =
+        getSessionPluginOutputIfAny(sessionDetail)
+            .filter(pluginOutput -> pluginOutput.getResultCase() != ResultCase.RESULT_NOT_SET);
     Optional<MobileHarnessException> sessionError = getSessionError(sessionDetail);
     if (result.isPresent()) {
       sessionError.ifPresent(
@@ -542,7 +545,7 @@ public class AtsSessionStub {
                     MobileHarnessExceptionFactory.create(
                         InfraErrorId.ATSC_SESSION_STUB_ATS_SESSION_PLUGIN_ERROR,
                         String.format(
-                            "ATS session plugin error, method=[%s]",
+                            "ATS session error, method=[%s]",
                             atsSessionPluginError.getMethodName()),
                         ErrorModelConverter.toDeserializedException(
                             atsSessionPluginError.getError()),

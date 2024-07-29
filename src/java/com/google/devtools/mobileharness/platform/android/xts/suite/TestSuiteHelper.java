@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.ExtErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiFormatter;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
@@ -143,12 +144,15 @@ public class TestSuiteHelper {
     }
 
     if (abis.isEmpty()) {
-      throw new MobileHarnessException(
+      throw MobileHarnessExceptionFactory.create(
           ExtErrorId.TEST_SUITE_NO_ABIS_SUPPORTED,
           String.format(
               "None of the abi supported by this tests suite build ('%s') are supported by the"
                   + " device ('%s').",
-              archAbis, deviceAbis));
+              archAbis, deviceAbis),
+          /* cause= */ null,
+          /* addErrorIdToMessage= */ false,
+          /* clearStackTrace= */ true);
     }
     return abis;
   }
