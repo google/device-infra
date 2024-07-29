@@ -285,7 +285,7 @@ public class SystemUtil {
   }
 
   /** Returns the OS version. */
-  public String getOsVersion() {
+  public static String getOsVersion() {
     return OS_VERSION.value();
   }
 
@@ -341,7 +341,7 @@ public class SystemUtil {
   }
 
   /** Returns the java version. */
-  public String getJavaVersion() {
+  public static String getJavaVersion() {
     return JAVA_VERSION.value();
   }
 
