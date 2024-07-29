@@ -28,6 +28,7 @@ java_library(
         ":enums",
         ":info",
         ":install_cmd_args",
+        ":list_packages_args",
         "//src/java/com/google/devtools/deviceinfra/platform/android/lightning/internal/sdk/adb",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/platform/android/file:android_file_util",
@@ -54,9 +55,23 @@ java_library(
     name = "enums",
     srcs = [
         "PackageType.java",
+        "StatusFilter.java",
     ],
     deps = [
         "@maven//:com_google_code_findbugs_jsr305",
+    ],
+)
+
+java_library(
+    name = "list_packages_args",
+    srcs = [
+        "ListPackagesArgs.java",
+    ],
+    deps = [
+        ":enums",
+        "//src/java/com/google/devtools/mobileharness/platform/android/shared/autovalue:util_args",
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
     ],
 )
 

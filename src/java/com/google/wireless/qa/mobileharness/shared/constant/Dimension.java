@@ -122,6 +122,8 @@ public final class Dimension {
     ROOTED,
     /** Whether to enable taking screenshot from FE. */
     SCREENSHOT_ABLE,
+    /** Skip SUW by disabling the app. The value should be the package name of the SUW app. */
+    SKIP_SUW_APP,
     /** Whether a lab/device supports running tests on ad hoc testbeds. */
     SUPPORTS_ADHOC,
     /** Whether a device is responsive on serial. */

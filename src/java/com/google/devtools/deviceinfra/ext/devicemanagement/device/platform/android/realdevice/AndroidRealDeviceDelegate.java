@@ -18,6 +18,7 @@ package com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.and
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.collect.MoreCollectors.toOptional;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
@@ -762,6 +763,7 @@ public abstract class AndroidRealDeviceDelegate {
             | checkLaunchers()
             | checkIccids()
             | extraChecksForOnlineModeDevice();
+    checkSuwAppDisabled();
     if (!Flags.instance().skipNetwork.getNonNull()) {
       isDimensionChanged = isDimensionChanged | checkWifiRssi();
     }
@@ -2060,6 +2062,32 @@ public abstract class AndroidRealDeviceDelegate {
           AndroidErrorId.ANDROID_REAL_DEVICE_ONLINE_DEVICE_NOT_READY,
           String.format(
               "Online mode device %s services aren't available yet. Reboot to recover.", deviceId));
+    }
+  }
+
+  private void checkSuwAppDisabled() throws InterruptedException {
+    String packageName =
+        device.getDimension(Dimension.Name.SKIP_SUW_APP).stream()
+            .collect(toOptional())
+            .orElse(null);
+    if (packageName == null) {
+      return;
+    }
+    logger.atInfo().log("Checking if %s is disabled on device %s", packageName, deviceId);
+    try {
+      checkAppDisabled(packageName);
+    } catch (MobileHarnessException e) {
+      logger.atWarning().log(
+          "Failed to disable SUW app %s on device %s: %s",
+          packageName, deviceId, MoreThrowables.shortDebugString(e));
+    }
+  }
+
+  private void checkAppDisabled(String packageName)
+      throws MobileHarnessException, InterruptedException {
+    if (androidPkgManagerUtil.isPackageEnabled(deviceId, packageName)) {
+      androidPkgManagerUtil.userDisablePackage(deviceId, packageName);
+      logger.atInfo().log("Disabled %s on device %s", packageName, deviceId);
     }
   }
 
