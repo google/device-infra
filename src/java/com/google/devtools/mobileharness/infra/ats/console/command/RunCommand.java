@@ -498,6 +498,7 @@ public final class RunCommand implements Callable<Integer> {
           spec.commandLine(),
           Ansi.AUTO.string(String.format("Subplan [%s] doesn't exist.\n", subPlanName)));
     }
+    validateRunCommandExtraArgs();
   }
 
   private void validateRunRetryCommandParameters() {
@@ -511,6 +512,24 @@ public final class RunCommand implements Callable<Integer> {
           spec.commandLine(),
           Ansi.AUTO.string(
               "Option '--subplan <subplan_name>' is not supported in retry command.\n"));
+    }
+  }
+
+  private void validateRunCommandExtraArgs() {
+    if (extraRunCmdArgs != null && !extraRunCmdArgs.isEmpty()) {
+      // The extra args are passed to TF behind if need to run tests via TF. Ideally we should add
+      // corresponding parameter or option in this Command class explicitly, but at the moment we
+      // may not cover all TF supported options, so we do some basic validations here.
+      if (!extraRunCmdArgs.get(0).startsWith("-")) {
+        throw new ParameterException(
+            spec.commandLine(),
+            Ansi.AUTO.string(
+                String.format(
+                    "Invalid arguments provided. Unprocessed arguments: %s\n"
+                        + "Double check if the input is valid, for example, quoting the arg value"
+                        + " if it contains space.\n",
+                    extraRunCmdArgs)));
+      }
     }
   }
 

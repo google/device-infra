@@ -115,6 +115,28 @@ public final class RunCommandTest {
   }
 
   @Test
+  public void validateCommandParameters_quotingExtraArgs() {
+    commandLine.parseArgs(
+        "cts",
+        "--include-filter",
+        "\"CtsCompanionDeviceManagerMultiDeviceTestCases"
+            + " CompanionDeviceManagerTestClass#test_associate_createsAssociation_classicBluetooth\"");
+  }
+
+  @Test
+  public void validateCommandParameters_invalidExtraArgs() {
+    commandLine.parseArgs(
+        "cts",
+        "--include-filter",
+        "CtsCompanionDeviceManagerMultiDeviceTestCases",
+        "CompanionDeviceManagerTestClass#test_associate_createsAssociation_classicBluetooth");
+
+    assertThat(assertThrows(ParameterException.class, () -> runCommand.validateCommandParameters()))
+        .hasMessageThat()
+        .contains("Invalid arguments provided. Unprocessed arguments:");
+  }
+
+  @Test
   public void parseArgs_propertyIsNotKeyValuePair() {
     assertThat(
             assertThrows(
