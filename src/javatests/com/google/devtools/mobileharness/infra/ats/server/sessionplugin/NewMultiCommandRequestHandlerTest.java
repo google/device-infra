@@ -220,7 +220,7 @@ public final class NewMultiCommandRequestHandlerTest {
     request =
         request.toBuilder().clearCommands().addCommands(commandInfoWithInvalidCommandLine).build();
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     RequestDetail.Builder requestDetail = RequestDetail.newBuilder();
     newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
@@ -242,7 +242,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void addTradefedJobs_success() throws Exception {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Trigger the handler.
@@ -291,7 +291,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void addTradefedJobs_fromRetrySession_success() throws Exception {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     Mockito.doReturn(Path.of("/path/to/previous_result.pb"))
         .when(localFileUtil)
@@ -348,7 +348,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void addTradefedJobs_retryResultNotFound_runAsNewAttempt() throws Exception {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     MobileHarnessException fakeException =
         new MobileHarnessException(
@@ -404,7 +404,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void addTradefedJobs_fromRetryTestRun_success() throws Exception {
     when(clock.millis()).thenReturn(1000L).thenReturn(2000L).thenReturn(3000L);
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     String expectedCommandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
@@ -470,7 +470,7 @@ public final class NewMultiCommandRequestHandlerTest {
   @Test
   public void addTradefedJobs_mountAndroidXtsZipFailed_cancelRequestWithInvalidResourceError()
       throws Exception {
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     MobileHarnessException commandExecutorException = Mockito.mock(CommandException.class);
     when(commandExecutor.run(any())).thenThrow(commandExecutorException);
 
@@ -717,7 +717,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_getMalformedOutputURL_onlyCleanup() throws Exception {
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Add TF job.
@@ -744,7 +744,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_processResultFailed_onlyCleanup() throws Exception {
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Add TF job.
@@ -772,7 +772,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void handleResultProcessing_nonFileUrl_onlyCleanup() throws Exception {
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Add TF job.
@@ -798,7 +798,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void cleanup_success() throws Exception {
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Trigger the handler.
@@ -820,7 +820,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void cleanup_unmountAndroidXtsZipFailed_logWarningAndProceed() throws Exception {
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     Command mountCommand =
         Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
@@ -842,7 +842,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   @Test
   public void cleanup_cleanupJobGenDirsFailed_logWarningAndProceed() throws Exception {
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     Command mountCommand =
         Command.of("fuse-zip", "-r", "/path/to/xts/zip/file.zip", xtsRootDir)
@@ -886,7 +886,7 @@ public final class NewMultiCommandRequestHandlerTest {
 
   private void createJobAndHandleResultProcessing(RequestDetail.Builder requestDetail)
       throws Exception {
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.of(jobInfo));
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of(jobInfo));
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
 
     // Add TF job.

@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import java.time.Duration;
@@ -125,6 +126,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<String> remoteRunnerFilePathPrefix();
 
+  public abstract ShardingMode shardingMode();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -144,7 +147,8 @@ public abstract class SessionRequestInfo {
         .setJobTimeout(Duration.ZERO)
         .setStartTimeout(Duration.ZERO)
         .setHtmlInZip(false)
-        .setIsAtsServerRequest(false);
+        .setIsAtsServerRequest(false)
+        .setShardingMode(ShardingMode.RUNNER);
   }
 
   public abstract Builder toBuilder();
@@ -233,6 +237,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setIsAtsServerRequest(boolean isAtsServerRequest);
 
     public abstract Builder setRemoteRunnerFilePathPrefix(String remoteRunnerFilePathPrefix);
+
+    public abstract Builder setShardingMode(ShardingMode shardingMode);
 
     protected abstract SessionRequestInfo autoBuild();
 

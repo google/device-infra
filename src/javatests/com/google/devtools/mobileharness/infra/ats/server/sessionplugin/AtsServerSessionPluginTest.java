@@ -170,8 +170,8 @@ public final class AtsServerSessionPluginTest {
     when(moblyJobInfo2.locator()).thenReturn(new JobLocator("mobly_job_id2", "mobly_job_name2"));
     when(moblyJobInfo2.properties()).thenReturn(properties);
     when(xtsJobCreator.createXtsTradefedTestJob(any()))
-        .thenReturn(Optional.of(jobInfo))
-        .thenReturn(Optional.of(jobInfo2));
+        .thenReturn(ImmutableList.of(jobInfo))
+        .thenReturn(ImmutableList.of(jobInfo2));
     when(xtsJobCreator.createXtsNonTradefedJobs(any()))
         .thenReturn(ImmutableList.of(moblyJobInfo))
         .thenReturn(ImmutableList.of(moblyJobInfo2));
@@ -290,7 +290,7 @@ public final class AtsServerSessionPluginTest {
   public void onSessionStarting_requestHasZeroTradefedJob_tryCreateNonTradefedJob()
       throws Exception {
     // Intentionally make it fail to create any tradefed test.
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of());
     // Though the command cannot generate a tradefed job, it can generate non-tradefed job.
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(true);
     when(sessionInfo.getSessionPluginExecutionConfig())
@@ -308,7 +308,7 @@ public final class AtsServerSessionPluginTest {
   public void onSessionStarting_requestHasNeitherTradefedJobNorNonTradefedJob_cancelSession()
       throws Exception {
     // Intentionally make it fail to create any tradefed test and fail non tradefed test check.
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of());
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(
@@ -868,7 +868,7 @@ public final class AtsServerSessionPluginTest {
   @Test
   public void onSessionEnded_requestWasCancelled_keepCancelStateAndNoRetry() throws Exception {
     // Intentionally make it fail to create any tradefed test and fail non tradefed test check.
-    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(Optional.empty());
+    when(xtsJobCreator.createXtsTradefedTestJob(any())).thenReturn(ImmutableList.of());
     when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
     when(sessionInfo.getSessionPluginExecutionConfig())
         .thenReturn(

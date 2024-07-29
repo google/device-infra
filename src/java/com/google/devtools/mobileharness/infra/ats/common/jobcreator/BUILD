@@ -28,15 +28,18 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_handler_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:shard_constants",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:test_plan_parser",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
@@ -57,6 +60,11 @@ java_library(
 java_library(
     name = "console_job_creator",
     srcs = ["ConsoleJobCreator.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
+    ],
     deps = [
         ":xts_job_creator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
@@ -85,6 +93,11 @@ java_library(
 java_library(
     name = "server_job_creator",
     srcs = ["ServerJobCreator.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
+    ],
     deps = [
         ":xts_job_creator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",

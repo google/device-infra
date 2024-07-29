@@ -34,9 +34,11 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.ShardConstants;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
@@ -55,6 +57,7 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -86,33 +89,40 @@ public abstract class XtsJobCreator {
    *
    * @return a tradefed jobInfo.
    */
-  public Optional<JobInfo> createXtsTradefedTestJob(SessionRequestInfo sessionRequestInfo)
+  public ImmutableList<JobInfo> createXtsTradefedTestJob(SessionRequestInfo sessionRequestInfo)
       throws MobileHarnessException, InterruptedException {
     Optional<ImmutableList<String>> tfModules =
         sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
     if (tfModules.isEmpty()) {
-      return Optional.empty();
+      return ImmutableList.of();
     }
 
-    Optional<TradefedJobInfo> tradefedJobInfo =
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         createXtsTradefedTestJobInfo(sessionRequestInfo, tfModules.get());
-    if (tradefedJobInfo.isEmpty()) {
-      return Optional.empty();
+    if (tradefedJobInfoList.isEmpty()) {
+      return ImmutableList.of();
     }
 
-    return sessionRequestHandlerUtil.createXtsTradefedTestJob(
-        sessionRequestInfo, tradefedJobInfo.get());
+    ImmutableList.Builder<JobInfo> jobInfos = ImmutableList.builder();
+    for (TradefedJobInfo tradefedJobInfo : tradefedJobInfoList) {
+      Optional<JobInfo> jobInfo =
+          sessionRequestHandlerUtil.createXtsTradefedTestJob(sessionRequestInfo, tradefedJobInfo);
+      if (jobInfo.isPresent()) {
+        jobInfos.add(jobInfo.get());
+      }
+    }
+
+    return jobInfos.build();
   }
 
   @VisibleForTesting
-  Optional<TradefedJobInfo> createXtsTradefedTestJobInfo(
+  ImmutableList<TradefedJobInfo> createXtsTradefedTestJobInfo(
       SessionRequestInfo sessionRequestInfo, ImmutableList<String> tfModules)
       throws MobileHarnessException, InterruptedException {
     String testPlan = sessionRequestInfo.testPlan();
     Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     String xtsType = sessionRequestInfo.xtsType();
     int shardCount = sessionRequestInfo.shardCount().orElse(0);
-    ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
     ImmutableMap.Builder<XtsPropertyName, String> extraJobProperties = ImmutableMap.builder();
 
     Map<String, String> driverParams = new HashMap<>();
@@ -122,13 +132,13 @@ public abstract class XtsJobCreator {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
       if (SessionHandlerHelper.useTfRetry()) {
         if (!prepareTfRetry(sessionRequestInfo, driverParams, extraJobProperties)) {
-          return Optional.empty();
+          return ImmutableList.of();
         }
       } else {
         Optional<SubPlan> runRetryTfSubPlan =
             prepareRunRetrySubPlan(sessionRequestInfo, /* forTf= */ true);
         if (runRetryTfSubPlan.isEmpty()) {
-          return Optional.empty();
+          return ImmutableList.of();
         }
         driverParams.put(
             "prev_session_xts_test_plan", runRetryTfSubPlan.get().getPreviousSessionXtsTestPlan());
@@ -144,7 +154,7 @@ public abstract class XtsJobCreator {
           prepareTfSubPlan(
               xtsRootDir, sessionRequestInfo.xtsType(), sessionRequestInfo.subPlanName().get());
       if (tfSubPlan.isEmpty()) {
-        return Optional.empty();
+        return ImmutableList.of();
       }
       driverParams.put("subplan_xml", tfSubPlan.get().toAbsolutePath().toString());
     }
@@ -155,6 +165,9 @@ public abstract class XtsJobCreator {
     if (sessionRequestInfo.testPlanFile().isPresent()) {
       driverParams.put("xts_test_plan_file", sessionRequestInfo.testPlanFile().get());
     }
+
+    injectEnvSpecificProperties(sessionRequestInfo, driverParams);
+
     ImmutableList<String> shardCountArg =
         shardCount > 0
             ? ImmutableList.of(String.format("--shard-count %s", shardCount))
@@ -163,51 +176,147 @@ public abstract class XtsJobCreator {
     Optional<String> testNameArg =
         sessionRequestInfo.testName().map((String value) -> String.format("-t %s", value));
 
-    String sessionRequestInfoArgs =
-        Joiner.on(' ')
-            .join(
-                Streams.concat(
-                        // For "run retry" command, the given modules have been processed when
-                        // generating the subplan above, no need to pass these again to underneath
-                        // TF
-                        (!SessionHandlerHelper.useTfRetry()
-                                && SessionRequestHandlerUtil.isRunRetry(testPlan)
-                            ? Stream.empty()
-                            : tfModules.stream().map(module -> String.format("-m %s", module))),
-                        testNameArg.stream(),
-                        shardCountArg.stream(),
-                        // For "run retry" command, the passed in include filters and exclude
-                        // filters are set in generated subplan, no need to set in TF command again.
-                        !SessionHandlerHelper.useTfRetry()
-                                && SessionRequestHandlerUtil.isRunRetry(testPlan)
-                            ? Stream.empty()
-                            : sessionRequestInfo.includeFilters().stream()
-                                .map(
-                                    includeFilter ->
-                                        String.format("--include-filter \"%s\"", includeFilter)),
-                        !SessionHandlerHelper.useTfRetry()
-                                && SessionRequestHandlerUtil.isRunRetry(testPlan)
-                            ? Stream.empty()
-                            : sessionRequestInfo.excludeFilters().stream()
-                                .map(
-                                    excludeFilter ->
-                                        String.format("--exclude-filter \"%s\"", excludeFilter)),
-                        extraArgs.stream()
-                            .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
-                    .collect(toImmutableList()));
-    if (!sessionRequestInfoArgs.isEmpty()) {
-      driverParams.put("run_command_args", sessionRequestInfoArgs);
+    ImmutableSet<String> runCommandArgsSet;
+    if (shouldEnableModuleSharding(sessionRequestInfo)) {
+      runCommandArgsSet = generateShardingArgs(sessionRequestInfo, tfModules);
+    } else {
+      ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
+      String sessionRequestInfoArgs =
+          Joiner.on(' ')
+              .join(
+                  Streams.concat(
+                          // For "run retry" command, the given modules have been processed when
+                          // generating the subplan above, no need to pass these again to underneath
+                          // TF
+                          (!SessionHandlerHelper.useTfRetry()
+                                  && SessionRequestHandlerUtil.isRunRetry(testPlan)
+                              ? Stream.empty()
+                              : tfModules.stream().map(module -> String.format("-m %s", module))),
+                          testNameArg.stream(),
+                          shardCountArg.stream(),
+                          // For "run retry" command, the passed in include filters and exclude
+                          // filters are set in generated subplan, no need to set in TF command
+                          // again.
+                          !SessionHandlerHelper.useTfRetry()
+                                  && SessionRequestHandlerUtil.isRunRetry(testPlan)
+                              ? Stream.empty()
+                              : sessionRequestInfo.includeFilters().stream()
+                                  .map(
+                                      includeFilter ->
+                                          String.format("--include-filter \"%s\"", includeFilter)),
+                          !SessionHandlerHelper.useTfRetry()
+                                  && SessionRequestHandlerUtil.isRunRetry(testPlan)
+                              ? Stream.empty()
+                              : sessionRequestInfo.excludeFilters().stream()
+                                  .map(
+                                      excludeFilter ->
+                                          String.format("--exclude-filter \"%s\"", excludeFilter)),
+                          extraArgs.stream()
+                              .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
+                      .collect(toImmutableList()));
+      runCommandArgsSet = ImmutableSet.of(sessionRequestInfoArgs);
     }
 
-    injectEnvSpecificProperties(sessionRequestInfo, driverParams);
-    Optional<JobConfig> jobConfig =
-        sessionRequestHandlerUtil.initializeJobConfig(sessionRequestInfo, driverParams);
-
-    if (jobConfig.isEmpty()) {
-      return Optional.empty();
+    ImmutableList.Builder<TradefedJobInfo> tradefedJobInfos = ImmutableList.builder();
+    for (String runCommandArgs : runCommandArgsSet) {
+      Map<String, String> driverParamsCopy = new HashMap<>(driverParams);
+      if (!runCommandArgs.isEmpty()) {
+        driverParamsCopy.put("run_command_args", runCommandArgs);
+      }
+      Optional<JobConfig> jobConfig =
+          sessionRequestHandlerUtil.initializeJobConfig(sessionRequestInfo, driverParamsCopy);
+      if (jobConfig.isPresent()) {
+        tradefedJobInfos.add(
+            TradefedJobInfo.of(jobConfig.get(), extraJobProperties.buildOrThrow()));
+      }
     }
 
-    return Optional.of(TradefedJobInfo.of(jobConfig.get(), extraJobProperties.buildOrThrow()));
+    return tradefedJobInfos.build();
+  }
+
+  @VisibleForTesting
+  ImmutableSet<String> generateShardingArgs(
+      SessionRequestInfo sessionRequestInfo, ImmutableList<String> tfModules)
+      throws MobileHarnessException {
+    HashSet<String> remainingLocalModules =
+        new HashSet<>(
+            tfModules.isEmpty()
+                ? sessionRequestHandlerUtil.getAllLocalTradefedModules(sessionRequestInfo)
+                : tfModules);
+    ImmutableSet.Builder<String> shardingArgs = ImmutableSet.builder();
+    ImmutableList.Builder<String> excludeFilterAfterSharding = ImmutableList.builder();
+    excludeFilterAfterSharding.addAll(sessionRequestInfo.excludeFilters());
+    ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
+
+    for (String module : ShardConstants.SHARED_MODULES) {
+      if (remainingLocalModules.contains(module)) {
+        ImmutableList<String> moduleArgs = ImmutableList.of(String.format("-m %s", module));
+        ImmutableList<String> shardCountArgs =
+            ImmutableList.of(String.format("--shard-count %s", ShardConstants.MAX_MODULE_SHARDS));
+        for (int index = 0; index < ShardConstants.MAX_MODULE_SHARDS; index++) {
+          String sessionRequestInfoArgs =
+              Joiner.on(' ')
+                  .join(
+                      Streams.concat(
+                              moduleArgs.stream(),
+                              shardCountArgs.stream(),
+                              Stream.of(String.format("--shard-index %s", index)),
+                              extraArgs.stream()
+                                  .map(
+                                      arg ->
+                                          arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
+                          .collect(toImmutableList()));
+          shardingArgs.add(sessionRequestInfoArgs);
+        }
+        excludeFilterAfterSharding.add(module);
+        remainingLocalModules.remove(module);
+      }
+    }
+
+    for (String module : ShardConstants.LARGE_MODULES) {
+      if (remainingLocalModules.contains(module)) {
+        ImmutableList<String> moduleArgs = ImmutableList.of(String.format("-m %s", module));
+        String sessionRequestInfoArgs =
+            Joiner.on(' ')
+                .join(
+                    Streams.concat(
+                            moduleArgs.stream(),
+                            extraArgs.stream()
+                                .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
+                        .collect(toImmutableList()));
+        shardingArgs.add(sessionRequestInfoArgs);
+        excludeFilterAfterSharding.add(module);
+        remainingLocalModules.remove(module);
+      }
+    }
+
+    if (!remainingLocalModules.isEmpty()) {
+      String sessionRequestInfoArgs =
+          Joiner.on(' ')
+              .join(
+                  Streams.concat(
+                          tfModules.stream().map(module -> String.format("-m %s", module)),
+                          sessionRequestInfo.includeFilters().stream()
+                              .map(
+                                  includeFilter ->
+                                      String.format("--include-filter \"%s\"", includeFilter)),
+                          excludeFilterAfterSharding.build().stream()
+                              .map(
+                                  excludeFilter ->
+                                      String.format("--exclude-filter \"%s\"", excludeFilter)),
+                          extraArgs.stream()
+                              .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
+                      .collect(toImmutableList()));
+      shardingArgs.add(sessionRequestInfoArgs);
+    }
+
+    return shardingArgs.build();
+  }
+
+  private boolean shouldEnableModuleSharding(SessionRequestInfo sessionRequestInfo) {
+    return sessionRequestInfo.shardingMode().equals(ShardingMode.MODULE)
+        && sessionRequestInfo.testName().isEmpty()
+        && !SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan());
   }
 
   /** Prepares a sub plan file for a tradefed job. */
@@ -408,6 +517,13 @@ public abstract class XtsJobCreator {
     return Optional.of(subPlan);
   }
 
+  protected static ImmutableSet<String> getNonTfModules(
+      ImmutableMap<String, Configuration> configsMap) {
+    return configsMap.values().stream()
+        .map(config -> config.getMetadata().getXtsModule())
+        .collect(toImmutableSet());
+  }
+
   /**
    * Prepares retry parameters/properties for Tradefed.
    *
@@ -427,13 +543,6 @@ public abstract class XtsJobCreator {
 
   protected abstract Path prepareRunRetryTfSubPlanXmlFile(
       SessionRequestInfo sessionRequestInfo, SubPlan subPlan) throws MobileHarnessException;
-
-  protected static ImmutableSet<String> getNonTfModules(
-      ImmutableMap<String, Configuration> configsMap) {
-    return configsMap.values().stream()
-        .map(config -> config.getMetadata().getXtsModule())
-        .collect(toImmutableSet());
-  }
 
   protected abstract Optional<SubPlan> prepareRunRetrySubPlan(
       SessionRequestInfo sessionRequestInfo, boolean forTf) throws MobileHarnessException;

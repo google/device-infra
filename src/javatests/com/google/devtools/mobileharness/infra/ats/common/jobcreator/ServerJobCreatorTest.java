@@ -32,7 +32,9 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.ShardConstants;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
@@ -138,15 +140,47 @@ public final class ServerJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
         .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
-        jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of());
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
 
+    assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
-            "xts_type", "cts", "android_xts_zip", ANDROID_XTS_ZIP_PATH, "xts_test_plan", "cts");
-    assertThat(tradefedJobInfoOpt.get().extraJobProperties()).isEmpty();
+            "run_command_args",
+            "-m mock_module",
+            "xts_type",
+            "cts",
+            "android_xts_zip",
+            ANDROID_XTS_ZIP_PATH,
+            "xts_test_plan",
+            "cts");
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties()).isEmpty();
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_moduleSharding() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setAndroidXtsZip(ANDROID_XTS_ZIP_PATH)
+            .setShardingMode(ShardingMode.MODULE)
+            .build();
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+        .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.copyOf(ShardConstants.SHARED_MODULES));
+
+    assertThat(tradefedJobInfoList)
+        .hasSize(ShardConstants.SHARED_MODULES.size() * ShardConstants.MAX_MODULE_SHARDS);
   }
 
   @SuppressWarnings("unchecked")
@@ -166,13 +200,17 @@ public final class ServerJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
         .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
-        jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of());
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
 
+    assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
+            "run_command_args",
+            "-m mock_module",
             "xts_type",
             "cts",
             "android_xts_zip",
@@ -181,7 +219,7 @@ public final class ServerJobCreatorTest {
             "cts",
             "xts_test_plan_file",
             "ats-file-server::/path/to/test_plan");
-    assertThat(tradefedJobInfoOpt.get().extraJobProperties()).isEmpty();
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties()).isEmpty();
   }
 
   @SuppressWarnings("unchecked")
@@ -212,10 +250,11 @@ public final class ServerJobCreatorTest {
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
-        jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of());
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
 
-    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
 
@@ -263,11 +302,11 @@ public final class ServerJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
         .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
-        jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of());
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
 
-    assertThat(tradefedJobInfoOpt).isPresent();
-
+    assertThat(tradefedJobInfoList).hasSize(1);
     // Verify generator got correct input.
     verify(retryGenerator).generateRetrySubPlan(retryArgsCaptor.capture());
     assertThat(retryArgsCaptor.getValue().passedInIncludeFilters()).hasSize(1);
@@ -320,10 +359,11 @@ public final class ServerJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
         .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
-        jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of());
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
 
-    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoList).hasSize(1);
 
     verify(retryGenerator).generateRetrySubPlan(retryArgsCaptor.capture());
     RetryArgs retryArgs = retryArgsCaptor.getValue();
@@ -372,17 +412,18 @@ public final class ServerJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
         .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
-        jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of());
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
 
-    assertThat(tradefedJobInfoOpt).isPresent();
-
+    assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(4);
     assertThat(driverParamsMap)
         .containsAtLeast(
+            "run_command_args",
+            "-m mock_module",
             "xts_type",
             "cts",
             "android_xts_zip",
@@ -419,17 +460,19 @@ public final class ServerJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
         .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
-        jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of());
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
 
-    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoList).hasSize(1);
 
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
     Map<String, String> driverParamsMap = driverParamsCaptor.getValue();
-    assertThat(driverParamsMap).hasSize(4);
     assertThat(driverParamsMap)
         .containsAtLeast(
+            "run_command_args",
+            "-m mock_module",
             "xts_type",
             "cts",
             "android_xts_zip",

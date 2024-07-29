@@ -52,7 +52,6 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -135,37 +134,39 @@ class RunCommandHandler {
   @CanIgnoreReturnValue
   ImmutableList<String> addTradefedJobs(RunCommand command)
       throws MobileHarnessException, InterruptedException {
-    Optional<JobInfo> jobInfo = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
-    if (jobInfo.isEmpty()) {
+    ImmutableList<JobInfo> jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+    if (jobInfoList.isEmpty()) {
       logger.atInfo().log(
           "No tradefed jobs created, double check device availability. The run command -> %s",
           shortDebugString(command));
       return ImmutableList.of();
     }
 
+    ImmutableList.Builder<String> tradefedJobIds = ImmutableList.builder();
+
     // Lets the driver write TF output to XTS log dir directly.
-    jobInfo
-        .get()
-        .params()
-        .add(
-            "xts_log_root_path",
-            XtsDirUtil.getXtsLogsDir(Path.of(command.getXtsRootDir()), command.getXtsType())
-                .resolve(
-                    sessionInfo
-                        .getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME)
-                        .orElseThrow())
-                .toString());
+    jobInfoList.forEach(
+        jobInfo -> {
+          jobInfo
+              .params()
+              .add(
+                  "xts_log_root_path",
+                  XtsDirUtil.getXtsLogsDir(Path.of(command.getXtsRootDir()), command.getXtsType())
+                      .resolve(
+                          sessionInfo
+                              .getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME)
+                              .orElseThrow())
+                      .toString());
+          addEnableXtsDynamicDownloadToJob(jobInfo, command);
 
-    addEnableXtsDynamicDownloadToJob(jobInfo.get(), command);
-
-    if (addJobToSession(jobInfo.get())) {
-      String jobId = jobInfo.get().locator().getId();
-      logger.atInfo().log(
-          "Added tradefed job[%s] to the session %s", jobId, sessionInfo.getSessionId());
-      return ImmutableList.of(jobId);
-    } else {
-      return ImmutableList.of();
-    }
+          if (addJobToSession(jobInfo)) {
+            String jobId = jobInfo.locator().getId();
+            logger.atInfo().log(
+                "Added tradefed job[%s] to the session %s", jobId, sessionInfo.getSessionId());
+            tradefedJobIds.add(jobId);
+          }
+        });
+    return tradefedJobIds.build();
   }
 
   /**

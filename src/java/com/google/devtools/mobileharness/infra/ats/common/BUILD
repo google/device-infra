@@ -156,6 +156,7 @@ java_library(
     name = "session_request_info",
     srcs = ["SessionRequestInfo.java"],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:retry_type",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
@@ -208,6 +209,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/plugin:__pkg__",
     ],
@@ -223,4 +225,10 @@ java_library(
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
+)
+
+java_library(
+    name = "shard_constants",
+    srcs = ["ShardConstants.java"],
+    deps = ["@maven//:com_google_guava_guava"],
 )

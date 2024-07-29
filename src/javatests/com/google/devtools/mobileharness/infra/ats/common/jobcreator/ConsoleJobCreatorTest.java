@@ -31,7 +31,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
+import com.google.devtools.mobileharness.infra.ats.common.ShardConstants;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryArgs;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryGenerator;
@@ -120,15 +122,45 @@ public final class ConsoleJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
         .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
-        jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of());
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
 
+    assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
     assertThat(driverParamsCaptor.getValue())
         .containsExactly(
-            "xts_type", "cts", "xts_root_dir", XTS_ROOT_DIR_PATH, "xts_test_plan", "cts");
-    assertThat(tradefedJobInfoOpt.get().extraJobProperties()).isEmpty();
+            "run_command_args",
+            "-m mock_module",
+            "xts_type",
+            "cts",
+            "xts_root_dir",
+            XTS_ROOT_DIR_PATH,
+            "xts_test_plan",
+            "cts");
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties()).isEmpty();
+  }
+
+  @Test
+  public void createXtsTradefedTestJob_withModuleSharding() throws Exception {
+    SessionRequestInfo sessionRequestInfo =
+        SessionRequestInfo.builder()
+            .setTestPlan("cts")
+            .setCommandLineArgs("cts")
+            .setXtsType("cts")
+            .setXtsRootDir(XTS_ROOT_DIR_PATH)
+            .setShardingMode(ShardingMode.MODULE)
+            .build();
+
+    when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
+        .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
+
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.copyOf(ShardConstants.LARGE_MODULES));
+
+    assertThat(tradefedJobInfoList).hasSize(ShardConstants.LARGE_MODULES.size());
   }
 
   @SuppressWarnings("unchecked")
@@ -151,9 +183,10 @@ public final class ConsoleJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
         .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of("module1"));
 
+    assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
     assertThat(driverParamsCaptor.getValue())
@@ -168,7 +201,7 @@ public final class ConsoleJobCreatorTest {
             "{\"env_key1\":\"env_value1\"}",
             "run_command_args",
             "-m module1 --shard-count 2 --logcat-on-failure");
-    assertThat(tradefedJobInfoOpt.get().extraJobProperties()).isEmpty();
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties()).isEmpty();
   }
 
   @SuppressWarnings("unchecked")
@@ -191,9 +224,10 @@ public final class ConsoleJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
         .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of("module1"));
 
+    assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
     assertThat(driverParamsCaptor.getValue())
@@ -208,7 +242,7 @@ public final class ConsoleJobCreatorTest {
             "{\"env_key1\":\"env_value1\"}",
             "run_command_args",
             "-m module1 -t test1 --shard-count 2 --logcat-on-failure");
-    assertThat(tradefedJobInfoOpt.get().extraJobProperties()).isEmpty();
+    assertThat(tradefedJobInfoList.get(0).extraJobProperties()).isEmpty();
   }
 
   @SuppressWarnings("unchecked")
@@ -233,10 +267,11 @@ public final class ConsoleJobCreatorTest {
     when(retryGenerator.generateRetrySubPlan(any())).thenReturn(subPlan);
     doCallRealMethod().when(localFileUtil).prepareDir(any(Path.class));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
-        jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of());
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
 
-    assertThat(tradefedJobInfoOpt).isPresent();
+    assertThat(tradefedJobInfoList).hasSize(1);
     verify(sessionRequestHandlerUtil)
         .initializeJobConfig(eq(sessionRequestInfo), driverParamsCaptor.capture());
 
@@ -281,11 +316,11 @@ public final class ConsoleJobCreatorTest {
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
         .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
 
-    Optional<TradefedJobInfo> tradefedJobInfoOpt =
-        jobCreator.createXtsTradefedTestJobInfo(sessionRequestInfo, ImmutableList.of());
+    ImmutableList<TradefedJobInfo> tradefedJobInfoList =
+        jobCreator.createXtsTradefedTestJobInfo(
+            sessionRequestInfo, ImmutableList.of("mock_module"));
 
-    assertThat(tradefedJobInfoOpt).isPresent();
-
+    assertThat(tradefedJobInfoList).hasSize(1);
     // Verify generator got correct input.
     verify(retryGenerator).generateRetrySubPlan(retryArgsCaptor.capture());
     assertThat(retryArgsCaptor.getValue().passedInIncludeFilters()).hasSize(1);

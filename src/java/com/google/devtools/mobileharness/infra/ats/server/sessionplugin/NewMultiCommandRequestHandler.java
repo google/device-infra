@@ -295,23 +295,23 @@ final class NewMultiCommandRequestHandler {
       return commandDetailBuilder.build();
     }
 
-    Optional<JobInfo> jobInfo = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
-    if (jobInfo.isPresent()) {
-      String commandId =
-          UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-      commandDetailBuilder.setId(commandId).setState(CommandState.RUNNING);
-      commandToJobsMap.put(commandId, jobInfo.get().locator().getId());
-      jobToCommandMap.put(jobInfo.get().locator().getId(), commandId);
-      jobInfo.get().properties().add(XTS_TF_JOB_PROP, "true");
-      insertAdditionalTestResource(jobInfo.get(), request);
-      sessionInfo.addJob(jobInfo.get());
-      logger.atInfo().log(
-          "Added job[%s] to the session %s",
-          jobInfo.get().locator().getId(), sessionInfo.getSessionId());
-    } else {
+    ImmutableList<JobInfo> jobInfoList = xtsJobCreator.createXtsTradefedTestJob(sessionRequestInfo);
+    if (jobInfoList.isEmpty()) {
       commandDetailBuilder
           .setState(CommandState.CANCELED)
           .setCancelReason(CancelReason.INVALID_REQUEST);
+    }
+    for (JobInfo jobInfo : jobInfoList) {
+      String commandId =
+          UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+      commandDetailBuilder.setId(commandId).setState(CommandState.RUNNING);
+      commandToJobsMap.put(commandId, jobInfo.locator().getId());
+      jobToCommandMap.put(jobInfo.locator().getId(), commandId);
+      jobInfo.properties().add(XTS_TF_JOB_PROP, "true");
+      insertAdditionalTestResource(jobInfo, request);
+      sessionInfo.addJob(jobInfo);
+      logger.atInfo().log(
+          "Added job[%s] to the session %s", jobInfo.locator().getId(), sessionInfo.getSessionId());
     }
     return commandDetailBuilder.build();
   }

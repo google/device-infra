@@ -294,6 +294,38 @@ public class SessionRequestHandlerUtil {
     return Optional.of(jobInfo);
   }
 
+  /** Gets all local tradefed modules which doesn't include the mcts modules. */
+  public ImmutableSet<String> getAllLocalTradefedModules(SessionRequestInfo sessionRequestInfo)
+      throws MobileHarnessException {
+    Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
+    if (!localFileUtil.isDirExist(xtsRootDir)) {
+      logger.atInfo().log(
+          "xTS root dir [%s] doesn't exist, skip getting all TF modules.", xtsRootDir);
+      return ImmutableSet.of();
+    }
+    String xtsType = sessionRequestInfo.xtsType();
+    ImmutableMap<String, Configuration> configsMap =
+        configurationUtil.getConfigsFromDirs(
+            ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile()));
+    return configsMap.values().stream()
+        .map(config -> config.getMetadata().getXtsModule())
+        .collect(toImmutableSet());
+  }
+
+  /** Gets all local tradefed modules including the mcts modules from the static list. */
+  public ImmutableSet<String> getStaticFullTradefedModules() throws MobileHarnessException {
+    String ctsListPath =
+        resUtilProvider
+            .get()
+            .getResourceFile(
+                getClass(),
+                "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/cts_list.txt");
+    return localFileUtil.readLineListFromFile(ctsListPath).stream()
+        .map(String::trim)
+        .filter(line -> !line.isEmpty())
+        .collect(toImmutableSet());
+  }
+
   /**
    * Gets a list of filtered tradefed modules.
    *
@@ -312,28 +344,12 @@ public class SessionRequestHandlerUtil {
       return Optional.empty();
     }
 
-    String xtsType = sessionRequestInfo.xtsType();
-    ImmutableMap<String, Configuration> configsMap =
-        configurationUtil.getConfigsFromDirs(
-            ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile()));
+    ImmutableSet<String> localTfModules = getAllLocalTradefedModules(sessionRequestInfo);
+    ImmutableSet<String> staticTfModules = getStaticFullTradefedModules();
+    ImmutableSet<String> allTfModules =
+        Stream.concat(localTfModules.stream(), staticTfModules.stream()).collect(toImmutableSet());
 
     ImmutableList<String> modules = sessionRequestInfo.moduleNames();
-    String ctsListPath =
-        resUtilProvider
-            .get()
-            .getResourceFile(
-                getClass(),
-                "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/cts_list.txt");
-    ImmutableList<String> ctsLists =
-        localFileUtil.readLineListFromFile(ctsListPath).stream()
-            .map(String::trim)
-            .filter(line -> !line.isEmpty())
-            .collect(toImmutableList());
-    ImmutableSet<String> allTfModules =
-        Stream.concat(
-                configsMap.values().stream().map(config -> config.getMetadata().getXtsModule()),
-                ctsLists.stream())
-            .collect(toImmutableSet());
     ImmutableSet<String> givenMatchedTfModules =
         modules.isEmpty() ? allTfModules : matchModules(modules, allTfModules);
 
