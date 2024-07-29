@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -89,15 +88,13 @@ func RestoreFile(path string, chunksDir string, chunks []ChunkInfo) error {
 
 	// Restore the file by appending chunks.
 	for _, chunk := range chunks {
-		chunkFile := filepath.Join(chunksDir, chunk.SHA256)
-
-		chunkData, err := ioutil.ReadFile(chunkFile)
+		chunkFile, err := os.Open(filepath.Join(chunksDir, chunk.SHA256))
 		if err != nil {
-			return fmt.Errorf("failed to read chunk data from file: %v", err)
+			return fmt.Errorf("failed to open chunk file: %v", err)
 		}
-
-		if _, err = file.Write(chunkData); err != nil {
-			return err
+		_, err = io.Copy(file, chunkFile)
+		if err != nil {
+			return fmt.Errorf("failed to append chunk to artifact: %v", err)
 		}
 	}
 
