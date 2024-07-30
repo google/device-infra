@@ -68,7 +68,7 @@ public abstract class JobScheduleUnit {
 
   /** Create a builder for creating {@link JobScheduleUnit} instances. */
   public static Builder newBuilder() {
-    return new $AutoValue_JobScheduleUnit.Builder()
+    return new AutoValue_JobScheduleUnit.Builder()
         .setPriority(Priority.DEFAULT)
         .setTimeout(Timeout.getDefaultInstance());
   }
