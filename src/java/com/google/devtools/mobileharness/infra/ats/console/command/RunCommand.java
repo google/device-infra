@@ -458,6 +458,10 @@ public final class RunCommand implements Callable<Integer> {
     }
     ImmutableList<String> extraArgs =
         extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
+    if (this.retryType != null) {
+      sessionRequestBuilder.setRetryType(
+          RetryType.valueOf(Ascii.toUpperCase(this.retryType.name())));
+    }
     return sessionRequestBuilder.setExtraArgs(extraArgs);
   }
 
@@ -469,6 +473,7 @@ public final class RunCommand implements Callable<Integer> {
           Ansi.AUTO.string(
               "Param @|fg(yellow) <config>|@ right after 'run' command is required.\n"));
     }
+    logger.atInfo().log("config: %s", config);
     if (moduleTestOptionsGroups != null && !moduleTestOptionsGroups.isEmpty()) {
       ImmutableList<String> tests =
           moduleTestOptionsGroups.stream()
