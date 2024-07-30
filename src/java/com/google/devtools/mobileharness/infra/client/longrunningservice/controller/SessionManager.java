@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.S
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionRequest;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.SessionServiceProto.SubscribeSessionResponse;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.message.FieldMaskUtils;
@@ -661,17 +662,22 @@ public class SessionManager {
     return Optional.empty();
   }
 
-  private static ImmutableMap<InvocationType, String> getContext(
+  private static ImmutableMap<InvocationType, InvocationInfo> getContext(
       String sessionId, SessionConfig sessionConfig) {
-    ImmutableMap.Builder<InvocationType, String> result = ImmutableMap.builder();
-    result.put(InvocationType.OLC_SESSION, sessionId);
+    ImmutableMap.Builder<InvocationType, InvocationInfo> result = ImmutableMap.builder();
+    result.put(InvocationType.OLC_SESSION, InvocationInfo.fromUuid(sessionId));
     if (sessionConfig.containsSessionProperty(SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)) {
       result.put(
           InvocationType.OLC_CLIENT,
-          sessionConfig.getSessionPropertyOrThrow(
-              SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID));
+          getClientIdInvocationInfo(
+              sessionConfig.getSessionPropertyOrThrow(
+                  SessionProperties.PROPERTY_KEY_SESSION_CLIENT_ID)));
     }
     return result.buildOrThrow();
+  }
+
+  private static InvocationInfo getClientIdInvocationInfo(String clientId) {
+    return InvocationInfo.of(clientId, clientId.substring(0, min(20, clientId.length())));
   }
 
   /** {@link SessionDetail} and the future of the final result of the session. */

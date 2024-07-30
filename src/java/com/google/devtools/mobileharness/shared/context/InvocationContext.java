@@ -17,7 +17,9 @@
 package com.google.devtools.mobileharness.shared.context;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.lang.Math.min;
 
+import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
@@ -37,35 +39,65 @@ public class InvocationContext {
     OLC_SESSION("olc_session_id"),
     OLC_CLIENT("olc_client_id");
 
-    private final String name;
+    private final String displayName;
 
-    InvocationType(String name) {
-      this.name = name;
+    InvocationType(String displayName) {
+      this.displayName = displayName;
+    }
+
+    public String displayName() {
+      return displayName;
     }
 
     @Override
     public String toString() {
-      return name;
+      return displayName();
+    }
+  }
+
+  /** Invocation information. */
+  @AutoValue
+  public abstract static class InvocationInfo {
+
+    public abstract String id();
+
+    public abstract String displayId();
+
+    @Override
+    public final String toString() {
+      return displayId();
+    }
+
+    public static InvocationInfo of(String id, String displayId) {
+      return new AutoValue_InvocationContext_InvocationInfo(id, displayId);
+    }
+
+    public static InvocationInfo fromUuid(String uuid) {
+      return of(uuid, uuid.substring(0, min(8, uuid.length())));
+    }
+
+    public static InvocationInfo sameDisplayId(String id) {
+      return of(id, id);
     }
   }
 
   /** An auto closeable scope of context. */
   public static class ContextScope implements NonThrowingAutoCloseable {
 
-    private final Map<InvocationType, String> scopedContext;
+    private final Map<InvocationType, InvocationInfo> scopedContext;
 
     /**
      * Adds the given {@code scopedContext} to the current context, and removes them when this
      * object is {@linkplain NonThrowingAutoCloseable#close() closed}.
      */
-    public ContextScope(Map<InvocationType, String> scopedContext) {
+    public ContextScope(Map<InvocationType, InvocationInfo> scopedContext) {
       this.scopedContext = copy(scopedContext);
       getCurrentContext().putAll(this.scopedContext);
     }
 
     @Override
     public void close() {
-      Map<InvocationType, String> currentContext = getCurrentContext();
+      Map<InvocationType, InvocationInfo> currentContext = getCurrentContext();
       scopedContext.forEach((type, value) -> currentContext.remove(type));
     }
   }
@@ -74,51 +106,51 @@ public class InvocationContext {
       ThreadLocal.withInitial(InvocationContext::new);
 
   /** Callers should not modify the returned map. */
-  public static Map<InvocationType, String> getCurrentContext() {
+  public static Map<InvocationType, InvocationInfo> getCurrentContext() {
     return CONTEXT.get().context;
   }
 
   /** Returns an immutable snapshot of the current context. */
-  public static ImmutableMap<InvocationType, String> getCurrentContextImmutable() {
+  public static ImmutableMap<InvocationType, InvocationInfo> getCurrentContextImmutable() {
     return ImmutableMap.copyOf(getCurrentContext());
   }
 
   /** Propagated the current context to the thread that runs the given {@code runnable}. */
   public static Runnable propagateContext(Runnable runnable) {
     checkNotNull(runnable);
-    Map<InvocationType, String> parentContext = getCurrentContext();
-    Map<InvocationType, String> context = copy(parentContext);
+    Map<InvocationType, InvocationInfo> parentContext = getCurrentContext();
+    Map<InvocationType, InvocationInfo> context = copy(parentContext);
     return new RunnableWithContext(runnable, context, parentContext);
   }
 
   /** Propagated the current context to the thread that runs the given {@code callable}. */
   public static <V> Callable<V> propagateContext(Callable<V> callable) {
     checkNotNull(callable);
-    Map<InvocationType, String> parentContext = getCurrentContext();
-    Map<InvocationType, String> context = copy(parentContext);
+    Map<InvocationType, InvocationInfo> parentContext = getCurrentContext();
+    Map<InvocationType, InvocationInfo> context = copy(parentContext);
     return new CallableWithContext<>(callable, context, parentContext);
   }
 
   /** Propagated the current context to the thread that runs the given {@code futureCallback}. */
   public static <V> FutureCallback<V> propagateContext(FutureCallback<V> futureCallback) {
     checkNotNull(futureCallback);
-    Map<InvocationType, String> parentContext = getCurrentContext();
-    Map<InvocationType, String> context = copy(parentContext);
+    Map<InvocationType, InvocationInfo> parentContext = getCurrentContext();
+    Map<InvocationType, InvocationInfo> context = copy(parentContext);
     return new FutureCallbackWithContext<>(futureCallback, context, parentContext);
   }
 
-  private final Map<InvocationType, String> context = new EnumMap<>(InvocationType.class);
+  private final Map<InvocationType, InvocationInfo> context = new EnumMap<>(InvocationType.class);
 
   private InvocationContext() {}
 
   private static class RunnableWithContext implements Runnable {
 
     private final Runnable runnable;
-    private final Map<InvocationType, String> context;
+    private final Map<InvocationType, InvocationInfo> context;
     private final Object parentContext;
 
     private RunnableWithContext(
-        Runnable runnable, Map<InvocationType, String> context, Object parentContext) {
+        Runnable runnable, Map<InvocationType, InvocationInfo> context, Object parentContext) {
       this.runnable = runnable;
       this.context = context;
       this.parentContext = parentContext;
@@ -139,11 +171,11 @@ public class InvocationContext {
   private static class CallableWithContext<V> implements Callable<V> {
 
     private final Callable<V> callable;
-    private final Map<InvocationType, String> context;
+    private final Map<InvocationType, InvocationInfo> context;
     private final Object parentContext;
 
     private CallableWithContext(
-        Callable<V> callable, Map<InvocationType, String> context, Object parentContext) {
+        Callable<V> callable, Map<InvocationType, InvocationInfo> context, Object parentContext) {
       this.callable = callable;
       this.context = context;
       this.parentContext = parentContext;
@@ -164,12 +196,12 @@ public class InvocationContext {
   private static class FutureCallbackWithContext<V> implements FutureCallback<V> {
 
     private final FutureCallback<V> futureCallback;
-    private final Map<InvocationType, String> context;
+    private final Map<InvocationType, InvocationInfo> context;
     private final Object parentContext;
 
     private FutureCallbackWithContext(
         FutureCallback<V> futureCallback,
-        Map<InvocationType, String> context,
+        Map<InvocationType, InvocationInfo> context,
         Object parentContext) {
       this.futureCallback = futureCallback;
       this.context = context;
@@ -199,7 +231,7 @@ public class InvocationContext {
     }
   }
 
-  private static Map<InvocationType, String> copy(Map<InvocationType, String> map) {
+  private static Map<InvocationType, InvocationInfo> copy(Map<InvocationType, InvocationInfo> map) {
     return map.isEmpty() ? new EnumMap<>(InvocationType.class) : new EnumMap<>(map);
   }
 }

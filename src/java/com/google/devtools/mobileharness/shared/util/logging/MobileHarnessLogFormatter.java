@@ -21,6 +21,7 @@ import static com.google.common.base.Strings.nullToEmpty;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.devtools.mobileharness.shared.context.InvocationContext;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -89,7 +90,7 @@ public final class MobileHarnessLogFormatter {
     }
 
     private static String getContext() {
-      Map<InvocationType, String> context = InvocationContext.getCurrentContext();
+      Map<InvocationType, InvocationInfo> context = InvocationContext.getCurrentContext();
       return context.isEmpty() ? "" : " " + context;
     }
   }

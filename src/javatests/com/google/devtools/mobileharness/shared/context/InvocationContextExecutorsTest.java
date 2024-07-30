@@ -18,6 +18,7 @@ package com.google.devtools.mobileharness.shared.context;
 
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
+import static com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo.sameDisplayId;
 import static com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType.OMNILAB_TEST;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -32,6 +33,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -52,9 +54,9 @@ public class InvocationContextExecutorsTest {
   private final ListeningScheduledExecutorService scheduledThreadPool =
       ThreadPools.createStandardScheduledThreadPool("testing-scheduled-thread-pool", 1);
 
-  private volatile SettableFuture<ImmutableMap<InvocationType, String>> contextFuture;
+  private volatile SettableFuture<ImmutableMap<InvocationType, InvocationInfo>> contextFuture;
 
-  private final Callable<ImmutableMap<InvocationType, String>> callable =
+  private final Callable<ImmutableMap<InvocationType, InvocationInfo>> callable =
       InvocationContext::getCurrentContextImmutable;
 
   @SuppressWarnings({"UnusedAssignment", "unused"})
@@ -62,88 +64,101 @@ public class InvocationContextExecutorsTest {
   public void propagatingContext() throws Exception {
     InvocationContext.propagateContext(() -> {}).run();
 
-    try (var ignored = new ContextScope(ImmutableMap.of(OMNILAB_TEST, "fake_test_id"))) {
+    try (var ignored =
+        new ContextScope(ImmutableMap.of(OMNILAB_TEST, sameDisplayId("fake_test_id")))) {
       assertThat(InvocationContext.getCurrentContext())
-          .containsExactly(OMNILAB_TEST, "fake_test_id");
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
       InvocationContext.propagateContext(() -> {}).run();
 
       assertThat(InvocationContext.getCurrentContext())
-          .containsExactly(OMNILAB_TEST, "fake_test_id");
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
       ListenableFuture<?> future;
 
       contextFuture = SettableFuture.create();
       threadPool.execute(this::readContext);
-      assertThat(contextFuture.get(3L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      assertThat(contextFuture.get(3L, SECONDS))
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
       contextFuture = SettableFuture.create();
       future = threadPool.submit(this::readContext);
-      assertThat(contextFuture.get(3L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      assertThat(contextFuture.get(3L, SECONDS))
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
       contextFuture = SettableFuture.create();
       future = threadPool.submit(this::readContext, "whatever");
-      assertThat(contextFuture.get(3L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      assertThat(contextFuture.get(3L, SECONDS))
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
       assertThat(threadPool.submit(callable).get(3L, SECONDS))
-          .containsExactly(OMNILAB_TEST, "fake_test_id");
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
-      List<Future<ImmutableMap<InvocationType, String>>> futures =
+      List<Future<ImmutableMap<InvocationType, InvocationInfo>>> futures =
           threadPool.invokeAll(ImmutableList.of(callable, callable));
-      for (Future<ImmutableMap<InvocationType, String>> oneFuture : futures) {
-        assertThat(oneFuture.get(3L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      for (Future<ImmutableMap<InvocationType, InvocationInfo>> oneFuture : futures) {
+        assertThat(oneFuture.get(3L, SECONDS))
+            .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
       }
 
       assertThat(threadPool.invokeAny(ImmutableList.of(callable, callable)))
-          .containsExactly(OMNILAB_TEST, "fake_test_id");
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
       contextFuture = SettableFuture.create();
       future = scheduledThreadPool.schedule(this::readContext, 1L, MILLISECONDS);
-      assertThat(contextFuture.get(3L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      assertThat(contextFuture.get(3L, SECONDS))
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
       contextFuture = SettableFuture.create();
       future = scheduledThreadPool.schedule(this::readContext, Duration.ofMillis(1L));
-      assertThat(contextFuture.get(3L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      assertThat(contextFuture.get(3L, SECONDS))
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
       assertThat(scheduledThreadPool.schedule(callable, 1L, MILLISECONDS).get(3L, SECONDS))
-          .containsExactly(OMNILAB_TEST, "fake_test_id");
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
       assertThat(scheduledThreadPool.schedule(callable, Duration.ofMillis(1L)).get(3L, SECONDS))
-          .containsExactly(OMNILAB_TEST, "fake_test_id");
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
       contextFuture = SettableFuture.create();
       future = scheduledThreadPool.scheduleAtFixedRate(this::readContext, 1L, 2_000L, MILLISECONDS);
-      assertThat(contextFuture.get(3L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      assertThat(contextFuture.get(3L, SECONDS))
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
       future.cancel(false);
 
       contextFuture = SettableFuture.create();
       future =
           scheduledThreadPool.scheduleAtFixedRate(
               this::readContext, Duration.ofMillis(1L), Duration.ofSeconds(2L));
-      assertThat(contextFuture.get(3L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      assertThat(contextFuture.get(3L, SECONDS))
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
       future.cancel(false);
 
       contextFuture = SettableFuture.create();
       future =
           scheduledThreadPool.scheduleWithFixedDelay(this::readContext, 1L, 2_000L, MILLISECONDS);
-      assertThat(contextFuture.get(3L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      assertThat(contextFuture.get(3L, SECONDS))
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
       future.cancel(false);
 
       contextFuture = SettableFuture.create();
       future =
           scheduledThreadPool.scheduleWithFixedDelay(
               this::readContext, Duration.ofMillis(1L), Duration.ofSeconds(2L));
-      assertThat(contextFuture.get(3L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      assertThat(contextFuture.get(3L, SECONDS))
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
       future.cancel(false);
 
       contextFuture = SettableFuture.create();
       Futures.addCallback(
           threadPool.submit(this::sleep), new ContextFutureCallback(), directExecutor());
-      assertThat(contextFuture.get(4L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      assertThat(contextFuture.get(4L, SECONDS))
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
 
       contextFuture = SettableFuture.create();
       Futures.addCallback(threadPool.submit(() -> {}), new ContextFutureCallback(), threadPool);
-      assertThat(contextFuture.get(3L, SECONDS)).containsExactly(OMNILAB_TEST, "fake_test_id");
+      assertThat(contextFuture.get(3L, SECONDS))
+          .containsExactly(OMNILAB_TEST, sameDisplayId("fake_test_id"));
     }
 
     assertThat(scheduledThreadPool.schedule(callable, Duration.ofMillis(1L)).get(3L, SECONDS))

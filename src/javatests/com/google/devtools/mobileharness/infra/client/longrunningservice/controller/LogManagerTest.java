@@ -34,6 +34,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.LogImportanceScope;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogFormatter;
@@ -100,9 +101,9 @@ public class LogManagerTest {
         new ContextScope(
             ImmutableMap.of(
                 InvocationType.OLC_CLIENT,
-                "fake_client_id",
+                InvocationInfo.sameDisplayId("fake_client_id"),
                 InvocationType.OMNILAB_TEST,
-                "fake_test_id"))) {
+                InvocationInfo.sameDisplayId("fake_test_id")))) {
       logger.atInfo().log("Foo");
     }
 

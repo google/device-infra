@@ -16,6 +16,7 @@
 
 package com.google.devtools.mobileharness.shared.util.logging;
 
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 
 /** Utility to add logging tags. */
 public final class MobileHarnessLogTag {
@@ -26,9 +27,9 @@ public final class MobileHarnessLogTag {
 
   public static final String SESSION_ID = "session_id";
 
-  public static final String JOB_ID = "job_id";
+  public static final String JOB_ID = InvocationType.OMNILAB_JOB.displayName();
 
-  public static final String TEST_ID = "test_id";
+  public static final String TEST_ID = InvocationType.OMNILAB_TEST.displayName();
 
   public static void addTag(String tag, String value) {}
 

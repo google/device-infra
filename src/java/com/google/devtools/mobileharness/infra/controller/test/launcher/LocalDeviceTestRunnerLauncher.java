@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.infra.controller.test.model.TestExecuti
 import com.google.devtools.mobileharness.shared.constant.closeable.NonThrowingAutoCloseable;
 import com.google.devtools.mobileharness.shared.context.InvocationContext;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.wireless.qa.mobileharness.shared.api.device.Device;
 import java.util.ArrayList;
@@ -157,7 +158,7 @@ public class LocalDeviceTestRunnerLauncher extends TestRunnerLauncher<TestRunner
     protected abstract TestExecutionResult doExecuteTest() throws InterruptedException;
   }
 
-  private final ImmutableMap<InvocationType, String> context =
+  private final ImmutableMap<InvocationType, InvocationInfo> context =
       InvocationContext.getCurrentContextImmutable();
   private final ImmutableList<AbstractDeviceTestExecutor> testExecutors;
   private final CyclicBarrier barrier;

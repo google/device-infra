@@ -26,6 +26,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.proto.L
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance;
 import com.google.devtools.mobileharness.shared.constant.LogRecordImportance.LogImportanceScope;
 import com.google.devtools.mobileharness.shared.context.InvocationContext;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.command.linecallback.CommandOutputLogger;
 import java.util.HashSet;
@@ -215,8 +216,9 @@ public class LogManager<D> {
       if (isLoggable(logRecord)) {
         LogImportanceScope importanceScope = LogImportanceScope.getCurrentScope();
 
-        Map<InvocationType, String> context = InvocationContext.getCurrentContext();
-        String clientId = context.get(InvocationType.OLC_CLIENT);
+        Map<InvocationType, InvocationInfo> context = InvocationContext.getCurrentContext();
+        InvocationInfo clientIdInvocationInfo = context.get(InvocationType.OLC_CLIENT);
+        String clientId = clientIdInvocationInfo == null ? null : clientIdInvocationInfo.id();
         String formattedLogRecord = context.isEmpty() ? null : getFormatter().format(logRecord);
 
         if (importanceScope == null && clientId == null) {

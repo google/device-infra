@@ -68,5 +68,6 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/concurrent:__pkg__",
     ],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/context:invocation_context",
     ],
 )

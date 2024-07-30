@@ -32,6 +32,7 @@ import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
+import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogFormatter;
@@ -92,7 +93,9 @@ public class ClientApiTest {
     JobInfo jobInfo = createJobInfo();
 
     try (var ignored =
-        new ContextScope(ImmutableMap.of(InvocationType.OLC_CLIENT, "fake_client_id"))) {
+        new ContextScope(
+            ImmutableMap.of(
+                InvocationType.OLC_CLIENT, InvocationInfo.sameDisplayId("fake_client_id")))) {
       clientApi.startJob(jobInfo, new LocalMode());
 
       assertThat(jobInfo.properties().get(Job.EXEC_MODE)).isNotNull();
