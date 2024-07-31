@@ -373,10 +373,17 @@ public class LocalFileUtil {
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
                 throws IOException {
               Path targetFile =
-                  Paths.get(
+                  Path.of(
                       finalDesFileOrDirPath, file.toString().substring(srcFileOrDirPath.length()));
-              Files.copy(
-                  file, targetFile, LinkOption.NOFOLLOW_LINKS, StandardCopyOption.REPLACE_EXISTING);
+              try {
+                Files.copy(
+                    file,
+                    targetFile,
+                    LinkOption.NOFOLLOW_LINKS,
+                    StandardCopyOption.REPLACE_EXISTING);
+              } catch (NoSuchFileException e) {
+                // Does nothing.
+              }
               return FileVisitResult.CONTINUE;
             }
 
