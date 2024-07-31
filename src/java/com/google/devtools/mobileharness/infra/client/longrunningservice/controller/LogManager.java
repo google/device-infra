@@ -70,7 +70,7 @@ public class LogManager<D> {
     void consumeLogRecords(D logRecords);
   }
 
-  private static final int CAPACITY = 10;
+  private static final int CAPACITY = 100;
 
   private final Handler logHandler;
 

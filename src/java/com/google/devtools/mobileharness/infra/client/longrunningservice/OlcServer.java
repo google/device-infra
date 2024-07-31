@@ -188,23 +188,28 @@ public class OlcServer {
     controlService.setLifecycleManager(manager);
     manager.start();
 
+    // Starts monitoring.
     if (Flags.instance().enableCloudPubsubMonitoring.getNonNull()
         && monitorPipelineLauncher != null) {
       logger.atInfo().log("Starting monitoring service.");
       monitorPipelineLauncher.start();
     }
 
+    // Starts exec mode.
     logger.atInfo().log("Starting %s exec mode", execMode.getClass().getSimpleName());
     logFailure(
         threadPool.submit(threadRenaming(new ExecModeInitializer(), () -> "exec-mode-initializer")),
         Level.SEVERE,
         "Fatal error while initializing %s exec mode",
         execMode.getClass().getSimpleName());
+
+    // Prints signal.
     logger.atInfo().log("Servers have started: %s.", SERVER_STARTED_SIGNAL);
     logger.atInfo().log(
         "Process info: pid=%s, memory_info=[%s]",
         ProcessHandle.current().pid(), systemUtil.getMemoryInfo());
 
+    // Waits for termination.
     manager.awaitTermination();
     logger.atInfo().log("Exiting...");
     System.exit(0);
