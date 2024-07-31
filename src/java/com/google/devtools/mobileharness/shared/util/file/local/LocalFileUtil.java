@@ -58,6 +58,7 @@ import java.nio.file.FileAlreadyExistsException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -355,7 +356,7 @@ public class LocalFileUtil {
       String finalDesFileOrDirPath = desFileOrDirPath;
       Files.walkFileTree(
           Paths.get(srcFileOrDirPath),
-          new SimpleFileVisitor<Path>() {
+          new SimpleFileVisitor<>() {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
                 throws IOException {
@@ -377,6 +378,14 @@ public class LocalFileUtil {
               Files.copy(
                   file, targetFile, LinkOption.NOFOLLOW_LINKS, StandardCopyOption.REPLACE_EXISTING);
               return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+              if (exc instanceof NoSuchFileException) {
+                return FileVisitResult.CONTINUE;
+              }
+              throw exc;
             }
           });
     } catch (IOException e) {
