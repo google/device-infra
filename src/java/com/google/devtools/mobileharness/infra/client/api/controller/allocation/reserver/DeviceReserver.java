@@ -90,4 +90,18 @@ public abstract class DeviceReserver {
       throws MobileHarnessException, InterruptedException {
     logger.atWarning().log("Method [tempReserveAllocation] has no real implementation.");
   }
+
+  public void quarantineDevice(
+      com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator deviceLocator,
+      String reason,
+      Duration timeout)
+      throws MobileHarnessException, InterruptedException {
+    logger.atWarning().log("Method [quarantineDevice] has no real implementation.");
+  }
+
+  public void unquarantineDevice(
+      com.google.devtools.mobileharness.api.model.proto.Device.DeviceLocator deviceLocator)
+      throws MobileHarnessException, InterruptedException {
+    logger.atWarning().log("Method [unquarantineDevice] has no real implementation.");
+  }
 }
