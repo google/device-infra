@@ -16,6 +16,7 @@
 
 package com.google.devtools.common.metrics.stability.converter;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.devtools.common.metrics.stability.model.ErrorId;
 import com.google.devtools.common.metrics.stability.model.ErrorIdProvider;
 import javax.annotation.Nullable;
@@ -35,15 +36,24 @@ import javax.annotation.Nullable;
 @SuppressWarnings("OverrideThrowableToString")
 public class DeserializedException extends Exception implements ErrorIdProvider<ErrorId> {
 
+  private static final ImmutableSet<String> KNOWN_EXCEPTION_CLASS_NAMES =
+      ImmutableSet.of(
+          "com.google.devtools.mobileharness.api.model.error.MobileHarnessException",
+          DeserializedException.class.getName());
+
   private final DeserializedErrorId errorId;
   private final String originalExceptionClassName;
+  private final String originalExceptionClassSimpleName;
+  private final boolean displayClassSimpleName;
 
   /** Do not make it public. */
   DeserializedException(
       DeserializedErrorId errorId, String originalMessage, String originalExceptionClassName) {
-    super(formatMessage(originalMessage, originalExceptionClassName));
+    super(formatMessage(originalMessage, getClassSimpleName(originalExceptionClassName)));
     this.errorId = errorId;
     this.originalExceptionClassName = originalExceptionClassName;
+    this.originalExceptionClassSimpleName = getClassSimpleName(originalExceptionClassName);
+    this.displayClassSimpleName = KNOWN_EXCEPTION_CLASS_NAMES.contains(originalExceptionClassName);
   }
 
   /** Returns the class name of the serialized original exception. */
@@ -53,12 +63,12 @@ public class DeserializedException extends Exception implements ErrorIdProvider<
 
   @Override
   public String toString() {
-    String originalClassName = getOriginalExceptionClassName();
+    String displayClassName =
+        displayClassSimpleName ? originalExceptionClassSimpleName : originalExceptionClassName;
     String message = getLocalizedMessage();
-    return message == null ? originalClassName : originalClassName + ": " + message;
+    return message == null ? displayClassName : displayClassName + ": " + message;
   }
 
-  /** {@inheritDoc} */
   @Override
   public ErrorId getErrorId() {
     return errorId;
@@ -74,7 +84,6 @@ public class DeserializedException extends Exception implements ErrorIdProvider<
     return super.getMessage();
   }
 
-  /** {@inheritDoc} */
   @Nullable
   @Override
   public DeserializedException getCause() {
@@ -91,10 +100,12 @@ public class DeserializedException extends Exception implements ErrorIdProvider<
     return super.getStackTrace();
   }
 
-  private static String formatMessage(String originalMessage, String originalExceptionClassName) {
-    return String.format(
-        "%s [%s]",
-        originalMessage,
-        originalExceptionClassName.substring(originalExceptionClassName.lastIndexOf('.') + 1));
+  private static String formatMessage(
+      String originalMessage, String originalExceptionClassSimpleName) {
+    return String.format("%s [%s]", originalMessage, originalExceptionClassSimpleName);
+  }
+
+  private static String getClassSimpleName(String className) {
+    return className.substring(className.lastIndexOf('.') + 1);
   }
 }
