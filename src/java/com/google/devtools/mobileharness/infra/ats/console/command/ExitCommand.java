@@ -20,7 +20,6 @@ import static com.google.devtools.mobileharness.shared.constant.LogRecordImporta
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static java.util.concurrent.TimeUnit.MINUTES;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
@@ -93,6 +92,8 @@ final class ExitCommand implements Callable<Integer> {
       // Wait until no running sessions.
       waitUntilNoRunningSessions();
     } finally {
+      consoleUtil.printlnStdout("Exiting...");
+
       // Exits the console directly. Its shutdown hook will kill olc server.
       consoleInfo.setShouldExitConsole(true);
     }
@@ -103,30 +104,23 @@ final class ExitCommand implements Callable<Integer> {
   private void waitUntilNoRunningSessions() {
     consoleUtil.printlnStdout("Will exit the console after all commands have executed.");
     try {
-      ImmutableList<String> unfinishedNotAbortedSessions;
       int sleepCount = 0;
+      int runningRunCommandCount;
       do {
-        unfinishedNotAbortedSessions =
-            atsSessionStub.getAllUnfinishedNotAbortedSessions(/* fromCurrentClient= */ true);
-
-        if (!unfinishedNotAbortedSessions.isEmpty()) {
+        // Sessions of RunCommand are the only async sessions in ATS console.
+        runningRunCommandCount = RunCommand.getRunningRunCommandCount();
+        if (runningRunCommandCount > 0) {
           logger
               .atInfo()
               .with(IMPORTANCE, DEBUG)
               .atMostEvery(1, MINUTES)
               .log(
-                  "Still need to wait as sessions - %s are still running.",
-                  unfinishedNotAbortedSessions);
+                  "Still need to wait as %s RunCommands are still running.",
+                  runningRunCommandCount);
           sleeper.sleep(sleepCount < 10 ? SHORT_SLEEP_INTERVAL : LONG_SLEEP_INTERVAL);
           sleepCount++;
         }
-      } while (!unfinishedNotAbortedSessions.isEmpty());
-    } catch (MobileHarnessException e) {
-      consoleUtil.printlnStderr(
-          String.format(
-              "Failed to wait until no running sessions with error. Going to exit the"
-                  + " console directly. Error=[%s]",
-              MoreThrowables.shortDebugString(e)));
+      } while (runningRunCommandCount > 0);
     } catch (InterruptedException e) {
       consoleUtil.printlnStderr(
           "Interrupted while waiting until no running sessions. Going to exit the console"

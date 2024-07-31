@@ -431,6 +431,11 @@ public final class RunCommand implements Callable<Integer> {
     }
   }
 
+  /** Returns the number of currently running RunCommand instances. */
+  static int getRunningRunCommandCount() {
+    return RUNNING_COMMAND_COUNT.get();
+  }
+
   private SessionRequestInfo.Builder createParseResult() throws MobileHarnessException {
     SessionRequestInfo.Builder sessionRequestBuilder = SessionRequestInfo.builder();
     validateCommandParameters();
@@ -734,16 +739,20 @@ public final class RunCommand implements Callable<Integer> {
 
     @Override
     public void onSuccess(AtsSessionPluginOutput output) {
-      PluginOutputPrinter.printOutput(output, consoleUtil);
-
-      disableServerLogPrinterIfNecessary();
+      try {
+        PluginOutputPrinter.printOutput(output, consoleUtil);
+      } finally {
+        disableServerLogPrinterIfNecessary();
+      }
     }
 
     @Override
     public void onFailure(Throwable error) {
-      logger.atWarning().withCause(error).log("Failed to execute command");
-
-      disableServerLogPrinterIfNecessary();
+      try {
+        logger.atWarning().withCause(error).log("Failed to execute command");
+      } finally {
+        disableServerLogPrinterIfNecessary();
+      }
     }
 
     private void disableServerLogPrinterIfNecessary() {

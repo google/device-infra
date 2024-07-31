@@ -197,28 +197,6 @@ public class AtsSessionStub {
   }
 
   /**
-   * Returns all sessions including non RunCommand sessions which are not finished and not aborted.
-   */
-  public ImmutableList<String> getAllUnfinishedNotAbortedSessions(boolean fromCurrentClient)
-      throws MobileHarnessException {
-    SessionFilter sessionFilter =
-        fromCurrentClient
-            ? SessionQueryUtil.getAllAbortableSessionFromClientFilter(clientId)
-            : SessionQueryUtil.UNFINISHED_NOT_ABORTED_SESSION_FILTER;
-    GetAllSessionsRequest getAllSessionsRequest =
-        GetAllSessionsRequest.newBuilder()
-            .setSessionDetailFieldMask(SessionQueryUtil.SESSION_ID_FIELD_MASK)
-            .setSessionFilter(sessionFilter)
-            .build();
-
-    GetAllSessionsResponse getAllSessionsResponse = getAllSessionsByRequest(getAllSessionsRequest);
-    return getAllSessionsResponse.getSessionDetailList().stream()
-        .map(SessionDetail::getSessionId)
-        .map(SessionId::getId)
-        .collect(toImmutableList());
-  }
-
-  /**
    * Returns all sessions which are not finished.
    *
    * @param sessionNameRegex the regex to match the session name
