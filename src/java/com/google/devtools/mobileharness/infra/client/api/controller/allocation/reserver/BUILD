@@ -42,6 +42,7 @@ java_library(
         "//javatests/com/google/devtools/mobileharness/service/moscar:__subpackages__",
     ],
     deps = [
+        "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/lab:locator",
