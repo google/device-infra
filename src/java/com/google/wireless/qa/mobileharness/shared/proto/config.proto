@@ -183,6 +183,8 @@ message WifiConfig {
   optional string ssid = 1;
   // PSK of the WiFi, required.
   optional string psk = 2;
+  // Whether to scan the SSID. Must set this to true if the SSID is hidden.
+  optional bool scan_ssid = 3;
 }
 
 // Local file, or the RemoteFileTypes supported by MH.
