@@ -31,6 +31,9 @@ message WifiConfig {
 
   // PSK of the WiFi.
   string psk = 2;
+
+  // Whether to scan the SSID. Must set this to true if the SSID is hidden.
+  bool scan_ssid = 3;
 }
 
 // The basic configuration of a device.

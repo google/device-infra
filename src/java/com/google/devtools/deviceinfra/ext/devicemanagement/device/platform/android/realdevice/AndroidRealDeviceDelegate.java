@@ -1500,8 +1500,10 @@ public abstract class AndroidRealDeviceDelegate {
    *
    * @param ssid SSID of WIFI to be connected
    * @param pwd password of WIFI to be connected
+   * @param scanSsid whether to scan the SSID
    */
-  private void connectToWifi(String serial, int sdkVersion, String ssid, String pwd)
+  private void connectToWifi(
+      String serial, int sdkVersion, String ssid, String pwd, boolean scanSsid)
       throws com.google.wireless.qa.mobileharness.shared.MobileHarnessException,
           InterruptedException {
     if (Flags.instance().disableWifiUtilFunc.getNonNull()) {
@@ -1518,7 +1520,7 @@ public abstract class AndroidRealDeviceDelegate {
             .setSerial(serial)
             .setSdkVersion(sdkVersion)
             .setWifiSsid(ssid)
-            .setScanSsid(false)
+            .setScanSsid(scanSsid)
             .setWaitTimeout(Duration.ofSeconds(5));
     if (!Strings.isNullOrEmpty(pwd)) {
       argsBuilder.setWifiPsk(pwd);
@@ -1641,13 +1643,19 @@ public abstract class AndroidRealDeviceDelegate {
       return Optional.of(currentSsid);
     }
     try {
-      connectToWifi(deviceId, sdkVersion, defaultWifi.getSsid(), defaultWifi.getPsk());
+      connectToWifi(
+          deviceId,
+          sdkVersion,
+          defaultWifi.getSsid(),
+          defaultWifi.getPsk(),
+          defaultWifi.getScanSsid());
     } catch (com.google.wireless.qa.mobileharness.shared.MobileHarnessException e) {
       logger.atWarning().log(
-          "Failed to connect device %s to WIFI %s with psk %s: %s",
+          "Failed to connect device %s to WIFI %s with psk %s, scan_ssid %s: %s",
           deviceId,
           defaultWifi.getSsid(),
           defaultWifi.getPsk(),
+          defaultWifi.getScanSsid(),
           MoreThrowables.shortDebugString(e));
     }
     // Regain the WiFi SSID
