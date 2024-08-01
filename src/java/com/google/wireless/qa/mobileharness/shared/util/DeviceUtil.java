@@ -23,11 +23,9 @@ import com.google.common.net.HostAndPort;
 import com.google.common.net.InetAddresses;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
-import com.google.wireless.qa.mobileharness.shared.constant.Dimension;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceScheduleUnit;
 import java.util.Collection;
 import java.util.Map;
-import java.util.Map.Entry;
 
 /** Utilities related to devices. */
 public final class DeviceUtil {
@@ -66,46 +64,6 @@ public final class DeviceUtil {
    */
   public static boolean isFailedDeviceCreationEnabled() {
     return Flags.instance().createFailedDevice.getNonNull();
-  }
-
-  /**
-   * Deprecated. Use {@link
-   * com.google.wireless.qa.mobileharness.shared.model.lab.in.CompositeDimensions#supportAndSatisfied(Map)}
-   * instead.
-   */
-  @Deprecated
-  public static boolean deviceSupportsDimensions(
-      Multimap<String, String> deviceDimensions, Map<String, String> jobDimensions) {
-    if (jobDimensions.isEmpty()) {
-      return true;
-    }
-    for (Entry<String, String> jobDimension : jobDimensions.entrySet()) {
-      String dimensionName = jobDimension.getKey();
-      String jobDimensionValue = jobDimensions.get(dimensionName);
-      // The exclude value means request the device excluding the dimension.
-      if (jobDimensionValue.equals(Dimension.Value.EXCLUDE)) {
-        if (deviceDimensions.containsKey(dimensionName)) {
-          return false;
-        }
-        continue;
-      }
-
-      boolean match = false;
-      for (String deviceDimensionValue : deviceDimensions.get(dimensionName)) {
-        if (deviceDimensionValue.equals(Dimension.Value.ALL_VALUE_FOR_DEVICE)
-            || jobDimensionValue.equals(deviceDimensionValue)
-            || (jobDimensionValue.startsWith(Dimension.Value.PREFIX_REGEX)
-                && deviceDimensionValue.matches(
-                    jobDimensionValue.substring(Dimension.Value.PREFIX_REGEX.length())))) {
-          match = true;
-          break;
-        }
-      }
-      if (!match) {
-        return false;
-      }
-    }
-    return true;
   }
 
   /**
