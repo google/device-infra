@@ -25,7 +25,8 @@ import com.google.common.collect.ImmutableSet;
 public final class ShardConstants {
 
   // Modules that should be shard to several commands for execution efficiency
-  public static final ImmutableSet<String> SHARED_MODULES = ImmutableSet.of("CtsDeqpTestCases");
+  public static final ImmutableSet<String> SHARD_MODULES = ImmutableSet.of("CtsDeqpTestCases");
+
   // Modules that should be shard to several commands for execution efficiency
   public static final ImmutableSet<String> LARGE_MODULES =
       ImmutableSet.of(
@@ -38,8 +39,6 @@ public final class ShardConstants {
           "CtsWindowManagerDeviceTestCases",
           "CtsLibcoreOjTestCases",
           "CtsInstallHostTestCases");
-  // Max shard number for a single module
-  public static final int MAX_MODULE_SHARDS = 10;
 
   private ShardConstants() {}
 }

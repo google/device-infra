@@ -121,6 +121,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/subplan:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common/jobcreator:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__subpackages__",
     ],

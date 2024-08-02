@@ -104,6 +104,7 @@ java_library(
     srcs = ["SessionRequestHandlerUtil.java"],
     resources = [
         "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:cts_list",
+        "//src/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs:mcts_list",
     ],
     deps = [
         ":device_details",

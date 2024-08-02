@@ -34,7 +34,6 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
-import com.google.devtools.mobileharness.infra.ats.common.ShardConstants;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
@@ -57,7 +56,6 @@ import java.io.OutputStream;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -72,16 +70,19 @@ public abstract class XtsJobCreator {
   private final LocalFileUtil localFileUtil;
   private final TestPlanParser testPlanParser;
   private final RetryGenerator retryGenerator;
+  private final ModuleShardingArgsGenerator moduleShardingArgsGenerator;
 
   protected XtsJobCreator(
       SessionRequestHandlerUtil sessionRequestHandlerUtil,
       LocalFileUtil localFileUtil,
       TestPlanParser testPlanParser,
-      RetryGenerator retryGenerator) {
+      RetryGenerator retryGenerator,
+      ModuleShardingArgsGenerator moduleShardingArgsGenerator) {
     this.sessionRequestHandlerUtil = sessionRequestHandlerUtil;
     this.localFileUtil = localFileUtil;
     this.testPlanParser = testPlanParser;
     this.retryGenerator = retryGenerator;
+    this.moduleShardingArgsGenerator = moduleShardingArgsGenerator;
   }
 
   /**
@@ -178,7 +179,8 @@ public abstract class XtsJobCreator {
 
     ImmutableSet<String> runCommandArgsSet;
     if (shouldEnableModuleSharding(sessionRequestInfo)) {
-      runCommandArgsSet = generateShardingArgs(sessionRequestInfo, tfModules);
+      runCommandArgsSet =
+          moduleShardingArgsGenerator.generateShardingArgs(sessionRequestInfo, tfModules);
     } else {
       ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
       String sessionRequestInfoArgs =
@@ -232,85 +234,6 @@ public abstract class XtsJobCreator {
     }
 
     return tradefedJobInfos.build();
-  }
-
-  @VisibleForTesting
-  ImmutableSet<String> generateShardingArgs(
-      SessionRequestInfo sessionRequestInfo, ImmutableList<String> tfModules)
-      throws MobileHarnessException {
-    HashSet<String> remainingLocalModules =
-        new HashSet<>(
-            tfModules.isEmpty()
-                ? sessionRequestHandlerUtil.getAllLocalTradefedModules(sessionRequestInfo)
-                : tfModules);
-    ImmutableSet.Builder<String> shardingArgs = ImmutableSet.builder();
-    ImmutableList.Builder<String> excludeFilterAfterSharding = ImmutableList.builder();
-    excludeFilterAfterSharding.addAll(sessionRequestInfo.excludeFilters());
-    ImmutableList<String> extraArgs = sessionRequestInfo.extraArgs();
-
-    for (String module : ShardConstants.SHARED_MODULES) {
-      if (remainingLocalModules.contains(module)) {
-        ImmutableList<String> moduleArgs = ImmutableList.of(String.format("-m %s", module));
-        ImmutableList<String> shardCountArgs =
-            ImmutableList.of(String.format("--shard-count %s", ShardConstants.MAX_MODULE_SHARDS));
-        for (int index = 0; index < ShardConstants.MAX_MODULE_SHARDS; index++) {
-          String sessionRequestInfoArgs =
-              Joiner.on(' ')
-                  .join(
-                      Streams.concat(
-                              moduleArgs.stream(),
-                              shardCountArgs.stream(),
-                              Stream.of(String.format("--shard-index %s", index)),
-                              extraArgs.stream()
-                                  .map(
-                                      arg ->
-                                          arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
-                          .collect(toImmutableList()));
-          shardingArgs.add(sessionRequestInfoArgs);
-        }
-        excludeFilterAfterSharding.add(module);
-        remainingLocalModules.remove(module);
-      }
-    }
-
-    for (String module : ShardConstants.LARGE_MODULES) {
-      if (remainingLocalModules.contains(module)) {
-        ImmutableList<String> moduleArgs = ImmutableList.of(String.format("-m %s", module));
-        String sessionRequestInfoArgs =
-            Joiner.on(' ')
-                .join(
-                    Streams.concat(
-                            moduleArgs.stream(),
-                            extraArgs.stream()
-                                .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
-                        .collect(toImmutableList()));
-        shardingArgs.add(sessionRequestInfoArgs);
-        excludeFilterAfterSharding.add(module);
-        remainingLocalModules.remove(module);
-      }
-    }
-
-    if (!remainingLocalModules.isEmpty()) {
-      String sessionRequestInfoArgs =
-          Joiner.on(' ')
-              .join(
-                  Streams.concat(
-                          tfModules.stream().map(module -> String.format("-m %s", module)),
-                          sessionRequestInfo.includeFilters().stream()
-                              .map(
-                                  includeFilter ->
-                                      String.format("--include-filter \"%s\"", includeFilter)),
-                          excludeFilterAfterSharding.build().stream()
-                              .map(
-                                  excludeFilter ->
-                                      String.format("--exclude-filter \"%s\"", excludeFilter)),
-                          extraArgs.stream()
-                              .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
-                      .collect(toImmutableList()));
-      shardingArgs.add(sessionRequestInfoArgs);
-    }
-
-    return shardingArgs.build();
   }
 
   private boolean shouldEnableModuleSharding(SessionRequestInfo sessionRequestInfo) {

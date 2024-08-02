@@ -57,8 +57,14 @@ public class ServerJobCreator extends XtsJobCreator {
       LocalFileUtil localFileUtil,
       TestPlanParser testPlanParser,
       PreviousResultLoader previousResultLoader,
-      RetryGenerator retryGenerator) {
-    super(sessionRequestHandlerUtil, localFileUtil, testPlanParser, retryGenerator);
+      RetryGenerator retryGenerator,
+      ModuleShardingArgsGenerator moduleShardingArgsGenerator) {
+    super(
+        sessionRequestHandlerUtil,
+        localFileUtil,
+        testPlanParser,
+        retryGenerator,
+        moduleShardingArgsGenerator);
 
     this.previousResultLoader = previousResultLoader;
   }

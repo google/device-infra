@@ -32,7 +32,6 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionHandlerHelper;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil.TradefedJobInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
-import com.google.devtools.mobileharness.infra.ats.common.ShardConstants;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
 import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.PreviousResultLoader;
@@ -90,6 +89,7 @@ public final class ServerJobCreatorTest {
   @Bind @Mock private TestPlanParser testPlanParser;
   @Bind @Mock private PreviousResultLoader previousResultLoader;
   @Bind @Mock private RetryGenerator retryGenerator;
+  @Bind @Mock private ModuleShardingArgsGenerator moduleShardingArgsGenerator;
 
   private LocalFileUtil realLocalFileUtil;
   private TestPlanParser.TestPlanFilter testPlanFilter;
@@ -174,13 +174,14 @@ public final class ServerJobCreatorTest {
 
     when(sessionRequestHandlerUtil.initializeJobConfig(eq(sessionRequestInfo), any()))
         .thenReturn(Optional.of(JobConfig.getDefaultInstance()));
+    when(moduleShardingArgsGenerator.generateShardingArgs(eq(sessionRequestInfo), any()))
+        .thenReturn(ImmutableSet.of("arg1", "arg2", "arg3"));
 
     ImmutableList<TradefedJobInfo> tradefedJobInfoList =
         jobCreator.createXtsTradefedTestJobInfo(
-            sessionRequestInfo, ImmutableList.copyOf(ShardConstants.SHARED_MODULES));
+            sessionRequestInfo, ImmutableList.of("mock_module"));
 
-    assertThat(tradefedJobInfoList)
-        .hasSize(ShardConstants.SHARED_MODULES.size() * ShardConstants.MAX_MODULE_SHARDS);
+    assertThat(tradefedJobInfoList).hasSize(3);
   }
 
   @SuppressWarnings("unchecked")

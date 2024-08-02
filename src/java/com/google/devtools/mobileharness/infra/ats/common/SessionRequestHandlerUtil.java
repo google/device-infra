@@ -307,6 +307,7 @@ public class SessionRequestHandlerUtil {
     ImmutableMap<String, Configuration> configsMap =
         configurationUtil.getConfigsFromDirs(
             ImmutableList.of(XtsDirUtil.getXtsTestCasesDir(xtsRootDir, xtsType).toFile()));
+
     return configsMap.values().stream()
         .map(config -> config.getMetadata().getXtsModule())
         .collect(toImmutableSet());
@@ -320,6 +321,20 @@ public class SessionRequestHandlerUtil {
             .getResourceFile(
                 getClass(),
                 "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/cts_list.txt");
+    return localFileUtil.readLineListFromFile(ctsListPath).stream()
+        .map(String::trim)
+        .filter(line -> !line.isEmpty())
+        .collect(toImmutableSet());
+  }
+
+  /** Gets all mcts modules from the static list. */
+  public ImmutableSet<String> getStaticMctsModules() throws MobileHarnessException {
+    String ctsListPath =
+        resUtilProvider
+            .get()
+            .getResourceFile(
+                getClass(),
+                "/devtools/mobileharness/infra/controller/test/util/xtsdownloader/configs/mcts_list.txt");
     return localFileUtil.readLineListFromFile(ctsListPath).stream()
         .map(String::trim)
         .filter(line -> !line.isEmpty())

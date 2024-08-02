@@ -33,13 +33,13 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],
     deps = [
+        ":module_sharding_args_generator",
         "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_handler_helper",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
-        "//src/java/com/google/devtools/mobileharness/infra/ats/common:shard_constants",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_property_name",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/plan:test_plan_parser",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:xts_dir_util",
@@ -66,6 +66,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
     ],
     deps = [
+        ":module_sharding_args_generator",
         ":xts_job_creator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
@@ -99,6 +100,7 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__",
     ],
     deps = [
+        ":module_sharding_args_generator",
         ":xts_job_creator",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
@@ -117,6 +119,20 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/path",
         "@maven//:com_google_code_findbugs_jsr305",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)
+
+java_library(
+    name = "module_sharding_args_generator",
+    srcs = ["ModuleShardingArgsGenerator.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_handler_util",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:shard_constants",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_test_filter",
         "@maven//:com_google_guava_guava",
         "@maven//:javax_inject_jsr330_api",
     ],
