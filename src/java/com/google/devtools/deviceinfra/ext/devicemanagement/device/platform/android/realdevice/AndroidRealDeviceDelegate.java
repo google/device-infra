@@ -18,7 +18,6 @@ package com.google.devtools.deviceinfra.ext.devicemanagement.device.platform.and
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
-import static com.google.common.collect.MoreCollectors.toOptional;
 
 import com.google.auto.value.AutoValue;
 import com.google.auto.value.extension.memoized.Memoized;
@@ -2074,23 +2073,19 @@ public abstract class AndroidRealDeviceDelegate {
   }
 
   private void checkSuwAppDisabled() throws InterruptedException {
-    String packageName =
-        device.getDimension(Dimension.Name.SKIP_SUW_APP).stream()
-            .collect(toOptional())
-            .orElse(null);
-    if (packageName == null) {
-      return;
-    }
-    logger.atInfo().log("Checking if %s is disabled on device %s", packageName, deviceId);
-    try {
-      checkAppDisabled(packageName);
-    } catch (MobileHarnessException e) {
-      logger.atWarning().log(
-          "Failed to disable SUW app %s on device %s: %s",
-          packageName, deviceId, MoreThrowables.shortDebugString(e));
+    for (String packageName : device.getDimension(Dimension.Name.SKIP_SUW_APP)) {
+      logger.atInfo().log("Checking if %s is disabled on device %s", packageName, deviceId);
+      try {
+        checkAppDisabled(packageName);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().log(
+            "Failed to disable SUW app %s on device %s: %s",
+            packageName, deviceId, MoreThrowables.shortDebugString(e));
+      }
     }
   }
 
+  /* This method has no effect if the package not installed or disabled. */
   private void checkAppDisabled(String packageName)
       throws MobileHarnessException, InterruptedException {
     if (androidPkgManagerUtil.isPackageEnabled(deviceId, packageName)) {
