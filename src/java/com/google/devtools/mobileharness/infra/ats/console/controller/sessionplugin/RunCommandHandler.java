@@ -311,6 +311,7 @@ class RunCommandHandler {
             .setDeviceProperties(ImmutableMap.copyOf(runCommand.getDevicePropertyMap()))
             .setModuleNames(runCommand.getModuleNameList())
             .setHtmlInZip(runCommand.getHtmlInZip())
+            .setReportSystemCheckers(runCommand.getReportSystemCheckers())
             .setIncludeFilters(runCommand.getIncludeFilterList())
             .setExcludeFilters(runCommand.getExcludeFilterList())
             .setExtraArgs(runCommand.getExtraArgList());

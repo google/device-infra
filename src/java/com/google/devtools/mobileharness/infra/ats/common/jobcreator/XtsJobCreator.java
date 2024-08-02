@@ -176,6 +176,10 @@ public abstract class XtsJobCreator {
 
     Optional<String> testNameArg =
         sessionRequestInfo.testName().map((String value) -> String.format("-t %s", value));
+    Optional<String> reportSystemCheckersArg =
+        sessionRequestInfo.reportSystemCheckers()
+            ? Optional.of("--report-system-checkers")
+            : Optional.empty();
 
     ImmutableSet<String> runCommandArgsSet;
     if (shouldEnableModuleSharding(sessionRequestInfo)) {
@@ -213,6 +217,7 @@ public abstract class XtsJobCreator {
                                   .map(
                                       excludeFilter ->
                                           String.format("--exclude-filter \"%s\"", excludeFilter)),
+                          reportSystemCheckersArg.stream(),
                           extraArgs.stream()
                               .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
                       .collect(toImmutableList()));
