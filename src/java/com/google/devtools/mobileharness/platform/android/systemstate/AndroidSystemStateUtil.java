@@ -680,6 +680,12 @@ public class AndroidSystemStateUtil {
    */
   public void waitForState(String serial, DeviceConnectionState state, Duration timeout)
       throws InterruptedException, MobileHarnessException {
+    if (Flags.instance().disableWaitForDevice.getNonNull()
+        && state.equals(DeviceConnectionState.DEVICE)) {
+      logger.atInfo().log("Skip 'wait-for-device' for device %s", serial);
+      sleeper.sleep(Duration.ofSeconds(1));
+      return;
+    }
     try {
       // No output expected.
       String unused = adb.run(serial, new String[] {state.getWaitForArg()}, timeout);

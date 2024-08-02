@@ -512,6 +512,14 @@ public class Flags {
   public Flag<Boolean> disableDeviceRebootForRoProperties =
       disableDeviceRebootForRoPropertiesDefault;
 
+  private static final Flag<Boolean> disableWaitForDeviceDefault = Flag.value(false);
+
+  @com.beust.jcommander.Parameter(
+      names = "--disable_wait_for_device",
+      description = "Whether to disable 'adb wait-for-device'. Default is false.",
+      converter = Flag.BooleanConverter.class)
+  public Flag<Boolean> disableWaitForDevice = disableWaitForDeviceDefault;
+
   private static final Flag<Boolean> disableWifiUtilFuncDefault = Flag.value(false);
 
   @com.beust.jcommander.Parameter(
