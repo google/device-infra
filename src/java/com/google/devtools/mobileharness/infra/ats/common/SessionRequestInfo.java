@@ -126,6 +126,8 @@ public abstract class SessionRequestInfo {
 
   public abstract Optional<String> remoteRunnerFilePathPrefix();
 
+  public abstract boolean reportSystemCheckers();
+
   public abstract ShardingMode shardingMode();
 
   public static Builder builder() {
@@ -147,6 +149,7 @@ public abstract class SessionRequestInfo {
         .setJobTimeout(Duration.ZERO)
         .setStartTimeout(Duration.ZERO)
         .setHtmlInZip(false)
+        .setReportSystemCheckers(false)
         .setIsAtsServerRequest(false)
         .setShardingMode(ShardingMode.RUNNER);
   }
@@ -237,6 +240,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setIsAtsServerRequest(boolean isAtsServerRequest);
 
     public abstract Builder setRemoteRunnerFilePathPrefix(String remoteRunnerFilePathPrefix);
+
+    public abstract Builder setReportSystemCheckers(boolean reportSystemCheckers);
 
     public abstract Builder setShardingMode(ShardingMode shardingMode);
 

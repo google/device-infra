@@ -251,6 +251,12 @@ public final class RunCommand implements Callable<Integer> {
   private boolean htmlInZip;
 
   @Option(
+      names = {"--report-system-checkers"},
+      paramLabel = "<report-system-checkers>",
+      description = "Whether reporting system checkers as test or not. Default is false.")
+  private boolean reportSystemCheckers = false;
+
+  @Option(
       names = {"--subplan"},
       paramLabel = "<subplan_name>",
       description = "Run the specified subplan.")
@@ -652,7 +658,8 @@ public final class RunCommand implements Callable<Integer> {
             .putAllDeviceProperty(devicePropertiesMap)
             .addAllIncludeFilter(includeFilters)
             .addAllExcludeFilter(excludeFilters)
-            .setHtmlInZip(htmlInZip);
+            .setHtmlInZip(htmlInZip)
+            .setReportSystemCheckers(reportSystemCheckers);
     if (shardCount > 0) {
       runCommand.setShardCount(shardCount);
     }

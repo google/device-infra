@@ -145,6 +145,9 @@ message RunCommand {
 
   // Optional. Set max sdk level requirement for test device.
   optional int32 max_sdk_level = 26;
+
+  // Optional. Whether reporting system checkers as test or not.
+  optional bool report_system_checkers = 27;
 }
 
 message RunCommandState {
