@@ -22,8 +22,14 @@ import com.google.wireless.qa.mobileharness.shared.constant.DirCommon;
 /** Dir constants for ATS console. */
 public class AtsConsoleDirs {
 
+  private static final String LOG_DIR_NAME = "ats_console_log";
+
   public static String getLogDir() {
-    return PathUtil.join(DirCommon.getPublicDirRoot(), "ats_console_log");
+    return PathUtil.join(DirCommon.getPublicDirRoot(), getLogDirName());
+  }
+
+  public static String getLogDirName() {
+    return LOG_DIR_NAME;
   }
 
   private AtsConsoleDirs() {}

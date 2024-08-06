@@ -81,7 +81,7 @@ public class ServerPreparer {
 
   private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(10L);
 
-  private static final int MAX_CONNECT_SERVER_ATTEMPTS = 20;
+  private static final int MAX_CONNECT_SERVER_ATTEMPTS = 25;
   private static final Duration CONNECT_SERVER_INTERVAL = Duration.ofSeconds(1L);
 
   private static final ImmutableList<String> UNFINISHED_SESSIONS_TABLE_HEADER =
@@ -202,7 +202,7 @@ public class ServerPreparer {
         }
       }
 
-      // Starts a new server if not exists.
+      // Starts a new server.
       serverStartingLogger.log("Starting new OLC server...");
       String serverBinaryPath = requireNonNull(serverBinary.get()).toString();
       localFileUtil.checkFile(serverBinaryPath);
@@ -220,44 +220,45 @@ public class ServerPreparer {
           .with(IMPORTANCE, DEBUG)
           .log("OLC server flags: %s, native arguments: %s", serverFlags, serverNativeArguments);
 
-      CommandProcess serverProcess = null;
-
+      // Creates the command to start the server.
+      String serverOutputPath = Flags.instance().atsConsoleOlcServerOutputPath.getNonNull();
       ImmutableList.Builder<String> startOlcServerCommandBuilder = ImmutableList.builder();
       startOlcServerCommandBuilder.add("nohup");
       startOlcServerCommandBuilder.addAll(
           JavaCommandCreator.of(
                   /* useStandardInvocationForm= */ true, requireNonNull(javaPath.get()).toString())
               .createJavaCommand(serverBinaryPath, serverFlags, serverNativeArguments));
-      startOlcServerCommandBuilder.add(">/dev/null").add("2>&1").add("&");
+      startOlcServerCommandBuilder.add(">" + serverOutputPath).add("2>&1").add("&");
+
+      // Starts the server process.
+      CommandProcess serverProcess;
+      try {
+        serverProcess =
+            commandExecutor.start(
+                Command.of(
+                        ImmutableList.of(
+                            "sh", "-c", Joiner.on(" ").join(startOlcServerCommandBuilder.build())))
+                    .timeout(ChronoUnit.YEARS.getDuration())
+                    .redirectStderr(false)
+                    .needStdoutInResult(false)
+                    .needStderrInResult(false));
+      } catch (CommandStartException e) {
+        throw new MobileHarnessException(
+            InfraErrorId.ATSC_SERVER_PREPARER_START_OLC_SERVER_ERROR,
+            "Failed to start OLC server",
+            e);
+      }
 
       try {
-        try {
-          serverProcess =
-              commandExecutor.start(
-                  Command.of(
-                          ImmutableList.of(
-                              "sh",
-                              "-c",
-                              Joiner.on(" ").join(startOlcServerCommandBuilder.build())))
-                      .timeout(ChronoUnit.YEARS.getDuration())
-                      .redirectStderr(false)
-                      .needStdoutInResult(false)
-                      .needStderrInResult(false));
-        } catch (CommandStartException e) {
-          throw new MobileHarnessException(
-              InfraErrorId.ATSC_SERVER_PREPARER_START_OLC_SERVER_ERROR,
-              "Failed to start OLC server",
-              e);
-        }
-
         // Waits until the server starts.
         logger
             .atInfo()
             .with(IMPORTANCE, DEBUG)
             .log("Wait until OLC server starts, command=[%s]", serverProcess.command());
-        // Sleep for a while to wait for the server to start.
-        sleeper.sleep(Duration.ofSeconds(1L));
         GetVersionResponse serverVersion = connectWithRetry();
+
+        // The server starts successfully.
+        serverProcess.stopReadingOutput();
         serverStartingLogger.log(
             "OLC server started, port=%s, pid=%s",
             Flags.instance().olcServerPort.getNonNull(), serverVersion.getProcessId());
@@ -269,7 +270,7 @@ public class ServerPreparer {
         }
 
         try {
-          printServerStartingLogFromLogFile();
+          printServerStartingLogFromLogFile(serverOutputPath);
         } catch (MobileHarnessException | RuntimeException | Error readLogException) {
           logger.atWarning().withCause(readLogException).log(
               "Failed to print server starting log from the log file.");
@@ -279,23 +280,32 @@ public class ServerPreparer {
     }
   }
 
-  private void printServerStartingLogFromLogFile() throws MobileHarnessException {
-    Path logFile = Path.of(OlcServerDirs.getLogDir()).resolve("log0.txt");
-    if (!localFileUtil.isFileOrDirExist(logFile)) {
-      return;
-    }
-    Instant lastModifiedTime = localFileUtil.getFileLastModifiedTime(logFile);
-    Instant now = Instant.now();
+  private void printServerStartingLogFromLogFile(String serverOutputPath)
+      throws MobileHarnessException {
+    String serverStartingLog;
 
-    Duration duration = Duration.between(lastModifiedTime, now);
-    if (duration.compareTo(
-            CONNECT_SERVER_INTERVAL.multipliedBy(MAX_CONNECT_SERVER_ATTEMPTS).plusSeconds(5L))
-        > 0) {
-      // Skip printing if the log file wasn't modified recently.
-      return;
+    if (!serverOutputPath.equals("/dev/null") && localFileUtil.isFileExist(serverOutputPath)) {
+      serverStartingLog = localFileUtil.readFile(serverOutputPath);
+    } else {
+      Path logFile = Path.of(OlcServerDirs.getLogDir()).resolve("log0.txt");
+      if (!localFileUtil.isFileOrDirExist(logFile)) {
+        return;
+      }
+      Instant lastModifiedTime = localFileUtil.getFileLastModifiedTime(logFile);
+      Instant now = Instant.now();
+
+      Duration duration = Duration.between(lastModifiedTime, now);
+      if (duration.compareTo(
+              CONNECT_SERVER_INTERVAL.multipliedBy(MAX_CONNECT_SERVER_ATTEMPTS).plusSeconds(5L))
+          > 0) {
+        // Skip printing if the log file wasn't modified recently.
+        return;
+      }
+
+      serverStartingLog = localFileUtil.readFile(logFile);
     }
 
-    serverStartingLogger.log("%s", localFileUtil.readFile(logFile));
+    serverStartingLogger.log("OLC server log:\n%s", serverStartingLog);
   }
 
   /**

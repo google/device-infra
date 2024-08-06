@@ -214,6 +214,14 @@ public class Flags {
   public Flag<Integer> atsConsoleOlcServerMinLogRecordImportance =
       atsConsoleOlcServerMinLogRecordImportanceDefault;
 
+  private static final Flag<String> atsConsoleOlcServerOutputPathDefault = Flag.value("/dev/null");
+
+  @com.beust.jcommander.Parameter(
+      names = "--ats_console_olc_server_output_path",
+      description = "Path of OLC server stdout/stderr in ATS console. Default is /dev/null.",
+      converter = Flag.StringConverter.class)
+  public Flag<String> atsConsoleOlcServerOutputPath = atsConsoleOlcServerOutputPathDefault;
+
   private static final Flag<String> atsConsoleOlcServerPathDefault = Flag.value(null);
 
   @com.beust.jcommander.Parameter(
