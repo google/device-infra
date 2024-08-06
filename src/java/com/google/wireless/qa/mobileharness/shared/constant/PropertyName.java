@@ -70,6 +70,12 @@ public interface PropertyName {
     /** The job allocation fails after start_timeout is reached. */
     ALLOCATION_FAIL_AFTER_START_TIMEOUT,
 
+    /**
+     * True indicates that another associated job of this job has an allocation, so the start
+     * timeout and diagnostic report of this job will be disabled.
+     */
+    HAS_ASSOCIATED_ALLOCATION,
+
     /** Whether it is a resumed job from a previous interrupted one // */
     _IS_RESUMED_JOB,
 

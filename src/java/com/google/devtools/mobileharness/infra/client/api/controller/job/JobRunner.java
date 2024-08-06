@@ -611,20 +611,22 @@ public class JobRunner implements Runnable {
               }
             }
             if (!hasAllocation) {
-              Instant now = clock.instant();
-              if (expireTime.isBefore(now)) {
-                jobInfo
-                    .log()
-                    .atWarning()
-                    .alsoTo(logger)
-                    .log(
-                        "Timeout because no device is allocated after start_timeout %s seconds.",
-                        jobInfo.setting().getTimeout().getStartTimeoutMs() / 1000);
-                onJobStartTimeout(isDeviceAllocatorSetUp, true);
-              } else if (diagnosticTime.isBefore(now)) {
-                diagnosticTime =
-                    diagnosticTime.plus(ALLOCATION_DIAGNOSE_INTERVAL_BEFORE_JOB_TIMEOUT);
-                diagnose(false);
+              if (!jobInfo.properties().getBoolean(Job.HAS_ASSOCIATED_ALLOCATION).orElse(false)) {
+                Instant now = clock.instant();
+                if (expireTime.isBefore(now)) {
+                  jobInfo
+                      .log()
+                      .atWarning()
+                      .alsoTo(logger)
+                      .log(
+                          "Timeout because no device is allocated after start_timeout %s seconds.",
+                          jobInfo.setting().getTimeout().getStartTimeoutMs() / 1000);
+                  onJobStartTimeout(isDeviceAllocatorSetUp, true);
+                } else if (diagnosticTime.isBefore(now)) {
+                  diagnosticTime =
+                      diagnosticTime.plus(ALLOCATION_DIAGNOSE_INTERVAL_BEFORE_JOB_TIMEOUT);
+                  diagnose(false);
+                }
               }
               if (jobInfo.setting().getAllocationExitStrategy() != AllocationExitStrategy.NORMAL) {
                 suitableDeviceChecker.check();
