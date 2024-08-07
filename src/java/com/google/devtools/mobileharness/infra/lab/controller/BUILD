@@ -154,6 +154,7 @@ java_library(
         "//src/devtools/mobileharness/infra/master/rpc/proto:lab_sync_service_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
         "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_provider",
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device/util:device_status_info_printer",
         "//src/java/com/google/devtools/mobileharness/infra/lab/rpc/stub/helper:lab_sync",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared:exception",

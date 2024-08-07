@@ -13,6 +13,10 @@
 # limitations under the License.
 #
 
+package(
+    default_applicable_licenses = ["//:license"],
+)
+
 java_library(
     name = "device_reboot_util",
     srcs = [
@@ -29,5 +33,19 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/stat",
+    ],
+)
+
+java_library(
+    name = "device_status_info_printer",
+    srcs = ["DeviceStatusInfoPrinter.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/client/api/mode/local:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/infra/lab/controller:__pkg__",
+    ],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/controller/device:device_status_info",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/api/device",
+        "@maven//:com_google_guava_guava",
     ],
 )

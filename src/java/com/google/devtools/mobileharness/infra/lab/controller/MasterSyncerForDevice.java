@@ -19,8 +19,6 @@ package com.google.devtools.mobileharness.infra.lab.controller;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.LinkedListMultimap;
-import com.google.common.collect.Multimap;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.model.proto.ExceptionProto.ExceptionDetail;
@@ -29,6 +27,7 @@ import com.google.devtools.mobileharness.api.model.proto.Device.DeviceStatusWith
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusInfo;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusProvider;
 import com.google.devtools.mobileharness.infra.controller.device.DeviceStatusProvider.DeviceWithStatusInfo;
+import com.google.devtools.mobileharness.infra.controller.device.util.DeviceStatusInfoPrinter;
 import com.google.devtools.mobileharness.infra.lab.rpc.stub.helper.LabSyncHelper;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.HeartbeatLabResponse;
 import com.google.devtools.mobileharness.infra.master.rpc.proto.LabSyncServiceProto.SignUpLabResponse;
@@ -39,7 +38,6 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceD
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceErrorEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.LocalDeviceUpEvent;
 import java.time.Duration;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -171,7 +169,7 @@ public class MasterSyncerForDevice implements Runnable, Observer {
 
   /** Signs out the device when its error info changes. */
   @Subscribe
-  public void onDeviceErrorChanged(LocalDeviceErrorEvent event) throws InterruptedException {
+  public void onDeviceErrorChanged(LocalDeviceErrorEvent event) {
     String deviceId = event.getDeviceUuid();
 
     try {
@@ -185,9 +183,7 @@ public class MasterSyncerForDevice implements Runnable, Observer {
               .setExceptionDetail(exceptionDetail)
               .build();
       logger.atInfo().log("Device %s has error %s.", deviceId, event.getDeviceError());
-      signUpLab(
-          ImmutableMap.<Device, DeviceStatusInfo>of(
-              deviceAndStatusInfo.device(), updatedDeviceStatusInfo));
+      signUpLab(ImmutableMap.of(deviceAndStatusInfo.device(), updatedDeviceStatusInfo));
     } catch (MobileHarnessException e) {
       logger.atWarning().withCause(e).log("Failed to update error on device %s", deviceId);
     }
@@ -226,53 +222,7 @@ public class MasterSyncerForDevice implements Runnable, Observer {
     // detection to dispatch as a tradeoff.
     Map<Device, DeviceStatusInfo> devicesToSync =
         deviceStatusProvider.getAllDeviceStatusWithoutDuplicatedUuid(/* realtimeDispatch= */ true);
-    Map<Class<? extends Device>, Multimap<String, String>> devicesToPrint = new HashMap<>();
-
-    for (Entry<Device, DeviceStatusInfo> entry : devicesToSync.entrySet()) {
-      Device device = entry.getKey();
-      Class<? extends Device> type = device.getClass();
-      Multimap<String, String> map =
-          devicesToPrint.computeIfAbsent(type, k -> LinkedListMultimap.create());
-      map.put(
-          entry.getValue().getDeviceStatusWithTimestamp().getStatus().name(),
-          entry.getKey().getDeviceId());
-    }
-
-    StringBuilder buf = new StringBuilder("Device count: ");
-    buf.append(devicesToSync.size());
-    if (!devicesToPrint.isEmpty()) {
-      buf.append(", status:");
-      for (Entry<Class<? extends Device>, Multimap<String, String>> entry :
-          devicesToPrint.entrySet()) {
-        // Prints the device type and the numbers of the devices of different status.
-        buf.append("\n======== ");
-        buf.append(entry.getKey().getSimpleName());
-        buf.append(" ========");
-        for (Entry<String, Collection<String>> map : entry.getValue().asMap().entrySet()) {
-          // Prints the status.
-          buf.append('\n');
-          buf.append(map.getKey());
-          buf.append('(');
-          buf.append(map.getValue().size());
-          buf.append("):");
-          if (map.getValue().size() > 3) {
-            buf.append("\n");
-          }
-          // Prints the device id. Up to 3 id in one row.
-          int colIdx = 0;
-          for (String id : map.getValue()) {
-            if (colIdx == 3) {
-              buf.append('\n');
-              colIdx = 0;
-            }
-            buf.append('\t');
-            buf.append(id);
-            colIdx++;
-          }
-        }
-      }
-    }
-    logger.atInfo().log("%s", buf);
+    logger.atInfo().log("%s", DeviceStatusInfoPrinter.printDeviceStatusInfos(devicesToSync));
 
     // Syncs with master.
     HeartbeatLabResponse heartbeatResp = null;
