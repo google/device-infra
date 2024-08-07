@@ -68,6 +68,7 @@ java_library(
     visibility = ["//src/javatests/com/google/devtools/mobileharness/infra/ats/server/sessionplugin:__pkg__"],
     deps = [
         ":tradefed_config_generator",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/devtools/mobileharness/infra/ats/server/proto:service_java_proto",
         "//src/java/com/google/devtools/deviceinfra/shared/util/file/remote/constant:remote_file_type",

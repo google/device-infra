@@ -37,7 +37,6 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
-import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
@@ -178,7 +177,7 @@ public abstract class XtsJobCreator {
         sessionRequestInfo.testName().map((String value) -> String.format("-t %s", value));
 
     ImmutableSet<String> runCommandArgsSet;
-    if (shouldEnableModuleSharding(sessionRequestInfo)) {
+    if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
       runCommandArgsSet =
           moduleShardingArgsGenerator.generateShardingArgs(sessionRequestInfo, tfModules);
     } else {
@@ -234,12 +233,6 @@ public abstract class XtsJobCreator {
     }
 
     return tradefedJobInfos.build();
-  }
-
-  private boolean shouldEnableModuleSharding(SessionRequestInfo sessionRequestInfo) {
-    return sessionRequestInfo.shardingMode().equals(ShardingMode.MODULE)
-        && sessionRequestInfo.testName().isEmpty()
-        && !SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan());
   }
 
   /** Prepares a sub plan file for a tradefed job. */

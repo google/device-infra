@@ -43,6 +43,7 @@ import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
 import com.google.devtools.mobileharness.infra.ats.common.XtsPropertyName.Job;
 import com.google.devtools.mobileharness.infra.ats.common.plan.TestPlanParser;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CertificationSuiteInfoFactory;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
@@ -174,14 +175,29 @@ public class SessionRequestHandlerUtil {
       SessionRequestInfo sessionRequestInfo, int shardCount)
       throws MobileHarnessException, InterruptedException {
     if (sessionRequestInfo.isAtsServerRequest() && !sessionRequestInfo.deviceSerials().isEmpty()) {
-      return sessionRequestInfo.deviceSerials().stream()
-          .map(
-              deviceSerial ->
-                  SubDeviceSpec.newBuilder()
-                      .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
-                      .setDimensions(StringMap.newBuilder().putContent("uuid", deviceSerial))
-                      .build())
-          .collect(toImmutableList());
+      if (shouldEnableModuleSharding(sessionRequestInfo)) {
+        StringMap dimensions =
+            StringMap.newBuilder()
+                .putContent(
+                    "uuid",
+                    String.format(
+                        "regex:(%s)", Joiner.on('|').join(sessionRequestInfo.deviceSerials())))
+                .build();
+        return ImmutableList.of(
+            SubDeviceSpec.newBuilder()
+                .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
+                .setDimensions(dimensions)
+                .build());
+      } else {
+        return sessionRequestInfo.deviceSerials().stream()
+            .map(
+                deviceSerial ->
+                    SubDeviceSpec.newBuilder()
+                        .setType(getTradefedRequiredDeviceType(sessionRequestInfo))
+                        .setDimensions(StringMap.newBuilder().putContent("uuid", deviceSerial))
+                        .build())
+            .collect(toImmutableList());
+      }
     }
 
     ImmutableMap<String, DeviceDetails> allAndroidDevices =
@@ -494,6 +510,12 @@ public class SessionRequestHandlerUtil {
     ImmutableSet<String> allNonTfModules = getNonTfModules(configsMap);
     updatedSessionRequestInfo.setGivenMatchedNonTfModules(matchModules(modules, allNonTfModules));
     return updatedSessionRequestInfo.build();
+  }
+
+  public static boolean shouldEnableModuleSharding(SessionRequestInfo sessionRequestInfo) {
+    return sessionRequestInfo.shardingMode().equals(ShardingMode.MODULE)
+        && sessionRequestInfo.testName().isEmpty()
+        && !SessionRequestHandlerUtil.isRunRetry(sessionRequestInfo.testPlan());
   }
 
   private Optional<DeviceInfo> getDeviceInfo(SessionRequestInfo sessionRequestInfo)

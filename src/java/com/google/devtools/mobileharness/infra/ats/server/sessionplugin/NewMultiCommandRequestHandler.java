@@ -40,6 +40,7 @@ import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.SessionResultHandlerUtil;
 import com.google.devtools.mobileharness.infra.ats.common.XtsTypeLoader;
 import com.google.devtools.mobileharness.infra.ats.common.jobcreator.XtsJobCreator;
+import com.google.devtools.mobileharness.infra.ats.common.proto.XtsCommonProto.ShardingMode;
 import com.google.devtools.mobileharness.infra.ats.console.command.parser.CommandLineParser;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.CancelReason;
@@ -409,25 +410,6 @@ final class NewMultiCommandRequestHandler {
                     "Please make sure your XTS zip file %s only contains one xts type.",
                     androidXtsZipPathCopy));
 
-    // Generate XML test config template for ClusterCommandLauncher.
-    Path commandPath = Path.of(xtsRootDir).resolveSibling("command.xml");
-    try (OutputStream outputStream = new FileOutputStream(commandPath.toFile())) {
-      TradefedConfigGenerator.generateXml(
-          outputStream,
-          request.getTestEnvironment(),
-          fileTestResources.build(),
-          deviceSerials.size());
-    } catch (IOException | XmlPullParserException e) {
-      throw new MobileHarnessException(
-          InfraErrorId.ATS_SERVER_FAILED_TO_GENERATE_XML_TEST_CONFIG,
-          String.format(
-              "Failed to create XML test config for session %s ", sessionInfo.getSessionId()),
-          e);
-    }
-    logger.atInfo().log(
-        "Generate TF config for session %s:\n%s",
-        sessionInfo.getSessionId(), localFileUtil.readFile(commandPath));
-
     SessionRequestInfo.Builder sessionRequestInfoBuilder =
         CommandLineParser.getInstance().parseCommandLine(commandInfo.getCommandLine());
     sessionRequestInfoBuilder.setCommandLineArgs(commandInfo.getCommandLine());
@@ -437,8 +419,6 @@ final class NewMultiCommandRequestHandler {
     sessionRequestInfoBuilder.setDeviceSerials(deviceSerials);
     sessionRequestInfoBuilder.setEnvVars(
         ImmutableMap.copyOf(request.getTestEnvironment().getEnvVarsMap()));
-    sessionRequestInfoBuilder.setTestPlanFile(
-        replacePathForRemoteRunner(commandPath.toAbsolutePath().toString()));
     sessionRequestInfoBuilder.setRemoteRunnerFilePathPrefix(
         RemoteFileType.ATS_FILE_SERVER.prefix());
 
@@ -494,6 +474,33 @@ final class NewMultiCommandRequestHandler {
         .setJobTimeout(toJavaDuration(request.getTestEnvironment().getInvocationTimeout()))
         .setStartTimeout(toJavaDuration(request.getQueueTimeout()))
         .setIsAtsServerRequest(true);
+
+    if (commandInfo.getShardingMode() != ShardingMode.SHARDING_MODE_UNSPECIFIED) {
+      sessionRequestInfoBuilder.setShardingMode(commandInfo.getShardingMode());
+    }
+
+    // Generate XML test config template for ClusterCommandLauncher.
+    Path commandPath = Path.of(xtsRootDir).resolveSibling("command.xml");
+    try (OutputStream outputStream = new FileOutputStream(commandPath.toFile())) {
+      TradefedConfigGenerator.generateXml(
+          outputStream,
+          request.getTestEnvironment(),
+          fileTestResources.build(),
+          SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfoBuilder.build())
+              ? 1
+              : deviceSerials.size());
+    } catch (IOException | XmlPullParserException e) {
+      throw new MobileHarnessException(
+          InfraErrorId.ATS_SERVER_FAILED_TO_GENERATE_XML_TEST_CONFIG,
+          String.format(
+              "Failed to create XML test config for session %s ", sessionInfo.getSessionId()),
+          e);
+    }
+    logger.atInfo().log(
+        "Generate TF config for session %s:\n%s",
+        sessionInfo.getSessionId(), localFileUtil.readFile(commandPath));
+    sessionRequestInfoBuilder.setTestPlanFile(
+        replacePathForRemoteRunner(commandPath.toAbsolutePath().toString()));
     return sessionRequestHandlerUtil.addNonTradefedModuleInfo(sessionRequestInfoBuilder.build());
   }
 

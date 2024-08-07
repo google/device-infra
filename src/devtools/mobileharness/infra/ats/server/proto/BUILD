@@ -28,6 +28,7 @@ proto_library(
     name = "service_proto",
     srcs = ["service.proto"],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_proto",
         "@com_google_protobuf//:duration_proto",
         "@com_google_protobuf//:timestamp_proto",
     ],
@@ -39,6 +40,7 @@ py_proto_library(
         "service.proto",
     ],
     deps = [
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_py_proto",
         "@com_github_protocolbuffers_protobuf//:well_known_types_py_pb2",
     ],
 )

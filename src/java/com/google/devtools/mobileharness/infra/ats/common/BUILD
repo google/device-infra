@@ -115,6 +115,7 @@ java_library(
         ":session_request_info",
         ":xts_property_name",
         "//src/devtools/mobileharness/api/query/proto:device_query_java_proto",
+        "//src/devtools/mobileharness/infra/ats/common/proto:xts_common_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
         "//src/devtools/mobileharness/platform/android/xts/proto:device_configuration_java_proto",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
