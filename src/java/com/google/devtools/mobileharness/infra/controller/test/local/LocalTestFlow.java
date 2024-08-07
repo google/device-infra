@@ -149,7 +149,7 @@ public class LocalTestFlow {
     }
     builtinPluginsBuilder.add(
         PluginItem.create(new TestCommandHistorySaver(), EventScope.CLASS_INTERNAL),
-        PluginItem.create(new NonTradefedReportGenerator(), EventScope.CLASS_INTERNAL));
+        PluginItem.create(new NonTradefedReportGenerator(), EventScope.INTERNAL_PLUGIN));
     if (XtsDeviceCompatibilityChecker.isEnabled(testInfo.jobInfo())) {
       builtinPluginsBuilder.add(
           PluginItem.create(new XtsDeviceCompatibilityChecker(), EventScope.INTERNAL_PLUGIN));

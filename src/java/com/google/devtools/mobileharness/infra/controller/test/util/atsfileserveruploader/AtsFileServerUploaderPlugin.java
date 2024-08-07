@@ -64,6 +64,11 @@ public class AtsFileServerUploaderPlugin {
       String genFileDir = event.getTest().getGenFileDir();
       List<String> genFiles = localFileUtil.listFilePaths(genFileDir, true);
       for (String genFile : genFiles) {
+        if (genFile.contains(",")) {
+          logger.atInfo().log("genFile contains comma: %s", genFile);
+          localFileUtil.moveFileOrDir(genFile, genFile.replace(',', '_'));
+          genFile = genFile.replace(',', '_');
+        }
         updateGenFile(genFileDir, genFile, event.getTest().locator().getId());
       }
     } finally {

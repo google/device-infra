@@ -75,7 +75,9 @@ public class AtsFileServerUploaderPluginTest {
   @Test
   public void test() throws Exception {
     when(localFileUtil.listFilePaths("/var", true))
-        .thenReturn(ImmutableList.of("/var/output.txt", "/var/hello/world.txt"));
+        .thenReturn(
+            ImmutableList.of(
+                "/var/output.txt", "/var/hello/world.txt", "/var/file,with,comma.txt"));
     plugin.onTestEnding(testEndingEvent);
 
     verify(commandExecutor)
@@ -100,6 +102,17 @@ public class AtsFileServerUploaderPluginTest {
                 "--fail",
                 "--location",
                 "www.example.com:8006/file/genfiles/test_id/hello/world.txt"));
+    verify(commandExecutor)
+        .run(
+            Command.of(
+                "curl",
+                "--request",
+                "POST",
+                "--form",
+                "file=@/var/file_with_comma.txt",
+                "--fail",
+                "--location",
+                "www.example.com:8006/file/genfiles/test_id/file_with_comma.txt"));
     verify(localFileUtil).removeFileOrDir("/var");
     verify(localFileUtil).removeFileOrDir("/tmp");
     verify(localFileUtil).removeFileOrDir("/run");

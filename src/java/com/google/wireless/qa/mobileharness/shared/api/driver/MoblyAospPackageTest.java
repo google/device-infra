@@ -113,10 +113,16 @@ public class MoblyAospPackageTest extends MoblyGenericTest {
       throws MobileHarnessException, InterruptedException {
     Path moblyPkg =
         Path.of(testInfo.jobInfo().files().getSingle(MoblyAospPackageTestSpec.FILE_MOBLY_PKG));
+    localFileUtil.grantFileOrDirFullAccess(moblyPkg.toString());
     Path moblyUnzipDir = Path.of(testInfo.getTmpFileDir(), "mobly");
+    localFileUtil.prepareDir(moblyUnzipDir);
+    localFileUtil.grantFileOrDirFullAccess(moblyUnzipDir.toString());
     Path venvPath = Path.of(testInfo.getTmpFileDir(), "venv");
     Path configPath = Path.of(configFile.getPath());
     String testPath = testInfo.jobInfo().params().get(MoblyAospPackageTestSpec.PARAM_TEST_PATH);
+    if (testPath != null && !testPath.isEmpty()) {
+      localFileUtil.grantFileOrDirFullAccess(testPath);
+    }
     String testCaseSelector = testInfo.jobInfo().params().get(TEST_SELECTOR_KEY);
     String pythonVersion =
         testInfo.jobInfo().params().get(MoblyAospPackageTestSpec.PARAM_PYTHON_VERSION);

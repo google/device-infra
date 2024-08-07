@@ -37,7 +37,7 @@ import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.protobuf.TextFormat;
 import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotation;
-import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndedEvent;
+import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -108,7 +108,7 @@ public final class NonTradefedReportGenerator {
   }
 
   @Subscribe
-  public void onTestEnded(TestEndedEvent event) throws InterruptedException {
+  public void onTestEnding(TestEndingEvent event) throws InterruptedException {
     Instant endTime = clock.instant();
     startTime = startTime == null ? endTime : startTime;
     try {
