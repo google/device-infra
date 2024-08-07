@@ -25,6 +25,7 @@ import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
 import com.google.common.flogger.FluentLogger;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
@@ -41,6 +42,7 @@ import com.google.devtools.mobileharness.infra.controller.device.bootstrap.Detec
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfig;
 import com.google.devtools.mobileharness.infra.controller.device.config.ApiConfigFileProcessor;
 import com.google.devtools.mobileharness.infra.controller.device.external.NoopExternalDeviceManager;
+import com.google.devtools.mobileharness.infra.controller.device.util.DeviceStatusInfoPrinter;
 import com.google.devtools.mobileharness.infra.controller.scheduler.AbstractScheduler;
 import com.google.devtools.mobileharness.infra.controller.scheduler.simple.SimpleScheduler;
 import com.google.devtools.mobileharness.infra.controller.test.DirectTestRunner;
@@ -55,6 +57,7 @@ import com.google.devtools.mobileharness.infra.controller.test.local.utp.proto.I
 import com.google.devtools.mobileharness.infra.lab.controller.LocalFileBasedDeviceConfigManager;
 import com.google.devtools.mobileharness.shared.context.InvocationContextExecutors;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadFactoryUtil;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -104,12 +107,16 @@ public class LocalMode implements ExecMode {
       synchronized (LOCAL_ENV_LOCK) {
         if (localDeviceManager == null) {
           logger.atInfo().log("Starting local device manager");
+
           final ListeningExecutorService localEnvThreadPool =
               InvocationContextExecutors.propagatingContext(
                   MoreExecutors.listeningDecorator(
                       Executors.newCachedThreadPool(
                           ThreadFactoryUtil.createThreadFactory("local-mode-thread-pool"))),
                   ListeningExecutorService.class);
+          final ListeningScheduledExecutorService scheduledThreadPool =
+              ThreadPools.createStandardScheduledThreadPool(
+                  "local-mode-scheduled-thread-pool", /* corePoolSize= */ 1);
           Runtime.getRuntime().addShutdownHook(new Thread(localEnvThreadPool::shutdownNow));
 
           ApiConfig.getInstance().init(/* defaultPublic= */ true, "");
@@ -117,8 +124,7 @@ public class LocalMode implements ExecMode {
           // Subscribes LocalDeviceUpEvent.
           globalInternalBus.register(this);
 
-          // For the iOS device testing, it always needs DeviceStat. The IosRealDeviceDetector needs
-          // check the device last reboot time.
+          // Initializes local device manager.
           DetectorsAndDispatchers detectorsAndDispatchers =
               new DetectorDispatcherSelector(Component.LOCAL_MODE).selectDetectorsAndDispatchers();
           localDeviceManager =
@@ -132,6 +138,7 @@ public class LocalMode implements ExecMode {
           localDeviceManager.initialize();
           localDeviceManagerFuture.set(localDeviceManager);
 
+          // Starts device config manager.
           if (Flags.instance().enableDeviceConfigManager.getNonNull()) {
             logFailure(
                 localEnvThreadPool.submit(
@@ -146,10 +153,9 @@ public class LocalMode implements ExecMode {
                 "Fatal error in device config manager");
           }
 
-          // Prepares the global scheduler.
+          // Initializes local scheduler.
           localScheduler = new SimpleScheduler(localEnvThreadPool);
           localSchedulerFuture.set(localScheduler);
-
           LocalDeviceManagerSchedulerSyncer localDeviceManagerSchedulerSyncer =
               new LocalDeviceManagerSchedulerSyncer(localDeviceManager, localScheduler);
           ApiConfig.getInstance().addObserver(localDeviceManagerSchedulerSyncer);
@@ -163,6 +169,30 @@ public class LocalMode implements ExecMode {
               Level.SEVERE,
               "Fatal error in local device manager");
           localScheduler.start();
+
+          // Starts device status info printer.
+          Duration printDeviceStatusInfoInterval = Duration.ofMinutes(2L);
+          logFailure(
+              scheduledThreadPool.scheduleWithFixedDelay(
+                  threadRenaming(
+                      () -> {
+                        try {
+                          logger.atInfo().log(
+                              "%s",
+                              DeviceStatusInfoPrinter.printDeviceStatusInfos(
+                                  localDeviceManager.getAllDeviceStatusWithoutDuplicatedUuid(
+                                      /* realtimeDetect= */ false)));
+                        } catch (InterruptedException e) {
+                          Thread.currentThread().interrupt();
+                        }
+                      },
+                      () -> "device-status-info-printer"),
+                  printDeviceStatusInfoInterval,
+                  printDeviceStatusInfoInterval),
+              Level.WARNING,
+              "Error when printing device status info");
+
+          // Starts first device detector.
           logFailure(
               localEnvThreadPool.submit(
                   (Callable<Void>)
@@ -228,14 +258,7 @@ public class LocalMode implements ExecMode {
 
   private static TestFlowConverter createTestFlowConverterOss() {
     return new NoOpTestFlowConverter(
-        IncompatibleReasonProto.InfraIncompatibleReason.ATS2, "ATS2 uses classic mode");
-  }
-
-  /** Returns the local device manager created and owned by LocalMode. */
-  public LocalDeviceManager getDeviceManager(EventBus globalInternalBus)
-      throws InterruptedException {
-    initialize(globalInternalBus);
-    return localDeviceManager;
+        IncompatibleReasonProto.InfraIncompatibleReason.ATS2, "ATS uses classic mode");
   }
 
   @Subscribe
