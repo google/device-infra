@@ -78,7 +78,11 @@ enum DeviceAllocationPriority {
   DEVICE_ALLOCATION_PRIORITY_DEFAULT = 0;
 
   // this value should be used by the user. When given this priority,
-  // other priority logic will be override.
+  // other priority logic will be override. The priority is lower than default.
+  DEVICE_ALLOCATION_PRIORITY_LOW = -1;
+
+  // this value should be used by the user. When given this priority,
+  // other priority logic will be override. The priority is higher than default.
   DEVICE_ALLOCATION_PRIORITY_INTERACTIVE = 1;
 }
 
