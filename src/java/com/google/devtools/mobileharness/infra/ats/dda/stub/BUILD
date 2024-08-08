@@ -13,15 +13,17 @@
 # limitations under the License.
 #
 
-package(default_applicable_licenses = ["//:license"])
+package(
+    default_applicable_licenses = ["//:license"],
+    default_visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+    ],
+)
 
 java_library(
     name = "ats_dda_stub",
     srcs = ["AtsDdaStub.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-    ],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
@@ -46,7 +48,6 @@ java_library(
 java_library(
     name = "ats_lab_info_stub",
     srcs = ["AtsLabInfoStub.java"],
-    visibility = ["//visibility:private"],
     deps = [
         "//src/devtools/mobileharness/api/model/proto:device_java_proto",
         "//src/devtools/mobileharness/api/query/proto:lab_query_java_proto",
@@ -58,6 +59,17 @@ java_library(
         "@io_grpc_grpc_java//core",
         "@maven//:com_google_guava_guava",
         "@maven//:com_google_inject_guice",
+    ],
+)
+
+java_library(
+    name = "ats_olc_server_connection",
+    srcs = ["AtsOlcServerConnection.java"],
+    deps = [
+        ":ats_dda_stub",
+        ":ats_lab_info_stub",
+        "@io_grpc_grpc_java//core",
+        "@io_grpc_grpc_java//netty",
     ],
 )
 
