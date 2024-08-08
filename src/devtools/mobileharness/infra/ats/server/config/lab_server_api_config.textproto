@@ -3,7 +3,5 @@
 
 composite_dimension {
   supported_dimension {
-    name: "recovery"
-    value: "test_harness"
   }
 }
