@@ -125,6 +125,13 @@ public class XtsTradefedTest extends BaseDriver
   private static final ImmutableList<String> EXCLUDED_JAR_FILE_PATTERNS =
       ImmutableList.of("art-run-test.*", "art-gtest-jars.*");
 
+  private static final ImmutableSet<String> FILTER_KEYS =
+      ImmutableSet.of(
+          "--include-filter",
+          "--exclude-filter",
+          "--compatibility:include-filter",
+          "--compatibility:exclude-filter");
+
   private static final String TF_PATH_KEY = "TF_PATH";
 
   private static final Duration KILL_TF_AFTER_FINISH_TIME = Duration.ofMinutes(5L);
@@ -804,10 +811,21 @@ public class XtsTradefedTest extends BaseDriver
       String configTemplate = localFileUtil.readFile(spec.getXtsTestPlanFile());
       StringSubstitutor sub = new StringSubstitutor(envVars);
       String config = sub.replace(configTemplate);
+
+      ImmutableList.Builder<String> formattedCommandBuilder = ImmutableList.<String>builder();
+      for (int i = 0; i < xtsCommand.size(); i++) {
+        if (i > 0 && FILTER_KEYS.contains(xtsCommand.get(i - 1))) {
+          formattedCommandBuilder.add(String.format("\"%s\"", xtsCommand.get(i)));
+        } else {
+          formattedCommandBuilder.add(xtsCommand.get(i));
+        }
+      }
+
       // Replace ${COMMAND} with the xTS command
       config =
           config.replace(
-              TradefedConfigGenerator.COMMAND_LINE_TEMPLATE, String.join(" ", xtsCommand));
+              TradefedConfigGenerator.COMMAND_LINE_TEMPLATE,
+              String.join(" ", formattedCommandBuilder.build()));
       // Replace ${FILE_tag} with the real file path
       for (Entry<String, String> entry : testInfo.jobInfo().files().getAll().entries()) {
         config =
