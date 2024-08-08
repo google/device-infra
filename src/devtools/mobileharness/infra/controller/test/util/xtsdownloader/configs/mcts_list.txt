@@ -1,3 +1,6 @@
+# deviceinfra:google3-begin(internal)
+# LINT.IfChange
+# deviceinfra:google3-end
 AdExtServicesGaUxAlreadyEnrolledChannelEuTest
 AdExtServicesGaUxAlreadyEnrolledChannelRowTest
 AdExtServicesGaUxDebugChannelApiOffTest
@@ -165,3 +168,6 @@ net-tests-utils-host-common
 odsign_e2e_tests
 SdkSandboxManagerDisabledTests
 SdkSandboxManagerTests
+# deviceinfra:google3-begin(internal)
+# LINT.ThenChange(//depot/google3/configs/wireless/android/testing/atp/prod/android-xts/cts/templates/common.gcl)
+# deviceinfra:google3-end
