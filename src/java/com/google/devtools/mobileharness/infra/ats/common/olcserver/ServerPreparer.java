@@ -53,6 +53,7 @@ import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.command.CommandProcess;
 import com.google.devtools.mobileharness.shared.util.command.CommandStartException;
+import com.google.devtools.mobileharness.shared.util.command.LineCallback;
 import com.google.devtools.mobileharness.shared.util.command.java.JavaCommandCreator;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
@@ -65,6 +66,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.stream.Stream;
@@ -225,13 +227,16 @@ public class ServerPreparer {
       ImmutableList.Builder<String> startOlcServerCommandBuilder = ImmutableList.builder();
       startOlcServerCommandBuilder.add("nohup");
       startOlcServerCommandBuilder.addAll(
-          JavaCommandCreator.of(
-                  /* useStandardInvocationForm= */ true, requireNonNull(javaPath.get()).toString())
-              .createJavaCommand(serverBinaryPath, serverFlags, serverNativeArguments));
+          wrapExecutablePath(
+              JavaCommandCreator.of(
+                      /* useStandardInvocationForm= */ true,
+                      requireNonNull(javaPath.get()).toString())
+                  .createJavaCommand(serverBinaryPath, serverFlags, serverNativeArguments)));
       startOlcServerCommandBuilder.add(">" + serverOutputPath).add("2>&1").add("&");
 
       // Starts the server process.
       CommandProcess serverProcess;
+      StringBuilderLineCallback serverOutputLineCallback = new StringBuilderLineCallback();
       try {
         serverProcess =
             commandExecutor.start(
@@ -240,6 +245,8 @@ public class ServerPreparer {
                             "sh", "-c", Joiner.on(" ").join(startOlcServerCommandBuilder.build())))
                     .timeout(ChronoUnit.YEARS.getDuration())
                     .redirectStderr(false)
+                    .onStdout(serverOutputLineCallback)
+                    .onStderr(serverOutputLineCallback)
                     .needStdoutInResult(false)
                     .needStderrInResult(false));
       } catch (CommandStartException e) {
@@ -258,33 +265,39 @@ public class ServerPreparer {
         GetVersionResponse serverVersion = connectWithRetry();
 
         // The server starts successfully.
-        serverProcess.stopReadingOutput();
         serverStartingLogger.log(
             "OLC server started, port=%s, pid=%s",
             Flags.instance().olcServerPort.getNonNull(), serverVersion.getProcessId());
       } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
         // Kills the wrapper process.
-        if (serverProcess != null && serverProcess.isAlive()) {
+        if (serverProcess.isAlive()) {
           serverStartingLogger.log("Killing OLC server");
           serverProcess.kill();
         }
 
         try {
-          printServerStartingLogFromLogFile(serverOutputPath);
+          printServerStartingLog(serverOutputPath, serverOutputLineCallback);
         } catch (MobileHarnessException | RuntimeException | Error readLogException) {
           logger.atWarning().withCause(readLogException).log(
               "Failed to print server starting log from the log file.");
         }
         throw e;
+      } finally {
+        serverProcess.stopReadingOutput();
       }
     }
   }
 
-  private void printServerStartingLogFromLogFile(String serverOutputPath)
+  private void printServerStartingLog(
+      String serverOutputPath, StringBuilderLineCallback serverOutputLineCallback)
       throws MobileHarnessException {
     String serverStartingLog;
 
-    if (!serverOutputPath.equals("/dev/null") && localFileUtil.isFileExist(serverOutputPath)) {
+    String serverOutput = serverOutputLineCallback.toString();
+    if (!serverOutput.isEmpty()) {
+      serverStartingLog = serverOutput;
+    } else if (!serverOutputPath.equals("/dev/null")
+        && localFileUtil.isFileExist(serverOutputPath)) {
       serverStartingLog = localFileUtil.readFile(serverOutputPath);
     } else {
       Path logFile = Path.of(OlcServerDirs.getLogDir()).resolve("log0.txt");
@@ -447,6 +460,36 @@ public class ServerPreparer {
           "Using existing OLC server in a different version, "
               + "version of OLC server: [%s], version of %s: [%s]",
           shortDebugString(serverVersion), clientComponentName, shortDebugString(clientVersion));
+    }
+  }
+
+  /** Wraps the executable path of the command just in case that it contains special characters. */
+  private static ImmutableList<String> wrapExecutablePath(List<String> command) {
+    String executablePath = "'" + command.get(0) + "'";
+    ImmutableList.Builder<String> result =
+        ImmutableList.<String>builderWithExpectedSize(command.size()).add(executablePath);
+    command.stream().skip(1L).forEach(result::add);
+    return result.build();
+  }
+
+  private static class StringBuilderLineCallback implements LineCallback {
+
+    @GuardedBy("itself")
+    private final StringBuilder stringBuilder = new StringBuilder();
+
+    @Override
+    public Response onLine(String line) {
+      synchronized (stringBuilder) {
+        stringBuilder.append(line).append('\n');
+      }
+      return Response.empty();
+    }
+
+    @Override
+    public String toString() {
+      synchronized (stringBuilder) {
+        return stringBuilder.toString();
+      }
     }
   }
 }
