@@ -90,7 +90,6 @@ java_library(
     ],
     visibility = [
         # Only for Mobile Harness internal use.
-        "//src/java/com/google/devtools/mobileharness/infra/controller/test/util:__subpackages__",
     ],
     deps = [
         ":base",
