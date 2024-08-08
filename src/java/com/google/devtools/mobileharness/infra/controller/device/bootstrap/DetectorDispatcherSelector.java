@@ -16,21 +16,28 @@
 
 package com.google.devtools.mobileharness.infra.controller.device.bootstrap;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.devicemanager.detector.Detector;
 import com.google.devtools.mobileharness.api.devicemanager.dispatcher.Dispatcher;
 import com.google.devtools.mobileharness.infra.controller.device.DispatcherManager;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 /** Selector for selecting and preparing {@link DetectorsAndDispatchers} for a device manager. */
 public final class DetectorDispatcherSelector {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final ListeningExecutorService executorService =
+      ThreadPools.createStandardThreadPool("detector-dispatcher");
 
   /** The component where the device manager is. */
   public enum Component {
@@ -45,12 +52,13 @@ public final class DetectorDispatcherSelector {
   }
 
   public DetectorsAndDispatchers selectDetectorsAndDispatchers() throws InterruptedException {
-    ImmutableList<Detector> supportedDetectors = selectSupportedDetectors();
+    ImmutableList<AsyncDetector> detectorCandidates = selectSupportedDetectors();
     ImmutableList<Class<? extends Dispatcher>> supportedDispatchers = selectSupportedDispatchers();
-    return DetectorsAndDispatchers.of(supportedDetectors, supportedDispatchers);
+    return DetectorsAndDispatchers.of(
+        checkDetectorsAsync(detectorCandidates), supportedDispatchers);
   }
 
-  private ImmutableList<Detector> selectSupportedDetectors() throws InterruptedException {
+  private ImmutableList<AsyncDetector> selectSupportedDetectors() {
     ImmutableList<Detector> detectorCandidates;
     if (component == Component.LOCAL_MODE) {
       detectorCandidates =
@@ -63,7 +71,7 @@ public final class DetectorDispatcherSelector {
               ? AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss()
               : AllDetectorsAndDispatchers.detectorCandidatesForLabServerOss();
     }
-    return checkDetectors(detectorCandidates);
+    return detectorCandidates.stream().map(AsyncDetector::new).collect(toImmutableList());
   }
 
   private ImmutableList<Class<? extends Dispatcher>> selectSupportedDispatchers() {
@@ -87,15 +95,36 @@ public final class DetectorDispatcherSelector {
   @VisibleForTesting
   static ImmutableList<Detector> checkDetectors(List<Detector> detectorCandidates)
       throws InterruptedException {
+    return checkDetectorsAsync(
+        detectorCandidates.stream().map(AsyncDetector::new).collect(toImmutableList()));
+  }
+
+  private static ImmutableList<Detector> checkDetectorsAsync(List<AsyncDetector> detectorCandidates)
+      throws InterruptedException {
     ImmutableList.Builder<Detector> supportedDetectors = ImmutableList.builder();
-    for (Detector detector : detectorCandidates) {
-      if (detector.precondition()) {
-        supportedDetectors.add(detector);
-      } else {
-        logger.atWarning().log(
-            "Current system environment does not support %s", detector.getClass().getSimpleName());
+    for (var result : detectorCandidates) {
+      try {
+        if (result.asyncPrecondition.get()) {
+          supportedDetectors.add(result.detector);
+        } else {
+          logger.atWarning().log(
+              "Current system environment does not support %s",
+              result.detector.getClass().getSimpleName());
+        }
+      } catch (ExecutionException e) {
+        throw new IllegalStateException(e);
       }
     }
     return supportedDetectors.build();
+  }
+
+  private static final class AsyncDetector {
+    private final Detector detector;
+    private final ListenableFuture<Boolean> asyncPrecondition;
+
+    AsyncDetector(Detector detector) {
+      this.detector = detector;
+      asyncPrecondition = executorService.submit(detector::precondition);
+    }
   }
 }
