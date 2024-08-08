@@ -134,6 +134,15 @@ public class TestManager<T extends TestRunner> implements Runnable {
     }
   }
 
+  /** Kills all tests. */
+  public void killAllTests() {
+    synchronized (testRunners) {
+      for (TestRunner runner : testRunners.values()) {
+        runner.kill(/* timeout= */ false);
+      }
+    }
+  }
+
   /** Checks whether there is any {@link TestRunner} running. */
   public boolean isAnyTestRunning() {
     synchronized (testRunners) {

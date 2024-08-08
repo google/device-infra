@@ -21,7 +21,6 @@ import static com.google.devtools.mobileharness.shared.util.concurrent.Callables
 import com.google.auto.value.AutoValue;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
@@ -35,6 +34,7 @@ import com.google.devtools.mobileharness.infra.client.api.mode.ExecMode;
 import com.google.devtools.mobileharness.infra.client.api.plugin.TestRetryHandler;
 import com.google.devtools.mobileharness.infra.controller.test.event.TestExecutionEndedEvent;
 import com.google.devtools.mobileharness.shared.util.comm.messaging.poster.TestMessagePoster;
+import com.google.devtools.mobileharness.shared.util.error.MoreThrowables;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
@@ -162,9 +162,19 @@ public class JobManager implements Runnable {
         Future<?> future = runnerFuture.jobRunnerFuture();
         JobInfo jobInfo = runner.getJobInfo();
         if (runner.isRunning() || !future.isDone()) {
+          // Interrupts test runner thread.
+          try {
+            runner.killAllTests();
+          } catch (RuntimeException | Error e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to kill tests of job %s", jobInfo.locator());
+          }
+
+          // Interrupts job runner thread.
           future.cancel(true);
           logger.atInfo().log(
-              "Call stack for killJob: %s", Throwables.getStackTraceAsString(new Throwable()));
+              "Call stack for killJob: %s",
+              MoreThrowables.shortDebugCurrentStackTrace(/* maxLength= */ 0));
           jobInfo.log().atInfo().alsoTo(logger).log("Kill job %s", jobId);
         } else {
           jobRunners.remove(jobId);

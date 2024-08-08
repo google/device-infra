@@ -42,6 +42,8 @@ public interface TestRunner {
   /**
    * Kills the test.
    *
+   * <p>Killing a finished test has no effect.
+   *
    * @param timeout if the test is killed because it timeouts
    * @return how many times the current test has been killed
    */

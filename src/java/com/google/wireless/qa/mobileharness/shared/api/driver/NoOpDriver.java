@@ -130,6 +130,9 @@ public class NoOpDriver extends BaseDriver implements SpecConfigable<NoOpDriverS
         testInfo.log().atInfo().alsoTo(logger).log("Sleep for %d seconds", sleepTimeSec);
         WakeupReason wakeupReason = wakeupFuture.get(sleepTimeSec, SECONDS);
         testInfo.log().atInfo().alsoTo(logger).log("Wake up from sleep, reason=%s", wakeupReason);
+      } catch (InterruptedException e) {
+        testInfo.log().atInfo().alsoTo(logger).log("Interrupted from sleep");
+        throw e;
       } catch (ExecutionException e) {
         throw new AssertionError(e); // The future will never be set with an exception.
       } catch (TimeoutException e) {

@@ -19,7 +19,6 @@ package com.google.devtools.mobileharness.infra.client.api.controller.job;
 import static com.google.common.collect.Comparators.min;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.joining;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -166,8 +165,8 @@ public class JobRunner implements Runnable {
   /** The number of using the real-time polling allocation interval multiplier. */
   private static final int NUM_USE_REAL_TIME_POLL_ALLOCATION_INTERVAL_MULTIPLIER = 15;
 
-  /** Timeout in milliseconds for waiting for the test thread pool terminate. */
-  private static final long TERMINATE_TEST_TIMEOUT_MS = Duration.ofMinutes(5).toMillis();
+  /** Timeout for waiting for the test thread pool terminate. */
+  private static final Duration TERMINATE_TEST_TIMEOUT = Duration.ofMinutes(5);
 
   /** Interval for checking the tests which are waiting for allocating devices. */
   private static final Duration CHECK_NEW_TESTS_INTERVAL = Duration.ofSeconds(30);
@@ -700,6 +699,12 @@ public class JobRunner implements Runnable {
     }
   }
 
+  /** Kills all tests of the job. */
+  public void killAllTests() {
+    logger.atInfo().log("Stop all tests of job %s", jobInfo.locator());
+    testManager.killAllTests();
+  }
+
   /**
    * Gets the correct test allocation start time. When a test retries, the test allocation time is
    * different from the job allocation start time.
@@ -950,23 +955,27 @@ public class JobRunner implements Runnable {
     try {
       logger.at(jobError == null ? Level.INFO : Level.WARNING).log(
           "Job runner post run job%s", jobError == null ? "" : " with exception " + jobError);
+
       // Catches all Exception of each operations below to make sure the all operations are
       // executed. It is OK to swallow InterruptedException here, the job thread is ending soon.
       logger.atInfo().log("Shutdown test thread pool");
       try {
         threadPool.shutdownNow();
-        threadPool.awaitTermination(TERMINATE_TEST_TIMEOUT_MS, MILLISECONDS);
+        boolean terminated = threadPool.awaitTermination(TERMINATE_TEST_TIMEOUT);
+        if (!terminated) {
+          jobInfo
+              .errors()
+              .addAndLog(
+                  new MobileHarnessException(
+                      InfraErrorId.CLIENT_JR_JOB_SHUT_DOWN_THRAD_POOL_INTERRUPTED,
+                      String.format(
+                          "Failed to terminate test thread pool of job %s within %s",
+                          jobInfo.locator(), TERMINATE_TEST_TIMEOUT)),
+                  logger);
+        }
       } catch (InterruptedException e) {
-        jobInfo
-            .errors()
-            .addAndLog(
-                new MobileHarnessException(
-                    InfraErrorId.CLIENT_JR_JOB_SHUT_DOWN_THRAD_POOL_INTERRUPTED,
-                    String.format(
-                        "Failed to terminate test thread pool of job %s within %d ms",
-                        jobInfo.locator(), TERMINATE_TEST_TIMEOUT_MS),
-                    e),
-                logger);
+        logger.atInfo().log(
+            "Interrupted when terminating test thread pool of job %s", jobInfo.locator());
       } catch (RuntimeException e) {
         String errorMessage = "Failed to shutdown test thread pool";
         logger.atWarning().withCause(e).log("%s", errorMessage);
@@ -977,6 +986,7 @@ public class JobRunner implements Runnable {
                     InfraErrorId.CLIENT_JR_JOB_SHUT_DOWN_THREAD_POOL_FATAL_ERROR, errorMessage, e));
       }
 
+      // Finalizes job.
       logger.atInfo().log("Finalize job");
       try {
         finalizeJobResult(failFastError, isDeviceAllocatorSetUp, false, jobError);

@@ -16,8 +16,10 @@
 
 package com.google.devtools.mobileharness.infra.client.api;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.truth.Truth.assertThat;
 import static com.google.common.truth.Truth.assertWithMessage;
+import static com.google.devtools.mobileharness.shared.util.concurrent.MoreFutures.logFailure;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.google.common.base.Splitter;
@@ -25,17 +27,23 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.eventbus.EventBus;
+import com.google.common.eventbus.Subscribe;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.truth.Correspondence;
 import com.google.common.truth.Correspondence.BinaryPredicate;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.api.model.proto.Job.Retry;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
+import com.google.devtools.mobileharness.api.testrunner.event.test.LocalDriverStartingEvent;
 import com.google.devtools.mobileharness.infra.client.api.Annotations.GlobalInternalEventBus;
 import com.google.devtools.mobileharness.infra.client.api.mode.local.LocalMode;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.ContextScope;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationInfo;
 import com.google.devtools.mobileharness.shared.context.InvocationContext.InvocationType;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.logging.MobileHarnessLogFormatter;
+import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.Guice;
 import com.google.inject.testing.fieldbinder.Bind;
 import com.google.inject.testing.fieldbinder.BoundFieldModule;
@@ -46,8 +54,10 @@ import com.google.wireless.qa.mobileharness.shared.model.job.JobSetting;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.JobType;
 import java.io.ByteArrayOutputStream;
+import java.time.Duration;
 import java.util.List;
 import java.util.logging.Handler;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.StreamHandler;
 import javax.inject.Inject;
@@ -60,7 +70,12 @@ import org.junit.runners.JUnit4;
 @RunWith(JUnit4.class)
 public class ClientApiTest {
 
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
   private static final Logger rootLogger = Logger.getLogger("");
+
+  private final ListeningScheduledExecutorService scheduledThreadPool =
+      ThreadPools.createStandardScheduledThreadPool("testing-scheduled-thread-pool", 1);
 
   private final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
   private Handler logHandler;
@@ -71,7 +86,19 @@ public class ClientApiTest {
 
   @Before
   public void setUp() {
-    Flags.parse(new String[] {"--no_op_device_num=1", "--detect_adb_device=false"});
+    ImmutableMap<String, String> flagMap =
+        ImmutableMap.of(
+            "detect_adb_device",
+            "false",
+            "external_adb_initializer_template",
+            "true",
+            "no_op_device_num",
+            "1");
+    ImmutableList<String> flagList =
+        flagMap.entrySet().stream()
+            .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
+            .collect(toImmutableList());
+    Flags.parse(flagList.toArray(new String[0]));
 
     logHandler = new StreamHandler(outputStream, MobileHarnessLogFormatter.getDefaultFormatter());
     rootLogger.addHandler(logHandler);
@@ -90,7 +117,7 @@ public class ClientApiTest {
 
   @Test
   public void startJob() throws Exception {
-    JobInfo jobInfo = createJobInfo();
+    JobInfo jobInfo = createJobInfo(/* sleepTimeSec= */ 5);
 
     try (var ignored =
         new ContextScope(
@@ -137,7 +164,35 @@ public class ClientApiTest {
     }
   }
 
-  private static JobInfo createJobInfo() {
+  @Test
+  public void killJob() throws Exception {
+    JobInfo jobInfo = createJobInfo(/* sleepTimeSec= */ 60);
+
+    clientApi.startJob(jobInfo, new LocalMode(), ImmutableList.of(this));
+
+    clientApi.waitForJob(jobInfo.locator().getId());
+    Sleeper.defaultSleeper().sleep(Duration.ofSeconds(10L));
+
+    TestInfo testInfo = Iterables.getOnlyElement(jobInfo.tests().getAll().values());
+    assertThat(testInfo.log().get(0)).contains("Interrupted from sleep");
+  }
+
+  @Subscribe
+  private void onDriverStarting(LocalDriverStartingEvent event) {
+    if (event.getDriverName().equals("NoOpDriver")) {
+      logFailure(
+          scheduledThreadPool.schedule(
+              () -> {
+                logger.atInfo().log("Kill job");
+                clientApi.killJob(event.getTest().jobInfo().locator().getId());
+              },
+              Duration.ofSeconds(1L)),
+          Level.WARNING,
+          "Error when killing job");
+    }
+  }
+
+  private static JobInfo createJobInfo(int sleepTimeSec) {
     JobInfo jobInfo =
         JobInfo.newBuilder()
             .setLocator(new JobLocator("fake_job_name"))
@@ -147,7 +202,7 @@ public class ClientApiTest {
                     .setRetry(Retry.newBuilder().setTestAttempts(1).build())
                     .build())
             .build();
-    jobInfo.params().add("sleep_time_sec", "5");
+    jobInfo.params().add("sleep_time_sec", Integer.toString(sleepTimeSec));
     return jobInfo;
   }
 }
