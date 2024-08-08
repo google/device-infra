@@ -889,6 +889,14 @@ public class Flags {
       converter = DurationFlag.DurationConverter.class)
   public Flag<Duration> fileTransferLocalCacheTtl = fileTransferLocalCacheTtlDefault;
 
+  private static final Flag<Integer> gcsUtilThreadsDefault = Flag.value(30);
+
+  @com.beust.jcommander.Parameter(
+      names = "--gcs_util_threads",
+      description = "Thread pool size for uploading/downloading GCS files in parallel.",
+      converter = Flag.IntegerConverter.class)
+  public Flag<Integer> gcsUtilThreads = gcsUtilThreadsDefault;
+
   private static final Flag<Duration> getTestStatusRpcCallIntervalDefault =
       DurationFlag.value(Duration.ofSeconds(5L));
 

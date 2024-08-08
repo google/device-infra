@@ -47,6 +47,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -260,6 +261,7 @@ public class LocalFileUtil {
    *
    * @throws MobileHarnessException if the file or directory does not exist
    */
+  @CanIgnoreReturnValue
   public Path checkFileOrDir(Path fileOrDir) throws MobileHarnessException {
     if (!Files.exists(fileOrDir)) {
       throw new MobileHarnessException(
@@ -1489,6 +1491,20 @@ public class LocalFileUtil {
           e);
     }
     return outputStream.toByteArray();
+  }
+
+  /**
+   * Returns a buffered input stream to read from a file.
+   *
+   * @throws MobileHarnessException if file not exists.
+   */
+  public InputStream newInputStream(Path path) throws MobileHarnessException {
+    try {
+      return new BufferedInputStream(new FileInputStream(path.toFile()));
+    } catch (FileNotFoundException e) {
+      throw new MobileHarnessException(
+          BasicErrorId.LOCAL_FILE_OR_DIR_NOT_FOUND, "File not found: " + path, e);
+    }
   }
 
   /**
