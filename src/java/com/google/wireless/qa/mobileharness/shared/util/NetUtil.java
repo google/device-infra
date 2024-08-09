@@ -174,14 +174,19 @@ public class NetUtil {
   public Optional<String> getUniqueHostIpOrEmpty(Optional<List<NetworkInterfaceInfo>> interfaces) {
     if (interfaces.isPresent()) {
       List<InetAddress> ips = new ArrayList<>();
-      interfaces.get().forEach(networkInterfaceInfo -> ips.addAll(networkInterfaceInfo.ips()));
+      interfaces
+          .get()
+          .forEach(
+              networkInterfaceInfo -> {
+                ips.addAll(networkInterfaceInfo.ips());
+              });
       // Could return site local address if it is the only one address in system.
       if (ips.size() == 1) {
         return Optional.of(ips.get(0).getHostAddress());
       }
 
       // List the non-site-local IP addresses.
-      List<InetAddress> corpAddressList =
+      ImmutableList<InetAddress> corpAddressList =
           ips.stream().filter(address -> !address.isSiteLocalAddress()).collect(toImmutableList());
       // If only one non-site-local address in the list.
       if (corpAddressList != null && corpAddressList.size() == 1) {
