@@ -141,6 +141,7 @@ message CommandDetail {
   optional google.protobuf.Timestamp end_time = 12;
   optional google.protobuf.Timestamp create_time = 13;
   optional google.protobuf.Timestamp update_time = 14;
+  optional int64 total_module_count = 15;
 }
 
 enum CommandState {

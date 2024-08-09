@@ -218,8 +218,7 @@ final class AtsServerSessionPlugin {
         updateSessionPluginOutput();
       }
 
-      if (requestDetail.getState().equals(RequestState.ERROR)
-          && requestDetail.getMaxRetryOnTestFailures() > 0) {
+      if (canRetrySession(requestDetail.build())) {
         try {
           retrySession();
         } catch (MobileHarnessException e) {
@@ -298,6 +297,15 @@ final class AtsServerSessionPlugin {
         localSessionStub.createSession(createSessionRequest).getSessionId().getId();
     requestDetail.setNextAttemptSessionId(nextAttemptSessionId);
     updateSessionPluginOutput();
+  }
+
+  // TODO: create more concrete retry strategy.
+  private boolean canRetrySession(RequestDetail requestDetail) {
+    return requestDetail.getState().equals(RequestState.ERROR)
+        && requestDetail.getMaxRetryOnTestFailures() > 0
+        && !requestDetail.getCommandDetailsMap().isEmpty()
+        && requestDetail.getCommandDetailsMap().values().iterator().next().getTotalModuleCount()
+            != 0;
   }
 
   private void createNonTradefedJobs() throws MobileHarnessException, InterruptedException {

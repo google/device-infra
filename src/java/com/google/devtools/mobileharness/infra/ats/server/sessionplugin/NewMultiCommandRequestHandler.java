@@ -575,7 +575,8 @@ final class NewMultiCommandRequestHandler {
           if (result.isPresent() && result.get().hasSummary()) {
             commandDetailBuilder
                 .setPassedTestCount(result.get().getSummary().getPassed())
-                .setFailedTestCount(result.get().getSummary().getFailed());
+                .setFailedTestCount(result.get().getSummary().getFailed())
+                .setTotalModuleCount(result.get().getSummary().getModulesTotal());
             commandDetailBuilder.setTotalTestCount(
                 commandDetailBuilder.getPassedTestCount()
                     + commandDetailBuilder.getFailedTestCount());
