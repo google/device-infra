@@ -507,7 +507,8 @@ public class AndroidSystemSpecUtil {
   /** Check whether the given device ID is of type Cuttlefish. */
   public boolean isCuttlefishEmulator(String serial)
       throws MobileHarnessException, InterruptedException {
-    return adbUtil.getProperty(serial, AndroidProperty.MODEL).startsWith("Cuttlefish");
+    return adbUtil.getProperty(serial, AndroidProperty.MODEL).startsWith("Cuttlefish")
+        || adbUtil.getProperty(serial, AndroidProperty.MODEL).startsWith("cf_x86_64");
   }
 
   /**
