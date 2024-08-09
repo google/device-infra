@@ -60,7 +60,6 @@ import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
-import com.google.errorprone.annotations.FormatMethod;
 import io.grpc.Status.Code;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -81,6 +80,9 @@ public class ServerPreparer {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
 
+  private static final String SH_COMMAND = "sh";
+  private static final String NOHUP_COMMAND = "nohup";
+
   private static final Duration HEARTBEAT_INTERVAL = Duration.ofSeconds(10L);
 
   private static final int MAX_CONNECT_SERVER_ATTEMPTS = 25;
@@ -89,16 +91,8 @@ public class ServerPreparer {
   private static final ImmutableList<String> UNFINISHED_SESSIONS_TABLE_HEADER =
       ImmutableList.of("Session ID", "Name", "Status", "Submitted Time");
 
-  /** Logger for printing logs of OLC server until it starts successfully. */
-  @FunctionalInterface
-  public interface ServerStartingLogger {
-    @FormatMethod
-    void log(String format, Object... args);
-  }
-
   private final String clientComponentName;
   private final String clientId;
-  private final ServerStartingLogger serverStartingLogger;
   private final CommandExecutor commandExecutor;
   private final Sleeper sleeper;
   private final SystemUtil systemUtil;
@@ -119,7 +113,6 @@ public class ServerPreparer {
   ServerPreparer(
       @ClientComponentName String clientComponentName,
       @ClientId String clientId,
-      ServerStartingLogger serverStartingLogger,
       CommandExecutor commandExecutor,
       Sleeper sleeper,
       SystemUtil systemUtil,
@@ -132,7 +125,6 @@ public class ServerPreparer {
       ListeningScheduledExecutorService scheduledThreadPool) {
     this.clientComponentName = clientComponentName;
     this.clientId = clientId;
-    this.serverStartingLogger = serverStartingLogger;
     this.commandExecutor = commandExecutor;
     this.sleeper = sleeper;
     this.systemUtil = systemUtil;
@@ -189,7 +181,7 @@ public class ServerPreparer {
       GetVersionResponse version = tryConnectToOlcServer().orElse(null);
       if (version != null) {
         if (firstPreparation) {
-          serverStartingLogger.log(
+          logger.atInfo().log(
               "Connected to existing OLC server, version=[%s]", shortDebugString(version));
         }
 
@@ -197,7 +189,7 @@ public class ServerPreparer {
           killExistingServer(/* forcibly= */ false);
         } else {
           if (firstPreparation) {
-            serverStartingLogger.log("Using existing OLC server");
+            logger.atInfo().log("Using existing OLC server");
             checkAndPrintServerVersionWarning(version);
           }
           return;
@@ -205,7 +197,7 @@ public class ServerPreparer {
       }
 
       // Starts a new server.
-      serverStartingLogger.log("Starting new OLC server...");
+      logger.atInfo().log("Starting new OLC server...");
       String serverBinaryPath = requireNonNull(serverBinary.get()).toString();
       localFileUtil.checkFile(serverBinaryPath);
       ImmutableList<String> serverFlags =
@@ -225,7 +217,7 @@ public class ServerPreparer {
       // Creates the command to start the server.
       String serverOutputPath = Flags.instance().atsConsoleOlcServerOutputPath.getNonNull();
       ImmutableList.Builder<String> startOlcServerCommandBuilder = ImmutableList.builder();
-      startOlcServerCommandBuilder.add("nohup");
+      startOlcServerCommandBuilder.add(NOHUP_COMMAND);
       startOlcServerCommandBuilder.addAll(
           wrapExecutablePath(
               JavaCommandCreator.of(
@@ -237,18 +229,18 @@ public class ServerPreparer {
       // Starts the server process.
       CommandProcess serverProcess;
       StringBuilderLineCallback serverOutputLineCallback = new StringBuilderLineCallback();
+      Command serverCommand =
+          Command.of(
+                  ImmutableList.of(
+                      SH_COMMAND, "-c", Joiner.on(" ").join(startOlcServerCommandBuilder.build())))
+              .timeout(ChronoUnit.YEARS.getDuration())
+              .redirectStderr(false)
+              .onStdout(serverOutputLineCallback)
+              .onStderr(serverOutputLineCallback)
+              .needStdoutInResult(false)
+              .needStderrInResult(false);
       try {
-        serverProcess =
-            commandExecutor.start(
-                Command.of(
-                        ImmutableList.of(
-                            "sh", "-c", Joiner.on(" ").join(startOlcServerCommandBuilder.build())))
-                    .timeout(ChronoUnit.YEARS.getDuration())
-                    .redirectStderr(false)
-                    .onStdout(serverOutputLineCallback)
-                    .onStderr(serverOutputLineCallback)
-                    .needStdoutInResult(false)
-                    .needStderrInResult(false));
+        serverProcess = commandExecutor.start(serverCommand);
       } catch (CommandStartException e) {
         throw new MobileHarnessException(
             InfraErrorId.ATSC_SERVER_PREPARER_START_OLC_SERVER_ERROR,
@@ -265,21 +257,23 @@ public class ServerPreparer {
         GetVersionResponse serverVersion = connectWithRetry();
 
         // The server starts successfully.
-        serverStartingLogger.log(
+        logger.atInfo().log(
             "OLC server started, port=%s, pid=%s",
             Flags.instance().olcServerPort.getNonNull(), serverVersion.getProcessId());
       } catch (MobileHarnessException | InterruptedException | RuntimeException | Error e) {
         // Kills the wrapper process.
         if (serverProcess.isAlive()) {
-          serverStartingLogger.log("Killing OLC server");
+          logger.atInfo().log("Killing OLC server");
           serverProcess.kill();
         }
 
         try {
-          printServerStartingLog(serverOutputPath, serverOutputLineCallback);
-        } catch (MobileHarnessException | RuntimeException | Error readLogException) {
-          logger.atWarning().withCause(readLogException).log(
+          printServerStartingFailureInfo(serverCommand, serverOutputPath, serverOutputLineCallback);
+        } catch (MobileHarnessException | RuntimeException | Error e2) {
+          logger.atWarning().withCause(e2).log(
               "Failed to print server starting log from the log file.");
+        } catch (InterruptedException e2) {
+          Thread.currentThread().interrupt();
         }
         throw e;
       } finally {
@@ -288,11 +282,16 @@ public class ServerPreparer {
     }
   }
 
-  private void printServerStartingLog(
-      String serverOutputPath, StringBuilderLineCallback serverOutputLineCallback)
-      throws MobileHarnessException {
-    String serverStartingLog;
+  private void printServerStartingFailureInfo(
+      Command serverCommand,
+      String serverOutputPath,
+      StringBuilderLineCallback serverOutputLineCallback)
+      throws MobileHarnessException, InterruptedException {
+    // Prints server command.
+    logger.atInfo().log("olc_server_command=%s", serverCommand.getCommand());
 
+    // Prints server starting log from stderr / redirected file / log files.
+    String serverStartingLog;
     String serverOutput = serverOutputLineCallback.toString();
     if (!serverOutput.isEmpty()) {
       serverStartingLog = serverOutput;
@@ -314,11 +313,15 @@ public class ServerPreparer {
         // Skip printing if the log file wasn't modified recently.
         return;
       }
-
       serverStartingLog = localFileUtil.readFile(logFile);
     }
+    logger.atInfo().log("OLC server log:\n%s", serverStartingLog);
 
-    serverStartingLogger.log("OLC server log:\n%s", serverStartingLog);
+    // Prints command versions.
+    logger.atInfo().log(
+        "sh version:\n%s", commandExecutor.run(Command.of(SH_COMMAND, "--version")));
+    logger.atInfo().log(
+        "nohup version:\n%s", commandExecutor.run(Command.of(NOHUP_COMMAND, "--version")));
   }
 
   /**
@@ -328,7 +331,7 @@ public class ServerPreparer {
    */
   public void killExistingServer(boolean forcibly)
       throws MobileHarnessException, InterruptedException {
-    serverStartingLogger.log("Killing existing OLC server...%s", forcibly ? " (forcibly)" : "");
+    logger.atInfo().log("Killing existing OLC server...%s", forcibly ? " (forcibly)" : "");
     KillServerResponse killServerResponse;
     try {
       killServerResponse =
@@ -349,7 +352,7 @@ public class ServerPreparer {
         try {
           requireNonNull(versionStub.get()).getVersion();
         } catch (GrpcExceptionWithErrorId e) {
-          serverStartingLogger.log("Existing OLC server (pid=%s) killed", serverPid);
+          logger.atInfo().log("Existing OLC server (pid=%s) killed", serverPid);
           return;
         }
       }
@@ -357,7 +360,7 @@ public class ServerPreparer {
 
     if (forcibly) {
       killServerProcess(serverPid);
-      serverStartingLogger.log("Existing OLC server (pid=%s) forcibly killed", serverPid);
+      logger.atInfo().log("Existing OLC server (pid=%s) forcibly killed", serverPid);
     } else {
       if (killServerResponse.getResultCase() == ResultCase.FAILURE) {
         throw MobileHarnessExceptionFactory.create(

@@ -33,7 +33,6 @@ import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionCancellation;
 import com.google.devtools.mobileharness.infra.ats.console.controller.proto.SessionPluginProto.AtsSessionPluginConfig;
@@ -83,8 +82,6 @@ public class AtsSessionStubTest {
   @ConsoleOutput(ConsoleOutput.Type.ERR_STREAM)
   private PrintStream errPrintStream;
 
-  @Bind private ServerStartingLogger serverStartingLogger;
-
   @Inject private ServerPreparer serverPreparer;
 
   @Inject
@@ -124,8 +121,6 @@ public class AtsSessionStubTest {
 
     outPrintStream = System.out;
     errPrintStream = System.err;
-
-    serverStartingLogger = (format, args) -> {};
 
     Path serverBinary =
         Path.of(

@@ -21,7 +21,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.system.SystemUtil;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -75,10 +74,5 @@ public final class AtsLocalRunnerModule extends AbstractModule {
   @Provides
   Sleeper provideSleeper() {
     return Sleeper.defaultSleeper();
-  }
-
-  @Provides
-  ServerStartingLogger provideOlcServerStartingLogger() {
-    return (format, args) -> System.out.printf(format + "%n", args);
   }
 }

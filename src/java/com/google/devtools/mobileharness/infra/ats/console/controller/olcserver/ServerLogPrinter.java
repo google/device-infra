@@ -16,6 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.console.controller.olcserver;
 
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
+import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.DEBUG;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.collect.ImmutableSet;
@@ -89,7 +91,10 @@ public class ServerLogPrinter {
   public void enable(boolean enable) throws MobileHarnessException, InterruptedException {
     synchronized (lock) {
       this.enable = enable;
-      consoleUtil.printlnStdout("%s server log.", enable ? "Printing" : "Stop printing");
+      logger
+          .atInfo()
+          .with(IMPORTANCE, DEBUG)
+          .log("%s server log.", enable ? "Printing" : "Stop printing");
 
       if (enable) {
         serverPreparer.prepareOlcServer();

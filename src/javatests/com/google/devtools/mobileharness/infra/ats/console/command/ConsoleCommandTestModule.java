@@ -22,12 +22,10 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunCommandParsingResultFuture;
 import com.google.devtools.mobileharness.infra.ats.console.ConsoleInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
 import com.google.inject.AbstractModule;
@@ -70,11 +68,6 @@ public class ConsoleCommandTestModule extends AbstractModule {
   @Provides
   Sleeper provideSleeper() {
     return Sleeper.defaultSleeper();
-  }
-
-  @Provides
-  ServerStartingLogger provideOlcServerStartingLogger(ConsoleUtil consoleUtil) {
-    return consoleUtil::printlnStderr;
   }
 
   @Provides

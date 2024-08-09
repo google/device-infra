@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
-import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer.ServerStartingLogger;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleLineReader;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ConsoleOutput;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.MainArgs;
@@ -35,7 +34,6 @@ import com.google.devtools.mobileharness.infra.ats.console.Annotations.RunComman
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.SystemProperties;
 import com.google.devtools.mobileharness.infra.ats.console.result.report.CompatibilityReportModule;
 import com.google.devtools.mobileharness.infra.ats.console.util.command.CommandHelper;
-import com.google.devtools.mobileharness.infra.ats.console.util.console.ConsoleUtil;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsCommandUtil;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.devtools.mobileharness.shared.util.time.Sleeper;
@@ -166,10 +164,5 @@ public class AtsConsoleModule extends AbstractModule {
   @Provides
   Sleeper provideSleeper() {
     return Sleeper.defaultSleeper();
-  }
-
-  @Provides
-  ServerStartingLogger provideOlcServerStartingLogger(ConsoleUtil consoleUtil) {
-    return consoleUtil::printlnStderr;
   }
 }
