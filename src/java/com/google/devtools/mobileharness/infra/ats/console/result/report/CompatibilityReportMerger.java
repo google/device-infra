@@ -49,6 +49,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.report.MoblyReportParser.MoblyReportInfo;
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.infra.ats.console.util.tradefed.TestRecordProtoUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommonUtil;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
@@ -169,8 +170,14 @@ public class CompatibilityReportMerger {
     }
 
     ImmutableList<Module> mergedModuleList = mergeModules(modules.build());
-    int modulesDoneInSummary = (int) mergedModuleList.stream().filter(Module::getDone).count();
-    int modulesTotalInSummary = mergedModuleList.size();
+
+    ImmutableList<Module> modulesWithoutModuleCheckers =
+        mergedModuleList.stream()
+            .filter(module -> !SuiteCommonUtil.isModuleChecker(module))
+            .collect(toImmutableList());
+    int modulesDoneInSummary =
+        (int) modulesWithoutModuleCheckers.stream().filter(Module::getDone).count();
+    int modulesTotalInSummary = modulesWithoutModuleCheckers.size();
 
     Summary summary =
         Summary.newBuilder()

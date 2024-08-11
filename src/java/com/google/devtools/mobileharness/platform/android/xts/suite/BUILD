@@ -114,6 +114,19 @@ java_library(
 )
 
 java_library(
+    name = "suite_common_util",
+    srcs = ["SuiteCommonUtil.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/report:__pkg__",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite/retry:__pkg__",
+    ],
+    deps = [
+        ":suite_common",
+        "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
+    ],
+)
+
+java_library(
     name = "suite_test_filter",
     srcs = ["SuiteTestFilter.java"],
     visibility = [
@@ -141,10 +154,12 @@ java_library(
         "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/controller/sessionplugin:__pkg__",
     ],
     deps = [
+        ":suite_common_util",
         "//src/devtools/mobileharness/infra/ats/console/result/proto:report_java_proto",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common:test_status",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:abi_util",
+        "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "//src/java/com/google/devtools/mobileharness/shared/util/time:time_utils",
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_guava_guava",

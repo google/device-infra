@@ -41,5 +41,8 @@ public final class SuiteCommon {
 
   public static final String TEST_REPORT_PROPERTY_HAS_NON_TF_MODULE = "has_non_tf_module";
 
+  public static final String MODULE_CHECKER_PRE = "PreModuleChecker";
+  public static final String MODULE_CHECKER_POST = "PostModuleChecker";
+
   private SuiteCommon() {}
 }

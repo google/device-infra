@@ -62,6 +62,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/result/xml:xml_constants",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console/util/tradefed:test_record_proto_util",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:suite_common_util",
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "//src/java/com/google/devtools/mobileharness/shared/util/logging:google_logger",
         "@maven//:com_google_guava_guava",

@@ -39,6 +39,7 @@ import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportPr
 import com.google.devtools.mobileharness.infra.ats.console.result.xml.XmlConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.TestStatus;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommonUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.subplan.SubPlan;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import java.nio.file.Path;
@@ -215,11 +216,15 @@ public class RetryReportMerger {
     long passedInSummary = 0;
     long failedInSummary = 0;
     int modulesDoneInSummary = 0;
-    int modulesTotalInSummary = mergedResult.getModuleInfoCount();
-    for (Module module : mergedResult.getModuleInfoList()) {
+    int modulesTotalInSummary = 0;
+    for (Module module :
+        mergedResult.getModuleInfoList().stream()
+            .filter(module -> !SuiteCommonUtil.isModuleChecker(module))
+            .collect(toImmutableList())) {
       if (module.getDone()) {
         modulesDoneInSummary++;
       }
+      modulesTotalInSummary++;
       passedInSummary += module.getPassed();
       failedInSummary += module.getFailedTests();
     }

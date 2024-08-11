@@ -20,6 +20,11 @@ import static java.util.Comparator.comparing;
 import static java.util.Comparator.comparingLong;
 
 import com.google.common.base.Ascii;
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Multimaps;
+import com.google.common.collect.TreeMultimap;
+import com.google.common.flogger.FluentLogger;
 import com.google.common.primitives.Longs;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Module;
 import com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result;
@@ -32,15 +37,31 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.SortedSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.annotation.Nullable;
 
 /** Generates the invocation summary. */
 public class SuiteResultReporter {
+
+  private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+
+  private static final Comparator<String> MODULE_CHECKER_NAME_COMPARATOR =
+      (String m1, String m2) -> {
+        // module name is in format of "<abi> <module name with parameter if any>"
+        ImmutableList<String> module1NameList = AbiUtil.parseId(m1);
+        ImmutableList<String> module2NameList = AbiUtil.parseId(m2);
+        int moduleNameCompareResult = module1NameList.get(1).compareTo(module2NameList.get(1));
+        if (moduleNameCompareResult != 0) {
+          return moduleNameCompareResult;
+        }
+        return module1NameList.get(0).compareTo(module2NameList.get(0));
+      };
 
   /* Gets an invocation summary for the given result. */
   public String getSummary(@Nullable Result result) {
@@ -49,6 +70,12 @@ public class SuiteResultReporter {
     Map<String, String> failedModule = new HashMap<>();
     // Map holding the preparation time for each Module.
     Map<String, ModulePrepTimes> preparationMap = new HashMap<>();
+    TreeMultimap<String, Module> moduleCheckers =
+        TreeMultimap.create(
+            MODULE_CHECKER_NAME_COMPARATOR,
+            (Module m1, Module m2) ->
+                // Reverses based on the module checker name
+                m2.getName().compareTo(m1.getName()));
     StringBuilder invocationSummary = new StringBuilder();
     long totalTests = 0L;
     long passedTests = 0L;
@@ -57,8 +84,12 @@ public class SuiteResultReporter {
     long assumeFailureTests = 0L;
 
     if (result != null) {
-      totalModules.set(result.getSummary().getModulesTotal());
       for (Module module : result.getModuleInfoList()) {
+        if (SuiteCommonUtil.isModuleChecker(module)) {
+          moduleCheckers.put(getModuleCheckerName(module), module);
+          continue;
+        }
+        totalModules.incrementAndGet();
         if (module.getDone()) {
           completeModules.incrementAndGet();
         } else {
@@ -95,6 +126,7 @@ public class SuiteResultReporter {
       printModuleTestTime(result.getModuleInfoList(), invocationSummary);
       printTopSlowModules(result.getModuleInfoList(), invocationSummary);
       printPreparationMetrics(preparationMap, invocationSummary);
+      printModuleCheckersMetric(moduleCheckers, invocationSummary);
       // TODO: Add PreparationMetrics, ModuleCheckersMetric, ModuleRetriesInformation
     }
     invocationSummary.append("=============== Summary ===============\n");
@@ -218,6 +250,30 @@ public class SuiteResultReporter {
     invocationSummary.append("=======================================================\n");
   }
 
+  private void printModuleCheckersMetric(
+      TreeMultimap<String, Module> moduleCheckers, StringBuilder invocationSummary) {
+    if (moduleCheckers.isEmpty()) {
+      return;
+    }
+    invocationSummary.append("============== Modules Checkers Times ==============\n");
+    long totalTime = 0L;
+    for (Entry<String, SortedSet<Module>> entry : Multimaps.asMap(moduleCheckers).entrySet()) {
+      for (Module module : entry.getValue()) {
+        invocationSummary.append(
+            String.format(
+                "    %s: %s\n",
+                module.getName(),
+                TimeUtils.toReadableDurationString(Duration.ofMillis(module.getRuntimeMillis()))));
+        totalTime += module.getRuntimeMillis();
+      }
+    }
+    invocationSummary.append(
+        String.format(
+            "Total module checkers time: %s\n",
+            TimeUtils.toReadableDurationString(Duration.ofMillis(totalTime))));
+    invocationSummary.append("====================================================\n");
+  }
+
   private static long getReportStartTime(Result result) {
     return result.getAttributeList().stream()
         .filter(attr -> attr.getKey().equals(XmlConstants.START_TIME_ATTR))
@@ -243,6 +299,18 @@ public class SuiteResultReporter {
 
   private static String getModuleName(Module module) {
     return AbiUtil.createId(module.getAbi(), module.getName());
+  }
+
+  private static String getModuleCheckerName(Module module) {
+    // Module check name is in the format of "<Pre/Post>ModuleChecker_<abi> <module name with
+    // parameter if any>"
+    List<String> moduleCheckerNameList = Splitter.on("_").splitToList(module.getName());
+    if (moduleCheckerNameList.size() != 2) {
+      logger.atWarning().log(
+          "Module checker name [%s] is not in the correct format.", module.getName());
+      return module.getName();
+    }
+    return moduleCheckerNameList.get(1);
   }
 
   /** Object holder for the preparation and tear down time of one module. */
