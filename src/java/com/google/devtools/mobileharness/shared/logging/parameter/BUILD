@@ -44,7 +44,6 @@ java_library(
     visibility = [
         "//src/java/com/google/devtools/mobileharness/infra/lab:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/shared/logging:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/shared/logging:__subpackages__",
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/logging/controller/uploader",
