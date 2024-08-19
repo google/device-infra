@@ -87,9 +87,7 @@ java_library(
 java_library(
     name = "ats_console_module",
     srcs = ["AtsConsoleModule.java"],
-    visibility = DEFAULT_VISIBILITY + [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/server:__subpackages__",
-    ],
+    visibility = DEFAULT_VISIBILITY,
     deps = [
         ":annotations",
         ":console_info",
@@ -122,9 +120,7 @@ java_library(
 java_library(
     name = "guice_factory",
     srcs = ["GuiceFactory.java"],
-    visibility = DEFAULT_VISIBILITY + [
-        "//src/java/com/google/devtools/mobileharness/infra/ats/server:__subpackages__",
-    ],
+    visibility = DEFAULT_VISIBILITY,
     deps = [
         "@maven//:com_google_inject_guice",
         "@maven//:info_picocli_picocli",
