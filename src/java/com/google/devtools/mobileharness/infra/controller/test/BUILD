@@ -151,6 +151,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:client_test_events",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:scoped_bus",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event/util:skip_information_handler",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/log:info_log_importance_scope",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/out",

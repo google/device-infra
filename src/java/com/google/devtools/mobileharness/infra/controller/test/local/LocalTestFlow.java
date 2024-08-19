@@ -78,6 +78,7 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartEve
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartedEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestStartingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
+import com.google.wireless.qa.mobileharness.shared.log.InfoLogImportanceScope;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
@@ -286,12 +287,14 @@ public class LocalTestFlow {
   /** Actual execution of a test. */
   void runTest(TestInfo testInfo, Driver driver)
       throws MobileHarnessException, InterruptedException {
-    testInfo
-        .log()
-        .atInfo()
-        .alsoTo(logger)
-        .log("--------- Device: RunTest (%s) ---------", testInfo.locator().getId());
-    driver.run(testInfo);
+    try (InfoLogImportanceScope ignored = new InfoLogImportanceScope()) {
+      testInfo
+          .log()
+          .atInfo()
+          .alsoTo(logger)
+          .log("--------- Device: RunTest (%s) ---------", testInfo.locator().getId());
+      driver.run(testInfo);
+    }
   }
 
   /** Device clean up after actually running a test. */

@@ -57,6 +57,7 @@ java_library(
         "LogContext.java",
     ],
     deps = [
+        ":info_log_importance_scope",
         ":log",
         ":log_collector_backend",
         ":log_data",
@@ -66,4 +67,10 @@ java_library(
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
     ],
+)
+
+java_library(
+    name = "info_log_importance_scope",
+    srcs = ["InfoLogImportanceScope.java"],
+    deps = ["//src/java/com/google/devtools/mobileharness/shared/constant/closeable"],
 )

@@ -64,6 +64,7 @@ import com.google.wireless.qa.mobileharness.shared.controller.event.util.ScopedE
 import com.google.wireless.qa.mobileharness.shared.controller.event.util.SkipInformationHandler;
 import com.google.wireless.qa.mobileharness.shared.controller.event.util.SkipInformationHandler.SkipInformation;
 import com.google.wireless.qa.mobileharness.shared.controller.event.util.SkipInformationHandler.SkipResultWithCause;
+import com.google.wireless.qa.mobileharness.shared.log.InfoLogImportanceScope;
 import com.google.wireless.qa.mobileharness.shared.model.allocation.Allocation;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestLocator;
@@ -934,33 +935,35 @@ public abstract class BaseTestRunner<T extends BaseTestRunner<T>> extends Abstra
   @CanIgnoreReturnValue
   protected final boolean postTestEvent(
       String eventType, boolean afterDriverExecution, Object... testEvents) {
-    List<Object> events = Arrays.asList(testEvents);
-    try {
-      if (afterDriverExecution) {
-        scopedEventBus.post(
-            events,
-            EventScope.JAR_PLUGIN,
-            EventScope.API_PLUGIN,
-            EventScope.INTERNAL_PLUGIN,
-            EventScope.GLOBAL_INTERNAL,
-            EventScope.CLASS_INTERNAL);
-      } else {
-        scopedEventBus.post(
-            events,
-            EventScope.CLASS_INTERNAL,
-            EventScope.GLOBAL_INTERNAL,
-            EventScope.INTERNAL_PLUGIN,
-            EventScope.API_PLUGIN,
-            EventScope.JAR_PLUGIN);
-      }
+    try (InfoLogImportanceScope ignored = new InfoLogImportanceScope()) {
+      try {
+        List<Object> events = Arrays.asList(testEvents);
+        if (afterDriverExecution) {
+          scopedEventBus.post(
+              events,
+              EventScope.JAR_PLUGIN,
+              EventScope.API_PLUGIN,
+              EventScope.INTERNAL_PLUGIN,
+              EventScope.GLOBAL_INTERNAL,
+              EventScope.CLASS_INTERNAL);
+        } else {
+          scopedEventBus.post(
+              events,
+              EventScope.CLASS_INTERNAL,
+              EventScope.GLOBAL_INTERNAL,
+              EventScope.INTERNAL_PLUGIN,
+              EventScope.API_PLUGIN,
+              EventScope.JAR_PLUGIN);
+        }
 
-      if (checkPluginExceptions(afterDriverExecution)) {
-        return true;
+        if (checkPluginExceptions(afterDriverExecution)) {
+          return true;
+        }
+      } catch (RuntimeException | Error e) {
+        logTestEventError(e, eventType);
       }
-    } catch (RuntimeException | Error e) {
-      logTestEventError(e, eventType);
+      return false;
     }
-    return false;
   }
 
   /**

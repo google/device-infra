@@ -86,6 +86,7 @@ java_library(
         "//src/java/com/google/wireless/qa/mobileharness/shared/constant:property",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/event:test",
         "//src/java/com/google/wireless/qa/mobileharness/shared/controller/plugin",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/log:info_log_importance_scope",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/allocation",
         "//src/java/com/google/wireless/qa/mobileharness/shared/model/job",
         "//src/java/com/google/wireless/qa/mobileharness/shared/proto:common_java_proto",

@@ -42,7 +42,7 @@ public class LogRecordImportance {
     // Importance >= 150
     // OLC server logs whose importance is not less than it will be shown in ATS console.
 
-    /** Logs from TestInfo/JobInfo log() have this importance by default. */
+    /** Logs from TestInfo/JobInfo log() in driver/decorator/plugin will have this importance. */
     TEST_INFO(150),
 
     IMPORTANT(200),
