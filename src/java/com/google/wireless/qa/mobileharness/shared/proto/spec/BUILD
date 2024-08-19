@@ -20,8 +20,6 @@ package(
     default_visibility = ["//visibility:public"],
 )
 
-CC_API_VERSION = 2
-
 PYTHON_API_VERSION = 2
 
 # If you are adding a new spec, please add it as a dependency here. If your spec is
