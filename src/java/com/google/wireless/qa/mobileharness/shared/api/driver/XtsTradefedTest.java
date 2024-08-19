@@ -946,29 +946,18 @@ public class XtsTradefedTest extends BaseDriver
 
     if (useTfRunRetry(spec)) {
       // When using TF "run retry", TF looks for the corresponding previous result dir per given
-      // session index. So it needs to "copy" previous session's test-record proto files and
-      // test_result.xml file so TF can locate them to start the retry.
+      // session index. So it needs to link the previous session's result dir to the work dir so TF
+      // can locate the prev result to complete the retry.
       Path resultsDirInTmpXtsWorkDir = XtsDirUtil.getXtsResultsDir(tmpXtsWorkDir, xtsType);
 
       String prevSessionResultDirName = "0";
-      Path prevSessionResultDir = resultsDirInTmpXtsWorkDir.resolve(prevSessionResultDirName);
+      Path linkPrevSessionResultDir = resultsDirInTmpXtsWorkDir.resolve(prevSessionResultDirName);
       previousResultDirNames = ImmutableSet.of(prevSessionResultDirName);
 
-      // Prepares the proto dir within the previous session result dir
-      Path prevSessionResultProtoDir = prevSessionResultDir.resolve("proto");
-
-      // When prepares the previous session's result proto dir, its ancestor directories are
-      // prepared too
-      localFileUtil.prepareDir(prevSessionResultProtoDir);
-
-      localFileUtil.copyFileOrDir(
-          spec.getPrevSessionTestResultXml(), prevSessionResultDir.toString());
-      for (String prevSessionTestRecordFile : getPrevSessionTestRecordFiles(spec)) {
-        localFileUtil.copyFileOrDir(
-            prevSessionTestRecordFile, prevSessionResultProtoDir.toString());
-      }
-
-      localFileUtil.grantFileOrDirFullAccessRecursively(resultsDirInTmpXtsWorkDir);
+      localFileUtil.prepareDir(resultsDirInTmpXtsWorkDir);
+      // Link the result dir so TF can load prev results and merge files
+      createSymlink(
+          linkPrevSessionResultDir, Path.of(spec.getPrevSessionTestResultXml()).getParent());
 
       // Link subplan dir so TF can use the subplan for retry
       Path sourceXtsSubPlansDir = XtsDirUtil.getXtsSubPlansDir(sourceXtsRootDir, xtsType);
@@ -1050,15 +1039,6 @@ public class XtsTradefedTest extends BaseDriver
    */
   private static boolean isRunWithSubPlan(XtsTradefedTestDriverSpec spec) {
     return !spec.getSubplanXml().isEmpty();
-  }
-
-  private static List<String> getPrevSessionTestRecordFiles(XtsTradefedTestDriverSpec spec) {
-    String prevSessionTestRecordFilesJsonList = spec.getPrevSessionTestRecordFiles();
-    if (prevSessionTestRecordFilesJsonList.isEmpty()) {
-      return ImmutableList.of();
-    }
-    return new Gson()
-        .fromJson(prevSessionTestRecordFilesJsonList, new TypeToken<List<String>>() {}.getType());
   }
 
   private String getTradefedAgentFilePath() throws MobileHarnessException {
