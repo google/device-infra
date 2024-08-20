@@ -7,14 +7,6 @@ AdExtServicesGaUxDebugChannelApiOffTest
 AdExtServicesGaUxDebugChannelEuTest
 AdExtServicesGaUxDebugChannelRowTest
 AdExtServicesGaUxGraduationChannelRowTest
-art_libnativebridge_cts_tests
-art_libnativeloader_cts_test
-art-run-test-018-stack-overflow
-art-run-test-048-reflect-v8
-art_standalone_dex2oat_cts_tests
-art_standalone_libartpalette_tests
-art_standalone_libdexfile_external_tests
-compatibility-host-provider-preconditions
 CtsAdExtServicesAdIdEndToEndTest
 CtsAdExtServicesAdServicesCobaltTest
 CtsAdExtServicesAppSetIdEndToEndTest
@@ -40,7 +32,6 @@ CtsAdServicesDeviceTestCases
 CtsAdServicesEndToEndTestMeasurement
 CtsAdServicesEndToEndTests
 CtsAdServicesExtDataStorageServiceTest
-CtsAdservicesHostTestApp
 CtsAdServicesHostTests
 CtsAdServicesMddTests
 CtsAdServicesNotInAllowListEndToEndTests
@@ -49,6 +40,7 @@ CtsAdServicesPermissionsNoPermEndToEndTests
 CtsAdServicesPermissionsValidEndToEndTests
 CtsAdServicesTopicsAppUpdateTests
 CtsAdServicesTopicsConnectionTests
+CtsAdservicesHostTestApp
 CtsAlarmManagerTestCases
 CtsAppCloningHostTest
 CtsAppCloningMediaProviderHostTest
@@ -61,7 +53,6 @@ CtsAutoRevokeRApp
 CtsAutoRevokeSApp
 CtsClasspathsTestCases
 CtsContentTestCases
-cts-dalvik-host-test-runner
 CtsDeviceConfigTestCases
 CtsDeviceInfo
 CtsExerciseRouteTestCases
@@ -88,6 +79,9 @@ CtsLibcoreWycheproofBCTestCases
 CtsLibcoreWycheproofConscryptTestCases
 CtsMediaProviderTestCases
 CtsMediaProviderTranscodeTests
+CtsNNAPIBenchmarkTestCases
+CtsNNAPIStatsdAtomHostTestCases
+CtsNNAPITestCases
 CtsNativeNetDnsTestCases
 CtsNearbyFastPairTestCases
 CtsNetHttpTestCases
@@ -95,9 +89,6 @@ CtsNetTestCases
 CtsNetTestCasesMaxTargetSdk30
 CtsNetTestCasesMaxTargetSdk31
 CtsNetTestCasesMaxTargetSdk33
-CtsNNAPIBenchmarkTestCases
-CtsNNAPIStatsdAtomHostTestCases
-CtsNNAPITestCases
 CtsOnDevicePersonalizationConfigTests
 CtsOnDevicePersonalizationE2ETests
 CtsPackageManagerTestCases
@@ -143,6 +134,7 @@ CtsTestAppWithQueryAllPackagesPermission
 CtsTetheringTest
 CtsTfliteNnapiDelegateTestCases
 CtsThreadNetworkTestCases
+CtsUsbTests
 CtsUwbMultiDeviceTestCase_FiraRangingTests
 CtsUwbMultiDeviceTestCase_UwbManagerTests
 CtsUwbTestCases
@@ -164,10 +156,19 @@ MctsMediaRecorderTestCases
 MctsMediaTranscodingTestCases
 MctsMediaV2TestCases
 MctsTextClassifierTestCases
-net-tests-utils-host-common
-odsign_e2e_tests
 SdkSandboxManagerDisabledTests
 SdkSandboxManagerTests
+art-run-test-018-stack-overflow
+art-run-test-048-reflect-v8
+art_libnativebridge_cts_tests
+art_libnativeloader_cts_test
+art_standalone_dex2oat_cts_tests
+art_standalone_libartpalette_tests
+art_standalone_libdexfile_external_tests
+compatibility-host-provider-preconditions
+cts-dalvik-host-test-runner
+net-tests-utils-host-common
+odsign_e2e_tests
 # deviceinfra:google3-begin(internal)
 # LINT.ThenChange(//depot/google3/configs/wireless/android/testing/atp/prod/android-xts/cts/templates/common.gcl)
 # deviceinfra:google3-end

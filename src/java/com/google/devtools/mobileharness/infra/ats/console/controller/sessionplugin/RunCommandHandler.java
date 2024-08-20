@@ -17,6 +17,7 @@
 package com.google.devtools.mobileharness.infra.ats.console.controller.sessionplugin;
 
 import static com.google.common.base.Ascii.toUpperCase;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.IMPORTANCE;
 import static com.google.devtools.mobileharness.shared.constant.LogRecordImportance.Importance.IMPORTANT;
 import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat.shortDebugString;
@@ -24,6 +25,7 @@ import static com.google.devtools.mobileharness.shared.util.base.ProtoTextFormat
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.flogger.FluentLogger;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestHandlerUtil;
@@ -43,6 +45,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.model.S
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteResultReporter;
+import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteTestFilter;
 import com.google.devtools.mobileharness.platform.android.xts.suite.retry.RetryType;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -52,6 +55,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
@@ -143,6 +147,13 @@ class RunCommandHandler {
     }
 
     ImmutableList.Builder<String> tradefedJobIds = ImmutableList.builder();
+    ImmutableSet<String> staticMctsModules = sessionRequestHandlerUtil.getStaticMctsModules();
+    Optional<ImmutableList<String>> tfModules =
+        sessionRequestHandlerUtil.getFilteredTradefedModules(sessionRequestInfo);
+    ImmutableList<SuiteTestFilter> includeFilters =
+        sessionRequestInfo.includeFilters().stream()
+            .map(SuiteTestFilter::create)
+            .collect(toImmutableList());
 
     // Lets the driver write TF output to XTS log dir directly.
     jobInfoList.forEach(
@@ -157,7 +168,12 @@ class RunCommandHandler {
                               .getSessionProperty(SESSION_PROPERTY_NAME_TIMESTAMP_DIR_NAME)
                               .orElseThrow())
                       .toString());
-          addEnableXtsDynamicDownloadToJob(jobInfo, command);
+          addEnableXtsDynamicDownloadToJob(
+              jobInfo,
+              command,
+              tfModules.orElse(ImmutableList.of()),
+              staticMctsModules,
+              includeFilters);
 
           if (addJobToSession(jobInfo)) {
             String jobId = jobInfo.locator().getId();
@@ -189,8 +205,6 @@ class RunCommandHandler {
     ImmutableList.Builder<String> nonTradefedJobIds = ImmutableList.builder();
     jobInfos.forEach(
         jobInfo -> {
-          addEnableXtsDynamicDownloadToJob(jobInfo, runCommand);
-
           if (addJobToSession(jobInfo)) {
             nonTradefedJobIds.add(jobInfo.locator().getId());
             logger.atInfo().log(
@@ -378,9 +392,28 @@ class RunCommandHandler {
         + "=================== End ====================\n";
   }
 
-  private static void addEnableXtsDynamicDownloadToJob(JobInfo jobInfo, RunCommand runCommand) {
+  private static void addEnableXtsDynamicDownloadToJob(
+      JobInfo jobInfo,
+      RunCommand runCommand,
+      ImmutableList<String> tfModules,
+      ImmutableSet<String> staticMctsModules,
+      ImmutableList<SuiteTestFilter> includeFilters) {
     if (runCommand.getEnableXtsDynamicDownload()) {
       jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "true");
+    }
+    // Consider independent two cases:
+    // 1. No -m MCTS modules specified, dynamic download is disabled.
+    // 2. No include filtered MCTS modules, dynamic download is disabled.
+    if (!tfModules.isEmpty()) {
+      if (tfModules.stream().noneMatch(staticMctsModules::contains)) {
+        jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "false");
+      }
+    }
+    if (!includeFilters.isEmpty()) {
+      if (includeFilters.stream()
+          .noneMatch(filter -> staticMctsModules.stream().anyMatch(filter::matchModuleName))) {
+        jobInfo.properties().add(XtsConstants.IS_XTS_DYNAMIC_DOWNLOAD_ENABLED, "false");
+      }
     }
   }
 }
