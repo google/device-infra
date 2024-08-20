@@ -46,6 +46,7 @@ public abstract class DetectionResult {
   public enum DetectionType {
     ADB,
     CROS,
+    SDV_OSPREY,
     DHCP,
     EMBEDDED_LINUX,
     EMULATOR,
