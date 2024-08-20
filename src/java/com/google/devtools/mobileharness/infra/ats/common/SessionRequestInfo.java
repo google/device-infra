@@ -130,6 +130,8 @@ public abstract class SessionRequestInfo {
 
   public abstract ShardingMode shardingMode();
 
+  public abstract Optional<Boolean> skipDeviceInfo();
+
   public static Builder builder() {
     return new AutoValue_SessionRequestInfo.Builder()
         .setModuleNames(ImmutableList.of())
@@ -244,6 +246,8 @@ public abstract class SessionRequestInfo {
     public abstract Builder setReportSystemCheckers(boolean reportSystemCheckers);
 
     public abstract Builder setShardingMode(ShardingMode shardingMode);
+
+    public abstract Builder setSkipDeviceInfo(boolean skipDeviceInfo);
 
     protected abstract SessionRequestInfo autoBuild();
 

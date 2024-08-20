@@ -784,7 +784,8 @@ public class SessionRequestHandlerUtil {
                 matchedTestCasesBuilder.build(),
                 jobTimeout,
                 testTimeout,
-                startTimeout);
+                startTimeout,
+                isSkipDeviceInfo(sessionRequestInfo, subPlan));
         // TODO: correct the device serial dimension.
         if (jobInfoOpt.isPresent()) {
           JobInfo jobInfo = jobInfoOpt.get();
@@ -891,7 +892,8 @@ public class SessionRequestHandlerUtil {
       ImmutableList<String> matchedTestCases,
       Duration jobTimeout,
       Duration testTimeout,
-      Duration startTimeout)
+      Duration startTimeout,
+      boolean skipDeviceInfo)
       throws MobileHarnessException, InterruptedException {
     Optional<JobInfo> jobInfoOpt =
         createBaseXtsNonTradefedJob(
@@ -917,6 +919,7 @@ public class SessionRequestHandlerUtil {
     if (moduleParameter != null) {
       jobInfo.properties().add(SessionHandlerHelper.XTS_MODULE_PARAMETER_PROP, moduleParameter);
     }
+    jobInfo.properties().add(Job.SKIP_COLLECTING_DEVICE_INFO, Boolean.toString(skipDeviceInfo));
     if (!matchedTestCases.isEmpty()) {
       jobInfo.params().add("test_case_selector", Joiner.on(" ").join(matchedTestCases));
     }
@@ -1120,5 +1123,13 @@ public class SessionRequestHandlerUtil {
     return jobTimeout.compareTo(JOB_TEST_TIMEOUT_DIFF.multipliedBy(2L)) < 0
         ? jobTimeout.dividedBy(2L)
         : jobTimeout.minus(JOB_TEST_TIMEOUT_DIFF);
+  }
+
+  private static boolean isSkipDeviceInfo(
+      SessionRequestInfo sessionRequestInfo, @Nullable SubPlan subPlan) {
+    return sessionRequestInfo.skipDeviceInfo().orElse(false)
+        || (isRunRetry(sessionRequestInfo.testPlan())
+            && subPlan != null
+            && subPlan.getPreviousSessionDeviceBuildFingerprint().orElse("").isEmpty());
   }
 }

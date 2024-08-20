@@ -40,6 +40,7 @@ import com.google.wireless.qa.mobileharness.shared.api.annotation.ParamAnnotatio
 import com.google.wireless.qa.mobileharness.shared.controller.event.TestEndingEvent;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin;
 import com.google.wireless.qa.mobileharness.shared.controller.plugin.Plugin.PluginType;
+import com.google.wireless.qa.mobileharness.shared.model.job.JobInfo;
 import com.google.wireless.qa.mobileharness.shared.model.job.TestInfo;
 import com.google.wireless.qa.mobileharness.shared.model.lab.DeviceLocator;
 import java.nio.file.Path;
@@ -132,17 +133,14 @@ public final class NonTradefedReportGenerator {
       Instant testStartTime,
       Instant testEndTime)
       throws MobileHarnessException, InterruptedException {
-    if (testInfo
-        .jobInfo()
-        .properties()
-        .getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS)
-        .orElse(false)) {
+    JobInfo jobInfo = testInfo.jobInfo();
+    if (jobInfo.properties().getBoolean(Job.SKIP_COLLECTING_NON_TF_REPORTS).orElse(false)) {
       logger.atInfo().log("Skip collecting non tradefed reports.");
       return;
     }
 
     boolean runCertificationTestSuite =
-        testInfo.jobInfo().params().getBool(PARAM_RUN_CERTIFICATION_TEST_SUITE, false);
+        jobInfo.params().getBool(PARAM_RUN_CERTIFICATION_TEST_SUITE, false);
     if (!runCertificationTestSuite) {
       return;
     }
@@ -155,8 +153,7 @@ public final class NonTradefedReportGenerator {
     Map<String, String> suiteInfoMap =
         new HashMap<>(
             StrUtil.toMap(
-                testInfo.jobInfo().params().get(PARAM_XTS_SUITE_INFO, ""),
-                /* allowDelimiterInValue= */ true));
+                jobInfo.params().get(PARAM_XTS_SUITE_INFO, ""), /* allowDelimiterInValue= */ true));
     CertificationSuiteInfo suiteInfo = certificationSuiteInfoFactory.createSuiteInfo(suiteInfoMap);
 
     try {
@@ -168,24 +165,29 @@ public final class NonTradefedReportGenerator {
           MoreThrowables.shortDebugString(e));
     }
 
+    boolean skipCollectingDeviceInfo =
+        jobInfo.properties().getBoolean(Job.SKIP_COLLECTING_DEVICE_INFO).orElse(false);
+    logger.atInfo().log("Skip collecting device info: %s", skipCollectingDeviceInfo);
     try {
       moblyReportHelper.generateBuildAttributesFile(
-          deviceIds.get(0), Path.of(testInfo.getGenFileDir()));
+          deviceIds.get(0), Path.of(testInfo.getGenFileDir()), skipCollectingDeviceInfo);
     } catch (MobileHarnessException e) {
       logger.atWarning().log(
           "Failed to generate build attributes file for xTS Mobly run: %s",
           MoreThrowables.shortDebugString(e));
     }
 
-    // Writes first device build fingerprint to a file for post processing
-    localFileUtil.writeToFile(
-        Path.of(testInfo.getGenFileDir())
-            .resolve("device_build_fingerprint.txt")
-            .toAbsolutePath()
-            .toString(),
-        androidAdbUtil
-            .getProperty(deviceIds.get(0), ImmutableList.of("ro.build.fingerprint"))
-            .trim());
+    if (!skipCollectingDeviceInfo) {
+      // Writes first device build fingerprint to a file for post processing
+      localFileUtil.writeToFile(
+          Path.of(testInfo.getGenFileDir())
+              .resolve("device_build_fingerprint.txt")
+              .toAbsolutePath()
+              .toString(),
+          androidAdbUtil
+              .getProperty(deviceIds.get(0), ImmutableList.of("ro.build.fingerprint"))
+              .trim());
+    }
 
     ResultTypeWithCause resultWithCause = testInfo.resultWithCause().get();
     ModuleRunResult.Builder resultBuilder =

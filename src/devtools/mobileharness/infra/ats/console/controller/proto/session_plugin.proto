@@ -148,6 +148,9 @@ message RunCommand {
 
   // Optional. Whether reporting system checkers as test or not.
   optional bool report_system_checkers = 27;
+
+  // Optional. Whether device info collection should be skipped.
+  optional bool skip_device_info = 28;
 }
 
 message RunCommandState {

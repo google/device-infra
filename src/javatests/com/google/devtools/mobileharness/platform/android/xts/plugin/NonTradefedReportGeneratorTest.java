@@ -19,6 +19,7 @@ package com.google.devtools.mobileharness.platform.android.xts.plugin;
 import static com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator.PARAM_RUN_CERTIFICATION_TEST_SUITE;
 import static com.google.devtools.mobileharness.platform.android.xts.plugin.NonTradefedReportGenerator.PARAM_XTS_SUITE_INFO;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doCallRealMethod;
@@ -144,7 +145,9 @@ public final class NonTradefedReportGeneratorTest {
             ImmutableList.of(SERIAL),
             certificationSuiteInfo,
             Path.of("/gen"));
-    verify(moblyReportHelper).generateBuildAttributesFile(SERIAL, Path.of("/gen"));
+    verify(moblyReportHelper)
+        .generateBuildAttributesFile(
+            SERIAL, Path.of("/gen"), /* skipCollectBuildPrefixAttribute= */ false);
     verify(localFileUtil)
         .writeToFile(
             eq(
@@ -177,7 +180,7 @@ public final class NonTradefedReportGeneratorTest {
     verify(certificationSuiteInfoFactory, never()).createSuiteInfo(any());
     verify(moblyReportHelper, never())
         .generateResultAttributesFile(any(), any(), any(), any(), any());
-    verify(moblyReportHelper, never()).generateBuildAttributesFile(any(), any());
+    verify(moblyReportHelper, never()).generateBuildAttributesFile(any(), any(), anyBoolean());
     verify(localFileUtil, never())
         .writeToFile(
             eq(
@@ -204,7 +207,7 @@ public final class NonTradefedReportGeneratorTest {
     verify(certificationSuiteInfoFactory, never()).createSuiteInfo(any());
     verify(moblyReportHelper, never())
         .generateResultAttributesFile(any(), any(), any(), any(), any());
-    verify(moblyReportHelper, never()).generateBuildAttributesFile(any(), any());
+    verify(moblyReportHelper, never()).generateBuildAttributesFile(any(), any(), anyBoolean());
     verify(localFileUtil, never())
         .writeToFile(
             eq(

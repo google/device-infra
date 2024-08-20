@@ -128,6 +128,7 @@ public abstract class XtsJobCreator {
     Map<String, String> driverParams = new HashMap<>();
     driverParams.put("xts_type", xtsType);
     driverParams.put("xts_test_plan", testPlan);
+    boolean prevSessionSkipDeviceInfo = false;
     if (SessionRequestHandlerUtil.isRunRetry(testPlan)) {
       extraJobProperties.put(Job.IS_RUN_RETRY, "true");
       if (SessionHandlerHelper.useTfRetry()) {
@@ -142,12 +143,14 @@ public abstract class XtsJobCreator {
         }
         driverParams.put(
             "prev_session_xts_test_plan", runRetryTfSubPlan.get().getPreviousSessionXtsTestPlan());
+        String prevSessionDeviceBuildFingerprint =
+            runRetryTfSubPlan.get().getPreviousSessionDeviceBuildFingerprint().orElse("");
         extraJobProperties.put(
-            Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT,
-            runRetryTfSubPlan.get().getPreviousSessionDeviceBuildFingerprint().orElse(""));
+            Job.PREV_SESSION_DEVICE_BUILD_FINGERPRINT, prevSessionDeviceBuildFingerprint);
         Path runRetryTfSubPlanXmlFile =
             prepareRunRetryTfSubPlanXmlFile(sessionRequestInfo, runRetryTfSubPlan.get());
         driverParams.put("subplan_xml", runRetryTfSubPlanXmlFile.toAbsolutePath().toString());
+        prevSessionSkipDeviceInfo = prevSessionDeviceBuildFingerprint.isEmpty();
       }
     } else if (sessionRequestInfo.subPlanName().isPresent()) {
       Optional<Path> tfSubPlan =
@@ -179,6 +182,13 @@ public abstract class XtsJobCreator {
         sessionRequestInfo.reportSystemCheckers()
             ? Optional.of("--report-system-checkers")
             : Optional.empty();
+    Optional<String> skipDeviceInfoArg =
+        prevSessionSkipDeviceInfo ? Optional.of("--skip-device-info true") : Optional.empty();
+    if (sessionRequestInfo.skipDeviceInfo().isPresent()) {
+      skipDeviceInfoArg =
+          Optional.of(
+              String.format("--skip-device-info %s", sessionRequestInfo.skipDeviceInfo().get()));
+    }
 
     ImmutableSet<String> runCommandArgsSet;
     if (SessionRequestHandlerUtil.shouldEnableModuleSharding(sessionRequestInfo)) {
@@ -217,6 +227,7 @@ public abstract class XtsJobCreator {
                                       excludeFilter ->
                                           String.format("--exclude-filter \"%s\"", excludeFilter)),
                           reportSystemCheckersArg.stream(),
+                          skipDeviceInfoArg.stream(),
                           extraArgs.stream()
                               .map(arg -> arg.contains(" ") ? String.format("\"%s\"", arg) : arg))
                       .collect(toImmutableList()));

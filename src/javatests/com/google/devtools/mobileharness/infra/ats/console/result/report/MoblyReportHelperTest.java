@@ -253,7 +253,9 @@ public final class MoblyReportHelperTest {
     when(adb.runShellWithRetry(DEVICE_ID, "getprop")).thenReturn(devicePropertiesOutput);
     when(adb.runShellWithRetry(DEVICE_ID, "uname -a")).thenReturn(DEVICE_KERNEL_INFO);
 
-    assertThat(moblyReportHelper.generateBuildAttributes(DEVICE_ID))
+    assertThat(
+            moblyReportHelper.generateBuildAttributes(
+                DEVICE_ID, /* skipCollectBuildPrefixAttribute= */ false))
         .containsExactlyEntriesIn(
             EXPECTED_BUILD_ATTRIBUTES.stream()
                 .collect(toImmutableMap(Attribute::getKey, Attribute::getValue)))
@@ -269,7 +271,8 @@ public final class MoblyReportHelperTest {
     when(adb.runShellWithRetry(DEVICE_ID, "getprop")).thenReturn(devicePropertiesOutput);
     when(adb.runShellWithRetry(DEVICE_ID, "uname -a")).thenReturn(DEVICE_KERNEL_INFO);
 
-    moblyReportHelper.generateBuildAttributesFile(DEVICE_ID, tempDir.toPath());
+    moblyReportHelper.generateBuildAttributesFile(
+        DEVICE_ID, tempDir.toPath(), /* skipCollectBuildPrefixAttribute= */ false);
 
     AttributeList attributes =
         TextFormat.parse(

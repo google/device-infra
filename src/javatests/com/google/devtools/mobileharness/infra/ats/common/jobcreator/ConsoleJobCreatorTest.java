@@ -252,6 +252,7 @@ public final class ConsoleJobCreatorTest {
   public void createXtsTradefedTestJob_addSubPlanXmlPathForRetry() throws Exception {
     SubPlan subPlan = new SubPlan();
     subPlan.setPreviousSessionXtsTestPlan("cts");
+    subPlan.setPreviousSessionDeviceBuildFingerprint("[fake device build fingerprint]");
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     File xtsRootDir = folder.newFolder("xts_root_dir");
     SessionRequestInfo sessionRequestInfo =
@@ -297,6 +298,7 @@ public final class ConsoleJobCreatorTest {
   public void createXtsTradefedTestJobInfo_retrySubplanWithFilters() throws Exception {
     SubPlan subPlan = new SubPlan();
     subPlan.setPreviousSessionXtsTestPlan("cts");
+    subPlan.setPreviousSessionDeviceBuildFingerprint("[fake device build fingerprint]");
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     subPlan.addExcludeFilter("armeabi-v7a ModuleB android.test.Foo#test1");
     File xtsRootDir = folder.newFolder("xts_root_dir");

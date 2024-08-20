@@ -315,6 +315,9 @@ class RunCommandHandler {
             .setIncludeFilters(runCommand.getIncludeFilterList())
             .setExcludeFilters(runCommand.getExcludeFilterList())
             .setExtraArgs(runCommand.getExtraArgList());
+    if (runCommand.hasSkipDeviceInfo()) {
+      builder.setSkipDeviceInfo(runCommand.getSkipDeviceInfo());
+    }
     if (runCommand.hasTestName()) {
       builder.setTestName(runCommand.getTestName());
     }

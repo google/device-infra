@@ -99,12 +99,13 @@ public class CompatibilityReportMerger {
    * <p>Note: the XML report files must have the same device build fingerprint info, otherwise the
    * merge won't proceed.
    */
-  public Optional<Result> mergeXmlReports(List<Path> reportXmlFiles)
+  public Optional<Result> mergeXmlReports(List<Path> reportXmlFiles, boolean skipDeviceInfo)
       throws MobileHarnessException, InterruptedException {
     return mergeResultBundles(
         reportXmlFiles.stream()
             .map(file -> TradefedResultBundle.of(file, Optional.empty()))
-            .collect(toImmutableList()));
+            .collect(toImmutableList()),
+        skipDeviceInfo);
   }
 
   /**
@@ -114,9 +115,10 @@ public class CompatibilityReportMerger {
    * <p>Note: the XML report files must have the same device build fingerprint info, otherwise the
    * merge won't proceed.
    */
-  public Optional<Result> mergeResultBundles(List<TradefedResultBundle> resultBundles)
+  public Optional<Result> mergeResultBundles(
+      List<TradefedResultBundle> resultBundles, boolean skipDeviceInfo)
       throws MobileHarnessException, InterruptedException {
-    return mergeParsedReports(parseResultBundles(resultBundles));
+    return mergeParsedReports(parseResultBundles(resultBundles), skipDeviceInfo);
   }
 
   /**
@@ -125,9 +127,10 @@ public class CompatibilityReportMerger {
    * <p>Note: the Mobly report files must have the same device build fingerprint info, otherwise the
    * merge won't proceed.
    */
-  public Optional<Result> mergeMoblyReports(List<MoblyReportInfo> moblyReports)
+  public Optional<Result> mergeMoblyReports(
+      List<MoblyReportInfo> moblyReports, boolean skipDeviceInfo)
       throws MobileHarnessException, InterruptedException {
-    return mergeParsedReports(parseMoblyReports(moblyReports));
+    return mergeParsedReports(parseMoblyReports(moblyReports), skipDeviceInfo);
   }
 
   /**
@@ -135,17 +138,23 @@ public class CompatibilityReportMerger {
    *
    * @param validateReports whether to validate reports before the merge
    */
-  public Optional<Result> mergeReports(List<Result> reports, boolean validateReports)
+  public Optional<Result> mergeReports(
+      List<Result> reports, boolean validateReports, boolean skipDeviceInfo)
       throws MobileHarnessException {
     ImmutableList<Result> usableReports =
         reports.stream()
             .filter(
-                report -> report.hasBuild() && !report.getBuild().getBuildFingerprint().isEmpty())
+                report ->
+                    skipDeviceInfo
+                        || (report.hasBuild()
+                            && !report.getBuild().getBuildFingerprint().isEmpty()))
             .collect(toImmutableList());
     logger.atInfo().log(
         "Given reports number: %d, usable reports number: %d",
         reports.size(), usableReports.size());
-    if (validateReports && !validateReportsWithSameBuildFingerprint(usableReports)) {
+    if (!skipDeviceInfo
+        && validateReports
+        && !validateReportsWithSameBuildFingerprint(usableReports)) {
       return Optional.empty();
     }
 
@@ -302,27 +311,34 @@ public class CompatibilityReportMerger {
    * <p>Note: the report in the {@link ParseResult} must have the same device build fingerprint
    * info, otherwise the merge won't proceed.
    */
-  private Optional<Result> mergeParsedReports(List<ParseResult> reportParseResults)
-      throws MobileHarnessException {
+  private Optional<Result> mergeParsedReports(
+      List<ParseResult> reportParseResults, boolean skipDeviceInfo) throws MobileHarnessException {
     // Filters parse results that have report and its build info has device build fingerprint
     ImmutableList<ParseResult> parseResults =
         reportParseResults.stream()
             .filter(
                 parseResult ->
                     parseResult.report().isPresent()
-                        && parseResult.report().get().hasBuild()
-                        && !parseResult.report().get().getBuild().getBuildFingerprint().isEmpty())
+                        && (skipDeviceInfo
+                            || (parseResult.report().get().hasBuild()
+                                && !parseResult
+                                    .report()
+                                    .get()
+                                    .getBuild()
+                                    .getBuildFingerprint()
+                                    .isEmpty())))
             .collect(toImmutableList());
     logger.atInfo().log(
         "Given reports number: %d, usable parsed results number: %d",
         reportParseResults.size(), parseResults.size());
-    if (!validateParsedReportsWithSameBuildFingerprint(parseResults)) {
+    if (!skipDeviceInfo && !validateParsedReportsWithSameBuildFingerprint(parseResults)) {
       return Optional.empty();
     }
 
     return mergeReports(
         parseResults.stream().map(pr -> pr.report().get()).collect(toImmutableList()),
-        /* validateReports= */ false);
+        /* validateReports= */ false,
+        skipDeviceInfo);
   }
 
   /** Gets the attributes showed in the <Result> element in the merged report. */

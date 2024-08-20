@@ -229,6 +229,7 @@ public final class ServerJobCreatorTest {
       throws Exception {
     SubPlan subPlan = new SubPlan();
     subPlan.setPreviousSessionXtsTestPlan("cts");
+    subPlan.setPreviousSessionDeviceBuildFingerprint("[fake device build fingerprint]");
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     File xtsRootDir = folder.newFolder("xts_root_dir");
     File xtsZipPath = folder.newFile("xts_zip.zip");
@@ -279,6 +280,7 @@ public final class ServerJobCreatorTest {
   public void createXtsTradefedTestJobInfo_retrySubplanWithFilters() throws Exception {
     SubPlan subPlan = new SubPlan();
     subPlan.setPreviousSessionXtsTestPlan("cts");
+    subPlan.setPreviousSessionDeviceBuildFingerprint("[fake device build fingerprint]");
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     subPlan.addExcludeFilter("armeabi-v7a ModuleB android.test.Foo#test1");
     File xtsRootDir = folder.newFolder("xts_root_dir");
@@ -339,6 +341,7 @@ public final class ServerJobCreatorTest {
   public void createXtsTradefedTestJobInfo_addSubPlanXmlPathForRetry() throws Exception {
     SubPlan subPlan = new SubPlan();
     subPlan.setPreviousSessionXtsTestPlan("cts");
+    subPlan.setPreviousSessionDeviceBuildFingerprint("[fake device build fingerprint]");
     subPlan.addIncludeFilter("armeabi-v7a ModuleA android.test.Foo#test1");
     File xtsRootDir = folder.newFolder("xts_root_dir");
     File xtsZipPath = folder.newFile("xts_zip.zip");

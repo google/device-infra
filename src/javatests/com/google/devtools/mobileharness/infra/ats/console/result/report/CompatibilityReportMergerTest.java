@@ -155,7 +155,8 @@ public final class CompatibilityReportMergerTest {
   public void mergeXmlReports() throws Exception {
     Optional<Result> res =
         reportMerger.mergeXmlReports(
-            ImmutableList.of(Path.of(CTS_TEST_RESULT_XML_2), Path.of(CTS_TEST_RESULT_XML)));
+            ImmutableList.of(Path.of(CTS_TEST_RESULT_XML_2), Path.of(CTS_TEST_RESULT_XML)),
+            /* skipDeviceInfo= */ false);
 
     assertThat(res).isPresent();
     Result result = res.get();
@@ -220,7 +221,8 @@ public final class CompatibilityReportMergerTest {
                     () ->
                         reportMerger.mergeXmlReports(
                             ImmutableList.of(
-                                Path.of(CTS_TEST_RESULT_XML_2), Path.of(CTS_TEST_RESULT_XML_3))))
+                                Path.of(CTS_TEST_RESULT_XML_2), Path.of(CTS_TEST_RESULT_XML_3)),
+                            /* skipDeviceInfo= */ false))
                 .getErrorId())
         .isEqualTo(ExtErrorId.REPORT_MERGER_DIFF_DEVICE_BUILD_FINGERPRINT_FOUND);
   }
@@ -276,7 +278,8 @@ public final class CompatibilityReportMergerTest {
                     Path.of(MOBLY_RESULT_ATTR_FILE_2),
                     DEVICE_BUILD_FINGERPRINT,
                     Path.of(MOBLY_BUILD_ATTR_FILE_2),
-                    Path.of(MODULE_RESULT_FILE_2))));
+                    Path.of(MODULE_RESULT_FILE_2))),
+            /* skipDeviceInfo= */ false);
 
     assertThat(res).isPresent();
     Result result = res.get();

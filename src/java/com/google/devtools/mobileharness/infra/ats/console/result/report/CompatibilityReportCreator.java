@@ -185,9 +185,8 @@ public class CompatibilityReportCreator {
     }
 
     // Creates checksum data for the report and the files in directory {@code resultDir}.
-    if (!report.getBuild().getBuildFingerprint().isEmpty()
-        && !CompatibilityReportChecksumHelper.tryCreateChecksum(
-            resultDir.toFile(), report, report.getBuild().getBuildFingerprint())) {
+    if (!CompatibilityReportChecksumHelper.tryCreateChecksum(
+        resultDir.toFile(), report, report.getBuild().getBuildFingerprint())) {
       logger.atWarning().log(
           "Failed to crete checksum for result dir [%s] and report with build fingerprint [%s]",
           resultDir, report.getBuild().getBuildFingerprint());

@@ -346,7 +346,7 @@ public class SessionResultHandlerUtil {
                               res.moduleParameter().orElse(null),
                               res.testSummaryFile().orElse(null),
                               res.resultAttributesFile(),
-                              res.deviceBuildFingerprint(),
+                              res.deviceBuildFingerprint().orElse(null),
                               res.buildAttributesFile(),
                               res.moduleResultFile())));
               return null;
@@ -359,12 +359,16 @@ public class SessionResultHandlerUtil {
 
     Optional<Result> mergedTradefedReport = Optional.empty();
     if (!tradefedResultBundles.isEmpty()) {
-      mergedTradefedReport = compatibilityReportMerger.mergeResultBundles(tradefedResultBundles);
+      mergedTradefedReport =
+          compatibilityReportMerger.mergeResultBundles(
+              tradefedResultBundles, sessionRequestInfo.skipDeviceInfo().orElse(false));
     }
 
     Optional<Result> mergedNonTradefedReport = Optional.empty();
     if (!moblyReportInfos.isEmpty()) {
-      mergedNonTradefedReport = compatibilityReportMerger.mergeMoblyReports(moblyReportInfos);
+      mergedNonTradefedReport =
+          compatibilityReportMerger.mergeMoblyReports(
+              moblyReportInfos, sessionRequestInfo.skipDeviceInfo().orElse(false));
     }
 
     List<Result> reportList = new ArrayList<>();
@@ -372,7 +376,10 @@ public class SessionResultHandlerUtil {
     mergedNonTradefedReport.ifPresent(reportList::add);
 
     Optional<Result> mergedReport =
-        compatibilityReportMerger.mergeReports(reportList, /* validateReports= */ true);
+        compatibilityReportMerger.mergeReports(
+            reportList,
+            /* validateReports= */ true,
+            sessionRequestInfo.skipDeviceInfo().orElse(false));
 
     boolean testReportHasNonTfModule = curSessionHasNonTfJob || previousSessionHasNonTfModule;
     boolean testReportHasTfModule = curSessionHasTfJob || previousSessionHasTfModule;
@@ -885,7 +892,7 @@ public class SessionResultHandlerUtil {
      * The build fingerprint for the major device on which the test run, it's used to identify the
      * generated report.
      */
-    public abstract String deviceBuildFingerprint();
+    public abstract Optional<String> deviceBuildFingerprint();
 
     /**
      * The path of the test summary file being parsed. It could be empty in some cases like the test

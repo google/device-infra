@@ -64,6 +64,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Stack;
 import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -246,15 +247,24 @@ public final class RunCommand implements Callable<Integer> {
 
   @Option(
       names = {"--html-in-zip"},
+      arity = "0..1",
       paramLabel = "<html_in_zip>",
       description = "Whether to include html reports in the result zip file. Default is false.")
   private boolean htmlInZip;
 
   @Option(
       names = {"--report-system-checkers"},
-      paramLabel = "<report-system-checkers>",
+      arity = "0..1",
+      paramLabel = "<report_system_checkers>",
       description = "Whether reporting system checkers as test or not. Default is false.")
   private boolean reportSystemCheckers = false;
+
+  @Option(
+      names = {"-d", "--skip-device-info"},
+      arity = "0..1",
+      paramLabel = "<skip_device_info>",
+      description = "Whether device info collection should be skipped. Default is false.")
+  private Boolean skipDeviceInfo = null;
 
   @Option(
       names = {"--subplan"},
@@ -304,7 +314,7 @@ public final class RunCommand implements Callable<Integer> {
     boolean runTestOnEmulator;
 
     @Option(
-        names = {"-d", "--device"},
+        names = {"-rd", "--device"},
         required = false,
         paramLabel = "<run_test_on_real_device>",
         description =
@@ -660,6 +670,7 @@ public final class RunCommand implements Callable<Integer> {
             .addAllExcludeFilter(excludeFilters)
             .setHtmlInZip(htmlInZip)
             .setReportSystemCheckers(reportSystemCheckers);
+    isSkipDeviceInfo().ifPresent(runCommand::setSkipDeviceInfo);
     if (shardCount > 0) {
       runCommand.setShardCount(shardCount);
     }
@@ -795,5 +806,15 @@ public final class RunCommand implements Callable<Integer> {
   @VisibleForTesting
   List<String> getExtraRunCmdArgs() {
     return this.extraRunCmdArgs;
+  }
+
+  private Optional<Boolean> isSkipDeviceInfo() {
+    // Currently skip collecting device info for plan cts-dev or set explicitly, and ideally it
+    // should parse given plan and its child plans to see if the option "skip-device-info" is set to
+    // true explicitly.
+    if (skipDeviceInfo == null && Objects.equals(config, "cts-dev")) {
+      return Optional.of(true);
+    }
+    return Optional.ofNullable(skipDeviceInfo);
   }
 }

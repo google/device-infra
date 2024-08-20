@@ -179,10 +179,11 @@ public class MoblyReportHelper {
    * with file name {@link #MOBLY_REPORT_BUILD_ATTR_TEXTPROTO_FILE_NAME} in the directory {@code
    * outputDir}.
    */
-  public void generateBuildAttributesFile(String serial, Path outputDir)
+  public void generateBuildAttributesFile(
+      String serial, Path outputDir, boolean skipCollectBuildPrefixAttribute)
       throws MobileHarnessException, InterruptedException {
     ImmutableList<Attribute> attributes =
-        generateBuildAttributes(serial).entrySet().stream()
+        generateBuildAttributes(serial, skipCollectBuildPrefixAttribute).entrySet().stream()
             .map(e -> Attribute.newBuilder().setKey(e.getKey()).setValue(e.getValue()).build())
             .collect(toImmutableList());
 
@@ -197,7 +198,8 @@ public class MoblyReportHelper {
    * the report.
    */
   @VisibleForTesting
-  ImmutableMap<String, String> generateBuildAttributes(String serial)
+  ImmutableMap<String, String> generateBuildAttributes(
+      String serial, boolean skipCollectBuildPrefixAttribute)
       throws MobileHarnessException, InterruptedException {
     String allProps = adb.runShellWithRetry(serial, "getprop");
     ImmutableSet<String> targetProps = getTargetProps();
@@ -221,6 +223,10 @@ public class MoblyReportHelper {
 
     ImmutableMap.Builder<String, String> buildAttributesMap = ImmutableMap.builder();
     for (DeviceBuildInfo deviceBuildInfo : DeviceBuildInfo.values()) {
+      if (skipCollectBuildPrefixAttribute
+          && deviceBuildInfo.getAttributeName().startsWith("build_")) {
+        continue;
+      }
       buildAttributesMap.put(
           deviceBuildInfo.getAttributeName(),
           propNameToValueMap.getOrDefault(deviceBuildInfo.getPropName(), ""));

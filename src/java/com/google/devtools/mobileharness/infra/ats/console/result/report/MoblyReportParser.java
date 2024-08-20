@@ -124,13 +124,16 @@ public class MoblyReportParser {
       }
     }
 
+    BuildInfo.Builder buildInfoBuilder =
+        BuildInfo.newBuilder().addAllAttribute(buildAttributesList.getAttributeList());
+    if (moblyReportInfo.deviceBuildFingerprint() != null) {
+      buildInfoBuilder.setBuildFingerprint(moblyReportInfo.deviceBuildFingerprint());
+    }
+
     Result.Builder resultBuilder =
         Result.newBuilder()
             .addAllAttribute(resultAttributesList.getAttributeList())
-            .setBuild(
-                BuildInfo.newBuilder()
-                    .setBuildFingerprint(moblyReportInfo.deviceBuildFingerprint())
-                    .addAllAttribute(buildAttributesList.getAttributeList()));
+            .setBuild(buildInfoBuilder);
 
     String moduleName =
         moblyReportInfo.moblyPackageName()
@@ -259,11 +262,10 @@ public class MoblyReportParser {
         @Nullable String moduleParameter,
         @Nullable Path moblySummaryFile,
         Path resultAttributesFile,
-        String deviceBuildFingerprint,
+        @Nullable String deviceBuildFingerprint,
         Path buildAttributesFile,
         Path moduleResultFile) {
-      return new com.google.devtools.mobileharness.infra.ats.console.result.report
-          .AutoValue_MoblyReportParser_MoblyReportInfo(
+      return new AutoValue_MoblyReportParser_MoblyReportInfo(
           moblyPackageName,
           moduleAbi,
           moduleParameter,
@@ -302,6 +304,7 @@ public class MoblyReportParser {
      * The build fingerprint for the major device on which the test run, it's used to identify the
      * generated report.
      */
+    @Nullable
     public abstract String deviceBuildFingerprint();
 
     /**

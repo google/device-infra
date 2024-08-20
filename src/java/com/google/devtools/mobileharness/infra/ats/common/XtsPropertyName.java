@@ -36,5 +36,7 @@ public interface XtsPropertyName extends PropertyName {
     PREV_SESSION_HAS_NON_TF_MODULE,
 
     SKIP_COLLECTING_NON_TF_REPORTS,
+
+    SKIP_COLLECTING_DEVICE_INFO,
   }
 }
