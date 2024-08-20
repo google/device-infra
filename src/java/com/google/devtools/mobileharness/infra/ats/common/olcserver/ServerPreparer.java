@@ -65,7 +65,6 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.List;
 import java.util.Optional;
 import java.util.logging.Level;
 import java.util.stream.Stream;
@@ -219,11 +218,10 @@ public class ServerPreparer {
       ImmutableList.Builder<String> startOlcServerCommandBuilder = ImmutableList.builder();
       startOlcServerCommandBuilder.add(NOHUP_COMMAND);
       startOlcServerCommandBuilder.addAll(
-          wrapExecutablePath(
-              JavaCommandCreator.of(
-                      /* useStandardInvocationForm= */ true,
-                      requireNonNull(javaPath.get()).toString())
-                  .createJavaCommand(serverBinaryPath, serverFlags, serverNativeArguments)));
+          JavaCommandCreator.of(
+                  /* useStandardInvocationForm= */ true,
+                  wrapPath(requireNonNull(javaPath.get()).toString()))
+              .createJavaCommand(wrapPath(serverBinaryPath), serverFlags, serverNativeArguments));
       startOlcServerCommandBuilder.add(">" + serverOutputPath).add("2>&1").add("&");
 
       // Starts the server process.
@@ -466,13 +464,9 @@ public class ServerPreparer {
     }
   }
 
-  /** Wraps the executable path of the command just in case that it contains special characters. */
-  private static ImmutableList<String> wrapExecutablePath(List<String> command) {
-    String executablePath = "'" + command.get(0) + "'";
-    ImmutableList.Builder<String> result =
-        ImmutableList.<String>builderWithExpectedSize(command.size()).add(executablePath);
-    command.stream().skip(1L).forEach(result::add);
-    return result.build();
+  /** Wraps a path in a command just in case that it contains special characters. */
+  private static String wrapPath(String path) {
+    return "'" + path + "'";
   }
 
   private static class StringBuilderLineCallback implements LineCallback {
