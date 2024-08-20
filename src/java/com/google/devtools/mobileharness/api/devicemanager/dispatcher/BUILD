@@ -117,3 +117,16 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "android_jit_emulator_dispatcher",
+    srcs = ["AndroidJitEmulatorDispatcher.java"],
+    deps = [
+        ":base",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/detector/model",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher/model",
+        "//src/java/com/google/devtools/mobileharness/api/devicemanager/dispatcher/util:device_id_descriptor_generator",
+        "//src/java/com/google/devtools/mobileharness/api/model/lab:device_id_descriptor",
+        "@maven//:com_google_guava_guava",
+    ],
+)
