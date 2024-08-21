@@ -82,3 +82,21 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "mobly_test_loader",
+    srcs = ["MoblyTestLoader.java"],
+    visibility = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/common:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/common/util:__subpackages__",
+    ],
+    deps = [
+        "//src/devtools/mobileharness/platform/android/xts/proto:configuration_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/shared/util/command",
+        "//src/java/com/google/devtools/mobileharness/shared/util/file/local",
+        "@maven//:com_google_guava_guava",
+        "@maven//:javax_inject_jsr330_api",
+    ],
+)

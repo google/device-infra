@@ -38,6 +38,7 @@ import com.google.devtools.mobileharness.infra.client.api.controller.device.Devi
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionGenDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotations.SessionTempDir;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.MoblyTestLoader;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
 import com.google.devtools.mobileharness.platform.android.xts.config.proto.ConfigurationProto.Configuration;
@@ -96,6 +97,7 @@ public final class SessionRequestHandlerUtilTest {
   @Bind @SessionGenDir private Path sessionGenDir;
   @Bind @SessionTempDir private Path sessionTempDir;
   @Bind @Mock private SessionInfo sessionInfo;
+  @Bind @Mock private MoblyTestLoader moblyTestLoader;
 
   @Inject private SessionRequestHandlerUtil sessionRequestHandlerUtil;
 
@@ -975,7 +977,8 @@ public final class SessionRequestHandlerUtilTest {
         .getTestSuiteHelper(any(), any(), any());
     when(testSuiteHelper.loadTests(any()))
         .thenReturn(ImmutableMap.of("module1", config1, "module2", config2, "module3", config3));
-
+    when(moblyTestLoader.getTestNamesInModule(Path.of("/path/to/config3"), config3))
+        .thenReturn(ImmutableList.of("test1", "test2", "test3"));
     SessionRequestInfo sessionRequestInfo =
         sessionRequestHandlerUtil.addNonTradefedModuleInfo(
             SessionRequestInfo.builder()
@@ -989,16 +992,17 @@ public final class SessionRequestHandlerUtilTest {
                         "module1 test_class2#test2",
                         "module1 test_class2#test3",
                         "module2",
-                        "module3 test_class1#test1"))
-                .setExcludeFilters(ImmutableList.of("module3"))
+                        "module3"))
+                .setExcludeFilters(ImmutableList.of("module3 test_class1#test1"))
                 .build());
     ImmutableList<JobInfo> jobInfos =
         sessionRequestHandlerUtil.createXtsNonTradefedJobs(
             sessionRequestInfo, testPlanFilter, null, ImmutableMap.of());
 
-    assertThat(jobInfos).hasSize(2);
+    assertThat(jobInfos).hasSize(3);
     assertThat(jobInfos.get(0).params().get("test_case_selector")).isEqualTo("test1 test2 test3");
     assertThat(jobInfos.get(1).params().get("test_case_selector")).isNull();
+    assertThat(jobInfos.get(2).params().get("test_case_selector")).isEqualTo("test2 test3");
   }
 
   @Test

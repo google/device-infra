@@ -37,6 +37,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/client/api/controller/device:querier",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/model:session_info",
+        "//src/java/com/google/devtools/mobileharness/platform/android/xts/common/util:mobly_test_loader",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:configuration_util",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/config:module_configuration_helper",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:test_suite_helper",

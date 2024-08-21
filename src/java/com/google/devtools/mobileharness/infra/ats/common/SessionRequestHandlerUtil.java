@@ -51,6 +51,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.Annotat
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidAdbUtil;
 import com.google.devtools.mobileharness.platform.android.sdktool.adb.AndroidProperty;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.AbiUtil;
+import com.google.devtools.mobileharness.platform.android.xts.common.util.MoblyTestLoader;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsDirUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ConfigurationUtil;
 import com.google.devtools.mobileharness.platform.android.xts.config.ModuleConfigurationHelper;
@@ -125,6 +126,7 @@ public class SessionRequestHandlerUtil {
   private final Path sessionTempDir;
   private final Provider<ResUtil> resUtilProvider;
   private final DeviceDetailsRetriever deviceDetailsRetriever;
+  private final MoblyTestLoader moblyTestLoader;
 
   @Inject
   SessionRequestHandlerUtil(
@@ -137,7 +139,8 @@ public class SessionRequestHandlerUtil {
       @SessionGenDir Path sessionGenDir,
       @SessionTempDir Path sessionTempDir,
       Provider<ResUtil> resUtilProvider,
-      DeviceDetailsRetriever deviceDetailsRetriever) {
+      DeviceDetailsRetriever deviceDetailsRetriever,
+      MoblyTestLoader moblyTestLoader) {
     this.deviceQuerier = deviceQuerier;
     this.localFileUtil = localFileUtil;
     this.configurationUtil = configurationUtil;
@@ -148,6 +151,7 @@ public class SessionRequestHandlerUtil {
     this.sessionTempDir = sessionTempDir;
     this.resUtilProvider = resUtilProvider;
     this.deviceDetailsRetriever = deviceDetailsRetriever;
+    this.moblyTestLoader = moblyTestLoader;
   }
 
   /** Information used to create the Tradefed job. */
@@ -311,8 +315,7 @@ public class SessionRequestHandlerUtil {
   }
 
   /** Gets all local tradefed modules which doesn't include the mcts modules. */
-  public ImmutableSet<String> getAllLocalTradefedModules(SessionRequestInfo sessionRequestInfo)
-      throws MobileHarnessException {
+  public ImmutableSet<String> getAllLocalTradefedModules(SessionRequestInfo sessionRequestInfo) {
     Path xtsRootDir = Path.of(sessionRequestInfo.xtsRootDir());
     if (!localFileUtil.isDirExist(xtsRootDir)) {
       logger.atInfo().log(
@@ -733,7 +736,8 @@ public class SessionRequestHandlerUtil {
         if (excludeFilters.stream()
             .anyMatch(
                 excludeFilter ->
-                    excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))) {
+                    excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter)
+                        && excludeFilter.testName().isEmpty())) {
           continue;
         }
         if (subPlan != null
@@ -766,6 +770,43 @@ public class SessionRequestHandlerUtil {
           if (!matched) {
             continue;
           }
+        }
+
+        // Get excluded test names in current module.
+        ImmutableList<String> excludedTestNames =
+            excludeFilters.stream()
+                .filter(
+                    excludeFilter ->
+                        excludeFilter.matchModule(originalModuleName, moduleAbi, moduleParameter))
+                .filter(excludeFilter -> excludeFilter.testName().isPresent())
+                .map(excludeFilter -> parseTestName(excludeFilter.testName().orElse(null)))
+                .collect(toImmutableList());
+        if (!excludedTestNames.isEmpty()) {
+          if (matchedTestCasesBuilder.build().isEmpty()) {
+            try {
+              List<String> allTestNamesInModule =
+                  moblyTestLoader.getTestNamesInModule(
+                      Path.of(
+                          requireNonNull(moduleNameToConfigFilePathMap.get(originalModuleName))),
+                      entry.getValue());
+              matchedTestCasesBuilder.addAll(allTestNamesInModule);
+            } catch (MobileHarnessException e) {
+              logger
+                  .atWarning()
+                  .with(IMPORTANCE, IMPORTANT)
+                  .withCause(e)
+                  .log(
+                      "Failed to get all test names from module %s. Will run all test cases in the"
+                          + " module",
+                      originalModuleName);
+            }
+          }
+          ImmutableList<String> originalMatchedTestCases = matchedTestCasesBuilder.build();
+          matchedTestCasesBuilder = ImmutableList.builder();
+          matchedTestCasesBuilder.addAll(
+              originalMatchedTestCases.stream()
+                  .filter(testName -> !excludedTestNames.contains(testName))
+                  .collect(toImmutableList()));
         }
 
         Optional<JobInfo> jobInfoOpt =

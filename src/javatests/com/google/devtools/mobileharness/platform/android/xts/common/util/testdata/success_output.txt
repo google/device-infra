@@ -1,0 +1,4 @@
+==========> CompanionDeviceManagerTestClass <==========
+test_associate_createsAssociation_classicBluetooth
+test_permissions_sync
+test_removeBond_associatedDevice_succeeds
