@@ -69,7 +69,6 @@ main() {
     --alr_olc_server_path=${ATS_OLC_SERVER_JAR} \
     --fastboot=$(type -P fastboot 2>/dev/null) \
     --public_dir=${DEFAULT_TMP_DIR} \
-    --simplified_log_format=true \
     --tmp_dir_root=${DEFAULT_TMP_DIR} \
   "
   local alr_args=("--alr_test_config=${TEST_CONFIG}"
