@@ -18,11 +18,7 @@ package(default_applicable_licenses = ["//:license"])
 java_library(
     name = "command_helper",
     srcs = ["CommandHelper.java"],
-    visibility = [
-        "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-        "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
-        "//src/javatests/com/google/devtools/mobileharness/infra/ats:__subpackages__",
-    ],
+    visibility = ["//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:xts_type_loader",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:console_info",
