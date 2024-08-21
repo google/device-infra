@@ -19,7 +19,11 @@ import (
 	"github.com/google/device-infra/src/devtools/rbe/rbeclient"
 )
 
-const version = "1.3"
+const (
+	version = "1.4"
+	// RBECASConcurrency is the default maximum number of concurrent upload and download operations for RBE clients.
+	RBECASConcurrency = 500
+)
 
 // multiStringFlag is a slice of strings for parsing command flags into a string list.
 type multiStringFlag []string
@@ -53,7 +57,7 @@ var (
 	dumpFileDetails = flag.String("dump-file-details", "", "Export information of all uploaded files to a file")
 	dumpMetrics     = flag.String("dump-metrics", "", "Export metrics to a file")
 	// Flags for concurrency (affects peak memory), specify 0 for default.
-	casConcurrency = flag.Int("cas-concurrency", 0, "the maximum number of concurrent upload operations.")
+	casConcurrency = flag.Int("cas-concurrency", RBECASConcurrency, "the maximum number of concurrent upload operations.")
 	excludeFilters multiStringFlag
 )
 
