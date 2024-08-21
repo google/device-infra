@@ -41,7 +41,6 @@ java_library(
             "Timing.java",
         ],
     ),
-    javacopts = ["-XDinjectLogSites=false"],
     exports = [
         ":timing",
     ],
