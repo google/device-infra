@@ -151,7 +151,6 @@ class ModuleShardingArgsGenerator {
               /* shardIndex= */ 0);
       shardingArgs.add(sessionRequestInfoArgs);
     }
-    // }
     return shardingArgs.build();
   }
 
@@ -211,7 +210,10 @@ class ModuleShardingArgsGenerator {
     return Joiner.on(' ')
         .join(
             Streams.concat(
-                    Stream.of(String.format("-m %s", moduleName)),
+                    // Include filters can't work when the module is specified by -m.
+                    includeFilters.isEmpty()
+                        ? Stream.of(String.format("-m %s", moduleName))
+                        : Stream.empty(),
                     includeFilters.stream()
                         .map(
                             includeFilter ->

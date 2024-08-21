@@ -71,10 +71,9 @@ public final class ModuleShardingArgsGeneratorTest {
 
     assertThat(shardingArgs)
         .containsExactly(
-            "-m mock_module1"
-                + " --include-filter \"mock_module1[instant]\""
+            "--include-filter \"mock_module1[instant]\""
                 + " --exclude-filter \"mock_module1[instant] class#test\"",
-            "-m mock_module2" + " --include-filter \"mock_module2\"");
+            "--include-filter \"mock_module2\"");
   }
 
   @Test
