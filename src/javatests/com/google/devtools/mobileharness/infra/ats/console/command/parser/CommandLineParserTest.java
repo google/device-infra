@@ -45,12 +45,12 @@ public final class CommandLineParserTest {
     // Fill required fields in order to build the builder.
     SessionRequestInfo requestInfo1 =
         requestInfoBuilder1
-            .setTestPlan("cts")
             .setCommandLineArgs(tfCommand1)
             .setXtsRootDir("xts_root_dir")
             .setXtsType("cts")
             .build();
 
+    assertThat(requestInfo1.testPlan()).isEqualTo("cts");
     assertThat(requestInfo1.moduleNames()).containsExactly("module1");
     assertThat(requestInfo1.testName()).hasValue("testCase1");
     assertThat(requestInfo1.shardCount()).hasValue(1);
@@ -66,15 +66,37 @@ public final class CommandLineParserTest {
     // Fill required fields in order to build the builder.
     SessionRequestInfo requestInfo1 =
         requestInfoBuilder1
-            .setTestPlan("cts")
             .setCommandLineArgs(tfCommand1)
             .setXtsRootDir("xts_root_dir")
             .setXtsType("cts")
             .build();
 
+    assertThat(requestInfo1.testPlan()).isEqualTo("cts");
     assertThat(requestInfo1.includeFilters()).containsExactly("test_module_name1 test_name1");
     assertThat(requestInfo1.excludeFilters()).containsExactly("test_module_name2 test_name2");
     assertThat(requestInfo1.shardCount()).hasValue(1);
+  }
+
+  @Test
+  public void parseCommandLine_retryCommand_success() throws Exception {
+    String tfCommand1 =
+        "retry --retry 0 --retry-type NOT_EXECUTED --exclude-filter"
+            + " \"test_module_name2 test_name2\"";
+    SessionRequestInfo.Builder requestInfoBuilder1 = commandLineParser.parseCommandLine(tfCommand1);
+
+    // Fill required fields in order to build the builder.
+    SessionRequestInfo requestInfo1 =
+        requestInfoBuilder1
+            .setCommandLineArgs(tfCommand1)
+            .setXtsRootDir("xts_root_dir")
+            .setXtsType("cts")
+            .setRetrySessionId("retry_session_id")
+            .setRetryResultDir("retry_result_dir")
+            .build();
+
+    assertThat(requestInfo1.testPlan()).isEqualTo("retry");
+    assertThat(requestInfo1.retryType().get().toString()).isEqualTo("NOT_EXECUTED");
+    assertThat(requestInfo1.excludeFilters()).containsExactly("test_module_name2 test_name2");
   }
 
   @Test

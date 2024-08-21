@@ -474,6 +474,10 @@ public final class RunCommand implements Callable<Integer> {
     }
     ImmutableList<String> extraArgs =
         extraRunCmdArgs != null ? ImmutableList.copyOf(extraRunCmdArgs) : ImmutableList.of();
+    if (this.retryType != null) {
+      sessionRequestBuilder.setRetryType(
+          RetryType.valueOf(Ascii.toUpperCase(this.retryType.name())));
+    }
     return sessionRequestBuilder.setExtraArgs(extraArgs);
   }
 

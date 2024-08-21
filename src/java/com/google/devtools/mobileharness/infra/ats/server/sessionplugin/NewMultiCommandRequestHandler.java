@@ -56,7 +56,6 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.Tes
 import com.google.devtools.mobileharness.infra.client.longrunningservice.constant.SessionProperties;
 import com.google.devtools.mobileharness.infra.client.longrunningservice.model.SessionInfo;
 import com.google.devtools.mobileharness.infra.lab.common.dir.DirUtil;
-import com.google.devtools.mobileharness.platform.android.xts.suite.SuiteCommon;
 import com.google.devtools.mobileharness.shared.util.command.Command;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -220,9 +219,7 @@ final class NewMultiCommandRequestHandler {
     }
     Optional<CommandDetail> optionalCommandDetail = Optional.empty();
 
-    // Hash commandId
-    String commandId =
-        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    String commandId = getCommandId(commandInfo, request);
     if (!commandToJobsMap.containsKey(commandId)) {
       CommandDetail commandDetail =
           CommandDetail.newBuilder()
@@ -303,8 +300,7 @@ final class NewMultiCommandRequestHandler {
           .setCancelReason(CancelReason.INVALID_REQUEST);
     }
     for (JobInfo jobInfo : jobInfoList) {
-      String commandId =
-          UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+      String commandId = getCommandId(commandInfo, request);
       commandDetailBuilder.setId(commandId).setState(CommandState.RUNNING);
       commandToJobsMap.put(commandId, jobInfo.locator().getId());
       jobToCommandMap.put(jobInfo.locator().getId(), commandId);
@@ -340,6 +336,16 @@ final class NewMultiCommandRequestHandler {
         }
       }
     }
+  }
+
+  // Hash commandId from command line.
+  private String getCommandId(CommandInfo commandInfo, NewMultiCommandRequest request) {
+    if (request.getPrevTestContext().hasCommandLine()
+        && !request.getPrevTestContext().getCommandLine().isEmpty()) {
+      return UUID.nameUUIDFromBytes(request.getPrevTestContext().getCommandLine().getBytes(UTF_8))
+          .toString();
+    }
+    return UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
   }
 
   private String replacePathForRemoteRunner(String path) {
@@ -422,29 +428,7 @@ final class NewMultiCommandRequestHandler {
     sessionRequestInfoBuilder.setRemoteRunnerFilePathPrefix(
         RemoteFileType.ATS_FILE_SERVER.prefix());
 
-    if (!request.getRetryPreviousSessionId().isEmpty()) {
-      try {
-        URL outputUrl = URI.create(request.getTestEnvironment().getOutputFileUploadUrl()).toURL();
-        if (outputUrl.getProtocol().equals("file")) {
-          String previousCommandId =
-              UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
-          Path outputDirPath =
-              Path.of(outputUrl.getPath())
-                  .resolve(request.getRetryPreviousSessionId())
-                  .resolve(previousCommandId);
-          localFileUtil.checkFile(outputDirPath.resolve(SuiteCommon.TEST_RESULT_PB_FILE_NAME));
-          sessionRequestInfoBuilder.setRetryResultDir(outputDirPath.toString());
-          sessionRequestInfoBuilder.setTestPlan("retry");
-          // TODO: customize retry type based on UI input.
-          sessionRequestInfoBuilder.setRetrySessionId(request.getRetryPreviousSessionId());
-        }
-      } catch (MalformedURLException | MobileHarnessException e) {
-        logger.atWarning().withCause(e).log(
-            "Failed to parse prevous session's output file, skip processing result for previous"
-                + " session: %s. Will rerun the command directly.",
-            request.getRetryPreviousSessionId());
-      }
-    } else if (request.hasPrevTestContext()) {
+    if (request.hasPrevTestContext()) {
       for (TestResource testResource : request.getPrevTestContext().getTestResourceList()) {
         URL testResourceUrl;
         try {
@@ -455,16 +439,23 @@ final class NewMultiCommandRequestHandler {
           continue;
         }
         logger.atInfo().log("testResourceUrl: %s", testResourceUrl);
-        if (testResourceUrl.getProtocol().equals("file")) {
-          if (RESULT_ZIP_FILENAME_PATTERN.matcher(testResource.getName()).matches()) {
-            logger.atInfo().log("resource name: %s", testResource.getName());
-            Path prevResultZipPath = Path.of(testResourceUrl.getPath());
-            sessionRequestInfoBuilder.setRetryResultDir(prevResultZipPath.getParent().toString());
-            String prevSessionId =
-                prevResultZipPath.getParent().getParent().getFileName().toString();
-            sessionRequestInfoBuilder.setRetrySessionId(prevSessionId).setTestPlan("retry");
+        if (testResourceUrl.getProtocol().equals("file")
+            && RESULT_ZIP_FILENAME_PATTERN.matcher(testResource.getName()).matches()) {
+          Path prevResultZipPath;
+          try {
+            prevResultZipPath = Path.of(testResourceUrl.getPath());
+            localFileUtil.checkFile(prevResultZipPath);
+          } catch (MobileHarnessException e) {
+            logger.atWarning().withCause(e).log(
+                "Failed to parse previous session's output file, skip processing result for"
+                    + " previous session: %s. Will rerun the command directly.",
+                request.getRetryPreviousSessionId());
             break;
           }
+          sessionRequestInfoBuilder.setRetryResultDir(prevResultZipPath.getParent().toString());
+          String prevSessionId = prevResultZipPath.getParent().getParent().getFileName().toString();
+          sessionRequestInfoBuilder.setRetrySessionId(prevSessionId).setTestPlan("retry");
+          break;
         }
       }
     }
@@ -549,9 +540,20 @@ final class NewMultiCommandRequestHandler {
                   sessionRequestInfo);
           Path resultZip = outputDirPath.resolve(resultDirectoryName + ".zip");
           if (localFileUtil.isFileExist(resultZip)) {
+            // Make sure the context command line is the original command line, not a retry command.
+            String contextCommandLine = commandDetail.getCommandLine();
+            if (requestDetail.getOriginalRequest().hasPrevTestContext()
+                && !requestDetail
+                    .getOriginalRequest()
+                    .getPrevTestContext()
+                    .getCommandLine()
+                    .isEmpty()) {
+              contextCommandLine =
+                  requestDetail.getOriginalRequest().getPrevTestContext().getCommandLine();
+            }
             TestContext testContext =
                 TestContext.newBuilder()
-                    .setCommandLine(commandDetail.getCommandLine())
+                    .setCommandLine(contextCommandLine)
                     .putAllEnvVar(
                         requestDetail.getOriginalRequest().getTestEnvironment().getEnvVarsMap())
                     .addTestResource(

@@ -267,9 +267,35 @@ final class AtsServerSessionPlugin {
   private void retrySession() throws MobileHarnessException {
     NewMultiCommandRequest.Builder retryRequestBuilder =
         requestDetail.getOriginalRequest().toBuilder();
-    retryRequestBuilder.clearPrevTestContext();
+    if (requestDetail.getTestContextMap().isEmpty()) {
+      // No test context, retry like a new request.
+      retryRequestBuilder.clearPrevTestContext();
+      // Use original command line if exists, in case current request is a retry. Otherwise reuse
+      // current request's command line.
+      if (requestDetail.getOriginalRequest().hasPrevTestContext()
+          && !requestDetail.getOriginalRequest().getPrevTestContext().getCommandLine().isEmpty()) {
+        String retryCommandLine =
+            requestDetail.getOriginalRequest().getPrevTestContext().getCommandLine();
+        retryRequestBuilder
+            .clearCommands()
+            .addCommands(
+                requestDetail.getOriginalRequest().getCommandsList().get(0).toBuilder()
+                    .setCommandLine(retryCommandLine)
+                    .build());
+      }
+    } else {
+      // Has test context, retry with previous test result as context.
+      retryRequestBuilder
+          .setPrevTestContext(requestDetail.getTestContextMap().values().iterator().next())
+          .clearCommands();
+      String retryCommandLine =
+          requestDetail.getOriginalRequest().getTestEnvironment().getRetryCommandLine();
+      retryRequestBuilder.addCommands(
+          requestDetail.getOriginalRequest().getCommandsList().get(0).toBuilder()
+              .setCommandLine(retryCommandLine)
+              .build());
+    }
     retryRequestBuilder.setRetryPreviousSessionId(sessionInfo.getSessionId());
-    // TODO: customize retry type
     retryRequestBuilder.setMaxRetryOnTestFailures(requestDetail.getMaxRetryOnTestFailures() - 1);
     SessionPluginConfig retryConfig =
         SessionPluginConfig.newBuilder()

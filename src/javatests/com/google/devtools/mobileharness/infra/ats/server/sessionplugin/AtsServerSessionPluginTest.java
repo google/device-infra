@@ -50,6 +50,7 @@ import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.New
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.RequestDetail.RequestState;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.SessionRequest;
+import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestContext;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestEnvironment;
 import com.google.devtools.mobileharness.infra.ats.server.proto.ServiceProto.TestResource;
 import com.google.devtools.mobileharness.infra.client.api.controller.device.DeviceQuerier;
@@ -66,6 +67,7 @@ import com.google.devtools.mobileharness.infra.client.longrunningservice.rpc.ser
 import com.google.devtools.mobileharness.infra.controller.scheduler.model.job.in.DeviceRequirement;
 import com.google.devtools.mobileharness.platform.android.xts.common.util.XtsConstants;
 import com.google.devtools.mobileharness.shared.util.command.CommandExecutor;
+import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.time.TimeUtils;
 import com.google.inject.Guice;
@@ -96,6 +98,7 @@ import com.google.wireless.qa.mobileharness.shared.proto.Job.TestResult;
 import com.google.wireless.qa.mobileharness.shared.proto.Job.TestStatus;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceInfo;
 import com.google.wireless.qa.mobileharness.shared.proto.query.DeviceQuery.DeviceQueryResult;
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
@@ -112,6 +115,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.Mock;
 import org.mockito.Mockito;
+import org.mockito.Spy;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
@@ -137,6 +141,8 @@ public final class AtsServerSessionPluginTest {
   @Bind @Mock private XtsTypeLoader xtsTypeLoader;
   @Bind @Mock private LocalSessionStub localSessionStub;
   @Bind @Mock private TestMessageUtil testMessageUtil;
+  @Bind @Spy private LocalFileUtil localFileUtil = new LocalFileUtil();
+
   @Mock private JobInfo jobInfo;
   @Mock private JobInfo jobInfo2;
   @Mock private JobInfo moblyJobInfo;
@@ -703,6 +709,169 @@ public final class AtsServerSessionPluginTest {
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
     String commandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
+        .isEqualTo(commandId);
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+  }
+
+  @Test
+  public void onSessionEnded_retryNeededHasCurrentContext_createRetrySession() throws Exception {
+    request = request.toBuilder().setMaxRetryOnTestFailures(1).build();
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+
+    when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
+    when(testInfo.result()).thenReturn(result);
+
+    when(jobInfo.result()).thenReturn(result);
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    CreateSessionResponse response =
+        CreateSessionResponse.newBuilder()
+            .setSessionId(SessionId.newBuilder().setId("retry_session_id"))
+            .build();
+    when(localSessionStub.createSession(any())).thenReturn(response);
+    com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result.Builder
+        resultBuilder =
+            com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
+                .newBuilder()
+                .setSummary(
+                    Summary.newBuilder().setPassed(5).setFailed(5).setModulesTotal(1).build());
+    when(sessionResultHandlerUtil.processResult(
+            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
+        .thenReturn(Optional.of(resultBuilder.build()));
+    Mockito.doReturn(true).when(localFileUtil).isFileExist(any(Path.class));
+
+    plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+    ArgumentCaptor<CreateSessionRequest> requestCaptor =
+        ArgumentCaptor.forClass(CreateSessionRequest.class);
+    verify(localSessionStub).createSession(requestCaptor.capture());
+    SessionRequest sessionRequest =
+        requestCaptor
+            .getValue()
+            .getSessionConfig()
+            .getSessionPluginConfigs()
+            .getSessionPluginConfig(0)
+            .getExecutionConfig()
+            .getConfig()
+            .unpack(SessionRequest.class);
+    NewMultiCommandRequest newMultiCommandRequest = sessionRequest.getNewMultiCommandRequest();
+    assertThat(newMultiCommandRequest.getMaxRetryOnTestFailures()).isEqualTo(0);
+    assertThat(newMultiCommandRequest.getRetryPreviousSessionId()).isEqualTo("session_id");
+    assertThat(newMultiCommandRequest.getCommandsCount()).isEqualTo(1);
+    assertThat(newMultiCommandRequest.getCommandsList().get(0).getCommandLine())
+        .isEqualTo(request.getTestEnvironment().getRetryCommandLine());
+    assertThat(newMultiCommandRequest.getCommands(0).getDeviceDimensionsList())
+        .containsExactlyElementsIn(request.getCommands(0).getDeviceDimensionsList());
+
+    // sessionInfo.setSessionPluginOutput() is called 5 times. First time in
+    // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
+    // after job ended signal trigger session output update. 4th and 5th time in OnSessionEnded().
+    verify(sessionInfo, times(5))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    String commandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
+        .isEqualTo(commandId);
+    CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
+    assertThat(commandDetail.getState()).isEqualTo(CommandState.ERROR);
+    assertThat(requestDetail.getState()).isEqualTo(RequestState.ERROR);
+    assertThat(requestDetail.getTestContextMap().get(commandId))
+        .isEqualTo(newMultiCommandRequest.getPrevTestContext());
+  }
+
+  @Test
+  public void onSessionEnded_retryNeededAndHasPrevContext_createRetrySession() throws Exception {
+    String originalCommandLine = "run cts -m OrigianlModule";
+    request =
+        request.toBuilder()
+            .setPrevTestContext(
+                TestContext.newBuilder().setCommandLine(originalCommandLine).build())
+            .setMaxRetryOnTestFailures(1)
+            .build();
+    when(sessionRequestHandlerUtil.canCreateNonTradefedJobs(any())).thenReturn(false);
+    when(sessionInfo.getSessionPluginExecutionConfig())
+        .thenReturn(
+            SessionPluginExecutionConfig.newBuilder()
+                .setConfig(
+                    Any.pack(
+                        SessionRequest.newBuilder().setNewMultiCommandRequest(request).build()))
+                .build());
+    plugin.onSessionStarting(new SessionStartingEvent(sessionInfo));
+    verify(sessionInfo).addJob(jobInfo);
+    Timing timing = new Timing();
+    when(jobInfo.timing()).thenReturn(timing);
+    timing.start();
+    var unused = timing.end();
+
+    when(testInfo.status()).thenReturn(new Status(timing).set(TestStatus.DONE));
+    Result result = new Result(timing, new Params(timing)).set(TestResult.PASS);
+    when(testInfo.result()).thenReturn(result);
+
+    when(jobInfo.result()).thenReturn(result);
+    JobType jobType = JobType.newBuilder().setDriver("XtsTradefedTest").build();
+    when(jobInfo.type()).thenReturn(jobType);
+    plugin.onJobEnded(new JobEndEvent(jobInfo, null));
+    CreateSessionResponse response =
+        CreateSessionResponse.newBuilder()
+            .setSessionId(SessionId.newBuilder().setId("retry_session_id"))
+            .build();
+    when(localSessionStub.createSession(any())).thenReturn(response);
+    com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result.Builder
+        resultBuilder =
+            com.google.devtools.mobileharness.infra.ats.console.result.proto.ReportProto.Result
+                .newBuilder()
+                .setSummary(
+                    Summary.newBuilder().setPassed(5).setFailed(5).setModulesTotal(1).build());
+    when(sessionResultHandlerUtil.processResult(
+            any(), any(), any(), any(), eq(ImmutableList.of(jobInfo)), any()))
+        .thenReturn(Optional.of(resultBuilder.build()));
+
+    plugin.onSessionEnded(new SessionEndedEvent(sessionInfo, null));
+    ArgumentCaptor<CreateSessionRequest> requestCaptor =
+        ArgumentCaptor.forClass(CreateSessionRequest.class);
+    verify(localSessionStub).createSession(requestCaptor.capture());
+    SessionRequest sessionRequest =
+        requestCaptor
+            .getValue()
+            .getSessionConfig()
+            .getSessionPluginConfigs()
+            .getSessionPluginConfig(0)
+            .getExecutionConfig()
+            .getConfig()
+            .unpack(SessionRequest.class);
+    NewMultiCommandRequest newMultiCommandRequest = sessionRequest.getNewMultiCommandRequest();
+    assertThat(newMultiCommandRequest.getMaxRetryOnTestFailures()).isEqualTo(0);
+    assertThat(newMultiCommandRequest.getRetryPreviousSessionId()).isEqualTo("session_id");
+    assertThat(newMultiCommandRequest.getCommandsList().get(0).getCommandLine())
+        .isEqualTo(originalCommandLine);
+
+    // sessionInfo.setSessionPluginOutput() is called 5 times. First time in
+    // OnSessionStarting() after creating tradefed jobs. Second and third times in OnJobEnded()
+    // after job ended signal trigger session output update. 4th and 5th time in OnSessionEnded().
+    verify(sessionInfo, times(5))
+        .setSessionPluginOutput(unaryOperatorCaptor.capture(), eq(RequestDetail.class));
+    RequestDetail requestDetail = Iterables.getLast(unaryOperatorCaptor.getAllValues()).apply(null);
+    assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
+    String commandId = UUID.nameUUIDFromBytes(originalCommandLine.getBytes(UTF_8)).toString();
     assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
         .isEqualTo(commandId);
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();

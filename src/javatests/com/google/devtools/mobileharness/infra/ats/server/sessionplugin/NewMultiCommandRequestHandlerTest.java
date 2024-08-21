@@ -133,9 +133,8 @@ public final class NewMultiCommandRequestHandlerTest {
     when(jobInfo.locator()).thenReturn(new JobLocator("job_id", "job_name"));
     when(jobInfo.properties()).thenReturn(properties);
     when(jobInfo.files()).thenReturn(files);
-    doAnswer(invocation -> invocation.getArgument(0))
-        .when(sessionRequestHandlerUtil)
-        .addNonTradefedModuleInfo(any());
+    when(sessionRequestHandlerUtil.addNonTradefedModuleInfo(any()))
+        .thenAnswer(invocation -> invocation.getArgument(0));
     when(deviceQuerier.queryDevice(any()))
         .thenReturn(
             DeviceQueryResult.newBuilder()
@@ -296,10 +295,26 @@ public final class NewMultiCommandRequestHandlerTest {
     Mockito.doReturn(Path.of("/path/to/previous_result.pb"))
         .when(localFileUtil)
         .checkFile(any(Path.class));
+    String expectedCommandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    String retryCommandLine = "retry --retry 1";
     request =
         request.toBuilder()
-            .setRetryPreviousSessionId("retry_previous_session_id")
-            .setRetryType("FAILED")
+            .clearCommands()
+            .addCommands(commandInfo.toBuilder().setCommandLine(retryCommandLine))
+            .setPrevTestContext(
+                TestContext.newBuilder()
+                    .setCommandLine(commandInfo.getCommandLine())
+                    .addTestResource(
+                        TestResource.newBuilder()
+                            .setUrl(
+                                "file:///path/retry_previous_test_run_id/output/"
+                                    + "retry_previous_session_id/"
+                                    + expectedCommandId
+                                    + "/2024.07.16_15.09.01.972_5844.zip")
+                            .setName("2024.07.16_15.09.01.972_5844.zip")
+                            .build())
+                    .build())
             .build();
 
     // Trigger the handler.
@@ -307,12 +322,11 @@ public final class NewMultiCommandRequestHandlerTest {
     newMultiCommandRequestHandler.addTradefedJobs(request, sessionInfo, requestDetail);
 
     assertThat(requestDetail.getCommandDetailsCount()).isEqualTo(1);
-    String commandId = requestDetail.getCommandDetailsMap().keySet().iterator().next();
-    assertThat(commandId)
-        .isEqualTo(UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString());
+    assertThat(requestDetail.getCommandDetailsMap().keySet().iterator().next())
+        .isEqualTo(expectedCommandId);
     CommandDetail commandDetail = requestDetail.getCommandDetailsMap().values().iterator().next();
-    assertThat(commandDetail.getCommandLine()).isEqualTo(commandInfo.getCommandLine());
-    assertThat(commandDetail.getId()).isEqualTo(commandId);
+    assertThat(commandDetail.getCommandLine()).isEqualTo(retryCommandLine);
+    assertThat(commandDetail.getId()).isEqualTo(expectedCommandId);
 
     verify(sessionInfo).addJob(jobInfo);
     verify(properties).add("xts-tradefed-job", "true");
@@ -321,8 +335,6 @@ public final class NewMultiCommandRequestHandlerTest {
     // Verify sessionRequestInfo has been correctly generated.
     SessionRequestInfo sessionRequestInfo = sessionRequestInfoCaptor.getValue();
     assertThat(sessionRequestInfo.testPlan()).isEqualTo("retry");
-    assertThat(sessionRequestInfo.moduleNames()).containsExactly("module1");
-    assertThat(sessionRequestInfo.testName()).hasValue("test1");
     String xtsRootDir = DirUtil.getPublicGenDir() + "/session_session_id/file";
     String zipFile = "/path/to/xts/zip/file.zip";
     assertThat(sessionRequestInfo.xtsRootDir()).isEqualTo(xtsRootDir);
@@ -331,10 +343,10 @@ public final class NewMultiCommandRequestHandlerTest {
     assertThat(sessionRequestInfo.startTimeout()).isEqualTo(Duration.ofSeconds(1000));
     assertThat(sessionRequestInfo.jobTimeout()).isEqualTo(Duration.ofSeconds(2000));
     assertThat(sessionRequestInfo.deviceSerials()).containsExactly("device_id_1", "device_id_2");
-    assertThat(sessionRequestInfo.shardCount()).hasValue(2);
     assertThat(sessionRequestInfo.envVars()).containsExactly("env_key1", "env_value1");
     assertThat(sessionRequestInfo.retrySessionId()).hasValue("retry_previous_session_id");
-    String retryResultDir = outputFileUploadPath + "/retry_previous_session_id/" + commandId;
+    String retryResultDir =
+        "/path/retry_previous_test_run_id/output/retry_previous_session_id/" + expectedCommandId;
     assertThat(sessionRequestInfo.retryResultDir()).hasValue(retryResultDir);
 
     // Verify that handler has mounted the zip file.
@@ -354,10 +366,23 @@ public final class NewMultiCommandRequestHandlerTest {
         new MobileHarnessException(
             BasicErrorId.LOCAL_FILE_IS_DIR, "Failed to find retry result file");
     doThrow(fakeException).when(localFileUtil).checkFile(any(Path.class));
+    String expectedCommandId =
+        UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
     request =
         request.toBuilder()
-            .setRetryPreviousSessionId("retry_previous_session_id")
-            .setRetryType("FAILED")
+            .setPrevTestContext(
+                TestContext.newBuilder()
+                    .setCommandLine(commandInfo.getCommandLine())
+                    .addTestResource(
+                        TestResource.newBuilder()
+                            .setUrl(
+                                "file:///path/retry_previous_test_run_id/output/"
+                                    + "retry_previous_session_id/"
+                                    + expectedCommandId
+                                    + "/2024.07.16_15.09.01.972_5844.zip")
+                            .setName("2024.07.16_15.09.01.972_5844.zip")
+                            .build())
+                    .build())
             .build();
 
     // Trigger the handler.
@@ -408,6 +433,9 @@ public final class NewMultiCommandRequestHandlerTest {
     when(commandExecutor.run(any())).thenReturn("COMMAND_OUTPUT");
     String expectedCommandId =
         UUID.nameUUIDFromBytes(commandInfo.getCommandLine().getBytes(UTF_8)).toString();
+    Mockito.doReturn(Path.of("/path/to/previous_result.pb"))
+        .when(localFileUtil)
+        .checkFile(any(Path.class));
     request =
         request.toBuilder()
             .setPrevTestContext(
