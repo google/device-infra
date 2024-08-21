@@ -26,6 +26,7 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsoleModule;
 import com.google.devtools.mobileharness.infra.ats.console.GuiceFactory;
@@ -101,14 +102,13 @@ public final class CommandLineParser {
             .collect(toImmutableMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
 
     // Parses flags.
-    ImmutableList<String> deviceInfraServiceFlags = ImmutableList.of();
     runCommandParseResult = new RunCommandParseResult();
 
     injector =
         Guice.createInjector(
             new AtsConsoleModule(
                 "command-line-parser-" + UUID.randomUUID(),
-                deviceInfraServiceFlags,
+                FlagsString.of("", ImmutableList.of()),
                 ImmutableList.of(),
                 systemProperties,
                 /* consoleLineReader= */ null,

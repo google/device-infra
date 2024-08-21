@@ -68,6 +68,7 @@ java_library(
     srcs = ["OlcServerModule.java"],
     deps = [
         ":annotations",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:session_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",
@@ -91,6 +92,7 @@ java_library(
         "//src/java/com/google/devtools/common/metrics/stability/rpc/grpc",
         "//src/java/com/google/devtools/mobileharness/api/model/error",
         "//src/java/com/google/devtools/mobileharness/api/model/error:exception_factory",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/constant:dirs",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:control_stub",
         "//src/java/com/google/devtools/mobileharness/infra/client/longrunningservice/rpc/stub:version_stub",

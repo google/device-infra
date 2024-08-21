@@ -25,6 +25,7 @@ java_library(
     ],
     deps = [
         "//src/java/com/google/devtools/mobileharness/api/model/error",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:guice_factory",

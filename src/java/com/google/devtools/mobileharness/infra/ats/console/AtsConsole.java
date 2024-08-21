@@ -32,6 +32,7 @@ import com.google.common.flogger.FluentLogger;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
@@ -66,7 +67,6 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.time.Duration;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import javax.inject.Inject;
@@ -98,11 +98,11 @@ public class AtsConsole {
             .collect(toImmutableMap(e -> (String) e.getKey(), e -> (String) e.getValue()));
 
     // Parses flags.
-    ImmutableList<String> deviceInfraServiceFlags =
+    FlagsString deviceInfraServiceFlags =
         DeviceInfraServiceUtil.getDeviceInfraServiceFlagsFromSystemProperty();
-    ImmutableList<String> finalDeviceInfraServiceFlags =
+    FlagsString finalDeviceInfraServiceFlags =
         preprocessDeviceInfraServiceFlags(deviceInfraServiceFlags);
-    DeviceInfraServiceUtil.parseFlags(finalDeviceInfraServiceFlags);
+    DeviceInfraServiceUtil.parseFlags(finalDeviceInfraServiceFlags.flags());
 
     // Initializes line reader.
     LineReader lineReader = createLineReader();
@@ -148,7 +148,7 @@ public class AtsConsole {
   }
 
   private final ImmutableList<String> mainArgs;
-  private final ImmutableList<String> deviceInfraServiceFlags;
+  private final FlagsString deviceInfraServiceFlags;
   private final LineReader lineReader;
   private final PrintWriter outWriter;
   private final PrintWriter errWriter;
@@ -170,7 +170,7 @@ public class AtsConsole {
   @Inject
   AtsConsole(
       @MainArgs ImmutableList<String> mainArgs,
-      @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags,
+      @DeviceInfraServiceFlags FlagsString deviceInfraServiceFlags,
       @ConsoleLineReader LineReader lineReader,
       @ConsoleOutput(ConsoleOutput.Type.OUT_WRITER) PrintWriter outWriter,
       @ConsoleOutput(ConsoleOutput.Type.ERR_WRITER) PrintWriter errWriter,
@@ -221,7 +221,7 @@ public class AtsConsole {
       consoleUtil.printlnStderr("Args: %s", mainArgs);
     }
     logger.atInfo().with(IMPORTANCE, DEBUG).log("ATS console ID: %s", clientId);
-    logger.atInfo().with(IMPORTANCE, DEBUG).log("Flags: %s", deviceInfraServiceFlags);
+    logger.atInfo().with(IMPORTANCE, DEBUG).log("Flags: %s", deviceInfraServiceFlags.flags());
 
     // Starts listing test plans.
     CommandCompleterHolder.getInstance().initialize(commandCompleter);
@@ -349,15 +349,14 @@ public class AtsConsole {
     }
   }
 
-  private static ImmutableList<String> preprocessDeviceInfraServiceFlags(
-      List<String> deviceInfraServiceFlags) throws IOException, InterruptedException {
-    ImmutableList.Builder<String> flags =
-        new ImmutableList.Builder<String>().addAll(deviceInfraServiceFlags);
+  private static FlagsString preprocessDeviceInfraServiceFlags(FlagsString deviceInfraServiceFlags)
+      throws IOException, InterruptedException {
     if (Boolean.parseBoolean(System.getenv(USE_NEW_OLC_SERVER_ENV_VAR))) {
       // Generate random flags for a new OLC server
-      flags.addAll(getRandomServerFlags());
+      return deviceInfraServiceFlags.addToEnd(getRandomServerFlags());
+    } else {
+      return deviceInfraServiceFlags;
     }
-    return flags.build();
   }
 
   private static ImmutableList<String> getRandomServerFlags()

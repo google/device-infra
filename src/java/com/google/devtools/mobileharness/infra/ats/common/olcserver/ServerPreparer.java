@@ -32,6 +32,7 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithEr
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessExceptionFactory;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientComponentName;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
@@ -100,7 +101,7 @@ public class ServerPreparer {
   private final Provider<VersionStub> versionStub;
   private final Provider<Path> serverBinary;
   private final Provider<Path> javaPath;
-  private final ImmutableList<String> deviceInfraServiceFlags;
+  private final FlagsString deviceInfraServiceFlags;
   private final ListeningScheduledExecutorService scheduledThreadPool;
 
   private final Object prepareServerLock = new Object();
@@ -120,7 +121,7 @@ public class ServerPreparer {
       @ServerStub(ServerStub.Type.VERSION_SERVICE) Provider<VersionStub> versionStub,
       @ServerBinary Provider<Path> serverBinary,
       @OlcServerJavaPath Provider<Path> javaPath,
-      @DeviceInfraServiceFlags ImmutableList<String> deviceInfraServiceFlags,
+      @DeviceInfraServiceFlags FlagsString deviceInfraServiceFlags,
       ListeningScheduledExecutorService scheduledThreadPool) {
     this.clientComponentName = clientComponentName;
     this.clientId = clientId;
@@ -199,11 +200,7 @@ public class ServerPreparer {
       logger.atInfo().log("Starting new OLC server...");
       String serverBinaryPath = requireNonNull(serverBinary.get()).toString();
       localFileUtil.checkFile(serverBinaryPath);
-      ImmutableList<String> serverFlags =
-          ImmutableList.<String>builder()
-              .addAll(BuiltinOlcServerFlags.get())
-              .addAll(deviceInfraServiceFlags)
-              .build();
+      FlagsString serverFlags = deviceInfraServiceFlags.addToHead(BuiltinOlcServerFlags.get());
       ImmutableList<String> serverNativeArguments =
           ImmutableList.of(
               "-Xmx" + Flags.instance().atsConsoleOlcServerXmx.getNonNull(),
@@ -211,7 +208,9 @@ public class ServerPreparer {
       logger
           .atInfo()
           .with(IMPORTANCE, DEBUG)
-          .log("OLC server flags: %s, native arguments: %s", serverFlags, serverNativeArguments);
+          .log(
+              "OLC server flags: %s, native arguments: %s",
+              serverFlags.flags(), serverNativeArguments);
 
       // Creates the command to start the server.
       String serverOutputPath = Flags.instance().atsConsoleOlcServerOutputPath.getNonNull();
@@ -221,7 +220,11 @@ public class ServerPreparer {
           JavaCommandCreator.of(
                   /* useStandardInvocationForm= */ true,
                   wrapPath(requireNonNull(javaPath.get()).toString()))
-              .createJavaCommand(wrapPath(serverBinaryPath), serverFlags, serverNativeArguments));
+              .createJavaCommand(
+                  wrapPath(serverBinaryPath),
+                  // Treats all flags as one argument to keep escape chars.
+                  ImmutableList.of(serverFlags.flagsString()),
+                  serverNativeArguments));
       startOlcServerCommandBuilder.add(">" + serverOutputPath).add("2>&1").add("&");
 
       // Starts the server process.

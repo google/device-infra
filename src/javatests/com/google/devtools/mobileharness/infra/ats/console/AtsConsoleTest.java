@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
 import com.google.devtools.mobileharness.shared.util.flags.Flags;
 import com.google.devtools.mobileharness.shared.util.path.PathUtil;
@@ -65,7 +66,7 @@ public final class AtsConsoleTest {
   private PrintStream consoleOutPrintStream;
   private PrintStream consoleErrPrintStream;
 
-  private ImmutableList<String> deviceInfraServiceFlags;
+  private FlagsString deviceInfraServiceFlags;
   private ImmutableMap<String, String> systemProperties;
   private Path olcServerBinary;
 
@@ -98,11 +99,12 @@ public final class AtsConsoleTest {
             "true",
             "tmp_dir_root",
             tmpDirPath);
-    deviceInfraServiceFlags =
+    ImmutableList<String> flagList =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
             .collect(toImmutableList());
-    Flags.parse(deviceInfraServiceFlags.toArray(new String[0]));
+    deviceInfraServiceFlags = FlagsString.of(String.join(" ", flagList), flagList);
+    Flags.parse(deviceInfraServiceFlags.flags().toArray(new String[0]));
 
     olcServerBinary =
         Path.of(

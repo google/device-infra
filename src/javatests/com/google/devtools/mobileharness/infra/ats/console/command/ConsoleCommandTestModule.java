@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.infra.ats.console.Annotations.ParseCommandOnly;
@@ -46,7 +47,10 @@ public class ConsoleCommandTestModule extends AbstractModule {
   protected void configure() {
     install(
         new OlcServerModule(
-            () -> Path.of(""), ImmutableList.of(), "ATS console", "fake_client_id"));
+            () -> Path.of(""),
+            FlagsString.of("", ImmutableList.of()),
+            "ATS console",
+            "fake_client_id"));
     install(new CompatibilityReportModule());
   }
 

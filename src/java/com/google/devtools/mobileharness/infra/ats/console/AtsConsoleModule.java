@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.SessionRequestInfo;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
@@ -55,7 +56,7 @@ import org.jline.reader.LineReader;
 public class AtsConsoleModule extends AbstractModule {
 
   private final String consoleId;
-  private final ImmutableList<String> deviceInfraServiceFlags;
+  private final FlagsString deviceInfraServiceFlags;
   private final ImmutableList<String> mainArgs;
   private final ImmutableMap<String, String> systemProperties;
   @Nullable private final LineReader consoleLineReader;
@@ -67,7 +68,7 @@ public class AtsConsoleModule extends AbstractModule {
 
   public AtsConsoleModule(
       String consoleId,
-      List<String> deviceInfraServiceFlags,
+      FlagsString deviceInfraServiceFlags,
       List<String> mainArgs,
       Map<String, String> systemProperties,
       @Nullable LineReader consoleLineReader,
@@ -77,7 +78,7 @@ public class AtsConsoleModule extends AbstractModule {
       Consumer<ListenableFuture<SessionRequestInfo.Builder>> resultFuture,
       boolean parseCommandOnly) {
     this.consoleId = consoleId;
-    this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
+    this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.mainArgs = ImmutableList.copyOf(mainArgs);
     this.systemProperties = ImmutableMap.copyOf(systemProperties);
     this.consoleLineReader = consoleLineReader;

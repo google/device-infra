@@ -28,6 +28,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.flogger.FluentLogger;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsole;
 import com.google.devtools.mobileharness.infra.ats.console.AtsConsoleModule;
 import com.google.devtools.mobileharness.shared.util.file.local.LocalFileUtil;
@@ -118,11 +119,12 @@ public class ListCommandTest {
             "true",
             "tmp_dir_root",
             tmpDirPath);
-    ImmutableList<String> deviceInfraServiceFlags =
+    ImmutableList<String> flagList =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
             .collect(toImmutableList());
-    Flags.parse(deviceInfraServiceFlags.toArray(new String[0]));
+    FlagsString deviceInfraServiceFlags = FlagsString.of(String.join(" ", flagList), flagList);
+    Flags.parse(deviceInfraServiceFlags.flags().toArray(new String[0]));
 
     // Sets console stdout/stderr.
     ByteArrayOutputStream consoleOutOutputStream = new ByteArrayOutputStream();

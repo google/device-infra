@@ -16,9 +16,9 @@
 
 package com.google.devtools.mobileharness.infra.ats.local;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
 import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
@@ -29,18 +29,17 @@ import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import java.nio.file.Path;
-import java.util.List;
 
 /** Guice Module for ATS local runner. */
 public final class AtsLocalRunnerModule extends AbstractModule {
   private final Provider<Path> olcServerBinary;
-  private final ImmutableList<String> deviceInfraServiceFlags;
+  private final FlagsString deviceInfraServiceFlags;
   private final String runnerId;
 
   public AtsLocalRunnerModule(
-      Provider<Path> olcServerBinary, List<String> deviceInfraServiceFlags, String runnerId) {
+      Provider<Path> olcServerBinary, FlagsString deviceInfraServiceFlags, String runnerId) {
     this.olcServerBinary = olcServerBinary;
-    this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
+    this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.runnerId = runnerId;
   }
 

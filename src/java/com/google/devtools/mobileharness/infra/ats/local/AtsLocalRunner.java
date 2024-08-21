@@ -23,6 +23,7 @@ import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithEr
 import com.google.devtools.mobileharness.api.model.error.MobileHarnessException;
 import com.google.devtools.mobileharness.api.model.proto.Test.TestResult;
 import com.google.devtools.mobileharness.infra.ats.common.DeviceInfraServiceUtil;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.ServerPreparer;
 import com.google.devtools.mobileharness.infra.ats.local.proto.AtsLocalSessionPluginProto.AtsLocalSessionPluginConfig;
@@ -49,7 +50,6 @@ import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import io.grpc.stub.StreamObserver;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.UUID;
 import javax.inject.Inject;
 
@@ -61,14 +61,11 @@ public class AtsLocalRunner {
       "com.google.devtools.mobileharness.infra.ats.local.sessionplugin.AtsLocalSessionPlugin";
 
   public static void main(String[] args) throws InterruptedException, MobileHarnessException {
-    ImmutableList<String> deviceInfraServiceFlags =
+    FlagsString deviceInfraServiceFlags =
         DeviceInfraServiceUtil.getDeviceInfraServiceFlagsFromSystemProperty();
     // Parse the system property and args
     ImmutableList<String> allFlags =
-        ImmutableList.<String>builder()
-            .addAll(deviceInfraServiceFlags)
-            .addAll(Arrays.asList(args))
-            .build();
+        ImmutableList.<String>builder().addAll(deviceInfraServiceFlags.flags()).add(args).build();
     logger.atInfo().log("Device infra service flags: %s", allFlags);
     DeviceInfraServiceUtil.parseFlags(allFlags);
 

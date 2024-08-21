@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.devtools.common.metrics.stability.rpc.grpc.GrpcExceptionWithErrorId;
 import com.google.devtools.mobileharness.api.model.error.InfraErrorId;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.OlcServerJavaPath;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ServerStub;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.OlcServerModule;
@@ -71,7 +72,7 @@ public class AtsSessionStubTest {
   @Bind private ListeningExecutorService threadPool;
   @Bind private ListeningScheduledExecutorService scheduledThreadPool;
   @Bind private Sleeper sleeper;
-  @Bind private ImmutableList<String> deviceInfraServiceFlags;
+  @Bind private FlagsString deviceInfraServiceFlags;
   @Bind @OlcServerJavaPath private Path javaPath;
 
   @Bind
@@ -106,11 +107,12 @@ public class AtsSessionStubTest {
             "false",
             "tmp_dir_root",
             tmpDirPath);
-    deviceInfraServiceFlags =
+    ImmutableList<String> flagList =
         flagMap.entrySet().stream()
             .map(e -> String.format("--%s=%s", e.getKey(), e.getValue()))
             .collect(toImmutableList());
-    Flags.parse(deviceInfraServiceFlags.toArray(new String[0]));
+    deviceInfraServiceFlags = FlagsString.of(String.join(" ", flagList), flagList);
+    Flags.parse(deviceInfraServiceFlags.flags().toArray(new String[0]));
 
     javaPath = Path.of(systemUtil.getJavaBin());
 

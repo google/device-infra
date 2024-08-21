@@ -31,6 +31,7 @@ java_library(
     ],
     deps = [
         ":console_command_test_module",
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:ats_console_lib",
@@ -65,6 +66,7 @@ java_library(
     name = "console_command_test_module",
     srcs = ["ConsoleCommandTestModule.java"],
     deps = [
+        "//src/java/com/google/devtools/mobileharness/infra/ats/common:flags_string",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common:session_request_info",
         "//src/java/com/google/devtools/mobileharness/infra/ats/common/olcserver:module",
         "//src/java/com/google/devtools/mobileharness/infra/ats/console:annotations",

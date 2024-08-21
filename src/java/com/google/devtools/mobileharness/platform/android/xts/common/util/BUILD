@@ -61,6 +61,7 @@ java_library(
         "//src/java/com/google/devtools/mobileharness/infra/ats:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
         "//src/java/com/google/wireless/qa/mobileharness/shared/api/driver:__subpackages__",
+        "//src/javatests/com/google/devtools/mobileharness/infra/ats/console/integration/concord:__pkg__",
         "//src/javatests/com/google/devtools/mobileharness/platform/android/xts/suite:__subpackages__",
     ],
     deps = [

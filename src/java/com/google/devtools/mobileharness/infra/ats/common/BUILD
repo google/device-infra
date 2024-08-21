@@ -60,6 +60,7 @@ java_library(
     name = "device_infra_service_util",
     srcs = ["DeviceInfraServiceUtil.java"],
     deps = [
+        ":flags_string",
         "//src/java/com/google/devtools/mobileharness/shared/util/flags",
         "//src/java/com/google/devtools/mobileharness/shared/util/shell",
         "@maven//:com_google_guava_guava",
@@ -81,6 +82,15 @@ java_library(
 java_library(
     name = "device_selection_options",
     srcs = ["DeviceSelectionOptions.java"],
+    deps = [
+        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
+        "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "flags_string",
+    srcs = ["FlagsString.java"],
     deps = [
         "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
         "@maven//:com_google_guava_guava",

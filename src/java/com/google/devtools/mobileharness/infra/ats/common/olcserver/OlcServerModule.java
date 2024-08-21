@@ -16,8 +16,8 @@
 
 package com.google.devtools.mobileharness.infra.ats.common.olcserver;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.devtools.mobileharness.infra.ats.common.FlagsString;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientComponentName;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.ClientId;
 import com.google.devtools.mobileharness.infra.ats.common.olcserver.Annotations.DeviceInfraServiceFlags;
@@ -33,7 +33,6 @@ import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import io.grpc.ManagedChannel;
 import java.nio.file.Path;
-import java.util.List;
 import javax.inject.Provider;
 import javax.inject.Singleton;
 
@@ -41,17 +40,17 @@ import javax.inject.Singleton;
 public class OlcServerModule extends AbstractModule {
 
   private final Provider<Path> serverBinary;
-  private final ImmutableList<String> deviceInfraServiceFlags;
+  private final FlagsString deviceInfraServiceFlags;
   private final String clientComponentName;
   private final String clientId;
 
   public OlcServerModule(
       Provider<Path> serverBinary,
-      List<String> deviceInfraServiceFlags,
+      FlagsString deviceInfraServiceFlags,
       String clientComponentName,
       String clientId) {
     this.serverBinary = serverBinary;
-    this.deviceInfraServiceFlags = ImmutableList.copyOf(deviceInfraServiceFlags);
+    this.deviceInfraServiceFlags = deviceInfraServiceFlags;
     this.clientComponentName = clientComponentName;
     this.clientId = clientId;
   }
@@ -75,7 +74,7 @@ public class OlcServerModule extends AbstractModule {
 
   @Provides
   @DeviceInfraServiceFlags
-  ImmutableList<String> provideDeviceInfraServiceFlags() {
+  FlagsString provideDeviceInfraServiceFlags() {
     return deviceInfraServiceFlags;
   }
 
