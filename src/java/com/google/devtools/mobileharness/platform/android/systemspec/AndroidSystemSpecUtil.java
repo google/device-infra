@@ -54,6 +54,14 @@ public class AndroidSystemSpecUtil {
   private static final Pattern OUTPUT_USB_ID_PATTERN =
       Pattern.compile("(?<bus>\\d+)-(?<port>(\\d+\\.)*\\d+)");
 
+  @VisibleForTesting
+  static final String ADB_SHELL_GET_HINGE_ANGLE = "sensor_test sample --num-samples 1 --sensor 36";
+
+  private static final Pattern PATTERN_SENSOR_SAMPLE_DATA =
+      Pattern.compile(
+          "Sensor: (?<id>[\\d\\.]+) TS: (?<timestamp>\\d+) "
+              + "Data: (?<dataX>[\\d\\.]+) (?<dataY>[\\d\\.]+) (?<dataZ>[\\d\\.]+)");
+
   /** ADB shell command for getting iphonesubinfo of the device. */
   @VisibleForTesting
   static final String ADB_SHELL_IPHONE_SUBINFO_TEMPLATE = "service call iphonesubinfo %d";
@@ -585,6 +593,19 @@ public class AndroidSystemSpecUtil {
             .getProperty(serial, AndroidProperty.CHARACTERISTICS)
             .contains(CHARACTERISTIC_WEARABLE)
         || getSystemFeatures(serial).contains(FEATURE_WEARABLE);
+  }
+
+  /** Get the hinge angle of rooted foldable device by sampling sensor value. */
+  public String getHingeAngle(String serial) throws MobileHarnessException, InterruptedException {
+    String output = adb.runShell(serial, ADB_SHELL_GET_HINGE_ANGLE);
+
+    Matcher matcher = PATTERN_SENSOR_SAMPLE_DATA.matcher(output);
+    if (matcher.find()) {
+      return matcher.group("dataX");
+    }
+    throw new MobileHarnessException(
+        AndroidErrorId.ANDROID_SYSTEM_SPEC_SENSOR_SAMPLE_ERROR,
+        String.format("Failed to get hinge angle for device [%s]: %s", serial, output));
   }
 
   /**

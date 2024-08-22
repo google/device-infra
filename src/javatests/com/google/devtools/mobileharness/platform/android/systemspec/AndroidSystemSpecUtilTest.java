@@ -867,6 +867,32 @@ public class AndroidSystemSpecUtilTest {
   }
 
   @Test
+  public void getHingeAngle_isFoldable() throws Exception {
+    when(adb.runShell(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_HINGE_ANGLE))
+        .thenReturn(
+            "sensor_test version 99\n"
+                + "Sampling from sensor type 36.0: Hinge Angle (wake-up).\n"
+                + "Sensor: 36.0 TS: 88584228852 Data: 180.000000 0.000000 0.000000\n"
+                + "Collected 1 samples in 0.004998 seconds (200.086288 samples per second).\n"
+                + "Sensor 36.0 Collected 1 samples in 0.004998 seconds (200.086288 samples per"
+                + " second).\n");
+    assertThat(systemSpecUtil.getHingeAngle(SERIAL)).isEqualTo("180.000000");
+  }
+
+  @Test
+  public void getHingeAngle_isNonFoldable() throws Exception {
+    when(adb.runShell(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_GET_HINGE_ANGLE))
+        .thenReturn(
+            "Unable to find sensor id 36.0.\n"
+                + "ParseArgs returned with code (7).\n"
+                + "sensor_test version 99\n");
+    assertThat(
+            assertThrows(MobileHarnessException.class, () -> systemSpecUtil.getHingeAngle(SERIAL))
+                .getErrorId())
+        .isEqualTo(AndroidErrorId.ANDROID_SYSTEM_SPEC_SENSOR_SAMPLE_ERROR);
+  }
+
+  @Test
   public void getCarrierIds_noSims_returnsEmptyList() throws Exception {
     when(adb.runShellWithRetry(SERIAL, AndroidSystemSpecUtil.ADB_SHELL_QUERY_SIM_INFO))
         .thenReturn("No result.");

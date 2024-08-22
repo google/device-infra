@@ -104,6 +104,10 @@ public class AndroidRealDeviceConstants {
   /** Device feature indicating it is an AndroidTV device. */
   public static final String FEATURE_LEANBACK = "feature:android.software.leanback";
 
+  /** Device feature indicating it is an Android Foldable device. */
+  public static final String FEATURE_HINGE_ANGLE_SENSOR =
+      "feature:android.hardware.sensor.hinge_angle";
+
   /** The device use wipe method to recovery. */
   public static final String RECOVERY_TYPE_WIPE = "wipe";
 
@@ -135,6 +139,7 @@ public class AndroidRealDeviceConstants {
           .addAll(GMSCORE_FEATURES_PATTERNS)
           .add("PIXEL_EXPERIENCE")
           .add("android\\.hardware\\.nfc$")
+          .add("android\\.hardware\\.sensor\\.hinge_angle$")
           .build();
 
   /** The free external storage space threshold of alert. */

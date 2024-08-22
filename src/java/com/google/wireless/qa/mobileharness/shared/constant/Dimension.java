@@ -64,6 +64,8 @@ public final class Dimension {
     DISK_TYPE,
     /** The id of the device. */
     ID,
+    /** Hinge angle of the foldable device. */
+    HINGE_ANGLE,
     /** Host IP of the lab server. */
     HOST_IP,
     /** Host name of the lab server. */

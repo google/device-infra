@@ -761,6 +761,7 @@ public abstract class AndroidRealDeviceDelegate {
             | checkStorage(/* isExternal= */ true)
             | checkLaunchers()
             | checkIccids()
+            | checkHingeAngle()
             | extraChecksForOnlineModeDevice();
     checkSuwAppDisabled();
     if (!Flags.instance().skipNetwork.getNonNull()) {
@@ -1542,7 +1543,7 @@ public abstract class AndroidRealDeviceDelegate {
             "Wifi util functionality is disabled. Skip installing WifiUtil apk on device %s.",
             deviceId);
       } else {
-        // Install the wifi apk for Stallite lab only. (b/200517628)
+        // Install the wifi apk for Satellite lab only. (b/200517628)
         try {
           WifiUtil wifiUtil = new WifiUtil();
           apkInstaller.installApk(
@@ -1849,6 +1850,36 @@ public abstract class AndroidRealDeviceDelegate {
     }
 
     return device.updateDimension(Dimension.Name.ICCIDS, iccids);
+  }
+
+  /** Returns whether the device is a foldable device. */
+  private boolean isFoldableDevice() {
+    List<String> features = device.getDimension(Dimension.Name.FEATURE);
+    return features.contains("android.hardware.sensor.hinge_angle");
+  }
+
+  /**
+   * Checks the hinge angle of the foldable device.
+   *
+   * @return whether there is any dimension updated or removed
+   */
+  boolean checkHingeAngle() throws MobileHarnessException, InterruptedException {
+    if (!isFoldableDevice()) {
+      return false;
+    }
+    if (isRooted()) {
+      try {
+        String hingeAngle = systemSpecUtil.getHingeAngle(deviceId);
+        logger.atInfo().log("Hinge angle of device %s: %s", deviceId, hingeAngle);
+        hingeAngle = hingeAngle.substring(0, hingeAngle.indexOf('.'));
+        return device.updateDimension(Dimension.Name.HINGE_ANGLE, hingeAngle);
+      } catch (MobileHarnessException e) {
+        logger.atWarning().log(
+            "Failed to fetch device %s's hinge angle: %s",
+            deviceId, MoreThrowables.shortDebugString(e));
+      }
+    }
+    return device.removeDimension(Dimension.Name.HINGE_ANGLE);
   }
 
   /** Returns a comma-separated string of the ICCIDs of the SIMs on the device. */
