@@ -110,7 +110,7 @@ public class LocalFileUtil {
       PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwxrwxrwx"));
 
   /** Size of the buffer when reading input streams or writing output streams. */
-  private static final int BUFFER_SIZE = 1024;
+  private static final int BUFFER_SIZE = 1024 * 32;
 
   /** Max number of attempts when creating a soft link. */
   private static final int LINK_ATTEMPTS = 100;
