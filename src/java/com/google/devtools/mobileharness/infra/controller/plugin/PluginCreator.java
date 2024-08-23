@@ -21,6 +21,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.flogger.FluentLogger;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.devtools.mobileharness.api.model.error.BasicErrorId;
 import com.google.devtools.mobileharness.infra.controller.plugin.loader.PluginInstantiator;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.AnnotatedPluginClassProvider;
@@ -31,6 +33,7 @@ import com.google.devtools.mobileharness.infra.controller.plugin.provider.Plugin
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.PluginModuleClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.RetryPluginClassProvider;
 import com.google.devtools.mobileharness.infra.controller.plugin.provider.RetryPluginModuleClassProvider;
+import com.google.devtools.mobileharness.shared.util.concurrent.ThreadPools;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import com.google.inject.Module;
 import com.google.wireless.qa.mobileharness.shared.MobileHarnessException;
@@ -50,6 +53,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.NotThreadSafe;
@@ -77,6 +81,8 @@ import org.reflections.util.ConfigurationBuilder;
 public class PluginCreator implements AutoCloseable {
 
   private static final FluentLogger logger = FluentLogger.forEnclosingClass();
+  private static final ListeningExecutorService executorService =
+      ThreadPools.createStandardThreadPool("plugin-creator");
 
   /** The factory to create instance. */
   public interface Factory {
@@ -193,10 +199,24 @@ public class PluginCreator implements AutoCloseable {
               e);
         }
       }
+
       logger.atInfo().log("Loading plugins from jars %s", jarUrls);
       classLoader =
           PluginLoader.createClassLoader(
               jarUrls, getClass().getClassLoader(), forceLoadFromJarClassRegex);
+
+      List<AsyncReflection> reflectedJars = new ArrayList<>();
+      if (moduleClassNames == null || classNames == null) {
+        for (URL jarUrl : jarUrls) {
+          ConfigurationBuilder configBuilder =
+              new ConfigurationBuilder()
+                  .setUrls(ImmutableList.of(jarUrl))
+                  .addClassLoader(classLoader);
+          reflectedJars.add(
+              new AsyncReflection(
+                  jarUrl, executorService.submit(() -> new Reflections(configBuilder))));
+        }
+      }
 
       // Finds plugin module classes.
       Set<Class<? extends Module>> moduleClasses;
@@ -205,14 +225,18 @@ public class PluginCreator implements AutoCloseable {
             "No plugin module class name given, searching plugin module classes"
                 + " by plugin module annotation");
         moduleClasses = new HashSet<>();
-        for (URL jarUrl : jarUrls) {
+        for (var jarEntry : reflectedJars) {
+          final URL jarUrl = jarEntry.url;
           logger.atInfo().log("Searching plugin module classes in jar [%s]", jarUrl);
-
-          ConfigurationBuilder configBuilder =
-              new ConfigurationBuilder()
-                  .setUrls(ImmutableList.of(jarUrl))
-                  .addClassLoader(classLoader);
-          Reflections reflections = new Reflections(configBuilder);
+          final Reflections reflections;
+          try {
+            reflections = jarEntry.reflection.get();
+          } catch (InterruptedException | ExecutionException e) {
+            throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                BasicErrorId.PLUGIN_LOADER_FAILED_TO_GET_JAR_URL,
+                String.format("Error reflecting plugin module jar [%s]", jarUrl),
+                e);
+          }
           PluginModuleClassProvider moduleClassProvider =
               new RetryPluginModuleClassProvider(
                   new AnnotatedPluginModuleClassProvider(
@@ -251,15 +275,20 @@ public class PluginCreator implements AutoCloseable {
         logger.atInfo().log(
             "No plugin class name given, searching plugin class by plugin annotation");
         classes = new HashSet<>();
-        for (URL jarUrl : jarUrls) {
+        for (var jarEntry : reflectedJars) {
+          final URL jarUrl = jarEntry.url;
           logger.atInfo().log("Searching plugin classes in jar [%s]", jarUrl);
 
           // Class name not specified, finds all classes marked with @Plugin.
-          ConfigurationBuilder configBuilder =
-              new ConfigurationBuilder()
-                  .setUrls(ImmutableList.of(jarUrl))
-                  .addClassLoader(classLoader);
-          Reflections reflections = new Reflections(configBuilder);
+          final Reflections reflections;
+          try {
+            reflections = jarEntry.reflection.get();
+          } catch (InterruptedException | ExecutionException e) {
+            throw new com.google.devtools.mobileharness.api.model.error.MobileHarnessException(
+                BasicErrorId.PLUGIN_LOADER_FAILED_TO_GET_JAR_URL,
+                String.format("Error reflecting plugin jar [%s]", jarUrl),
+                e);
+          }
           PluginClassProvider classProvider =
               new RetryPluginClassProvider(
                   new AnnotatedPluginClassProvider(
@@ -344,6 +373,16 @@ public class PluginCreator implements AutoCloseable {
               "Failed to close plugin class loader for %s", jarUris);
         }
       }
+    }
+  }
+
+  private static final class AsyncReflection {
+    private final URL url;
+    private final ListenableFuture<Reflections> reflection;
+
+    private AsyncReflection(URL url, ListenableFuture<Reflections> reflection) {
+      this.url = url;
+      this.reflection = reflection;
     }
   }
 }
