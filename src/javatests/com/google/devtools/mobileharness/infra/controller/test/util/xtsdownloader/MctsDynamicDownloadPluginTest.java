@@ -86,6 +86,10 @@ public final class MctsDynamicDownloadPluginTest {
         .thenReturn(
             ImmutableSortedSet.of(
                 ModuleInfo.builder()
+                    .setPackageName("com.google.android.modulemetadata")
+                    .setName("modulemetadata")
+                    .build(),
+                ModuleInfo.builder()
                     .setPackageName("com.google.android.captiveportallogin")
                     .setName("networking")
                     .build(),

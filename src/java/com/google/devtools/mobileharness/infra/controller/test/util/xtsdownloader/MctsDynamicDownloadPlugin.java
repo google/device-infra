@@ -135,10 +135,12 @@ public class MctsDynamicDownloadPlugin implements XtsDynamicDownloadPlugin {
     List<String> downloadLinkUrls = new ArrayList<>();
     // Add the Lorry download link url of MCTS file for preloaded mainline modules. For example:
     // https://dl.google.com/dl/android/xts/mcts/YYYY-MM/arm64/android-mcts-<module_name>.zip
-    if (mctsNamesOfPreloadedMainlineModules.containsKey(PRELOADED_KEY)
-        && !deviceAbi.equals("arm")) {
+    if (mctsNamesOfPreloadedMainlineModules.containsKey(PRELOADED_KEY)) {
       String versioncode =
-          Integer.toString(androidPackageManagerUtil.getAppVersionCode(deviceId, MAINLINE_TVP_PKG));
+          preloadedMainlineModules.contains(MAINLINE_TVP_PKG)
+              ? Integer.toString(
+                  androidPackageManagerUtil.getAppVersionCode(deviceId, MAINLINE_TVP_PKG))
+              : "310000000";
       // if the TVP version is 310000000, that means all the mainline modules were built
       // from source, rather than prebuilt dropped. 310000000 is just the default value in
       // http://ac/vendor/unbundled_google/modules/ModuleMetadataGoogle/Primary_AndroidManifest.xml
