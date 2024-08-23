@@ -1,0 +1,215 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+package mobileharness.service.moss;
+
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
+import "src/devtools/mobileharness/api/model/proto/device.proto";
+import "src/devtools/mobileharness/api/model/proto/error.proto";
+import "src/devtools/mobileharness/api/model/proto/job.proto";
+import "src/devtools/mobileharness/api/model/proto/test.proto";
+import "src/devtools/mobileharness/service/moss/proto/result.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/spec/job_spec.proto";
+
+option java_package = "com.google.devtools.mobileharness.service.moss.proto";
+option java_outer_classname = "Slg";
+
+// The proto implementation of a Allocation java class.
+message AllocationProto {
+  // The entry to represent the key&valueList pair of a dimension multi-map.
+  message DimensionEntry {
+    // The dimension key.
+    string key = 1;
+    // All values of the corresponding key.
+    repeated string value = 2;
+  }
+
+  // The proto implementation of a Multimap<String, String> dimensionMap.
+  message DimensionMultiMap {
+    // All entries of a dimension multi-map.
+    repeated DimensionEntry dimension_entry = 1;
+  }
+
+  // The locator of the test.
+  api.model.TestLocator test_locator = 1;
+  // All devices allocated to the test.
+  repeated api.model.DeviceLocator device_locator = 2;
+  // The implementation of a List<Multimap<String, String>> dimensionsList.
+  repeated DimensionMultiMap dimension_multi_map = 3;
+}
+
+// The proto implementation of a Dimensions java class.
+message DimensionsProto {
+  // All dimensions of a job to be persistent.
+  map<string, string> dimensions = 1;
+}
+
+// The proto implementation of a Dirs java class.
+message DirsProto {
+  // The root path of all remote files to be stored.
+  string remote_file_dir_path = 1;
+  // Whether tests of the job have their own sub directories.
+  bool has_test_sub_dirs = 2;
+}
+
+// The proto implementation of a JobSetting class.
+message JobSettingProto {
+  // The timeout setting of the job.
+  api.model.Timeout timeout = 1;
+  // Use the deprecated Retry setting to recover the wireless/qa JobSetting
+  // easily.
+  shared.Retry retry = 2;
+  // The priority setting of the job.
+  api.model.Priority priority = 3;
+  // The allocation exit strategy of this job.
+  api.model.AllocationExitStrategy allocation_exit_strategy = 4;
+  // The required fields to recover a Dirs field of a JobSetting.
+  DirsProto dirs = 5;
+  // The repeated runs setting of the job.
+  api.model.Repeat repeat = 6;
+}
+
+// The proto implementation of a Params java class.
+message ParamsProto {
+  // All params to be persistent.
+  map<string, string> params = 1;
+}
+
+// The proto implementation of a Properties java class.
+message PropertiesProto {
+  // All properties to be persistent.
+  map<string, string> properties = 1;
+}
+
+// The proto implementation of a RemoteFiles java class.
+message RemoteFilesProto {
+  // Empty for the case that the root path isn't offered.
+  string root_path = 1;
+  // All paths of remote files.
+  repeated string remote_file_path = 2;
+}
+
+// The proto implementation of a Result java class.
+message ResultProto {
+  // The result of the job/test.
+  mobileharness.api.model.TestResult result = 1;
+  // The exception if the result is an abnormal one.
+  mobileharness.api.model.ExceptionDetail cause = 2;
+}
+
+// The proto implementation of a SubDeviceSpec java class.
+message SubDeviceSpecProto {
+  // The device requirement of a SubDeviceSpec.
+  mobileharness.api.model.DeviceRequirement device_requirement = 1;
+  // The json string representation of a ScopedSpecs class.
+  string scoped_specs_json_string = 2;
+}
+
+// The proto implementation of a SubDeviceSpecs java class.
+message SubDeviceSpecsProto {
+  // The proto implementation of List<SubDeviceSpec> subDevices.
+  repeated SubDeviceSpecProto sub_device_spec_proto = 1;
+  // The proto implementation of List<String> sharedDimensionNames.
+  repeated string shared_dimension_name = 2;
+  // For Map<String, SubDeviceSpec> subDeviceSpecsById and
+  // Map<String, Integer> subDeviceSpecsIndexById, they could be set at any time
+  // by a Allocation of a test that belongs to to job according to the public
+  // API of SubDeviceSpecs class. So only the latest device IDs from the latest
+  // Allocation are persistent to support restoring them.
+  repeated string latest_device_id_from_allocation = 3;
+}
+
+// The proto implementation of a JobScheduleUnit java class.
+message JobScheduleUnitProto {
+  // The locator of the job.
+  mobileharness.api.model.JobLocator job_locator = 1;
+  // The user runs the job.
+  string user = 2 [deprecated = true];
+  // The type of the job.
+  mobileharness.shared.JobType job_type = 3;
+  // The setting of the job.
+  JobSettingProto job_setting = 4;
+  // The timing of the job.
+  mobileharness.service.moss.TimeDetail timing = 5;
+  // The params of the job.
+  ParamsProto params = 6;
+  // The string representation of the ScopedSpecs of the job.
+  string scoped_specs_json_string = 7;
+  // The proto of the SubDeviceSpecs of the job.
+  SubDeviceSpecsProto sub_device_specs = 8;
+  // The job user runs the job.
+  mobileharness.api.model.JobUser job_user = 9;
+}
+
+// The proto implementation of a JobInfo java class.
+message JobInfoProto {
+  // The proto to construct a JobScheduleUnit.
+  JobScheduleUnitProto job_schedule_unit = 1;
+  // The proto for remoteGenFiles.
+  RemoteFilesProto remote_gen_files = 2;
+  // The proto for remoteRunFiles.
+  RemoteFilesProto remote_run_files = 3;
+  // The proto for the status of the job.
+  api.model.TestStatus status = 4;
+  // The proto to construct a Result.
+  ResultProto result = 5;
+  // The proto to construct a Properties.
+  PropertiesProto properties = 6;
+  // The proto to construct a Errors.
+  repeated stability.model.ExceptionDetail error = 7;
+  // The proto to construct a ProtoJobSpec.
+  mobileharness.shared.spec.JobSpec job_spec = 8;
+  // All tests belong to the job.
+  repeated TestInfoProto test_info = 9;
+}
+
+// The proto implementation of a TestScheduleUnit java class.
+message TestScheduleUnitProto {
+  // The locator of the test.
+  mobileharness.api.model.TestLocator test_locator = 1;
+  // The timing of the test.
+  TimeDetail timing = 2;
+}
+
+// Extra info that may not belong to a TestInfo.java, while it's required in a
+// TestInfoProto for some cases.
+message TestExtraInfo {
+  // The user who runs the job that the test belongs to.
+  string user = 1;
+}
+
+// The proto implementation of a TestInfo java class.
+message TestInfoProto {
+  // The proto to construct a TestScheduleUnit.
+  TestScheduleUnitProto test_schedule_unit = 1;
+  // The proto for remoteGenFiles of the test.
+  RemoteFilesProto remote_gen_files = 2;
+  // The proto for the status of the test.
+  api.model.TestStatus status = 3;
+  // The proto to construct the Result of the test.
+  ResultProto result = 4;
+  // The proto to construct the Properties of the test.
+  PropertiesProto properties = 5;
+  // The proto to construct the Errors of the test.
+  repeated stability.model.ExceptionDetail error = 6;
+  // The proto to recover sub-tests.
+  repeated TestInfoProto sub_test_info = 7;
+  // Extra info of the test.
+  TestExtraInfo extra_info = 8;
+}

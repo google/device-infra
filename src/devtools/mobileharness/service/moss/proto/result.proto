@@ -1,0 +1,203 @@
+/*
+ * Copyright 2022 Google LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto2";
+
+package mobileharness.service.moss;
+
+import "src/devtools/common/metrics/stability/model/proto/error_id.proto";
+import "src/devtools/common/metrics/stability/model/proto/error_type.proto";
+import "src/devtools/common/metrics/stability/model/proto/exception.proto";
+import "src/devtools/mobileharness/api/model/proto/error.proto";
+import "src/devtools/mobileharness/api/model/proto/job.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/common.proto";
+import "src/java/com/google/wireless/qa/mobileharness/shared/proto/job.proto";
+
+option java_package = "com.google.devtools.mobileharness.service.moss.proto";
+option java_outer_classname = "Result";
+
+message JobSetting {
+  optional mobileharness.shared.Timeout timeout = 1;
+  optional mobileharness.shared.Retry retry = 2;
+  optional mobileharness.shared.Priority priority = 3;
+  optional mobileharness.api.model.Repeat repeat = 4;
+}
+
+message FileDetail {
+  optional string path = 1;
+  optional string content_type = 2;
+  optional int64 length = 3;
+}
+
+message MarkPoint {
+  optional string tag = 1;
+  optional int64 timestamp_ms = 2;
+}
+
+// Each timeline is parsed from the log of a JobInfo or TestInfo.
+// The log line of the start point of a timeline should have this format
+// "TIMELINE:{enum}:START:{tag}".
+// The log line of the end point should have this format
+// "TIMELINE:{enum}:END:{tag}", and the tag must be the same as the one in start
+// point line.
+// The log line of the mark point should have this format
+// "TIMELINE:{enum}:MARK_POINT:{tag}".
+//
+// Take file resolve as an example, the general log could be:
+// XXX I FileResolver TIMELINE:FILE_RESOLVE:START:demo_file_resolve ...
+// ...
+// XXX I FileResolver TIMELINE:FILE_RESOLVE:MARK_POINT:file1 ...
+// ...
+// XXX I FileResolver TIMELINE:FILE_RESOLVE:MARK_POINT:file2 ...
+// ...
+// XXX I FileResolver TIMELINE:FILE_RESOLVE:END:demo_file_resolve ...
+message Timeline {
+  enum Job {
+    UNKNOWN_JOB_TYPE = 0;
+    PRE_RUN_JOB = 1;
+    RUN_JOB = 2;
+    POST_RUN_JOB = 3;
+    DEVICE_ALLOCATION = 4;
+    FILE_RESOLVE = 5;
+  }
+
+  enum Test {
+    UNKNOWN_TEST_TYPE = 0;
+    PRE_RUN_TEST = 1;
+    RUN_TEST = 2;
+    POST_RUN_TEST = 3;
+    SEND_FILE = 4;
+    DOWNLOAD_FILES = 5;
+  }
+
+  oneof type {
+    Job job_type = 1;
+    Test test_type = 2;
+  }
+  optional string tag = 3;
+  optional int64 start_time_ms = 4;
+  optional int64 end_time_ms = 5;
+  repeated MarkPoint mark_point = 6;
+}
+
+message TimeDetail {
+  // in millisecond.
+  optional int64 create_time_ms = 1;
+  optional int64 start_time_ms = 2;
+  optional int64 modify_time_ms = 3;
+  // If the start_time is present, duration_time = min(modify_time / end_time) -
+  // start_time. Otherwise, duration_time is set to 0.
+  optional int64 duration_time_ms = 4;
+  repeated Timeline timeline = 5;
+}
+
+// Errors/Warnings of a job/test. We can't directly use
+// mobileharness.api.model.ExceptionDetail because it recursively refers to
+// itself, which is not allowed to be used in Spanner.
+// Next ID: 12
+message ErrorInfo {
+  // Required.
+  // It does not contain stack traces.
+  optional mobileharness.api.model.ExceptionSummary deprecated_summary = 1
+      [deprecated = true];
+  optional stability.model.ExceptionSummary summary = 9;
+
+  // Cause chain.
+  // It does not contain stack traces.
+  repeated mobileharness.api.model.ExceptionSummary deprecated_cause = 2
+      [deprecated = true];
+  repeated stability.model.ExceptionSummary cause = 10;
+
+  // Serialized stack trace which contains the cause & suppressed exception
+  // info. Required for top level exception. Empty for cause/suppressed
+  // exceptions.
+  optional string complete_stack_trace = 4;
+
+  // Stack track of the error names, which contains the error names of the
+  // cause. Error names are joined with '|'. Such as:
+  // "CLIENT_TR_ALLOC_ERROR|GRPC_ERROR|COMMAND_ERROR".
+  optional string error_name_stack_trace = 5;
+
+  // Stack track of the error codes, which contains the error codes of the
+  // cause. Error names are joined with '|'. Such as "2354|1254|789".
+  optional string error_code_stack_trace = 6;
+
+  // Deprecated. Use critical_error_id.type instead.
+  optional stability.model.ErrorType aggregated_error_type = 7
+      [deprecated = true];
+
+  // MH slo facing critical Error ID.
+  // It is the same as the first non-(UNCLASSIFIED/UNDETERMINED) Error ID from
+  // the summary to all causes in the cause chain, if any. Otherwise it is the
+  // same as the summary's Error ID.
+  // It is used for statistics for MH SLO.
+  optional stability.model.ErrorId critical_error_id = 8;
+
+  // Critical Error ID in ALL namespaces (MH or user facing namespaces, e.g.,
+  // VINSON).
+  optional stability.model.ErrorId user_facing_critical_error_id = 11;
+}
+
+// A similar proto as mobileharness.api.model.DeviceRequirements, exception the
+// dimensions of the DeviceRequirement are stored in a list of StrPairs.
+message DeviceRequirements {
+  // At least one device requirement is required. Only add multiple device
+  // selector when you need multiple devices for every tests in the job.
+  repeated DeviceRequirement device_requirement = 1;
+
+  // Optional. Specifies dimension keys that must be present and share a common
+  // value across all devices being used in this job. Only used when multiple
+  // devices are required.
+  repeated string shared_dimension = 2;
+}
+
+// A similar proto as mobileharness.api.model.DeviceRequirement, except the
+// dimensions are stored as StrPairs.
+message DeviceRequirement {
+  // Required.
+  optional string device_type = 1;
+
+  // Optional: Decorators in reversed decorating order and in executing order,
+  // which means the preRun() of a decorator in the front will be executed
+  // BEFORE preRun() of other decorators.
+  repeated string decorator = 2;
+
+  // Optional.
+  repeated mobileharness.shared.StrPair dimension = 3;
+}
+
+message JobSummary {
+  optional string id = 1;
+  optional string name = 2;
+  optional string user = 3;
+  optional mobileharness.shared.JobType type = 4;
+  optional JobSetting setting = 5;
+  optional mobileharness.shared.TestStatus status = 6;
+  optional mobileharness.shared.TestResult result = 7;
+  optional TimeDetail time_detail = 8;
+  repeated mobileharness.shared.ErrorInfo deprecated_error = 9
+      [deprecated = true];
+  optional string log = 10;
+  repeated mobileharness.shared.StrPair param = 11;
+  repeated mobileharness.shared.StrPair dimension = 12;
+  repeated mobileharness.shared.StrPair property = 13;
+  repeated FileDetail run_file = 14;
+  repeated FileDetail gen_file = 15;
+  optional int32 total_test_count = 16;
+  repeated ErrorInfo warning = 17;
+  optional ErrorInfo result_cause = 18;
+  optional DeviceRequirements device_requirements = 19;
+}
