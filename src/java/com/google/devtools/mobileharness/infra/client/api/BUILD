@@ -71,7 +71,6 @@ java_library(
     name = "annotations",
     srcs = ["Annotations.java"],
     visibility = [
-        "//java/com/google/devtools/mobileharness/infra/rbeexecutor:__subpackages__",
         "//src/java/com/google/devtools/mobileharness/infra/client:__subpackages__",
         "//src/javatests/com/google/devtools/mobileharness/infra/client/api:__subpackages__",
     ],
