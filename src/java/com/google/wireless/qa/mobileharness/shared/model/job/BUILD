@@ -63,6 +63,7 @@ java_library(
     name = "job_helper",
     srcs = ["JobHelper.java"],
     visibility = [
+        "//src/java/com/google/devtools/mobileharness/service/moss/util/slg:__pkg__",
     ],
     deps = [
         ":job",
@@ -112,5 +113,22 @@ java_library(
         "@maven//:com_google_code_findbugs_jsr305",
         "@maven//:com_google_errorprone_error_prone_annotations",
         "@maven//:com_google_guava_guava",
+    ],
+)
+
+java_library(
+    name = "job_factory",
+    srcs = ["JobInternalFactory.java"],
+    visibility = [
+        # Note: this tool is only for MH infra, please don't add more visibilities.
+        "//src/java/com/google/devtools/mobileharness/service/moss/util/slg:__pkg__",
+    ],
+    deps = [
+        ":job",
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/in",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto/spec:job_spec_java_proto",
     ],
 )

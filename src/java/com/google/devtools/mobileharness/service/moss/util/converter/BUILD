@@ -13,23 +13,18 @@
 # limitations under the License.
 #
 
-# Description:
-#   Data models for Mobile Harness jobs and tests.
-
 package(
     default_applicable_licenses = ["//:license"],
     default_visibility = [
-        "//:deviceinfra_pkg",
+        "//:deviceinfra_all_pkg",
     ],
 )
 
 java_library(
-    name = "locator",
-    srcs = glob(["*Locator.java"]),
+    name = "test_status_converter",
+    srcs = ["TestStatusConverter.java"],
     deps = [
-        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
         "//src/devtools/mobileharness/api/model/proto:test_java_proto",
-        "//src/java/com/google/devtools/mobileharness/shared/util/auto:auto_value",
-        "@maven//:com_google_guava_guava",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
     ],
 )

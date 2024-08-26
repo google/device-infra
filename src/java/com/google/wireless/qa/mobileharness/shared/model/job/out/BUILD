@@ -73,3 +73,19 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "out_factory",
+    srcs = ["JobOutInternalFactory.java"],
+    visibility = [
+        # Note: this tool is only for MH infra, please don't add more visibilities.
+        "//src/java/com/google/devtools/mobileharness/service/moss/util/slg:__pkg__",
+    ],
+    deps = [
+        ":out",
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
+        "//src/java/com/google/devtools/mobileharness/api/model/job/out",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/model/job/in",
+        "//src/java/com/google/wireless/qa/mobileharness/shared/proto:job_java_proto",
+    ],
+)

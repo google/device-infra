@@ -35,3 +35,16 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "allocation_factory",
+    srcs = ["AllocationInternalFactory.java"],
+    visibility = [
+        # Note: this tool is only for MH infra, please don't add more visibilities.
+        "//src/java/com/google/devtools/mobileharness/service/moss/util/slg:__pkg__",
+    ],
+    deps = [
+        ":allocation",
+        "//src/devtools/mobileharness/service/moss/proto:slg_java_proto",
+    ],
+)

@@ -31,3 +31,16 @@ java_library(
         "@maven//:com_google_guava_guava",
     ],
 )
+
+java_library(
+    name = "in_factory",
+    srcs = ["JobInInternalFactory.java"],
+    visibility = [
+        # Note: this tool is only for MH infra, please don't add more visibilities.
+        "//src/java/com/google/devtools/mobileharness/service/moss/util/slg:__pkg__",
+    ],
+    deps = [
+        ":device_requirements",
+        "//src/devtools/mobileharness/api/model/proto:job_java_proto",
+    ],
+)
